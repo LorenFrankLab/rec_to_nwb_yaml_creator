@@ -35,10 +35,31 @@
 import { getAnimalDayIds } from '../state/workspaceSelectors';
 
 /**
- * @param {*} value
- * @returns {boolean} True for a non-null, non-array object.
+ * A classified day, as returned by {@link classifyWorkspaceDays} (and, minus `animalKey`/
+ * `ownerPresent`, by {@link classifyAnimalDays}). One documented shape so the two classifiers and
+ * any shared row renderer agree.
  */
-function isRecord(value) {
+export interface DayClassificationRow {
+  /** The day's id (store map key). */
+  dayId: string;
+  /** The resolved day record, or `null` for a dangling reference. */
+  record: Record<string, unknown> | null;
+  /** A {@link DAY_STATUS} value. */
+  status: string;
+  /**
+   * The owning animal's STORE KEY. `null` ONLY for an `orphan_no_owner` row whose declared owner
+   * is missing/non-string. (Workspace-wide rows only.)
+   */
+  animalKey?: string | null;
+  /** Whether the owning animal exists. (Workspace-wide rows only.) */
+  ownerPresent?: boolean;
+}
+
+/**
+ * @param value
+ * @returns True for a non-null, non-array object.
+ */
+function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
 }
 
@@ -46,10 +67,8 @@ function isRecord(value) {
  * The explicit day recovery statuses. Frozen so this closed set (which the export policy keys off —
  * `isExportableDayStatus` is `status === DAY_STATUS.OK`) cannot be mutated at runtime, matching the
  * `Object.freeze` convention the state layer uses for its closed command vocabularies.
- *
- * @type {Readonly<Record<string,string>>}
  */
-export const DAY_STATUS = Object.freeze({
+export const DAY_STATUS: Readonly<Record<string, string>> = Object.freeze({
   OK: 'ok',
   DANGLING_REFERENCE: 'dangling_reference',
   RECOVERED_UNLINKED: 'recovered_unlinked',
@@ -58,30 +77,16 @@ export const DAY_STATUS = Object.freeze({
 });
 
 /**
- * A classified day, as returned by {@link classifyWorkspaceDays} (and, minus `animalKey`/
- * `ownerPresent`, by {@link classifyAnimalDays}). One documented shape so the two classifiers and
- * any shared row renderer agree.
- *
- * @typedef {object} DayClassificationRow
- * @property {string} dayId - The day's id (store map key).
- * @property {(object|null)} record - The resolved day record, or `null` for a dangling reference.
- * @property {string} status - A {@link DAY_STATUS} value.
- * @property {(string|null)} [animalKey] - The owning animal's STORE KEY. `null` ONLY for an
- *   `orphan_no_owner` row whose declared owner is missing/non-string. (Workspace-wide rows only.)
- * @property {boolean} [ownerPresent] - Whether the owning animal exists. (Workspace-wide rows only.)
- */
-
-/**
  * The status of an INDEX reference that resolves to a real record: `ok` when the record belongs
  * to the indexing animal (or carries no `animalId` — the index is then the authority), but
  * `wrong_owner` when the record EXPLICITLY names a different animal (exporting it with the
  * indexing animal would corrupt the YAML).
  *
- * @param {object} record - The resolved day record (already confirmed to be a record).
- * @param {string} animalKey - The animal whose index points at it.
- * @returns {string}
+ * @param record - The resolved day record (already confirmed to be a record).
+ * @param animalKey - The animal whose index points at it.
+ * @returns
  */
-function indexedRecordStatus(record, animalKey) {
+function indexedRecordStatus(record: Record<string, unknown>, animalKey: string): string {
   return record.animalId != null && record.animalId !== animalKey
     ? DAY_STATUS.WRONG_OWNER
     : DAY_STATUS.OK;
@@ -92,10 +97,10 @@ function indexedRecordStatus(record, animalKey) {
  * automatically exported. Only `ok` qualifies: a recovered-unlinked record must be re-linked
  * first, and dangling/no-owner have no trustworthy exportable record.
  *
- * @param {string} status - A {@link DAY_STATUS} value.
- * @returns {boolean}
+ * @param status - A {@link DAY_STATUS} value.
+ * @returns
  */
-export function isExportableDayStatus(status) {
+export function isExportableDayStatus(status: string): boolean {
   return status === DAY_STATUS.OK;
 }
 
@@ -107,10 +112,10 @@ export function isExportableDayStatus(status) {
  * "records present" count (Workspace day count, calendar date guard, setup-checklist
  * `recordingDayCount`) can't drift from this definition or from the per-status set.
  *
- * @param {string} status - A {@link DAY_STATUS} value.
- * @returns {boolean}
+ * @param status - A {@link DAY_STATUS} value.
+ * @returns
  */
-export function isPresentRecordStatus(status) {
+export function isPresentRecordStatus(status: string): boolean {
   return status === DAY_STATUS.OK || status === DAY_STATUS.RECOVERED_UNLINKED;
 }
 
@@ -120,10 +125,10 @@ export function isPresentRecordStatus(status) {
  * render as "[object Object]" / "undefined") becomes an explicit phrase so the explanation stays
  * usable instead of leaking a meaningless token to the user.
  *
- * @param {*} animalId - The record's declared `animalId` (may be corrupt/non-string/absent).
- * @returns {string}
+ * @param animalId - The record's declared `animalId` (may be corrupt/non-string/absent).
+ * @returns
  */
-export function describeOwner(animalId) {
+export function describeOwner(animalId: unknown): string {
   return typeof animalId === 'string' && animalId.length > 0
     ? animalId
     : 'another animal (unreadable id)';
@@ -134,18 +139,22 @@ export function describeOwner(animalId) {
  * any record that belongs to the animal but is not in its index (recovered_unlinked). Tolerates
  * a corrupt/missing index (read through `getAnimalDayIds`) and a non-record days map.
  *
- * @param {string} animalId - The animal's store key (the reliable owner handle).
- * @param {object} animal - The animal record (for its `days` index).
- * @param {object} daysMap - The workspace `days` map.
- * @returns {Array<DayClassificationRow>} Per-animal rows carry `{ dayId, record, status }` (the
+ * @param animalId - The animal's store key (the reliable owner handle).
+ * @param animal - The animal record (for its `days` index).
+ * @param daysMap - The workspace `days` map.
+ * @returns Per-animal rows carry `{ dayId, record, status }` (the
  *   `animalKey`/`ownerPresent` of the workspace-wide shape are implicit: the owner is `animalId`).
  */
-export function classifyAnimalDays(animalId, animal, daysMap) {
-  const days = isRecord(daysMap) ? daysMap : {};
+export function classifyAnimalDays(
+  animalId: string,
+  animal: unknown,
+  daysMap: unknown
+): DayClassificationRow[] {
+  const days: Record<string, unknown> = isRecord(daysMap) ? daysMap : {};
   const indexIds = getAnimalDayIds(animal);
   const indexSet = new Set(indexIds);
 
-  const result = indexIds.map((dayId) => {
+  const result: DayClassificationRow[] = indexIds.map((dayId) => {
     const record = days[dayId];
     return isRecord(record)
       ? { dayId, record, status: indexedRecordStatus(record, animalId) }
@@ -167,12 +176,12 @@ export function classifyAnimalDays(animalId, animal, daysMap) {
  * cards, the section-nav, the animal switcher, the recording-days header — can't drift from each
  * other or from {@link isPresentRecordStatus}.
  *
- * @param {string} animalId - The animal's store key.
- * @param {object} animal - The animal record.
- * @param {object} daysMap - The workspace day map.
- * @returns {number} The count of present day records.
+ * @param animalId - The animal's store key.
+ * @param animal - The animal record.
+ * @param daysMap - The workspace day map.
+ * @returns The count of present day records.
  */
-export function getPresentDayCount(animalId, animal, daysMap) {
+export function getPresentDayCount(animalId: string, animal: unknown, daysMap: unknown): number {
   return classifyAnimalDays(animalId, animal, daysMap).filter((d) =>
     isPresentRecordStatus(d.status)
   ).length;
@@ -185,12 +194,14 @@ export function getPresentDayCount(animalId, animal, daysMap) {
  * home for this predicate so the animal-delete cascade and the per-day delete confirm can't disagree
  * about whether the caveat applies.
  *
- * @param {object} record - A day record.
- * @returns {boolean} True if the day is validated or exported.
+ * @param record - A day record.
+ * @returns True if the day is validated or exported.
  */
-export function dayHasArtifacts(record) {
-  const state = record?.state;
-  if (!state || typeof state !== 'object' || Array.isArray(state)) return false;
+export function dayHasArtifacts(record: unknown): boolean {
+  // `isRecord(record) ? record.state : undefined` is the typed equivalent of the prior
+  // `record?.state` (`record` is `unknown` here, so it can't be optional-chained directly).
+  const state = isRecord(record) ? record.state : undefined;
+  if (!isRecord(state)) return false;
   return !!state.validated || !!state.exported;
 }
 
@@ -201,21 +212,27 @@ export function dayHasArtifacts(record) {
  * its owning animal exists, orphan_no_owner when it does not). Every sort key is string-coerced
  * so a corrupt id/date can't throw. The order matches what the Validation summary renders.
  *
- * @param {object} workspace - `{ animals, days }`.
- * @returns {Array<DayClassificationRow>} Workspace-wide rows carry the full shape, including
+ * @param workspace - `{ animals, days }`.
+ * @returns Workspace-wide rows carry the full shape, including
  *   `animalKey` (the owner store key — `null` ONLY for an `orphan_no_owner` row) and `ownerPresent`.
  */
-export function classifyWorkspaceDays(workspace) {
-  const orderKey = (value) => (typeof value === 'string' ? value : String(value ?? ''));
-  const animalsMap = isRecord(workspace?.animals) ? workspace.animals : {};
-  const days = isRecord(workspace?.days) ? workspace.days : {};
+export function classifyWorkspaceDays(workspace: unknown): DayClassificationRow[] {
+  const orderKey = (value: unknown): string =>
+    typeof value === 'string' ? value : String(value ?? '');
+  // `isRecord(workspace) && isRecord(workspace.x)` is the typed equivalent of the prior
+  // `isRecord(workspace?.x)` (`workspace` is `unknown` and so can't be optional-chained): a null /
+  // non-record workspace short-circuits to `{}` either way, and the guard narrows the reads.
+  const animalsMap: Record<string, unknown> =
+    isRecord(workspace) && isRecord(workspace.animals) ? workspace.animals : {};
+  const days: Record<string, unknown> =
+    isRecord(workspace) && isRecord(workspace.days) ? workspace.days : {};
 
   const animals = Object.entries(animalsMap)
     .map(([animalKey, animal]) => ({ animalKey, animal }))
     .sort((a, b) => orderKey(a.animalKey).localeCompare(orderKey(b.animalKey)));
 
-  const out = [];
-  const indexed = new Set();
+  const out: DayClassificationRow[] = [];
+  const indexed = new Set<string>();
   for (const { animalKey, animal } of animals) {
     const refs = getAnimalDayIds(animal)
       .map((dayId) => ({ dayId, record: days[dayId] }))

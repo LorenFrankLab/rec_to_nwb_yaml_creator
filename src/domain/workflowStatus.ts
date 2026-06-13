@@ -30,14 +30,76 @@ import {
   getConfigHistory,
   getProbeElectrodeGroups,
 } from '../state/workspaceSelectors';
+import type { ElectrodeGroup } from '../state/workspaceTypes';
+import type { RepairableIssue } from './repairRouting';
+import type { ValidationModel } from '../validation/issueTypes';
+
+/** A setup-area key a validation issue can be attributed to (for the per-item `has_errors` state). */
+type SetupArea = 'subject' | 'electrodes' | 'cameras' | 'data_acq';
+
+/** Options for {@link getAnimalSetupChecklist}. */
+interface GetAnimalSetupChecklistOptions {
+  /** Validation issues used only to upgrade items to `has_errors`. */
+  issues?: RepairableIssue[];
+  /** A recovery-aware count of the animal's recording-day records (else falls back to the index). */
+  recordingDayCount?: number;
+}
+
+/** A next-action descriptor for a setup-checklist item. */
+interface SetupItemAction {
+  /** Button label. */
+  label: string;
+  /** Field-path keyword for tab deep-linking, or null. */
+  fieldHint: string | null;
+}
+
+/** One animal-setup checklist item. */
+interface SetupChecklistItem {
+  /** Item key. */
+  key: string;
+  /** User-facing label. */
+  label: string;
+  /** One of {@link SETUP_STATE}. */
+  state: string;
+  /** Item count (e.g. electrode-group count). */
+  count: number;
+  /** Whether the item has content. */
+  present: boolean;
+  /** Short content summary. */
+  summary: string;
+  /** Electrodes-only: the snapshot-mirror divergence repair flag. */
+  needsSync?: boolean;
+  /** Next action. */
+  action: SetupItemAction;
+}
+
+/** The day-list-row triage status returned by {@link getDayRowStatus}. */
+interface DayRowStatus {
+  /** One of the {@link DAY_LIFECYCLE} variants. */
+  variant: string;
+  /** Display label. */
+  label: string;
+}
+
+/** The day workflow/readiness status returned by {@link getDayWorkflowStatus}. */
+interface DayWorkflowStatus {
+  configurationVersion: number | null;
+  latestConfigurationVersion: number | null;
+  isHistoricalConfiguration: boolean;
+  usesUnpinnedConfiguration: boolean;
+  hasElectrodes: boolean;
+  readyForFailedChannels: boolean;
+  exportStatus: string;
+  blockedByRepair: boolean;
+  readyForExportPreflight: boolean;
+}
 
 /**
  * The four checklist-item states from the workflow design. Frozen to match the closed-enum
  * convention used elsewhere in the domain/state layers (these are informational categories, never an
  * export gate).
- * @type {Readonly<Record<string, 'not_started'|'needs_review'|'has_errors'|'complete'>>}
  */
-export const SETUP_STATE = Object.freeze({
+export const SETUP_STATE: Readonly<Record<string, string>> = Object.freeze({
   NOT_STARTED: 'not_started',
   NEEDS_REVIEW: 'needs_review',
   HAS_ERRORS: 'has_errors',
@@ -46,10 +108,11 @@ export const SETUP_STATE = Object.freeze({
 
 /**
  * The latest configuration snapshot's electrode groups (the export source of truth).
- * @param {object} animal
- * @returns {Array}
+ *
+ * @param animal
+ * @returns
  */
-function latestSnapshotElectrodeGroups(animal) {
+function latestSnapshotElectrodeGroups(animal: unknown): ElectrodeGroup[] {
   const history = getConfigHistory(animal);
   const latest = history.length > 0 ? history[history.length - 1] : null;
   return getProbeElectrodeGroups(latest?.devices);
@@ -61,10 +124,10 @@ function latestSnapshotElectrodeGroups(animal) {
  * lands on a populated editor. Under model B, `animal.devices` mirrors the latest configuration
  * snapshot, so in normal use this also matches what the export resolves.
  *
- * @param {object} animal
- * @returns {boolean}
+ * @param animal
+ * @returns
  */
-export function animalHasElectrodes(animal) {
+export function animalHasElectrodes(animal: unknown): boolean {
   return getAnimalElectrodeGroups(animal).length > 0;
 }
 
@@ -77,10 +140,10 @@ export function animalHasElectrodes(animal) {
  * (dangerously) adding a fresh group that would OVERWRITE the snapshot via the devices→snapshot
  * mirror in `applyAnimalUpdates`.
  *
- * @param {object} animal
- * @returns {boolean}
+ * @param animal
+ * @returns
  */
-export function animalElectrodeSetupNeedsSync(animal) {
+export function animalElectrodeSetupNeedsSync(animal: unknown): boolean {
   return getAnimalElectrodeGroups(animal).length === 0 && latestSnapshotElectrodeGroups(animal).length > 0;
 }
 
@@ -89,10 +152,10 @@ export function animalElectrodeSetupNeedsSync(animal) {
  * is presentation grouping for the checklist only — repair routing stays owned by
  * `repairTargetForIssue`. Returns null for issues that don't map to a setup item.
  *
- * @param {{code?: string, path?: string, instancePath?: string, field?: string}} issue
- * @returns {'subject'|'electrodes'|'cameras'|'data_acq'|null}
+ * @param issue
+ * @returns
  */
-function setupAreaForIssue(issue) {
+function setupAreaForIssue(issue: RepairableIssue): SetupArea | null {
   const code = issue?.code;
   // Raw-shape issues carry `field`/`focusPath` rather than a schema `path`, so fold them in
   // (e.g. a corrupt `cameras` collection → the Cameras setup item).
@@ -135,11 +198,11 @@ function setupAreaForIssue(issue) {
  * keyword the existing `animalSetupTabForFieldPath` understands, so the rendering surface can
  * deep-link to the owning animal-setup tab without the domain layer knowing route strings.
  *
- * @param {string} key - Setup item key.
- * @param {boolean} present - Whether the item has content.
- * @returns {{ label: string, fieldHint: (string|null) }}
+ * @param key - Setup item key.
+ * @param present - Whether the item has content.
+ * @returns
  */
-function actionForItem(key, present) {
+function actionForItem(key: string, present: boolean): SetupItemAction {
   switch (key) {
     case 'electrodes':
       return { label: present ? 'Review Electrodes' : 'Set Up Electrodes', fieldHint: 'electrode_groups' };
@@ -168,16 +231,20 @@ function actionForItem(key, present) {
  *  - present subject/days → `complete`;
  *  - a supplied error-severity issue mapped to the item → `has_errors` (overrides the above).
  *
- * @param {object} animal - The animal record.
- * @param {{ issues?: Array, recordingDayCount?: number }} [options] - `issues`: validation issues
- *   (already computed by the caller via `validateDay`) used only to upgrade items to `has_errors`;
- *   the checklist never computes validation itself. `recordingDayCount`: a recovery-aware count of
- *   the animal's recording-day RECORDS (indexed + recovered) from the caller's
- *   `classifyAnimalDays`; when omitted, the Recording Days item falls back to the raw `days` index
- *   length. Passing it keeps the checklist count consistent with the rest of the Workspace.
- * @returns {Array<{ key: string, label: string, state: string, count: number, present: boolean, action: { label: string, fieldHint: (string|null) } }>}
+ * @param animal - The animal record.
+ * @param options - Checklist options.
+ * @param options.issues - Validation issues (already computed by the caller via `validateDay`) used
+ *   only to upgrade items to `has_errors`; the checklist never computes validation itself.
+ * @param options.recordingDayCount - A recovery-aware count of the animal's recording-day RECORDS
+ *   (indexed + recovered) from the caller's `classifyAnimalDays`; when omitted, the Recording Days
+ *   item falls back to the raw `days` index length. Passing it keeps the checklist count consistent
+ *   with the rest of the Workspace.
+ * @returns
  */
-export function getAnimalSetupChecklist(animal, { issues = [], recordingDayCount } = {}) {
+export function getAnimalSetupChecklist(
+  animal: unknown,
+  { issues = [], recordingDayCount }: GetAnimalSetupChecklistOptions = {}
+): SetupChecklistItem[] {
   const subject = getAnimalSubject(animal);
   const electrodeCount = getAnimalElectrodeGroups(animal).length;
   const electrodesPresent = electrodeCount > 0;
@@ -187,12 +254,14 @@ export function getAnimalSetupChecklist(animal, { issues = [], recordingDayCount
   const dayCount =
     typeof recordingDayCount === 'number' ? recordingDayCount : getAnimalDayIds(animal).length;
 
-  // Which items carry an error-severity issue (per-item has_errors).
+  // Which items carry an error-severity issue (per-item has_errors). The `area is string` predicate
+  // is `filter(Boolean)` with a narrowing type guard (drops the `null` non-matches) so the resulting
+  // Set is `Set<string>` and `errorAreas.has(key)` typechecks below.
   const errorAreas = new Set(
     (Array.isArray(issues) ? issues : [])
       .filter((i) => i?.severity === 'error')
       .map(setupAreaForIssue)
-      .filter(Boolean)
+      .filter((area): area is SetupArea => Boolean(area))
   );
 
   const subjectPresent = Boolean(subject.subject_id);
@@ -201,17 +270,24 @@ export function getAnimalSetupChecklist(animal, { issues = [], recordingDayCount
   const daysPresent = dayCount > 0;
 
   /**
-   * @param {string} key
-   * @param {string} label
-   * @param {boolean} present
-   * @param {string} presentState - The state to use when present and error-free.
-   * @param {number} count
-   * @param {string} summary
-   * @returns {object} The checklist item.
+   * @param key
+   * @param label
+   * @param present
+   * @param presentState - The state to use when present and error-free.
+   * @param count
+   * @param summary
+   * @returns The checklist item.
    */
-  const item = (key, label, present, presentState, count, summary) => {
-    let state;
-    if (errorAreas.has(key)) state = SETUP_STATE.HAS_ERRORS;
+  const item = (
+    key: string,
+    label: string,
+    present: boolean,
+    presentState: string,
+    count: number,
+    summary: string
+  ): SetupChecklistItem => {
+    let state: string;
+    if (errorAreas.has(key as SetupArea)) state = SETUP_STATE.HAS_ERRORS;
     else if (!present) state = SETUP_STATE.NOT_STARTED;
     else state = presentState;
     return { key, label, state, count, present, summary, action: actionForItem(key, present) };
@@ -220,8 +296,8 @@ export function getAnimalSetupChecklist(animal, { issues = [], recordingDayCount
   // Electrodes are special: a mirror divergence (geometry only in the snapshot) is a
   // repair/sync state, NOT "not started" — the electrodes exist; the editable mirror is stale.
   const snapshotElectrodeCount = latestSnapshotElectrodeGroups(animal).length;
-  const electrodesItem = (() => {
-    let state;
+  const electrodesItem: SetupChecklistItem = (() => {
+    let state: string;
     if (errorAreas.has('electrodes') || electrodesNeedSync) state = SETUP_STATE.HAS_ERRORS;
     else if (!electrodesPresent) state = SETUP_STATE.NOT_STARTED;
     else state = SETUP_STATE.NEEDS_REVIEW;
@@ -265,15 +341,20 @@ export function getAnimalSetupChecklist(animal, { issues = [], recordingDayCount
  * `collectAnimalSetupIssues` consume); it does NOT re-derive validation. A null `mergedDay`
  * (the merge threw on a corrupt/missing configuration) is itself a blocking reason.
  *
- * @param {object} animal - The owning animal.
- * @param {object} day - The recording day record.
- * @param {object|null} mergedDay - `mergeDayMetadata(animal, day)`, or null if it threw.
- * @param {Array} [animalDays] - The animal's day records; enables the bad-channel monotonicity
+ * @param animal - The owning animal.
+ * @param day - The recording day record.
+ * @param mergedDay - `mergeDayMetadata(animal, day)`, or null if it threw.
+ * @param animalDays - The animal's day records; enables the bad-channel monotonicity
  *   export-block (a day that silently un-fails an earlier same-config bad channel reads as
  *   "Needs fixing"). Omitted → no cross-day comparison (back-compat).
- * @returns {string|null} The blocking reason, or null when nothing blocks export.
+ * @returns The blocking reason, or null when nothing blocks export.
  */
-function firstBlockingReason(animal, day, mergedDay, animalDays = []) {
+function firstBlockingReason(
+  animal: unknown,
+  day: ValidationModel,
+  mergedDay: ValidationModel | null,
+  animalDays: unknown[] = []
+): string | null {
   if (!mergedDay) return 'recording day configuration could not be loaded';
   let issues;
   try {
@@ -321,15 +402,20 @@ function firstBlockingReason(animal, day, mergedDay, animalDays = []) {
  * "not in day list" state separately (see RecordingDaysTab / ValidationSummary), since such a day is
  * not exportable until re-linked regardless of this status.
  *
- * @param {object} animal - The owning animal.
- * @param {object} day - The recording day record.
- * @param {object|null} mergedDay - `mergeDayMetadata(animal, day)`, or null if it threw.
- * @param {Array} [animalDays] - The animal's day records; forwarded to the export gate so the
+ * @param animal - The owning animal.
+ * @param day - The recording day record.
+ * @param mergedDay - `mergeDayMetadata(animal, day)`, or null if it threw.
+ * @param animalDays - The animal's day records; forwarded to the export gate so the
  *   bad-channel monotonicity block surfaces as a "Needs fixing" row (and folds into live readiness).
  *   Omitted → back-compat.
- * @returns {{ variant: 'needs_fixing'|'exported'|'validated'|'ready'|'draft', label: string }}
+ * @returns
  */
-export function getDayRowStatus(animal, day, mergedDay, animalDays = []) {
+export function getDayRowStatus(
+  animal: unknown,
+  day: ValidationModel,
+  mergedDay: ValidationModel | null,
+  animalDays: unknown[] = []
+): DayRowStatus {
   const reason = firstBlockingReason(animal, day, mergedDay, animalDays);
   if (reason) {
     return { variant: DAY_LIFECYCLE.NEEDS_FIXING, label: `${DAY_LIFECYCLE_LABEL.needs_fixing} — ${reason}` };
@@ -342,9 +428,10 @@ export function getDayRowStatus(animal, day, mergedDay, animalDays = []) {
   // (matching firstBlockingReason's throw handling), never a misleading "Draft". (computeStepStatus
   // re-runs validateDay internally; that second pass is acceptable O(days) per row for realistic
   // counts — see RecordingDaysTab's note.)
-  let stepStatus;
+  let stepStatus: ReturnType<typeof computeStepStatus>;
   try {
-    stepStatus = computeStepStatus(day, mergedDay, animal, animalDays);
+    // `reason === null` from firstBlockingReason guarantees `mergedDay` is non-null here.
+    stepStatus = computeStepStatus(day, mergedDay!, animal, animalDays);
   } catch (err) {
     // eslint-disable-next-line no-console
     console.error(`[workflow-status] could not compute readiness for day "${day?.id}":`, err);
@@ -391,26 +478,21 @@ export function getDayRowStatus(animal, day, mergedDay, animalDays = []) {
  * longer guards export — it drives the explanatory review copy and the pin control. (A
  * single-version animal is unambiguous, so it is not flagged.)
  *
- * @param {object} animal - The owning animal.
- * @param {object} day - The recording day.
- * @param {object|null} mergedDay - `mergeDayMetadata(animal, day)`, or null when it could not
+ * @param animal - The owning animal.
+ * @param day - The recording day.
+ * @param mergedDay - `mergeDayMetadata(animal, day)`, or null when it could not
  *   be resolved (corrupt/missing configuration) — treated as blocked, not ready.
- * @param {Array} [animalDays] - The animal's day records; forwarded to the export gate so the
+ * @param animalDays - The animal's day records; forwarded to the export gate so the
  *   cross-day bad-channel monotonicity block (a day that silently un-fails an earlier same-config
  *   bad channel) folds into readiness, matching the Export button. Omitted → back-compat no-op.
- * @returns {{
- *   configurationVersion: (number|null),
- *   latestConfigurationVersion: (number|null),
- *   isHistoricalConfiguration: boolean,
- *   usesUnpinnedConfiguration: boolean,
- *   hasElectrodes: boolean,
- *   readyForFailedChannels: boolean,
- *   exportStatus: string,
- *   blockedByRepair: boolean,
- *   readyForExportPreflight: boolean
- * }}
+ * @returns
  */
-export function getDayWorkflowStatus(animal, day, mergedDay, animalDays = []) {
+export function getDayWorkflowStatus(
+  animal: unknown,
+  day: ValidationModel,
+  mergedDay: ValidationModel | null,
+  animalDays: unknown[] = []
+): DayWorkflowStatus {
   const history = getConfigHistory(animal);
   const latest = history.length > 0 ? history[history.length - 1] : null;
   const latestConfigurationVersion = latest && latest.version != null ? latest.version : null;
@@ -423,8 +505,10 @@ export function getDayWorkflowStatus(animal, day, mergedDay, animalDays = []) {
   // A missing pin only ambiguous when more than one version exists.
   const usesUnpinnedConfiguration = !isPinned && history.length > 1;
 
+  // `mergedDay != null` (was `Boolean(mergedDay)`) so TS narrows it for the `.electrode_groups`
+  // read; the chained `&&` result is identically `false` when `mergedDay` is null.
   const hasElectrodes =
-    Boolean(mergedDay) &&
+    mergedDay != null &&
     Array.isArray(mergedDay.electrode_groups) &&
     mergedDay.electrode_groups.length > 0;
 

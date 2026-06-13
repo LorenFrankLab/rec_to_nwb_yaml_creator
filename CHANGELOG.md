@@ -9,6 +9,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Typed the `domain/` workflow/readiness layer (5 modules) under strict TS (refactor only, behavior-preserving).**
+  [domain/sectionStatus.js](src/domain/sectionStatus.ts) (per-section nav status + animal blocking-section
+  attribution), [domain/dayRecovery.js](src/domain/dayRecovery.ts) (the `DAY_STATUS` recovery classifier —
+  `classifyAnimalDays`/`classifyWorkspaceDays`/`dayHasArtifacts`), [domain/workflowCategories.js](src/domain/workflowCategories.ts)
+  (`CATEGORY_BY_CODE` + `workflowCategoryForIssue`/`groupIssuesByWorkflowCategory`),
+  [domain/workflowOwnership.js](src/domain/workflowOwnership.ts) (the ownership-pattern descriptors +
+  `ownershipForIssue`/`ownershipForFieldPath`/`ownershipForSection`), and
+  [domain/workflowStatus.js](src/domain/workflowStatus.ts) (`getAnimalSetupChecklist`/`getDayRowStatus`/`getDayWorkflowStatus`)
+  → `.ts`. Boundary types follow precedent: `unknown`-in for the shape-safe readers (`isRecord` type-guards),
+  `ValidationModel` (= `Record<string, any>`) for the merged-model day inputs (`workflowStatus`), canonical
+  `Animal`/`Day` where `mergeDayMetadata` is called (`sectionStatus.getAnimalBlockingSections`), and the
+  closed-enum tables typed `Readonly<Record<string, X>>` (matching their original `@type`). Behavior-equivalent
+  transforms (each commented): `dayRecovery`'s `record?.state` → `isRecord(record) ? record.state : undefined`
+  and two `isRecord(workspace?.x)` → `isRecord(workspace) && isRecord(workspace.x)`; `workflowStatus`'s
+  `Boolean(mergedDay)` → `mergedDay != null` (TS-narrowing), `computeStepStatus(day, mergedDay!, …)` (the
+  `firstBlockingReason`-returned-null invariant guarantees non-null), and `.filter((area): area is SetupArea =>
+  Boolean(area))`; the established `[issue?.code as string]` index casts and `byCategory.get(category)!` (guarded
+  by the preceding `has`/`set`). **One supporting type-only fix in the already-typed
+  [domain/stepStatus.ts](src/domain/stepStatus.ts):** `interface StepStatusMap` → `type StepStatusMap` so it
+  carries an implicit string index signature and is assignable to the export gate's `Record<string, string>`
+  param (`stepGate.isExportEnabled`) — a latent incompatibility the conversion exposed (never type-checked while
+  `workflowStatus` was `.js`); purely type-level, runtime unchanged. None of the 5 emit `code:` literals, so the
+  `workflowOwnership` `emittedCodesIn` floor is unaffected (`workflowOwnership` itself is converted and re-scanned).
+  `npm run typecheck` + `CI=true` build clean; golden baselines + targeted tests + 3 source-scanning guards (293)
+  pass; full suite 4793; e2e 104. **This completes the `domain/` migration except the `validation.js` barrel —
+  `domain/` is now 24 .ts / 1 .js.**
+
 - **Typed 6 pure `domain/` utility modules (batch 2b) under strict TS (refactor only, behavior-preserving).**
   [domain/badChannels.js](src/domain/badChannels.ts) (the bad-channel converter semantics: probe-wide
   toggle / later-row migration / invalid-mark interpretation),

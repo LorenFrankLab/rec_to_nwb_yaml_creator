@@ -30,16 +30,51 @@
 
 import { repairTargetForIssue } from './validation';
 import { WORKFLOW_CATEGORY, workflowCategoryForIssue } from './workflowCategories';
+import type { RepairableIssue, RepairSurface } from './repairRouting';
+
+/** User-facing vocabulary for one ownership pattern. */
+export interface OwnershipPatternMeta {
+  /** Plain-language label. */
+  label: string;
+  /** Visible ownership cue. */
+  cue: string;
+  /** Alternate cue (a few patterns carry one). */
+  altCue?: string;
+  /** Day-behavior copy. */
+  dayBehavior: string;
+  /** Suggested primary action. */
+  primaryAction: string;
+  /** Whether a correction to this kind of field can reach days other than the current one. */
+  reachesBeyondDay: boolean;
+}
+
+/** A resolved ownership descriptor (pattern meta + the per-issue edit surface and reach). */
+export interface OwnershipDescriptor {
+  /** The resolved {@link OWNERSHIP_PATTERN}. */
+  pattern: string;
+  /** Plain-language label. */
+  label: string;
+  /** Visible ownership cue. */
+  cue: string;
+  /** Alternate cue (present only when the pattern defines one). */
+  altCue?: string;
+  /** Day-behavior copy. */
+  dayBehavior: string;
+  /** Suggested primary action. */
+  primaryAction: string;
+  /** The headline "today-only edit" (`false`) vs "touches these N days" (`true`) switch. */
+  reachesBeyondDay: boolean;
+  /** The edit surface (always derived from `repairTargetForIssue`, never re-decided here). */
+  editSurface: RepairSurface;
+}
 
 /**
  * The seven internal ownership patterns plus the `recovered_data` repair pseudo-pattern.
  * `recovered_data` is NOT one of the seven ownership patterns — it is the state of
  * imported/corrupt data that must be cleaned up before it is trusted, kept here so every
  * validator issue code resolves to a descriptor (the completeness invariant).
- *
- * @type {Readonly<Record<string, string>>}
  */
-export const OWNERSHIP_PATTERN = Object.freeze({
+export const OWNERSHIP_PATTERN: Readonly<Record<string, string>> = Object.freeze({
   ANIMAL_SETUP: 'animal_setup',
   CONFIGURATION_VERSION: 'configuration_version',
   SETUP_DEFAULT_TO_DAY: 'setup_default_to_day',
@@ -56,10 +91,8 @@ export const OWNERSHIP_PATTERN = Object.freeze({
  * before commit ("touches these N days"). It describes whether a CORRECTION to this kind of
  * field can reach days other than the one in front of the user — not whether the common-case
  * edit propagates automatically (it never does silently).
- *
- * @type {Readonly<Record<string, {label: string, cue: string, altCue?: string, dayBehavior: string, primaryAction: string, reachesBeyondDay: boolean}>>}
  */
-export const OWNERSHIP_PATTERN_META = Object.freeze({
+export const OWNERSHIP_PATTERN_META: Readonly<Record<string, OwnershipPatternMeta>> = Object.freeze({
   [OWNERSHIP_PATTERN.ANIMAL_SETUP]: {
     label: 'Animal setup',
     cue: 'Shared setup',
@@ -128,10 +161,8 @@ export const OWNERSHIP_PATTERN_META = Object.freeze({
 /**
  * Default ownership pattern for each workflow category (`export_preflight` is a readiness state,
  * not an issue destination, so it is intentionally absent).
- *
- * @type {Readonly<Record<string, string>>}
  */
-export const CATEGORY_DEFAULT_PATTERN = Object.freeze({
+export const CATEGORY_DEFAULT_PATTERN: Readonly<Record<string, string>> = Object.freeze({
   [WORKFLOW_CATEGORY.ANIMAL_SETUP]: OWNERSHIP_PATTERN.ANIMAL_SETUP,
   [WORKFLOW_CATEGORY.DAY_METADATA]: OWNERSHIP_PATTERN.DAY_FACT,
   [WORKFLOW_CATEGORY.FAILED_CHANNELS]: OWNERSHIP_PATTERN.DAY_FACT,
@@ -144,10 +175,8 @@ export const CATEGORY_DEFAULT_PATTERN = Object.freeze({
  * parallel re-tabling of surface/category (those are reused) — it is the genuinely-new
  * ownership dimension. Keys must all exist in `SURFACE_BY_CODE` (locked by the completeness
  * test); values must be valid {@link OWNERSHIP_PATTERN}s.
- *
- * @type {Readonly<Record<string, string>>}
  */
-export const PATTERN_REFINEMENT_BY_CODE = Object.freeze({
+export const PATTERN_REFINEMENT_BY_CODE: Readonly<Record<string, string>> = Object.freeze({
   // animal_setup → configuration_version: probe/electrode geometry, locations, and channel maps
   // are the versioned physical snapshot that each day pins.
   channel_value_out_of_range: OWNERSHIP_PATTERN.CONFIGURATION_VERSION,
@@ -204,10 +233,8 @@ export const PATTERN_REFINEMENT_BY_CODE = Object.freeze({
  * first: `weight` before `subject`; the rig constants before everything (they live under
  * `technical`); `fs_gui`/`tasks` before `camera` (a `tasks[].camera_id` / `fs_gui_yamls[].camera_id`
  * is a task-epoch assignment, not a catalog identity edit).
- *
- * @type {ReadonlyArray<[string, string]>}
  */
-const PATTERN_BY_PATH_KEYWORD = Object.freeze([
+const PATTERN_BY_PATH_KEYWORD: ReadonlyArray<readonly [string, string]> = Object.freeze([
   // Day-exported session value even under the inherited subject record (subject.weight).
   ['weight', OWNERSHIP_PATTERN.DAY_FACT],
   // Recording-system rig constants copied into day.technical.
@@ -259,10 +286,10 @@ const PATTERN_BY_PATH_KEYWORD = Object.freeze([
  * so a documented state path (`animal.cameras[0].lens`) scans the same as an export path
  * (`cameras[0].lens`).
  *
- * @param {string} [pathOrSection]
- * @returns {string}
+ * @param pathOrSection
+ * @returns
  */
-function normalizePath(pathOrSection) {
+function normalizePath(pathOrSection?: string): string {
   return String(pathOrSection || '')
     .replace(/^\//, '')
     .replace(/\//g, '.')
@@ -274,10 +301,10 @@ function normalizePath(pathOrSection) {
  * Resolve the ownership pattern for a field path or section id via the ordered keyword scan,
  * falling back to the workflow-category default (then `day_fact`) when nothing matches.
  *
- * @param {string} [pathOrSection]
- * @returns {string} A valid {@link OWNERSHIP_PATTERN}.
+ * @param pathOrSection
+ * @returns A valid {@link OWNERSHIP_PATTERN}.
  */
-function patternForPath(pathOrSection) {
+function patternForPath(pathOrSection?: string): string {
   const normalized = normalizePath(pathOrSection);
   for (const [keyword, pattern] of PATTERN_BY_PATH_KEYWORD) {
     if (normalized.includes(keyword)) return pattern;
@@ -298,11 +325,11 @@ function patternForPath(pathOrSection) {
  *     `animal_setup`), which still propagates to all days;
  *   - a `none`-surface (read-only identity) keeps the pattern's inherent reach.
  *
- * @param {string} pattern - The resolved {@link OWNERSHIP_PATTERN}.
- * @param {'day'|'animal'|'none'} editSurface
- * @returns {boolean}
+ * @param pattern - The resolved {@link OWNERSHIP_PATTERN}.
+ * @param editSurface
+ * @returns
  */
-function issueReachesBeyondDay(pattern, editSurface) {
+function issueReachesBeyondDay(pattern: string, editSurface: RepairSurface): boolean {
   if (editSurface === 'animal') return true;
   if (editSurface === 'none') return OWNERSHIP_PATTERN_META[pattern].reachesBeyondDay;
   // day surface: local repair unless it is a constant animal fact edited from the day.
@@ -316,12 +343,16 @@ function issueReachesBeyondDay(pattern, editSurface) {
  * inherent reach (used when describing a FIELD/section); an issue may override it with the
  * surface-aware {@link issueReachesBeyondDay}.
  *
- * @param {string} pattern - A valid {@link OWNERSHIP_PATTERN}.
- * @param {'day'|'animal'|'none'} editSurface
- * @param {boolean} [reachesBeyondDay] - Override for the pattern default.
- * @returns {{pattern: string, label: string, cue: string, altCue?: string, dayBehavior: string, primaryAction: string, reachesBeyondDay: boolean, editSurface: string}}
+ * @param pattern - A valid {@link OWNERSHIP_PATTERN}.
+ * @param editSurface
+ * @param reachesBeyondDay - Override for the pattern default.
+ * @returns
  */
-function buildDescriptor(pattern, editSurface, reachesBeyondDay) {
+function buildDescriptor(
+  pattern: string,
+  editSurface: RepairSurface,
+  reachesBeyondDay?: boolean
+): OwnershipDescriptor {
   const meta = OWNERSHIP_PATTERN_META[pattern] || OWNERSHIP_PATTERN_META[OWNERSHIP_PATTERN.DAY_FACT];
   return {
     pattern,
@@ -342,13 +373,13 @@ function buildDescriptor(pattern, editSurface, reachesBeyondDay) {
  * camera selection or config pin does not falsely warn "touches N days"). Robust to a null/empty
  * issue (falls back to the day-metadata default, matching `workflowCategoryForIssue`).
  *
- * @param {{code?: string, path?: string, instancePath?: string, step?: string, repairSurface?: string, ownerSurface?: string}} [issue]
- * @returns {{pattern: string, label: string, cue: string, altCue?: string, dayBehavior: string, primaryAction: string, reachesBeyondDay: boolean, editSurface: string}}
+ * @param issue
+ * @returns
  */
-export function ownershipForIssue(issue) {
-  const safeIssue = issue || {};
+export function ownershipForIssue(issue?: RepairableIssue | null): OwnershipDescriptor {
+  const safeIssue: RepairableIssue = issue || {};
   const editSurface = repairTargetForIssue(safeIssue).surface;
-  const refined = PATTERN_REFINEMENT_BY_CODE[safeIssue.code];
+  const refined = PATTERN_REFINEMENT_BY_CODE[safeIssue.code as string];
   const pattern =
     refined ||
     CATEGORY_DEFAULT_PATTERN[workflowCategoryForIssue(safeIssue)] ||
@@ -361,10 +392,10 @@ export function ownershipForIssue(issue) {
  * state path like `day.technical.raw_data_to_volts`). The pattern is resolved by the whole-path
  * keyword scan; the edit surface is reused from `repairTargetForIssue` (path derivation).
  *
- * @param {string} [fieldPath]
- * @returns {{pattern: string, label: string, cue: string, altCue?: string, dayBehavior: string, primaryAction: string, reachesBeyondDay: boolean, editSurface: string}}
+ * @param fieldPath
+ * @returns
  */
-export function ownershipForFieldPath(fieldPath) {
+export function ownershipForFieldPath(fieldPath?: string): OwnershipDescriptor {
   return buildDescriptor(patternForPath(fieldPath), repairTargetForIssue({ path: fieldPath }).surface);
 }
 
@@ -374,9 +405,9 @@ export function ownershipForFieldPath(fieldPath) {
  * surface is reused from `repairTargetForIssue` so a section descriptor and an issue descriptor
  * on the same domain cannot disagree.
  *
- * @param {string} sectionId
- * @returns {{pattern: string, label: string, cue: string, altCue?: string, dayBehavior: string, primaryAction: string, reachesBeyondDay: boolean, editSurface: string}}
+ * @param sectionId
+ * @returns
  */
-export function ownershipForSection(sectionId) {
+export function ownershipForSection(sectionId: string): OwnershipDescriptor {
   return buildDescriptor(patternForPath(sectionId), repairTargetForIssue({ path: sectionId }).surface);
 }

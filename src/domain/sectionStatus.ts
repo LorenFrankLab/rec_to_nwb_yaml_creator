@@ -21,9 +21,10 @@ import {
 import { mergeDayMetadata } from '../state/workspaceUtils';
 import { validateDay, repairTargetForIssue, animalSetupTabForFieldPath } from './validation';
 import { optoFieldsPresence } from './optoCompleteness';
+import type { Animal, Day } from '../state/workspaceTypes';
 
 /** Section status values. `blocking` (Phase 3a.5) is computed separately — see getAnimalBlockingSections. */
-export const SECTION_STATUS = {
+export const SECTION_STATUS: Readonly<Record<string, string>> = {
   TODO: 'todo',
   NONE: 'none',
 };
@@ -33,7 +34,7 @@ export const SECTION_STATUS = {
  * {@link module:validation/rulesValidation} `partial_configuration` (rulesValidation.js): opto is
  * gated on FOUR fields each being present and non-empty.
  */
-export const OPTO_COMPLETENESS = {
+export const OPTO_COMPLETENESS: Readonly<Record<string, string>> = {
   COMPLETE: 'complete',
   PARTIAL: 'partial',
   NONE: 'none',
@@ -49,10 +50,10 @@ export const OPTO_COMPLETENESS = {
  * the hollow-○ todo path owns). Shape-safe: a malformed `optogenetics` yields NONE rather than
  * throwing.
  *
- * @param {object} animal - The animal record.
- * @returns {string} One of {@link OPTO_COMPLETENESS}.
+ * @param animal - The animal record.
+ * @returns One of {@link OPTO_COMPLETENESS}.
  */
-export function getAnimalOptoCompleteness(animal) {
+export function getAnimalOptoCompleteness(animal: Animal): string {
   const opto = animal?.optogenetics;
   if (!opto || typeof opto !== 'object' || Array.isArray(opto)) return OPTO_COMPLETENESS.NONE;
   // SAME shared predicate as the export gate (rulesValidation `partial_configuration`), reading the
@@ -73,7 +74,7 @@ export function getAnimalOptoCompleteness(animal) {
  * — agreeing with both the nav's "incomplete" count and the export gate — instead of a misleading
  * "Done" that contradicts them.
  */
-const SETUP_SECTION_IS_CONFIGURED = {
+const SETUP_SECTION_IS_CONFIGURED: Record<string, (animal: Animal) => boolean> = {
   'electrode-groups': (animal) => getAnimalElectrodeGroups(animal).length > 0,
   'recording-system': (animal) => getDataAcqDevices(animal).length > 0,
   cameras: (animal) => getAnimalCameras(animal).length > 0,
@@ -84,11 +85,11 @@ const SETUP_SECTION_IS_CONFIGURED = {
 /**
  * The section-nav status for one section of one animal (Phase 1: `todo` | `none`).
  *
- * @param {object} animal - The animal record.
- * @param {string} sectionKey - A route `:tab` key (e.g. `cameras`, `days`).
- * @returns {string} `SECTION_STATUS.TODO` for a never-configured setup section, else `NONE`.
+ * @param animal - The animal record.
+ * @param sectionKey - A route `:tab` key (e.g. `cameras`, `days`).
+ * @returns `SECTION_STATUS.TODO` for a never-configured setup section, else `NONE`.
  */
-export function getAnimalSectionStatus(animal, sectionKey) {
+export function getAnimalSectionStatus(animal: Animal, sectionKey: string): string {
   const isConfigured = SETUP_SECTION_IS_CONFIGURED[sectionKey];
   // Day-work sections (and any unknown key) carry no setup todo.
   if (!isConfigured) return SECTION_STATUS.NONE;
@@ -101,10 +102,12 @@ export function getAnimalSectionStatus(animal, sectionKey) {
  * depend on the workspace day map + the export validator and are computed by the view. Read through
  * the shape-safe selectors, so a malformed/recovered animal yields 0 rather than crashing.
  *
- * @param {object} animal - The animal record.
- * @returns {{ 'electrode-groups': number, 'recording-system': number, cameras: number }}
+ * @param animal - The animal record.
+ * @returns
  */
-export function getAnimalSetupCounts(animal) {
+export function getAnimalSetupCounts(
+  animal: Animal
+): { 'electrode-groups': number; 'recording-system': number; cameras: number } {
   return {
     'electrode-groups': getAnimalElectrodeGroups(animal).length,
     'recording-system': getDataAcqDevices(animal).length,
@@ -121,18 +124,18 @@ export function getAnimalSetupCounts(animal) {
  * Read-only over the existing validators; a day whose config can't be merged is skipped (its
  * corruption surfaces via the raw-shape banner, not here).
  *
- * @param {object} animal - The animal record.
- * @param {object} [days] - The workspace day map (`model.workspace.days`).
- * @returns {Set<string>} Tab keys (e.g. `electrode-groups`, `cameras`) with a blocking error.
+ * @param animal - The animal record.
+ * @param days - The workspace day map (`model.workspace.days`).
+ * @returns Tab keys (e.g. `electrode-groups`, `cameras`) with a blocking error.
  */
-export function getAnimalBlockingSections(animal, days) {
-  const blocking = new Set();
+export function getAnimalBlockingSections(animal: Animal, days?: Record<string, Day>): Set<string> {
+  const blocking = new Set<string>();
   if (!animal) return blocking;
 
   for (const dayId of getAnimalDayIds(animal)) {
     const day = days?.[dayId];
     if (!day) continue;
-    let merged;
+    let merged: Record<string, unknown>;
     try {
       merged = mergeDayMetadata(animal, day);
     } catch {

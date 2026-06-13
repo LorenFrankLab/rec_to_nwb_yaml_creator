@@ -40,15 +40,21 @@ interface StepStatusMergedDay {
   }>;
 }
 
-/** The per-step status map `computeStepStatus` returns (the export gate reads `export`). */
-interface StepStatusMap {
+/**
+ * The per-step status map `computeStepStatus` returns (the export gate reads `export`).
+ *
+ * A `type` alias (not an `interface`) so it carries an implicit string index signature and is
+ * therefore assignable to the export gate's `Record<string, string>` param
+ * (`stepGate.isExportEnabled`), which indexes it by an arbitrary `stepId`.
+ */
+type StepStatusMap = {
   overview: StepStatus;
   devices: StepStatus;
   epochs: StepStatus;
   behavioral: StepStatus;
   validation: StepStatus;
   export: StepStatus;
-}
+};
 
 /**
  * The closed vocabulary of per-step statuses `computeStepStatus` produces. Named + frozen so the
