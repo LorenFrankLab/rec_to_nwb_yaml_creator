@@ -9,6 +9,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Typed `pages/AnimalView` + `layouts/AppLayout` — all 3 files `.jsx`→`.tsx` (refactor only, behavior-preserving) — page cycle 13. `pages/` and `layouts/` are now 100% TypeScript.**
+  The tabbed animal shell (`pages/AnimalView/index`, `ConfigVersionContext`) and the app routing
+  layout (`layouts/AppLayout`). Props→interfaces; the pure helpers (`shouldInterceptNavDiscard`,
+  `renderPanel`) got typed context interfaces (`NavDiscardContext`/`RenderPanelContext`); PropTypes
+  dropped; JSDoc trimmed; stray `import React` removed. Behavior-equivalent non-type changes only:
+  `tabIndex={-1}` (was `'-1'`, DOM-identical, 3 sites); `panelRef = useRef<HTMLElement>(null)` and
+  `querySelectorAll<HTMLElement>` / `querySelector<HTMLElement>` (erased generics) for the `?field=`
+  repair-highlight DOM walk; `useState<string | null>`; `getAnimalBlockingSections(animal as Animal, …)`
+  in the pre-not-found-guard `useMemo` (the callee has its own `if (!animal)` guard, so the cast is
+  runtime-sound); `useMemo<Record<string, string> | null>` for `sectionCounts` (the object-spread of
+  `Object.fromEntries` drops its index signature, so the annotation restores `[item.key]` indexing —
+  every value is provably a string). AppLayout's workspace destructure stays maximally faithful to the
+  original per-key defaults via `const { animals = {}, days = {} } = model?.workspace ?? {}` (`??` is
+  value-identical to the original `||` for a never-falsy `Workspace` object — no cast). `AnimalView`
+  props typed required (`{ animalId: string; tab: string }`) to match its sole caller (AppLayout, from
+  the `Record<string,string>` route params). `npm run typecheck` and `CI=true` build clean (net +18 B);
+  golden baselines, AnimalView + AppLayout suites with the 3 source-scanning guards, full suite 4793,
+  e2e 104 all pass. code-reviewer: no findings ≥80 confidence; its one sub-50 note (the AppLayout
+  destructure) was adopted (cast removed in favor of the faithful per-key-default form).
 - **Typed `pages/Home` + `pages/AnimalWorkspace` — all 9 files `.jsx`→`.tsx` (refactor only, behavior-preserving) — page cycle 12.**
   Home (`AnimalCreationForm`, `index`) and the workspace pane pieces (`AnimalSetupCard`,
   `DuplicateDayModal`, `ExistingDataReview`, `DayList`, `ImportYamlDialog`, `RecordingDaysTab`, `index`).

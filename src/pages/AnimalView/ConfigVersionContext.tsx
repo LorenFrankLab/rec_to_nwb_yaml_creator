@@ -9,16 +9,15 @@
  *
  * Single-version animals (no reconfiguration) render nothing — there is no boundary to explain.
  */
-import PropTypes from 'prop-types';
 import { getConfigHistory } from '../../state/workspaceSelectors';
 import './ConfigVersionContext.css';
 
-/**
- * @param {object} props
- * @param {object} props.animal - The animal whose configuration history to describe.
- * @returns {React.Element|null} A note listing each version boundary, or null when single-version.
- */
-export default function ConfigVersionContext({ animal }) {
+interface ConfigVersionContextProps {
+  /** The animal whose configuration history to describe (read through the tolerant selector). */
+  animal: unknown;
+}
+
+export default function ConfigVersionContext({ animal }: ConfigVersionContextProps) {
   const history = getConfigHistory(animal);
   // Sort by version so an out-of-order persisted history still reads as a timeline. A single
   // version (or none) means no reconfiguration ever happened — nothing to explain.
@@ -47,8 +46,3 @@ export default function ConfigVersionContext({ animal }) {
   );
 }
 
-ConfigVersionContext.propTypes = {
-  animal: PropTypes.shape({
-    configurationHistory: PropTypes.arrayOf(PropTypes.object),
-  }).isRequired,
-};

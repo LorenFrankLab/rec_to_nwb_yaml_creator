@@ -12,9 +12,9 @@
  * route-change focus fires only on `view` change, not `:tab` (Task 1.1b).
  */
 
-import React, { useEffect, useRef, useState, useMemo } from 'react';
-import PropTypes from 'prop-types';
+import { useEffect, useRef, useState, useMemo, type MouseEvent as ReactMouseEvent } from 'react';
 import { useStoreContext } from '../../state/StoreContext';
+import type { Animal } from '../../state/workspaceTypes';
 import { getAnimalSubject, getAnimalDayIds } from '../../state/workspaceSelectors';
 import { getPresentDayCount } from '../../domain/dayRecovery';
 import {
@@ -50,7 +50,7 @@ import './AnimalView.css';
  * ownership/blast-radius (charter "tab → content map"). Only tabs extracted so far carry an
  * entry; later sub-phases add the rest.
  */
-const TAB_SCOPE = {
+const TAB_SCOPE: Record<string, string> = {
   'electrode-groups':
     'Shared across all recording days — a hardware change starts a new version (with an audit trail).',
   // Recording system is an animal-wide CATALOG of acquisition systems; each recording day uses one
@@ -88,7 +88,7 @@ const SECTION_GROUPS = [
 
 /** Map of tab key -> display label, derived from SECTION_GROUPS. */
 const TAB_LABEL = Object.fromEntries(
-  SECTION_GROUPS.flatMap((g) => g.items).map((i) => [i.key, i.label])
+  SECTION_GROUPS.flatMap((g) => g.items).map((i): [string, string] => [i.key, i.label])
 );
 
 /**
@@ -103,10 +103,8 @@ const CORRUPTION_BANNER_FIELDS = ['cameras', 'data_acq_device', 'configurationHi
  * repair deep-link scrolls to and highlights (Phase 3a.3). A requested field matches a tab's anchor
  * when, with array indices stripped, it equals or is prefixed by the anchor (so
  * `data_acq_device[0].name` matches `data_acq_device`).
- *
- * @type {Record<string, string>}
  */
-const TAB_FIELD_ANCHOR = {
+const TAB_FIELD_ANCHOR: Record<string, string> = {
   'electrode-groups': 'electrode_groups',
   'recording-system': 'data_acq_device',
   cameras: 'cameras',
@@ -116,10 +114,27 @@ const TAB_FIELD_ANCHOR = {
 
 /**
  * Strip array indices so a specific field path can be matched against a coarse section anchor.
- * @param {string} value - A field path or anchor.
- * @returns {string} The path with `[i]` / `.i` index segments removed.
  */
-const normalizeFieldPath = (value) => String(value || '').replace(/\[\d+\]/g, '').replace(/\.\d+/g, '');
+const normalizeFieldPath = (value: unknown): string =>
+  String(value || '').replace(/\[\d+\]/g, '').replace(/\.\d+/g, '');
+
+/** Decision inputs for {@link shouldInterceptNavDiscard}. */
+interface NavDiscardContext {
+  /** The :tab the clicked link points at. */
+  targetKey: string;
+  /** The currently active :tab. */
+  currentTab: string;
+  /** Whether the active setup editor reports unsaved edits. */
+  pendingEdits: boolean;
+  /** The click event (modifier keys / mouse button). */
+  event: {
+    metaKey?: boolean;
+    ctrlKey?: boolean;
+    shiftKey?: boolean;
+    altKey?: boolean;
+    button?: number;
+  };
+}
 
 /**
  * Pure decision for the section-nav unsaved-edit guard (charter decision 2): should a nav click be
@@ -134,16 +149,8 @@ const normalizeFieldPath = (value) => String(value || '').replace(/\[\d+\]/g, ''
  * every shipped setup editor that sets `pendingEdits` is a focus-trapping modal whose overlay eats
  * the nav click first (see the LATENT SAFETY NET note in AnimalView). Testing this decision directly
  * is the honest way to pin the guard's behavior. See AnimalView.navDiscardGuard.test.jsx.
- *
- * @param {object} ctx - Decision inputs.
- * @param {string} ctx.targetKey - The :tab the clicked link points at.
- * @param {string} ctx.currentTab - The currently active :tab.
- * @param {boolean} ctx.pendingEdits - Whether the active setup editor reports unsaved edits.
- * @param {{ metaKey?: boolean, ctrlKey?: boolean, shiftKey?: boolean, altKey?: boolean, button?: number }} ctx.event
- *   - The click event (modifier keys / mouse button).
- * @returns {boolean} True if the click should be intercepted for a discard confirm.
  */
-export function shouldInterceptNavDiscard({ targetKey, currentTab, pendingEdits, event }) {
+export function shouldInterceptNavDiscard({ targetKey, currentTab, pendingEdits, event }: NavDiscardContext): boolean {
   if (!pendingEdits || targetKey === currentTab) return false;
   if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) {
     return false;
@@ -151,22 +158,26 @@ export function shouldInterceptNavDiscard({ targetKey, currentTab, pendingEdits,
   return true;
 }
 
+/** Panel context for {@link renderPanel}. */
+interface RenderPanelContext {
+  /** The active tab (route `:tab` segment). */
+  tab: string;
+  /** The animal whose section to render. */
+  animalId: string;
+  /** The resolved animal record (for config-version legibility / status). */
+  animal: Animal;
+  /** Pending-edit reporter the setup containers call so the shell can guard a section-nav switch. */
+  onPendingEditsChange: (pending: boolean) => void;
+  /** Field-update callback the `{ animal, onFieldUpdate }` containers persist through. */
+  onFieldUpdate: (field: string, value: unknown) => void;
+}
+
 /**
  * Render the active tab's panel content. The `days` tab hosts the shared RecordingDaysTab; the
  * setup tabs host their extracted containers (Phase 3-2/3-3); only `export` still shows the
  * Phase-1 placeholder until its sub-phase (3-5) lands.
- *
- * @param {object} ctx - Panel context.
- * @param {string} ctx.tab - The active tab (route `:tab` segment).
- * @param {string} ctx.animalId - The animal whose section to render.
- * @param {object} ctx.animal - The resolved animal record (for config-version legibility / status).
- * @param {Function} ctx.onPendingEditsChange - Pending-edit reporter the setup containers call so
- *   the shell can guard a section-nav switch (charter decision 2).
- * @param {Function} ctx.onFieldUpdate - Field-update callback the `{ animal, onFieldUpdate }`
- *   containers (recording-system / cameras / dio) persist through.
- * @returns {React.Element}
  */
-function renderPanel({ tab, animalId, animal, onPendingEditsChange, onFieldUpdate }) {
+function renderPanel({ tab, animalId, animal, onPendingEditsChange, onFieldUpdate }: RenderPanelContext) {
   switch (tab) {
     case 'days':
       return <RecordingDaysTab animalId={animalId} />;
@@ -228,15 +239,18 @@ function renderPanel({ tab, animalId, animal, onPendingEditsChange, onFieldUpdat
   }
 }
 
+/** Props for {@link AnimalView}. */
+interface AnimalViewProps {
+  /** The animal whose view to render. */
+  animalId: string;
+  /** The active tab (route `:tab` segment). */
+  tab: string;
+}
+
 /**
  * AnimalView component.
- *
- * @param {object} props
- * @param {string} props.animalId - The animal whose view to render.
- * @param {string} props.tab - The active tab (route `:tab` segment).
- * @returns {React.Element}
  */
-export function AnimalView({ animalId, tab }) {
+export function AnimalView({ animalId, tab }: AnimalViewProps) {
   const { model, actions, persistence } = useStoreContext();
   const { animals = {} } = model.workspace;
   const animal = animalId ? animals[animalId] : null;
@@ -262,7 +276,9 @@ export function AnimalView({ animalId, tab }) {
   // the export validator + the repair-routing attribution — no second mapping. Memoized off the
   // animal + days so it recomputes only when the data changes.
   const blockingSections = useMemo(
-    () => getAnimalBlockingSections(animal, model.workspace.days),
+    // `animal` may be null here (the not-found guard is below); getAnimalBlockingSections tolerates
+    // a null animal (its own guard returns an empty set), so the cast is sound at runtime.
+    () => getAnimalBlockingSections(animal as Animal, model.workspace.days),
     [animal, model.workspace.days]
   );
 
@@ -271,7 +287,7 @@ export function AnimalView({ animalId, tab }) {
   // view uses — `classifyAnimalDays` (present day records) and the export validator's per-animal
   // rows (`buildAnimalRows`, "N ready" = valid days) — so the nav can never disagree with the days
   // tab / the export tab. Memoized off the animal + days.
-  const sectionCounts = useMemo(() => {
+  const sectionCounts = useMemo<Record<string, string> | null>(() => {
     if (!animal) return null;
     const dayCount = getPresentDayCount(animalId, animal, model.workspace.days);
     const readyCount = buildAnimalRows(model.workspace, animalId).filter(
@@ -281,7 +297,7 @@ export function AnimalView({ animalId, tab }) {
       days: String(dayCount),
       export: `${readyCount} ready`,
       ...Object.fromEntries(
-        Object.entries(getAnimalSetupCounts(animal)).map(([k, n]) => [k, String(n)])
+        Object.entries(getAnimalSetupCounts(animal)).map(([k, n]): [string, string] => [k, String(n)])
       ),
       // Opto count is HONEST about completeness (decision 10): COMPLETE (all four export-gated
       // fields present) → "used"; PARTIAL (some-but-not-all) → "incomplete" so the count AGREES
@@ -293,7 +309,7 @@ export function AnimalView({ animalId, tab }) {
     };
   }, [animal, animalId, model.workspace]);
 
-  const panelRef = useRef(null);
+  const panelRef = useRef<HTMLElement>(null);
   const isFirstRender = useRef(true);
 
   // Unsaved-edit guard (charter decision 2). A setup container reports `true` while its
@@ -311,7 +327,7 @@ export function AnimalView({ animalId, tab }) {
   // Pinned by AnimalView.navDiscardGuard.test.jsx (the browser path is unreachable, so it tests the
   // guard's decision directly). DO NOT remove because "nothing triggers it" — it is the net.
   const [pendingEdits, setPendingEdits] = useState(false);
-  const [pendingNavTab, setPendingNavTab] = useState(null);
+  const [pendingNavTab, setPendingNavTab] = useState<string | null>(null);
 
   // Task 1.1b: AppLayout focuses #main-content on `view` change (legacy -> animal-view), but a
   // `:tab` change keeps the same view, so AppLayout won't fire. Move focus to the panel on tab
@@ -333,13 +349,13 @@ export function AnimalView({ animalId, tab }) {
   useEffect(() => {
     const field = routeContext.field;
     if (!field) return undefined;
-    let highlighted = null;
-    let removeTimer = null;
+    let highlighted: HTMLElement | null = null;
+    let removeTimer: ReturnType<typeof setTimeout> | null = null;
     const raf = requestAnimationFrame(() => {
       const panel = panelRef.current;
       if (!panel) return;
       const requested = normalizeFieldPath(field);
-      const match = Array.from(panel.querySelectorAll('[data-field-path]')).find((el) => {
+      const match = Array.from(panel.querySelectorAll<HTMLElement>('[data-field-path]')).find((el) => {
         const anchor = normalizeFieldPath(el.getAttribute('data-field-path'));
         return anchor !== '' && (requested === anchor || requested.startsWith(anchor));
       });
@@ -352,7 +368,7 @@ export function AnimalView({ animalId, tab }) {
       // Editor, which focuses the owning control). A setup table with no inline input still
       // exposes an "Edit"/action button, so this lands keyboard/SR users inside the section.
       // If the section somehow has no focusable control, keep the existing panel focus.
-      const focusTarget = match.querySelector(
+      const focusTarget = match.querySelector<HTMLElement>(
         'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), ' +
           'textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
       );
@@ -391,7 +407,7 @@ export function AnimalView({ animalId, tab }) {
     return (
       <main
         id="main-content"
-        tabIndex="-1"
+        tabIndex={-1}
         role="main"
         aria-labelledby="animal-view-heading"
         className="error-state"
@@ -416,10 +432,8 @@ export function AnimalView({ animalId, tab }) {
    * clicks and the no-pending-edits case fall through to the link's normal hash navigation. The
    * intercept DECISION is the pure {@link shouldInterceptNavDiscard} (unit-pinned), since the real
    * browser path is currently unreachable — see the LATENT SAFETY NET note on `pendingEdits`.
-   * @param {React.MouseEvent} event - The anchor click.
-   * @param {string} targetKey - The :tab the link points at.
    */
-  const handleNavClick = (event, targetKey) => {
+  const handleNavClick = (event: ReactMouseEvent<HTMLAnchorElement>, targetKey: string) => {
     if (!shouldInterceptNavDiscard({ targetKey, currentTab: tab, pendingEdits, event })) return;
     event.preventDefault();
     setPendingNavTab(targetKey);
@@ -434,7 +448,7 @@ export function AnimalView({ animalId, tab }) {
   };
 
   return (
-    <main id="main-content" tabIndex="-1" role="main" aria-labelledby="animal-view-heading">
+    <main id="main-content" tabIndex={-1} role="main" aria-labelledby="animal-view-heading">
       <header className="animal-view-header">
         <h1 id="animal-view-heading">{animal.id}</h1>
         <span className="animal-view-idbadge">animal ID</span>
@@ -542,7 +556,7 @@ export function AnimalView({ animalId, tab }) {
         <section
           className="animal-view-panel"
           aria-label={TAB_LABEL[tab] || 'Section'}
-          tabIndex="-1"
+          tabIndex={-1}
           ref={panelRef}
         >
           {TAB_SCOPE[tab] && (
@@ -600,10 +614,5 @@ export function AnimalView({ animalId, tab }) {
     </main>
   );
 }
-
-AnimalView.propTypes = {
-  animalId: PropTypes.string,
-  tab: PropTypes.string,
-};
 
 export default AnimalView;

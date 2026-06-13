@@ -7,8 +7,10 @@
  * @module layouts/AppLayout
  */
 
-import React, { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import type { MouseEvent as ReactMouseEvent } from 'react';
 import { useHashRouter } from '../hooks/useHashRouter';
+import type { RouteInfo } from '../hooks/useHashRouter';
 import { isFeatureEnabled } from '../featureFlags';
 import { useStoreContext } from '../state/StoreContext';
 import { useUnsavedWorkGuard } from '../hooks/useUnsavedWorkGuard';
@@ -28,12 +30,10 @@ import { LegacyFormView } from '../pages/LegacyFormView';
 import logo from '../logo.png';
 
 /**
- * Get view name for screen reader announcements
- * @param {string} view - Current view identifier
- * @returns {string} Human-readable view name
+ * Get view name for screen reader announcements.
  */
-function getViewName(view) {
-  const viewNames = {
+function getViewName(view: string): string {
+  const viewNames: Record<string, string> = {
     legacy: 'Metadata Form',
     home: 'Home - Animal Selection',
     workspace: 'Animal Workspace',
@@ -51,9 +51,9 @@ function getViewName(view) {
  * text — a polite live region only re-announces when its content actually changes, so an identical
  * "Navigated to Day Editor" on every day switch would be silently swallowed.
  *
- * @param {{ view: string, params: object }} route - The current route.
+ * @param route - The current route.
  */
-function announceRouteChange(route) {
+function announceRouteChange(route: RouteInfo) {
   const liveRegion = document.getElementById('route-announcer');
   if (!liveRegion) return;
   const detail = route.view === 'day' && route.params?.id ? `: ${route.params.id}` : '';
@@ -61,13 +61,9 @@ function announceRouteChange(route) {
 }
 
 /**
- * Handle skip link clicks
- * Ensures target exists before attempting to focus
- *
- * @param {Event} e - Click event
- * @param {string} targetId - ID of element to focus
+ * Handle skip link clicks. Ensures target exists before attempting to focus.
  */
-function handleSkipLinkClick(e, targetId) {
+function handleSkipLinkClick(e: ReactMouseEvent<HTMLAnchorElement>, targetId: string) {
   e.preventDefault();
 
   // Wait for React to finish rendering
@@ -114,12 +110,12 @@ export function AppLayout() {
   // ONE shared type-to-confirm dialog serves it (and "+ New animal…" routes to the workspace's
   // single inline create panel) — neither host is duplicated. `pendingDeleteAnimalId` is the animal
   // a switcher row asked to delete (null when closed).
-  const { animals = {}, days = {} } = model?.workspace || {};
-  const [pendingDeleteAnimalId, setPendingDeleteAnimalId] = useState(null);
+  const { animals = {}, days = {} } = model?.workspace ?? {};
+  const [pendingDeleteAnimalId, setPendingDeleteAnimalId] = useState<string | null>(null);
   const pendingDeleteAnimal = pendingDeleteAnimalId ? animals[pendingDeleteAnimalId] : null;
   // The animal whose "Edit profile…" dialog is open (from a switcher row ⋮). Hosted here so the
   // dropdown can edit any animal's shared subject facts without navigating to it.
-  const [pendingProfileAnimalId, setPendingProfileAnimalId] = useState(null);
+  const [pendingProfileAnimalId, setPendingProfileAnimalId] = useState<string | null>(null);
   const pendingProfileAnimal = pendingProfileAnimalId ? animals[pendingProfileAnimalId] : null;
   const confirmDeleteAnimal = () => {
     const id = pendingDeleteAnimalId;
@@ -143,7 +139,7 @@ export function AppLayout() {
   // navigation / add are broadcast to whichever stepper is on screen; help opens a
   // dialog; Ctrl/Cmd+S flushes the workspace save.
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
-  const shortcutsTriggerRef = useRef(null);
+  const shortcutsTriggerRef = useRef<HTMLButtonElement>(null);
   // Open help; focus the trigger first so that when `?` opens the dialog (no element
   // focused), the Modal captures a real opener and returns focus to it on close.
   const openShortcuts = () => {
@@ -382,8 +378,8 @@ export function AppLayout() {
           AnimalView's "Animal not found" guard handles. */}
       <AnimalDeleteDialog
         isOpen={pendingDeleteAnimalId != null}
-        animalId={pendingDeleteAnimalId}
-        animal={pendingDeleteAnimal}
+        animalId={pendingDeleteAnimalId ?? undefined}
+        animal={pendingDeleteAnimal ?? undefined}
         days={days}
         onConfirm={confirmDeleteAnimal}
         onCancel={() => setPendingDeleteAnimalId(null)}
