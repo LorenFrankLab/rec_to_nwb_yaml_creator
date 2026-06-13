@@ -1,6 +1,11 @@
-import PropTypes from 'prop-types';
 import { ownershipForIssue } from '../../domain/workflowOwnership';
+import type { RepairableIssue } from '../../domain/repairRouting';
 import './IssueOwnershipHint.css';
+
+interface IssueOwnershipHintProps {
+  /** Issue to describe; forwarded verbatim to `ownershipForIssue` (which is total). */
+  issue?: RepairableIssue | null;
+}
 
 /**
  * A compact, understated ownership-pattern hint rendered next to a validation/export issue
@@ -14,12 +19,8 @@ import './IssueOwnershipHint.css';
  * stay on {@link RepairActionButton}, owned by `repairTargetForIssue`), and it does NOT regroup
  * issues (grouping stays on the workflow category). The copy is read verbatim from the single
  * ownership descriptor (`ownershipForIssue`), so it cannot drift from the matrix.
- *
- * @param {object} props
- * @param {{code?: string, path?: string, instancePath?: string}} [props.issue] - Issue to describe.
- * @returns {JSX.Element} The ownership hint (always renders — `ownershipForIssue` is total).
  */
-export default function IssueOwnershipHint({ issue }) {
+export default function IssueOwnershipHint({ issue }: IssueOwnershipHintProps) {
   const descriptor = ownershipForIssue(issue);
   return (
     <span className="issue-ownership-hint" data-ownership-pattern={descriptor.pattern}>
@@ -30,15 +31,3 @@ export default function IssueOwnershipHint({ issue }) {
     </span>
   );
 }
-
-IssueOwnershipHint.propTypes = {
-  issue: PropTypes.shape({
-    code: PropTypes.string,
-    path: PropTypes.string,
-    instancePath: PropTypes.string,
-  }),
-};
-
-IssueOwnershipHint.defaultProps = {
-  issue: null,
-};

@@ -1,4 +1,16 @@
-import PropTypes from 'prop-types';
+interface MalformedField {
+  key: string;
+  label: string;
+}
+
+interface MalformedCollectionNoticeProps {
+  /** The persisted day (may be corrupt; read defensively). */
+  day?: Record<string, unknown> | null;
+  /** The collections this step owns. */
+  fields: MalformedField[];
+  /** Reset a field to an empty array. */
+  onReset: (key: string) => void;
+}
 
 /**
  * MalformedCollectionNotice — repair surface for Boundary 1 (raw-shape) corruption.
@@ -9,17 +21,11 @@ import PropTypes from 'prop-types';
  * such field the owning step is responsible for, carrying `data-field-path={key}` (the
  * issue's `focusPath`) so the stepper's repair-focus lands here. Resetting writes `[]`,
  * clearing the raw-shape issue.
- *
- * @param {object} props
- * @param {object} props.day - The persisted day (may be corrupt; read defensively).
- * @param {Array<{key: string, label: string}>} props.fields - The collections this step owns.
- * @param {(key: string) => void} props.onReset - Reset a field to an empty array.
- * @returns {JSX.Element|null}
  */
-export default function MalformedCollectionNotice({ day, fields, onReset }) {
+export default function MalformedCollectionNotice({ day, fields, onReset }: MalformedCollectionNoticeProps) {
   const isRecord = day !== null && typeof day === 'object' && !Array.isArray(day);
   const malformed = isRecord
-    ? fields.filter((f) => day[f.key] != null && !Array.isArray(day[f.key]))
+    ? fields.filter((f) => day![f.key] != null && !Array.isArray(day![f.key]))
     : [];
 
   if (malformed.length === 0) return null;
@@ -44,15 +50,3 @@ export default function MalformedCollectionNotice({ day, fields, onReset }) {
     </section>
   );
 }
-
-MalformedCollectionNotice.propTypes = {
-  day: PropTypes.object,
-  fields: PropTypes.arrayOf(
-    PropTypes.shape({ key: PropTypes.string.isRequired, label: PropTypes.string.isRequired })
-  ).isRequired,
-  onReset: PropTypes.func.isRequired,
-};
-
-MalformedCollectionNotice.defaultProps = {
-  day: null,
-};

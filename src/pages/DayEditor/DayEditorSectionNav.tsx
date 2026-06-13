@@ -1,4 +1,27 @@
-import PropTypes from 'prop-types';
+import type { StepStatus } from '../../domain/stepStatus';
+
+interface SectionNavItem {
+  id: string;
+  label: string;
+}
+
+interface SectionNavGroup {
+  label: string;
+  items: SectionNavItem[];
+}
+
+interface DayEditorSectionNavProps {
+  /** Grouped section descriptors, in display order. Each `item.id` must be a step id. */
+  groups: SectionNavGroup[];
+  /** The active section id. */
+  currentStep: string;
+  /** Status map: { stepId: 'valid'|'incomplete'|'error'|'pending' }. */
+  stepStatus: Record<string, StepStatus>;
+  /** Section-switch callback: (stepId) => void. */
+  onNavigate: (stepId: string) => void;
+  /** Issues remaining to fix; shown on the Validation item if > 0. */
+  toFixCount?: number;
+}
 
 /**
  * Day Editor Section Nav — a tabbed, free-navigation section nav for the Day Editor.
@@ -13,17 +36,8 @@ import PropTypes from 'prop-types';
  * `isExportEnabled`/`exportBlocked`), not as a nav lock. Each item still shows its
  * `computeStepStatus` glyph (✓ valid / ⚠ incomplete / ✗ error / ○ pending), so a blocked
  * Export remains visible (its ✗/⚠ glyph) while staying clickable.
- *
- * @param {object} props
- * @param {Array<{ label: string, items: Array<{ id: string, label: string }> }>} props.groups
- *   Grouped section descriptors, in display order. Each `item.id` must be a step id.
- * @param {string} props.currentStep - The active section id.
- * @param {object} props.stepStatus - Status map: { stepId: 'valid'|'incomplete'|'error'|'pending' }.
- * @param {Function} props.onNavigate - Section-switch callback: (stepId) => void.
- * @param {number} [props.toFixCount] - Issues remaining to fix; shown on the Validation item if > 0.
- * @returns {JSX.Element}
  */
-export default function DayEditorSectionNav({ groups, currentStep, stepStatus, onNavigate, toFixCount }) {
+export default function DayEditorSectionNav({ groups, currentStep, stepStatus, onNavigate, toFixCount }: DayEditorSectionNavProps) {
   return (
     <nav className="section-nav" aria-label="Day editor sections">
       {groups.map((group) => (
@@ -67,10 +81,8 @@ export default function DayEditorSectionNav({ groups, currentStep, stepStatus, o
  * Visual status glyph for a section.
  *
  * @private
- * @param {string} status - Section status.
- * @returns {string} Unicode glyph.
  */
-function getStatusIcon(status) {
+function getStatusIcon(status: StepStatus): string {
   switch (status) {
     case 'valid': return '✓';
     case 'incomplete': return '⚠';
@@ -83,10 +95,8 @@ function getStatusIcon(status) {
  * Accessible status label for a section (folded into the button's accessible name).
  *
  * @private
- * @param {string} status - Section status.
- * @returns {string} Human-readable status.
  */
-function getStatusLabel(status) {
+function getStatusLabel(status: StepStatus): string {
   switch (status) {
     case 'valid': return 'Complete';
     case 'incomplete': return 'Incomplete';
@@ -94,27 +104,3 @@ function getStatusLabel(status) {
     default: return 'Not started';
   }
 }
-
-DayEditorSectionNav.propTypes = {
-  groups: PropTypes.arrayOf(
-    PropTypes.shape({
-      label: PropTypes.string.isRequired,
-      items: PropTypes.arrayOf(
-        PropTypes.shape({
-          id: PropTypes.string.isRequired,
-          label: PropTypes.string.isRequired,
-        })
-      ).isRequired,
-    })
-  ).isRequired,
-  currentStep: PropTypes.string.isRequired,
-  stepStatus: PropTypes.objectOf(
-    PropTypes.oneOf(['valid', 'incomplete', 'error', 'pending'])
-  ).isRequired,
-  onNavigate: PropTypes.func.isRequired,
-  toFixCount: PropTypes.number,
-};
-
-DayEditorSectionNav.defaultProps = {
-  toFixCount: undefined,
-};
