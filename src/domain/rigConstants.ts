@@ -10,9 +10,17 @@
  * @module domain/rigConstants
  */
 
+import type { TechnicalParameters, TechnicalDefaults } from '../state/workspaceTypes';
+
+/** The rig-constant fields this module resolves. */
+export type RigField = 'raw_data_to_volts' | 'times_period_multiplier';
+
 /** Fallback rig-constant values (match `createDayRecord`'s seeding fallbacks, not the schema
  *  `default` of 0.0 — these are the app's seeded values). */
-export const RIG_FALLBACK = { raw_data_to_volts: 0.195, times_period_multiplier: 1.5 };
+export const RIG_FALLBACK: Record<RigField, number> = {
+  raw_data_to_volts: 0.195,
+  times_period_multiplier: 1.5,
+};
 
 /**
  * Resolve a rig constant's EFFECTIVE day value (what export reads) and how it relates to the
@@ -23,16 +31,21 @@ export const RIG_FALLBACK = { raw_data_to_volts: 0.195, times_period_multiplier:
  * `day.technical[field]` directly with NO empty-omit guard, so an undefined value fails the schema's
  * required check. Surface that honestly rather than falsely reassuring "using default".
  *
- * @param {object} technical - The day's `technical` block.
- * @param {object} defaults - The animal's `technicalDefaults`.
- * @param {string} field - `'raw_data_to_volts'` | `'times_period_multiplier'`.
- * @returns {{ display: (number|string), status: 'default'|'differs'|'unset', currentDefault: number }}
+ * @param technical - The day's `technical` block.
+ * @param defaults - The animal's `technicalDefaults`.
+ * @param field - `'raw_data_to_volts'` | `'times_period_multiplier'`.
+ * @returns The effective day value (`display`), its relation to the current default (`status`),
+ *   and that `currentDefault`.
  */
-export function resolveRigConstant(technical, defaults, field) {
+export function resolveRigConstant(
+  technical: Partial<TechnicalParameters> | null | undefined,
+  defaults: Partial<TechnicalDefaults> | null | undefined,
+  field: RigField
+): { display: number | string; status: 'default' | 'differs' | 'unset'; currentDefault: number } {
   const dayVal = technical?.[field];
-  const currentDefault =
-    typeof defaults?.[field] === 'number' ? defaults[field] : RIG_FALLBACK[field];
+  const defaultVal = defaults?.[field];
+  const currentDefault = typeof defaultVal === 'number' ? defaultVal : RIG_FALLBACK[field];
   const hasDay = typeof dayVal === 'number';
   const status = !hasDay ? 'unset' : dayVal === currentDefault ? 'default' : 'differs';
-  return { display: hasDay ? dayVal : '—', status, currentDefault };
+  return { display: typeof dayVal === 'number' ? dayVal : '—', status, currentDefault };
 }

@@ -11,8 +11,6 @@
 
 /**
  * The three day-protocol opto states (the batch-row scan contract's "opto state").
- *
- * @type {Readonly<{NONE: string, IMPLANTED_NO_STIM: string, STIMULATED: string}>}
  */
 export const OPTO_STATE = Object.freeze({
   NONE: 'none',
@@ -24,7 +22,7 @@ export const OPTO_STATE = Object.freeze({
  * Array, or [] for any non-array (tolerates a malformed/missing merged section).
  * @param value
  */
-const asArray = (value) => (Array.isArray(value) ? value : []);
+const asArray = (value: unknown): any[] => (Array.isArray(value) ? value : []);
 
 /**
  * Describe the optogenetics state of a MERGED day (the shape summaries already hold — it carries
@@ -36,11 +34,13 @@ const asArray = (value) => (Array.isArray(value) ? value : []);
  * Stimulation is checked first so a (separately-flagged-invalid) fs_gui-without-implant day still
  * reads as stimulation rather than under-reporting the day's own protocol.
  *
- * @param {object} [mergedDay] - The merged day metadata (from `mergeDayMetadata`).
- * @returns {{state: string, label: string}} The opto state and a short summary label.
+ * @param mergedDay - The merged day metadata (from `mergeDayMetadata`).
+ * @returns The opto state and a short summary label.
  */
-export function describeDayOptoState(mergedDay) {
-  const day = mergedDay || {};
+export function describeDayOptoState(
+  mergedDay?: Record<string, unknown> | null
+): { state: string; label: string } {
+  const day: Record<string, unknown> = mergedDay || {};
   const fsGui = asArray(day.fs_gui_yamls);
 
   if (fsGui.length > 0) {

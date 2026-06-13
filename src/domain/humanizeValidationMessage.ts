@@ -17,7 +17,7 @@
  * Friendly labels for high-traffic required properties. Keys are the schema property names; values
  * are full user-facing sentences. Any property not listed falls back to {@link humanizeKey}.
  */
-const REQUIRED_PROP_LABELS = {
+const REQUIRED_PROP_LABELS: Record<string, string> = {
   task_environment: 'Task environment (room/apparatus) is required',
   camera_id: 'A camera selection is required',
   data_acq_device: 'A data acquisition device is required',
@@ -30,11 +30,12 @@ const REQUIRED_PROP_LABELS = {
  * Humanize a snake_case schema key into sentence case (e.g. `some_prop` → "Some prop"). A
  * dotted path is reduced to its last segment first (`subject.date_of_birth` → "Date of birth").
  *
- * @param {string} key - The raw schema property name or dotted path.
- * @returns {string} The sentence-cased, space-separated label.
+ * @param key - The raw schema property name or dotted path.
+ * @returns The sentence-cased, space-separated label.
  */
-function humanizeKey(key) {
-  const lastSegment = String(key).split('.').pop();
+function humanizeKey(key: string): string {
+  // `String(x).split('.')` always yields at least one element, so `pop()` is never undefined.
+  const lastSegment = String(key).split('.').pop()!;
   const words = lastSegment.replace(/_/g, ' ').trim();
   if (!words) {
     return key;
@@ -51,10 +52,10 @@ const LEADING_FIELD_TOKEN = /^([a-z][a-z0-9]*(?:[._][a-z0-9]+)+)(\s+.*)$/;
  * Rewrite a raw validation message into user-facing text. Pure; returns '' for empty/non-string
  * input and passes through anything it does not recognize unchanged.
  *
- * @param {string} message - The raw validation message.
- * @returns {string} The display message.
+ * @param message - The raw validation message.
+ * @returns The display message.
  */
-export function humanizeValidationMessage(message) {
+export function humanizeValidationMessage(message: unknown): string {
   if (!message || typeof message !== 'string') {
     return '';
   }
