@@ -1,6 +1,23 @@
 import { useState } from 'react';
-import PropTypes from 'prop-types';
 import { resolveRigConstant } from '../../domain/rigConstants';
+import type { TechnicalParameters, TechnicalDefaults } from '../../state/workspaceTypes';
+
+interface DayTechnicalSectionProps {
+  /** The day's `technical` block. */
+  technical?: Partial<TechnicalParameters>;
+  /** Day field updater (dot-path, e.g. `technical.default_header_file_path`). */
+  onFieldUpdate: (fieldPath: string, value: unknown) => void;
+  /**
+   * The animal's `technicalDefaults`, for the effective-value comparison.
+   * Falls back to the standard rig values when absent.
+   */
+  recordingSystemDefaults?: Partial<TechnicalDefaults>;
+  /**
+   * The owning animal's store key, for the `Edit in Recording System` deep-link.
+   * The link is omitted when absent.
+   */
+  animalKey?: string;
+}
 
 /**
  * DayTechnicalSection - per-day technical parameters (Day Editor / Overview).
@@ -16,18 +33,8 @@ import { resolveRigConstant } from '../../domain/rigConstants';
  * `units` is written as a whole object, and cleared to `undefined` when both fields are
  * blank so the export omits it (the schema rejects a present-but-empty `units`) rather
  * than emitting invalid empty strings.
- *
- * @param {object} props
- * @param {object} props.technical - The day's `technical` block.
- * @param {(fieldPath: string, value: *) => void} props.onFieldUpdate - Day field updater
- *   (dot-path, e.g. `technical.default_header_file_path`).
- * @param {object} [props.recordingSystemDefaults] - The animal's `technicalDefaults`, for the
- *   effective-value comparison. Falls back to the standard rig values when absent.
- * @param {string} [props.animalKey] - The owning animal's store key, for the `Edit in Recording
- *   System` deep-link. The link is omitted when absent.
- * @returns {JSX.Element}
  */
-export default function DayTechnicalSection({ technical, onFieldUpdate, recordingSystemDefaults = undefined, animalKey = undefined }) {
+export default function DayTechnicalSection({ technical = {}, onFieldUpdate, recordingSystemDefaults = undefined, animalKey = undefined }: DayTechnicalSectionProps) {
   const [local, setLocal] = useState({
     default_header_file_path: technical?.default_header_file_path || '',
     analog: technical?.units?.analog || '',
@@ -36,7 +43,7 @@ export default function DayTechnicalSection({ technical, onFieldUpdate, recordin
 
   const raw = resolveRigConstant(technical, recordingSystemDefaults, 'raw_data_to_volts');
   const mult = resolveRigConstant(technical, recordingSystemDefaults, 'times_period_multiplier');
-  const rigCue = (c) => {
+  const rigCue = (c: ReturnType<typeof resolveRigConstant>) => {
     if (c.status === 'unset') {
       // Honest, no misleading remedy: these are read-only here and editing the animal default does
       // NOT backfill an existing day (days keep their copied value), so don't steer there. The
@@ -48,7 +55,7 @@ export default function DayTechnicalSection({ technical, onFieldUpdate, recordin
       : `Different from current recording-system default (current default: ${c.currentDefault})`;
   };
 
-  const change = (key, value) => setLocal((prev) => ({ ...prev, [key]: value }));
+  const change = (key: keyof typeof local, value: string) => setLocal((prev) => ({ ...prev, [key]: value }));
 
   // units requires BOTH analog and behavioral_events together (schema). Flag the
   // partial case inline rather than letting it surface only at the export gate.
@@ -159,26 +166,3 @@ export default function DayTechnicalSection({ technical, onFieldUpdate, recordin
   );
 }
 
-DayTechnicalSection.propTypes = {
-  technical: PropTypes.shape({
-    default_header_file_path: PropTypes.string,
-    raw_data_to_volts: PropTypes.number,
-    times_period_multiplier: PropTypes.number,
-    units: PropTypes.shape({
-      analog: PropTypes.string,
-      behavioral_events: PropTypes.string,
-    }),
-  }),
-  onFieldUpdate: PropTypes.func.isRequired,
-  recordingSystemDefaults: PropTypes.shape({
-    raw_data_to_volts: PropTypes.number,
-    times_period_multiplier: PropTypes.number,
-  }),
-  animalKey: PropTypes.string,
-};
-
-DayTechnicalSection.defaultProps = {
-  technical: {},
-  recordingSystemDefaults: undefined,
-  animalKey: undefined,
-};

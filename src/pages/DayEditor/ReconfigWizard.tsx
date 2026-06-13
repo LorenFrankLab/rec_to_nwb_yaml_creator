@@ -1,5 +1,4 @@
 import { useId, useMemo, useState } from 'react';
-import PropTypes from 'prop-types';
 import Modal from '../../components/Modal/Modal';
 import {
   getAnimalElectrodeGroups,
@@ -8,7 +7,36 @@ import {
   getProbeElectrodeGroups,
   getProbeNtrodeMaps,
 } from '../../state/workspaceSelectors';
+import type { Animal, Day } from '../../state/workspaceTypes';
 import './ReconfigWizard.scss';
+
+interface ReconfigWizardProps {
+  /** Whether the dialog is shown. */
+  isOpen: boolean;
+  /** Called (no args) on cancel/ESC/overlay and after a successful fork before navigating. */
+  onClose: () => void;
+  /** Animal whose latest configuration is forked. */
+  animal: Animal;
+  /**
+   * The resolved store owner key; the snapshot write and the post-fork navigation use it
+   * instead of the possibly-stale `day.animalId`/`animal.id`.
+   */
+  animalKey?: string;
+  /** The day being reconfigured (the earliest day to move). */
+  day: Day;
+  /** The chronologically previous day, or null (for the "stays pinned" note). */
+  prevDay?: Day | null;
+  /** This day and all chronologically later days (the apply-forward set). */
+  candidateDays: Day[];
+  /** Store actions: `createConfigurationSnapshotAndApplyForward`. */
+  actions: {
+    createConfigurationSnapshotAndApplyForward: (
+      animalKey: string,
+      snapshot: { date: string; description: string; devices: unknown },
+      orderedIds: string[]
+    ) => number;
+  };
+}
 
 /**
  * Probe-reconfiguration wizard — fork-before-edit.
@@ -28,18 +56,6 @@ import './ReconfigWizard.scss';
  * The wizard is a fork-point + affected-days confirmation: it shows which days move
  * to the new version and that earlier days stay pinned, then forks. There is no
  * live-vs-snapshot diff (geometry is edited afterward, not before).
- *
- * @param {object} props
- * @param {boolean} props.isOpen - Whether the dialog is shown.
- * @param {Function} props.onClose - Called (no args) on cancel/ESC/overlay and after a successful fork before navigating to the Animal Editor.
- * @param {object} props.animal - Animal whose latest configuration is forked.
- * @param {object} props.day - The day being reconfigured (the earliest day to move).
- * @param {object|null} [props.prevDay] - The chronologically previous day, or null (for the "stays pinned" note).
- * @param {object[]} props.candidateDays - This day and all chronologically later days (the apply-forward set).
- * @param {object} props.actions - Store actions: `createConfigurationSnapshotAndApplyForward`.
- * @param {string} [props.animalKey] - The resolved store owner key; the snapshot write and the
- *   post-fork navigation use it instead of the possibly-stale `day.animalId`/`animal.id`.
- * @returns {JSX.Element|null}
  */
 export default function ReconfigWizard({
   isOpen,
@@ -50,7 +66,7 @@ export default function ReconfigWizard({
   prevDay = null,
   candidateDays,
   actions,
-}) {
+}: ReconfigWizardProps) {
   // The store OWNER KEY the reconfiguration writes/navigates by. Prefer the explicit key from the
   // stepper, then the day's declared owner, then the (possibly stale) `animal.id` record field.
   const ownerKey = animalKey ?? day?.animalId ?? animal?.id;
@@ -92,7 +108,7 @@ export default function ReconfigWizard({
     return sortedDays;
   }, [candidateDays, day.date, day.id]);
 
-  const navigateToAnimalEditor = (newVersion) => {
+  const navigateToAnimalEditor = (newVersion: number) => {
     if (typeof window === 'undefined') return;
     const params = new URLSearchParams({
       context: 'reconfigure',
@@ -233,16 +249,3 @@ export default function ReconfigWizard({
   );
 }
 
-ReconfigWizard.propTypes = {
-  isOpen: PropTypes.bool.isRequired,
-  onClose: PropTypes.func.isRequired,
-  animal: PropTypes.object.isRequired,
-  // The resolved store owner key; the write/navigation use it instead of the stale `animal.id`.
-  animalKey: PropTypes.string,
-  day: PropTypes.object.isRequired,
-  prevDay: PropTypes.object,
-  candidateDays: PropTypes.arrayOf(PropTypes.object).isRequired,
-  actions: PropTypes.shape({
-    createConfigurationSnapshotAndApplyForward: PropTypes.func.isRequired,
-  }).isRequired,
-};

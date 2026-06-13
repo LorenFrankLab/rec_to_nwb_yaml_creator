@@ -1,8 +1,29 @@
-import React from 'react';
-import PropTypes from 'prop-types';
+import type { Camera } from '../../state/workspaceTypes';
+
+/** Day-level FsGUI protocol entry (a distinct shape from the canonical `FsGuiYaml`). */
+interface FsGuiItem {
+  name?: string;
+  epochs?: number[];
+  power_in_mW?: number | string;
+  dio_output_name?: string;
+  camera_id?: number | string;
+}
+
+interface FsGuiSectionProps {
+  /** day.fs_gui_yamls. */
+  fsGuiYamls?: FsGuiItem[];
+  /** animal.cameras (id + camera_name) for the camera select. */
+  cameras?: Camera[];
+  /** Task-epoch numbers defined on this day. */
+  epochOptions?: number[];
+  /** Behavioral-event names for the DIO-output select. */
+  dioOptions?: string[];
+  /** `(nextFsGuiYamls)` updater. */
+  onChange: (items: FsGuiItem[]) => void;
+}
 
 /** Empty fs_gui protocol item (blank scalars, empty epochs). */
-function emptyFsGui() {
+function emptyFsGui(): FsGuiItem {
   return { name: '', epochs: [], power_in_mW: '', dio_output_name: '', camera_id: '' };
 }
 
@@ -20,24 +41,17 @@ function emptyFsGui() {
  * stimulation on a given day (or only some epochs) is a normal, valid state. Only
  * rendered when the animal has optogenetics enabled — without an implant there is
  * nothing to stimulate.
- *
- * @param {object} root0 - Props.
- * @param {Array} root0.fsGuiYamls - day.fs_gui_yamls.
- * @param {Array} root0.cameras - animal.cameras (id + camera_name) for the camera select.
- * @param {number[]} root0.epochOptions - Task-epoch numbers defined on this day.
- * @param {string[]} root0.dioOptions - Behavioral-event names for the DIO-output select.
- * @param {Function} root0.onChange - `(nextFsGuiYamls)` updater.
  */
-export default function FsGuiSection({ fsGuiYamls, cameras, epochOptions, dioOptions, onChange }) {
+export default function FsGuiSection({ fsGuiYamls = [], cameras = [], epochOptions = [], dioOptions = [], onChange }: FsGuiSectionProps) {
   const items = Array.isArray(fsGuiYamls) ? fsGuiYamls : [];
 
   const addItem = () => onChange([...items, emptyFsGui()]);
-  const removeItem = (index) => onChange(items.filter((_, i) => i !== index));
-  const updateItem = (index, patch) =>
+  const removeItem = (index: number) => onChange(items.filter((_, i) => i !== index));
+  const updateItem = (index: number, patch: Partial<FsGuiItem>) =>
     onChange(items.map((item, i) => (i === index ? { ...item, ...patch } : item)));
 
-  const toggleEpoch = (index, epoch, checked) => {
-    const current = Array.isArray(items[index].epochs) ? items[index].epochs : [];
+  const toggleEpoch = (index: number, epoch: number, checked: boolean) => {
+    const current = (Array.isArray(items[index].epochs) ? items[index].epochs : []) as number[];
     const next = checked
       ? [...new Set([...current, epoch])].sort((a, b) => a - b)
       : current.filter((e) => e !== epoch);
@@ -187,17 +201,3 @@ export default function FsGuiSection({ fsGuiYamls, cameras, epochOptions, dioOpt
   );
 }
 
-FsGuiSection.propTypes = {
-  fsGuiYamls: PropTypes.array,
-  cameras: PropTypes.array,
-  epochOptions: PropTypes.arrayOf(PropTypes.number),
-  dioOptions: PropTypes.arrayOf(PropTypes.string),
-  onChange: PropTypes.func.isRequired,
-};
-
-FsGuiSection.defaultProps = {
-  fsGuiYamls: [],
-  cameras: [],
-  epochOptions: [],
-  dioOptions: [],
-};

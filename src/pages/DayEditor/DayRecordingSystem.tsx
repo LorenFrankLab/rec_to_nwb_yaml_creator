@@ -1,6 +1,14 @@
-import React, { useId } from 'react';
-import PropTypes from 'prop-types';
-import { rawArray } from '../../components/rawPropTypes';
+import { useId } from 'react';
+import type { DataAcqDevice } from '../../state/workspaceTypes';
+
+interface DayRecordingSystemProps {
+  /** The animal's `data_acq_device` catalog. */
+  catalog?: DataAcqDevice[];
+  /** The day's current reference (`day.data_acq_device_name`). */
+  selectedName?: string;
+  /** Called with the chosen system name, or `undefined` to clear back to the animal default. */
+  onSelect: (name: string | undefined) => void;
+}
 
 /**
  * DayRecordingSystem — the per-day recording-system selector for the Day Editor's setup step.
@@ -14,15 +22,8 @@ import { rawArray } from '../../components/rawPropTypes';
  *
  * The reference is by NAME (the Spyglass `DataAcquisitionDevice` identity); the export resolves it
  * live from the catalog, falling back to the first entry when unset/dangling.
- *
- * @param {object} props
- * @param {Array<object>} props.catalog - The animal's `data_acq_device` catalog.
- * @param {string} [props.selectedName] - The day's current reference (`day.data_acq_device_name`).
- * @param {(name: string|undefined) => void} props.onSelect - Called with the chosen system name, or
- *   `undefined` to clear back to the animal default.
- * @returns {JSX.Element}
  */
-export default function DayRecordingSystem({ catalog, selectedName, onSelect }) {
+export default function DayRecordingSystem({ catalog = [], selectedName, onSelect }: DayRecordingSystemProps) {
   const selectId = useId();
   const systems = Array.isArray(catalog) ? catalog : [];
   const firstName = systems[0]?.name || '';
@@ -75,13 +76,3 @@ export default function DayRecordingSystem({ catalog, selectedName, onSelect }) 
   );
 }
 
-DayRecordingSystem.propTypes = {
-  catalog: rawArray(PropTypes.object),
-  selectedName: PropTypes.string,
-  onSelect: PropTypes.func.isRequired,
-};
-
-DayRecordingSystem.defaultProps = {
-  catalog: [],
-  selectedName: undefined,
-};

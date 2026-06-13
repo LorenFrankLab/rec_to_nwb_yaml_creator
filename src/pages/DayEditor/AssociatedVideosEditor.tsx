@@ -1,6 +1,13 @@
 import { useId } from 'react';
-import PropTypes from 'prop-types';
+import type { Camera, Task } from '../../state/workspaceTypes';
 import './AssociatedVideosEditor.scss';
+
+/** Editor row shape: scalars carry an empty-string sentinel for "unselected". */
+interface VideoRow {
+  name?: string;
+  camera_id?: number | string;
+  task_epochs?: number | string;
+}
 
 /**
  * Collect the day's valid task-epoch numbers (sorted, de-duplicated).
@@ -8,22 +15,30 @@ import './AssociatedVideosEditor.scss';
  * The associated-video editor offers ONLY these as epoch options so a video can
  * never reference an epoch the day's tasks do not define — the controlled-ref
  * contract that keeps the export from carrying a dangling `task_epochs`.
- *
- * @param {Array} tasks Day tasks.
- * @returns {number[]} Sorted unique valid epoch numbers.
  */
-function collectValidEpochs(tasks) {
-  const seen = new Set();
+function collectValidEpochs(tasks: unknown): number[] {
+  const seen = new Set<number>();
   (Array.isArray(tasks) ? tasks : []).forEach((task) => {
     // A malformed task_epochs inside an otherwise-valid task (a string, not an
     // array) must contribute no epochs rather than crash this repair UI on `.forEach`.
-    const epochs = Array.isArray(task?.task_epochs) ? task.task_epochs : [];
+    const epochs: unknown[] = Array.isArray(task?.task_epochs) ? task.task_epochs : [];
     epochs.forEach((epoch) => {
       const n = Number(epoch);
       if (Number.isInteger(n)) seen.add(n);
     });
   });
   return [...seen].sort((a, b) => a - b);
+}
+
+interface AssociatedVideosEditorProps {
+  /** The day's associated_video_files. */
+  videos?: VideoRow[];
+  /** The animal's cameras (camera_id options). */
+  cameras?: Camera[];
+  /** The day's tasks (task_epochs options). */
+  tasks?: Task[];
+  /** Called with the next videos array. */
+  onChange: (videos: VideoRow[]) => void;
 }
 
 /**
@@ -39,15 +54,8 @@ function collectValidEpochs(tasks) {
  * A row loaded with a stale id (camera/epoch no longer present) is flagged and
  * cannot be left valid: the select renders no matching option, so the user must
  * re-point it before the day is clean.
- *
- * @param {object} props
- * @param {Array} props.videos The day's associated_video_files.
- * @param {Array} props.cameras The animal's cameras (camera_id options).
- * @param {Array} props.tasks The day's tasks (task_epochs options).
- * @param {Function} props.onChange Called with the next videos array.
- * @returns {JSX.Element}
  */
-export default function AssociatedVideosEditor({ videos, cameras, tasks, onChange }) {
+export default function AssociatedVideosEditor({ videos = [], cameras = [], tasks = [], onChange }: AssociatedVideosEditorProps) {
   const baseId = useId();
   // Tolerate corrupt persisted state: a non-array `videos` (e.g. `{}`) must not crash
   // `.map`/`.filter`/`.length`. It is surfaced + reset by the step's raw-shape notice;
@@ -59,12 +67,9 @@ export default function AssociatedVideosEditor({ videos, cameras, tasks, onChang
 
   /**
    * Replace one row's field and emit the updated array.
-   * @param {number} index Row index.
-   * @param {string} field 'name' | 'camera_id' | 'task_epochs'.
-   * @param {*} value New value (already coerced).
    */
-  function updateRow(index, field, value) {
-    onChange(videoList.map((video, i) => (i === index ? { ...video, [field]: value } : video)));
+  function updateRow(index: number, field: keyof VideoRow, value: string | number) {
+    onChange(videoList.map((video, i) => (i === index ? { ...video, [field]: value } as VideoRow : video)));
   }
 
   /**
@@ -76,9 +81,8 @@ export default function AssociatedVideosEditor({ videos, cameras, tasks, onChang
 
   /**
    * Remove the row at `index`.
-   * @param {number} index Row index.
    */
-  function removeRow(index) {
+  function removeRow(index: number) {
     onChange(videoList.filter((_, i) => i !== index));
   }
 
@@ -236,15 +240,3 @@ export default function AssociatedVideosEditor({ videos, cameras, tasks, onChang
   );
 }
 
-AssociatedVideosEditor.propTypes = {
-  videos: PropTypes.arrayOf(PropTypes.object),
-  cameras: PropTypes.arrayOf(PropTypes.object),
-  tasks: PropTypes.arrayOf(PropTypes.object),
-  onChange: PropTypes.func.isRequired,
-};
-
-AssociatedVideosEditor.defaultProps = {
-  videos: [],
-  cameras: [],
-  tasks: [],
-};

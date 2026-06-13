@@ -15,7 +15,7 @@ const dayEditor = path.resolve(here, '..');
 
 const GUARDED_FILES = [
   'TasksEpochsStep.jsx',
-  'TasksTable.jsx',
+  'TasksTable.tsx',
   'TaskModal.jsx',
   'BehavioralEventsDisplay.jsx',
 ];

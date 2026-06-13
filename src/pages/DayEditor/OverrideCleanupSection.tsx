@@ -1,6 +1,14 @@
 import { useMemo, useCallback } from 'react';
-import PropTypes from 'prop-types';
 import { classifyDeviceOverrides } from '../../domain/deviceOverrides';
+
+interface OverrideCleanupSectionProps {
+  /** The day record (its `deviceOverrides`). */
+  day: Record<string, unknown>;
+  /** The day's resolved ntrode-id set (stale-key detection). */
+  resolvedNtrodeIds: Set<string>;
+  /** `(fieldPath, value) => void` store writer. */
+  onFieldUpdate: (fieldPath: string, value: unknown) => void;
+}
 
 /**
  * Malformed / stale / shadowing `deviceOverrides` repair controls. The merge declines to apply any
@@ -13,14 +21,8 @@ import { classifyDeviceOverrides } from '../../domain/deviceOverrides';
  * counterpart of the validator's `dayOverrideIssues`) and the atomic removal writes. Each per-key
  * bad-channel button carries a KEY-SPECIFIC `data-field-path` so repair-focus lands on the clicked
  * ntrode's control. Renders `null` when there is nothing to clean up.
- *
- * @param {object} props
- * @param {object} props.day - The day record (its `deviceOverrides`).
- * @param {Set<string>} props.resolvedNtrodeIds - The day's resolved ntrode-id set (stale-key detection).
- * @param {Function} props.onFieldUpdate - `(fieldPath, value) => void` store writer.
- * @returns {JSX.Element|null}
  */
-export default function OverrideCleanupSection({ day, resolvedNtrodeIds, onFieldUpdate }) {
+export default function OverrideCleanupSection({ day, resolvedNtrodeIds, onFieldUpdate }: OverrideCleanupSectionProps) {
   // Malformed / stale / shadowing override classification. The converter-meaning decision (which
   // shapes the merge can't honor, partitioned for distinct removal labels) lives in
   // `classifyDeviceOverrides` — the editing-surface counterpart of the validator's `dayOverrideIssues`.
@@ -40,9 +42,9 @@ export default function OverrideCleanupSection({ day, resolvedNtrodeIds, onField
    * Remove a single bad-channel override key (stale or corrupt-value) via ONE atomic
    * write of the whole map minus that key. The container is a record here (guarded by
    * the callers), so spreading it is safe.
-   * @param {string} key - The ntrode_id key to drop.
+   * @param key - The ntrode_id key to drop.
    */
-  const handleRemoveOverrideKey = useCallback((key) => {
+  const handleRemoveOverrideKey = useCallback((key: string) => {
     const overrides = badChannelContainerIsRecord ? badChannelContainer : {};
     const next = { ...overrides };
     delete next[key];
@@ -54,9 +56,9 @@ export default function OverrideCleanupSection({ day, resolvedNtrodeIds, onField
    * container, or a non-array geometry override). Rewrites the whole `deviceOverrides`
    * record without that key — `handleFieldUpdate` only SETS a path, so deleting a key
    * means writing the parent object minus it.
-   * @param {string} overrideKey - 'bad_channels' | 'electrode_groups' | 'ntrode_electrode_group_channel_map'.
+   * @param overrideKey - 'bad_channels' | 'electrode_groups' | 'ntrode_electrode_group_channel_map'.
    */
-  const handleRemoveOverride = useCallback((overrideKey) => {
+  const handleRemoveOverride = useCallback((overrideKey: string) => {
     const next = { ...(overridesRecord || {}) };
     delete next[overrideKey];
     onFieldUpdate('deviceOverrides', next);
@@ -126,7 +128,7 @@ export default function OverrideCleanupSection({ day, resolvedNtrodeIds, onField
           data-field-path={`deviceOverrides.${key}`}
           onClick={() => handleRemoveOverride(key)}
         >
-          {Array.isArray(overridesRecord[key])
+          {Array.isArray(overridesRecord?.[key])
             ? `Remove ${key} override (revert to saved configuration)`
             : `Remove corrupt ${key} override`}
         </button>
@@ -135,8 +137,3 @@ export default function OverrideCleanupSection({ day, resolvedNtrodeIds, onField
   );
 }
 
-OverrideCleanupSection.propTypes = {
-  day: PropTypes.object.isRequired,
-  resolvedNtrodeIds: PropTypes.instanceOf(Set).isRequired,
-  onFieldUpdate: PropTypes.func.isRequired,
-};
