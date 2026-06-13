@@ -1,6 +1,19 @@
 import { useState, useRef, useEffect, useId } from 'react';
-import PropTypes from 'prop-types';
 import './TaskEpochsEditor.scss';
+
+/** Editor-local row: epoch number plus optional start/end times (times are not persisted). */
+interface EpochRow {
+  epochNumber: string;
+  start: string;
+  end: string;
+}
+
+interface TaskEpochsEditorProps {
+  /** Epoch numbers to seed the rows. */
+  initialEpochs?: number[];
+  /** Called with `{ epochs: number[], hasError: boolean }` on every edit. */
+  onChange: (payload: { epochs: number[]; hasError: boolean }) => void;
+}
 
 /**
  * TaskEpochsEditor - dynamic editor for a task's epochs.
@@ -18,15 +31,9 @@ import './TaskEpochsEditor.scss';
  *
  * The committed epoch list is de-duplicated to satisfy the schema's uniqueItems
  * constraint; rows without a valid integer epoch number contribute nothing.
- *
- * @param {object} props
- * @param {number[]} props.initialEpochs - Epoch numbers to seed the rows.
- * @param {Function} props.onChange - Called with `{ epochs: number[], hasError: boolean }`
- *   on every edit.
- * @returns {JSX.Element}
  */
-export default function TaskEpochsEditor({ initialEpochs, onChange }) {
-  const [rows, setRows] = useState(() =>
+export default function TaskEpochsEditor({ initialEpochs = [], onChange }: TaskEpochsEditorProps) {
+  const [rows, setRows] = useState<EpochRow[]>(() =>
     (initialEpochs || []).map((number) => ({
       epochNumber: String(number),
       start: '',
@@ -34,8 +41,8 @@ export default function TaskEpochsEditor({ initialEpochs, onChange }) {
     }))
   );
 
-  const inputRefs = useRef([]);
-  const pendingFocusRef = useRef(null);
+  const inputRefs = useRef<Array<HTMLInputElement | null>>([]);
+  const pendingFocusRef = useRef<number | null>(null);
   const headingId = useId();
 
   // Focus the first input of a freshly added row, once it has rendered.
@@ -51,10 +58,8 @@ export default function TaskEpochsEditor({ initialEpochs, onChange }) {
    * Parse an input string to a valid epoch number, or null if not a valid one.
    * Epochs are 1-based positive integers, so non-positive values are rejected
    * (and never persisted) — matching the `min="1"` guard on the input.
-   * @param {string} value Raw input value.
-   * @returns {number|null}
    */
-  function toEpochNumber(value) {
+  function toEpochNumber(value: string): number | null {
     if (value === '' || value == null) return null;
     const n = Number(value);
     return Number.isInteger(n) && n >= 1 ? n : null;
@@ -62,25 +67,21 @@ export default function TaskEpochsEditor({ initialEpochs, onChange }) {
 
   /**
    * Whether a row's interval is fully specified (both ends are finite numbers).
-   * @param {object} row Row state.
-   * @returns {boolean}
    */
-  function hasInterval(row) {
+  function hasInterval(row: EpochRow): boolean {
     return row.start !== '' && row.end !== '' &&
       Number.isFinite(Number(row.start)) && Number.isFinite(Number(row.end));
   }
 
   /**
    * Whether a row's end is at or before its start (only when both are set).
-   * @param {object} row Row state.
-   * @returns {boolean}
    */
-  function isReversed(row) {
+  function isReversed(row: EpochRow): boolean {
     return hasInterval(row) && Number(row.end) <= Number(row.start);
   }
 
   // Cross-row overlap detection over fully-specified, non-reversed intervals.
-  const overlaps = [];
+  const overlaps: Array<[number, number]> = [];
   const intervalRows = rows
     .map((row, index) => ({ row, index }))
     .filter(({ row }) => hasInterval(row) && !isReversed(row));
@@ -100,13 +101,12 @@ export default function TaskEpochsEditor({ initialEpochs, onChange }) {
 
   /**
    * Recompute derived state and notify the parent.
-   * @param {object[]} nextRows Updated rows.
    */
-  function commit(nextRows) {
+  function commit(nextRows: EpochRow[]) {
     setRows(nextRows);
     const hasError = nextRows.some((row) => isReversed(row));
-    const epochs = [];
-    const seen = new Set();
+    const epochs: number[] = [];
+    const seen = new Set<number>();
     for (const row of nextRows) {
       const n = toEpochNumber(row.epochNumber);
       if (n != null && !seen.has(n)) {
@@ -119,12 +119,9 @@ export default function TaskEpochsEditor({ initialEpochs, onChange }) {
 
   /**
    * Update one field of one row.
-   * @param {number} index Row index.
-   * @param {string} field 'epochNumber' | 'start' | 'end'.
-   * @param {string} value New value.
    */
-  function updateRow(index, field, value) {
-    commit(rows.map((row, i) => (i === index ? { ...row, [field]: value } : row)));
+  function updateRow(index: number, field: keyof EpochRow, value: string) {
+    commit(rows.map((row, i) => (i === index ? { ...row, [field]: value } as EpochRow : row)));
   }
 
   /**
@@ -138,9 +135,8 @@ export default function TaskEpochsEditor({ initialEpochs, onChange }) {
 
   /**
    * Remove a row by index.
-   * @param {number} index Row index.
    */
-  function removeRow(index) {
+  function removeRow(index: number) {
     commit(rows.filter((_, i) => i !== index));
   }
 
@@ -228,11 +224,3 @@ export default function TaskEpochsEditor({ initialEpochs, onChange }) {
   );
 }
 
-TaskEpochsEditor.propTypes = {
-  initialEpochs: PropTypes.arrayOf(PropTypes.number),
-  onChange: PropTypes.func.isRequired,
-};
-
-TaskEpochsEditor.defaultProps = {
-  initialEpochs: [],
-};

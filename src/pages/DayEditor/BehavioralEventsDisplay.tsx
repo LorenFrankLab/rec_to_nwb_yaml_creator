@@ -1,4 +1,3 @@
-import PropTypes from 'prop-types';
 import {
   duplicateBehavioralEventDescriptions,
   duplicateBehavioralEventNames,
@@ -10,7 +9,24 @@ import {
   setChannelName,
 } from '../../utils/behavioralEventSet';
 import SuggestionCombobox from '../../components/SuggestionCombobox';
+import type { BehavioralEvent } from '../../state/workspaceTypes';
 import './BehavioralEventsDisplay.scss';
+
+/** Another animal's DIO set, offered to seed a blank first day. */
+interface CopyableDioSource {
+  id: string;
+  name: string;
+  events: BehavioralEvent[];
+}
+
+interface BehavioralEventsDisplayProps {
+  /** The day's exported events. */
+  dayEvents?: BehavioralEvent[];
+  /** Called with the next day-events array. */
+  onDayEventsChange: (events: BehavioralEvent[]) => void;
+  /** Other animals whose DIO set can seed a blank first day. */
+  copyableSources?: CopyableDioSource[];
+}
 
 /**
  * The standard SpikeGadgets ECU digital configuration this grid authors for is Din1…Din32 (inputs)
@@ -22,7 +38,7 @@ import './BehavioralEventsDisplay.scss';
  */
 const ECU_DIGITAL_CHANNELS = 32;
 
-const GROUPS = [
+const GROUPS: Array<{ type: 'Din' | 'Dout'; heading: string; blurb: string }> = [
   { type: 'Din', heading: 'Inputs (Din)', blurb: 'Sensors the animal triggers — pokes, beam breaks.' },
   {
     type: 'Dout',
@@ -33,18 +49,14 @@ const GROUPS = [
 
 /**
  * The ordered channel ids for a direction, e.g. ["Din1", … "Din32"].
- * @param {string} type - The DIO type, `"Din"` or `"Dout"`.
- * @returns {string[]} The channel ids `${type}1`…`${type}${ECU_DIGITAL_CHANNELS}`.
  */
-const channelsFor = (type) =>
+const channelsFor = (type: string): string[] =>
   Array.from({ length: ECU_DIGITAL_CHANNELS }, (_, i) => `${type}${i + 1}`);
 
 /**
  * Sanitize a channel id for use in an element id.
- * @param {string} description - The channel id (e.g. `"Din1"`).
- * @returns {string} The id with non-`[A-Za-z0-9_-]` characters replaced by `-`.
  */
-const channelId = (description) => String(description).replace(/[^a-zA-Z0-9_-]/g, '-');
+const channelId = (description: string): string => String(description).replace(/[^a-zA-Z0-9_-]/g, '-');
 
 /**
  * BehavioralEventsDisplay — the per-day behavioral-events (DIO) editor, presented as the ECU's
@@ -56,22 +68,14 @@ const channelId = (description) => String(description).replace(/[^a-zA-Z0-9_-]/g
  * Event names must be unique (a duplicate collides on the Spyglass DIOEvents primary key). A new day
  * carries the previous day's names forward; this editor edits them in place. An imported event whose
  * channel isn't a standard Din/Dout line is preserved in an "Other" group rather than dropped.
- *
- * @param {object} props
- * @param {Array<{name: string, description: string}>} props.dayEvents - The day's exported events.
- * @param {Function} props.onDayEventsChange - Called with the next day-events array.
- * @param {Array<{id: string, name: string, events: Array}>} [props.copyableSources] - Other animals
- *   whose DIO set can seed a blank first day (see `getCopyableDioSources`). When the day is empty and
- *   this is non-empty, a "Copy from <animal>" bootstrap CTA is offered.
- * @returns {JSX.Element}
  */
-export default function BehavioralEventsDisplay({ dayEvents, onDayEventsChange, copyableSources }) {
+export default function BehavioralEventsDisplay({ dayEvents = [], onDayEventsChange, copyableSources = [] }: BehavioralEventsDisplayProps) {
   // Tolerate corrupt persisted state: a non-array events list (`{}`) must not crash.
   const dayItems = Array.isArray(dayEvents) ? dayEvents : [];
 
   // Channel → event lookup so each grid row can show its current name (first wins on a corrupt
   // duplicate-description import; the duplicate is surfaced by the banner below).
-  const byDescription = new Map();
+  const byDescription = new Map<string, BehavioralEvent>();
   dayItems.forEach((event) => {
     if (event && typeof event.description === 'string' && !byDescription.has(event.description)) {
       byDescription.set(event.description, event);
@@ -97,34 +101,26 @@ export default function BehavioralEventsDisplay({ dayEvents, onDayEventsChange, 
 
   /**
    * Set the event name for a channel (blank removes it from the set).
-   * @param {string} description - The channel id (e.g. "Din1").
-   * @param {string} name - The event name.
    */
-  function nameChannel(description, name) {
+  function nameChannel(description: string, name: string) {
     onDayEventsChange(setChannelName(dayItems, description, name));
   }
 
   /**
    * Auto-number a PICKED name for a channel: `Poke` → `Poke1`, the next pick `Poke2`, …. The number
    * is the next per-label instance among the OTHER channels' events — never the channel index.
-   * @param {string} description - The channel being named.
-   * @param {string} label - The picked suggestion.
    */
-  function selectName(description, label) {
+  function selectName(description: string, label: string) {
     const others = dayItems.filter((e) => e?.description !== description);
     nameChannel(description, `${label}${nextInstanceNumber(label, others)}`);
   }
 
   /**
-   * Render the editable Event-name cell for one channel.
-   * @param {string} description - The channel id.
-   * @param {*} rawName - The current event name ('' when unused); coerced if persisted corruption
-   *   left a non-string here, so the editor survives it instead of crashing.
-   * @param {('Din'|'Dout')} [direction] - The channel's direction, so the field suggests only the
-   *   inputs (on Din) or outputs (on Dout) that actually wire that way. Omit for the "Other" group.
-   * @returns {JSX.Element}
+   * Render the editable Event-name cell for one channel. `rawName` is the current event name
+   * ('' when unused), coerced if persisted corruption left a non-string here. `direction` is the
+   * channel's direction (so the field suggests only inputs on Din / outputs on Dout); omit for "Other".
    */
-  function renderNameField(description, rawName, direction) {
+  function renderNameField(description: string, rawName: unknown, direction?: 'Din' | 'Dout') {
     const name = typeof rawName === 'string' ? rawName : '';
     const isDuplicate = name.trim() !== '' && duplicateNames.has(name);
     const errorId = `dio-dup-name-${channelId(description)}`;
@@ -156,10 +152,8 @@ export default function BehavioralEventsDisplay({ dayEvents, onDayEventsChange, 
 
   /**
    * Render one direction's full channel table (all 32 rows).
-   * @param {{type: string, heading: string, blurb: string}} group
-   * @returns {JSX.Element}
    */
-  function renderGroup(group) {
+  function renderGroup(group: { type: 'Din' | 'Dout'; heading: string; blurb: string }) {
     return (
       <div className="dio-direction-group" key={group.type}>
         <header className="section-header">
@@ -295,18 +289,3 @@ export default function BehavioralEventsDisplay({ dayEvents, onDayEventsChange, 
   );
 }
 
-BehavioralEventsDisplay.propTypes = {
-  dayEvents: PropTypes.arrayOf(
-    PropTypes.shape({ name: PropTypes.string, description: PropTypes.string })
-  ),
-  onDayEventsChange: PropTypes.func,
-  copyableSources: PropTypes.arrayOf(
-    PropTypes.shape({ id: PropTypes.string, name: PropTypes.string, events: PropTypes.array })
-  ),
-};
-
-BehavioralEventsDisplay.defaultProps = {
-  dayEvents: [],
-  onDayEventsChange: null,
-  copyableSources: [],
-};

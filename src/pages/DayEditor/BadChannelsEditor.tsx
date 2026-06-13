@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import PropTypes from 'prop-types';
 import { getProbeElectrodeIds } from '../../ntrode/probeCatalog';
 import {
   isMultiShankGroup,
@@ -9,7 +8,36 @@ import {
   toggleMark,
 } from '../../domain/badChannels';
 import ConfirmDialog from '../../components/Modal/ConfirmDialog';
+import type { NtrodeMap } from '../../state/workspaceTypes';
 import './DayEditor.scss';
+
+/** A prior-bad un-mark awaiting confirmation: the deferred write runs on confirm. */
+interface PendingUnmark {
+  ntrodeId: string;
+  channel: number;
+  apply: () => void;
+}
+
+interface BadChannelsEditorProps {
+  /** Ntrode channel maps for this electrode group. */
+  ntrodes: NtrodeMap[];
+  /** Current bad channels `{ [ntrodeId]: number[] }` (the FULL map across all groups). */
+  badChannels: Record<string, number[]>;
+  /** Single-shank, per-ntrode atomic write: `(ntrodeId, badChannelArray) => void`. */
+  onUpdate: (ntrodeId: string, badChannelArray: number[]) => void;
+  /** Atomic write of the WHOLE bad_channels map (multi-shank probe-wide migration). */
+  onBatchUpdate?: (badChannelsObject: Record<string, number[]>) => void;
+  /** The electrode group's device type; enables the probe-wide selector for multi-shank probes. */
+  deviceType?: string;
+  /** Validation errors `{ [ntrodeId]: errorMessage }`. */
+  errors?: Record<string, string>;
+  /** Validation warnings `{ [ntrodeId]: warningMessage }`. */
+  warnings?: Record<string, string>;
+  /** `{ [ntrodeId]: number[] }` of channels bad on an EARLIER same-config day, not yet acknowledged. */
+  priorBadByNtrode?: Record<string, number[]>;
+  /** `(ntrodeId, channel) => void` — records the OFF-EXPORT acknowledgment on confirm. */
+  onAcknowledgeRemoval?: (ntrodeId: string, channel: number) => void;
+}
 
 /**
  * BadChannelsEditor - Edit failed channels for electrode groups
@@ -57,35 +85,13 @@ import './DayEditor.scss';
  * multi-shank group the probe-wide control anchors the FIRST row's id, and additional
  * focusable anchors cover the other ntrode ids in the group (since either rule may
  * key the issue by a non-first row) — all landing inside the same probe-wide control.
- *
- * @param {object} props
- * @param {Array} props.ntrodes - Ntrode channel maps for this electrode group
- * @param {object} props.badChannels - Current bad channels: { [ntrodeId]: [channelNumbers] }
- *   (the FULL map across all groups, so a batched write can rewrite the whole object).
- * @param {Function} props.onUpdate - Callback: (ntrodeId, badChannelArray) => void
- *   (single-shank, per-ntrode atomic write).
- * @param {Function} [props.onBatchUpdate] - Callback: (badChannelsObject) => void —
- *   atomic write of the WHOLE bad_channels map, used by the multi-shank probe-wide
- *   migration so concurrent per-ntrode writes can't race/clobber.
- * @param {string} [props.deviceType] - The electrode group's device type; enables the
- *   probe-wide selector for multi-shank probes (via the verified probe catalog).
- * @param {object} props.errors - Validation errors: { [ntrodeId]: errorMessage }
- * @param {object} props.warnings - Validation warnings: { [ntrodeId]: warningMessage }
- * @param {object} [props.priorBadByNtrode] - `{ [ntrodeId]: number[] }` of channels that were
- *   bad on an EARLIER same-config day and are NOT yet acknowledged for this day. Un-marking one
- *   of these is a monotonicity exception, so it is intercepted with a confirm prompt (bad
- *   channels normally only accumulate). Channels absent here un-mark immediately (a normal
- *   correction of a mark added this day).
- * @param {Function} [props.onAcknowledgeRemoval] - Callback `(ntrodeId, channel) => void`,
- *   invoked on confirm to record the OFF-EXPORT acknowledgment so the export gate won't block.
- * @returns {JSX.Element}
  */
-export default function BadChannelsEditor({ ntrodes, badChannels, onUpdate, onBatchUpdate, deviceType, errors, warnings, priorBadByNtrode, onAcknowledgeRemoval }) {
-  const [expandedMaps, setExpandedMaps] = useState({});
+export default function BadChannelsEditor({ ntrodes, badChannels, onUpdate, onBatchUpdate, deviceType, errors = {}, warnings = {}, priorBadByNtrode = {}, onAcknowledgeRemoval }: BadChannelsEditorProps) {
+  const [expandedMaps, setExpandedMaps] = useState<Record<string, boolean>>({});
   // A pending prior-bad un-mark awaiting confirmation: `{ ntrodeId, channel, apply }`. `apply`
   // is the deferred un-mark write (single-shank `onUpdate`, or the multi-shank batch). null when
   // no prompt is open. Confirm → record the ack + run `apply`; cancel → discard (channel stays bad).
-  const [pendingUnmark, setPendingUnmark] = useState(null);
+  const [pendingUnmark, setPendingUnmark] = useState<PendingUnmark | null>(null);
 
   if (!ntrodes || ntrodes.length === 0) {
     return null;
@@ -94,11 +100,8 @@ export default function BadChannelsEditor({ ntrodes, badChannels, onUpdate, onBa
   /**
    * Whether un-marking `channel` on `ntrodeId` is a monotonicity exception that must be
    * confirmed: it was bad on an earlier same-config day and is not yet acknowledged.
-   * @param {string} key - Stringified ntrode id.
-   * @param {number} channel - The channel/electrode id being un-marked.
-   * @returns {boolean}
    */
-  const isPriorBadUnmark = (key, channel) =>
+  const isPriorBadUnmark = (key: string, channel: number): boolean =>
     Array.isArray(priorBadByNtrode?.[key]) && priorBadByNtrode[key].includes(channel);
 
   /**
@@ -114,7 +117,7 @@ export default function BadChannelsEditor({ ntrodes, badChannels, onUpdate, onBa
 
   // Multi-shank iff the verified catalog reports >1 shank for this device AND there is
   // >1 ntrode row (so a 1-row group never collapses to a degenerate selector).
-  const isMultiShank = isMultiShankGroup(deviceType, ntrodes.length);
+  const isMultiShank = isMultiShankGroup(deviceType as string, ntrodes.length);
 
   // Shared confirm prompt for a prior-bad un-mark (rendered in both the single- and multi-shank
   // returns). Not destructive — un-failing is a correction; just deliberate.
@@ -137,12 +140,9 @@ export default function BadChannelsEditor({ ntrodes, badChannels, onUpdate, onBa
   );
 
   /**
-   * Handle checkbox change for a channel
-   * @param {number|string} ntrodeId - Ntrode ID
-   * @param {number} channelNum - Channel number
-   * @param {boolean} isChecked - Whether checkbox is checked
+   * Handle checkbox change for a channel.
    */
-  const handleChannelToggle = (ntrodeId, channelNum, isChecked) => {
+  const handleChannelToggle = (ntrodeId: number | string, channelNum: number, isChecked: boolean) => {
     const key = String(ntrodeId);
     const apply = () => onUpdate(key, toggleMark(badChannels[key] || [], channelNum, isChecked));
     // Un-marking (isChecked === false) a channel that was bad on an earlier same-config day is a
@@ -165,20 +165,17 @@ export default function BadChannelsEditor({ ntrodes, badChannels, onUpdate, onBa
    * cleared by the user — yet it blocks export (`bad_channel_out_of_range`). This is
    * the only path that can clear it. Strict `!==` filtering removes ONLY this value,
    * leaving valid numeric marks intact.
-   * @param {number|string} ntrodeId - Ntrode ID
-   * @param {*} value - The invalid bad-channel value to remove.
    */
-  const handleRemoveInvalidMark = (ntrodeId, value) => {
+  const handleRemoveInvalidMark = (ntrodeId: number | string, value: number) => {
     const key = String(ntrodeId);
     const currentBadChannels = badChannels[key] || [];
     onUpdate(key, currentBadChannels.filter((x) => x !== value));
   };
 
   /**
-   * Toggle channel map visibility
-   * @param {number|string} ntrodeId - Ntrode ID
+   * Toggle channel map visibility.
    */
-  const toggleChannelMap = (ntrodeId) => {
+  const toggleChannelMap = (ntrodeId: number | string) => {
     const key = String(ntrodeId);
     setExpandedMaps(prev => ({
       ...prev,
@@ -209,7 +206,7 @@ export default function BadChannelsEditor({ ntrodes, badChannels, onUpdate, onBa
 
     // The set of ids the probe-wide selector can render/uncheck, for invalid-mark
     // detection (the migration translates against the same set internally).
-    const probeIdSet = probeElectrodeIdSet(deviceType);
+    const probeIdSet = probeElectrodeIdSet(deviceType as string);
 
     /**
      * Probe-wide toggle: compute the ENTIRE new bad_channels map (the converter meaning —
@@ -218,19 +215,17 @@ export default function BadChannelsEditor({ ntrodes, badChannels, onUpdate, onBa
      * atomic `onBatchUpdate` call. The Day Editor replaces deviceOverrides wholesale, so
      * separate per-ntrode writes would race/clobber; the single write also migrates loaded
      * later-row corruption so `multishank_bad_channels_ignored` passes.
-     * @param {number} electrodeId - Probe-local electrode id.
-     * @param {boolean} isChecked - Whether the box was checked.
      */
-    const handleProbeWideToggle = (electrodeId, isChecked) => {
+    const handleProbeWideToggle = (electrodeId: number, isChecked: boolean) => {
       const apply = () =>
-        onBatchUpdate(
+        onBatchUpdate?.(
           buildProbeWideBadChannelMap({
             badChannels,
             firstNtrodeId: firstNtrode.ntrode_id,
             laterNtrodes,
             electrodeId,
             isChecked,
-            deviceType,
+            deviceType: deviceType as string,
           })
         );
       // Un-marking a probe-local electrode id that was bad on an earlier same-config day (keyed
@@ -252,12 +247,11 @@ export default function BadChannelsEditor({ ntrodes, badChannels, onUpdate, onBa
      * Remove ONE invalid first-row mark via the ATOMIC batch path. The Day Editor
      * rebuilds deviceOverrides wholesale, so a lone `onUpdate` would race; mirror
      * `handleProbeWideToggle` and emit the WHOLE next map in one `onBatchUpdate`.
-     * @param {*} value - The invalid bad-channel value to remove.
      */
-    const handleRemoveInvalidMark = (value) => {
+    const handleRemoveInvalidMark = (value: number) => {
       const next = { ...badChannels };
       next[firstKey] = currentBadChannels.filter((x) => x !== value);
-      onBatchUpdate(next);
+      onBatchUpdate?.(next);
     };
 
     return (
@@ -490,30 +484,3 @@ export default function BadChannelsEditor({ ntrodes, badChannels, onUpdate, onBa
   );
 }
 
-BadChannelsEditor.propTypes = {
-  ntrodes: PropTypes.arrayOf(
-    PropTypes.shape({
-      ntrode_id: PropTypes.number.isRequired,
-      electrode_group_id: PropTypes.number.isRequired,
-      bad_channels: PropTypes.arrayOf(PropTypes.number),
-      map: PropTypes.objectOf(PropTypes.number).isRequired,
-    })
-  ).isRequired,
-  badChannels: PropTypes.objectOf(PropTypes.arrayOf(PropTypes.number)).isRequired,
-  onUpdate: PropTypes.func.isRequired,
-  onBatchUpdate: PropTypes.func,
-  deviceType: PropTypes.string,
-  errors: PropTypes.object,
-  warnings: PropTypes.object,
-  priorBadByNtrode: PropTypes.objectOf(PropTypes.arrayOf(PropTypes.number)),
-  onAcknowledgeRemoval: PropTypes.func,
-};
-
-BadChannelsEditor.defaultProps = {
-  onBatchUpdate: undefined,
-  deviceType: undefined,
-  errors: {},
-  warnings: {},
-  priorBadByNtrode: {},
-  onAcknowledgeRemoval: undefined,
-};
