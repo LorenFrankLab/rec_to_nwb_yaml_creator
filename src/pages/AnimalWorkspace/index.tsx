@@ -10,10 +10,11 @@
  * @see src/state/workspaceTypes.js for the workspace data model (typedefs)
  */
 
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useStoreContext } from '../../state/StoreContext';
 import { getPresentDayCount } from '../../domain/dayRecovery';
 import { buildAnimalFromForm, getDefaultExperimenters } from '../../domain/animalCreation';
+import type { AnimalCreationFormData } from '../../domain/animalCreation';
 import { getAnimalDayIds } from '../../state/workspaceSelectors';
 import OverflowMenu from '../../components/OverflowMenu';
 import AnimalDeleteDialog from '../../components/AnimalDeleteDialog';
@@ -40,11 +41,11 @@ export function AnimalWorkspace() {
   // The animal id whose delete dialog is open (null when closed). Deleting is the highest-blast-
   // radius action, so it routes through the shared type-to-confirm AnimalDeleteDialog rather than a
   // menu-adjacent button. A single dialog instance serves whichever card's ⋮ opened it.
-  const [pendingDeleteAnimalId, setPendingDeleteAnimalId] = useState(null);
+  const [pendingDeleteAnimalId, setPendingDeleteAnimalId] = useState<string | null>(null);
   const pendingDeleteAnimal = pendingDeleteAnimalId ? animals[pendingDeleteAnimalId] : null;
   // The animal whose "Edit profile…" dialog is open (from a card ⋮) — same dialog as the header /
   // switcher, so subject facts are editable from wherever an animal is listed.
-  const [pendingProfileAnimalId, setPendingProfileAnimalId] = useState(null);
+  const [pendingProfileAnimalId, setPendingProfileAnimalId] = useState<string | null>(null);
   const pendingProfileAnimal = pendingProfileAnimalId ? animals[pendingProfileAnimalId] : null;
 
   // Whether the inline create-animal panel is open (Task 4.2). Create lives IN the workspace — an
@@ -68,9 +69,8 @@ export function AnimalWorkspace() {
    * Create the animal from the inline panel's form submission (the SAME builder Home uses), then
    * land on the new animal's days route. createAnimal applies synchronously, so navigating
    * immediately is safe.
-   * @param {object} formData - The processed AnimalCreationForm payload.
    */
-  const handleCreate = (formData) => {
+  const handleCreate = (formData: AnimalCreationFormData) => {
     const { animalId, subject, metadata } = buildAnimalFromForm(formData);
     // Defense-in-depth (same as Home): the store throws on a duplicate id from inside a React
     // updater, which can't be caught here — so guard before navigating, or a regressed form check
@@ -109,7 +109,7 @@ export function AnimalWorkspace() {
   }, []); // Run only on mount
 
   return (
-    <main id="main-content" tabIndex="-1" role="main" aria-labelledby="workspace-heading">
+    <main id="main-content" tabIndex={-1} role="main" aria-labelledby="workspace-heading">
       <h1 id="workspace-heading">Animal Workspace</h1>
 
       {showCreate ? (
@@ -215,8 +215,8 @@ export function AnimalWorkspace() {
 
       <AnimalDeleteDialog
         isOpen={pendingDeleteAnimalId != null}
-        animalId={pendingDeleteAnimalId}
-        animal={pendingDeleteAnimal}
+        animalId={pendingDeleteAnimalId ?? undefined}
+        animal={pendingDeleteAnimal ?? undefined}
         days={days}
         onConfirm={confirmDeleteAnimal}
         onCancel={() => setPendingDeleteAnimalId(null)}
@@ -234,7 +234,5 @@ export function AnimalWorkspace() {
     </main>
   );
 }
-
-AnimalWorkspace.propTypes = {};
 
 export default AnimalWorkspace;

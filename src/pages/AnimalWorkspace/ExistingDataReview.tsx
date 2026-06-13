@@ -1,5 +1,27 @@
-import PropTypes from 'prop-types';
 import RawCorruptionBanner from '../../components/RawCorruptionBanner';
+import type { Animal } from '../../state/workspaceTypes';
+import type { RawShapeIssue } from '../../validation/rawShape';
+
+interface ExistingDataReviewProps {
+  /** The animal under review (for the Validation & Export links). */
+  animalId: string;
+  /** The animal record (passed to the corruption banner). */
+  animal: Animal;
+  /** Recording-day records present (indexed + recovered). */
+  dayCount: number;
+  /** Hardware configurations in the animal's history. */
+  configCount: number;
+  /** Whether any saved data is corrupt (styling + lead copy). */
+  hasCorruption: boolean;
+  /** Whether the day-index reference itself is malformed. */
+  daysCorrupt: boolean;
+  /** Recovered-unlinked day ids (not in the index). */
+  orphanDayIds: string[];
+  /** Day ids listed here but owned by another animal. */
+  wrongOwnerDayIds: string[];
+  /** Executor for a raw-shape repair command. */
+  onRepair: (issue: RawShapeIssue) => void;
+}
 
 /**
  * The "Review existing data" state for a recovered/imported animal: it surfaces raw-shape
@@ -8,18 +30,6 @@ import RawCorruptionBanner from '../../components/RawCorruptionBanner';
  * `pages/AnimalWorkspace/RecordingDaysTab.jsx` (Phase 9c-2) with no behavior change. The parent
  * decides WHETHER to render it (only when there is something to review); the `hasCorruption`
  * styling/message branch is preserved verbatim.
- *
- * @param {object} props
- * @param {string} props.animalId - The animal under review (for the Validation & Export links).
- * @param {object} props.animal - The animal record (passed to the corruption banner).
- * @param {number} props.dayCount - Recording-day records present (indexed + recovered).
- * @param {number} props.configCount - Hardware configurations in the animal's history.
- * @param {boolean} props.hasCorruption - Whether any saved data is corrupt (styling + lead copy).
- * @param {boolean} props.daysCorrupt - Whether the day-index reference itself is malformed.
- * @param {string[]} props.orphanDayIds - Recovered-unlinked day ids (not in the index).
- * @param {string[]} props.wrongOwnerDayIds - Day ids listed here but owned by another animal.
- * @param {Function} props.onRepair - Executor for a raw-shape repair command.
- * @returns {JSX.Element}
  */
 export default function ExistingDataReview({
   animalId,
@@ -31,7 +41,7 @@ export default function ExistingDataReview({
   orphanDayIds,
   wrongOwnerDayIds,
   onRepair,
-}) {
+}: ExistingDataReviewProps) {
   return (
     <section
       className={`existing-data-review ${hasCorruption ? 'existing-data-review-corrupt' : ''}`}
@@ -96,14 +106,3 @@ export default function ExistingDataReview({
   );
 }
 
-ExistingDataReview.propTypes = {
-  animalId: PropTypes.string.isRequired,
-  animal: PropTypes.object.isRequired,
-  dayCount: PropTypes.number.isRequired,
-  configCount: PropTypes.number.isRequired,
-  hasCorruption: PropTypes.bool.isRequired,
-  daysCorrupt: PropTypes.bool.isRequired,
-  orphanDayIds: PropTypes.arrayOf(PropTypes.string).isRequired,
-  wrongOwnerDayIds: PropTypes.arrayOf(PropTypes.string).isRequired,
-  onRepair: PropTypes.func.isRequired,
-};

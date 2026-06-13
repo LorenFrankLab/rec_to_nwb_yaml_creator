@@ -16,8 +16,7 @@
  * so each host owns its single `#main-content`.
  */
 
-import React, { useMemo, useState } from 'react';
-import PropTypes from 'prop-types';
+import { useMemo, useState } from 'react';
 import { useStoreContext } from '../../state/StoreContext';
 import {
   getAnimalCameras,
@@ -33,7 +32,9 @@ import {
   normalizeElectrodeGroupWithDefaults,
   normalizeNtrodeMapWithDefaults,
 } from '../../utils/deviceNormalization';
+import type { NtrodeMap } from '../../state/workspaceTypes';
 import CopyFromAnimalDialog from '../AnimalEditor/CopyFromAnimalDialog';
+import type { CopyPayload } from '../AnimalEditor/CopyFromAnimalDialog';
 import {
   classifyAnimalDays,
   DAY_STATUS,
@@ -42,6 +43,7 @@ import {
 import { DOWNSTREAM_NOT_DELETED_NOTE } from '../../domain/animalDeleteCascade';
 import { validateRawAnimal } from '../../validation/rawShape';
 import { applyRepairCommand } from '../../state/repairCommands';
+import type { RepairCommand } from '../../state/repairCommands';
 import { CalendarDayCreator } from '../../components/CalendarDayCreator/CalendarDayCreator';
 import DayLifecycleLegend from '../../components/DayLifecycleLegend/DayLifecycleLegend';
 import { ConfirmDialog } from '../../components/Modal';
@@ -50,17 +52,26 @@ import ExistingDataReview from './ExistingDataReview';
 import DayList from './DayList';
 import DuplicateDayModal from './DuplicateDayModal';
 
+/** A pending per-day delete descriptor (named even after the store row changes). */
+interface PendingDeleteDay {
+  dayId: string;
+  date?: string;
+  sessionId?: string;
+  hasArtifacts: boolean;
+}
+
+interface RecordingDaysTabProps {
+  /** The animal whose recording days to manage. */
+  animalId: string;
+}
+
 /**
  * RecordingDaysTab Component
  *
  * Renders one animal's recording-days management surface. The owning host decides which animal
  * is shown (legacy Workspace selection vs. the `#/animal/:id/days` route) and passes its id.
- *
- * @param {object} props
- * @param {string} props.animalId - The animal whose recording days to manage.
- * @returns {React.Element|null}
  */
-export function RecordingDaysTab({ animalId }) {
+export function RecordingDaysTab({ animalId }: RecordingDaysTabProps) {
   const { model, actions } = useStoreContext();
   // Alias the prop to the original local-state name so the extracted pane body transfers
   // verbatim from AnimalWorkspace (lowest-risk extraction; the 34 workspace tests pin it).
@@ -69,11 +80,11 @@ export function RecordingDaysTab({ animalId }) {
   // Pending per-day delete confirm (null when closed): a small descriptor of the row (so the
   // confirm can name it even after the store row changes). Animal delete moved to the AnimalView
   // header ⋮ in Phase 4 (the shared type-to-confirm AnimalDeleteDialog), so it no longer lives here.
-  const [pendingDeleteDay, setPendingDeleteDay] = useState(null);
+  const [pendingDeleteDay, setPendingDeleteDay] = useState<PendingDeleteDay | null>(null);
   // Pending per-day DUPLICATE (null when closed): the source row descriptor (dayId/date). The
   // single-date picker writes its chosen date into `duplicateDate`; `duplicateError` surfaces a
   // collision or a store throw inside the dialog (mirroring how create errors are surfaced).
-  const [pendingDuplicateDay, setPendingDuplicateDay] = useState(null);
+  const [pendingDuplicateDay, setPendingDuplicateDay] = useState<{ dayId: string; date?: string } | null>(null);
   const [duplicateDate, setDuplicateDate] = useState('');
   const [duplicateError, setDuplicateError] = useState('');
   // Carry-forward day creation: default ON. When on, a new day seeds its day-owned content
@@ -121,7 +132,7 @@ export function RecordingDaysTab({ animalId }) {
     () =>
       selectedDayClassification
         .filter((d) => d.status === DAY_STATUS.OK && d.record)
-        .map((d) => d.record)
+        .map((d) => d.record!)
         .sort((a, b) => String(a?.date ?? '').localeCompare(String(b?.date ?? ''))),
     [selectedDayClassification]
   );
@@ -149,10 +160,8 @@ export function RecordingDaysTab({ animalId }) {
 
   /**
    * Open the single-date duplicate picker for a source row (resets any prior chosen date/error).
-   *
-   * @param {object} source - `{ dayId, date }` descriptor of the row to clone.
    */
-  function openDuplicateDay(source) {
+  function openDuplicateDay(source: { dayId: string; date?: string }) {
     setDuplicateDate('');
     setDuplicateError('');
     setPendingDuplicateDay(source);
@@ -186,7 +195,7 @@ export function RecordingDaysTab({ animalId }) {
       actions.duplicateDay(source.dayId, duplicateDate);
       cancelDuplicateDay();
     } catch (error) {
-      setDuplicateError(error.message);
+      setDuplicateError((error as Error).message);
     }
   }
 
@@ -194,23 +203,20 @@ export function RecordingDaysTab({ animalId }) {
    * Execute a raw-shape corruption repair in place (same executor the editor banners use),
    * so recovered/imported corruption can be cleared from the review state without leaving the
    * workspace.
-   *
-   * @param {object} issue - A raw-shape issue carrying a `repairCommand`.
    */
-  function handleRepair(issue) {
+  function handleRepair(issue: { repairCommand?: unknown } | null | undefined) {
     if (!issue?.repairCommand || !selectedAnimalId) return;
-    applyRepairCommand(issue.repairCommand, {
+    applyRepairCommand(issue.repairCommand as RepairCommand, {
       actions,
       animalId: selectedAnimalId,
-      animal: selectedAnimal,
+      animal: selectedAnimal ?? undefined,
     });
   }
 
   /**
-   * Handle creating multiple recording days from calendar
-   * @param {string[]} dates - Array of ISO date strings (YYYY-MM-DD)
+   * Handle creating multiple recording days from calendar.
    */
-  async function handleCreateDays(dates) {
+  async function handleCreateDays(dates: string[]) {
     if (!selectedAnimalId || !dates || dates.length === 0) return;
 
     // Snapshot existing ids once, then accumulate locally. The `days` prop is the
@@ -241,7 +247,7 @@ export function RecordingDaysTab({ animalId }) {
         existingIds.add(dayId);
       } catch (error) {
         console.error(`Failed to create day ${date}:`, error);
-        throw new Error(`Failed to create day ${date}: ${error.message}`);
+        throw new Error(`Failed to create day ${date}: ${(error as Error).message}`);
       }
     }
   }
@@ -253,11 +259,8 @@ export function RecordingDaysTab({ animalId }) {
     setShowCalendar(!showCalendar);
   }
 
-  /**
-   * Get existing days for selected animal
-   * @returns {string[]} Array of ISO date strings
-   */
-  function getExistingDays() {
+  /** Get existing days (ISO date strings) for selected animal. */
+  function getExistingDays(): string[] {
     if (!selectedAnimal) return [];
     // Use the recovery classifier so the calendar's duplicate-date guard accounts for recovered
     // records too (ok + recovered-unlinked), not just the index — otherwise a recovered day's
@@ -267,7 +270,7 @@ export function RecordingDaysTab({ animalId }) {
         (d) => isPresentRecordStatus(d.status)
       )
       .map((d) => d.record?.date)
-      .filter(Boolean);
+      .filter((x): x is string => Boolean(x));
   }
 
   /**
@@ -277,10 +280,10 @@ export function RecordingDaysTab({ animalId }) {
    * tab does; the recording-system catalog is appended; cameras are appended. The common case is a
    * fresh/under-configured target with empty catalogs, where appending equals replacing.
    *
-   * @param {object} payload - `{ electrode_groups?, ntrode_electrode_group_channel_map?, cameras?, data_acq_device? }`.
+   * The payload carries only the checked sections.
    */
-  function handleCopyConfirm(payload) {
-    const update = {};
+  function handleCopyConfirm(payload: CopyPayload) {
+    const update: Record<string, unknown> = {};
 
     const hasDeviceSection =
       Array.isArray(payload.electrode_groups) ||
@@ -300,7 +303,10 @@ export function RecordingDaysTab({ animalId }) {
         devices.ntrode_electrode_group_channel_map = [
           ...getAnimalNtrodeMaps(selectedAnimal),
           ...payload.ntrode_electrode_group_channel_map,
-        ].map(normalizeNtrodeMapWithDefaults);
+          // Point-free to preserve the original .jsx call exactly (Array#map passes (el, index,
+          // array); the 3rd arg lands in the IGNORED `fallback*` param) — a behavior-preserving
+          // cast, NOT a 2-arg rewrite, to keep this migration runtime-identical.
+        ].map(normalizeNtrodeMapWithDefaults as unknown as (value: NtrodeMap, index: number, array: NtrodeMap[]) => NtrodeMap);
       }
       if (Array.isArray(payload.data_acq_device)) {
         devices.data_acq_device = [
@@ -488,9 +494,5 @@ export function RecordingDaysTab({ animalId }) {
     </>
   );
 }
-
-RecordingDaysTab.propTypes = {
-  animalId: PropTypes.string.isRequired,
-};
 
 export default RecordingDaysTab;
