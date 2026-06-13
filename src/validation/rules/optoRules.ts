@@ -31,7 +31,7 @@ export function optogeneticsRules(model: ValidationModel): ValidationIssue[] {
   // nav count can never drift. The arrays use Array.isArray(...) && length > 0 (a corrupt non-array
   // value is NOT present); the software is a non-empty trimmed string — matching the converter's
   // len()>0 on the string.
-  const optoPresence = optoFieldsPresence(model as Parameters<typeof optoFieldsPresence>[0]);
+  const optoPresence = optoFieldsPresence(model);
   const hasOptoSource = optoPresence.opto_excitation_source;
   const hasOpticalFiber = optoPresence.optical_fiber;
   const hasVirusInjection = optoPresence.virus_injection;

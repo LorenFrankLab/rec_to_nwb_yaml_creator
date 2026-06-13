@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Typed the optogenetics-completeness predicate under strict TS (refactor only, no behavior change).**
+  [domain/optoCompleteness.js](src/domain/optoCompleteness.ts) → `.ts`: `optoFieldsPresence` (the single
+  source of truth for "which of the four opto fields count as present") now takes a permissive
+  `OptoFields` and returns a typed `OptoFieldsPresence` (`{ …four booleans, count }`); the `isOptoList…`
+  / `isOptoSoftware…` helpers take `unknown`. Body equivalent — the `presence.count = …` post-assignment
+  is rewritten as four `const`s + a single returned object (same values). As a **payoff, the consumer
+  `validation/rules/optoRules.ts` drops its `model as Parameters<typeof optoFieldsPresence>[0]` cast** —
+  a `Record<string, any>` model is assignable to `OptoFields` directly. The other consumer
+  (`domain/sectionStatus.js`) is JS, so the rename is transparent. Validation (incl. opto rules) +
+  `sectionStatus` + golden baselines (483) pass; `npm run typecheck` + `CI=true` build clean; full suite
+  4793; e2e 104.
+
 - **Typed the day camera-usage helpers under strict TS (refactor only, no behavior change).**
   [state/cameraUsage.js](src/state/cameraUsage.ts) → `.ts`: `inferredCameraKeys` / `referencedCameraKeys`
   / `resolveDayCameraUsage` (→ `Camera[]`) / `findCameraAffectedDays` and the `cameraKey` helper are

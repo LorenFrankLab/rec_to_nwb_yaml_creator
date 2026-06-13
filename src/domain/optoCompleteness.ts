@@ -18,49 +18,63 @@
  * site reads them from its own source).
  */
 
+/** The four optogenetics field VALUES (each call site reads them from its own source). */
+export interface OptoFields {
+  /** The excitation-source list. */
+  opto_excitation_source?: unknown;
+  /** The optical-fiber list. */
+  optical_fiber?: unknown;
+  /** The virus-injection list. */
+  virus_injection?: unknown;
+  /** The stimulation-software string. */
+  optogenetic_stimulation_software?: unknown;
+}
+
+/** Each optogenetics field's presence boolean plus the total count of present fields. */
+export interface OptoFieldsPresence {
+  opto_excitation_source: boolean;
+  optical_fiber: boolean;
+  virus_injection: boolean;
+  optogenetic_stimulation_software: boolean;
+  count: number;
+}
+
 /**
  * A list opto field counts as present only when it's a non-empty array (corrupt non-array → absent).
  * @param value
  */
-const isOptoListPresent = (value) => Array.isArray(value) && value.length > 0;
+const isOptoListPresent = (value: unknown): boolean => Array.isArray(value) && value.length > 0;
 
 /**
  * The software field counts as present only when it's a non-empty trimmed string.
  * @param value
  */
-const isOptoSoftwarePresent = (value) => typeof value === 'string' && value.trim() !== '';
+const isOptoSoftwarePresent = (value: unknown): boolean =>
+  typeof value === 'string' && value.trim() !== '';
 
 /**
  * Compute the per-field presence of the four optogenetics fields from their VALUES.
  *
- * @param {object} fields - The four field values (read from the caller's own source).
- * @param {*} fields.opto_excitation_source - The excitation-source list.
- * @param {*} fields.optical_fiber - The optical-fiber list.
- * @param {*} fields.virus_injection - The virus-injection list.
- * @param {*} fields.optogenetic_stimulation_software - The stimulation-software string.
- * @returns {{
- *   opto_excitation_source: boolean,
- *   optical_fiber: boolean,
- *   virus_injection: boolean,
- *   optogenetic_stimulation_software: boolean,
- *   count: number,
- * }} Each field's presence boolean plus the total count of present fields.
+ * @param fields - The four field values (read from the caller's own source).
  */
-export function optoFieldsPresence(fields) {
-  const source = fields || {};
-  const presence = {
-    opto_excitation_source: isOptoListPresent(source.opto_excitation_source),
-    optical_fiber: isOptoListPresent(source.optical_fiber),
-    virus_injection: isOptoListPresent(source.virus_injection),
-    optogenetic_stimulation_software: isOptoSoftwarePresent(
-      source.optogenetic_stimulation_software
-    ),
+export function optoFieldsPresence(fields: OptoFields | null | undefined): OptoFieldsPresence {
+  const source: OptoFields = fields || {};
+  const opto_excitation_source = isOptoListPresent(source.opto_excitation_source);
+  const optical_fiber = isOptoListPresent(source.optical_fiber);
+  const virus_injection = isOptoListPresent(source.virus_injection);
+  const optogenetic_stimulation_software = isOptoSoftwarePresent(
+    source.optogenetic_stimulation_software
+  );
+  return {
+    opto_excitation_source,
+    optical_fiber,
+    virus_injection,
+    optogenetic_stimulation_software,
+    count: [
+      opto_excitation_source,
+      optical_fiber,
+      virus_injection,
+      optogenetic_stimulation_software,
+    ].filter(Boolean).length,
   };
-  presence.count = [
-    presence.opto_excitation_source,
-    presence.optical_fiber,
-    presence.virus_injection,
-    presence.optogenetic_stimulation_software,
-  ].filter(Boolean).length;
-  return presence;
 }
