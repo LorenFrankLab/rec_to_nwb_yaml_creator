@@ -14,6 +14,25 @@
  */
 
 import { repairTargetForIssue } from './validation';
+import type { RepairableIssue } from './repairRouting';
+
+/** The five user-facing workflow categories. */
+export type WorkflowCategory =
+  | 'animal_setup'
+  | 'day_metadata'
+  | 'failed_channels'
+  | 'existing_data'
+  | 'export_preflight';
+
+/** A workflow-category bucket of issues, as returned by {@link groupIssuesByWorkflowCategory}. */
+export interface WorkflowCategoryBucket {
+  /** The bucket's category. */
+  category: WorkflowCategory;
+  /** User-facing label. */
+  label: string;
+  /** Issues in this bucket. */
+  issues: RepairableIssue[];
+}
 
 /**
  * The five user-facing workflow categories.
@@ -21,10 +40,8 @@ import { repairTargetForIssue } from './validation';
  * `export_preflight` is a readiness STATE (the "ready for export" stage), not a destination
  * for any issue code — no issue maps to it; the Export surface uses it for the preflight
  * section header. The other four are where blocking issues are grouped.
- *
- * @type {Readonly<Record<string, 'animal_setup'|'day_metadata'|'failed_channels'|'existing_data'|'export_preflight'>>}
  */
-export const WORKFLOW_CATEGORY = Object.freeze({
+export const WORKFLOW_CATEGORY: Readonly<Record<string, WorkflowCategory>> = Object.freeze({
   ANIMAL_SETUP: 'animal_setup',
   DAY_METADATA: 'day_metadata',
   FAILED_CHANNELS: 'failed_channels',
@@ -34,9 +51,8 @@ export const WORKFLOW_CATEGORY = Object.freeze({
 
 /**
  * Display order for the categories — the workflow order (setup first, export last).
- * @type {ReadonlyArray<string>}
  */
-export const WORKFLOW_CATEGORY_ORDER = Object.freeze([
+export const WORKFLOW_CATEGORY_ORDER: readonly WorkflowCategory[] = Object.freeze([
   WORKFLOW_CATEGORY.ANIMAL_SETUP,
   WORKFLOW_CATEGORY.DAY_METADATA,
   WORKFLOW_CATEGORY.FAILED_CHANNELS,
@@ -46,9 +62,8 @@ export const WORKFLOW_CATEGORY_ORDER = Object.freeze([
 
 /**
  * User-facing label for each category, worded to match the setup checklist.
- * @type {Readonly<Record<string, string>>}
  */
-export const WORKFLOW_CATEGORY_LABELS = Object.freeze({
+export const WORKFLOW_CATEGORY_LABELS: Readonly<Record<string, string>> = Object.freeze({
   animal_setup: 'Animal setup',
   day_metadata: 'Day metadata',
   failed_channels: 'Day-specific failed channels',
@@ -63,10 +78,8 @@ export const WORKFLOW_CATEGORY_LABELS = Object.freeze({
  *  - this day's session/tasks/videos/files/event references → day metadata;
  *  - day-specific failed-channel marks → failed channels;
  *  - corrupt/recovered/stale shapes that need cleanup before trust → existing-data repair.
- *
- * @type {Readonly<Record<string, string>>}
  */
-export const CATEGORY_BY_CODE = Object.freeze({
+export const CATEGORY_BY_CODE: Readonly<Record<string, WorkflowCategory>> = Object.freeze({
   // Shared animal hardware setup (device geometry, channel maps, probe catalog, cameras,
   // data-acq devices) and animal-level optogenetics.
   channel_value_out_of_range: WORKFLOW_CATEGORY.ANIMAL_SETUP,
@@ -147,11 +160,11 @@ export const CATEGORY_BY_CODE = Object.freeze({
  * override codes already carry an app code, so the day fallback only ever sees session/task
  * schema errors — hence day_metadata is the safe default there.
  *
- * @param {{code?: string, path?: string, instancePath?: string, step?: string, repairSurface?: string, ownerSurface?: string}} issue
- * @returns {string} One of the WORKFLOW_CATEGORY values (never `export_preflight`).
+ * @param issue
+ * @returns One of the WORKFLOW_CATEGORY values (never `export_preflight`).
  */
-export function workflowCategoryForIssue(issue) {
-  const byCode = CATEGORY_BY_CODE[issue?.code];
+export function workflowCategoryForIssue(issue: RepairableIssue): WorkflowCategory {
+  const byCode = CATEGORY_BY_CODE[issue?.code as string];
   if (byCode) return byCode;
 
   const { surface } = repairTargetForIssue(issue);
@@ -163,19 +176,20 @@ export function workflowCategoryForIssue(issue) {
  * Group issues into ordered category buckets (empty buckets dropped). Each bucket is
  * `{ category, label, issues }`, in `WORKFLOW_CATEGORY_ORDER`.
  *
- * @param {Array} issues - Validation issues.
- * @returns {Array<{category: string, label: string, issues: Array}>}
+ * @param issues - Validation issues.
+ * @returns
  */
-export function groupIssuesByWorkflowCategory(issues) {
-  const byCategory = new Map();
+export function groupIssuesByWorkflowCategory(issues: RepairableIssue[]): WorkflowCategoryBucket[] {
+  const byCategory = new Map<WorkflowCategory, RepairableIssue[]>();
   for (const issue of Array.isArray(issues) ? issues : []) {
     const category = workflowCategoryForIssue(issue);
     if (!byCategory.has(category)) byCategory.set(category, []);
-    byCategory.get(category).push(issue);
+    // The `has`/`set` immediately above guarantees the bucket exists.
+    byCategory.get(category)!.push(issue);
   }
   return WORKFLOW_CATEGORY_ORDER.filter((category) => byCategory.has(category)).map((category) => ({
     category,
     label: WORKFLOW_CATEGORY_LABELS[category],
-    issues: byCategory.get(category),
+    issues: byCategory.get(category)!,
   }));
 }
