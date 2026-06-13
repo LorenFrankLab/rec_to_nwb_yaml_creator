@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 /**
  * Parses day ID from URL hash: #/day/remy-2023-06-22
  *
- * @returns {string|null} Day ID or null if not found
+ * @returns Day ID or null if not found
  *
  * @example
  * // URL: #/day/remy-2023-06-22
@@ -13,8 +13,8 @@ import { useState, useEffect } from 'react';
  * // URL: #/workspace
  * const dayId = useDayIdFromUrl(); // null
  */
-export function useDayIdFromUrl() {
-  const [dayId, setDayId] = useState(null);
+export function useDayIdFromUrl(): string | null {
+  const [dayId, setDayId] = useState<string | null>(null);
 
   useEffect(() => {
     /**

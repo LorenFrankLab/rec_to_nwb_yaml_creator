@@ -16,22 +16,22 @@ export const STEPPER_SHORTCUT_EVENT = 'workspace:stepper-shortcut';
 /**
  * Broadcast a stepper navigation/add intent to the active stepper.
  *
- * @param {'next'|'prev'|'add'} action - The stepper intent.
- * @returns {void}
+ * @param action - The stepper intent.
+ * @returns
  */
-export function emitStepperShortcut(action) {
+export function emitStepperShortcut(action: 'next' | 'prev' | 'add'): void {
   window.dispatchEvent(new CustomEvent(STEPPER_SHORTCUT_EVENT, { detail: { action } }));
 }
 
 /**
  * Subscribe the current stepper to stepper-shortcut events.
  *
- * @param {(action: 'next'|'prev'|'add') => void} handler - Called with the action.
- * @returns {void}
+ * @param handler - Called with the action.
+ * @returns
  */
-export function useStepperShortcut(handler) {
+export function useStepperShortcut(handler: (action: 'next' | 'prev' | 'add') => void): void {
   useEffect(() => {
-    const listener = (event) => handler(event.detail?.action);
+    const listener = (event: Event) => handler((event as CustomEvent).detail?.action);
     window.addEventListener(STEPPER_SHORTCUT_EVENT, listener);
     return () => window.removeEventListener(STEPPER_SHORTCUT_EVENT, listener);
   }, [handler]);

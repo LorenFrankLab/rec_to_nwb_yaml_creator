@@ -9,12 +9,21 @@
  */
 import { useState, useEffect } from 'react';
 
+/** Transient animal-view route context parsed from the hash query string. */
+interface ReconfigContext {
+  context: string | null;
+  version: number | null;
+  fromDayId: string | null;
+  movedDays: number | null;
+  field: string | null;
+}
+
 /**
  * Parse a non-negative integer query param, or null when absent/blank/non-numeric.
- * @param {string|null} raw - Raw query value.
- * @returns {number|null} The parsed safe integer, or null.
+ * @param raw - Raw query value.
+ * @returns The parsed safe integer, or null.
  */
-function parseIntegerParam(raw) {
+function parseIntegerParam(raw: string | null): number | null {
   const trimmed = (raw || '').trim();
   if (!trimmed || !/^\d+$/.test(trimmed)) return null;
   const parsed = Number.parseInt(trimmed, 10);
@@ -24,10 +33,10 @@ function parseIntegerParam(raw) {
 /**
  * Parse transient animal-view route context from a hash string.
  *
- * @param {string} hash - Current window hash (e.g. `#/animal/remy/electrode-groups?context=reconfigure`).
- * @returns {{context: string|null, version: number|null, fromDayId: string|null, movedDays: number|null, field: string|null}}
+ * @param hash - Current window hash (e.g. `#/animal/remy/electrode-groups?context=reconfigure`).
+ * @returns The parsed route context.
  */
-export function parseReconfigContext(hash) {
+export function parseReconfigContext(hash: string): ReconfigContext {
   const query = (hash || '').split('?')[1] || '';
   const params = new URLSearchParams(query);
   const movedDays = parseIntegerParam(params.get('movedDays'));
@@ -36,7 +45,7 @@ export function parseReconfigContext(hash) {
     context: params.get('context'),
     version: parseIntegerParam(params.get('version')),
     fromDayId: params.get('fromDay'),
-    movedDays: movedDays > 0 ? movedDays : null,
+    movedDays: movedDays !== null && movedDays > 0 ? movedDays : null,
     field: params.get('field'),
   };
 }
@@ -44,10 +53,10 @@ export function parseReconfigContext(hash) {
 /**
  * Track the route query context while mounted, re-parsing on every `hashchange`.
  *
- * @returns {{context: string|null, version: number|null, fromDayId: string|null, movedDays: number|null, field: string|null}}
+ * @returns The parsed route context.
  */
-export function useReconfigContext() {
-  const [routeContext, setRouteContext] = useState(() => (
+export function useReconfigContext(): ReconfigContext {
+  const [routeContext, setRouteContext] = useState<ReconfigContext>(() => (
     typeof window === 'undefined'
       ? { context: null, version: null, fromDayId: null, movedDays: null, field: null }
       : parseReconfigContext(window.location.hash)

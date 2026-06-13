@@ -32,13 +32,15 @@ export const ANIMAL_VIEW_TABS = [
  */
 export const DEFAULT_ANIMAL_VIEW_TAB = 'days';
 
-/**
- * Route information object
- * @typedef {object} RouteInfo
- * @property {'home'|'workspace'|'day'|'validation'|'animal-view'|'legacy'} view - Current view name
- * @property {Object.<string, string>} params - Route parameters (e.g., {id: '123'} or {animalId, tab})
- * @property {boolean} [isUnknownRoute] - True if route was not recognized
- */
+/** Parsed route information. */
+export interface RouteInfo {
+  /** Current view name. */
+  view: 'home' | 'workspace' | 'day' | 'validation' | 'animal-view' | 'legacy';
+  /** Route parameters (e.g., `{id: '123'}` or `{animalId, tab}`). */
+  params: Record<string, string>;
+  /** True if route was not recognized. */
+  isUnknownRoute?: boolean;
+}
 
 /**
  * Parse hash string into route object
@@ -46,8 +48,8 @@ export const DEFAULT_ANIMAL_VIEW_TAB = 'days';
  * Pure function that converts window.location.hash into structured route information.
  * Moved outside component to ensure stable reference and prevent re-render issues.
  *
- * @param {string} [hash=window.location.hash] - Hash string to parse (e.g., "#/workspace")
- * @returns {RouteInfo} Parsed route information
+ * @param [hash=window.location.hash] - Hash string to parse (e.g., "#/workspace")
+ * @returns Parsed route information
  *
  * @example
  * parseHashRoute('#/day/123')
@@ -57,7 +59,9 @@ export const DEFAULT_ANIMAL_VIEW_TAB = 'days';
  * parseHashRoute('#/')
  * // Returns: { view: 'legacy', params: {} }
  */
-export function parseHashRoute(hash = typeof window !== 'undefined' ? window.location.hash : '') {
+export function parseHashRoute(
+  hash: string = typeof window !== 'undefined' ? window.location.hash : ''
+): RouteInfo {
   // Guard for SSR/testing environments
   if (typeof window === 'undefined') {
     return { view: 'legacy', params: {} };
@@ -100,7 +104,8 @@ export function parseHashRoute(hash = typeof window !== 'undefined' ? window.loc
     // its real store key — but ALSO guard a malformed percent-sequence (keep the raw segment), which
     // the day route does not. (Imported animal ids are gated to a route-safe charset, so this decode
     // is belt-and-suspenders.)
-    let animalId = (animalTabMatch || animalNoTabMatch)[1];
+    // One of the two matched (the enclosing `if` guarantees it).
+    let animalId = (animalTabMatch || animalNoTabMatch)![1];
     try {
       animalId = decodeURIComponent(animalId);
     } catch {
@@ -143,7 +148,7 @@ export function parseHashRoute(hash = typeof window !== 'undefined' ? window.loc
  * Manages current route state and listens for hash changes.
  * Automatically updates when user navigates via browser back/forward or clicks links.
  *
- * @returns {RouteInfo} Current route information
+ * @returns Current route information
  *
  * @example
  * function AppLayout() {
@@ -155,10 +160,10 @@ export function parseHashRoute(hash = typeof window !== 'undefined' ? window.loc
  *   // ...
  * }
  */
-export function useHashRouter() {
+export function useHashRouter(): RouteInfo {
   // Initialize with current hash
   // Use function form to only parse once on mount
-  const [route, setRoute] = useState(() => parseHashRoute());
+  const [route, setRoute] = useState<RouteInfo>(() => parseHashRoute());
 
   useEffect(() => {
     /**

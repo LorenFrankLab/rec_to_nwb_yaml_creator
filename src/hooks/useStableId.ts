@@ -16,9 +16,9 @@ let globalIdCounter = 0;
  * - Supports SSR (server-side rendering) safe patterns
  * - Enables proper label and aria-describedby associations
  *
- * @param {string|number} [providedId] - Optional ID provided by parent component
- * @param {string} [prefix='stable-id'] - Prefix for generated IDs
- * @returns {string} - A stable, unique ID
+ * @param [providedId] - Optional ID provided by parent component
+ * @param [prefix='stable-id'] - Prefix for generated IDs
+ * @returns - A stable, unique ID
  *
  * @example
  * // With provided ID
@@ -39,9 +39,12 @@ let globalIdCounter = 0;
  *   return <input id={id} key={item.id} />;
  * })}
  */
-export function useStableId(providedId, prefix = 'stable-id') {
+export function useStableId(
+  providedId?: string | number | null,
+  prefix: string = 'stable-id'
+): string {
   // Store the stable ID in a ref to maintain across re-renders
-  const stableIdRef = useRef(null);
+  const stableIdRef = useRef<string | null>(null);
 
   // On first render or when we don't have a stable ID yet
   if (stableIdRef.current === null) {
@@ -69,5 +72,6 @@ export function useStableId(providedId, prefix = 'stable-id') {
     // If providedId becomes undefined/null/empty, keep the current stable ID
   }
 
-  return stableIdRef.current;
+  // Always set to a string by the first-render block above (cross-branch invariant).
+  return stableIdRef.current!;
 }
