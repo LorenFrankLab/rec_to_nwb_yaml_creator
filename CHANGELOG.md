@@ -9,6 +9,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Typed `utils/deviceNormalization.js` (the corruption-preserving "Normalization Contract", 646 LOC) under strict TS (refactor only, value-identical).**
+  [utils/deviceNormalization.js](src/utils/deviceNormalization.ts) is the device-shape normalizer plus the
+  one-time bad-channel base→day migration; it is golden-baseline-relevant (its output flows into export).
+  Helpers (`parseExactInteger`/`cleanString`/`toFiniteNumber`/`normalizeNumberList`/`normalizeMap`) are typed
+  `unknown`-in / `unknown`-out — honest about corruption preservation; `isPlainObject` is a
+  `value is Record<string, unknown>` guard. The 5 `.ts`-consumed public normalizers return the canonical
+  workspace types (`DeviceConfiguration`/`ElectrodeGroup`/`NtrodeMap`/`DeviceOverrides`/`Record<string, unknown>`)
+  via documented `as unknown as` TOLERANT-BOUNDARY casts, so the consumers (`workspaceUtils`/`workspaceTransitions`/
+  `workspaceHydration`/`persistence`) keep compiling unchanged. Behavior-equivalent transforms only (every one an
+  erased cast or a provably-equal restructure): two `Object.hasOwn` → `Object.prototype.hasOwnProperty.call` swaps
+  (the lib is ES2020), three cast-based local extractions (`rawName` / `rawHistory`+`dayVersion` / `overridesBag`)
+  replacing `?.` chains on `unknown`, and a few erased `as` casts on template/index expressions. Proven by a
+  temporary deep-compare of EVERY export across clean + corrupt + migration inputs, then deleted. With this typed,
+  the live non-component glue layer is complete. `npm run typecheck` + `CI=true` build clean (bundle +2 B); golden
+  baselines, the deviceNormalization/badChannelMigration suites, and 3 source-scanning guards pass; full suite 4793;
+  e2e 104; code-reviewer-verified (independent 268-check parity harness, 0 failures).
+
 - **Typed 3 live glue modules under strict TS — `featureFlags`, `features/importYaml`, root `utils` (refactor only, behavior-preserving).**
   [featureFlags.js](src/featureFlags.ts) (feature-flag registry + `isFeatureEnabled`/`overrideFlags`; the
   `FLAGS` object body is byte-identical, so the `shadowExportStrict`/`shadowExportLog` export-integrity gate
