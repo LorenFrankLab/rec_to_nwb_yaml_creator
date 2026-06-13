@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Typed 5 pure `domain/` utility modules under strict TS (refactor only, behavior-preserving).**
+  [domain/rigConstants.js](src/domain/rigConstants.ts) (`resolveRigConstant` + `RigField`/`RIG_FALLBACK`),
+  [domain/animalDeleteCascade.js](src/domain/animalDeleteCascade.ts) (`getAnimalDeleteCascade`),
+  [domain/stepGate.js](src/domain/stepGate.ts) (`isExportEnabled` / `exportBlockReason`),
+  [domain/optoStatus.js](src/domain/optoStatus.ts) (`describeDayOptoState`), and
+  [domain/humanizeValidationMessage.js](src/domain/humanizeValidationMessage.ts) → `.ts`. Bodies are
+  behavior-identical apart from small narrowing accommodations: `rigConstants` extracts `defaultVal` and
+  inlines the `display` typeof (both exactly equal to the prior `hasDay` boolean — the const didn't narrow);
+  `humanizeValidationMessage` adds a `pop()!` (a `split('.')` always yields ≥1 element) + `Record<string,string>`
+  + `message: unknown` (narrowed by the existing guard); `animalDeleteCascade` reads its rows as `(d: any)`
+  because `dayRecovery` is still `.js` (workflow-layer phase); `optoStatus` types `asArray(value: unknown): any[]`.
+  Zero `.ts`/`.tsx` consumers. `npm run typecheck` + `CI=true` build clean; targeted tests + 3 source-scanning
+  guards (175) pass; full suite 4793; e2e 104. Begins the `domain/` migration.
+
 - **Typed the React state-shell hooks under strict TS (refactor only, behavior-preserving).**
   [state/useWorkspacePersistence.js](src/state/useWorkspacePersistence.ts),
   [state/useWorkspace.js](src/state/useWorkspace.ts), [state/useEpochCleanup.js](src/state/useEpochCleanup.ts),

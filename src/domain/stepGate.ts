@@ -16,10 +16,11 @@ import { STEP_STATUS } from './validation';
  * Steps that must be valid before Export is reachable, in addition to the authoritative
  * `export` status. The data-entry steps gate on completeness; the `export` status gates on
  * zero error-severity validation issues (see {@link computeStepStatus}).
- *
- * @type {string[]}
  */
-const EXPORT_PREREQUISITE_STEPS = ['overview', 'devices', 'epochs', 'validation'];
+const EXPORT_PREREQUISITE_STEPS: string[] = ['overview', 'devices', 'epochs', 'validation'];
+
+/** A step-status map: `{ stepId: 'valid'|'incomplete'|'error'|'pending' }`. */
+type StepStatusMap = Record<string, string> | null | undefined;
 
 /**
  * Whether the Export step is reachable for the current validation state.
@@ -29,10 +30,10 @@ const EXPORT_PREREQUISITE_STEPS = ['overview', 'devices', 'epochs', 'validation'
  * data-entry steps "valid" (e.g. a device-field error the Devices completeness check ignores)
  * still keeps export closed.
  *
- * @param {object} stepStatus - Status map: `{ stepId: 'valid'|'incomplete'|'error'|'pending' }`.
- * @returns {boolean} True when Export may be reached / the download may fire.
+ * @param stepStatus - Status map: `{ stepId: 'valid'|'incomplete'|'error'|'pending' }`.
+ * @returns True when Export may be reached / the download may fire.
  */
-export function isExportEnabled(stepStatus) {
+export function isExportEnabled(stepStatus: StepStatusMap): boolean {
   return (
     stepStatus?.export === STEP_STATUS.VALID &&
     EXPORT_PREREQUISITE_STEPS.every((stepId) => stepStatus?.[stepId] === STEP_STATUS.VALID)
@@ -45,10 +46,12 @@ export function isExportEnabled(stepStatus) {
  * enter) from an export-blocking validation error on a day whose steps all look complete (the
  * user must resolve errors, not revisit the already-finished steps).
  *
- * @param {object} stepStatus - Status map.
- * @returns {'incomplete-steps'|'validation-errors'|null}
+ * @param stepStatus - Status map.
+ * @returns The reason Export is locked, or `null` when enabled.
  */
-export function exportBlockReason(stepStatus) {
+export function exportBlockReason(
+  stepStatus: StepStatusMap
+): 'incomplete-steps' | 'validation-errors' | null {
   if (isExportEnabled(stepStatus)) return null;
   const prerequisitesComplete = EXPORT_PREREQUISITE_STEPS.every(
     (stepId) => stepStatus?.[stepId] === STEP_STATUS.VALID
