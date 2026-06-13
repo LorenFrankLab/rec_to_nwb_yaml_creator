@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Typed 3 LIVE animal-dialog components `.jsx`→`.tsx` (refactor only, behavior-preserving) — component cycle 4.**
+  [components/AnimalDeleteDialog.jsx](src/components/AnimalDeleteDialog.tsx) (type-to-confirm delete; the one
+  non-annotation change is erased boundary casts on the `getAnimalDeleteCascade(animalId as string, animal as Animal,
+  days as Record<string, Day>)` call — NOT `??`-coalesced, so the function receives identical runtime values),
+  [components/AnimalProfileDialog.jsx](src/components/AnimalProfileDialog.tsx) (subject-facts editor — local `ProfileForm`
+  type; `onSave: (changedFields: Partial<ProfileForm>) => void`), and
+  [components/AnimalSwitcher.jsx](src/components/AnimalSwitcher.tsx) (the object-selector disclosure popup — roving-focus
+  refs typed `Array<HTMLElement|null>`, `indexOf(document.activeElement as HTMLElement|null)` preserves reference
+  equality) → `.tsx`. Runtime PropTypes/defaultProps dropped (the `days = {}` default preserved as a destructure
+  default); unused default `import React` dropped. **The component leaf + shared/dialog tiers are complete; only the
+  `pages/**` + `layouts/AppLayout` + `App.js` remain.** `npm run typecheck` + `CI=true` build clean (bundle −42 B);
+  golden baselines, the dialog suites + consumers (200), and the 3 source-scanning guards pass; full suite 4793; e2e 104.
+
 - **Typed 4 LIVE Tier-2 React components `.jsx`→`.tsx` (refactor only, behavior-preserving) — component cycle 3.**
   [components/Modal/ConfirmDialog.jsx](src/components/Modal/ConfirmDialog.tsx) (`title`/`message: ReactNode`),
   [components/ShortcutsHelp/ShortcutsHelp.jsx](src/components/ShortcutsHelp/ShortcutsHelp.tsx) (kept `import React`
