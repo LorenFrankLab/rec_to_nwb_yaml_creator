@@ -1,8 +1,23 @@
-import React, { useId, useState, useEffect } from 'react';
-import PropTypes from 'prop-types';
+import { useId, useState, useEffect } from 'react';
 import Modal from './Modal/Modal';
 import { getAnimalDeleteCascade, DOWNSTREAM_NOT_DELETED_NOTE } from '../domain/animalDeleteCascade';
+import type { Animal, Day } from '../state/workspaceTypes';
 import './AnimalDeleteDialog.css';
+
+interface AnimalDeleteDialogProps {
+  /** Whether the dialog is shown. */
+  isOpen: boolean;
+  /** The animal's store key (the value the user must type). */
+  animalId?: string;
+  /** The animal record (for the cascade). */
+  animal?: Animal;
+  /** The workspace day map (for the cascade). */
+  days?: Record<string, Day>;
+  /** Called when the user confirms with a matching typed name. */
+  onConfirm: () => void;
+  /** Called for cancel / ESC. */
+  onCancel: () => void;
+}
 
 /**
  * AnimalDeleteDialog — the destructive, type-to-confirm animal-delete dialog (Phase 4, Tasks
@@ -16,16 +31,15 @@ import './AnimalDeleteDialog.css';
  * wherever animal-delete is triggered (the picker ⋮ and the header ⋮). Built on the shared Modal
  * (focus trap, ESC, focus return); the typed field is the first focusable, so focus opens on it.
  *
- * @param {object} props
- * @param {boolean} props.isOpen - Whether the dialog is shown.
- * @param {string} props.animalId - The animal's store key (the value the user must type).
- * @param {object} props.animal - The animal record (for the cascade).
- * @param {object} props.days - The workspace day map (for the cascade).
- * @param {Function} props.onConfirm - Called when the user confirms with a matching typed name.
- * @param {Function} props.onCancel - Called for cancel / ESC.
- * @returns {JSX.Element|null}
  */
-export default function AnimalDeleteDialog({ isOpen, animalId, animal, days, onConfirm, onCancel }) {
+export default function AnimalDeleteDialog({
+  isOpen,
+  animalId,
+  animal,
+  days,
+  onConfirm,
+  onCancel,
+}: AnimalDeleteDialogProps) {
   const baseId = useId();
   const titleId = `${baseId}-title`;
   const messageId = `${baseId}-message`;
@@ -39,7 +53,11 @@ export default function AnimalDeleteDialog({ isOpen, animalId, animal, days, onC
 
   if (!isOpen) return null;
 
-  const cascade = getAnimalDeleteCascade(animalId, animal, days);
+  const cascade = getAnimalDeleteCascade(
+    animalId as string,
+    animal as Animal,
+    days as Record<string, Day>
+  );
   const matches = typed.trim() === String(animalId ?? '').trim();
 
   const handleConfirm = () => {
@@ -111,17 +129,3 @@ export default function AnimalDeleteDialog({ isOpen, animalId, animal, days, onC
   );
 }
 
-AnimalDeleteDialog.propTypes = {
-  isOpen: PropTypes.bool.isRequired,
-  animalId: PropTypes.string,
-  animal: PropTypes.object,
-  days: PropTypes.object,
-  onConfirm: PropTypes.func.isRequired,
-  onCancel: PropTypes.func.isRequired,
-};
-
-AnimalDeleteDialog.defaultProps = {
-  animalId: undefined,
-  animal: null,
-  days: null,
-};

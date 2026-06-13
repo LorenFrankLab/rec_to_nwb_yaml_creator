@@ -1,8 +1,23 @@
-import React, { useCallback, useEffect, useId, useRef, useState } from 'react';
-import PropTypes from 'prop-types';
+import { useCallback, useEffect, useId, useRef, useState } from 'react';
+import type { KeyboardEvent as ReactKeyboardEvent } from 'react';
 import { getPresentDayCount } from '../domain/dayRecovery';
 import OverflowMenu from './OverflowMenu';
 import './AnimalSwitcher.css';
+
+interface AnimalSwitcherProps {
+  /** The animal currently being viewed (shown in the trigger, marked `aria-current`). */
+  currentAnimalId: string;
+  /** The workspace animals map. */
+  animals: Record<string, unknown>;
+  /** The workspace days map (for per-row day counts). */
+  days?: Record<string, unknown>;
+  /** Called with an animal id when a row's Delete is chosen. */
+  onRequestDelete: (animalId: string) => void;
+  /** Called when "+ New animal…" is chosen. */
+  onRequestCreate: () => void;
+  /** Called with an animal id when a row's Edit profile… is chosen. */
+  onRequestEditProfile: (animalId: string) => void;
+}
 
 /**
  * AnimalSwitcher — the top object-selector dropdown `Workspace ▸ <animal> ▾` (Phase 4, Task 4.5 /
@@ -20,37 +35,27 @@ import './AnimalSwitcher.css';
  * Lifecycle (create / delete) is delegated UP so a single host (AppLayout) owns one create panel and
  * one delete dialog — the switcher never duplicates them.
  *
- * @param {object} props
- * @param {string} props.currentAnimalId - The animal currently being viewed (shown in the trigger,
- *   marked `aria-current` in the list).
- * @param {object} props.animals - The workspace animals map.
- * @param {object} props.days - The workspace days map (for per-row day counts).
- * @param {Function} props.onRequestDelete - Called with an animal id when a row's Delete is chosen.
- * @param {Function} props.onRequestCreate - Called when "+ New animal…" is chosen.
- * @param {Function} props.onRequestEditProfile - Called with an animal id when a row's Edit
- *   profile… is chosen.
- * @returns {JSX.Element}
  */
 export default function AnimalSwitcher({
   currentAnimalId,
   animals,
-  days,
+  days = {},
   onRequestDelete,
   onRequestCreate,
   onRequestEditProfile,
-}) {
+}: AnimalSwitcherProps) {
   const popupId = useId();
   const [open, setOpen] = useState(false);
-  const triggerRef = useRef(null);
-  const popupRef = useRef(null);
+  const triggerRef = useRef<HTMLButtonElement | null>(null);
+  const popupRef = useRef<HTMLDivElement | null>(null);
   // Roving-focus targets: the per-row switch links followed by the "+ New animal…" button. The ⋮
   // menubuttons are intentionally NOT roving targets (they are reached via Tab and own their menu).
-  const rowRefs = useRef([]);
+  const rowRefs = useRef<Array<HTMLElement | null>>([]);
 
   const animalIds = Object.keys(animals);
 
   /** Close the popup and optionally return focus to the trigger. */
-  const close = useCallback((returnFocus = false) => {
+  const close = useCallback((returnFocus: boolean = false) => {
     setOpen(false);
     if (returnFocus) triggerRef.current?.focus();
   }, []);
@@ -66,8 +71,9 @@ export default function AnimalSwitcher({
   // handled by its own onClick.
   useEffect(() => {
     if (!open) return undefined;
-    const onPointerDown = (e) => {
-      if (popupRef.current?.contains(e.target) || triggerRef.current?.contains(e.target)) return;
+    const onPointerDown = (e: PointerEvent) => {
+      const target = e.target as Node | null;
+      if (popupRef.current?.contains(target) || triggerRef.current?.contains(target)) return;
       setOpen(false);
     };
     document.addEventListener('pointerdown', onPointerDown);
@@ -78,9 +84,9 @@ export default function AnimalSwitcher({
    * Roving + dismissal for the popup. Esc closes (→ trigger); Up/Down move between roving targets.
    * Arrow keys originating inside a row's ⋮ menu never reach here (OverflowMenu stops them), so a
    * bare arrow here always means "move between rows".
-   * @param {React.KeyboardEvent} e - The keydown event.
+   * @param e - The keydown event.
    */
-  const handlePopupKeyDown = (e) => {
+  const handlePopupKeyDown = (e: ReactKeyboardEvent) => {
     if (e.key === 'Escape') {
       e.preventDefault();
       close(true);
@@ -90,7 +96,7 @@ export default function AnimalSwitcher({
     // Only live (still-attached) roving targets, so a stale ref from a since-removed row (were the
     // list to change while the popup is open) can't trap focus on a detached node.
     const targets = rowRefs.current.filter((el) => el && el.isConnected);
-    const idx = targets.indexOf(document.activeElement);
+    const idx = targets.indexOf(document.activeElement as HTMLElement | null);
     if (idx === -1) return; // focus is on a ⋮ trigger — let it handle the key
     e.preventDefault();
     const dir = e.key === 'ArrowDown' ? 1 : -1;
@@ -99,10 +105,10 @@ export default function AnimalSwitcher({
 
   /**
    * Day RECORDS present for an animal (indexed + recovered), via the shared recovery count.
-   * @param {string} animalId - The animal whose present-day records to count.
-   * @returns {number} The count of present day records.
+   * @param animalId - The animal whose present-day records to count.
+   * @returns The count of present day records.
    */
-  const dayCountFor = (animalId) => getPresentDayCount(animalId, animals[animalId], days);
+  const dayCountFor = (animalId: string) => getPresentDayCount(animalId, animals[animalId], days);
 
   return (
     <div className="animal-switcher">
@@ -218,15 +224,3 @@ export default function AnimalSwitcher({
   );
 }
 
-AnimalSwitcher.propTypes = {
-  currentAnimalId: PropTypes.string.isRequired,
-  animals: PropTypes.object.isRequired,
-  days: PropTypes.object,
-  onRequestDelete: PropTypes.func.isRequired,
-  onRequestCreate: PropTypes.func.isRequired,
-  onRequestEditProfile: PropTypes.func.isRequired,
-};
-
-AnimalSwitcher.defaultProps = {
-  days: {},
-};

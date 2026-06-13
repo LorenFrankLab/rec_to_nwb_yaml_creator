@@ -1,10 +1,31 @@
-import React, { useId, useMemo, useState, useEffect } from 'react';
-import PropTypes from 'prop-types';
+import { useId, useMemo, useState, useEffect } from 'react';
 import { getAnimalSubject } from '../state/workspaceSelectors';
 import { isValidSpecies } from '../validation/dandiSubject';
 import Modal from './Modal/Modal';
 import { ConfirmDialog } from './Modal';
 import './AnimalProfileDialog.css';
+
+/** The editable constant subject facts held by this dialog's form. */
+interface ProfileForm {
+  species: string;
+  sex: string;
+  date_of_birth: string;
+  genotype: string;
+  description: string;
+}
+
+interface AnimalProfileDialogProps {
+  /** Whether the dialog is shown. */
+  isOpen: boolean;
+  /** The animal record (`subject`). */
+  animal?: unknown;
+  /** Number of recording days owned by this animal (blast radius). */
+  dayCount: number;
+  /** Called with the changed subject fields only (a partial `{ field: value }`). */
+  onSave: (changedFields: Partial<ProfileForm>) => void;
+  /** Called for ESC / overlay / Cancel. */
+  onClose: () => void;
+}
 
 /**
  * AnimalProfileDialog — the animal-wide subject-facts editor, opened from the AnimalView header ⋮
@@ -21,16 +42,14 @@ import './AnimalProfileDialog.css';
  * Relocated from the always-visible collapsible AnimalProfileSection (which cluttered the header band
  * on every tab) into this on-demand dialog; the form behaviour is preserved.
  *
- * @param {object} props
- * @param {boolean} props.isOpen - Whether the dialog is shown.
- * @param {object} props.animal - The animal record (`subject`).
- * @param {number} props.dayCount - Number of recording days owned by this animal (blast radius).
- * @param {Function} props.onSave - Called with the changed subject fields only (a partial
- *   `{ field: value }`); the parent shallow-merges via `updateAnimal(id, { subject })`.
- * @param {Function} props.onClose - Called for ESC / overlay / Cancel.
- * @returns {JSX.Element|null}
  */
-export default function AnimalProfileDialog({ isOpen, animal, dayCount, onSave, onClose }) {
+export default function AnimalProfileDialog({
+  isOpen,
+  animal,
+  dayCount,
+  onSave,
+  onClose,
+}: AnimalProfileDialogProps) {
   const baseId = useId();
   const titleId = `${baseId}-title`;
   const subject = getAnimalSubject(animal);
@@ -62,11 +81,12 @@ export default function AnimalProfileDialog({ isOpen, animal, dayCount, onSave, 
     }
   }, [isOpen, initial]);
 
-  const setField = (field, value) => setForm((prev) => ({ ...prev, [field]: value }));
+  const setField = (field: keyof ProfileForm, value: string) =>
+    setForm((prev) => ({ ...prev, [field]: value }));
 
   // Only the changed fields are saved (the store shallow-merges subject), with DOB re-encoded.
   const changedFields = useMemo(() => {
-    const out = {};
+    const out: Partial<ProfileForm> = {};
     if (form.species.trim() !== (initial.species || '').trim()) out.species = form.species.trim();
     if (form.sex !== initial.sex) out.sex = form.sex;
     if (form.date_of_birth !== initial.date_of_birth) {
@@ -228,14 +248,3 @@ export default function AnimalProfileDialog({ isOpen, animal, dayCount, onSave, 
   );
 }
 
-AnimalProfileDialog.propTypes = {
-  isOpen: PropTypes.bool.isRequired,
-  animal: PropTypes.shape({ id: PropTypes.string, subject: PropTypes.object }),
-  dayCount: PropTypes.number.isRequired,
-  onSave: PropTypes.func.isRequired,
-  onClose: PropTypes.func.isRequired,
-};
-
-AnimalProfileDialog.defaultProps = {
-  animal: null,
-};
