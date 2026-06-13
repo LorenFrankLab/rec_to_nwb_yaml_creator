@@ -1,5 +1,19 @@
-import PropTypes from 'prop-types';
 import './WarningAcknowledgement.css';
+
+interface WarningAcknowledgementItem {
+  key: string;
+  label: string;
+  warnings: Array<{ message: string }>;
+}
+
+interface WarningAcknowledgementProps {
+  /** One entry per day that carries outstanding warnings (days with none are omitted by the caller). */
+  items: WarningAcknowledgementItem[];
+  /** Whether the user has checked the acknowledgement. */
+  acknowledged: boolean;
+  /** Called with the new checkbox state. */
+  onChange: (next: boolean) => void;
+}
 
 /**
  * WarningAcknowledgement — a checkbox-gated review of outstanding non-blocking warnings before a
@@ -11,15 +25,12 @@ import './WarningAcknowledgement.css';
  * count) and requires an explicit "I've reviewed these warnings" acknowledgement before the caller
  * lets the download proceed. Reusable by every export surface (the per-animal Validation & Export
  * tab now; the chrome-level batch screen in Phase 4) so the acknowledgement can't drift.
- *
- * @param {object} props
- * @param {Array<{ key: string, label: string, warnings: Array<{ message: string }> }>} props.items
- *   - One entry per day that carries outstanding warnings (days with none are omitted by the caller).
- * @param {boolean} props.acknowledged - Whether the user has checked the acknowledgement.
- * @param {(next: boolean) => void} props.onChange - Called with the new checkbox state.
- * @returns {JSX.Element|null}
  */
-export default function WarningAcknowledgement({ items, acknowledged, onChange }) {
+export default function WarningAcknowledgement({
+  items,
+  acknowledged,
+  onChange,
+}: WarningAcknowledgementProps) {
   if (!items || items.length === 0) return null;
 
   const dayCount = items.length;
@@ -53,15 +64,3 @@ export default function WarningAcknowledgement({ items, acknowledged, onChange }
     </section>
   );
 }
-
-WarningAcknowledgement.propTypes = {
-  items: PropTypes.arrayOf(
-    PropTypes.shape({
-      key: PropTypes.string.isRequired,
-      label: PropTypes.string.isRequired,
-      warnings: PropTypes.arrayOf(PropTypes.shape({ message: PropTypes.string })).isRequired,
-    })
-  ).isRequired,
-  acknowledged: PropTypes.bool.isRequired,
-  onChange: PropTypes.func.isRequired,
-};
