@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Typed the workspace hydration initializer under strict TS (refactor only, no behavior change).**
+  [state/workspaceHydration.js](src/state/workspaceHydration.ts) → `.ts`: `resolveInitialWorkspace` (the
+  pure `useState` initializer for the workspace slice). The function body is **byte-identical** — only a
+  `InitialWorkspaceState { workspace?: unknown }` param interface (extracted to dodge
+  `jsdoc/check-param-names`) and a `InitialWorkspaceResolution { workspace: Record<string, unknown>;
+  discarded: LoadDiscardReason | null; recovered: { missingKeys: string[] } | null }` return interface were
+  added. The already-typed `loadWorkspace(): LoadWorkspaceResult` union narrows cleanly through the existing
+  `loaded == null` / `if (loaded.workspace)` guards, so the five-branch hydration precedence (tests-win →
+  persistence-off → clean-first-run → restored-with-recovered → discarded-default) and the at-most-one
+  non-null `discarded`/`recovered` invariant are unchanged. No `workspaceTypes.ts` / tsconfig change.
+  `npm run typecheck` + `CI=true` build clean; hydration test + 3 source-scanning guards (56) pass; full
+  suite 4793; e2e 104.
+
 - **Typed the workspace mutation-action factory under strict TS (refactor only, no behavior change).**
   [state/workspaceActions.js](src/state/workspaceActions.ts) → `.ts`: `createWorkspaceActions` and its 13
   store-mutation methods (createAnimal / updateAnimal / deleteAnimal /
