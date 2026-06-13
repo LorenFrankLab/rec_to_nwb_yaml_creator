@@ -18,16 +18,22 @@
  * (the export bridge) and by the camera edit/correction blast-radius UI.
  */
 
-import { getAnimalCameras, getDayCamerasUsed } from './workspaceSelectors';
+import {
+  getAnimalCameras,
+  getDayCamerasUsed,
+  getDayTasks,
+  getDayAssociatedVideos,
+  getDayFsGuiYamls,
+} from './workspaceSelectors';
+import type { Camera } from './workspaceTypes';
 
 /**
  * Normalize a camera id to a comparison key so a numeric `1` and a string `"1"` match (corrupt
  * imports can carry either). Returns null for an absent id.
  *
- * @param {*} id
- * @returns {string|null}
+ * @param id
  */
-function cameraKey(id) {
+function cameraKey(id: unknown): string | null {
   return id === null || id === undefined ? null : String(id);
 }
 
@@ -40,32 +46,33 @@ function cameraKey(id) {
  * uncheck a camera they only explicitly added, so the disabled decision must ignore `cameras_used`.
  * Shape-tolerant: non-array collections and null/undefined ids are skipped, never thrown on.
  *
- * @param {object} day - A recording-day record.
- * @returns {Set<string>} Normalized camera-id keys inferred from task/video/fs-gui references.
+ * @param day - A recording-day record.
+ * @returns Normalized camera-id keys inferred from task/video/fs-gui references.
  */
-export function inferredCameraKeys(day) {
-  const keys = new Set();
-  const add = (id) => {
+export function inferredCameraKeys(day: unknown): Set<string> {
+  const keys = new Set<string>();
+  const add = (id: unknown): void => {
     const key = cameraKey(id);
     if (key !== null) keys.add(key);
   };
 
-  const tasks = Array.isArray(day?.tasks) ? day.tasks : [];
-  for (const task of tasks) {
-    // task.camera_id is normally an array, but tolerate a stray scalar.
-    const ids = Array.isArray(task?.camera_id)
-      ? task.camera_id
-      : task?.camera_id !== undefined && task?.camera_id !== null
-        ? [task.camera_id]
+  for (const task of getDayTasks(day)) {
+    // task.camera_id is normally an array, but tolerate a stray scalar (raw corruption), so read
+    // it as `unknown` rather than the canonical `string[]`.
+    const cameraId: unknown = task?.camera_id;
+    const ids: unknown[] = Array.isArray(cameraId)
+      ? cameraId
+      : cameraId !== undefined && cameraId !== null
+        ? [cameraId]
         : [];
     ids.forEach(add);
   }
 
-  const videos = Array.isArray(day?.associated_video_files) ? day.associated_video_files : [];
-  for (const video of videos) add(video?.camera_id);
+  for (const video of getDayAssociatedVideos(day)) add(video?.camera_id);
 
-  const fsGui = Array.isArray(day?.fs_gui_yamls) ? day.fs_gui_yamls : [];
-  for (const protocol of fsGui) add(protocol?.camera_id);
+  // FsGuiYaml's type omits `camera_id` (the interface predates the FsGUI camera field that
+  // trodes_to_nwb + the `dangling_camera_ref` rule read), so read it tolerantly.
+  for (const protocol of getDayFsGuiYamls(day)) add((protocol as { camera_id?: unknown })?.camera_id);
 
   return keys;
 }
@@ -78,10 +85,10 @@ export function inferredCameraKeys(day) {
  * the cameras-used CHECKBOX disabled/hint decision use `inferredCameraKeys` instead, so an
  * explicitly-added camera stays uncheckable.
  *
- * @param {object} day - A recording-day record.
- * @returns {Set<string>} Normalized camera-id keys.
+ * @param day - A recording-day record.
+ * @returns Normalized camera-id keys.
  */
-export function referencedCameraKeys(day) {
+export function referencedCameraKeys(day: unknown): Set<string> {
   const keys = inferredCameraKeys(day);
 
   // UNION the explicit per-day "cameras used" set on top of the inferred references. For existing
@@ -108,14 +115,17 @@ export function referencedCameraKeys(day) {
  * matches ids by exact type, so it can only be MORE eager to block than this String-normalized
  * resolver), so a dangling reference never reaches a real export file.
  *
- * @param {object} animal - The owning animal (read shape-safely via `getAnimalCameras`).
- * @param {object} day - The recording day.
- * @returns {Array<object>} The day-used camera objects, in catalog order.
+ * @param animal - The owning animal (read shape-safely via `getAnimalCameras`).
+ * @param day - The recording day.
+ * @returns The day-used camera objects, in catalog order.
  */
-export function resolveDayCameraUsage(animal, day) {
+export function resolveDayCameraUsage(animal: unknown, day: unknown): Camera[] {
   const refs = referencedCameraKeys(day);
   if (refs.size === 0) return [];
-  return getAnimalCameras(animal).filter((camera) => refs.has(cameraKey(camera?.id)));
+  // `cameraKey` is `string | null`, but a null key is never present in `refs` (it is skipped when
+  // building the set), so `has(null)` is always false at runtime — the `as string` keeps that exact
+  // behavior without a redundant null branch.
+  return getAnimalCameras(animal).filter((camera) => refs.has(cameraKey(camera?.id) as string));
 }
 
 /**
@@ -123,11 +133,11 @@ export function resolveDayCameraUsage(animal, day) {
  * affected days before an "apply this camera correction to the N days using it" action (the
  * immutable-once-referenced rule), and never folded into the single-day export helper above.
  *
- * @param {Array<object>} days - Recording-day records to scan.
- * @param {*} cameraId - The camera id to look for.
- * @returns {Array<*>} The ids of days that reference the camera, in input order.
+ * @param days - Recording-day records to scan.
+ * @param cameraId - The camera id to look for.
+ * @returns The ids of days that reference the camera, in input order.
  */
-export function findCameraAffectedDays(days, cameraId) {
+export function findCameraAffectedDays(days: unknown, cameraId: unknown): unknown[] {
   const key = cameraKey(cameraId);
   if (key === null) return [];
   return (Array.isArray(days) ? days : [])

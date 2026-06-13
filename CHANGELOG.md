@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Typed the day camera-usage helpers under strict TS (refactor only, no behavior change).**
+  [state/cameraUsage.js](src/state/cameraUsage.ts) → `.ts`: `inferredCameraKeys` / `referencedCameraKeys`
+  / `resolveDayCameraUsage` (→ `Camera[]`) / `findCameraAffectedDays` and the `cameraKey` helper are
+  typed (`unknown` for the raw animal/day inputs). The day collections are now read through the typed
+  selectors (`getDayTasks` / `getDayAssociatedVideos` / `getDayFsGuiYamls`) instead of inline
+  `Array.isArray(day?.x) ? day.x : []` — behavior-equivalent and removes the raw `day?.x` access.
+  `task.camera_id` is read back as `unknown` to keep the stray-scalar tolerance honest. Two small,
+  documented reads remain: the `FsGuiYaml` interface omits `camera_id` (a pre-existing type gap — that
+  field is read tolerantly), and `refs.has(cameraKey(...) as string)` keeps the exact `has(null) →
+  false` behavior without a redundant null branch. cameraUsage suite (20) + golden baselines pass;
+  `npm run typecheck` + `CI=true` build clean; full suite 4793; e2e 104.
+
 - **Typed the probe-config diff utility under strict TS (refactor only, no behavior change).**
   [state/configDiff.js](src/state/configDiff.ts) → `.ts`: `diffProbeConfigs` now returns the defined
   `ProbeConfigDiff` and consumes the newly-typed selectors (`getProbeElectrodeGroups` → `ElectrodeGroup[]`,
