@@ -7,10 +7,10 @@
 /**
  * Validates if a value is a positive integer string
  *
- * @param {string} value - Value to verify
- * @returns {boolean} true if value is a positive integer, false otherwise
+ * @param value - Value to verify
+ * @returns true if value is a positive integer, false otherwise
  */
-export const isInteger = (value) => {
+export const isInteger = (value: string): boolean => {
   return /^\d+$/.test(value);
 };
 
@@ -20,10 +20,10 @@ export const isInteger = (value) => {
  * Converts input to string, trims whitespace, and removes all
  * non-alphanumeric characters. Useful for creating HTML IDs/keys.
  *
- * @param {string} title - Title to sanitize
- * @returns {string} Sanitized title with only alphanumeric characters
+ * @param title - Title to sanitize
+ * @returns Sanitized title with only alphanumeric characters
  */
-export const sanitizeTitle = (title) => {
+export const sanitizeTitle = (title: string): string => {
   if (!title) {
     return '';
   }
@@ -38,8 +38,8 @@ export const sanitizeTitle = (title) => {
  *
  * Splits on commas, trims whitespace, removes empty strings, and deduplicates.
  *
- * @param {string} stringSet - A string with comma-separated values
- * @returns {Array<string>} Array of unique non-empty strings
+ * @param stringSet - A string with comma-separated values
+ * @returns Array of unique non-empty strings
  *
  * @example
  * formatCommaSeparatedString('apple, banana, cherry')
@@ -48,7 +48,7 @@ export const sanitizeTitle = (title) => {
  * formatCommaSeparatedString('a, b, a, c')
  * // Returns: ['a', 'b', 'c'] (deduplicated)
  */
-export const formatCommaSeparatedString = (stringSet) => {
+export const formatCommaSeparatedString = (stringSet: string): string[] => {
   return [
     ...new Set(
       stringSet
@@ -65,8 +65,8 @@ export const formatCommaSeparatedString = (stringSet) => {
  * Splits on commas, filters for valid positive integers, and deduplicates.
  * Non-numeric values, floats, and negative numbers are excluded.
  *
- * @param {string} stringSet - A string with comma-separated numbers
- * @returns {Array<number>} Array of unique positive integers
+ * @param stringSet - A string with comma-separated numbers
+ * @returns Array of unique positive integers
  *
  * @example
  * commaSeparatedStringToNumber('1, 2, 3')
@@ -78,7 +78,7 @@ export const formatCommaSeparatedString = (stringSet) => {
  * commaSeparatedStringToNumber('1, 2, 2, 3')
  * // Returns: [1, 2, 3] (deduplicated)
  */
-export const commaSeparatedStringToNumber = (stringSet) => {
+export const commaSeparatedStringToNumber = (stringSet: string): number[] => {
   return [
     ...new Set(
       stringSet
