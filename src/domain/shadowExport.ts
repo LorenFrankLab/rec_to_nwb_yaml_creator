@@ -6,6 +6,19 @@
 import { encodeYaml } from '../io/yaml';
 import { mergeDayMetadata } from '../state/workspaceUtils';
 import { isFeatureEnabled } from '../featureFlags';
+import type { Animal, Day } from '../state/workspaceTypes';
+
+/** Result of {@link checkShadowExport}. */
+interface ShadowExportResult {
+  /** Whether the encoder is stable for this input (safe to download). */
+  ok: boolean;
+  /** The YAML about to be downloaded. */
+  yaml: string;
+  /** The YAML re-encoded from a pristine copy (must equal `yaml` when `ok`). */
+  stableYaml: string;
+  /** A first-difference report when unstable, else `null`. */
+  diff: string | null;
+}
 
 /**
  * Cheap pre-download encoder-stability check. Recomputes the export YAML and
@@ -30,11 +43,11 @@ import { isFeatureEnabled } from '../featureFlags';
  * golden baseline suite. A failure here is a data-integrity bug (encoder
  * instability), never a feature.
  *
- * @param {object} animal - Animal record providing shared metadata.
- * @param {object} day - Recording day providing session-specific data.
- * @returns {{ ok: boolean, yaml: string, stableYaml: string, diff: string|null }}
+ * @param animal - Animal record providing shared metadata.
+ * @param day - Recording day providing session-specific data.
+ * @returns
  */
-export function checkShadowExport(animal, day) {
+export function checkShadowExport(animal: Animal, day: Day): ShadowExportResult {
   const merged = mergeDayMetadata(animal, day);
 
   // Snapshot the input BEFORE encoding so an in-place mutation is detectable
@@ -73,10 +86,10 @@ export function checkShadowExport(animal, day) {
  * JSON-safe, insertion-ordered object, so a straight `JSON.stringify` is an
  * order-sensitive snapshot — reordering or value coercion both change it.
  *
- * @param {object} value - Value to serialize.
- * @returns {string} JSON string snapshot.
+ * @param value - Value to serialize.
+ * @returns JSON string snapshot.
  */
-function stableStringify(value) {
+function stableStringify(value: unknown): string {
   return JSON.stringify(value);
 }
 
@@ -84,11 +97,11 @@ function stableStringify(value) {
  * Produce a compact, human-readable first-difference report between two YAML
  * strings (line number + both sides). Used for the blocking UI notice.
  *
- * @param {string} a - First YAML string.
- * @param {string} b - Second YAML string.
- * @returns {string} Human-readable description of the first difference.
+ * @param a - First YAML string.
+ * @param b - Second YAML string.
+ * @returns Human-readable description of the first difference.
  */
-export function firstLineDiff(a, b) {
+export function firstLineDiff(a: string, b: string): string {
   const aLines = a.split('\n');
   const bLines = b.split('\n');
   const max = Math.max(aLines.length, bLines.length);
