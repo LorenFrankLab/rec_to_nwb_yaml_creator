@@ -14,14 +14,50 @@
  * or malformed command is a no-op — never a throw, never a partial write.
  */
 
+import type { Animal, Day } from './workspaceTypes';
+
+/** A serializable repair command (persisted/rehydrated, then executed by {@link applyRepairCommand}). */
+export interface RepairCommand {
+  /** The command type (one of {@link REPAIR_COMMAND_TYPES}); an unknown type is a no-op. */
+  type?: string;
+  /** The day-owned collection to clear (for `resetDayCollection`). */
+  field?: string;
+  /** The override / ntrode key to drop (for the `remove*Key` commands). */
+  key?: string;
+  /** The deliberate un-marks to record off-export (for `acknowledgeBadChannelRemovals`). */
+  acks?: Record<string, number[]>;
+}
+
+/** The store actions the executor writes through (a subset of the workspace actions). */
+export interface RepairCommandActions {
+  /** Apply a partial update to a day (no-op-safe when the id is absent — see the surface guard). */
+  updateDay: (dayId: string | undefined, updates: Record<string, unknown>) => void;
+  /** Apply a partial update to an animal. */
+  updateAnimal: (animalId: string | undefined, updates: Record<string, unknown>) => void;
+  /** Rebuild an animal's configuration history. */
+  rebuildConfigurationHistory: (animalId: string | undefined) => void;
+}
+
+/** Execution context for {@link applyRepairCommand}. */
+export interface RepairCommandContext {
+  /** Store actions to write through. */
+  actions: RepairCommandActions;
+  /** The owning animal id (for animal-surface commands). */
+  animalId?: string;
+  /** The owning day id (for day-surface commands). */
+  dayId?: string;
+  /** The current day record, read by partial-removal commands to preserve sibling keys. */
+  day?: Day;
+  /** The owning animal record (read only for its `id` as a session-id prefix fallback). */
+  animal?: Animal;
+}
+
 /**
  * The canonical set of repair command types. Kept as an exported constant so a structural
  * test can assert every type has an executor branch (no type can be added without a
  * handler) and so issue producers reference the same vocabulary.
- *
- * @type {readonly string[]}
  */
-export const REPAIR_COMMAND_TYPES = Object.freeze([
+export const REPAIR_COMMAND_TYPES: readonly string[] = Object.freeze([
   'resetDayCollection',
   'resetAnimalCameras',
   'resetDataAcqDevice',
@@ -41,10 +77,8 @@ export const REPAIR_COMMAND_TYPES = Object.freeze([
  * absent in `ctx` is a no-op, never a write with an `undefined` id (which would THROW inside the
  * store action — `Day "undefined" not found`). This keeps "missing/malformed → no-op" true even
  * when a command is routed to a handler whose ctx lacks the matching id.
- *
- * @type {Readonly<Record<string, 'day'|'animal'>>}
  */
-const COMMAND_SURFACE = Object.freeze({
+const COMMAND_SURFACE: Readonly<Record<string, 'day' | 'animal'>> = Object.freeze({
   resetDayCollection: 'day',
   resetDeviceOverrides: 'day',
   removeDeviceOverrideKey: 'day',
@@ -62,10 +96,10 @@ const COMMAND_SURFACE = Object.freeze({
  * guard used across validation/selectors — used to read the day's CURRENT `deviceOverrides`
  * tolerantly when a partial-removal command needs to preserve sibling keys.
  *
- * @param {*} value
- * @returns {boolean}
+ * @param value
+ * @returns True for a non-null, non-array object.
  */
-function isRecord(value) {
+function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
 }
 
@@ -74,10 +108,10 @@ function isRecord(value) {
  * (scalar/array) container reads as `{}` so a key-removal command degrades to "clear all"
  * rather than throwing on a non-object spread.
  *
- * @param {object} day - The current day record (from ctx).
- * @returns {object} A shallow-cloneable overrides record.
+ * @param day - The current day record (from ctx).
+ * @returns A shallow-cloneable overrides record.
  */
-function currentOverrides(day) {
+function currentOverrides(day: Day | undefined): Record<string, unknown> {
   const ov = day?.deviceOverrides;
   return isRecord(ov) ? ov : {};
 }
@@ -85,21 +119,14 @@ function currentOverrides(day) {
 /**
  * Execute a serializable repair command against the store.
  *
- * @param {{type?: string, field?: string, key?: string, acks?: Record<string, number[]>}} command
- *   The serializable repair command. Per `type`: `resetDayCollection` carries `field` (the
- *   collection to clear); `removeDeviceOverrideKey` / `removeBadChannelOverrideKey` carry `key`
- *   (the override/ntrode key to drop); `acknowledgeBadChannelRemovals` carries `acks`
+ * @param command - The serializable repair command. Per `type`: `resetDayCollection` carries
+ *   `field` (the collection to clear); `removeDeviceOverrideKey` / `removeBadChannelOverrideKey`
+ *   carry `key` (the override/ntrode key to drop); `acknowledgeBadChannelRemovals` carries `acks`
  *   (`{ [ntrodeId: string]: number[] }`, the deliberate un-marks to record off-export).
- * @param {object} ctx - Execution context.
- * @param {object} ctx.actions - Store actions (`updateDay` / `updateAnimal` /
- *   `rebuildConfigurationHistory`).
- * @param {string} ctx.animalId - The owning animal id (for animal-surface commands).
- * @param {string} ctx.dayId - The owning day id (for day-surface commands).
- * @param {object} [ctx.day] - The current day record, read by partial-removal commands so
- *   they can preserve sibling override keys.
- * @returns {void} No-op for an unknown/malformed command.
+ * @param ctx - Execution context ({@link RepairCommandContext}).
+ * @returns Nothing; a no-op for an unknown/malformed command.
  */
-export function applyRepairCommand(command, ctx) {
+export function applyRepairCommand(command: RepairCommand, ctx: RepairCommandContext): void {
   if (!command || typeof command !== 'object') return;
   const { actions, animalId, dayId, day } = ctx || {};
   if (!actions) return;
@@ -108,7 +135,7 @@ export function applyRepairCommand(command, ctx) {
   // surface is present. Absent → no-op (NOT a write with `undefined`, which would throw in
   // the store action). This makes "missing id → no-op" structural, independent of which
   // handler routes the command.
-  const surface = COMMAND_SURFACE[command.type];
+  const surface = command.type ? COMMAND_SURFACE[command.type] : undefined;
   if (surface === 'day' && !dayId) return;
   if (surface === 'animal' && !animalId) return;
 
@@ -175,7 +202,7 @@ export function applyRepairCommand(command, ctx) {
         isRecord(current) && isRecord(current.badChannelRemovalAcks)
           ? current.badChannelRemovalAcks
           : {};
-      const merged = { ...existing };
+      const merged: Record<string, unknown> = { ...existing };
       for (const ntrodeId of Object.keys(command.acks)) {
         const add = Array.isArray(command.acks[ntrodeId]) ? command.acks[ntrodeId] : [];
         const prior = Array.isArray(merged[ntrodeId]) ? merged[ntrodeId] : [];
