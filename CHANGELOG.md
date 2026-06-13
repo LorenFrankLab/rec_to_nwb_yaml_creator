@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Typed 4 LIVE Tier-2 React components `.jsx`→`.tsx` (refactor only, behavior-preserving) — component cycle 3.**
+  [components/Modal/ConfirmDialog.jsx](src/components/Modal/ConfirmDialog.tsx) (`title`/`message: ReactNode`),
+  [components/ShortcutsHelp/ShortcutsHelp.jsx](src/components/ShortcutsHelp/ShortcutsHelp.tsx) (kept `import React`
+  for `<React.Fragment>`), [components/AlertModal.jsx](src/components/AlertModal.tsx) (`AlertType` union;
+  `message: ReactNode` widens the old PropTypes `string` — can't break a string-passing caller), and
+  [components/BrainRegionAutocomplete.jsx](src/components/BrainRegionAutocomplete.tsx) (`canonicalizeRegion(value:
+  string, knownRegions: string[])`; typed `memo` comparator) → `.tsx`. Each is a thin wrapper over the now-typed
+  `Modal`/`SuggestionCombobox`. Runtime PropTypes/defaultProps dropped (non-undefined defaults preserved as destructure
+  defaults); the unused default `import React` dropped where the component has no `React.` reference (JSX uses
+  `react-jsx`). `npm run typecheck` + `CI=true` build clean (bundle −32 B); golden baselines, the component suites +
+  consumer (ElectrodeGroupModal, 272), and the 3 source-scanning guards pass; full suite 4793; e2e 104.
+
 - **Typed 4 more LIVE leaf React components `.jsx`→`.tsx` (refactor only, behavior-preserving) — component cycle 2.**
   [components/RawCorruptionBanner.jsx](src/components/RawCorruptionBanner.tsx) (`animal`/`day` typed `unknown` to
   match `validateRawAnimal`/`validateRawDay`; `onRepair?: (issue: RawShapeIssue) => void`; one `issue.repairCommand!`

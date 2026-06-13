@@ -1,5 +1,4 @@
-import React, { memo } from 'react';
-import PropTypes from 'prop-types';
+import { memo } from 'react';
 import SuggestionCombobox from './SuggestionCombobox';
 
 /**
@@ -66,16 +65,31 @@ export const BRAIN_REGIONS = [
  * - A case-insensitive match snaps to the canonical known spelling.
  * - Anything else returns the trimmed value (a legitimate new "other" region).
  *
- * @param {string} value - Raw typed value.
- * @param {string[]} [knownRegions=BRAIN_REGIONS] - Canonical region list.
- * @returns {string} Canonical region string (or '' when blank).
+ * @param value - Raw typed value.
+ * @param knownRegions - Canonical region list.
+ * @returns Canonical region string (or '' when blank).
  */
-export function canonicalizeRegion(value, knownRegions = BRAIN_REGIONS) {
+export function canonicalizeRegion(value: string, knownRegions: string[] = BRAIN_REGIONS): string {
   const trimmed = (value ?? '').trim();
   if (trimmed === '') return '';
   if (knownRegions.includes(trimmed)) return trimmed;
   const caseMatch = knownRegions.find((r) => r.toLowerCase() === trimmed.toLowerCase());
   return caseMatch || trimmed;
+}
+
+interface BrainRegionAutocompleteProps {
+  /** Current value (controlled). */
+  value?: string;
+  /** Called with the new string value. */
+  onChange: (value: string) => void;
+  /** Visible label text (default 'Brain Region'). */
+  label?: string;
+  /** Input name. */
+  name?: string;
+  /** Input required. */
+  required?: boolean;
+  /** Extra workspace-derived region suggestions merged with the canonical list. */
+  suggestions?: string[];
 }
 
 const BrainRegionAutocompleteComponent = ({
@@ -85,7 +99,7 @@ const BrainRegionAutocompleteComponent = ({
   name,
   required = false,
   suggestions = [],
-}) => {
+}: BrainRegionAutocompleteProps) => {
   // Merge the canonical regions with any workspace-derived suggestions, deduped
   // and order-stable (canonical first), so already-used regions are also offered.
   const regionOptions = [...new Set([...BRAIN_REGIONS, ...suggestions])];
@@ -116,24 +130,10 @@ const BrainRegionAutocompleteComponent = ({
   );
 };
 
-BrainRegionAutocompleteComponent.propTypes = {
-  value: PropTypes.string,
-  onChange: PropTypes.func.isRequired,
-  label: PropTypes.string,
-  name: PropTypes.string,
-  required: PropTypes.bool,
-  suggestions: PropTypes.arrayOf(PropTypes.string),
-};
-
-BrainRegionAutocompleteComponent.defaultProps = {
-  value: '',
-  label: 'Brain Region',
-  name: undefined,
-  required: false,
-  suggestions: [],
-};
-
-const arePropsEqual = (prevProps, nextProps) => {
+const arePropsEqual = (
+  prevProps: BrainRegionAutocompleteProps,
+  nextProps: BrainRegionAutocompleteProps
+) => {
   return (
     prevProps.value === nextProps.value &&
     prevProps.label === nextProps.label &&

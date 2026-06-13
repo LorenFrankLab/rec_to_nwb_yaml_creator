@@ -1,7 +1,13 @@
 import React, { useId } from 'react';
-import PropTypes from 'prop-types';
 import Modal from '../Modal/Modal';
 import './ShortcutsHelp.scss';
+
+interface ShortcutsHelpProps {
+  /** Whether the dialog is shown. */
+  isOpen: boolean;
+  /** Close handler (Esc / overlay / button). */
+  onClose: () => void;
+}
 
 /**
  * The keyboard shortcuts surfaced by {@link useGlobalShortcuts}, shown in the help
@@ -18,13 +24,8 @@ export const SHORTCUTS = [
 
 /**
  * Keyboard-shortcuts help dialog, built on the shared accessible `<Modal>`.
- *
- * @param {object} props
- * @param {boolean} props.isOpen - Whether the dialog is shown.
- * @param {() => void} props.onClose - Close handler (Esc / overlay / button).
- * @returns {JSX.Element|null}
  */
-export default function ShortcutsHelp({ isOpen, onClose }) {
+export default function ShortcutsHelp({ isOpen, onClose }: ShortcutsHelpProps) {
   const baseId = useId();
   const titleId = `${baseId}-title`;
 
@@ -62,7 +63,3 @@ export default function ShortcutsHelp({ isOpen, onClose }) {
   );
 }
 
-ShortcutsHelp.propTypes = {
-  isOpen: PropTypes.bool.isRequired,
-  onClose: PropTypes.func.isRequired,
-};

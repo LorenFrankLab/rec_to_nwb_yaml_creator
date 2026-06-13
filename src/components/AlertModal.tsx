@@ -1,7 +1,22 @@
-import React, { useId } from 'react';
-import PropTypes from 'prop-types';
+import { useId } from 'react';
+import type { ReactNode } from 'react';
 import Modal from './Modal/Modal';
 import './AlertModal.scss';
+
+type AlertType = 'info' | 'success' | 'warning' | 'error';
+
+interface AlertModalProps {
+  /** Whether modal is currently open. */
+  isOpen: boolean;
+  /** Alert message to display. */
+  message: ReactNode;
+  /** Alert title (default: "Alert"). */
+  title?: string;
+  /** Callback when modal is closed. */
+  onClose: () => void;
+  /** Alert type (default: 'info'). */
+  type?: AlertType;
+}
 
 /**
  * AlertModal component - Accessible modal for displaying alerts
@@ -14,17 +29,8 @@ import './AlertModal.scss';
  * - Click outside overlay to close
  * - Focus management (auto-focus close button)
  * - Body scroll lock when open
- *
- * @param {object} props Component properties
- * @param {boolean} props.isOpen Whether modal is currently open
- * @param {string} props.message Alert message to display
- * @param {string} props.title Alert title (default: "Alert")
- * @param {Function} props.onClose Callback when modal is closed
- * @param {string} props.type Alert type: 'info', 'warning', 'error' (default: 'info')
- *
- * @returns {JSX.Element|null} Modal component or null if closed
  */
-const AlertModal = ({ isOpen, message, title = 'Alert', onClose, type = 'info' }) => {
+const AlertModal = ({ isOpen, message, title = 'Alert', onClose, type = 'info' }: AlertModalProps) => {
   // Unique per instance so multiple alerts in the tree can't collide on ids.
   const baseId = useId();
   const titleId = `${baseId}-alert-title`;
@@ -66,19 +72,6 @@ const AlertModal = ({ isOpen, message, title = 'Alert', onClose, type = 'info' }
       </button>
     </Modal>
   );
-};
-
-AlertModal.propTypes = {
-  isOpen: PropTypes.bool.isRequired,
-  message: PropTypes.string.isRequired,
-  title: PropTypes.string,
-  onClose: PropTypes.func.isRequired,
-  type: PropTypes.oneOf(['info', 'success', 'warning', 'error']),
-};
-
-AlertModal.defaultProps = {
-  title: 'Alert',
-  type: 'info',
 };
 
 export default AlertModal;
