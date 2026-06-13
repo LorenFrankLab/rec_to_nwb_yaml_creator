@@ -9,29 +9,26 @@
  * - Export: YAML file download (M10 - stub)
  */
 
-import React from 'react';
-import PropTypes from 'prop-types';
 import DayEditorStepper from './DayEditorStepper';
 import './DayEditor.scss';
+
+interface DayEditorProps {
+  /**
+   * Day identifier from the URL (provided by AppLayout). Unused here — the stepper reads the
+   * hash directly via `useDayIdFromUrl` — but kept on the contract AppLayout passes.
+   */
+  dayId?: string;
+}
 
 /**
  * Day Editor - Entry point for day editing workflow
  *
  * Renders the DayEditorStepper which manages the multi-step interface.
- * The dayId prop is provided by AppLayout from the URL hash.
- *
- * @param {object} props
- * @param {string} props.dayId - Day identifier from URL (e.g., "remy-2023-06-22")
- * @returns {JSX.Element}
  */
-export function DayEditor({ dayId }) {
+export function DayEditor(_props: DayEditorProps) {
   // DayEditorStepper reads dayId from URL via useDayIdFromUrl hook
   // We don't need to pass it as a prop since it parses the hash directly
   return <DayEditorStepper />;
 }
-
-DayEditor.propTypes = {
-  dayId: PropTypes.string,
-};
 
 export default DayEditor;

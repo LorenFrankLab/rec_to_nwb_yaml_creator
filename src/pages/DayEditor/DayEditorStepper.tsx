@@ -1,4 +1,5 @@
 import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
+import type { ComponentType } from 'react';
 import { useStoreContext } from '../../state/StoreContext';
 import { useStepperShortcut } from '../../hooks/stepperShortcuts';
 import { useDayIdFromUrl } from '../../hooks/useDayIdFromUrl';
@@ -9,9 +10,13 @@ import {
   getCopyableDioSources,
 } from '../../state/workspaceSelectors';
 import { applyRepairCommand } from '../../state/repairCommands';
+import type { RepairCommand, RepairCommandContext } from '../../state/repairCommands';
 import { computeStepStatus, animalSetupTabForFieldPath, validateDay } from '../../domain/validation';
+import type { RepairableIssue } from '../../domain/repairRouting';
+import type { StepStatus } from '../../domain/stepStatus';
 import { describeOwner } from '../../domain/dayRecovery';
 import { DayEditorProvider } from './DayEditorContext';
+import type { DayEditorBundle } from './DayEditorContext';
 import DayEditorSectionNav from './DayEditorSectionNav';
 import SaveIndicator from './SaveIndicator';
 import OverviewStep from './OverviewStep';
@@ -20,7 +25,29 @@ import TasksEpochsStep from './TasksEpochsStep';
 import BehavioralEventsStep from './BehavioralEventsStep';
 import ValidationStep from './ValidationStep';
 import ExportStep from './ExportStep';
+import type { CopyableDioSource } from './BehavioralEventsDisplay';
 import ErrorState from './ErrorState';
+import type { Animal } from '../../state/workspaceTypes';
+
+/** A repair-routed focus request: the target field path + a monotonic token to retrigger the effect. */
+interface FocusRequest {
+  fieldPath: string;
+  token: number;
+}
+
+/**
+ * The section-specific props the stepper passes to whichever step is active. The shared bundle
+ * fields reach each step via `DayEditorContext`, NOT through these props, so the dynamic
+ * `<CurrentStepComponent>` render is typed to this (all-optional) section surface — each step
+ * picks the ones it uses.
+ */
+interface StepSectionProps {
+  onSubjectUpdate?: (field: string, value: string) => void;
+  onNavigate?: (target: string, fieldPath?: string) => void;
+  onRepair?: (issue: RepairableIssue) => void;
+  focusRequest?: FocusRequest | null;
+  copyableDioSources?: CopyableDioSource[];
+}
 
 /**
  * Section-nav structure: the five sections grouped for the tabbed nav, in display order.
@@ -68,8 +95,6 @@ const SECTION_GROUPS = [
  * A visible "Next ▸"/"◂ Prev" affordance and the global Alt+←/→ shortcuts advance/retreat
  * through the order overview→devices→epochs→validation→export (Export included).
  *
- * @returns {JSX.Element}
- *
  * @example
  * // URL: #/day/remy-2023-06-22
  * <DayEditorStepper />
@@ -84,7 +109,7 @@ export default function DayEditorStepper() {
   // reachable tab (its DOWNLOAD action self-gates in ExportStep), so there is NO keyboard
   // fail-close here — Alt+→ advances all the way into Export.
   const stepOrderRef = useRef(['overview', 'devices', 'epochs', 'behavioral', 'validation', 'export']);
-  const goToStep = useCallback((direction) => {
+  const goToStep = useCallback((direction: 'next' | 'prev') => {
     setCurrentStep((cur) => {
       const ids = stepOrderRef.current;
       const idx = ids.indexOf(cur);
@@ -94,7 +119,7 @@ export default function DayEditorStepper() {
     });
   }, []);
   useStepperShortcut(
-    useCallback((action) => {
+    useCallback((action: 'next' | 'prev' | 'add') => {
       if (action === 'next' || action === 'prev') goToStep(action);
     }, [goToStep])
   );
@@ -104,8 +129,10 @@ export default function DayEditorStepper() {
   // animal's index — fall back to the animal whose index references this day, so the editor opens
   // under its real owner instead of dead-ending on "Animal not found". `ownerKey` (not the record's
   // `animal.id` field) is the store key used for every animal write below.
-  const day = model.workspace?.days?.[dayId];
-  const animalsMap = model.workspace?.animals ?? {};
+  // `dayId` is `string | null` (the early-return below handles null); a null index is a harmless
+  // miss (`undefined`) at runtime, so the erased cast keeps the lookup byte-identical.
+  const day = model.workspace?.days?.[dayId as string];
+  const animalsMap: Record<string, Animal> = model.workspace?.animals ?? {};
   // The owner key MUST be a string before it is used as a map key. A corrupt import can persist a
   // non-string `animalId` (object/number); coercing one to a property name would invent a phantom
   // key (`animalsMap['[object Object]']`) and diverge from dayRecovery's WRONG_OWNER classification.
@@ -123,7 +150,7 @@ export default function DayEditorStepper() {
     // holds. For well-formed data `day.id === dayId`, but a corrupt import can let the record's
     // own `id` field drift from its map key, so the map key is the reliable membership test.
     const indexingKey = Object.keys(animalsMap).find((key) =>
-      getAnimalDayIds(animalsMap[key]).includes(dayId)
+      getAnimalDayIds(animalsMap[key]).includes(dayId as string)
     );
     if (indexingKey != null) {
       ownerKey = indexingKey;
@@ -154,17 +181,19 @@ export default function DayEditorStepper() {
   // gate (the earlier same-config bad set this day must not silently un-fail). Computed before
   // the step-status memo so the gate sees the cross-day context; `getAnimalDays` returns [] for
   // a missing/unresolved owner, so this is safe before the null-checks below.
-  const animalDays = selectors.getAnimalDays(ownerKey);
+  // `ownerKey` may be null (unresolved owner); `getAnimalDays` returns [] for a null/missing id, so
+  // the erased cast keeps the [] behavior while satisfying the `string` selector param.
+  const animalDays = selectors.getAnimalDays(ownerKey as string);
 
   // Other animals whose existing DIO set can seed a blank first day (the Behavioral Events tab's
   // copy-from-animal bootstrap). Recomputed only when the workspace or owner changes.
   const copyableDioSources = useMemo(
-    () => getCopyableDioSources(model.workspace, ownerKey),
+    () => getCopyableDioSources(model.workspace, ownerKey as string),
     [model.workspace, ownerKey]
   );
 
   // Compute step validation status (must be before early returns to follow Rules of Hooks)
-  const stepStatus = useMemo(() => {
+  const stepStatus = useMemo((): Record<string, StepStatus> => {
     if (!day || !mergedDay) {
       return {
         overview: 'incomplete',
@@ -192,7 +221,7 @@ export default function DayEditorStepper() {
   // when a field target is available, focuses/highlights that control after the
   // destination step renders. With no matching anchor it degrades to the step
   // itself (focusing the main content region).
-  const [focusRequest, setFocusRequest] = useState(null);
+  const [focusRequest, setFocusRequest] = useState<FocusRequest | null>(null);
   const focusTokenRef = useRef(0);
 
   // Mirror AnimalView's focus-on-section-change: move focus onto the panel (#main-content)
@@ -223,7 +252,7 @@ export default function DayEditorStepper() {
     document.getElementById('main-content')?.focus();
     return undefined;
   }, [currentStep, focusRequest]);
-  const handleStepNavigate = useCallback((target, fieldPath) => {
+  const handleStepNavigate = useCallback((target: string, fieldPath?: string) => {
     // An 'animal' target routes to the Animal Editor (the editable owner of device
     // geometry, channel maps, cameras, data-acq devices, and subject identity),
     // mirroring the camera-banner link. Day-Editor step targets stay in this stepper.
@@ -255,12 +284,12 @@ export default function DayEditorStepper() {
 
   useEffect(() => {
     if (!focusRequest) return undefined;
-    let highlighted = null;
-    let removeTimer = null;
+    let highlighted: HTMLElement | null = null;
+    let removeTimer: ReturnType<typeof setTimeout> | null = null;
     const raf = requestAnimationFrame(() => {
       const main = document.getElementById('main-content');
       if (!main) return;
-      const target = Array.from(main.querySelectorAll('[data-field-path]')).find(
+      const target = Array.from(main.querySelectorAll<HTMLElement>('[data-field-path]')).find(
         (el) => el.getAttribute('data-field-path') === focusRequest.fieldPath
       );
       if (target) {
@@ -284,15 +313,16 @@ export default function DayEditorStepper() {
   // Field update handler with nested path support. The write is synchronous; real
   // save status (and any failure) is reported by the store's debounced autosave via
   // `persistence`, not optimistically here.
-  const handleFieldUpdate = useCallback((fieldPath, value) => {
+  const handleFieldUpdate = useCallback((fieldPath: string, value: unknown) => {
     if (!day || !dayId) return;
 
     // Parse path: "session.session_id" → ["session", "session_id"]
     const pathSegments = fieldPath.split('.');
 
-    // Clone day and update nested field immutably
-    const updated = structuredClone(day);
-    let target = updated;
+    // Clone day and update nested field immutably. Typed as a loose record for the dynamic
+    // path write below (the segments index arbitrary nested keys).
+    const updated = structuredClone(day) as Record<string, unknown>;
+    let target: Record<string, unknown> = updated;
 
     // Navigate to parent object, (re)creating intermediate objects. A repair write-through
     // a path whose intermediate is corrupt (e.g. `day.session` loaded as a scalar/array)
@@ -304,7 +334,7 @@ export default function DayEditorStepper() {
       if (child === null || typeof child !== 'object' || Array.isArray(child)) {
         target[segment] = {};
       }
-      target = target[segment];
+      target = target[segment] as Record<string, unknown>;
     }
 
     // Set the final value
@@ -320,17 +350,23 @@ export default function DayEditorStepper() {
   // place that context is assembled — no global side effects. A commandable issue's button
   // (in ExportStep's blocked list and the Validation summary) calls this instead of
   // navigating to a destination that may render a blank empty state.
-  const handleRepair = useCallback((issue) => {
+  const handleRepair = useCallback((issue: RepairableIssue) => {
     if (!issue?.repairCommand) return;
+    // `RepairableIssue.repairCommand` is `unknown` (a serializable command); narrow it to the
+    // executor's command type for the reads + the call below.
+    const command = issue.repairCommand as RepairCommand;
     // An ANIMAL-surface repair needs a resolved owner key; if it's null (a wrong-owner / non-string
     // animalId day that never resolved an owner), the executor would no-op. That should be
     // unreachable from this stepper (such a day renders "Animal not found", not a repair button),
     // but log if it ever happens so a silently-dead repair click is diagnosable rather than mute.
-    if (ownerKey == null && issue.repairCommand.type && issue.repairSurface === 'animal') {
+    if (ownerKey == null && command.type && issue.repairSurface === 'animal') {
       // eslint-disable-next-line no-console
-      console.warn(`[day-editor] repair "${issue.repairCommand.type}" no-op: unresolved animal owner key.`);
+      console.warn(`[day-editor] repair "${command.type}" no-op: unresolved animal owner key.`);
     }
-    applyRepairCommand(issue.repairCommand, {
+    // The assembled context matches RepairCommandContext, which tolerates an absent (null) id by
+    // no-op'ing the corresponding surface; the cast preserves the exact runtime values (the store
+    // actions + possibly-null owner/day ids) while satisfying its stricter optional types.
+    applyRepairCommand(command, {
       actions,
       // The resolved owner STORE KEY, not the possibly-stale `animal.id` record field, so an
       // ANIMAL-surface repair (resetAnimalCameras / resetDataAcqDevice / rebuildConfigurationHistory)
@@ -339,17 +375,18 @@ export default function DayEditorStepper() {
       dayId,
       day,
       animal,
-    });
+    } as unknown as RepairCommandContext);
   }, [actions, animal, ownerKey, dayId, day]);
 
   // Subject fields live on the animal, not the day. The Overview step uses this to
   // repair inherited subject metadata (DOB / weight / description / species) in
   // place, writing through to the animal so existing animals can be fixed.
-  const handleSubjectUpdate = useCallback((field, value) => {
+  const handleSubjectUpdate = useCallback((field: string, value: string) => {
     if (!animal) return;
     // Write through the resolved owner STORE KEY, not the possibly stale `animal.id` record
-    // field, so the repair lands on the right animal.
-    actions.updateAnimal(ownerKey, { subject: { ...getAnimalSubject(animal), [field]: value } });
+    // field, so the repair lands on the right animal. `animal` non-null here implies `ownerKey`
+    // resolved to a string (it is the key the animal was found by).
+    actions.updateAnimal(ownerKey as string, { subject: { ...getAnimalSubject(animal), [field]: value } });
   }, [animal, ownerKey, actions]);
 
   // Section → component lookup. The five sections and their internals are unchanged; only
@@ -377,7 +414,12 @@ export default function DayEditorStepper() {
     return <ErrorState message={`Animal not found: ${describeOwner(day.animalId)}`} />;
   }
 
-  const CurrentStepComponent = STEP_COMPONENTS[currentStep];
+  // The active step component. Each step reads its shared bundle from DayEditorContext, so the
+  // dynamic render only passes the section-specific props — typed via `StepSectionProps` (the bundle
+  // props are NOT passed here; the cast drops each step's required-bundle-prop contract accordingly).
+  const CurrentStepComponent = STEP_COMPONENTS[
+    currentStep as keyof typeof STEP_COMPONENTS
+  ] as ComponentType<StepSectionProps>;
   const stepOrder = stepOrderRef.current;
   const currentIndex = stepOrder.indexOf(currentStep);
   const hasPrev = currentIndex > 0;
@@ -387,14 +429,19 @@ export default function DayEditorStepper() {
   // drilling the same seven props through each <CurrentStepComponent>. Built fresh per render
   // (matching the prior per-render prop passing). Section-specific props (onNavigate, onRepair,
   // copyableDioSources, …) stay as ordinary props below.
-  const dayEditorContextValue = {
+  const dayEditorContextValue: DayEditorBundle = {
     animal,
     day,
-    mergedDay,
+    // `mergedDay` is null on the merge-failed fail-closed path (corrupt animal config); the bundle
+    // types it non-null and every section guards it with `|| {}`, so the erased cast keeps the null
+    // runtime value while satisfying the contract.
+    mergedDay: mergedDay as Record<string, unknown>,
     animalDays,
     onFieldUpdate: handleFieldUpdate,
-    actions,
-    animalKey: ownerKey,
+    // The bundle exposes `actions` as the loose store-action bag the sections cast back from.
+    actions: actions as unknown as Record<string, unknown>,
+    // `animal` is non-null here (early return), reachable only once `ownerKey` resolved to a string.
+    animalKey: ownerKey as string,
   };
 
   return (
@@ -429,7 +476,7 @@ export default function DayEditorStepper() {
           className="day-editor-content"
           role="main"
           aria-label="Day editor"
-          tabIndex="-1"
+          tabIndex={-1}
         >
           <DayEditorProvider value={dayEditorContextValue}>
             <CurrentStepComponent
@@ -466,5 +513,3 @@ export default function DayEditorStepper() {
     </div>
   );
 }
-
-DayEditorStepper.propTypes = {};
