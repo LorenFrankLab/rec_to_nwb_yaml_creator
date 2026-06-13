@@ -1,7 +1,26 @@
 import { createDefaultWorkspace } from './workspaceUtils';
 import { FLAGS } from '../featureFlags';
 import { loadWorkspace } from './persistence';
+import type { LoadDiscardReason } from './persistence';
 import { normalizeWorkspaceDevices } from '../utils/deviceNormalization';
+
+/** Optional initial state for {@link resolveInitialWorkspace}; a present `workspace` always wins. */
+export interface InitialWorkspaceState {
+  /** A test-provided workspace (device-normalized before use). */
+  workspace?: unknown;
+}
+
+/**
+ * The resolved initial workspace slice plus the two at-most-one-non-null post-mount notices.
+ */
+export interface InitialWorkspaceResolution {
+  /** The hydrated or default workspace. */
+  workspace: Record<string, unknown>;
+  /** Discard reason when a stored blob was unusable, else null. */
+  discarded: LoadDiscardReason | null;
+  /** Recovery notice (the shape-repaired sections) when a blob was incomplete-but-valid, else null. */
+  recovered: { missingKeys: string[] } | null;
+}
 
 /**
  * Resolve the workspace slice's INITIAL state, the pure logic of `useWorkspace`'s `useState`
@@ -17,10 +36,12 @@ import { normalizeWorkspaceDevices } from '../utils/deviceNormalization';
  * render — it stashes them in refs and emits a post-mount notice. At most one of
  * `discarded` / `recovered` is ever non-null.
  *
- * @param {object|null} initialState - Optional initial state; `initialState.workspace` wins.
- * @returns {{ workspace: object, discarded: (object|null), recovered: (object|null) }}
+ * @param initialState - Optional initial state; `initialState.workspace` wins.
+ * @returns The resolved workspace plus the `discarded` / `recovered` notices.
  */
-export function resolveInitialWorkspace(initialState) {
+export function resolveInitialWorkspace(
+  initialState?: InitialWorkspaceState | null
+): InitialWorkspaceResolution {
   const fallback = createDefaultWorkspace();
 
   if (initialState?.workspace) {
