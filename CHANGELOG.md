@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Typed the 2 HEAVY `pages/DayEditor` Tier-2 step components `DevicesStep` + `TasksEpochsStep` `.jsx`→`.tsx` (refactor only, behavior-preserving) — page cycle 7.**
+  Both read all seven shared fields from `useDayEditorContext(props)` with no section-specific props, so each is typed
+  `props: DayEditorBundle` directly. Runtime PropTypes/defaultProps dropped; JSDoc trimmed; the bad-channel / task-catalog
+  handlers, the orphan-repair helpers, and the modal/quick-add/pending-repair state got typed signatures + state
+  interfaces. Behavior-equivalent non-type changes only: `DevicesStep` casts the loose bundle `actions`
+  (`Record<string, unknown>`) to the now-exported `ReconfigActions` for `<ConfigVersionPanel>` and `day` to
+  `Record<string, unknown>` for `<OverrideCleanupSection>`, casts `group?.device_type as string` at the two badChannels
+  domain calls (which tolerate undefined), and adds `if (version == null) return null` to the `reconfig` memo — unobservable
+  because a `null` configuration version occurs only on the configError path, which early-returns before the panel renders
+  (it narrows the version to the `number` the panel contract requires). `TasksEpochsStep` casts the loose `actions.updateAnimal`
+  to its call signature and `day` to `Record<string, unknown>` for `<MalformedCollectionNotice>`. The `ReconfigActions`
+  interface gained an `export`; the no-emoji guard's `GUARDED_FILES` entry was updated `TasksEpochsStep.jsx` → `.tsx` to
+  track the rename. `npm run typecheck` + `CI=true` build clean; golden baselines, the DayEditor suites + the 3
+  source-scanning guards + the emoji guard pass; full suite 4793; e2e 104.
 - **Typed the 4 `pages/DayEditor` Tier-2 "display" step components `.jsx`→`.tsx` (refactor only, behavior-preserving) — page cycle 6.**
   `BehavioralEventsStep`, `ValidationStep`, `OverviewStep`, and `ExportStep` → `.tsx`. Each step's props now `extends
   DayEditorBundle` (so `useDayEditorContext(props)` — whose fallback param is the full bundle — typechecks) plus its

@@ -1,5 +1,4 @@
 import { useState, useRef, useCallback } from 'react';
-import PropTypes from 'prop-types';
 import { ConfirmDialog } from '../../components/Modal';
 import TaskInstancesTable from './TaskInstancesTable';
 import TaskInstanceModal from './TaskInstanceModal';
@@ -27,21 +26,44 @@ import {
   addTaskType,
   nextTaskTypeId,
 } from '../../state/taskCatalogActions';
+import type { TaskTypeDefinitionInput } from '../../state/taskCatalogActions';
 import { useDayEditorContext } from './DayEditorContext';
+import type { DayEditorBundle } from './DayEditorContext';
+import type { TaskInstance, TaskType, AssociatedVideoFile, AssociatedFile } from '../../state/workspaceTypes';
 import './TasksEpochsStep.scss';
+
+/** The orphaned associated references an edit would leave dangling. */
+interface OrphanedReferences {
+  videos: AssociatedVideoFile[];
+  files: AssociatedFile[];
+}
+
+/** The instance modal's UI state. */
+interface InstanceModalState {
+  open: boolean;
+  mode: 'add' | 'edit';
+  editingIndex: number | null;
+  preselectTypeId: string | null;
+}
+
+/** A pending orphan-repair awaiting user confirmation before commit. */
+interface PendingRepair extends OrphanedReferences {
+  nextInstances: TaskInstance[];
+  nextTaskTypes: TaskType[];
+}
 
 // The day-owned collections this step owns (raw-shape reset surface).
 const EPOCHS_STEP_COLLECTIONS = RAW_DAY_ARRAY_FIELDS.filter((f) => f.repairStep === 'epochs');
 
 /**
  * The valid epoch numbers across a day's task instances (the epochs a video/file may reference).
- * @param {Array} instances Task instances.
- * @returns {Set<number>} The valid epoch numbers.
+ * @param instances Task instances.
+ * @returns The valid epoch numbers.
  */
-function validEpochSet(instances) {
-  const set = new Set();
+function validEpochSet(instances: unknown): Set<number> {
+  const set = new Set<number>();
   (Array.isArray(instances) ? instances : []).forEach((instance) => {
-    (Array.isArray(instance?.task_epochs) ? instance.task_epochs : []).forEach((epoch) => {
+    (Array.isArray(instance?.task_epochs) ? instance.task_epochs : []).forEach((epoch: unknown) => {
       const n = Number(epoch);
       if (Number.isInteger(n)) set.add(n);
     });
@@ -52,12 +74,12 @@ function validEpochSet(instances) {
 /**
  * Associated_video_files / associated_files entries whose `task_epochs` reference is no longer
  * present in `validEpochs`.
- * @param {object} day The day.
- * @param {Set<number>} validEpochs The epochs that WOULD remain after the edit.
- * @returns {{ videos: Array, files: Array }} Affected entries.
+ * @param day The day.
+ * @param validEpochs The epochs that WOULD remain after the edit.
+ * @returns Affected entries.
  */
-function findOrphanedReferences(day, validEpochs) {
-  const isOrphan = (entry) =>
+function findOrphanedReferences(day: unknown, validEpochs: Set<number>): OrphanedReferences {
+  const isOrphan = (entry: { task_epochs?: number | string }) =>
     entry.task_epochs !== '' && entry.task_epochs != null && !validEpochs.has(Number(entry.task_epochs));
   return {
     videos: getDayAssociatedVideos(day).filter(isOrphan),
@@ -67,11 +89,11 @@ function findOrphanedReferences(day, validEpochs) {
 
 /**
  * A copy of an associated array with orphaned `task_epochs` cleared to ''.
- * @param {Array} entries associated_video_files / associated_files.
- * @param {Set<number>} validEpochs Valid epoch numbers.
- * @returns {Array} The repaired array.
+ * @param entries associated_video_files / associated_files.
+ * @param validEpochs Valid epoch numbers.
+ * @returns The repaired array.
  */
-function clearOrphans(entries, validEpochs) {
+function clearOrphans(entries: unknown, validEpochs: Set<number>): unknown[] {
   return (Array.isArray(entries) ? entries : []).map((entry) =>
     entry.task_epochs !== '' && entry.task_epochs != null && !validEpochs.has(Number(entry.task_epochs))
       ? { ...entry, task_epochs: '' }
@@ -89,16 +111,8 @@ function clearOrphans(entries, validEpochs) {
  * preserved: an edit that removes an epoch a video/file still references prompts a deterministic
  * cleanup before committing. All animal writes go through `actions.updateAnimal`; all day writes
  * through `onFieldUpdate('taskInstances', …)`.
- *
- * @param {object} props
- * @param {object} props.animal - Parent animal (taskTypes catalog + cameras).
- * @param {object} props.day - The day being edited (taskInstances or legacy inline tasks).
- * @param {Function} props.onFieldUpdate - `(fieldPath, value)` day updater.
- * @param {object} [props.actions] - Store actions (for `updateAnimal`; from context in the stepper).
- * @param {string} [props.animalKey] - The resolved store owner key.
- * @returns {JSX.Element}
  */
-export default function TasksEpochsStep(props) {
+export default function TasksEpochsStep(props: DayEditorBundle) {
   const { animal, day, onFieldUpdate, actions = undefined, animalKey = undefined } = useDayEditorContext(props);
   const ownerKey = animalKey ?? animal?.id;
 
@@ -116,9 +130,9 @@ export default function TasksEpochsStep(props) {
   // Resolve to inline tasks for the epoch-linked sub-editors (videos / files / FsGUI).
   const resolvedTasks = resolveTaskInstances(view.taskTypes, instances);
 
-  const [instanceModal, setInstanceModal] = useState({ open: false, mode: 'add', editingIndex: null, preselectTypeId: null });
-  const [quickAdd, setQuickAdd] = useState({ open: false, nameError: null });
-  const [pendingRepair, setPendingRepair] = useState(null);
+  const [instanceModal, setInstanceModal] = useState<InstanceModalState>({ open: false, mode: 'add', editingIndex: null, preselectTypeId: null });
+  const [quickAdd, setQuickAdd] = useState<{ open: boolean; nameError: string | null }>({ open: false, nameError: null });
+  const [pendingRepair, setPendingRepair] = useState<PendingRepair | null>(null);
   const [bannerDismissed, setBannerDismissed] = useState(false);
 
   const showCameraBanner = cameras.length === 0 && !bannerDismissed;
@@ -126,13 +140,15 @@ export default function TasksEpochsStep(props) {
   /**
    * Apply a committed edit: write the (possibly extended) animal catalog, the day's instances, and —
    * when `repair` — the orphaned associated references.
-   * @param {Array} nextInstances The new instance array.
-   * @param {Array} nextTaskTypes The catalog to persist (only written when it differs from the animal's).
-   * @param {boolean} repair Whether to clear orphaned associated references.
+   * @param nextInstances The new instance array.
+   * @param nextTaskTypes The catalog to persist (only written when it differs from the animal's).
+   * @param repair Whether to clear orphaned associated references.
    */
-  function applyCommit(nextInstances, nextTaskTypes, repair) {
+  function applyCommit(nextInstances: TaskInstance[], nextTaskTypes: TaskType[], repair: boolean) {
     if (nextTaskTypes !== animalTaskTypes && actions?.updateAnimal) {
-      actions.updateAnimal(ownerKey, { taskTypes: nextTaskTypes });
+      // `actions` is the loose bundle store-action bag; cast the resolved updater to its known
+      // signature so the call typechecks (behavior unchanged).
+      (actions.updateAnimal as (id: string, patch: Record<string, unknown>) => void)(ownerKey, { taskTypes: nextTaskTypes });
     }
     onFieldUpdate('taskInstances', nextInstances);
     // Retire the stale inline `day.tasks` the first time an inline/imported day is edited into the
@@ -159,10 +175,10 @@ export default function TasksEpochsStep(props) {
   /**
    * Commit a next instance array (with the current working catalog), prompting for orphan repair
    * first when the edit would leave a video/file pointing at a now-missing epoch.
-   * @param {Array} nextInstances The new instance array.
-   * @param {Array} [nextTaskTypes] The catalog to persist (defaults to the working view's).
+   * @param nextInstances The new instance array.
+   * @param nextTaskTypes The catalog to persist (defaults to the working view's).
    */
-  function commit(nextInstances, nextTaskTypes = view.taskTypes) {
+  function commit(nextInstances: TaskInstance[], nextTaskTypes: TaskType[] = view.taskTypes) {
     const valid = validEpochSet(nextInstances);
     const { videos, files } = findOrphanedReferences(day, valid);
     if (videos.length === 0 && files.length === 0) {
@@ -182,13 +198,13 @@ export default function TasksEpochsStep(props) {
   // Alt+N opens the add-task picker while this step is on screen.
   const addTaskRef = useRef(handleAddTask);
   addTaskRef.current = handleAddTask;
-  useStepperShortcut(useCallback((action) => { if (action === 'add') addTaskRef.current(); }, []));
+  useStepperShortcut(useCallback((action: 'next' | 'prev' | 'add') => { if (action === 'add') addTaskRef.current(); }, []));
 
   /**
    *
    * @param index
    */
-  function handleEditTask(index) {
+  function handleEditTask(index: number) {
     setInstanceModal({ open: true, mode: 'edit', editingIndex: index, preselectTypeId: null });
   }
 
@@ -198,7 +214,7 @@ export default function TasksEpochsStep(props) {
    * @param root0.taskTypeId
    * @param root0.task_epochs
    */
-  function handleSaveInstance({ taskTypeId, task_epochs }) {
+  function handleSaveInstance({ taskTypeId, task_epochs }: { taskTypeId: string; task_epochs: number[] }) {
     const next =
       instanceModal.mode === 'edit' && instanceModal.editingIndex != null
         ? instances.map((inst, i) => (i === instanceModal.editingIndex ? { taskTypeId, task_epochs } : inst))
@@ -211,7 +227,7 @@ export default function TasksEpochsStep(props) {
    *
    * @param index
    */
-  function handleRemoveTask(index) {
+  function handleRemoveTask(index: number) {
     commit(removeTaskInstance(instances, index));
   }
 
@@ -220,7 +236,7 @@ export default function TasksEpochsStep(props) {
    * @param from
    * @param to
    */
-  function handleReorder(from, to) {
+  function handleReorder(from: number, to: number) {
     commit(reorderTaskInstances(instances, from, to));
   }
 
@@ -239,9 +255,9 @@ export default function TasksEpochsStep(props) {
    * Appends the type to the catalog and a task instance referencing it, then opens that instance's
    * epoch editor so the user assigns the epochs it ran. A clashing name keeps the type modal open.
    *
-   * @param {object} definition - The cleaned `{ task_name, task_description, task_environment, camera_id }`.
+   * @param definition - The cleaned `{ task_name, task_description, task_environment, camera_id }`.
    */
-  function handleSaveNewType(definition) {
+  function handleSaveNewType(definition: TaskTypeDefinitionInput) {
     const clashes = view.taskTypes.some((t) => t?.task_name === definition.task_name);
     if (clashes) {
       setQuickAdd((prev) => ({
@@ -303,7 +319,9 @@ export default function TasksEpochsStep(props) {
       </p>
 
       <MalformedCollectionNotice
-        day={day}
+        // A clean `Day` is a valid possibly-corrupt-record input to this tolerant reader; the
+        // interface lacks an index signature, hence the cast.
+        day={day as unknown as Record<string, unknown>}
         fields={EPOCHS_STEP_COLLECTIONS}
         onReset={(key) => onFieldUpdate(key, [])}
       />
@@ -438,25 +456,3 @@ export default function TasksEpochsStep(props) {
   );
 }
 
-// animal/day/onFieldUpdate/actions/animalKey come from DayEditorContext in the Day Editor; these
-// propTypes describe the isolated-render fallback, so they are not `.isRequired`.
-TasksEpochsStep.propTypes = {
-  animal: PropTypes.shape({
-    id: PropTypes.string,
-    cameras: PropTypes.array,
-    taskTypes: PropTypes.array,
-  }),
-  day: PropTypes.shape({
-    taskInstances: PropTypes.array,
-    tasks: PropTypes.array,
-    associated_video_files: PropTypes.array,
-    associated_files: PropTypes.array,
-  }),
-  onFieldUpdate: PropTypes.func,
-  actions: PropTypes.object,
-  animalKey: PropTypes.string,
-};
-
-TasksEpochsStep.defaultProps = {
-  actions: undefined,
-};
