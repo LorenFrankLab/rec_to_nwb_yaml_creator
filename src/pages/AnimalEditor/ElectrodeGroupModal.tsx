@@ -1,20 +1,63 @@
-import React, { useState } from 'react';
-import PropTypes from 'prop-types';
+import { useState } from 'react';
+import type { ChangeEvent } from 'react';
 import Modal from '../../components/Modal/Modal';
 import BrainRegionAutocomplete, { canonicalizeRegion, BRAIN_REGIONS } from '../../components/BrainRegionAutocomplete';
 import { deviceTypes, deviceTypeLabel } from '../../valueList';
 import './ElectrodeGroupModal.scss';
 
 /**
+ * Edit-mode input: the saved electrode group as THIS editor reads it. `targeted_location` is a brain-
+ * region string here and coordinates live in `targeted_x/y/z` — the editor's contract (mirrors the
+ * original PropTypes), which deliberately differs from the canonical workspace `ElectrodeGroup`.
+ */
+interface ElectrodeGroupInput {
+  id?: number;
+  device_type?: string;
+  location?: string;
+  description?: string;
+  targeted_location?: string;
+  targeted_x?: string | number;
+  targeted_y?: string | number;
+  targeted_z?: string | number;
+  units?: string;
+}
+
+/** Local form state (all fields are strings while editing). */
+interface ElectrodeGroupFormData {
+  device_type: string;
+  location: string;
+  description: string;
+  targeted_location: string;
+  targeted_x: string;
+  targeted_y: string;
+  targeted_z: string;
+  units: string;
+  count: string;
+}
+
+/** The cleaned electrode-group definition this editor emits on save. */
+interface ElectrodeGroupSaveData {
+  device_type: string;
+  location: string;
+  description: string;
+  targeted_location: string;
+  targeted_x: number;
+  targeted_y: number;
+  targeted_z: number;
+  units: string;
+  count: number;
+}
+
+/**
  * Compute initial form state once, from props, at mount. The parent Modal only
  * renders this form while open, so it remounts on each open and this initializer
  * runs fresh — no unstable-dependency init effect needed.
  *
- * @param {string} mode 'add' or 'edit'.
- * @param {object|null} group Electrode group being edited (edit mode).
- * @returns {object} Initial form values.
+ * @param mode - 'add' or 'edit'.
+ * @param group - Electrode group being edited (edit mode).
+ * @returns Initial form values.
  */
-function getInitialFormData(mode, group) {
+function getInitialFormData(mode: string, group: ElectrodeGroupInput | null): ElectrodeGroupFormData {
   if (mode === 'edit' && group) {
     return {
       device_type: group.device_type || '',
@@ -41,22 +84,27 @@ function getInitialFormData(mode, group) {
   };
 }
 
+interface ElectrodeGroupFormProps {
+  /** 'add' or 'edit'. */
+  mode: 'add' | 'edit';
+  /** Group data for edit mode. */
+  group?: ElectrodeGroupInput | null;
+  /** Canonical regions already used in the workspace. */
+  knownRegions?: string[];
+  /** Save callback with the cleaned group object. */
+  onSave: (group: ElectrodeGroupSaveData) => void;
+  /** Cancel callback. */
+  onCancel: () => void;
+}
+
 /**
  * Electrode group add/edit form. Rendered as Modal children (only while open), so
  * its state initializes once per open. Field/validation/save behavior unchanged.
- *
- * @param {object} props
- * @param {string} props.mode 'add' or 'edit'.
- * @param {object|null} props.group Group data for edit mode.
- * @param {string[]} props.knownRegions Canonical regions already used in the workspace.
- * @param {Function} props.onSave Save callback with the cleaned group object.
- * @param {Function} props.onCancel Cancel callback.
- * @returns {JSX.Element}
  */
-function ElectrodeGroupForm({ mode, group, knownRegions, onSave, onCancel }) {
-  const [formData, setFormData] = useState(() => getInitialFormData(mode, group));
+function ElectrodeGroupForm({ mode, group = null, knownRegions = [], onSave, onCancel }: ElectrodeGroupFormProps) {
+  const [formData, setFormData] = useState<ElectrodeGroupFormData>(() => getInitialFormData(mode, group));
 
-  const isFiniteCoordinate = (value) => value.trim() !== '' && Number.isFinite(Number(value));
+  const isFiniteCoordinate = (value: string) => value.trim() !== '' && Number.isFinite(Number(value));
 
   const isFormValid = () => {
     // At recording time the scientist only has the TARGET; the actual `location`
@@ -74,9 +122,9 @@ function ElectrodeGroupForm({ mode, group, knownRegions, onSave, onCancel }) {
     );
   };
 
-  const handleInputChange = (e) => {
+  const handleInputChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    setFormData((prev) => ({ ...prev, [name]: value }) as ElectrodeGroupFormData);
   };
 
   const handleSave = () => {
@@ -305,31 +353,27 @@ function ElectrodeGroupForm({ mode, group, knownRegions, onSave, onCancel }) {
   );
 }
 
-ElectrodeGroupForm.propTypes = {
-  mode: PropTypes.oneOf(['add', 'edit']).isRequired,
-  group: PropTypes.object,
-  knownRegions: PropTypes.arrayOf(PropTypes.string),
-  onSave: PropTypes.func.isRequired,
-  onCancel: PropTypes.func.isRequired,
-};
-
-ElectrodeGroupForm.defaultProps = { group: null, knownRegions: [] };
+interface ElectrodeGroupModalProps {
+  /** Whether modal is currently open. */
+  isOpen: boolean;
+  /** 'add' or 'edit'. */
+  mode?: 'add' | 'edit';
+  /** Electrode group data (optional for add mode). */
+  group?: ElectrodeGroupInput | null;
+  /** Canonical regions already used in the workspace. */
+  knownRegions?: string[];
+  /** Callback with form data when saved. */
+  onSave: (group: ElectrodeGroupSaveData) => void;
+  /** Callback when modal is cancelled/closed. */
+  onCancel: () => void;
+}
 
 /**
  * ElectrodeGroupModal - Add/edit an electrode group. Dialog accessibility (focus
  * trap, focus return, ESC/overlay close, scroll lock) is provided by the shared
  * Modal primitive.
- *
- * @param {object} props Component properties
- * @param {boolean} props.isOpen Whether modal is currently open
- * @param {string} props.mode 'add' or 'edit'
- * @param {object} props.group Electrode group data (optional for add mode)
- * @param {string[]} props.knownRegions Canonical regions already used in the workspace
- * @param {Function} props.onSave Callback with form data when saved
- * @param {Function} props.onCancel Callback when modal is cancelled/closed
- * @returns {JSX.Element}
  */
-const ElectrodeGroupModal = ({ isOpen, mode = 'add', group = null, knownRegions = [], onSave, onCancel }) => (
+const ElectrodeGroupModal = ({ isOpen, mode = 'add', group = null, knownRegions = [], onSave, onCancel }: ElectrodeGroupModalProps) => (
   <Modal
     isOpen={isOpen}
     onClose={onCancel}
@@ -340,30 +384,5 @@ const ElectrodeGroupModal = ({ isOpen, mode = 'add', group = null, knownRegions 
     <ElectrodeGroupForm mode={mode} group={group} knownRegions={knownRegions} onSave={onSave} onCancel={onCancel} />
   </Modal>
 );
-
-ElectrodeGroupModal.propTypes = {
-  isOpen: PropTypes.bool.isRequired,
-  mode: PropTypes.oneOf(['add', 'edit']),
-  group: PropTypes.shape({
-    id: PropTypes.number,
-    device_type: PropTypes.string,
-    location: PropTypes.string,
-    description: PropTypes.string,
-    targeted_location: PropTypes.string,
-    targeted_x: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
-    targeted_y: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
-    targeted_z: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
-    units: PropTypes.string,
-  }),
-  knownRegions: PropTypes.arrayOf(PropTypes.string),
-  onSave: PropTypes.func.isRequired,
-  onCancel: PropTypes.func.isRequired,
-};
-
-ElectrodeGroupModal.defaultProps = {
-  mode: 'add',
-  group: null,
-  knownRegions: [],
-};
 
 export default ElectrodeGroupModal;

@@ -1,6 +1,21 @@
 import { useId } from 'react';
-import PropTypes from 'prop-types';
 import Modal from '../../components/Modal/Modal';
+
+interface CameraReferenceDialogProps {
+  isOpen: boolean;
+  /** The original camera being edited (`id`, `camera_name`). */
+  camera?: { id?: number; camera_name?: string } | null;
+  /** The recording days that reference it. */
+  affectedDays?: Array<{ id: number | string; date?: string }>;
+  /** Whether some of the animal's recording days could not be loaded (references uncheckable). */
+  hasUnresolvableDays?: boolean;
+  /** Commit as a new camera (keeps the affected days unchanged). */
+  onCreateNew: () => void;
+  /** Overwrite in place (updates the affected days). */
+  onCorrect: () => void;
+  /** Dismiss without changing anything. */
+  onCancel: () => void;
+}
 
 /**
  * CameraReferenceDialog — Phase 8.7 Task 5b (immutable-once-referenced cameras).
@@ -13,20 +28,8 @@ import Modal from '../../components/Modal/Modal';
  *    the original is untouched, so the referencing days keep exactly what they recorded.
  *  - **Correct this camera**: overwrite the camera in place — explicitly updating all N referencing
  *    days, including any already exported.
- *
- * @param {object} props
- * @param {boolean} props.isOpen
- * @param {object} props.camera - The original camera being edited (`id`, `camera_name`).
- * @param {Array<{id: *, date: string}>} props.affectedDays - The recording days that reference it.
- * @param {boolean} [props.hasUnresolvableDays] - Whether some of the animal's recording days could
- *   not be loaded (their camera references can't be checked) — surfaced so the decision is never
- *   silently skipped for a day we couldn't read.
- * @param {Function} props.onCreateNew - Commit as a new camera (keeps the affected days unchanged).
- * @param {Function} props.onCorrect - Overwrite in place (updates the affected days).
- * @param {Function} props.onCancel - Dismiss without changing anything.
- * @returns {JSX.Element|null}
  */
-export default function CameraReferenceDialog({ isOpen, camera, affectedDays, hasUnresolvableDays = false, onCreateNew, onCorrect, onCancel }) {
+export default function CameraReferenceDialog({ isOpen, camera = null, affectedDays = [], hasUnresolvableDays = false, onCreateNew, onCorrect, onCancel }: CameraReferenceDialogProps) {
   const baseId = useId();
   const titleId = `${baseId}-title`;
   const msgId = `${baseId}-msg`;
@@ -92,20 +95,3 @@ export default function CameraReferenceDialog({ isOpen, camera, affectedDays, ha
     </Modal>
   );
 }
-
-CameraReferenceDialog.propTypes = {
-  isOpen: PropTypes.bool.isRequired,
-  camera: PropTypes.shape({ id: PropTypes.number, camera_name: PropTypes.string }),
-  affectedDays: PropTypes.arrayOf(
-    PropTypes.shape({ id: PropTypes.any, date: PropTypes.string })
-  ),
-  hasUnresolvableDays: PropTypes.bool,
-  onCreateNew: PropTypes.func.isRequired,
-  onCorrect: PropTypes.func.isRequired,
-  onCancel: PropTypes.func.isRequired,
-};
-
-CameraReferenceDialog.defaultProps = {
-  camera: null,
-  affectedDays: [],
-};

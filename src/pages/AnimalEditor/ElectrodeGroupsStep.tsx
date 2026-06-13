@@ -1,13 +1,19 @@
-import PropTypes from 'prop-types';
 import {
   getAnimalElectrodeGroups,
   getConfigHistory,
   getProbeElectrodeGroups,
   getProbeNtrodeMaps,
 } from '../../state/workspaceSelectors';
+import type { ElectrodeGroup } from '../../state/workspaceTypes';
 import { animalElectrodeSetupNeedsSync } from '../../domain/workflowStatus';
 import { getChannelCount, getShankCount } from '../../utils/deviceTypeUtils';
 import './ElectrodeGroupsStep.scss';
+
+/**
+ * Editor-side electrode group: the canonical {@link ElectrodeGroup} plus the `units` field the
+ * editor maintains (it is part of the saved snapshot but not the canonical workspace type).
+ */
+type ElectrodeGroupRow = ElectrodeGroup & { units?: string };
 
 /**
  * Per-group completeness status: a decorative icon paired with a screen-reader
@@ -18,19 +24,13 @@ const STATUS_META = {
   incomplete: { icon: '❌', label: 'Missing required fields' },
 };
 
-/**
- * @param {unknown} value - Candidate required value.
- * @returns {boolean} True when a required text-ish field has real content.
- */
-function hasNonBlankValue(value) {
+/** True when a required text-ish field has real content. */
+function hasNonBlankValue(value: unknown): boolean {
   return value != null && (typeof value !== 'string' || value.trim() !== '');
 }
 
-/**
- * @param {unknown} value - Candidate coordinate value.
- * @returns {boolean} True when the coordinate is present and finite.
- */
-function hasFiniteCoordinate(value) {
+/** True when the coordinate is present and finite. */
+function hasFiniteCoordinate(value: unknown): boolean {
   return value != null && value !== '' && Number.isFinite(Number(value));
 }
 
@@ -38,40 +38,39 @@ function hasFiniteCoordinate(value) {
  * Render a catalog-derived geometry count, distinguishing an UNKNOWN probe (count 0,
  * which never occurs for a real catalogued probe) from a real zero. An em dash makes an
  * uncatalogued device visually distinct rather than reading as "0 channels/shanks".
- *
- * @param {number} count - Channel or shank count from the probe catalog.
- * @returns {number|string} The count, or '—' when 0 (unknown device).
  */
-function formatGeometryCount(count) {
+function formatGeometryCount(count: number): number | string {
   return count > 0 ? count : '—';
+}
+
+interface ElectrodeGroupsStepProps {
+  /** Animal record with `devices.electrode_groups`; read through tolerant selectors. */
+  animal: unknown;
+  /** Field update callback. */
+  onFieldUpdate: (field: string, value: unknown) => void;
+  /** Edit button click handler. */
+  onEdit?: ((id: number) => void) | null;
+  /** Add button click handler. */
+  onAdd?: (() => void) | null;
+  /** Delete button click handler. */
+  onDelete?: ((group: ElectrodeGroup) => void) | null;
+  /** Copy from animal click handler. */
+  onCopy?: (() => void) | null;
 }
 
 /**
  * ElectrodeGroupsStep - Step 1 of Animal Editor
  *
  * Provides CRUD interface for electrode groups with table view.
- *
- * @param {object} props
- * @param {object} props.animal - Animal record with devices.electrode_groups
- * @param {Function} props.onFieldUpdate - Field update callback
- * @param {Function} [props.onEdit] - Edit button click handler
- * @param {Function} [props.onAdd] - Add button click handler
- * @param {Function} [props.onDelete] - Delete button click handler
- * @param {Function} [props.onCopy] - Copy from animal click handler
- * @returns {JSX.Element}
  */
-export default function ElectrodeGroupsStep({ animal, onFieldUpdate, onEdit, onAdd, onDelete, onCopy }) {
+export default function ElectrodeGroupsStep({ animal, onFieldUpdate, onEdit, onAdd, onDelete, onCopy }: ElectrodeGroupsStepProps) {
   const electrodeGroups = getAnimalElectrodeGroups(animal);
 
-  /**
-   * Compute status badge (✓ complete, ⚠ incomplete, ❌ missing required)
-   * @param {object} group
-   * @returns {string}
-   */
-  function getStatusKey(group) {
+  /** Compute status badge (✓ complete, ❌ missing required). */
+  function getStatusKey(group: ElectrodeGroupRow): 'complete' | 'incomplete' {
     // `location` and `description` are optional in the editor (filled in on save),
     // so completeness keys off the fields the scientist must supply.
-    const requiredText = ['device_type', 'targeted_location', 'units'];
+    const requiredText: Array<keyof ElectrodeGroupRow> = ['device_type', 'targeted_location', 'units'];
     const hasRequired = (
       requiredText.every(field => hasNonBlankValue(group[field])) &&
       hasFiniteCoordinate(group.targeted_x) &&
@@ -99,21 +98,15 @@ export default function ElectrodeGroupsStep({ animal, onFieldUpdate, onEdit, onA
     }
   };
 
-  /**
-   * Handle edit button click
-   * @param {number} groupId - Electrode group id.
-   */
-  const handleEditClick = (groupId) => {
+  /** Handle edit button click. */
+  const handleEditClick = (groupId: number) => {
     if (onEdit) {
       onEdit(groupId);
     }
   };
 
-  /**
-   * Handle delete button click
-   * @param {object} group - Electrode group to delete.
-   */
-  const handleDeleteClick = (group) => {
+  /** Handle delete button click. */
+  const handleDeleteClick = (group: ElectrodeGroup) => {
     if (onDelete) {
       onDelete(group);
     }
@@ -248,24 +241,3 @@ export default function ElectrodeGroupsStep({ animal, onFieldUpdate, onEdit, onA
   );
 }
 
-ElectrodeGroupsStep.propTypes = {
-  animal: PropTypes.shape({
-    id: PropTypes.string.isRequired,
-    devices: PropTypes.shape({
-      electrode_groups: PropTypes.arrayOf(PropTypes.object),
-      ntrode_electrode_group_channel_map: PropTypes.arrayOf(PropTypes.object),
-    })
-  }).isRequired,
-  onFieldUpdate: PropTypes.func.isRequired,
-  onEdit: PropTypes.func,
-  onAdd: PropTypes.func,
-  onDelete: PropTypes.func,
-  onCopy: PropTypes.func,
-};
-
-ElectrodeGroupsStep.defaultProps = {
-  onEdit: null,
-  onAdd: null,
-  onDelete: null,
-  onCopy: null,
-};

@@ -9,6 +9,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Typed the `pages/AnimalEditor` LARGE leaf tier — the 10 presentational components plus the pure `identitySafety` identity-drift hub `.jsx`/`.js`→`.tsx`/`.ts` (refactor only, behavior-preserving) — page cycle 9.**
+  The first AnimalEditor cycle: `identitySafety` (re-exports `findIdentityDivergence` plus the
+  `IdentityDivergence`/`IdentityRegistryEntry` types), `CameraReferenceDialog`, `CamerasSection`,
+  `ElectrodeGroupsStep`, `TaskTypesSection`, `TaskTypeModal`, `CameraModal`, `ElectrodeGroupModal`,
+  `DataAcqSection`, `OptogeneticsStep`, `CopyFromAnimalDialog`. Each gets a typed props interface;
+  runtime PropTypes/defaultProps dropped (each non-undefined default preserved as a destructure
+  default); JSDoc trimmed; stray `import React` removed. One shared-vocabulary fix:
+  `workspaceTypes.Camera.camera_name` `?: number` → `?: string` — a latent type bug (the schema, the
+  form default, and every typed reader treat it as a string), which unblocks the identity-registry
+  name typing. Behavior-equivalent non-type changes only: `TaskTypeModal.onSave` reuses the canonical
+  `TaskTypeDefinitionInput` so it stays compatible with its one typed cross-dir consumer
+  (`DayEditor/TasksEpochsStep`); `ElectrodeGroupModal` keeps LOCAL input/form/save types whose
+  `targeted_location` is a region string (faithful to the original PropTypes, deliberately diverging
+  from canonical `ElectrodeGroup`); `OptogeneticsStep` narrows the tolerant-`unknown` opto block via
+  an `optoRecord` intermediate and swaps `enabled`-to-`opto` truthiness gates (provably equivalent:
+  `enabled === (opto !== null)`); erased casts (`!` after guards, `field as keyof X` index reads,
+  `parseInt(String(id), 10)`, `camera.camera_name as string`) preserve exact runtime. No
+  source-scanning-guard surgery (no `code:` literals, no raw qualified reads). `npm run typecheck` and
+  `CI=true` build clean (−98 B from PropTypes removal); golden baselines, AnimalEditor suites with the
+  3 source-scanning guards, full suite 4793, e2e 104 all pass.
 - **Typed the DayEditor orchestrator `DayEditorStepper` + route entry `index` `.jsx`→`.tsx` — the entire `pages/DayEditor` directory is now TypeScript (refactor only, behavior-preserving) — page cycle 8.**
   `DayEditorStepper` is the provider of the `DayEditorContext` bundle every step consumes; it resolves
   the day/animal/owner-key from the store, builds the typed `DayEditorBundle` value, and owns the

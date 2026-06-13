@@ -216,8 +216,8 @@ export interface Camera {
   model: string;
   /** Lens description. */
   lens?: string;
-  /** Legacy camera name field. */
-  camera_name?: number;
+  /** Camera name (Spyglass `CameraDevice` key). Schema-required string; optional here for tolerant reads. */
+  camera_name?: string;
 }
 
 /** Experimenter information. */
