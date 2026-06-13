@@ -9,6 +9,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Typed the workspace state transitions under strict TS (refactor only, no behavior change).**
+  [state/workspaceTransitions.js](src/state/workspaceTransitions.ts) → `.ts`: the pure-mutation heart of
+  the workspace model — `applyAnimalUpdates`, `createDayRecord`, `applyDayUpdates`,
+  `addConfigurationSnapshotToAnimal` / `createSnapshotAndApplyForward` /
+  `applyConfigurationForwardToAnimal`, `rebuildConfigurationHistoryForAnimal`, `nextConfigurationVersion`,
+  `sortDayIdsByDate` — now take the canonical `Animal`/`Day` interfaces and a typed `Record<string, Day>`
+  days map (matching the `configDiff.reconcileAppliedToDays` precedent) and return them;
+  `nextConfigurationVersion(history: unknown)` stays shape-agnostic. **Corruption tolerance is unchanged**
+  — it lives in the body's `unknown`-accepting selectors (`getConfigHistory` / `getAnimalDevices` /
+  `getDayTasks` / `getDayBadChannelOverrides` / …), exactly as before. Update payloads are three new named
+  interfaces (`AnimalUpdates` / `ConfigSnapshotInput` / `DayUpdates`). The only executable changes are
+  four type-level no-ops: a `carryFrom!.technical` non-null assertion (the `carryTechnical` guard already
+  proves it), two `as SessionMetadata` / `as DayState` casts on the malformed-`session`/`state` guard
+  merges (the inline corruption-recovery behavior is byte-identical), and a `Record<string, number[]>`
+  annotation. Two **`Animal`** type gaps are closed: `optogenetics` is widened to `OptogeneticsConfig |
+  null` (the editor's disable sentinel that `applyAnimalUpdates` writes) and the vestigial
+  `behavioral_events?: BehavioralEvent[]` is declared (it was already written by `applyAnimalUpdates` and
+  read by `getAnimalBehavioralEvents`, never typed). transitions (48) + store-public-api (5) + the three
+  source-scanning guards (`architectureBoundaries` / `workspaceSelectors.guard` / `workflowOwnership`) +
+  golden baselines (125) pass; `npm run typecheck` + `CI=true` build clean; full suite 4793; e2e 104.
+
 - **Typed the optogenetics-completeness predicate under strict TS (refactor only, no behavior change).**
   [domain/optoCompleteness.js](src/domain/optoCompleteness.ts) → `.ts`: `optoFieldsPresence` (the single
   source of truth for "which of the four opto fields count as present") now takes a permissive

@@ -8,6 +8,11 @@
  * day record. These are pure — they take the current record(s) + a timestamp and return the
  * next record(s); they never read the clock, touch localStorage, or call `setState`. The
  * hook keeps the side effects (hydration, autosave, debounce) and the existence-check throws.
+ *
+ * Typing contract: the record-producing functions take the canonical `Animal`/`Day` interfaces
+ * (their output) and a typed `Record<string, Day>` days map; corruption tolerance lives in the
+ * body's `unknown`-accepting selectors (`getConfigHistory`, `getAnimalDevices`, `getDayTasks`, …),
+ * exactly as before. `nextConfigurationVersion` stays shape-agnostic (`unknown`).
  */
 
 import { formatExperimentDate } from './workspaceUtils';
@@ -25,6 +30,76 @@ import {
   normalizeDevices,
   normalizeProbeConfigDevices,
 } from '../utils/deviceNormalization';
+import type {
+  Animal,
+  Day,
+  SessionMetadata,
+  SubjectMetadata,
+  ExperimenterInfo,
+  DeviceConfiguration,
+  DataAcqDevice,
+  Camera,
+  TechnicalDefaults,
+  TechnicalParameters,
+  OptogeneticsConfig,
+  BehavioralEvent,
+  Task,
+  TaskInstance,
+  TaskType,
+  AssociatedFile,
+  AssociatedVideoFile,
+  FsGuiYaml,
+  DeviceOverrides,
+  DayState,
+} from './workspaceTypes';
+
+/**
+ * Partial-update payload accepted by {@link applyAnimalUpdates}. Each recognized key is applied
+ * only when present (see the function for the exact present-vs-truthy semantics); `optogenetics`
+ * accepts an explicit `null` (the editor's "disable" sentinel).
+ */
+export interface AnimalUpdates {
+  subject?: Partial<SubjectMetadata>;
+  experimenters?: Partial<ExperimenterInfo>;
+  devices?: Partial<DeviceConfiguration>;
+  cameras?: Camera[];
+  data_acq_device?: DataAcqDevice[];
+  technicalDefaults?: Partial<TechnicalDefaults>;
+  behavioral_events?: BehavioralEvent[];
+  taskTypes?: TaskType[];
+  optogenetics?: OptogeneticsConfig | null;
+}
+
+/** `{ date, description, devices }` for a new configuration snapshot; `devices` is normalized. */
+export interface ConfigSnapshotInput {
+  date: string;
+  description: string;
+  /** Raw device payload (a devices object); `normalizeProbeConfigDevices` tolerates the contents. */
+  devices: Record<string, unknown>;
+}
+
+/**
+ * Partial-update payload accepted by {@link applyDayUpdates}. Recognized keys only; `session`,
+ * `technical`, and `state` are deep-merged (with malformed-current guards for `session`/`state`),
+ * the collections replace on `!== undefined`, and `data_acq_device_name` is matched by presence
+ * (so an explicit `undefined` clears it back to the animal default).
+ */
+export interface DayUpdates {
+  session?: Partial<SessionMetadata>;
+  tasks?: Task[];
+  taskInstances?: TaskInstance[];
+  behavioral_events?: BehavioralEvent[];
+  associated_files?: AssociatedFile[];
+  associated_video_files?: AssociatedVideoFile[];
+  fs_gui_yamls?: FsGuiYaml[];
+  technical?: Partial<TechnicalParameters>;
+  deviceOverrides?: DeviceOverrides;
+  state?: Partial<DayState>;
+  configurationVersion?: number;
+  keywords?: string[];
+  data_acq_device_name?: string;
+  cameras_used?: Array<number | string>;
+}
 
 /**
  * Order a list of day ids by their record's `date`, ascending. Day dates are ISO `YYYY-MM-DD`,
@@ -35,11 +110,11 @@ import {
  * so the stored `animal.days` index is canonically date-ordered (the sort-on-read selectors then
  * become redundant defense-in-depth).
  *
- * @param {string[]} ids - Day ids to order.
- * @param {object} daysById - The full days map (`{ [dayId]: dayRecord }`); read-only.
- * @returns {string[]} A new array of the ids, ascending by `date`.
+ * @param ids - Day ids to order.
+ * @param daysById - The full days map (`{ [dayId]: dayRecord }`); read-only.
+ * @returns A new array of the ids, ascending by `date`.
  */
-export function sortDayIdsByDate(ids, daysById) {
+export function sortDayIdsByDate(ids: string[], daysById: Record<string, Day>): string[] {
   return [...ids].sort((a, b) =>
     String(daysById[a]?.date ?? '').localeCompare(String(daysById[b]?.date ?? ''))
   );
@@ -53,16 +128,16 @@ export function sortDayIdsByDate(ids, daysById) {
  * current latest, never a frozen historical snapshot. An explicit `optogenetics: null`
  * clears opto (how the editor disables it).
  *
- * @param {object} animal - The current animal record.
- * @param {object} updates - Partial updates; recognized keys: `subject`, `experimenters`,
+ * @param animal - The current animal record.
+ * @param updates - Partial updates; recognized keys: `subject`, `experimenters`,
  *   `devices` (also mirrored into the latest snapshot), `cameras`, `data_acq_device` (routed
- *   onto `devices.data_acq_device`), `technicalDefaults`, `behavioral_events`, `optogenetics`.
- *   Note: `optogenetics: null` CLEARS opto (uses `!== undefined`, not truthiness); all other
- *   keys are applied only when truthy.
- * @param {string} now - Timestamp to stamp `lastModified`.
- * @returns {object} The next animal record (deep-cloned; input not mutated).
+ *   onto `devices.data_acq_device`), `technicalDefaults`, `behavioral_events`, `taskTypes`,
+ *   `optogenetics`. Note: `optogenetics: null` CLEARS opto (uses `!== undefined`, not
+ *   truthiness), as does `taskTypes: []`; all other keys are applied only when truthy.
+ * @param now - Timestamp to stamp `lastModified`.
+ * @returns The next animal record (deep-cloned; input not mutated).
  */
-export function applyAnimalUpdates(animal, updates, now) {
+export function applyAnimalUpdates(animal: Animal, updates: AnimalUpdates, now: string): Animal {
   const updated = structuredClone(animal);
 
   if (updates.subject) {
@@ -129,10 +204,10 @@ export function applyAnimalUpdates(animal, updates, now) {
  * duplicate 3), so `applyConfigurationForwardToAnimal`/`resolveDayConfig`'s first-match
  * `.find()` can never resolve to the wrong snapshot.
  *
- * @param {Array} history - The animal's configuration history (any shape tolerated).
- * @returns {number} The next version number.
+ * @param history - The animal's configuration history (any shape tolerated).
+ * @returns The next version number.
  */
-export function nextConfigurationVersion(history) {
+export function nextConfigurationVersion(history: unknown): number {
   // Versions are integers; ignore any non-integer (a corrupt import like `2.5` must not
   // yield a fractional next version such as `3.5`).
   const versions = (Array.isArray(history) ? history : [])
@@ -147,15 +222,20 @@ export function nextConfigurationVersion(history) {
  * so it is unique even for a non-contiguous history. The atomic reconfiguration transition
  * {@link createSnapshotAndApplyForward} composes this with the forward-apply in one step.
  *
- * @param {object} animal - The current animal record.
- * @param {object} config - `{ date, description, devices }` for the new snapshot.
- * @param {string} now - Timestamp to stamp `lastModified`.
- * @param {number} [version] - The version to assign. Defaults to
- *   {@link nextConfigurationVersion}. Pass an explicit value so a caller that reserved the
- *   version synchronously appends exactly that version (return === appended, no re-derive).
- * @returns {object} The next animal record.
+ * @param animal - The current animal record.
+ * @param config - `{ date, description, devices }` for the new snapshot.
+ * @param now - Timestamp to stamp `lastModified`.
+ * @param version - The version to assign. Defaults to {@link nextConfigurationVersion}. Pass
+ *   an explicit value so a caller that reserved the version synchronously appends exactly that
+ *   version (return === appended, no re-derive).
+ * @returns The next animal record.
  */
-export function addConfigurationSnapshotToAnimal(animal, config, now, version) {
+export function addConfigurationSnapshotToAnimal(
+  animal: Animal,
+  config: ConfigSnapshotInput,
+  now: string,
+  version?: number
+): Animal {
   const updated = structuredClone(animal);
   const history = getConfigHistory(updated);
 
@@ -180,19 +260,27 @@ export function addConfigurationSnapshotToAnimal(animal, config, now, version) {
  * returned version was stale. The snapshot and the day pins move together, so there is no
  * cross-action handoff to get wrong.
  *
- * @param {object} animal - The current animal record.
- * @param {object} days - The full `days` map (read-only; not mutated).
- * @param {object} config - `{ date, description, devices }` for the new snapshot.
- * @param {string[]} dayIds - Day ids to move onto the new version.
- * @param {string} now - Timestamp to stamp moved days + the animal.
- * @param {number} [version] - The version to assign (defaults to {@link nextConfigurationVersion}).
- * @param {string} [ownerKey] - The animal's STORE KEY, used for the day-ownership guard so it
- *   doesn't depend on the (possibly stale) `animal.id` record field. Defaults to `animal.id`.
- * @returns {{ animal: object, days: object, version: number }} The next animal + days map and
- *   the version that was created. (Superset of {@link applyConfigurationForwardToAnimal}'s
- *   `{animal, days}` — the extra `version` is the just-created snapshot.)
+ * @param animal - The current animal record.
+ * @param days - The full `days` map (read-only; not mutated).
+ * @param config - `{ date, description, devices }` for the new snapshot.
+ * @param dayIds - Day ids to move onto the new version.
+ * @param now - Timestamp to stamp moved days + the animal.
+ * @param version - The version to assign (defaults to {@link nextConfigurationVersion}).
+ * @param ownerKey - The animal's STORE KEY, used for the day-ownership guard so it doesn't
+ *   depend on the (possibly stale) `animal.id` record field. Defaults to `animal.id`.
+ * @returns The next animal + days map and the version that was created. (Superset of
+ *   {@link applyConfigurationForwardToAnimal}'s `{animal, days}` — the extra `version` is the
+ *   just-created snapshot.)
  */
-export function createSnapshotAndApplyForward(animal, days, config, dayIds, now, version, ownerKey) {
+export function createSnapshotAndApplyForward(
+  animal: Animal,
+  days: Record<string, Day>,
+  config: ConfigSnapshotInput,
+  dayIds: string[],
+  now: string,
+  version?: number,
+  ownerKey?: string
+): { animal: Animal; days: Record<string, Day>; version: number } {
   const created = version ?? nextConfigurationVersion(getConfigHistory(animal));
   const withSnapshot = addConfigurationSnapshotToAnimal(animal, config, now, created);
   const applied = applyConfigurationForwardToAnimal(withSnapshot, days, created, dayIds, now, ownerKey);
@@ -204,18 +292,25 @@ export function createSnapshotAndApplyForward(animal, days, config, dayIds, now,
  * `appliedToDays` a clean partition (a day appears in at most one list). Returns the next
  * animal record + the next full days map. Throws if the snapshot version does not exist.
  *
- * @param {object} animal - The current animal record.
- * @param {object} days - The full `days` map (read-only; not mutated).
- * @param {number} snapshotVersion - The existing snapshot version to apply.
- * @param {string[]} dayIds - Day ids to move onto that version.
- * @param {string} now - Timestamp to stamp moved days + the animal.
- * @param {string} [ownerKey] - The animal's STORE KEY for the ownership guard (so it doesn't rely
- *   on the possibly-stale `animal.id` record field). Defaults to `animal.id`.
- * @returns {{ animal: object, days: object }} The next animal + days map. (Returns NO
- *   `version` — use {@link createSnapshotAndApplyForward} if you also need the created version.)
- * @throws {Error} If `snapshotVersion` does not exist for the animal.
+ * @param animal - The current animal record.
+ * @param days - The full `days` map (read-only; not mutated).
+ * @param snapshotVersion - The existing snapshot version to apply.
+ * @param dayIds - Day ids to move onto that version.
+ * @param now - Timestamp to stamp moved days + the animal.
+ * @param ownerKey - The animal's STORE KEY for the ownership guard (so it doesn't rely on the
+ *   possibly-stale `animal.id` record field). Defaults to `animal.id`.
+ * @returns The next animal + days map. (Returns NO `version` — use
+ *   {@link createSnapshotAndApplyForward} if you also need the created version.)
+ * @throws If `snapshotVersion` does not exist for the animal.
  */
-export function applyConfigurationForwardToAnimal(animal, days, snapshotVersion, dayIds, now, ownerKey) {
+export function applyConfigurationForwardToAnimal(
+  animal: Animal,
+  days: Record<string, Day>,
+  snapshotVersion: number,
+  dayIds: string[],
+  now: string,
+  ownerKey?: string
+): { animal: Animal; days: Record<string, Day> } {
   const updatedAnimal = structuredClone(animal);
   const history = getConfigHistory(updatedAnimal);
   const target = history.find((s) => s.version === snapshotVersion);
@@ -230,7 +325,7 @@ export function applyConfigurationForwardToAnimal(animal, days, snapshotVersion,
   // that feeds the wizard) a record explicitly owned by a DIFFERENT animal must never have its
   // `configurationVersion` rewritten by this animal's reconfiguration. A record with no
   // `animalId` is permitted (the index is the authority).
-  const isRecordRow = (value) =>
+  const isRecordRow = (value: unknown): boolean =>
     value !== null && typeof value === 'object' && !Array.isArray(value);
   // Ownership is checked against the STORE KEY (ownerKey), not `updatedAnimal.id`, so a stale/
   // missing record id can't make the guard pass the wrong days or reject the right ones.
@@ -276,12 +371,12 @@ export function applyConfigurationForwardToAnimal(animal, days, snapshotVersion,
  * `resolveDayConfig` until re-applied — so it is one step toward export-readiness, not a
  * guarantee of it.
  *
- * @param {object} animal - The current animal record.
- * @param {string} now - Timestamp to stamp `lastModified`.
- * @param {string} today - Date string for the rebuilt snapshot.
- * @returns {object} The next animal record.
+ * @param animal - The current animal record.
+ * @param now - Timestamp to stamp `lastModified`.
+ * @param today - Date string for the rebuilt snapshot.
+ * @returns The next animal record.
  */
-export function rebuildConfigurationHistoryForAnimal(animal, now, today) {
+export function rebuildConfigurationHistoryForAnimal(animal: Animal, now: string, today: string): Animal {
   const updated = structuredClone(animal);
   const devices = getAnimalDevices(updated);
 
@@ -328,16 +423,24 @@ export function rebuildConfigurationHistoryForAnimal(animal, now, today) {
  * associated_files / associated_video_files / fs_gui_yamls / cameras_used (session-specific, left
  * unset/empty).
  *
- * @param {object} animal - The owning animal (for technicalDefaults + the latest pin).
- * @param {string} animalId - The owning animal id.
- * @param {string} dayId - The (already-validated) new day id.
- * @param {string} date - Date in YYYY-MM-DD.
- * @param {object} session - Session metadata (session_id, session_description, etc.).
- * @param {string} now - Timestamp for created/lastModified.
- * @param {object|null} [carryFrom] - A prior day record to seed day-owned content from, or null.
- * @returns {object} The new day record.
+ * @param animal - The owning animal (for technicalDefaults + the latest pin).
+ * @param animalId - The owning animal id.
+ * @param dayId - The (already-validated) new day id.
+ * @param date - Date in YYYY-MM-DD.
+ * @param session - Session metadata (session_id, session_description, etc.).
+ * @param now - Timestamp for created/lastModified.
+ * @param carryFrom - A prior day record to seed day-owned content from, or null.
+ * @returns The new day record.
  */
-export function createDayRecord(animal, animalId, dayId, date, session, now, carryFrom = null) {
+export function createDayRecord(
+  animal: Animal,
+  animalId: string,
+  dayId: string,
+  date: string,
+  session: SessionMetadata,
+  now: string,
+  carryFrom: Day | null = null
+): Day {
   // Pin to the latest snapshot's ACTUAL version, not the count. An imported/repaired
   // history can be non-contiguous (e.g. [1, 3]) — there the count (2) names no real
   // snapshot, and `resolveDayConfig` (which matches by `version`) would fail closed on a
@@ -368,7 +471,7 @@ export function createDayRecord(animal, animalId, dayId, date, session, now, car
   // source pins an older version the probe was reconfigured in between, so its marks are STALE
   // and must NOT be carried. We carry ONLY bad_channels (never a whole-map override), and skip an
   // empty map so a no-op carry stays byte-identical to a hand-entered/blank day.
-  const carriedBadChannels =
+  const carriedBadChannels: Record<string, number[]> =
     carryFrom && carryFrom.configurationVersion === latestVersion
       ? getDayBadChannelOverrides(carryFrom)
       : {};
@@ -409,7 +512,9 @@ export function createDayRecord(animal, animalId, dayId, date, session, now, car
     // Session-specific — never carried.
     associated_files: [],
     associated_video_files: [],
-    technical: carryTechnical ? structuredClone(carryFrom.technical) : defaultTechnical,
+    // `carryTechnical` truthy ⇒ `carryFrom` is a non-null record (the non-null assertion is a
+    // type-level no-op; the runtime guard is `carryTechnical` itself).
+    technical: carryTechnical ? structuredClone(carryFrom!.technical) : defaultTechnical,
     // Only present when guarded bad-channel carry produced a non-empty map (see above); a blank
     // day omits the key entirely so it stays byte-identical to today's output.
     ...(deviceOverrides ? { deviceOverrides } : {}),
@@ -435,23 +540,21 @@ export function createDayRecord(animal, animalId, dayId, date, session, now, car
  * record before spreading, so `{...'corrupt'}` can't scatter char-indexed keys — the
  * resetDaySession repair relies on this to write a clean session over a malformed one.
  *
- * @param {object} day - The current day record.
- * @param {object} updates - Partial updates; recognized keys: `session` (deep-merged, with the
+ * @param day - The current day record.
+ * @param updates - Partial updates; recognized keys: `session` (deep-merged, with the
  *   malformed-guard above), `technical` (deep-merged), `state` (deep-merged), `deviceOverrides`
- *   (normalized), and the replace-on-`!== undefined` collections `tasks`, `behavioral_events`,
- *   `associated_files`, `associated_video_files`, `fs_gui_yamls`, `keywords`, plus
- *   `configurationVersion`, plus `data_acq_device_name` (the per-day recording-system choice —
- *   the one key matched by a PRESENCE check rather than `!== undefined`, so clearing it to
- *   `undefined` to revert to the animal default persists instead of being silently dropped), plus
- *   `cameras_used` (the explicit per-day cameras-used set, UNIONed with inferred camera references;
- *   `!== undefined` like the other collections — cleared to `[]`, never to undefined).
- *   Note: setting `configurationVersion` here re-pins the day but does
- *   NOT eagerly reconcile snapshots' `appliedToDays` — `reconcileAppliedToDays` derives the
+ *   (normalized), and the replace-on-`!== undefined` collections `tasks`, `taskInstances`,
+ *   `behavioral_events`, `associated_files`, `associated_video_files`, `fs_gui_yamls`, `keywords`,
+ *   `cameras_used`, plus `configurationVersion`, plus `data_acq_device_name` (the per-day
+ *   recording-system choice — the one key matched by a PRESENCE check rather than `!== undefined`,
+ *   so clearing it to `undefined` to revert to the animal default persists instead of being
+ *   silently dropped). Note: setting `configurationVersion` here re-pins the day but does NOT
+ *   eagerly reconcile snapshots' `appliedToDays` — `reconcileAppliedToDays` derives the
  *   trustworthy view from each day's version.
- * @param {string} now - Timestamp to stamp `lastModified`.
- * @returns {object} The next day record (deep-cloned; input not mutated).
+ * @param now - Timestamp to stamp `lastModified`.
+ * @returns The next day record (deep-cloned; input not mutated).
  */
-export function applyDayUpdates(day, updates, now) {
+export function applyDayUpdates(day: Day, updates: DayUpdates, now: string): Day {
   const updated = structuredClone(day);
 
   if (updates.session) {
@@ -461,7 +564,7 @@ export function applyDayUpdates(day, updates, now) {
       !Array.isArray(updated.session)
         ? updated.session
         : {};
-    updated.session = { ...currentSession, ...updates.session };
+    updated.session = { ...currentSession, ...updates.session } as SessionMetadata;
   }
   if (updates.tasks !== undefined) {
     updated.tasks = updates.tasks;
@@ -500,7 +603,7 @@ export function applyDayUpdates(day, updates, now) {
       updated.state !== null && typeof updated.state === 'object' && !Array.isArray(updated.state)
         ? updated.state
         : {};
-    updated.state = { ...currentState, ...updates.state };
+    updated.state = { ...currentState, ...updates.state } as DayState;
   }
   // Probe-reconfiguration: point this day at a different snapshot version. Setting it here
   // does NOT eagerly reconcile snapshots' `appliedToDays`; `reconcileAppliedToDays` derives
