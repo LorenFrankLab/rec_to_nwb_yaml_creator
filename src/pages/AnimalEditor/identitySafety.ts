@@ -10,7 +10,7 @@
  * @module pages/AnimalEditor/identitySafety
  */
 
-import type { Animal } from '../../state/workspaceTypes';
+import type { Animal, Camera } from '../../state/workspaceTypes';
 import type { IdentityRegistryEntry } from '../../state/identityDivergence';
 import { getAnimalCameras, getDataAcqDevices } from '../../state/workspaceSelectors';
 
@@ -57,7 +57,7 @@ export const CAMERA_DEPENDENT_FIELDS = ['id', 'meters_per_pixel', 'lens', 'model
  *
  * NOTE: distinct from {@link CAMERA_DEPENDENT_FIELDS} (above) — see the note there.
  */
-export const CAMERA_IDENTITY_FIELDS: readonly string[] = ['camera_name', 'meters_per_pixel', 'lens', 'model', 'manufacturer'];
+export const CAMERA_IDENTITY_FIELDS: readonly (keyof Camera)[] = ['camera_name', 'meters_per_pixel', 'lens', 'model', 'manufacturer'];
 
 /**
  * Whether an edited camera differs from the original in any identity field (treating
@@ -68,8 +68,8 @@ export const CAMERA_IDENTITY_FIELDS: readonly string[] = ['camera_name', 'meters
  * @returns Whether any identity field changed.
  */
 export function cameraIdentityChanged(
-  original: Record<string, unknown> | null | undefined,
-  edited: Record<string, unknown> | null | undefined
+  original: Camera | null | undefined,
+  edited: Camera | null | undefined
 ): boolean {
   const norm = (v: unknown) => (v === null || v === undefined ? '' : v);
   return CAMERA_IDENTITY_FIELDS.some((field) => norm(original?.[field]) !== norm(edited?.[field]));

@@ -10,7 +10,7 @@ import './ElectrodeGroupModal.scss';
  * region string here and coordinates live in `targeted_x/y/z` — the editor's contract (mirrors the
  * original PropTypes), which deliberately differs from the canonical workspace `ElectrodeGroup`.
  */
-interface ElectrodeGroupInput {
+export interface ElectrodeGroupInput {
   id?: number;
   device_type?: string;
   location?: string;
@@ -36,7 +36,7 @@ interface ElectrodeGroupFormData {
 }
 
 /** The cleaned electrode-group definition this editor emits on save. */
-interface ElectrodeGroupSaveData {
+export interface ElectrodeGroupSaveData {
   device_type: string;
   location: string;
   description: string;

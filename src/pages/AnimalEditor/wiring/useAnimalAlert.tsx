@@ -1,5 +1,15 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import AlertModal from '../../../components/AlertModal';
+
+type AlertType = 'info' | 'success' | 'warning' | 'error';
+
+interface AlertState {
+  isOpen: boolean;
+  message: string;
+  type: AlertType;
+  title: string;
+  onClose: (() => void) | null;
+}
 
 /**
  * In-app feedback (replacing native `alert()`) for the animal-setup containers: a `showAlert`
@@ -7,10 +17,10 @@ import AlertModal from '../../../components/AlertModal';
  * alert it raises (e.g. "created N groups", a CSV import result) is scoped to that container and
  * not duplicated across sections.
  *
- * @returns {{ showAlert: Function, alertElement: JSX.Element }}
+ * @returns The alert dispatcher and the `AlertModal` element to render.
  */
 export function useAnimalAlert() {
-  const [alertState, setAlertState] = useState({
+  const [alertState, setAlertState] = useState<AlertState>({
     isOpen: false,
     message: '',
     type: 'info',
@@ -18,14 +28,8 @@ export function useAnimalAlert() {
     onClose: null,
   });
 
-  /**
-   * Show a non-blocking alert. Optional `onClose` runs after the user dismisses it.
-   * @param {string} message - Message to display.
-   * @param {('info'|'success'|'warning'|'error')} [type] - Alert type.
-   * @param {Function|null} [onClose] - Optional action to run on dismiss.
-   * @param {string} [title] - Dialog title (defaults to a sensible label per type).
-   */
-  const showAlert = (message, type = 'success', onClose = null, title) => {
+  /** Show a non-blocking alert. Optional `onClose` runs after the user dismisses it. */
+  const showAlert = (message: string, type: AlertType = 'success', onClose: (() => void) | null = null, title?: string) => {
     const defaultTitle =
       { success: 'Success', error: 'Error', warning: 'Warning', info: 'Notice' }[type] || 'Notice';
     setAlertState({ isOpen: true, message, type, title: title || defaultTitle, onClose });

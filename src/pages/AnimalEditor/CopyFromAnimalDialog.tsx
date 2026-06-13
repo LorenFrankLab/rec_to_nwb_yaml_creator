@@ -53,7 +53,7 @@ interface CopyDivergence {
 }
 
 /** The copy payload emitted on confirm (sections present only when checked + non-empty). */
-interface CopyPayload {
+export interface CopyPayload {
   sourceAnimalName: string;
   electrode_groups?: ElectrodeGroup[];
   ntrode_electrode_group_channel_map?: NtrodeMap[];

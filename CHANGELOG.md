@@ -9,6 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Typed the `pages/AnimalEditor/wiring` container tier — the 5 store-bound containers + 3 hooks `.jsx`/`.js`→`.tsx`/`.ts`; `pages/AnimalEditor` is now 100% TypeScript (refactor only, behavior-preserving) — page cycle 10.**
+  `CamerasContainer`, `ElectrodeGroupsContainer`, `OptogeneticsContainer`, `RecordingSystemContainer`,
+  `TaskTypesContainer` (the store→section wiring) plus `useAnimalAlert`, `useAnimalFieldUpdate`,
+  `useKnownRegions`. Each gets a typed props interface; runtime PropTypes/defaultProps dropped; JSDoc
+  trimmed; stray `import React` removed. Three already-typed cycle-9 files gained small consumer-forced
+  edits: `cameraIdentityChanged` widened to accept `Camera` (and `CAMERA_IDENTITY_FIELDS` →
+  `(keyof Camera)[]`); `ElectrodeGroupInput`/`ElectrodeGroupSaveData`/`CopyPayload` got `export` so the
+  containers can type their save/copy handlers against them. Behavior-equivalent non-type changes only:
+  `setEditingGroup(group ?? null)` (a find-miss stores null vs undefined — both falsy in the modal's
+  `mode==='edit' && group` gate); `handleCopyConfirm` destructures `electrode_groups = []` (dead
+  defensive default — this host always supplies the section); `editingGroup as unknown as
+  ElectrodeGroupInput` bridges the canonical `ElectrodeGroup` to the editor's region-string input shape;
+  `.filter((d): d is Day => Boolean(d))` type-guards (runtime-identical to `.filter(Boolean)`);
+  `parseInt(String(g.id), 10)`; `!`/`as keyof Camera` reads inside callbacks. `npm run typecheck` and
+  `CI=true` build clean (−18 B); golden baselines, AnimalEditor suites with the 3 source-scanning guards,
+  full suite 4793, e2e 104 all pass. code-reviewer found no behavior-changing defects.
 - **Typed the `pages/AnimalEditor` LARGE leaf tier — the 10 presentational components plus the pure `identitySafety` identity-drift hub `.jsx`/`.js`→`.tsx`/`.ts` (refactor only, behavior-preserving) — page cycle 9.**
   The first AnimalEditor cycle: `identitySafety` (re-exports `findIdentityDivergence` plus the
   `IdentityDivergence`/`IdentityRegistryEntry` types), `CameraReferenceDialog`, `CamerasSection`,

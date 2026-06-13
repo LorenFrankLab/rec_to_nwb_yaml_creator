@@ -8,9 +8,9 @@ import { getAnimalElectrodeGroups } from '../../../state/workspaceSelectors';
  * reference doesn't defeat the modal's BrainRegionAutocomplete memo. Read through the canonical
  * selector so a single corrupt animal's non-array `electrode_groups` can't crash the sweep.
  *
- * @returns {string[]} Distinct, non-empty region names across all animals.
+ * @returns Distinct, non-empty region names across all animals.
  */
-export function useKnownRegions() {
+export function useKnownRegions(): string[] {
   const { model } = useStoreContext();
   return useMemo(
     () => [
@@ -18,7 +18,7 @@ export function useKnownRegions() {
         Object.values(model.workspace.animals || {})
           .flatMap((a) => getAnimalElectrodeGroups(a))
           .flatMap((g) => [g.location, g.targeted_location])
-          .filter((r) => typeof r === 'string' && r.trim() !== '')
+          .filter((r): r is string => typeof r === 'string' && r.trim() !== '')
       ),
     ],
     [model.workspace.animals]
