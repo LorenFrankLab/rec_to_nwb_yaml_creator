@@ -65,14 +65,14 @@ export function resolveDayCatalogView(animal: unknown, day: unknown): DayCatalog
   // Already catalog-shaped: pass through untouched (the editor writes taskInstances back directly).
   if (Array.isArray(dayRecord.taskInstances)) {
     return {
-      taskTypes: getAnimalTaskTypes(animalRecord) as TaskType[],
+      taskTypes: getAnimalTaskTypes(animalRecord),
       taskInstances: dayRecord.taskInstances as TaskInstance[],
       derived: false,
     };
   }
 
   // Inline day: convert into the existing catalog, reusing types by name and minting new ones.
-  let taskTypes = getAnimalTaskTypes(animalRecord) as TaskType[];
+  let taskTypes = getAnimalTaskTypes(animalRecord);
   const byName = new Map<string, TaskType>();
   for (const type of taskTypes) {
     if (usableName(type?.task_name) && !byName.has(type.task_name)) byName.set(type.task_name, type);
