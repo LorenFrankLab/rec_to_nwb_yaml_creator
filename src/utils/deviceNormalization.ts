@@ -1,5 +1,13 @@
 /* eslint-disable jsdoc/require-jsdoc */
 
+import type {
+  DeviceConfiguration,
+  DeviceOverrides,
+  ElectrodeGroup,
+  NtrodeMap,
+  ProbeConfiguration,
+} from '../state/workspaceTypes';
+
 const DEFAULT_DEVICE_NAME = 'Trodes';
 
 const EMPTY_DEVICES = {
@@ -9,11 +17,11 @@ const EMPTY_DEVICES = {
   ntrode_electrode_group_channel_map: [],
 };
 
-function isPlainObject(value) {
+function isPlainObject(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
 }
 
-export function normalizeIdKey(value) {
+export function normalizeIdKey(value: unknown): string {
   // Lossless: an integer / exact integer-string becomes its canonical string form
   // ("2"→"2"); anything else ("2.9", "abc") is preserved verbatim so a corrupt
   // bad-channel-override key is NOT silently rerouted onto a real ntrode (e.g.
@@ -38,11 +46,11 @@ export function normalizeIdKey(value) {
  * (which test `Number.isInteger`) flag the corruption instead of silently
  * "fixing" it into valid-looking YAML.
  *
- * @param {*} value - Candidate id / map key / map value.
- * @returns {*} The integer when the input is an integer or exact integer-string;
+ * @param value - Candidate id / map key / map value.
+ * @returns The integer when the input is an integer or exact integer-string;
  *   otherwise the original value, unchanged.
  */
-export function parseExactInteger(value) {
+export function parseExactInteger(value: unknown): unknown {
   if (typeof value === 'number') {
     // A non-integer number (2.9) is preserved so it reaches schema/rules.
     return value;
@@ -68,10 +76,10 @@ export function parseExactInteger(value) {
  * the schema's `type: string` check surfaces the corruption instead of
  * `String(123)` → `"123"` slipping through (Normalization Contract).
  *
- * @param {*} value - Candidate string field.
- * @returns {*} Trimmed string, '' for absent, or the original non-string value.
+ * @param value - Candidate string field.
+ * @returns Trimmed string, '' for absent, or the original non-string value.
  */
-function cleanString(value) {
+function cleanString(value: unknown): unknown {
   if (value == null) return '';
   if (typeof value !== 'string') return value;
   return value.trim();
@@ -85,10 +93,10 @@ function cleanString(value) {
  * `''` return `undefined` so the field is omitted and the schema's `required` check
  * surfaces the absence.
  *
- * @param {*} value - Candidate numeric field.
- * @returns {*} The number, the preserved corrupt value, or `undefined` when absent.
+ * @param value - Candidate numeric field.
+ * @returns The number, the preserved corrupt value, or `undefined` when absent.
  */
-function toFiniteNumber(value) {
+function toFiniteNumber(value: unknown): unknown {
   if (value == null || value === '') return undefined;
   if (typeof value === 'number') return value; // finite stays; NaN/Inf preserved for schema
   if (typeof value === 'string' && /^[+-]?(\d+\.?\d*|\.\d+)([eE][+-]?\d+)?$/.test(value.trim())) {
@@ -110,15 +118,15 @@ function toFiniteNumber(value) {
  * corruption instead of it silently vanishing (the channel rules / DevicesStep
  * already guard iteration with `Array.isArray`, so a preserved scalar can't crash).
  *
- * @param {*} value - Candidate index list.
- * @returns {*} Normalized array (integers de-duped; corrupt entries preserved), `[]`
+ * @param value - Candidate index list.
+ * @returns Normalized array (integers de-duped; corrupt entries preserved), `[]`
  *   for an absent value, or the original non-array value preserved for validation.
  */
-function normalizeNumberList(value) {
+function normalizeNumberList(value: unknown): unknown {
   if (value == null) return []; // absent → clean empty default (byte-parity)
   if (!Array.isArray(value)) return value; // corrupt non-array → preserved for schema
-  const seen = new Set();
-  const out = [];
+  const seen = new Set<unknown>();
+  const out: unknown[] = [];
   value.forEach((item) => {
     if (item == null || item === '') return;
     const parsed = parseExactInteger(item);
@@ -143,10 +151,10 @@ function normalizeNumberList(value) {
  * channel-bound validation rules (which test `Number.isInteger` / probe-electrode
  * membership) flag the corrupt entry instead of it exporting as plausible YAML.
  *
- * @param {object} map - Raw map object (logical channel → probe electrode id).
- * @returns {object} Map with exact-integer entries coerced, everything else preserved.
+ * @param map - Raw map object (logical channel → probe electrode id).
+ * @returns Map with exact-integer entries coerced, everything else preserved.
  */
-function normalizeMap(map) {
+function normalizeMap(map: unknown): Record<string, unknown> {
   if (!isPlainObject(map)) return {};
 
   return Object.entries(map).reduce((acc, [key, value]) => {
@@ -154,9 +162,9 @@ function normalizeMap(map) {
     // integer (which re-stringifies identically, preserving byte output), but keep
     // a non-integer key (e.g. "abc") so the key-range rule can flag it.
     const normalizedKey = parseExactInteger(key);
-    acc[normalizedKey] = parseExactInteger(value);
+    acc[normalizedKey as string] = parseExactInteger(value);
     return acc;
-  }, {});
+  }, {} as Record<string, unknown>);
 }
 
 /**
@@ -168,20 +176,23 @@ function normalizeMap(map) {
  * @param root0.synthesizeText
  * @private
  */
-function buildElectrodeGroupBody(source, { synthesizeText }) {
+function buildElectrodeGroupBody(
+  source: Record<string, unknown>,
+  { synthesizeText }: { synthesizeText: boolean }
+): Record<string, unknown> {
   const location = cleanString(source.location);
   const id = source.id;
   const rawDescription = cleanString(source.description);
   const rawTargeted = cleanString(source.targeted_location);
 
   const description = synthesizeText
-    ? rawDescription || location || `Electrode group ${Number.isInteger(id) ? id : 0}`
+    ? rawDescription || location || `Electrode group ${Number.isInteger(id) ? (id as number) : 0}`
     : rawDescription;
   const targetedLocation = synthesizeText
     ? rawTargeted || location || description
     : rawTargeted;
 
-  const normalized = {
+  const normalized: Record<string, unknown> = {
     location,
     device_type: cleanString(source.device_type),
     description,
@@ -215,16 +226,18 @@ function buildElectrodeGroupBody(source, { synthesizeText }) {
  * intentionally IGNORED — a missing id is no longer back-filled from the array
  * index (that laundered corrupt state into a plausible integer).
  *
- * @param {object} group - Raw electrode group.
- * @param {number} [_fallbackId] - Ignored. Retained for signature compatibility.
- * @returns {object} Strictly-normalized group (corrupt fields preserved for validation).
+ * @param group - Raw electrode group.
+ * @param [_fallbackId] - Ignored. Retained for signature compatibility.
+ * @returns Strictly-normalized group (corrupt fields preserved for validation).
  */
-export function normalizeElectrodeGroup(group = {}, _fallbackId = 0) {
-  const source = isPlainObject(group) ? group : {};
+export function normalizeElectrodeGroup(group: unknown = {}, _fallbackId = 0): ElectrodeGroup {
+  const source: Record<string, unknown> = isPlainObject(group) ? group : {};
+  // Tolerant boundary: the body preserves corrupt field values (e.g. a non-integer id) for
+  // validation to flag, so the runtime shape is schema-SHAPED but not strictly `ElectrodeGroup`.
   return {
     id: parseExactInteger(source.id),
     ...buildElectrodeGroupBody(source, { synthesizeText: false }),
-  };
+  } as unknown as ElectrodeGroup;
 }
 
 /**
@@ -235,18 +248,21 @@ export function normalizeElectrodeGroup(group = {}, _fallbackId = 0) {
  * default id and default text. Synthesis lives HERE, never in the export/load
  * normalizer.
  *
- * @param {object} group - Raw electrode group being created.
- * @param {number} [fallbackId] - Default integer id when the group has none.
- * @returns {object} Normalized group with creation defaults applied.
+ * @param group - Raw electrode group being created.
+ * @param [fallbackId] - Default integer id when the group has none.
+ * @returns Normalized group with creation defaults applied.
  */
-export function normalizeElectrodeGroupWithDefaults(group = {}, fallbackId = 0) {
-  const source = isPlainObject(group) ? group : {};
+export function normalizeElectrodeGroupWithDefaults(
+  group: unknown = {},
+  fallbackId = 0
+): ElectrodeGroup {
+  const source: Record<string, unknown> = isPlainObject(group) ? group : {};
   const exactId = parseExactInteger(source.id);
   const id = Number.isInteger(exactId) ? exactId : fallbackId;
   return {
     id,
     ...buildElectrodeGroupBody({ ...source, id }, { synthesizeText: true }),
-  };
+  } as unknown as ElectrodeGroup;
 }
 
 /**
@@ -256,20 +272,25 @@ export function normalizeElectrodeGroupWithDefaults(group = {}, fallbackId = 0) 
  * map keys/values unchanged so schema/rules flag them. `fallback*` parameters are
  * accepted for call-site compatibility but IGNORED (no index back-fill).
  *
- * @param {object} ntrode - Raw ntrode row.
- * @param {number} [_fallbackNtrodeId] - Ignored.
- * @param {number} [_fallbackGroupId] - Ignored.
- * @returns {object} Strictly-normalized ntrode (corrupt fields preserved).
+ * @param ntrode - Raw ntrode row.
+ * @param [_fallbackNtrodeId] - Ignored.
+ * @param [_fallbackGroupId] - Ignored.
+ * @returns Strictly-normalized ntrode (corrupt fields preserved).
  */
-export function normalizeNtrodeMap(ntrode = {}, _fallbackNtrodeId = 0, _fallbackGroupId = 0) {
-  const source = isPlainObject(ntrode) ? ntrode : {};
+export function normalizeNtrodeMap(
+  ntrode: unknown = {},
+  _fallbackNtrodeId = 0,
+  _fallbackGroupId = 0
+): NtrodeMap {
+  const source: Record<string, unknown> = isPlainObject(ntrode) ? ntrode : {};
 
+  // Tolerant boundary: corrupt ids / map entries are preserved for validation (see header).
   return {
     ntrode_id: parseExactInteger(source.ntrode_id),
     electrode_group_id: parseExactInteger(source.electrode_group_id),
     bad_channels: normalizeNumberList(source.bad_channels),
     map: normalizeMap(source.map),
-  };
+  } as unknown as NtrodeMap;
 }
 
 /**
@@ -278,17 +299,17 @@ export function normalizeNtrodeMap(ntrode = {}, _fallbackNtrodeId = 0, _fallback
  * Applies default integer ids when absent. Used by editor/copy code that is
  * creating new ntrode rows.
  *
- * @param {object} ntrode - Raw ntrode row being created.
- * @param {number} [fallbackNtrodeId] - Default ntrode_id when absent.
- * @param {number} [fallbackGroupId] - Default electrode_group_id when absent.
- * @returns {object} Normalized ntrode with creation defaults applied.
+ * @param ntrode - Raw ntrode row being created.
+ * @param [fallbackNtrodeId] - Default ntrode_id when absent.
+ * @param [fallbackGroupId] - Default electrode_group_id when absent.
+ * @returns Normalized ntrode with creation defaults applied.
  */
 export function normalizeNtrodeMapWithDefaults(
-  ntrode = {},
+  ntrode: unknown = {},
   fallbackNtrodeId = 0,
   fallbackGroupId = 0
-) {
-  const source = isPlainObject(ntrode) ? ntrode : {};
+): NtrodeMap {
+  const source: Record<string, unknown> = isPlainObject(ntrode) ? ntrode : {};
   const exactNtrodeId = parseExactInteger(source.ntrode_id);
   const exactGroupId = parseExactInteger(source.electrode_group_id);
 
@@ -297,19 +318,21 @@ export function normalizeNtrodeMapWithDefaults(
     electrode_group_id: Number.isInteger(exactGroupId) ? exactGroupId : fallbackGroupId,
     bad_channels: normalizeNumberList(source.bad_channels),
     map: normalizeMap(source.map),
-  };
+  } as unknown as NtrodeMap;
 }
 
-function normalizeDeviceName(device) {
-  const names = Array.isArray(device?.name)
-    ? device.name.map(cleanString).filter(Boolean)
+function normalizeDeviceName(device: unknown): { name: string[] } {
+  const rawName = (device as { name?: unknown } | null | undefined)?.name;
+  const names = Array.isArray(rawName)
+    ? rawName.map(cleanString).filter(Boolean)
     : [];
 
-  return { name: names.length > 0 ? names : [DEFAULT_DEVICE_NAME] };
+  // Tolerant boundary: a corrupt non-string name element is preserved for the schema to flag.
+  return { name: (names.length > 0 ? names : [DEFAULT_DEVICE_NAME]) as string[] };
 }
 
-export function normalizeDevices(devices = {}) {
-  const source = isPlainObject(devices) ? devices : {};
+export function normalizeDevices(devices: unknown = {}): DeviceConfiguration {
+  const source: Record<string, unknown> = isPlainObject(devices) ? devices : {};
 
   return {
     data_acq_device: Array.isArray(source.data_acq_device)
@@ -325,8 +348,8 @@ export function normalizeDevices(devices = {}) {
   };
 }
 
-export function normalizeProbeConfigDevices(devices = {}) {
-  const source = isPlainObject(devices) ? devices : {};
+export function normalizeProbeConfigDevices(devices: unknown = {}): ProbeConfiguration {
+  const source: Record<string, unknown> = isPlainObject(devices) ? devices : {};
 
   return {
     electrode_groups: Array.isArray(source.electrode_groups)
@@ -338,9 +361,10 @@ export function normalizeProbeConfigDevices(devices = {}) {
   };
 }
 
-export function normalizeDeviceOverrides(overrides) {
-  if (!isPlainObject(overrides)) return overrides;
-  const normalized = { ...structuredClone(overrides) };
+export function normalizeDeviceOverrides(overrides: unknown): DeviceOverrides {
+  // Tolerant boundary: a corrupt non-object override passes through verbatim for validation.
+  if (!isPlainObject(overrides)) return overrides as DeviceOverrides;
+  const normalized: Record<string, unknown> = { ...structuredClone(overrides) };
 
   if (Array.isArray(overrides.electrode_groups)) {
     normalized.electrode_groups = overrides.electrode_groups.map((group) =>
@@ -355,14 +379,14 @@ export function normalizeDeviceOverrides(overrides) {
 
   if (isPlainObject(overrides.bad_channels)) {
     normalized.bad_channels = Object.fromEntries(
-      Object.entries(overrides.bad_channels).map(([ntrodeId, channels]) => [
+      Object.entries(overrides.bad_channels).map(([ntrodeId, channels]): [string, unknown] => [
         normalizeIdKey(ntrodeId),
         normalizeNumberList(channels),
       ])
     );
   }
 
-  return normalized;
+  return normalized as unknown as DeviceOverrides;
 }
 
 /**
@@ -373,19 +397,21 @@ export function normalizeDeviceOverrides(overrides) {
  * Returns `null` when there is no usable snapshot (no history, or a pin with no
  * matching version) — the migration then leaves the day to the existing repair path.
  *
- * @param {object} animal - The animal record.
- * @param {object} day - The day record.
- * @returns {object|null} The matching snapshot, or `null` when none resolves.
+ * @param animal - The animal record.
+ * @param day - The day record.
+ * @returns The matching snapshot, or `null` when none resolves.
  */
-function selectSnapshotForDay(animal, day) {
-  const history = Array.isArray(animal?.configurationHistory)
-    ? animal.configurationHistory
-    : [];
+function selectSnapshotForDay(animal: unknown, day: unknown): Record<string, unknown> | null {
+  const rawHistory = (animal as { configurationHistory?: unknown } | null | undefined)
+    ?.configurationHistory;
+  const history = Array.isArray(rawHistory) ? rawHistory : [];
   if (history.length === 0) return null;
 
-  const hasPin = day?.configurationVersion != null;
+  const dayVersion = (day as { configurationVersion?: unknown } | null | undefined)
+    ?.configurationVersion;
+  const hasPin = dayVersion != null;
   const snapshot = hasPin
-    ? history.find((c) => c && c.version === day.configurationVersion)
+    ? history.find((c) => c && c.version === dayVersion)
     : history[history.length - 1];
 
   return isPlainObject(snapshot) ? snapshot : null;
@@ -396,12 +422,12 @@ function selectSnapshotForDay(animal, day) {
  * Mirrors how a day selects its snapshot, so every day landing on the SAME snapshot
  * version shares the same key.
  *
- * @param {string} animalId - The day's animal id.
- * @param {*} version - The resolved snapshot's `version`.
- * @returns {string} Composite block-set key.
+ * @param animalId - The day's animal id.
+ * @param version - The resolved snapshot's `version`.
+ * @returns Composite block-set key.
  */
-function snapshotKey(animalId, version) {
-  return `${animalId} ${version}`;
+function snapshotKey(animalId: unknown, version: unknown): string {
+  return `${animalId as string} ${version as string}`;
 }
 
 /**
@@ -447,13 +473,13 @@ function snapshotKey(animalId, version) {
  * map, is skipped (left to the existing repair path), never crashed on. Operates on
  * an already-cloned `normalized` workspace — the caller owns the clone.
  *
- * @param {object} normalized - An ALREADY-CLONED workspace (mutated in place).
- * @returns {object} The same workspace, with base marks moved down.
+ * @param normalized - An ALREADY-CLONED workspace (mutated in place).
+ * @returns The same workspace, with base marks moved down.
  */
-function applyBadChannelMigration(normalized) {
+function applyBadChannelMigration(normalized: unknown): unknown {
   if (!isPlainObject(normalized)) return normalized;
-  const animals = normalized.animals || {};
-  const days = normalized.days || {};
+  const animals = (normalized.animals || {}) as Record<string, unknown>;
+  const days = (normalized.days || {}) as Record<string, unknown>;
 
   // The merge is DAY-OVERRIDE-ONLY: `resolveDayConfig` reads each ntrode's
   // bad_channels from `day.deviceOverrides.bad_channels` and NEVER falls back to the
@@ -476,22 +502,23 @@ function applyBadChannelMigration(normalized) {
   //   Pass 1 — materialize base→day-override for materializable days, and record
   //            the resolved (animalId, version) of any day that can't.
   //   Pass 2 — strip a snapshot's base ONLY if no dependent day blocked it.
-  const blockedSnapshots = new Set();
+  const blockedSnapshots = new Set<string>();
 
   // Pass 1: materialize + detect blockers (per day).
   Object.values(days).forEach((day) => {
     if (!isPlainObject(day)) return;
-    const animal = animals[day.animalId];
+    const animal = animals[day.animalId as string];
     if (!isPlainObject(animal)) return; // missing/corrupt animal → repair path
 
     const snapshot = selectSnapshotForDay(animal, day);
     if (!snapshot) return; // no usable snapshot (no history / dangling pin)
 
-    const baseNtrodes = snapshot.devices?.ntrode_electrode_group_channel_map;
+    const baseNtrodes = (snapshot.devices as { ntrode_electrode_group_channel_map?: unknown } | null | undefined)
+      ?.ntrode_electrode_group_channel_map;
     if (!Array.isArray(baseNtrodes)) return; // corrupt snapshot map → repair path
 
     // Collect the base marks to move down, keyed by canonical ntrode_id string.
-    const toMove = [];
+    const toMove: Array<[string, unknown]> = [];
     baseNtrodes.forEach((ntrode) => {
       if (!isPlainObject(ntrode)) return;
       const base = ntrode.bad_channels;
@@ -507,7 +534,8 @@ function applyBadChannelMigration(normalized) {
     // snapshot as blocked so Pass 2 leaves its base intact (forensic/repair state,
     // NOT an export fallback — the day-only merge resolves this day to [] and
     // export-gates it), and do NOT write into the corrupt container.
-    const existing = day.deviceOverrides?.bad_channels;
+    const existing = (day.deviceOverrides as { bad_channels?: unknown } | null | undefined)
+      ?.bad_channels;
     if (existing != null && !isPlainObject(existing)) {
       blockedSnapshots.add(snapshotKey(day.animalId, snapshot.version));
       return;
@@ -522,7 +550,8 @@ function applyBadChannelMigration(normalized) {
     // still materializing the OTHER (clean / absent-key) based ntrodes below.
     const hasCorruptValueOnBasedNtrode = toMove.some(([ntrodeId]) => {
       if (!isPlainObject(existing)) return false; // absent container → nothing corrupt
-      if (!Object.hasOwn(existing, ntrodeId)) return false; // absent key → materializable
+      // Object.hasOwn is ES2022; the pre-ES2022 .call form is byte-equivalent for plain records.
+      if (!Object.prototype.hasOwnProperty.call(existing, ntrodeId)) return false; // absent key → materializable
       return !Array.isArray(existing[ntrodeId]); // present non-array value → corrupt
     });
     if (hasCorruptValueOnBasedNtrode) {
@@ -534,15 +563,17 @@ function applyBadChannelMigration(normalized) {
     if (!isPlainObject(day.deviceOverrides)) {
       day.deviceOverrides = {};
     }
-    if (!isPlainObject(day.deviceOverrides.bad_channels)) {
-      day.deviceOverrides.bad_channels = {};
+    // Stable record reference (avoids re-narrowing the Record index access through reassignment).
+    const overridesBag = day.deviceOverrides as Record<string, unknown>;
+    if (!isPlainObject(overridesBag.bad_channels)) {
+      overridesBag.bad_channels = {};
     }
-    const target = day.deviceOverrides.bad_channels;
+    const target = overridesBag.bad_channels as Record<string, unknown>;
     toMove.forEach(([ntrodeId, base]) => {
       // REPLACE precedence: an existing override (incl. a corrupt non-array value) wins —
       // never overwrite it, never launder it. Only an ABSENT key is materialized.
-      if (!Object.hasOwn(target, ntrodeId)) {
-        target[ntrodeId] = [...base];
+      if (!Object.prototype.hasOwnProperty.call(target, ntrodeId)) {
+        target[ntrodeId] = [...(base as unknown[])];
       }
     });
   });
@@ -560,7 +591,8 @@ function applyBadChannelMigration(normalized) {
       if (!isPlainObject(snapshot)) return;
       if (blockedSnapshots.has(snapshotKey(animalId, snapshot.version))) return;
 
-      const baseNtrodes = snapshot.devices?.ntrode_electrode_group_channel_map;
+      const baseNtrodes = (snapshot.devices as { ntrode_electrode_group_channel_map?: unknown } | null | undefined)
+        ?.ntrode_electrode_group_channel_map;
       if (!Array.isArray(baseNtrodes)) return;
       baseNtrodes.forEach((ntrode) => {
         if (
@@ -582,19 +614,22 @@ function applyBadChannelMigration(normalized) {
  * bad-channel marks down into each day (see {@link applyBadChannelMigration}).
  * A no-op (deep-equal clone) for a base-free workspace. Idempotent.
  *
- * @param {object} workspace - Workspace to migrate (not mutated).
- * @returns {object} A migrated deep clone (or the input unchanged when not an object).
+ * @param workspace - Workspace to migrate (not mutated).
+ * @returns A migrated deep clone (or the input unchanged when not an object).
  */
-export function migrateBadChannelsToDays(workspace) {
+export function migrateBadChannelsToDays(workspace: unknown): unknown {
   if (!isPlainObject(workspace)) return workspace;
   return applyBadChannelMigration(structuredClone(workspace));
 }
 
-export function normalizeWorkspaceDevices(workspace, { migrateBadChannels = true } = {}) {
-  if (!isPlainObject(workspace)) return workspace;
+export function normalizeWorkspaceDevices(
+  workspace: unknown,
+  { migrateBadChannels = true }: { migrateBadChannels?: boolean } = {}
+): Record<string, unknown> {
+  if (!isPlainObject(workspace)) return workspace as Record<string, unknown>;
 
-  const normalized = structuredClone(workspace);
-  const animals = normalized.animals || {};
+  const normalized: Record<string, unknown> = structuredClone(workspace);
+  const animals = (normalized.animals || {}) as Record<string, unknown>;
 
   Object.values(animals).forEach((animal) => {
     if (!isPlainObject(animal)) return;
@@ -606,13 +641,16 @@ export function normalizeWorkspaceDevices(workspace, { migrateBadChannels = true
     // forbids. A corrupt configurationHistory is already preserved below (the Array.isArray
     // guard leaves a non-array untouched), and animal.cameras is top-level (never normalized
     // here), so data_acq_device is the only laundering gap to close.
-    const rawDevices = isPlainObject(animal.devices) ? animal.devices : {};
+    const rawDevices: Record<string, unknown> = isPlainObject(animal.devices)
+      ? animal.devices
+      : {};
     const rawDataAcq = rawDevices.data_acq_device;
 
     animal.devices = normalizeDevices(animal.devices || EMPTY_DEVICES);
 
     if (rawDataAcq != null && !Array.isArray(rawDataAcq)) {
-      animal.devices.data_acq_device = rawDataAcq;
+      // Re-assert the preserved corrupt non-array (raw-state contract); the write target is a record.
+      (animal.devices as Record<string, unknown>).data_acq_device = rawDataAcq;
     }
 
     if (Array.isArray(animal.configurationHistory)) {
@@ -623,7 +661,7 @@ export function normalizeWorkspaceDevices(workspace, { migrateBadChannels = true
     }
   });
 
-  Object.values(normalized.days || {}).forEach((day) => {
+  Object.values((normalized.days || {}) as Record<string, unknown>).forEach((day) => {
     if (!isPlainObject(day)) return;
 
     if (day.deviceOverrides) {
@@ -641,5 +679,8 @@ export function normalizeWorkspaceDevices(workspace, { migrateBadChannels = true
   // migration's idempotency stops being a load-bearing invariant of every write. Skipping it on
   // save is byte-identical for any in-memory workspace that was already loaded/hydrated (where the
   // migration already ran and is a no-op), and the next load migrates anything that wasn't.
-  return migrateBadChannels ? applyBadChannelMigration(normalized) : normalized;
+  return (migrateBadChannels ? applyBadChannelMigration(normalized) : normalized) as Record<
+    string,
+    unknown
+  >;
 }
