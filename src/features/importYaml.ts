@@ -20,34 +20,39 @@ import { decodeYaml } from '../io/yaml';
  * parse error, or non-object document) with a `sourceName` + `reason`. Input order is preserved
  * within each output list.
  *
- * @param {File[]} files - The files the picker / drop-zone provided (may be a FileList-like array).
- * @returns {Promise<{ decodedFiles: Array<{ sourceName: string, flatModel: object }>, parseFailures: Array<{ sourceName: string, reason: string }> }>}
+ * @param files - The files the picker / drop-zone provided (may be a FileList-like array).
+ * @returns The decoded plain-object documents and the per-file parse failures.
  */
-export async function parseImportFiles(files) {
+export async function parseImportFiles(
+  files: File[] | FileList | null | undefined
+): Promise<{
+  decodedFiles: Array<{ sourceName: string; flatModel: object }>;
+  parseFailures: Array<{ sourceName: string; reason: string }>;
+}> {
   const list = Array.isArray(files) ? files : files ? Array.from(files) : [];
-  const decodedFiles = [];
-  const parseFailures = [];
+  const decodedFiles: Array<{ sourceName: string; flatModel: object }> = [];
+  const parseFailures: Array<{ sourceName: string; reason: string }> = [];
 
   for (const file of list) {
     const sourceName = file?.name ?? '(unnamed file)';
-    let text;
+    let text: string;
     try {
       text = await file.text();
     } catch (error) {
       parseFailures.push({
         sourceName,
-        reason: `Could not read file: ${error?.message ?? String(error)}`,
+        reason: `Could not read file: ${(error as Error)?.message ?? String(error)}`,
       });
       continue;
     }
 
-    let flatModel;
+    let flatModel: unknown;
     try {
       flatModel = decodeYaml(text);
     } catch (error) {
       parseFailures.push({
         sourceName,
-        reason: `Not valid YAML: ${error?.message ?? String(error)}`,
+        reason: `Not valid YAML: ${(error as Error)?.message ?? String(error)}`,
       });
       continue;
     }
