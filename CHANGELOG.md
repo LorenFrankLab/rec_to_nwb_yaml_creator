@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Typed 3 more LIVE `pages/DayEditor` React leaf components `.jsx`→`.tsx` (refactor only, behavior-preserving) — page cycle 2.**
+  [pages/DayEditor/IssueOwnershipHint.jsx](src/pages/DayEditor/IssueOwnershipHint.tsx) (`issue?: RepairableIssue | null`,
+  the exact param type of the `ownershipForIssue` it forwards to — a type-only import from `domain/repairRouting`),
+  [pages/DayEditor/MalformedCollectionNotice.jsx](src/pages/DayEditor/MalformedCollectionNotice.tsx) (`day?:
+  Record<string, unknown> | null`; the one non-annotation change is `day[f.key]` to `day![f.key]` — an erased non-null
+  assertion guarded at runtime by the preceding `isRecord` check, so byte-identical for `null`/`[]`/corrupt-field/`{}`
+  inputs), and [pages/DayEditor/DayEditorSectionNav.jsx](src/pages/DayEditor/DayEditorSectionNav.tsx) (`stepStatus:
+  Record<string, StepStatus>` — the arbitrary-`item.id`-indexed map, reusing the canonical `StepStatus` union; helpers
+  retyped `(status: StepStatus): string`, `default:` branches preserved) to `.tsx`. Runtime PropTypes/defaultProps dropped
+  (the only defaults were `null`/`undefined`, becoming optional props, behavior-equivalent); component JSDoc trimmed to a
+  description. `npm run typecheck` + `CI=true` build clean; golden baselines, the leaf suites + repairability matrix (206),
+  and the 3 source-scanning guards pass; full suite 4793; e2e 103 pass + 1 pre-existing hash-router timing flake
+  (unrelated — a type-only change cannot alter runtime navigation).
+
 - **Typed the first 4 LIVE `pages/` React leaf components `.jsx`→`.tsx` (refactor only, behavior-preserving) — the first page cycle.**
   [pages/DayEditor/Breadcrumb.jsx](src/pages/DayEditor/Breadcrumb.tsx) (`BreadcrumbItem`/`BreadcrumbProps`),
   [pages/DayEditor/ReadOnlyField.jsx](src/pages/DayEditor/ReadOnlyField.tsx) (`value=''` default preserved from
