@@ -1,18 +1,18 @@
-import PropTypes from 'prop-types';
 import '../../components/ErrorState.css';
+
+interface ErrorStateProps {
+  /** Error message to display. */
+  message: string;
+}
 
 /**
  * Error State - Displays error message for missing data
- *
- * @param {object} props
- * @param {string} props.message - Error message to display
- * @returns {JSX.Element}
  */
-export default function ErrorState({ message }) {
+export default function ErrorState({ message }: ErrorStateProps) {
   // The normal DayEditor <main> is not rendered on the error path, so this screen
   // supplies its own landmark + focus target and never dead-ends (escape links).
   return (
-    <main id="main-content" role="main" tabIndex="-1" aria-label="Error" className="error-state">
+    <main id="main-content" role="main" tabIndex={-1} aria-label="Error" className="error-state">
       <h2>Error</h2>
       <p>{message}</p>
       <a href="#/workspace" className="error-state-action">
@@ -21,7 +21,3 @@ export default function ErrorState({ message }) {
     </main>
   );
 }
-
-ErrorState.propTypes = {
-  message: PropTypes.string.isRequired,
-};
