@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Typed the probe-config diff utility under strict TS (refactor only, no behavior change).**
+  [state/configDiff.js](src/state/configDiff.ts) → `.ts`: `diffProbeConfigs` now returns the defined
+  `ProbeConfigDiff` and consumes the newly-typed selectors (`getProbeElectrodeGroups` → `ElectrodeGroup[]`,
+  `getProbeNtrodeMaps` → `NtrodeMap[]`, `getConfigHistory` → `ConfigurationSnapshot[]`) — the first
+  payoff of the typed read-layer boundary. `stableStringify`/`deepEqual`/`setEqual` are typed (`unknown`
+  in); the sort comparators are structural (`{ id: number }` / `{ ntrode_id: number }`) so they sort
+  both the element arrays and the `changed` entries; `reconcileAppliedToDays` takes `(animal: unknown,
+  daysById: Record<string, Day> | null | undefined)`. Bodies are behavior-equivalent (the only body-adjacent change is a
+  `value[k]` index cast for the dynamic structural-stringify walk + tuple annotations on the `new Map`
+  entries). configDiff suite (13) + golden baselines pass; `npm run typecheck` + `CI=true` build clean;
+  full suite 4793; e2e 104.
+
 - **Typed the canonical workspace read layer under strict TS (refactor only, no behavior change).**
   [state/workspaceSelectors.js](src/state/workspaceSelectors.ts) → `.ts`: the ~25 shape-safe selectors
   now take `unknown` and return the app's canonical container types (`Camera[]`,
