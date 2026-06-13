@@ -9,6 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Typed the canonical workspace read layer under strict TS (refactor only, no behavior change).**
+  [state/workspaceSelectors.js](src/state/workspaceSelectors.ts) → `.ts`: the ~25 shape-safe selectors
+  now take `unknown` and return the app's canonical container types (`Camera[]`,
+  `ConfigurationSnapshot[]`, `Day[]`, `Record<string, number[]>`, …). The single shape-trust assertion
+  lives in the generic `asArray<T>` / `asRecord<T>` helpers, with a documented module rule: **selectors
+  guarantee container SHAPE, not deep element validity — element validity stays validation's job.** That
+  centralizes the one unavoidable assertion in the layer that owns it, so consumers no longer repeat
+  `getX(animal) as Foo[]` at each call site. Inputs are `unknown` (raw state can be corrupt); behavior
+  is preserved — fields are read through the typed `asRecord` (behavior-equivalent to the prior
+  optional-chain), proven by the 48 selector tests + golden baselines. One consumer adapted
+  (`domain/dayOverrideValidation.ts`: dropped a now-unneeded `as object`, constrained a dynamic key
+  array with `as const`). The generic helpers are function declarations (a `.ts` generic *arrow* is
+  mis-parsed as JSX by the vitest/esbuild transform; `tsc` accepts it but the test transform does not).
+  Selector + guard suites + golden baselines (174) pass; `npm run typecheck` + `CI=true` build clean;
+  full suite 4793; e2e 104.
+
 - **Typed the workspace persistence layer under strict TS (refactor only, no behavior change).**
   [state/persistence.js](src/state/persistence.ts) → `.ts`: `loadWorkspace` / `saveWorkspace` /
   `clearWorkspace` / `ensureWorkspaceShape` / `isPlainObject` are typed, with a precise
