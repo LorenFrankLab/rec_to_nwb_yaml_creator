@@ -16,23 +16,43 @@
  * @module probeCatalog
  */
 
+/** One shank of a probe: its id and the probe-local electrode ids it carries. */
+interface ProbeShank {
+  /** Shank index (0-based). */
+  shank_id: number;
+  /** Probe-local electrode ids on this shank. */
+  electrodeIds: number[];
+}
+
+/** A probe's verified per-shank electrode-id partition (the converter-truth catalog entry). */
+interface ProbeMetadata {
+  /** The probe/device-type identifier. */
+  probe_type: string;
+  /** Number of shanks. */
+  num_shanks: number;
+  /** Per-shank electrode-id partition. */
+  shanks: ProbeShank[];
+}
+
 /**
  * Inclusive integer range [start, end].
- * @param {number} start
- * @param {number} end
- * @returns {number[]}
+ *
+ * @param start
+ * @param end
+ * @returns
  */
-function range(start, end) {
+function range(start: number, end: number): number[] {
   return Array.from({ length: end - start + 1 }, (_, i) => start + i);
 }
 
 /**
  * Build a catalog entry from an array of per-shank electrode-id arrays.
- * @param {string} probeType
- * @param {number[][]} shankIdArrays
- * @returns {{ probe_type: string, num_shanks: number, shanks: Array<{shank_id: number, electrodeIds: number[]}> }}
+ *
+ * @param probeType
+ * @param shankIdArrays
+ * @returns
  */
-function entry(probeType, shankIdArrays) {
+function entry(probeType: string, shankIdArrays: number[][]): ProbeMetadata {
   return {
     probe_type: probeType,
     num_shanks: shankIdArrays.length,
@@ -48,9 +68,10 @@ const FOUR_SHANK_128 = [range(0, 31), range(32, 63), range(64, 95), range(96, 12
 
 /**
  * VERIFIED per-shank electrode-id catalog (from trodes_to_nwb source).
+ *
  * @private
  */
-const PROBE_CATALOG = {
+const PROBE_CATALOG: Record<string, ProbeMetadata> = {
   'tetrode_12.5': entry('tetrode_12.5', [[0, 1, 2, 3]]),
   'A1x32-6mm-50-177-H32_21mm': entry('A1x32-6mm-50-177-H32_21mm', [range(0, 31)]),
   '128c-4s4mm6cm-15um-26um-sl': entry('128c-4s4mm6cm-15um-26um-sl', FOUR_SHANK_128),
@@ -78,10 +99,10 @@ const PROBE_CATALOG = {
 /**
  * Returns the catalog entry for a device type, or undefined if not catalogued.
  *
- * @param {string} deviceType - Device/probe type identifier
- * @returns {{ probe_type: string, num_shanks: number, shanks: Array<{shank_id: number, electrodeIds: number[]}> }|undefined}
+ * @param deviceType - Device/probe type identifier
+ * @returns
  */
-export function getProbeMetadata(deviceType) {
+export function getProbeMetadata(deviceType: unknown): ProbeMetadata | undefined {
   if (typeof deviceType !== 'string') return undefined;
   return PROBE_CATALOG[deviceType];
 }
@@ -90,10 +111,10 @@ export function getProbeMetadata(deviceType) {
  * Returns the probe's shanks (each with `shank_id` and its `electrodeIds`).
  * Returns a fresh array of fresh arrays so callers can't mutate the catalog.
  *
- * @param {string} deviceType - Device/probe type identifier
- * @returns {Array<{shank_id: number, electrodeIds: number[]}>} Empty array if unknown.
+ * @param deviceType - Device/probe type identifier
+ * @returns Empty array if unknown.
  */
-export function getProbeShanks(deviceType) {
+export function getProbeShanks(deviceType: unknown): ProbeShank[] {
   const meta = getProbeMetadata(deviceType);
   if (!meta) return [];
   return meta.shanks.map((shank) => ({
@@ -106,10 +127,10 @@ export function getProbeShanks(deviceType) {
  * Returns the flat, sorted union of all of a probe's shank electrode ids.
  * For a consistent probe this is `0 … (total − 1)`.
  *
- * @param {string} deviceType - Device/probe type identifier
- * @returns {number[]} Empty array if unknown.
+ * @param deviceType - Device/probe type identifier
+ * @returns Empty array if unknown.
  */
-export function getProbeElectrodeIds(deviceType) {
+export function getProbeElectrodeIds(deviceType: unknown): number[] {
   const meta = getProbeMetadata(deviceType);
   if (!meta) return [];
   const ids = meta.shanks.flatMap((shank) => shank.electrodeIds);
@@ -125,10 +146,10 @@ export function getProbeElectrodeIds(deviceType) {
  * A probe that fails this is explicitly unexportable (validation blocks export and
  * names the probe) rather than silently generating a converter-invalid map.
  *
- * @param {string} deviceType - Device/probe type identifier
- * @returns {boolean}
+ * @param deviceType - Device/probe type identifier
+ * @returns
  */
-export function isProbeCatalogConsistent(deviceType) {
+export function isProbeCatalogConsistent(deviceType: unknown): boolean {
   const meta = getProbeMetadata(deviceType);
   if (!meta) return false;
   if (meta.num_shanks !== meta.shanks.length) return false;

@@ -34,15 +34,15 @@ export function getAnimalDeleteCascade(
   animal: Animal,
   days: Record<string, Day>
 ): { ownedDayCount: number; wrongOwnerCount: number; orphanCount: number; hasArtifacts: boolean } {
-  // `classifyAnimalDays` / `dayHasArtifacts` / `DAY_STATUS` come from the still-untyped `dayRecovery`
-  // (converted in the workflow-layer phase), so the classified rows are read as `any` for now.
+  // `classifyAnimalDays` now returns typed `DayClassificationRow[]`, so the rows read with their
+  // real `status` / `record` types (no `any` annotation needed).
   const classified = classifyAnimalDays(animalId, animal, days);
   // OK-only: counting recovered-unlinked here would promise a deletion the store does not perform.
-  const owned = classified.filter((d: any) => d.status === DAY_STATUS.OK);
+  const owned = classified.filter((d) => d.status === DAY_STATUS.OK);
   return {
     ownedDayCount: owned.length,
-    wrongOwnerCount: classified.filter((d: any) => d.status === DAY_STATUS.WRONG_OWNER).length,
-    orphanCount: classified.filter((d: any) => d.status === DAY_STATUS.RECOVERED_UNLINKED).length,
-    hasArtifacts: owned.some((d: any) => dayHasArtifacts(d.record)),
+    wrongOwnerCount: classified.filter((d) => d.status === DAY_STATUS.WRONG_OWNER).length,
+    orphanCount: classified.filter((d) => d.status === DAY_STATUS.RECOVERED_UNLINKED).length,
+    hasArtifacts: owned.some((d) => dayHasArtifacts(d.record)),
   };
 }
