@@ -88,8 +88,20 @@ export interface Animal {
   experiment_description?: string;
   /** Defaults copied into new days. */
   technicalDefaults: TechnicalDefaults;
-  /** Optional optogenetics setup. */
-  optogenetics?: OptogeneticsConfig;
+  /**
+   * Optional optogenetics setup. An explicit `null` is the editor's "disabled" sentinel
+   * (written by `applyAnimalUpdates` on `optogenetics: null`); readers treat `null` and
+   * `undefined` alike (both falsy). See {@link module:state/workspaceTransitions}.
+   */
+  optogenetics?: OptogeneticsConfig | null;
+  /**
+   * VESTIGIAL animal-level behavioral-events (DIO) library. Behavioral events are now
+   * day-owned (`Day.behavioral_events`, the only ones exported); this field is retained in
+   * the persisted blob for backward/forward compatibility and is still written by
+   * `applyAnimalUpdates` so the editor and the model agree. No longer read by the export.
+   * See {@link module:state/workspaceSelectors} `getAnimalBehavioralEvents`.
+   */
+  behavioral_events?: BehavioralEvent[];
   /**
    * Animal-level task-type catalog (define-once, pick/order per day). Each `TaskType`
    * is defined once for the animal and referenced from days via `Day.taskInstances`.
