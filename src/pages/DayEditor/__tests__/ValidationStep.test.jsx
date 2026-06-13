@@ -11,8 +11,11 @@ afterEach(() => vi.restoreAllMocks());
 describe('ValidationStep', () => {
   const baseProps = { animal: {}, day: {}, mergedDay: {} };
 
-  it('declares a default for the optional animal prop', () => {
-    expect(ValidationStep.defaultProps).toHaveProperty('animal', null);
+  it('renders safely when the optional animal prop is omitted', () => {
+    // `animal` is optional (it arrives via the DayEditorContext bundle, or is absent in an
+    // isolated render). Rendering without it must not throw — the contract the former
+    // `defaultProps.animal = null` existed to support, now guarded by the body's `animal?.id`.
+    expect(() => render(<ValidationStep day={{}} mergedDay={{}} />)).not.toThrow();
   });
 
   it('renders each issue under its severity heading with message and path', () => {

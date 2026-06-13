@@ -1,5 +1,4 @@
 import { useState, useMemo } from 'react';
-import PropTypes from 'prop-types';
 import { encodeYaml, formatDeterministicFilename, downloadYamlFile } from '../../io/yaml';
 import { mergeDayMetadata, resolveDayConfig } from '../../state/workspaceUtils';
 import { getAnimalDayIds } from '../../state/workspaceSelectors';
@@ -12,7 +11,21 @@ import { isFeatureEnabled } from '../../featureFlags';
 import { checkShadowExport } from '../../domain/shadowExport';
 import RepairActions from './RepairActions';
 import { useDayEditorContext } from './DayEditorContext';
+import type { DayEditorBundle } from './DayEditorContext';
 import './DayEditor.scss';
+
+/** A blocking/override notice with an optional first-difference diff report. */
+interface ExportNotice {
+  message: string;
+  diff?: string | null;
+}
+
+interface ExportStepProps extends DayEditorBundle {
+  /** Routes a repair action to the step that owns the fix (and an optional field target). */
+  onNavigate?: (stepId: string, fieldPath?: string) => void;
+  /** Executes an issue's `repairCommand` in place (threaded from DayEditorStepper). */
+  onRepair?: (issue: unknown) => void;
+}
 
 /**
  * ExportStep - per-day YAML export (Step 5 of Day Editor).
@@ -31,38 +44,21 @@ import './DayEditor.scss';
  * is clean does it run the encoder-stability pre-download check
  * ({@link checkShadowExport}) — a distinct guard (encoder determinism, not schema
  * validity) that still hard-stops the download in strict mode (the default).
- *
- * @param {object} props
- * @param {object} props.animal - Animal record providing shared metadata.
- * @param {object} props.day - Recording day providing session-specific data.
- * @param {(stepId: string, fieldPath?: string) => void} [props.onNavigate] - Routes a
- *   repair action to the step that owns the fix (and an optional field target).
- * @param {(issue: object) => void} [props.onRepair] - Executes an issue's `repairCommand`
- *   in place (threaded from DayEditorStepper) so a commandable corruption in the blocked
- *   list resets without leaving the Export step.
- * @param {string} [props.animalKey] - The resolved store owner key; used for the preflight
- *   display, the recovered-day re-link links, and animal-surface repair routing instead of the
- *   possibly-stale `animal.id` record field.
- * @param {Array} [props.animalDays] - The animal's recording-day records (threaded from
- *   {@link DayEditorStepper}). Required by the cross-day bad-channel monotonicity export-block:
- *   without it that rule is a no-op, so a day that silently un-fails an earlier same-config bad
- *   channel would download clean. Defaults to `[]` for isolated single-day renders (back-compat).
- * @returns {JSX.Element}
  */
-export default function ExportStep(props) {
+export default function ExportStep(props: ExportStepProps) {
   // The shared day bundle comes from DayEditorContext in the Day Editor (an isolated render
   // passes the same fields as props). `onNavigate`/`onRepair` are section-specific, so they stay
   // direct props.
   const { animal, day, animalKey = undefined, animalDays = [], actions = undefined } = useDayEditorContext(props);
-  const { onNavigate, onRepair } = props;
+  const { onNavigate = () => {}, onRepair } = props;
   // The store OWNER KEY (resolved by DayEditorStepper); a stale/missing `animal.id` record field
   // must not misroute a recovered animal's re-link/repair links. Falls back to `animal.id` for
   // isolated renders that don't pass it.
   const ownerKey = animalKey ?? animal?.id;
   const [showPreview, setShowPreview] = useState(false);
-  const [blockingError, setBlockingError] = useState(null);
-  const [overrideWarning, setOverrideWarning] = useState(null);
-  const [downloadedFile, setDownloadedFile] = useState(null);
+  const [blockingError, setBlockingError] = useState<ExportNotice | null>(null);
+  const [overrideWarning, setOverrideWarning] = useState<ExportNotice | null>(null);
+  const [downloadedFile, setDownloadedFile] = useState<string | null>(null);
 
   // Merge once; preview YAML, filename, validation, and the preflight summary are
   // all derived from this single merged object (the same one that will be encoded),
@@ -90,7 +86,7 @@ export default function ExportStep(props) {
       // "won't export" report carries the underlying reason instead of only the UI banner text.
       // eslint-disable-next-line no-console
       console.error(`[export-step] could not merge day "${day?.id}" with its animal config:`, err);
-      return { merged: {}, yaml: '', fileName: '', mergeError: err };
+      return { merged: {} as Record<string, unknown>, yaml: '', fileName: '', mergeError: err };
     }
   }, [animal, day]);
 
@@ -136,8 +132,8 @@ export default function ExportStep(props) {
   // on its day step.
   const blockingSteps = useMemo(() => {
     if (validationErrors.length > 0) return [];
-    const groups = merged.electrode_groups || [];
-    return ['overview', 'devices', 'epochs', 'validation']
+    const groups = (merged.electrode_groups || []) as unknown[];
+    return (['overview', 'devices', 'epochs', 'validation'] as const)
       .filter((s) => stepStatus[s] !== 'valid')
       .map((step) => {
         if (step === 'devices' && stepStatus.devices === 'incomplete') {
@@ -215,7 +211,12 @@ export default function ExportStep(props) {
     if (actions?.updateDay && day?.id) {
       const prevState =
         day.state && typeof day.state === 'object' && !Array.isArray(day.state) ? day.state : {};
-      actions.updateDay(day.id, { state: { ...prevState, exported: true } });
+      // `actions` is the loose store-action bag (`Record<string, unknown>`); cast the resolved
+      // updater to its known signature so the call typechecks (behavior unchanged).
+      (actions.updateDay as (id: string, patch: Record<string, unknown>) => void)(
+        day.id,
+        { state: { ...prevState, exported: true } }
+      );
     }
   };
 
@@ -232,13 +233,13 @@ export default function ExportStep(props) {
           reads "Validated" (or "Exported"), an unsaved-but-passing day "Ready to export". */}
       {!exportBlocked && (
         <p className="export-lifecycle-status" data-testid="export-lifecycle-status">
-          Status: <strong>{DAY_LIFECYCLE_LABEL[lifecycleForValidDay(day?.state)]}</strong>
+          Status: <strong>{DAY_LIFECYCLE_LABEL[lifecycleForValidDay(day?.state) as keyof typeof DAY_LIFECYCLE_LABEL]}</strong>
         </p>
       )}
 
       {exportBlocked && (
         <div className="export-validation-blocked" role="alert">
-          {mergeError && (
+          {Boolean(mergeError) && (
             <p className="export-merge-error">
               This day&apos;s metadata could not be assembled — its animal&apos;s device
               configuration is missing or corrupt. Repair it in Animal Setup, then return.
@@ -357,21 +358,3 @@ export default function ExportStep(props) {
     </div>
   );
 }
-
-// animal/day/animalKey/animalDays come from DayEditorContext in the Day Editor; these propTypes
-// describe the isolated-render fallback, so animal/day are not `.isRequired`.
-ExportStep.propTypes = {
-  animal: PropTypes.object,
-  day: PropTypes.object,
-  onNavigate: PropTypes.func,
-  onRepair: PropTypes.func,
-  animalKey: PropTypes.string,
-  // eslint-disable-next-line react/forbid-prop-types
-  animalDays: PropTypes.array,
-};
-
-ExportStep.defaultProps = {
-  onNavigate: () => {},
-  onRepair: undefined,
-  animalDays: [],
-};
