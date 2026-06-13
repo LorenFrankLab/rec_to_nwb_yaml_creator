@@ -14,6 +14,8 @@ import path from 'node:path';
  * Allowed exceptions (NOT consumers — they DEFINE or DETECT canonical/corrupt state):
  *   - `workspaceSelectors.js` (the guards live here),
  *   - `deviceNormalization.js` (the normalizer that PRODUCES canonical state),
+ *   - `taskCatalogMigration.ts` (a v2→v3 workspace→workspace MIGRATION that rewrites raw
+ *     persisted shapes — like a normalizer, it must read the old/raw shape it is converting),
  *   - `validation/` and `domain/validation.js` (raw-shape DETECTION must inspect
  *     the corrupt shape on purpose — a selector would hide it),
  *   - `pages/DayEditor/validation.js` (page-only field-blur helper; no raw collection reads).
@@ -62,20 +64,32 @@ const FORBIDDEN = SELECTOR_OWNED.flatMap((field) => [
   new RegExp(`${field}\\.(?:map|flatMap|filter|find|some|forEach|reduce|entries)\\s*\\(`),
 ]);
 
+// Exemptions are extension-agnostic: the definers/detectors (`workspaceSelectors`,
+// `deviceNormalization`, the `validation/` raw-shape detectors, the `domain/validation` barrel)
+// have migrated to TypeScript, so match `.js` and `.ts` alike.
 const isExempt = (file) =>
-  file.endsWith('workspaceSelectors.js') ||
-  file.endsWith('deviceNormalization.js') ||
+  file.endsWith('workspaceSelectors.js') || file.endsWith('workspaceSelectors.ts') ||
+  file.endsWith('deviceNormalization.js') || file.endsWith('deviceNormalization.ts') ||
+  // Born-.ts detectors/producers (never standalone `.js`, so the original `.js`-only scan never
+  // saw them): the catalog producer + its migration read raw `day.tasks` to build/convert the
+  // catalog; `domain/stepStatus` (extracted from the exempt `domain/validation.js` in Phase 9a)
+  // inspects the raw day shape to compute step status. All DETECT/PRODUCE, never plain consumers.
+  file.endsWith('taskCatalogMigration.ts') ||
+  file.endsWith(`state${path.sep}taskCatalog.ts`) ||
+  file.endsWith(`domain${path.sep}stepStatus.ts`) ||
   file.includes(`${path.sep}validation${path.sep}`) ||
-  file.endsWith(`domain${path.sep}validation.js`) ||
+  file.endsWith(`domain${path.sep}validation.js`) || file.endsWith(`domain${path.sep}validation.ts`) ||
   file.includes(`${path.sep}__tests__${path.sep}`);
 
 describe('canonical read layer — no ad-hoc `|| []` on raw collection fields', () => {
   it('every shipped consumer reads these fields through workspaceSelectors', () => {
     const files = readdirSync(srcDir, { recursive: true })
       .map((rel) => path.join(srcDir, rel))
-      .filter((f) => /\.(js|jsx)$/.test(f) && !isExempt(f));
+      .filter((f) => /\.(js|jsx|ts|tsx)$/.test(f) && !isExempt(f));
 
-    // Sanity: the walk actually found the source tree (guards against a vacuous pass).
+    // Sanity: the walk actually found the source tree (guards against a vacuous pass). The scan
+    // covers `.ts`/`.tsx` too so the "read through the selector" contract holds for the
+    // TypeScript-migrated consumers (every such file was previously `.js` and already passed here).
     expect(files.length).toBeGreaterThan(100);
 
     const offenders = [];

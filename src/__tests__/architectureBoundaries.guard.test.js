@@ -196,9 +196,11 @@ describe('architecture boundaries — real source tree', () => {
   it('has no forbidden domain/state→page or page→sibling-page imports', () => {
     const files = readdirSync(srcDir, { recursive: true })
       .map((rel) => String(rel).split(path.sep).join('/'))
-      .filter((rel) => /\.(jsx?)$/.test(rel) && !rel.includes('__tests__/') && !rel.includes('__mocks__/'));
+      .filter((rel) => /\.(jsx?|tsx?)$/.test(rel) && !rel.includes('__tests__/') && !rel.includes('__mocks__/'));
 
-    // Sanity: the walk found the tree (guards against a vacuous pass).
+    // Sanity: the walk found the tree (guards against a vacuous pass). The scan covers
+    // `.js`/`.jsx`/`.ts`/`.tsx` so the boundary contract applies to the TypeScript-migrated
+    // source too (the classifier is already extension-agnostic).
     expect(files.length).toBeGreaterThan(100);
 
     const violations = [];

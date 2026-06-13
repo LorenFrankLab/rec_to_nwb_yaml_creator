@@ -1,19 +1,11 @@
-/** The effective electrode-group fields this read-only panel displays. */
-interface ReadOnlyDeviceInfoGroup {
-  id: number;
-  device_type: string;
-  location: string;
-  targeted_location?: string;
-  targeted_x?: number;
-  targeted_y?: number;
-  targeted_z?: number;
-  units?: string;
-  description: string;
-}
+import type { ElectrodeGroup } from '../../state/workspaceTypes';
 
 interface ReadOnlyDeviceInfoProps {
-  /** Electrode group configuration. */
-  group: ReadOnlyDeviceInfoGroup;
+  /**
+   * Electrode group configuration (the canonical `ElectrodeGroup`, plus an optional `units`
+   * string this read-only panel also displays when present on an effective/merged group).
+   */
+  group: ElectrodeGroup & { units?: string };
 }
 
 /**

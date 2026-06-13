@@ -1,8 +1,37 @@
 import { useState, useId } from 'react';
-import PropTypes from 'prop-types';
 import Modal from '../../components/Modal/Modal';
 import TaskEpochsEditor from './TaskEpochsEditor';
+import type { Task, Camera } from '../../state/workspaceTypes';
 import './TaskModal.scss';
+
+/** The saved task object this modal produces (integer-array camera_id/task_epochs). */
+interface TaskResult {
+  task_name: string;
+  task_description: string;
+  task_environment: string;
+  camera_id: number[];
+  task_epochs: number[];
+}
+
+interface TaskFormProps {
+  /** Task being edited (edit mode). */
+  task?: Task | null;
+  /** Sibling tasks in the day (identity check). */
+  existingTasks: Task[];
+  /** Animal cameras (multi-select options). */
+  cameras?: Camera[];
+  /**
+   * Map of task_name → canonical task_description across the whole workspace/dataset,
+   * excluding the task being edited. Drives the Spyglass task-identity guard.
+   */
+  knownTaskDescriptions?: Record<string, string>;
+  /** Parent animal id (for the Animal Editor link). */
+  animalId?: string;
+  /** Called with the saved task object. */
+  onSave: (task: TaskResult) => void;
+  /** Called on cancel / ESC / overlay close. */
+  onCancel: () => void;
+}
 
 /**
  * Inner task form. Rendered as Modal children, so it mounts fresh on each open
@@ -18,28 +47,16 @@ import './TaskModal.scss';
  *
  * camera_id and task_epochs are persisted as integer arrays. Epoch start/end times
  * are editor-local and never reach the saved task.
- *
- * @param {object} props Component props.
- * @param {object|null} props.task Task being edited (edit mode).
- * @param {Array} props.existingTasks Sibling tasks in the day (identity check).
- * @param {Array} props.cameras Animal cameras (multi-select options).
- * @param {object} props.knownTaskDescriptions Map of task_name -> canonical
- *   task_description across the whole workspace/dataset, excluding the task being
- *   edited. Drives the Spyglass task-identity guard.
- * @param {string} [props.animalId] Parent animal id (for the Animal Editor link).
- * @param {Function} props.onSave Called with the saved task object.
- * @param {Function} props.onCancel Called on cancel / ESC / overlay close.
- * @returns {JSX.Element}
  */
 function TaskForm({
-  task,
+  task = null,
   existingTasks,
-  cameras,
-  knownTaskDescriptions,
+  cameras = [],
+  knownTaskDescriptions = {},
   animalId,
   onSave,
   onCancel,
-}) {
+}: TaskFormProps) {
   const [taskName, setTaskName] = useState(() => task?.task_name ?? '');
   const [taskDescription, setTaskDescription] = useState(() => task?.task_description ?? '');
   const [taskEnvironment, setTaskEnvironment] = useState(() => task?.task_environment ?? '');
@@ -47,10 +64,10 @@ function TaskForm({
   // rather than an array) must initialize as empty, not crash the form on `.map` —
   // the form is the repair surface, so it has to open.
   const [cameraIds, setCameraIds] = useState(() =>
-    (Array.isArray(task?.camera_id) ? task.camera_id : []).map(Number)
+    (Array.isArray(task?.camera_id) ? task?.camera_id : []).map(Number)
   );
   const [epochs, setEpochs] = useState(() =>
-    (Array.isArray(task?.task_epochs) ? task.task_epochs : []).map(Number)
+    (Array.isArray(task?.task_epochs) ? task?.task_epochs : []).map(Number)
   );
   const [epochsHaveError, setEpochsHaveError] = useState(false);
   // Required-field errors are surfaced only after the field has been blurred, so
@@ -106,7 +123,7 @@ function TaskForm({
   // complete, self-contained sentence so the combined hint reads grammatically
   // for any mix of reasons (the old shared "To save, add ${reasons}" template was
   // ungrammatical for the dangling-camera and description-conflict cases).
-  const blockingReasons = [];
+  const blockingReasons: string[] = [];
   if (nameBlank) blockingReasons.push('Enter a task name.');
   if (environmentBlank) blockingReasons.push('Enter a task environment.');
   if (epochsHaveError) blockingReasons.push('Make each epoch end after it starts.');
@@ -122,9 +139,8 @@ function TaskForm({
 
   /**
    * Toggle a camera id in the selection.
-   * @param {number} id Camera id.
    */
-  function toggleCamera(id) {
+  function toggleCamera(id: number) {
     setCameraIds((prev) =>
       prev.includes(id) ? prev.filter((existing) => existing !== id) : [...prev, id]
     );
@@ -139,9 +155,8 @@ function TaskForm({
 
   /**
    * Receive the epoch editor's derived state.
-   * @param {{epochs: number[], hasError: boolean}} next Editor payload.
    */
-  function handleEpochsChange(next) {
+  function handleEpochsChange(next: { epochs: number[]; hasError: boolean }) {
     setEpochs(next.epochs);
     setEpochsHaveError(next.hasError);
   }
@@ -277,8 +292,8 @@ function TaskForm({
               <legend>Cameras used in this task</legend>
               {cameras.map((camera) => {
                 const id = Number(camera.id);
-                const details = [];
-                if (camera.meters_per_pixel != null && camera.meters_per_pixel !== '') {
+                const details: string[] = [];
+                if (camera.meters_per_pixel != null && (camera.meters_per_pixel as number | string) !== '') {
                   details.push(`${camera.meters_per_pixel} m/px`);
                 }
                 if (camera.lens) {
@@ -351,40 +366,31 @@ function TaskForm({
   );
 }
 
-TaskForm.propTypes = {
-  task: PropTypes.object,
-  existingTasks: PropTypes.array.isRequired,
-  cameras: PropTypes.array,
-  knownTaskDescriptions: PropTypes.object,
-  animalId: PropTypes.string,
-  onSave: PropTypes.func.isRequired,
-  onCancel: PropTypes.func.isRequired,
-};
-
-TaskForm.defaultProps = {
-  task: null,
-  cameras: [],
-  knownTaskDescriptions: {},
-  animalId: undefined,
-};
+interface TaskModalProps {
+  /** Whether the modal is shown. */
+  isOpen: boolean;
+  /** Add or edit. */
+  mode?: 'add' | 'edit';
+  /** Task being edited (edit mode). */
+  task?: Task | null;
+  /** Sibling tasks in the day (identity check). */
+  existingTasks?: Task[];
+  /** Animal cameras (multi-select options). */
+  cameras?: Camera[];
+  /** Map of task_name → canonical task_description across the workspace/dataset. */
+  knownTaskDescriptions?: Record<string, string>;
+  /** Parent animal id (for the Animal Editor link). */
+  animalId?: string;
+  /** Called with the saved task object. */
+  onSave: (task: TaskResult) => void;
+  /** Called on cancel / ESC / overlay close. */
+  onCancel: () => void;
+}
 
 /**
  * TaskModal - add/edit a day's task. Dialog accessibility (focus trap, focus
  * return, ESC/overlay close, scroll lock) comes from the shared Modal primitive;
  * the form initializes from the edited task via a stable remount key.
- *
- * @param {object} props
- * @param {boolean} props.isOpen Whether the modal is shown.
- * @param {'add'|'edit'} props.mode Add or edit.
- * @param {object|null} props.task Task being edited (edit mode).
- * @param {Array} props.existingTasks Sibling tasks in the day (identity check).
- * @param {Array} props.cameras Animal cameras (multi-select options).
- * @param {object} [props.knownTaskDescriptions] Map of task_name -> canonical
- *   task_description across the workspace/dataset (excluding the task being edited).
- * @param {string} [props.animalId] Parent animal id (for the Animal Editor link).
- * @param {Function} props.onSave Called with the saved task object.
- * @param {Function} props.onCancel Called on cancel / ESC / overlay close.
- * @returns {JSX.Element}
  */
 const TaskModal = ({
   isOpen,
@@ -396,7 +402,7 @@ const TaskModal = ({
   animalId,
   onSave,
   onCancel,
-}) => (
+}: TaskModalProps) => (
   <Modal
     isOpen={isOpen}
     onClose={onCancel}
@@ -416,26 +422,5 @@ const TaskModal = ({
     />
   </Modal>
 );
-
-TaskModal.propTypes = {
-  isOpen: PropTypes.bool.isRequired,
-  mode: PropTypes.oneOf(['add', 'edit']),
-  task: PropTypes.object,
-  existingTasks: PropTypes.array,
-  cameras: PropTypes.array,
-  knownTaskDescriptions: PropTypes.object,
-  animalId: PropTypes.string,
-  onSave: PropTypes.func.isRequired,
-  onCancel: PropTypes.func.isRequired,
-};
-
-TaskModal.defaultProps = {
-  mode: 'add',
-  task: null,
-  existingTasks: [],
-  cameras: [],
-  knownTaskDescriptions: {},
-  animalId: undefined,
-};
 
 export default TaskModal;
