@@ -1,8 +1,50 @@
 import { useState, useRef, useMemo, useCallback, useLayoutEffect } from 'react';
+import type {
+  InputHTMLAttributes,
+  KeyboardEvent as ReactKeyboardEvent,
+  FocusEvent as ReactFocusEvent,
+  MutableRefObject,
+} from 'react';
 import { createPortal } from 'react-dom';
-import PropTypes from 'prop-types';
 import { useStableId } from '../hooks/useStableId';
 import './SuggestionCombobox.scss';
+
+interface SuggestionComboboxProps
+  extends Omit<
+    InputHTMLAttributes<HTMLInputElement>,
+    'value' | 'onChange' | 'onKeyDown' | 'onBlur' | 'onSelect'
+  > {
+  /** Current value (controlled). */
+  value?: string;
+  /** Called with the new string value. */
+  onChange: (value: string) => void;
+  /** Suggestion strings. */
+  suggestions?: string[];
+  /** Visible label text; omit for a label-less field (pass `aria-label` instead). */
+  label?: string;
+  /** Passthrough for keys the combobox does not consume (e.g. Enter/Escape when the list is closed). */
+  onKeyDown?: (e: ReactKeyboardEvent<HTMLInputElement>) => void;
+  /** Called when focus leaves the control. */
+  onBlur?: (e: ReactFocusEvent) => void;
+  /**
+   * Called instead of `onChange` when a suggestion is explicitly picked (click/Enter), so the caller
+   * can distinguish an explicit pick from typing and transform the chosen value. Falls back to `onChange`.
+   */
+  onSelect?: (option: string) => void;
+  /** Ref forwarded to the input (callback ref or a mutable ref object). */
+  inputRef?:
+    | ((node: HTMLInputElement | null) => void)
+    | MutableRefObject<HTMLInputElement | null>;
+  /** When true, show a gentle nudge while the list is closed and the value matches no suggestion. */
+  warnOffList?: boolean;
+  /** Custom text for the off-list nudge. */
+  offListMessage?: string;
+  /**
+   * Optional predicate deciding whether the trimmed value counts as "on-list" for the off-list nudge.
+   * Defaults to a case-insensitive exact match against `suggestions`.
+   */
+  acceptsValue?: (value: string, suggestions: string[]) => boolean;
+}
 
 /**
  * SuggestionCombobox — an accessible editable combobox (the WAI-ARIA APG "combobox with
@@ -28,65 +70,38 @@ import './SuggestionCombobox.scss';
  * `onKeyDown`. `onBlur` fires when focus leaves the whole control (used by callers to e.g.
  * canonicalize the value).
  *
- * @param {object} props
- * @param {string} props.value - Current value (controlled).
- * @param {(value: string) => void} props.onChange - Called with the new string value.
- * @param {string[]} props.suggestions - Suggestion strings.
- * @param {string} [props.id] - Optional input id (else auto-generated).
- * @param {string} [props.label] - Visible label text; omit for a label-less field (pass
- *   `aria-label` instead).
- * @param {string} [props.name] - Input name.
- * @param {boolean} [props.required] - Input required.
- * @param {string} [props.placeholder] - Input placeholder.
- * @param {string} [props.className] - Class applied to the input (e.g. validation state).
- * @param {(e: KeyboardEvent) => void} [props.onKeyDown] - Passthrough for keys the combobox
- *   does not consume (e.g. Enter/Escape when the list is closed).
- * @param {(e: FocusEvent) => void} [props.onBlur] - Called when focus leaves the control.
- * @param {(option: string) => void} [props.onSelect] - Called instead of `onChange` when a
- *   suggestion is explicitly picked (click/Enter), so the caller can distinguish an explicit pick
- *   from typing and transform the chosen value. Falls back to `onChange` when omitted.
- * @param {object} [props.inputRef] - Ref forwarded to the input.
- * @param {boolean} [props.warnOffList] - When true, show a gentle nudge while the list is
- *   closed and the value matches no suggestion (case-insensitive).
- * @param {string} [props.offListMessage] - Custom text for the off-list nudge.
- * @param {(value: string, suggestions: string[]) => boolean} [props.acceptsValue] - Optional
- *   predicate that decides whether the trimmed value counts as "on-list" for the off-list nudge.
- *   Defaults to a case-insensitive exact match against `suggestions`; pass a broader predicate to
- *   accept e.g. a numbered variant ("Poke1" of the standard "Poke") so the app's own generated
- *   values don't trip the nudge.
- * @returns {JSX.Element}
  */
 export default function SuggestionCombobox({
-  value,
+  value = '',
   onChange,
-  suggestions,
+  suggestions = [],
   id: providedId,
   label,
   name,
-  required,
+  required = false,
   placeholder,
   className,
   onKeyDown,
   onBlur,
   onSelect,
   inputRef,
-  warnOffList,
+  warnOffList = false,
   offListMessage,
   acceptsValue,
   ...inputProps
-}) {
+}: SuggestionComboboxProps) {
   const id = useStableId(providedId, 'combobox');
   const listboxId = `${id}-listbox`;
   const [open, setOpen] = useState(false);
   const [filtering, setFiltering] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
-  const containerRef = useRef(null);
+  const containerRef = useRef<HTMLDivElement | null>(null);
 
   // The input element ref, used to anchor the portaled listbox. Merge with any forwarded
   // `inputRef` so callers can still reach the input.
-  const innerInputRef = useRef(null);
+  const innerInputRef = useRef<HTMLInputElement | null>(null);
   const setInputRef = useCallback(
-    (node) => {
+    (node: HTMLInputElement | null) => {
       innerInputRef.current = node;
       if (typeof inputRef === 'function') inputRef(node);
       else if (inputRef) inputRef.current = node;
@@ -97,7 +112,11 @@ export default function SuggestionCombobox({
   // The listbox is rendered in a PORTAL on document.body so no ancestor's `overflow` (the
   // rounded-corner table clip, a scrolling modal) can crop it. Position it (fixed) under the
   // input, tracking scroll/resize while open.
-  const [menuPosition, setMenuPosition] = useState(null);
+  const [menuPosition, setMenuPosition] = useState<{
+    top: number;
+    left: number;
+    width: number;
+  } | null>(null);
 
   const query = (value ?? '').trim().toLowerCase();
   const options = useMemo(() => {
@@ -160,7 +179,7 @@ export default function SuggestionCombobox({
   }, []);
 
   const selectOption = useCallback(
-    (option) => {
+    (option: string) => {
       // An explicit pick routes through onSelect when provided (so the caller can distinguish a
       // pick from typing and transform the value), otherwise falls back to onChange. Typing
       // always uses onChange.
@@ -171,7 +190,7 @@ export default function SuggestionCombobox({
     [onSelect, onChange, closeList]
   );
 
-  const handleKeyDown = (e) => {
+  const handleKeyDown = (e: ReactKeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'ArrowDown') {
       e.preventDefault();
       if (!open) {
@@ -203,9 +222,9 @@ export default function SuggestionCombobox({
     if (onKeyDown) onKeyDown(e);
   };
 
-  const handleContainerBlur = (e) => {
+  const handleContainerBlur = (e: ReactFocusEvent<HTMLDivElement>) => {
     // Focus left the whole control (not just moved between input/toggle/options).
-    if (!containerRef.current?.contains(e.relatedTarget)) {
+    if (!containerRef.current?.contains(e.relatedTarget as Node | null)) {
       closeList();
       if (onBlur) onBlur(e);
     }
@@ -310,39 +329,3 @@ export default function SuggestionCombobox({
   );
 }
 
-SuggestionCombobox.propTypes = {
-  value: PropTypes.string,
-  onChange: PropTypes.func.isRequired,
-  suggestions: PropTypes.arrayOf(PropTypes.string),
-  id: PropTypes.string,
-  label: PropTypes.string,
-  name: PropTypes.string,
-  required: PropTypes.bool,
-  placeholder: PropTypes.string,
-  className: PropTypes.string,
-  onKeyDown: PropTypes.func,
-  onBlur: PropTypes.func,
-  onSelect: PropTypes.func,
-  inputRef: PropTypes.oneOfType([PropTypes.func, PropTypes.shape({ current: PropTypes.any })]),
-  warnOffList: PropTypes.bool,
-  offListMessage: PropTypes.string,
-  acceptsValue: PropTypes.func,
-};
-
-SuggestionCombobox.defaultProps = {
-  value: '',
-  suggestions: [],
-  id: undefined,
-  label: undefined,
-  name: undefined,
-  required: false,
-  placeholder: undefined,
-  className: undefined,
-  onKeyDown: undefined,
-  onBlur: undefined,
-  onSelect: undefined,
-  inputRef: undefined,
-  warnOffList: false,
-  offListMessage: undefined,
-  acceptsValue: undefined,
-};

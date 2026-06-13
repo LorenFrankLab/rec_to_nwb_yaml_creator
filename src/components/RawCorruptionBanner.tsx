@@ -1,5 +1,15 @@
-import PropTypes from 'prop-types';
-import { validateRawAnimal, validateRawDay } from '../validation/rawShape';
+import { validateRawAnimal, validateRawDay, type RawShapeIssue } from '../validation/rawShape';
+
+interface RawCorruptionBannerProps {
+  /** The raw (possibly corrupt) animal record. */
+  animal?: unknown;
+  /** The raw (possibly corrupt) day record. */
+  day?: unknown;
+  /** The raw-field keys this banner instance owns (only issues on these fields are surfaced). */
+  fields: string[];
+  /** Executes an issue's `repairCommand`. */
+  onRepair?: (issue: RawShapeIssue) => void;
+}
 
 /**
  * RawCorruptionBanner — the destination-side surface for raw-shape corruption.
@@ -17,16 +27,13 @@ import { validateRawAnimal, validateRawDay } from '../validation/rawShape';
  * validators produce, filtered to the fields the host editor is responsible for. With no
  * `onRepair` executor it renders nothing (never a dead control).
  *
- * @param {object} props
- * @param {object} [props.animal] - The raw (possibly corrupt) animal record.
- * @param {object} [props.day] - The raw (possibly corrupt) day record.
- * @param {string[]} props.fields - The raw-field keys this banner instance owns (e.g.
- *   `['cameras', 'data_acq_device', 'configurationHistory']`). Only issues on these fields
- *   are surfaced, so two banners on the same record don't double-render the same control.
- * @param {(issue: object) => void} [props.onRepair] - Executes an issue's `repairCommand`.
- * @returns {JSX.Element|null}
  */
-export default function RawCorruptionBanner({ animal, day, fields, onRepair }) {
+export default function RawCorruptionBanner({
+  animal,
+  day,
+  fields,
+  onRepair,
+}: RawCorruptionBannerProps) {
   if (typeof onRepair !== 'function') return null;
 
   // Each issue carries its `ownerSurface`, so filtering/keying include it: should an animal
@@ -52,7 +59,7 @@ export default function RawCorruptionBanner({ animal, day, fields, onRepair }) {
             <button
               type="button"
               className="repair-action-button repair-action-button-execute"
-              data-repair-command={issue.repairCommand.type}
+              data-repair-command={issue.repairCommand!.type}
               data-field-path={issue.focusPath || issue.field}
               onClick={() => onRepair(issue)}
             >
@@ -64,16 +71,3 @@ export default function RawCorruptionBanner({ animal, day, fields, onRepair }) {
     </section>
   );
 }
-
-RawCorruptionBanner.propTypes = {
-  animal: PropTypes.object,
-  day: PropTypes.object,
-  fields: PropTypes.arrayOf(PropTypes.string).isRequired,
-  onRepair: PropTypes.func,
-};
-
-RawCorruptionBanner.defaultProps = {
-  animal: null,
-  day: null,
-  onRepair: undefined,
-};

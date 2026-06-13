@@ -1,6 +1,22 @@
-import PropTypes from 'prop-types';
 import { getConfigHistory } from '../state/workspaceSelectors';
 import './ReconfigurationContextBanner.css';
+
+/** The subset of the parsed route context this banner reads (from {@link useReconfigContext}). */
+interface RouteContext {
+  context: string | null;
+  version: number | null;
+  fromDayId: string | null;
+  movedDays: number | null;
+}
+
+interface ReconfigurationContextBannerProps {
+  /** The animal record (its `configurationHistory` supplies versions). */
+  animal?: unknown;
+  /** Parsed route context from `useReconfigContext`. */
+  routeContext?: RouteContext | null;
+  /** The workspace day map (resolves `fromDay` to its date). */
+  days?: Record<string, { date?: string }> | null;
+}
 
 /**
  * ReconfigurationContextBanner — the transient "you're editing for a reconfiguration" notice.
@@ -11,14 +27,12 @@ import './ReconfigurationContextBanner.css';
  * flagged with a warning style (its changes won't propagate to days on a newer version). One
  * implementation shared by the legacy Animal Editor stepper and the tabbed Animal View, so the copy
  * can't drift. Self-hides unless the context is a reconfiguration.
- *
- * @param {object} props
- * @param {object} props.animal - The animal record (its `configurationHistory` supplies versions).
- * @param {object} props.routeContext - Parsed route context from {@link useReconfigContext}.
- * @param {object} [props.days] - The workspace day map (resolves `fromDay` to its date).
- * @returns {JSX.Element|null}
  */
-export default function ReconfigurationContextBanner({ animal, routeContext, days }) {
+export default function ReconfigurationContextBanner({
+  animal,
+  routeContext,
+  days,
+}: ReconfigurationContextBannerProps) {
   if (routeContext?.context !== 'reconfigure') return null;
 
   // Read history through the canonical selector: a non-array `configurationHistory` degrades to no
@@ -51,20 +65,3 @@ export default function ReconfigurationContextBanner({ animal, routeContext, day
     </div>
   );
 }
-
-ReconfigurationContextBanner.propTypes = {
-  animal: PropTypes.object,
-  routeContext: PropTypes.shape({
-    context: PropTypes.string,
-    version: PropTypes.number,
-    fromDayId: PropTypes.string,
-    movedDays: PropTypes.number,
-  }),
-  days: PropTypes.object,
-};
-
-ReconfigurationContextBanner.defaultProps = {
-  animal: null,
-  routeContext: null,
-  days: null,
-};

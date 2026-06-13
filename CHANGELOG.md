@@ -9,6 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Typed 4 more LIVE leaf React components `.jsx`→`.tsx` (refactor only, behavior-preserving) — component cycle 2.**
+  [components/RawCorruptionBanner.jsx](src/components/RawCorruptionBanner.tsx) (`animal`/`day` typed `unknown` to
+  match `validateRawAnimal`/`validateRawDay`; `onRepair?: (issue: RawShapeIssue) => void`; one `issue.repairCommand!`
+  assertion justified by the preceding `.filter(... && issue.repairCommand)`),
+  [components/ReconfigurationContextBanner.jsx](src/components/ReconfigurationContextBanner.tsx) (local `RouteContext`
+  prop shape; `getConfigHistory` takes `unknown`), [components/WarningAcknowledgement.jsx](src/components/WarningAcknowledgement.tsx)
+  (`WarningAcknowledgementItem[]`), and the editable combobox [components/SuggestionCombobox.jsx](src/components/SuggestionCombobox.tsx)
+  (`SuggestionComboboxProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'value'|'onChange'|'onKeyDown'|'onBlur'|'onSelect'>`
+  so custom-signature props win and `...inputProps` spreads onto `<input>`; `inputRef` as a callback-or-`MutableRefObject`
+  union; `useRef`/`useState` generics; portal/keyboard/off-list logic byte-identical) → `.tsx`. Runtime PropTypes dropped
+  for the typed interfaces; non-undefined `defaultProps` preserved as destructure defaults (`value=''`/`suggestions=[]`/
+  `required=false`/`warnOffList=false`); behavior-equivalent erased casts only (`e.relatedTarget as Node|null`). `npm run
+  typecheck` + `CI=true` build clean (bundle −79 B); golden baselines, the component suites + consumers
+  (BrainRegionAutocomplete/AnimalView/ReconfigWizard, 281), and the 3 source-scanning guards pass; full suite 4793; e2e 104.
+
 - **Typed 4 LIVE leaf React components `.jsx`→`.tsx` and added the standard `react-app-env.d.ts` (refactor only, behavior-preserving) — the first component cycle.**
   [components/ui/Button.jsx](src/components/ui/Button.tsx) (the token-driven button primitive —
   `ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement>`), [components/ErrorBoundary.jsx](src/components/ErrorBoundary.tsx)
