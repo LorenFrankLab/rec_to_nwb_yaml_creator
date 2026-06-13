@@ -9,13 +9,12 @@
  * cameras tab. (Originally extracted from the legacy stepper's HardwareConfigStep for a shared
  * implementation; the stepper was removed in Phase 5.)
  */
-import React, { useState, useMemo, useEffect } from 'react';
-import PropTypes from 'prop-types';
+import { useState, useMemo, useEffect } from 'react';
 import { useStoreContext } from '../../../state/StoreContext';
 import { getAnimalCameras, getAnimalDayIds } from '../../../state/workspaceSelectors';
+import type { Animal, Camera, Day } from '../../../state/workspaceTypes';
 import { findCameraAffectedDays } from '../../../state/cameraUsage';
 import { ConfirmDialog } from '../../../components/Modal';
-import { rawArray } from '../../../components/rawPropTypes';
 import CamerasSection from '../CamerasSection';
 import CameraModal from '../CameraModal';
 import CameraReferenceDialog from '../CameraReferenceDialog';
@@ -25,25 +24,40 @@ import {
   cameraIdentityChanged,
   CAMERA_DEPENDENT_FIELDS,
 } from '../identitySafety';
+import type { IdentityDivergence } from '../identitySafety';
 
-/**
- * @param {object} props
- * @param {object} props.animal - Animal record.
- * @param {Function} props.onFieldUpdate - Field-update callback (writes `cameras`).
- * @param {Function} [props.onPendingEditsChange] - Called with `true` while the add/edit
- *   CameraModal is open (an in-progress edit the user could lose) and `false` otherwise / on
- *   unmount. The tabbed AnimalView consults this to guard a section-nav switch (charter
- *   decision 2); the temporary stepper omits it (no nav under it), so its path is byte-unchanged.
- * @returns {JSX.Element}
- */
-export default function CamerasContainer({ animal, onFieldUpdate, onPendingEditsChange }) {
+interface CamerasContainerProps {
+  /** Animal record. */
+  animal: Animal;
+  /** Field-update callback (writes `cameras`). */
+  onFieldUpdate: (field: string, value: unknown) => void;
+  /** Called with `true` while the add/edit CameraModal is open and `false` otherwise / on unmount. */
+  onPendingEditsChange?: (hasPending: boolean) => void;
+}
+
+/** The open add/edit camera modal state. */
+interface CameraModalState {
+  open: boolean;
+  mode: 'add' | 'edit';
+  camera: Camera | null;
+}
+
+/** Pending immutable-once-referenced decision when editing a camera that recording days reference. */
+interface CameraRefDecision {
+  camera: Camera;
+  original: Camera;
+  affectedDays: Array<{ id: number | string; date?: string }>;
+  hasUnresolvableDays: boolean;
+}
+
+export default function CamerasContainer({ animal, onFieldUpdate, onPendingEditsChange }: CamerasContainerProps) {
   const { model } = useStoreContext();
 
-  const [cameraModal, setCameraModal] = useState({ open: false, mode: 'add', camera: null });
-  const [cameraDivergence, setCameraDivergence] = useState(null);
+  const [cameraModal, setCameraModal] = useState<CameraModalState>({ open: false, mode: 'add', camera: null });
+  const [cameraDivergence, setCameraDivergence] = useState<IdentityDivergence | null>(null);
   // Phase 8.7 Task 5b: pending decision when editing a camera that recording days reference.
-  const [cameraRefDecision, setCameraRefDecision] = useState(null);
-  const [pendingDelete, setPendingDelete] = useState(null);
+  const [cameraRefDecision, setCameraRefDecision] = useState<CameraRefDecision | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<Camera | null>(null);
 
   // Report "has pending edits" (the add/edit CameraModal being open) to a host that guards
   // navigation. Cleanup resets to false on unmount so a host doesn't hold a stale `true`.
@@ -61,7 +75,7 @@ export default function CamerasContainer({ animal, onFieldUpdate, onPendingEdits
   // camera references, so we must not silently take the "no day references this camera" fast-path.
   const { animalDays, hasUnresolvableDays } = useMemo(() => {
     const ids = getAnimalDayIds(animal);
-    const resolved = ids.map((id) => model.workspace?.days?.[id]).filter(Boolean);
+    const resolved = ids.map((id) => model.workspace?.days?.[id]).filter((d): d is Day => Boolean(d));
     return { animalDays: resolved, hasUnresolvableDays: resolved.length < ids.length };
   }, [animal, model.workspace]);
 
@@ -70,7 +84,7 @@ export default function CamerasContainer({ animal, onFieldUpdate, onPendingEdits
     setCameraModal({ open: true, mode: 'add', camera: null });
   };
 
-  const openEditCamera = (cameraId) => {
+  const openEditCamera = (cameraId: number) => {
     const camera = cameras.find((c) => c.id === cameraId);
     if (!camera) return;
     setCameraDivergence(null);
@@ -85,16 +99,14 @@ export default function CamerasContainer({ animal, onFieldUpdate, onPendingEdits
   /**
    * Persist a camera unless its name diverges from an existing camera identity in the dataset, in
    * which case surface the comparison and keep the modal open.
-   *
-   * @param {object} cameraData - Cleaned camera object from the modal.
    */
-  const handleSaveCamera = (cameraData) => {
+  const handleSaveCamera = (cameraData: Camera) => {
     const exclude =
       cameraModal.mode === 'edit' && cameraModal.camera
         ? { animalId: animal.id, id: cameraModal.camera.id }
         : null;
     const registry = collectCameraIdentities(model.workspace, exclude);
-    const candidate = Object.fromEntries(CAMERA_DEPENDENT_FIELDS.map((f) => [f, cameraData[f]]));
+    const candidate = Object.fromEntries(CAMERA_DEPENDENT_FIELDS.map((f): [string, unknown] => [f, cameraData[f as keyof Camera]]));
 
     // SELF-conflict: the edited camera is the SAME existing identity (same id + name).
     // Filling a dependent field that was EMPTY (null/undefined/'') on the saved camera COMPLETES
@@ -103,23 +115,23 @@ export default function CamerasContainer({ animal, onFieldUpdate, onPendingEdits
     // name" decision). We narrow ONLY the self-comparison: drop the candidate keys whose SAVED
     // value was empty, so they aren't compared here. The cross-camera `registry` comparison below
     // is unchanged, keeping the cross-animal / different-camera guards fully intact.
-    const isEmpty = (v) => v === null || v === undefined || v === '';
+    const isEmpty = (v: unknown) => v === null || v === undefined || v === '';
     const currentIdentity =
       cameraModal.mode === 'edit' && cameraModal.camera
         ? [{
-            name: cameraModal.camera.camera_name,
+            name: cameraModal.camera.camera_name as string,
             label: `${animal.id} camera ${cameraModal.camera.id} saved identity`,
-            fields: Object.fromEntries(CAMERA_DEPENDENT_FIELDS.map((f) => [f, cameraModal.camera[f]])),
+            fields: Object.fromEntries(CAMERA_DEPENDENT_FIELDS.map((f): [string, unknown] => [f, cameraModal.camera![f as keyof Camera]])),
           }]
         : [];
     const selfCandidate =
       cameraModal.mode === 'edit' && cameraModal.camera
         ? Object.fromEntries(
-            CAMERA_DEPENDENT_FIELDS.filter((f) => !isEmpty(cameraModal.camera[f])).map((f) => [f, cameraData[f]])
+            CAMERA_DEPENDENT_FIELDS.filter((f) => !isEmpty(cameraModal.camera![f as keyof Camera])).map((f): [string, unknown] => [f, cameraData[f as keyof Camera]])
           )
         : candidate;
-    const selfConflict = findIdentityDivergence(cameraData.camera_name, selfCandidate, currentIdentity);
-    const conflict = selfConflict || findIdentityDivergence(cameraData.camera_name, candidate, registry);
+    const selfConflict = findIdentityDivergence(cameraData.camera_name as string, selfCandidate, currentIdentity);
+    const conflict = selfConflict || findIdentityDivergence(cameraData.camera_name as string, candidate, registry);
     if (conflict) {
       setCameraDivergence(conflict);
       return; // Block: a divergent reuse must get a new name.
@@ -136,7 +148,7 @@ export default function CamerasContainer({ animal, onFieldUpdate, onPendingEdits
       // this camera, so don't take the silent fast-path — let the user decide (new vs correct).
       if ((affectedIds.length > 0 || hasUnresolvableDays) && cameraIdentityChanged(original, cameraData)) {
         const affectedDays = affectedIds.map((id) => ({
-          id,
+          id: id as string,
           date: animalDays.find((d) => d.id === id)?.date,
         }));
         setCameraRefDecision({ camera: cameraData, original, affectedDays, hasUnresolvableDays });
@@ -149,7 +161,7 @@ export default function CamerasContainer({ animal, onFieldUpdate, onPendingEdits
 
     const next =
       cameraModal.mode === 'edit' && cameraModal.camera
-        ? cameras.map((c) => (c.id === cameraModal.camera.id ? cameraData : c))
+        ? cameras.map((c) => (c.id === cameraModal.camera!.id ? cameraData : c))
         : [...cameras, cameraData];
     onFieldUpdate('cameras', next);
     closeCameraModal();
@@ -157,7 +169,7 @@ export default function CamerasContainer({ animal, onFieldUpdate, onPendingEdits
 
   /** Next free numeric camera id (max existing + 1). */
   const nextCameraId = () =>
-    cameras.reduce((max, c) => Math.max(max, typeof c.id === 'number' ? c.id : -1), -1) + 1;
+    cameras.reduce((max: number, c) => Math.max(max, typeof c.id === 'number' ? c.id : -1), -1) + 1;
 
   /**
    * Decision: keep the affected days unchanged — the edited values become a NEW camera, the
@@ -237,16 +249,3 @@ export default function CamerasContainer({ animal, onFieldUpdate, onPendingEdits
   );
 }
 
-CamerasContainer.propTypes = {
-  animal: PropTypes.shape({
-    id: PropTypes.string.isRequired,
-    // Tolerant: this section is a repair destination for corrupt animal hardware.
-    cameras: rawArray(PropTypes.object),
-  }).isRequired,
-  onFieldUpdate: PropTypes.func.isRequired,
-  onPendingEditsChange: PropTypes.func,
-};
-
-CamerasContainer.defaultProps = {
-  onPendingEditsChange: undefined,
-};

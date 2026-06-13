@@ -6,14 +6,15 @@
  * Animal View's electrode-groups tab. (Originally extracted from the legacy Animal Editor stepper so
  * both hosts shared one implementation; the stepper was removed in Phase 5.)
  */
-import React, { useState, useEffect } from 'react';
-import PropTypes from 'prop-types';
+import { useState, useEffect } from 'react';
+import type { MutableRefObject } from 'react';
 import { useStoreContext } from '../../../state/StoreContext';
 import {
   getAnimalDevices,
   getAnimalElectrodeGroups,
   getAnimalNtrodeMaps,
 } from '../../../state/workspaceSelectors';
+import type { ElectrodeGroup, NtrodeMap } from '../../../state/workspaceTypes';
 import { ConfirmDialog } from '../../../components/Modal';
 import { generateChannelMapsForGroup, nextNtrodeId } from '../../../utils/channelMapUtils';
 import {
@@ -23,7 +24,9 @@ import {
 } from '../../../utils/deviceNormalization';
 import ElectrodeGroupsStep from '../ElectrodeGroupsStep';
 import ElectrodeGroupModal from '../ElectrodeGroupModal';
+import type { ElectrodeGroupInput, ElectrodeGroupSaveData } from '../ElectrodeGroupModal';
 import CopyFromAnimalDialog from '../CopyFromAnimalDialog';
+import type { CopyPayload } from '../CopyFromAnimalDialog';
 import { useKnownRegions } from './useKnownRegions';
 import { useAnimalAlert } from './useAnimalAlert';
 import { useAnimalFieldUpdate } from './useAnimalFieldUpdate';
@@ -31,43 +34,38 @@ import { useAnimalFieldUpdate } from './useAnimalFieldUpdate';
 /**
  * Generate the next sequential electrode group ID (max existing + 1). IDs are integers end-to-end;
  * string-typed legacy ids are parsed defensively.
- * @param {Array} existingGroups - Current electrode groups.
- * @returns {number} Next integer ID.
  */
-function generateNextElectrodeGroupId(existingGroups) {
+function generateNextElectrodeGroupId(existingGroups: ElectrodeGroup[]): number {
   if (!existingGroups || existingGroups.length === 0) {
     return 0;
   }
   const maxId = Math.max(
     ...existingGroups.map((g) => {
-      const parsed = parseInt(g.id, 10);
+      const parsed = parseInt(String(g.id), 10);
       return isNaN(parsed) ? 0 : parsed;
     })
   );
   return maxId + 1;
 }
 
-/**
- * @param {object} props
- * @param {string} props.animalId - The animal whose electrode groups to edit.
- * @param {{ current: (Function|null) }} [props.addRef] - Optional ref the host (the temporary
- *   stepper) uses to invoke "add group" from its Alt+N shortcut; registered while mounted,
- *   cleared on unmount. The tabbed Animal View omits it.
- * @param {Function} [props.onPendingEditsChange] - Called with `true` while the add/edit
- *   ElectrodeGroupModal is open (an in-progress edit the user could lose) and `false` otherwise /
- *   on unmount. The tabbed AnimalView consults this to guard a section-nav switch (charter
- *   decision 2); the temporary stepper omits it (no nav under it), so its path is byte-unchanged.
- * @returns {JSX.Element|null}
- */
-export default function ElectrodeGroupsContainer({ animalId, addRef, onPendingEditsChange }) {
+interface ElectrodeGroupsContainerProps {
+  /** The animal whose electrode groups to edit. */
+  animalId: string;
+  /** Optional ref the host uses to invoke "add group" from its Alt+N shortcut. */
+  addRef?: MutableRefObject<(() => void) | null>;
+  /** Called with `true` while the add/edit ElectrodeGroupModal is open and `false` otherwise / on unmount. */
+  onPendingEditsChange?: (hasPending: boolean) => void;
+}
+
+export default function ElectrodeGroupsContainer({ animalId, addRef, onPendingEditsChange }: ElectrodeGroupsContainerProps) {
   const { model, actions } = useStoreContext();
   const animal = animalId ? model.workspace.animals[animalId] : null;
 
   const [modalOpen, setModalOpen] = useState(false);
-  const [modalMode, setModalMode] = useState('add');
-  const [editingGroup, setEditingGroup] = useState(null);
+  const [modalMode, setModalMode] = useState<'add' | 'edit'>('add');
+  const [editingGroup, setEditingGroup] = useState<ElectrodeGroup | null>(null);
   const [copyDialogOpen, setCopyDialogOpen] = useState(false);
-  const [pendingDeleteGroup, setPendingDeleteGroup] = useState(null);
+  const [pendingDeleteGroup, setPendingDeleteGroup] = useState<ElectrodeGroup | null>(null);
 
   const knownRegions = useKnownRegions();
   const { showAlert, alertElement } = useAnimalAlert();
@@ -104,39 +102,35 @@ export default function ElectrodeGroupsContainer({ animalId, addRef, onPendingEd
     setModalOpen(true);
   }
 
-  /**
-   * Open modal in edit mode with the selected group.
-   * @param {number|string|object} groupIdOrGroup - Electrode group ID or full group object.
-   */
-  function handleEditGroup(groupIdOrGroup) {
+  /** Open modal in edit mode with the selected group (resolved by id, or a passed group object). */
+  function handleEditGroup(groupIdOrGroup: number | ElectrodeGroup) {
     setModalMode('edit');
     // Resolve by id (integer or legacy string) via lookup; only treat an actual object as the
     // group itself. A bare integer id must not be mistaken for the group.
     const group = typeof groupIdOrGroup === 'object' && groupIdOrGroup !== null
       ? groupIdOrGroup
       : electrodeGroups.find((g) => normalizeIdKey(g.id) === normalizeIdKey(groupIdOrGroup));
-    setEditingGroup(group);
+    setEditingGroup(group ?? null);
     setModalOpen(true);
   }
 
   /**
    * Save electrode group (add or edit). Auto-generates channel maps if device_type changed.
    * Supports bulk creation via the `count` parameter (add mode only).
-   * @param {object} groupData - Form data from the modal (includes `count` for add mode).
    */
-  function handleSaveGroup(groupData) {
+  function handleSaveGroup(groupData: ElectrodeGroupSaveData) {
     const isAdding = modalMode === 'add';
     const count = groupData.count || 1;
 
     // Remove count from group data (not part of the electrode group schema).
     const { count: _, ...groupDataWithoutCount } = groupData;
 
-    let updatedGroups;
-    let groupsToGenerateMapsFor = [];
+    let updatedGroups: ElectrodeGroup[];
+    const groupsToGenerateMapsFor: ElectrodeGroup[] = [];
 
     if (isAdding) {
       // Add mode: create 'count' identical electrode groups with integer IDs.
-      const newGroups = [];
+      const newGroups: ElectrodeGroup[] = [];
       const startId = generateNextElectrodeGroupId(electrodeGroups);
 
       for (let i = 0; i < count; i++) {
@@ -152,17 +146,17 @@ export default function ElectrodeGroupsContainer({ animalId, addRef, onPendingEd
       updatedGroups = [...electrodeGroups, ...newGroups];
     } else {
       // Edit mode: update single existing group.
-      const groupId = editingGroup.id;
+      const groupId = editingGroup!.id;
       const normalizedGroup = normalizeElectrodeGroupWithDefaults(
         { ...groupDataWithoutCount, id: groupId },
         groupId
       );
       updatedGroups = electrodeGroups.map((g) =>
-        normalizeIdKey(g.id) === normalizeIdKey(editingGroup.id) ? normalizedGroup : g
+        normalizeIdKey(g.id) === normalizeIdKey(editingGroup!.id) ? normalizedGroup : g
       );
 
       // Check if device_type changed.
-      const deviceTypeChanged = editingGroup.device_type !== normalizedGroup.device_type;
+      const deviceTypeChanged = editingGroup!.device_type !== normalizedGroup.device_type;
       if (deviceTypeChanged) {
         groupsToGenerateMapsFor.push(normalizedGroup);
       }
@@ -181,7 +175,7 @@ export default function ElectrodeGroupsContainer({ animalId, addRef, onPendingEd
       // New ntrode IDs start after the current max across the animal, so an incremental add never
       // collides with an existing ntrode.
       let startNtrodeId = nextNtrodeId(retainedMaps);
-      const generatedMaps = [];
+      const generatedMaps: NtrodeMap[] = [];
       for (const group of groupsToGenerateMapsFor) {
         const groupMaps = generateChannelMapsForGroup(group, startNtrodeId);
         generatedMaps.push(...groupMaps);
@@ -214,9 +208,8 @@ export default function ElectrodeGroupsContainer({ animalId, addRef, onPendingEd
 
   /**
    * Request deletion of an electrode group — opens a confirmation dialog.
-   * @param {object} group - Electrode group to delete.
    */
-  function handleDeleteGroup(group) {
+  function handleDeleteGroup(group: ElectrodeGroup) {
     setPendingDeleteGroup(group);
   }
 
@@ -249,12 +242,9 @@ export default function ElectrodeGroupsContainer({ animalId, addRef, onPendingEd
     setCopyDialogOpen(true);
   }
 
-  /**
-   * Append copied electrode groups + channel maps from a source animal.
-   * @param {object} data - Copied electrode groups and channel maps.
-   */
-  function handleCopyConfirm(data) {
-    const { sourceAnimalName, electrode_groups, ntrode_electrode_group_channel_map } = data;
+  /** Append copied electrode groups + channel maps from a source animal. */
+  function handleCopyConfirm(data: CopyPayload) {
+    const { sourceAnimalName, electrode_groups = [], ntrode_electrode_group_channel_map = [] } = data;
 
     const existingGroups = electrodeGroups;
     const existingMaps = ntrodeMaps;
@@ -300,7 +290,7 @@ export default function ElectrodeGroupsContainer({ animalId, addRef, onPendingEd
       <ElectrodeGroupModal
         isOpen={modalOpen}
         mode={modalMode}
-        group={editingGroup}
+        group={editingGroup as unknown as ElectrodeGroupInput | null}
         knownRegions={knownRegions}
         onSave={handleSaveGroup}
         onCancel={handleCancelModal}
@@ -333,14 +323,3 @@ export default function ElectrodeGroupsContainer({ animalId, addRef, onPendingEd
     </>
   );
 }
-
-ElectrodeGroupsContainer.propTypes = {
-  animalId: PropTypes.string.isRequired,
-  addRef: PropTypes.shape({ current: PropTypes.any }),
-  onPendingEditsChange: PropTypes.func,
-};
-
-ElectrodeGroupsContainer.defaultProps = {
-  addRef: undefined,
-  onPendingEditsChange: undefined,
-};
