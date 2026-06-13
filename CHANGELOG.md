@@ -9,6 +9,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Typed the YAML-import flow under strict TS (refactor only, round-trip byte-identity preserved).**
+  [state/yamlImport.js](src/state/yamlImport.ts), [state/yamlImportPlan.js](src/state/yamlImportPlan.ts),
+  and [state/yamlImportApply.js](src/state/yamlImportApply.ts) → `.ts` (the import is the inverse of the
+  export merge, guarded by round-trip tests).
+  - `yamlImport` (`decomposeYaml` + `recomposeDayModel`): function bodies byte-identical; the decode result
+    is a discriminated `DecomposeResult` (`{ ok: true, … } | { ok: false, issues }`). The flat YAML model is
+    typed `ValidationModel` (the established `Record<string, any>` boundary that `validate` already takes).
+  - `yamlImportPlan` (`planImport` + `extractRecordingDate`): the JSDoc `@typedef`s become real exported
+    interfaces (`ImportPlan` / `ImportPlanDay` / `ImportPlanAnimal` / `ConfigVersion` / `Divergence`); helpers
+    typed.
+  - `yamlImportApply` (`applyImportPlan` + `preflightAnimal`): typed `ImportActions` / `ApplyImportResult`;
+    the `targetId!` / `existingAnimalId!` non-null assertions rest on the preflight invariant (replace/add
+    only run after preflight confirmed the animal exists; create uses the validated `subjectId`).
+  - Behavior-affecting body changes are all byte-equivalent: `Object.hasOwn` → `Object.prototype.hasOwnProperty.call`
+    (ES2020-lib-safe; `hasOpto`'s opto-presence gate + `findExistingAnimalId`), one `stableStringify` cast on a
+    post-guard index, a `?.message` on a condition-guaranteed access, and `(error as Error)` catch casts. Zero
+    `.ts` consumers. `npm run typecheck` + `CI=true` build clean; import-flow tests incl. both round-trips (48)
+    + 3 source-scanning guards (49) + golden baselines (125) pass; full suite 4793; e2e 104.
+
 - **Typed two pure `state/` leaf modules under strict TS (refactor only, no behavior change).**
   [state/identityDivergence.js](src/state/identityDivergence.ts) and
   [state/repairCommands.js](src/state/repairCommands.ts) → `.ts`.
