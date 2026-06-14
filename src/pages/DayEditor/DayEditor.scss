@@ -205,50 +205,8 @@
   margin-left: auto;
 }
 
-/* ===== Save Indicator ===== */
-
-.save-indicator {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-sm);
-  font-size: var(--font-size-sm);
-  color: var(--color-grey-600);
-  padding: var(--spacing-sm) var(--spacing-md);
-  border-radius: 4px;
-  transition: opacity var(--transition-standard);
-}
-
-.save-indicator.saving {
-  background-color: var(--color-primary-light);
-  color: var(--color-primary);
-}
-
-.save-indicator.saved {
-  background-color: var(--color-success-light);
-  color: var(--color-success);
-}
-
-.save-indicator.error {
-  background-color: var(--color-error-light);
-  color: var(--color-error);
-}
-
-.save-indicator .spinner {
-  animation: spin 1s linear infinite;
-}
-
-/* WCAG 2.3.3: honor reduced-motion — stop the continuous rotation. The "Saving…" text stays
-   visible so the saving state is still communicated. */
-@media (prefers-reduced-motion: reduce) {
-  .save-indicator .spinner {
-    animation: none;
-  }
-}
-
-@keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
+/* SaveIndicator styles moved to the colocated CSS Module
+   (src/pages/DayEditor/SaveIndicator.module.css). */
 
 /* ===== Form Sections ===== */
 

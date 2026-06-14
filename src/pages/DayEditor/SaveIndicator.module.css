@@ -1,0 +1,50 @@
+/**
+ * SaveIndicator styles (CSS Module — locally scoped).
+ *
+ * Moved out of the global DayEditor.scss so the indicator carries its own styling
+ * wherever it renders (the Day Editor stepper AND the AnimalView header) without a
+ * host stylesheet. Token-driven; the base is a muted grey and each status tints it.
+ */
+
+.saveIndicator {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  font-size: var(--font-size-sm);
+  color: var(--color-grey-600);
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-radius: 4px;
+  transition: opacity var(--transition-standard);
+}
+
+.saving {
+  background-color: var(--color-primary-light);
+  color: var(--color-primary);
+}
+
+.saved {
+  background-color: var(--color-success-light);
+  color: var(--color-success);
+}
+
+.error {
+  background-color: var(--color-error-light);
+  color: var(--color-error);
+}
+
+.spinner {
+  animation: spin 1s linear infinite;
+}
+
+/* WCAG 2.3.3: honor reduced-motion — stop the continuous rotation. The "Saving…" text
+   stays visible so the saving state is still communicated. */
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    animation: none;
+  }
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
