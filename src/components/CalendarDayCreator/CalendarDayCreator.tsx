@@ -251,6 +251,34 @@ export function CalendarDayCreator({ animalId, existingDays = [], onCreateDays, 
       title="Recording Days Calendar"
       titleId={titleId}
       className="calendar-day-creator"
+      footer={
+        <div className="calendar-actions">
+          <button
+            type="button"
+            onClick={handleClearSelection}
+            disabled={selectedDates.size === 0}
+            className="btn-secondary"
+          >
+            Clear Selection
+          </button>
+
+          <button
+            type="button"
+            onClick={handleCreateDays}
+            disabled={selectedDates.size === 0}
+            className="btn-primary"
+            aria-label={`Create ${selectedDates.size} recording day${selectedDates.size === 1 ? '' : 's'}`}
+          >
+            Create {selectedDates.size} {selectedDates.size === 1 ? 'Day' : 'Days'}
+          </button>
+
+          {onClose && (
+            <button type="button" onClick={onClose} className="btn-close" aria-label="Close calendar">
+              ✕
+            </button>
+          )}
+        </div>
+      }
     >
       <CalendarHeader
         currentMonth={currentMonth}
@@ -273,33 +301,6 @@ export function CalendarDayCreator({ animalId, existingDays = [], onCreateDays, 
           {createError}
         </div>
       )}
-
-      <div className="calendar-actions">
-        <button
-          type="button"
-          onClick={handleClearSelection}
-          disabled={selectedDates.size === 0}
-          className="btn-secondary"
-        >
-          Clear Selection
-        </button>
-
-        <button
-          type="button"
-          onClick={handleCreateDays}
-          disabled={selectedDates.size === 0}
-          className="btn-primary"
-          aria-label={`Create ${selectedDates.size} recording day${selectedDates.size === 1 ? '' : 's'}`}
-        >
-          Create {selectedDates.size} {selectedDates.size === 1 ? 'Day' : 'Days'}
-        </button>
-
-        {onClose && (
-          <button type="button" onClick={onClose} className="btn-close" aria-label="Close calendar">
-            ✕
-          </button>
-        )}
-      </div>
     </Modal>
   );
 }

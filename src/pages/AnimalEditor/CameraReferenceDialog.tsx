@@ -52,6 +52,19 @@ export default function CameraReferenceDialog({ isOpen, camera = null, affectedD
       closeOnOverlayClick={false}
       describedById={msgId}
       className="camera-reference-dialog"
+      footer={
+        <div className="form-actions">
+          <button type="button" className="btn-cancel" onClick={onCancel}>
+            Cancel
+          </button>
+          <button type="button" className="button-secondary" onClick={onCorrect}>
+            {count > 0 ? `Correct this camera (updates ${count} ${dayWord})` : 'Correct this camera'}
+          </button>
+          <button type="button" className="button-primary" onClick={onCreateNew}>
+            Create a new camera (recommended)
+          </button>
+        </div>
+      }
     >
       <p id={msgId}>
         {count > 0 ? (
@@ -81,17 +94,6 @@ export default function CameraReferenceDialog({ isOpen, camera = null, affectedD
           <li key={d.id}>{d.date || d.id}</li>
         ))}
       </ul>
-      <div className="form-actions">
-        <button type="button" className="btn-cancel" onClick={onCancel}>
-          Cancel
-        </button>
-        <button type="button" className="button-secondary" onClick={onCorrect}>
-          {count > 0 ? `Correct this camera (updates ${count} ${dayWord})` : 'Correct this camera'}
-        </button>
-        <button type="button" className="button-primary" onClick={onCreateNew}>
-          Create a new camera (recommended)
-        </button>
-      </div>
     </Modal>
   );
 }
