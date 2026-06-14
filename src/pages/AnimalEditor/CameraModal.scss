@@ -46,7 +46,9 @@
       cursor: not-allowed;
     }
 
-    &[required]:invalid {
+    // `:user-invalid` (not `:invalid`) so a required-but-empty field only turns red AFTER the
+    // user has interacted (edited/blurred/submitted) — not on a freshly-opened, untouched form.
+    &[required]:user-invalid {
       border-color: #d32f2f;
     }
   }
