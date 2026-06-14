@@ -24,7 +24,7 @@
   align-items: center;
   padding: 0.5rem 10px;
   border-bottom: 1px solid #e0e0e0;
-  background: #fafafa;
+  background: var(--color-grey-100);
 }
 
 .primaryNav a {
@@ -33,7 +33,7 @@
   min-height: 44px;
   padding: 0.4rem 0.9rem;
   border-radius: 4px;
-  color: #1565c0;
+  color: var(--color-primary);
   text-decoration: none;
 }
 
@@ -53,7 +53,7 @@
 
 /* Separator between the "Workspace" link and the animal object-selector (Task 4.5). */
 .primaryNavSep {
-  color: #9a9384;
+  color: var(--color-grey-500);
 }
 
 /* Workspace app-bar: a single header row holding the logo (left), the primary nav, and the
@@ -107,8 +107,8 @@
   border: 1px solid #b8860b;
   border-left: 4px solid #b8860b;
   border-radius: 4px;
-  background: #fff8e1;
-  color: #5f4b00;
+  background: var(--color-warning-light);
+  color: var(--color-warning);
   font-size: 0.95rem;
 }
 
@@ -118,8 +118,8 @@
   padding: 0.4rem 0.9rem;
   border: 1px solid #b8860b;
   border-radius: 4px;
-  background: #fff;
-  color: #5f4b00;
+  background: var(--color-white);
+  color: var(--color-warning);
   cursor: pointer;
 }
 

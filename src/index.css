@@ -86,6 +86,14 @@ main#main-content:not(.day-editor-content) {
   --color-grey-900: #333;
   --color-white: #fff;
 
+  /* Warm-ink + accent tokens. The modern ("boring but good") surfaces use a deliberate WARM text
+     palette distinct from the neutral grey scale; these three are the genuinely-distinct colors the
+     CSS-Modules track consolidated the component modules onto (the rest of the components' hardcoded
+     near-duplicate colors were folded into the semantic tokens above). All AA (>=4.5:1) on white. */
+  --color-ink-muted: #6a6557; /* warm secondary / italic label text — 5.8:1 on white */
+  --color-ink-warm: #46443d;  /* warm dark heading / caption ink — 9:1 on white */
+  --color-teal: #0d5c63;      /* teal accent (section-nav active, setup-card edge) — 6.8:1 on white */
+
   /* Spacing */
   --spacing-xs: 0.25rem;
   --spacing-sm: 0.5rem;

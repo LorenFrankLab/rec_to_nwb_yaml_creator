@@ -15,20 +15,20 @@
 }
 
 .counts .countValid {
-  color: #2e7d32;
+  color: var(--color-success);
 }
 
 .counts .countError {
-  color: #c62828;
+  color: var(--color-error);
 }
 
 .counts .countIncomplete {
   /* #bf360c keeps AA contrast (≥4.5:1) on the white page background. */
-  color: #bf360c;
+  color: var(--color-warning);
 }
 
 .hint {
-  color: #444;
+  color: var(--color-grey-800);
   margin: 0 0 0.75rem;
 }
 
@@ -53,7 +53,7 @@
 .failed {
   border: 1px solid #c62828;
   border-radius: 4px;
-  background-color: #fdecea;
+  background-color: var(--color-error-light);
   padding: 0.75rem 1rem;
   margin: 0.5rem 0 1rem;
 }
@@ -62,7 +62,7 @@
 .overridden {
   border: 1px solid #bf360c;
   border-radius: 4px;
-  background-color: #fff3e0;
+  background-color: var(--color-warning-light);
   padding: 0.75rem 1rem;
   margin: 0.5rem 0 1rem;
 }
@@ -75,7 +75,7 @@
 }
 
 .diff {
-  background-color: #fff;
+  background-color: var(--color-white);
   border: 1px solid #f5c6cb;
   border-radius: 4px;
   padding: 0.5rem;
@@ -87,7 +87,7 @@
 
 .empty {
   padding: 2rem 0;
-  color: #555;
+  color: var(--color-grey-700);
 }
 
 /* The 6-column day table can be wider than a phone viewport; scroll it horizontally WITHIN this
@@ -171,7 +171,7 @@
   padding: 1rem 1.25rem;
   border: 1px solid #90caf9;
   border-radius: 6px;
-  background-color: #e3f2fd;
+  background-color: var(--color-primary-light);
 
   /* Long unbroken values (session ids, camera names) must wrap inside the box at narrow widths
      instead of pushing the page wider than the viewport. */
@@ -210,13 +210,13 @@
 }
 
 .batchExportPreflightDetail {
-  color: #444;
+  color: var(--color-grey-800);
   min-width: 0;
   overflow-wrap: anywhere;
 }
 
 .batchExportPreflightError {
-  color: #c62828;
+  color: var(--color-error);
   font-weight: 600;
 }
 
@@ -236,7 +236,7 @@
 .orphanNote {
   font-size: 0.75rem;
   font-weight: 600;
-  color: #bf360c;
+  color: var(--color-warning);
   white-space: nowrap;
 }
 
@@ -244,20 +244,20 @@
 .sessionDescription {
   display: block;
   font-size: 0.8125rem;
-  color: #555;
+  color: var(--color-grey-700);
 }
 
 /* Batch-row scan detail (config version · cameras · opto state) — muted so it reads as
    at-a-glance context, not a primary value. */
 .scan {
   font-size: 0.8125rem;
-  color: #555;
+  color: var(--color-grey-700);
 }
 
 /* Per-camera calibration (name + meters_per_pixel) — muted further so it reads as a detail
    of the camera count, not a competing primary value. */
 .scanCameras {
-  color: #777;
+  color: var(--color-grey-500);
 }
 
 /* Phase 3-5: per-animal Validation & Export tab. The scoped header replaces the page h1; the
@@ -275,7 +275,7 @@
   margin: 0 0 0.25rem;
   font-family: var(--mono-font, monospace);
   font-size: 0.8rem;
-  color: #6a6557;
+  color: var(--color-ink-muted);
 }
 
 .scopedUplink {
@@ -295,7 +295,7 @@
   margin: 0 0 0.4rem;
   font-size: 0.8rem;
   font-weight: 600;
-  color: #46443d;
+  color: var(--color-ink-warm);
 }
 
 .effectiveDayReviewList {
@@ -311,12 +311,12 @@
 }
 
 .effectiveDayReviewList dt {
-  color: #6a6557;
+  color: var(--color-ink-muted);
 }
 
 .effectiveDayReviewList dd {
   margin: 0;
-  color: #2b2a25;
+  color: var(--color-grey-900);
 
   /* Long values must wrap within the grid cell, not widen the page at narrow viewports. */
   min-width: 0;

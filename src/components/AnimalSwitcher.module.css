@@ -15,8 +15,8 @@
   padding: 0.3rem 0.55rem;
   font: inherit;
   font-weight: 600;
-  color: #1c1b18;
-  background: #fff;
+  color: var(--color-grey-900);
+  background: var(--color-white);
   border: 1px solid var(--color-primary, #0d5c63);
   border-radius: 8px;
   box-shadow: 0 0 0 3px #eef4f4;
@@ -54,10 +54,10 @@
   position: absolute;
   top: calc(100% + 0.35rem);
   left: 0;
-  z-index: 40;
+  z-index: var(--z-popover);
   width: 266px;
   padding: 0.4rem;
-  background: #fff;
+  background: var(--color-white);
   border: 1px solid #c8c1ae;
   border-radius: 11px;
   box-shadow: 0 16px 40px -14px rgb(0 0 0 / 50%);
@@ -69,7 +69,7 @@
   font-size: 9px;
   letter-spacing: 0.15em;
   text-transform: uppercase;
-  color: #6a6557;
+  color: var(--color-ink-muted);
 }
 
 .row {
@@ -81,7 +81,7 @@
 }
 
 .row:hover {
-  background: #efeae0;
+  background: var(--color-grey-100);
 }
 
 .row.isCurrent {
@@ -112,7 +112,7 @@
   margin-left: auto;
   font-family: var(--mono-font, monospace);
   font-size: 11px;
-  color: #6a6557;
+  color: var(--color-ink-muted);
   flex: none;
 }
 

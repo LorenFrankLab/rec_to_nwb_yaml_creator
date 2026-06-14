@@ -22,7 +22,7 @@
   font-size: 0.6rem;
   letter-spacing: 0.15em;
   text-transform: uppercase;
-  color: #6a6557;
+  color: var(--color-ink-muted);
   padding: 0 0.55rem 0.4rem;
 }
 
@@ -52,7 +52,7 @@
   background: #eef4f4;
   border: 1px solid #cfe0e0;
   border-radius: 8px;
-  color: #0d5c63;
+  color: var(--color-teal);
   font-weight: 600;
   box-shadow: inset 3px 0 0 #0d5c63;
 }
@@ -68,7 +68,7 @@
   flex: none;
   width: 0.75rem;
   text-align: center;
-  color: #6a6557;
+  color: var(--color-ink-muted);
   font-size: 0.85rem;
   line-height: 1;
 }
@@ -79,12 +79,12 @@
   flex: none;
   font-family: var(--mono-font, monospace);
   font-size: 0.7rem;
-  color: #6a6557;
+  color: var(--color-ink-muted);
 }
 
 .chev {
   flex: none;
-  color: #9a9384;
+  color: var(--color-grey-500);
   font-size: 0.85rem;
   font-weight: 600;
   line-height: 1;
@@ -92,7 +92,7 @@
 
 .item.isActive .count,
 .item.isActive .chev {
-  color: #0d5c63;
+  color: var(--color-teal);
 }
 
 /* Red ● on a section that holds an export-blocking error (decision 11 / Phase 3a.5). Colour PLUS
@@ -101,7 +101,7 @@
   flex: none;
   width: 0.75rem;
   text-align: center;
-  color: #c0392b;
+  color: var(--color-error);
   font-size: 0.7rem;
   line-height: 1;
 }

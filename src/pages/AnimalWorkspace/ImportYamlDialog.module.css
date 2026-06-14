@@ -20,16 +20,16 @@
   text-align: center;
   cursor: pointer;
   margin: 1rem 0;
-  background: #fafafa;
+  background: var(--color-grey-100);
 }
 
 .dropZone.isDragging {
-  border-color: #2a6db5;
+  border-color: var(--color-primary);
   background: #eef5fc;
 }
 
 .dropOr {
-  color: #777;
+  color: var(--color-grey-500);
   margin: 0.5rem 0;
 }
 
@@ -38,7 +38,7 @@
   padding: 0.4rem 0.9rem;
   border: 1px solid #2a6db5;
   border-radius: 4px;
-  color: #2a6db5;
+  color: var(--color-primary);
   cursor: pointer;
 }
 
@@ -77,13 +77,13 @@
 
 .animalMeta {
   margin: 0 0 0.5rem;
-  color: #444;
+  color: var(--color-grey-800);
 }
 
 .configVersions {
   margin: 0 0 0.5rem;
   padding-left: 1.25rem;
-  color: #555;
+  color: var(--color-grey-700);
   font-size: 0.9rem;
 }
 
@@ -145,14 +145,14 @@
 }
 
 .unimportableReason {
-  color: #a33;
+  color: var(--color-error);
 }
 
 /* The remediation hint ("what to fix"), shown under the raw reason. */
 .unimportableHint {
   display: block;
   margin-top: 0.15rem;
-  color: #333;
+  color: var(--color-grey-900);
   font-size: 0.9rem;
 }
 
@@ -180,7 +180,7 @@
 }
 
 .resultDates {
-  color: #444;
+  color: var(--color-grey-800);
 }
 
 .actions {

@@ -62,7 +62,7 @@
 
 .btnCreateAnimal:hover {
   background-color: var(--color-primary);
-  color: white;
+  color: var(--color-white);
 }
 
 /* The card is a row: a flex-filling <a> link to #/animal/:id/days plus a trailing ⋮ menu
@@ -76,12 +76,12 @@
   margin-bottom: 0.5rem;
   border: 1px solid #ccc;
   border-radius: 4px;
-  background: white;
+  background: var(--color-white);
   transition: background-color 0.2s, border-color 0.2s;
 }
 
 .animalCard:hover {
-  background-color: #f5f5f5;
+  background-color: var(--color-grey-100);
   border-color: #999;
 }
 
@@ -114,7 +114,7 @@
 
 .animalDayCount {
   font-size: 0.875rem;
-  color: #666;
+  color: var(--color-grey-600);
 }
 
 /* Day Management Main Area */
@@ -186,21 +186,21 @@
 
 :global(.btn-primary) {
   background-color: var(--color-primary);
-  color: white;
+  color: var(--color-white);
   border-color: var(--color-primary);
 }
 
 :global(.btn-primary):hover {
-  background-color: #1976d2;
+  background-color: var(--color-primary-hover);
 }
 
 :global(.btn-secondary) {
-  background-color: white;
-  color: #333;
+  background-color: var(--color-white);
+  color: var(--color-grey-900);
 }
 
 :global(.btn-secondary):hover {
-  background-color: #f5f5f5;
+  background-color: var(--color-grey-100);
 }
 
 /* Day List */
@@ -234,14 +234,14 @@
   padding: 1rem;
   border: 1px solid #ddd;
   border-radius: 4px;
-  background-color: white;
+  background-color: var(--color-white);
   text-decoration: none;
   color: inherit;
   transition: background-color 0.2s, border-color 0.2s;
 }
 
 .dayLink:hover {
-  background-color: #fafafa;
+  background-color: var(--color-grey-100);
   border-color: #999;
 }
 
@@ -262,14 +262,14 @@
 
 .daySessionId {
   font-size: 0.875rem;
-  color: #666;
+  color: var(--color-grey-600);
 }
 
 /* Decision 12: the muted session description under the date (recognition aid), truncated to one
    line — the full text stays available via the element's `title`. */
 .daySessionDesc {
   font-size: 0.8125rem;
-  color: #6a6557;
+  color: var(--color-ink-muted);
   font-style: italic;
   white-space: nowrap;
   overflow: hidden;
@@ -348,43 +348,43 @@
 }
 
 :global(.status-chip.draft) {
-  background-color: #fff3e0;
-  color: #e65100;
+  background-color: var(--color-warning-light);
+  color: var(--color-warning);
 }
 
 :global(.status-chip.validated) {
-  background-color: #e8f5e9;
-  color: #2e7d32;
+  background-color: var(--color-success-light);
+  color: var(--color-success);
 }
 
 :global(.status-chip.exported) {
-  background-color: #e3f2fd;
-  color: #1976d2;
+  background-color: var(--color-primary-light);
+  color: var(--color-primary-hover);
 }
 
 :global(.status-chip.error) {
-  background-color: #fdecea;
-  color: #c62828;
+  background-color: var(--color-error-light);
+  color: var(--color-error);
 }
 
 /* Dangling day reference (no resolvable record) — surfaced, not dropped. */
 .dayLinkMissing {
   cursor: default;
   border-color: #ffcdd2;
-  background-color: #fff5f5;
+  background-color: var(--color-error-light);
 }
 
 /* Orphaned day record (not in the animal's index) — surfaced so it isn't lost. */
 .dayItemOrphan .dayLink {
   border-color: #ffe0b2;
-  background-color: #fff8e1;
+  background-color: var(--color-warning-light);
 }
 
 .dayOrphanNote {
   margin-left: 0.5rem;
   font-size: 0.75rem;
   font-weight: 600;
-  color: #bf360c;
+  color: var(--color-warning);
 }
 
 /* Lifecycle cleanup (Task 8): secondary/destructive delete actions. Deliberately understated
@@ -398,7 +398,7 @@
 .btnDangerText {
   background: none;
   border: 1px solid transparent;
-  color: #c62828;
+  color: var(--color-error);
   cursor: pointer;
   font-size: 0.8125rem;
   padding: 0.25rem 0.5rem;
@@ -407,7 +407,7 @@
 }
 
 .btnDangerText:hover {
-  background-color: #fdecea;
+  background-color: var(--color-error-light);
   text-decoration: underline;
 }
 
@@ -516,7 +516,7 @@
 :global(.empty-state) {
   text-align: center;
   padding: 3rem 2rem;
-  color: #666;
+  color: var(--color-grey-600);
 }
 
 .emptyMessage {
@@ -531,7 +531,7 @@
   margin-top: 1rem;
   padding: 0.75rem 1.5rem;
   background-color: var(--color-primary);
-  color: white;
+  color: var(--color-white);
   text-decoration: none;
   border: none;
   border-radius: 4px;
@@ -547,7 +547,7 @@
 }
 
 .createAnimalLink:hover {
-  background-color: #1976d2;
+  background-color: var(--color-primary-hover);
 }
 
 /* Empty-state "Import YAML…" — secondary affordance beside the loud "Create Animal" button. */
@@ -568,7 +568,7 @@
 
 .importYamlLink:hover {
   background-color: var(--color-primary);
-  color: white;
+  color: var(--color-white);
 }
 
 /* Picker header actions: "Import YAML…" + "+ New Animal" sit together at the right. */
@@ -596,7 +596,7 @@
 
 .btnImportYaml:hover {
   background-color: var(--color-primary);
-  color: white;
+  color: var(--color-white);
 }
 
 /* First-run "Set up this animal" card (Task 2.3) — the LOUD onboarding affordance, shown until
@@ -608,7 +608,7 @@
   border: 1px solid var(--color-primary, #0d5c63);
   border-left-width: 4px;
   border-radius: 6px;
-  background-color: #f6fafb;
+  background-color: var(--color-grey-100);
 }
 
 .setupCardHeading {
@@ -619,7 +619,7 @@
 .setupCardIntro {
   margin: 0 0 0.75rem;
   font-size: 0.875rem;
-  color: #555;
+  color: var(--color-grey-700);
 }
 
 /* Sits between the intro and the section list; base look comes from the shared .button-secondary. */
@@ -643,7 +643,7 @@
   gap: 0.75rem;
   align-items: center;
   padding: 0.5rem 0.75rem;
-  background-color: white;
+  background-color: var(--color-white);
   border: 1px solid #e0e0e0;
   border-radius: 4px;
 }
@@ -655,7 +655,7 @@
 
 .setupCardItemHint {
   font-size: 0.8rem;
-  color: #6a6557;
+  color: var(--color-ink-muted);
   font-style: italic;
 }
 
@@ -667,20 +667,20 @@
   justify-self: start;
   padding: 0.2rem 0.5rem;
   border-radius: 12px;
-  color: #2e7d32;
-  background-color: #e8f5e9;
+  color: var(--color-success);
+  background-color: var(--color-success-light);
 }
 
 /* Neutral todo (mirrors the section-nav hollow-○ ring — not an anxiety colour). */
 .setupCardItemTodo .setupCardItemState {
-  color: #46443d;
-  background-color: #efeae0;
+  color: var(--color-ink-warm);
+  background-color: var(--color-grey-100);
 }
 
 /* Blocking (mirrors the section-nav red ● — this section blocks export and must be fixed). */
 .setupCardItemBlocking .setupCardItemState {
-  color: #b3261e;
-  background-color: #f6e0de;
+  color: var(--color-error);
+  background-color: var(--color-error-light);
 }
 
 .setupCardItemAction {
@@ -698,7 +698,7 @@
 
 .setupCardItemAction:hover {
   background-color: var(--color-primary);
-  color: white;
+  color: var(--color-white);
 }
 
 /* Existing-data review state — recovered/imported data is not silently trusted.
@@ -709,12 +709,12 @@
   padding: 1rem 1.25rem;
   border: 1px solid #ddd;
   border-radius: 6px;
-  background-color: #f7f7f7;
+  background-color: var(--color-grey-100);
 }
 
 .existingDataReviewCorrupt {
   border-color: #ffe0b2;
-  background-color: #fff8e1;
+  background-color: var(--color-warning-light);
 }
 
 .existingDataReviewHeading {
@@ -725,18 +725,18 @@
 .existingDataReviewIntro {
   margin: 0 0 0.5rem;
   font-size: 0.875rem;
-  color: #555;
+  color: var(--color-grey-700);
 }
 
 .existingDataReviewCorrupt .existingDataReviewIntro {
-  color: #5d4037;
+  color: var(--color-ink-warm);
 }
 
 .existingDataReviewCorruptNote {
   margin: 0 0 0.5rem;
   font-size: 0.875rem;
   font-weight: 600;
-  color: #c62828;
+  color: var(--color-error);
 }
 
 .existingDataReviewLink {

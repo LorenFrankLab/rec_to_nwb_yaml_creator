@@ -29,7 +29,7 @@
 }
 
 .content {
-  background-color: white;
+  background-color: var(--color-white);
   border-radius: 8px;
   padding: 2rem;
   max-width: 600px;
@@ -56,7 +56,7 @@
   margin: 0 0 1.5rem;
   font-size: 1.5rem;
   font-weight: 600;
-  color: #333;
+  color: var(--color-grey-900);
 }
 
 /**
@@ -91,7 +91,7 @@
   // Opaque so the scrolled body doesn't show through the pinned footer, and the
   // box's bottom inset (which the action row's own top divider/spacing pairs with).
   padding: 0 2rem 2rem;
-  background-color: white;
+  background-color: var(--color-white);
 }
 
 .content::-webkit-scrollbar,
