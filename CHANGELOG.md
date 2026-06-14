@@ -9,6 +9,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Live TypeScript migration COMPLETE — the entire live app is now TypeScript; only the frozen legacy single-page form (slated for deletion) remains `.jsx`/`.js` — cycles 15–16.**
+  A post–app-root audit found live (non-legacy) JS the page-by-page conversion had missed; cycles 15–16
+  finish it (all refactor-only, behavior-preserving):
+  - **Cycle 15 (live glue / barrels):** `components/Modal/index.ts`, `components/ShortcutsHelp/index.ts`,
+    `pages/DayEditor/stepGate.ts` (pure re-export barrels — no content change); `pages/DayEditor/validation.ts`
+    (the page-local on-blur `validateField` wrapper, typed `mergedData: ValidationModel`); `components/rawPropTypes.ts`
+    (tolerant custom PropTypes validators, typed via a `RawValidator` alias + erased delegate casts — this file is
+    orphaned, only its own test imports it, and is a deletion candidate).
+  - **Cycle 16 (live components):** the whole `components/CalendarDayCreator/` subtree (`CalendarDayCreator` +
+    `CalendarGrid` + `CalendarDay` + `CalendarHeader` + `CalendarLegend`) and `components/DayLifecycleLegend/`.
+    Props→interfaces; PropTypes/defaultProps dropped (defaults preserved as destructure defaults); JSDoc trimmed;
+    the date-select callback typed `(date: string, event: { shiftKey: boolean }) => void` across the three files
+    (the consumer reads only `shiftKey`); `useRef<HTMLButtonElement>` roving-focus chain; `(error as Error).message`
+    in the create-days catch (byte-identical to the original `error.message`); the exported pure `getInitialCalendarMonth`
+    keeps its malformed-input tolerance with a `string[]` param.
+  After these cycles, **every live `.js`/`.jsx` under `src/` is TypeScript**; the only remaining JS is the legacy
+  form path (`useLegacyForm`, `LegacyFormView`, `element/*`, `*Fields.jsx`, `OptogeneticsFields`, `ChannelMap`, the
+  legacy-only hooks/glue, and the legacy-exclusive `ArrayUpdateMenu`/`HintDisplay`) plus test files. `npm run typecheck`
+  and `CI=true` build clean; golden baselines, the affected suites with the 3 source-scanning guards, full suite (4793),
+  and e2e (104) pass each cycle; code-reviewer found no ≥80-confidence issues on the component cycle.
 - **Typed the app root — `App.js`/`index.js`→`.tsx`, `setupTests.js`→`.ts` (refactor only, behavior-preserving) — cycle 14.**
   The React entry (`index`), the root component (`App`), and the global Vitest setup (`setupTests`).
   Dropped stray `import React`; `createRoot(document.getElementById('root') as HTMLElement)` (the

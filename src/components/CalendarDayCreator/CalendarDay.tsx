@@ -8,21 +8,32 @@
  */
 
 import { useCallback } from 'react';
-import PropTypes from 'prop-types';
+import type { Ref, MouseEvent as ReactMouseEvent, KeyboardEvent as ReactKeyboardEvent } from 'react';
+
+interface CalendarDayProps {
+  /** ISO date string (YYYY-MM-DD). */
+  date: string;
+  /** Is this date in the current displayed month. */
+  isCurrentMonth: boolean;
+  /** Is this date selected by user. */
+  isSelected: boolean;
+  /** Does a recording day already exist for this date. */
+  isExisting: boolean;
+  /** Is this date today. */
+  isToday: boolean;
+  /** Is this the roving-tabindex focus target (exactly one per grid). */
+  isActive: boolean;
+  /** Callback for date selection (toggle). Reads only `event.shiftKey` (range vs toggle). */
+  onSelect: (date: string, event: { shiftKey: boolean }) => void;
+  /**
+   * Ref attached to this cell's button when it is the active cell, so the parent grid can move
+   * DOM focus here after an arrow-key navigation.
+   */
+  cellRef?: Ref<HTMLButtonElement>;
+}
 
 /**
  * CalendarDay - Individual calendar day cell
- *
- * @param {object} props
- * @param {string} props.date - ISO date string (YYYY-MM-DD)
- * @param {boolean} props.isCurrentMonth - Is this date in the current displayed month
- * @param {boolean} props.isSelected - Is this date selected by user
- * @param {boolean} props.isExisting - Does a recording day already exist for this date
- * @param {boolean} props.isToday - Is this date today
- * @param {boolean} props.isActive - Is this the roving-tabindex focus target (exactly one per grid)
- * @param {Function} props.onSelect - Callback for date selection (toggle)
- * @param {object} [props.cellRef] - Ref attached to this cell's button when it is the active cell,
- *   so the parent grid can move DOM focus here after an arrow-key navigation.
  */
 export function CalendarDay({
   date,
@@ -33,7 +44,7 @@ export function CalendarDay({
   isActive,
   onSelect,
   cellRef,
-}) {
+}: CalendarDayProps) {
   // Extract day number from date
   const dayNumber = parseInt(date.split('-')[2], 10);
 
@@ -54,7 +65,7 @@ export function CalendarDay({
    * grid navigation via `aria-disabled`, but activating it does nothing).
    */
   const handleClick = useCallback(
-    (event) => {
+    (event: ReactMouseEvent<HTMLButtonElement>) => {
       if (isExisting) return;
       onSelect(date, event);
     },
@@ -66,7 +77,7 @@ export function CalendarDay({
    * bubble to the grid's roving-tabindex handler.
    */
   const handleKeyDown = useCallback(
-    (event) => {
+    (event: ReactKeyboardEvent<HTMLButtonElement>) => {
       if (event.key === ' ' || event.key === 'Enter') {
         event.preventDefault();
         if (isExisting) return;
@@ -113,19 +124,3 @@ export function CalendarDay({
     </button>
   );
 }
-
-CalendarDay.propTypes = {
-  date: PropTypes.string.isRequired,
-  isCurrentMonth: PropTypes.bool.isRequired,
-  isSelected: PropTypes.bool.isRequired,
-  isExisting: PropTypes.bool.isRequired,
-  isToday: PropTypes.bool.isRequired,
-  isActive: PropTypes.bool.isRequired,
-  onSelect: PropTypes.func.isRequired,
-  // eslint-disable-next-line react/forbid-prop-types
-  cellRef: PropTypes.object,
-};
-
-CalendarDay.defaultProps = {
-  cellRef: undefined,
-};
