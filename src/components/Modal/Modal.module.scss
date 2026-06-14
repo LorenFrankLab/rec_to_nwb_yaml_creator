@@ -1,12 +1,13 @@
 /**
- * Shared accessible Modal primitive styles.
+ * Shared accessible Modal primitive styles (CSS Module — locally scoped).
  *
- * Centralizes the overlay / content box / title that were previously duplicated
- * across CameraModal.scss and ElectrodeGroupModal.scss. Consumer stylesheets keep
- * only their form-specific layout (fields, coordinate grids, action buttons).
+ * Owns the overlay / content box / title that were previously duplicated across
+ * CameraModal.scss and ElectrodeGroupModal.scss. Consumer stylesheets keep only
+ * their form-specific layout (fields, coordinate grids, action buttons) under the
+ * per-dialog class they pass to Modal's `className` prop.
  */
 
-.modal-overlay {
+.overlay {
   position: fixed;
   inset: 0;
   background-color: rgb(0 0 0 / 50%);
@@ -27,7 +28,7 @@
   }
 }
 
-.modal-content {
+.content {
   background-color: white;
   border-radius: 8px;
   padding: 2rem;
@@ -51,30 +52,30 @@
   }
 }
 
-.modal-title {
+.title {
   margin: 0 0 1.5rem;
   font-size: 1.5rem;
   font-weight: 600;
   color: #333;
 }
 
-.modal-content::-webkit-scrollbar {
+.content::-webkit-scrollbar {
   width: 8px;
 }
 
-.modal-content::-webkit-scrollbar-track {
+.content::-webkit-scrollbar-track {
   background: transparent;
 }
 
-.modal-content::-webkit-scrollbar-thumb {
+.content::-webkit-scrollbar-thumb {
   background: #ccc;
   border-radius: 4px;
 }
 
 /* Honor reduced-motion: every dialog built on Modal inherits this. */
 @media (prefers-reduced-motion: reduce) {
-  .modal-overlay,
-  .modal-content {
+  .overlay,
+  .content {
     animation: none;
   }
 }

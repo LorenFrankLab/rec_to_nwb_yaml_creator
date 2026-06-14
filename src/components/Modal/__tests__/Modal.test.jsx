@@ -60,21 +60,21 @@ describe('Modal', () => {
   it('closes on overlay click but not on content click', async () => {
     const user = userEvent.setup();
     const onClose = vi.fn();
-    const { container } = render(<TwoButtonModal onClose={onClose} />);
+    render(<TwoButtonModal onClose={onClose} />);
 
     await user.click(screen.getByText('first')); // inside content
     expect(onClose).not.toHaveBeenCalled();
 
-    await user.click(container.querySelector('.modal-overlay'));
+    await user.click(screen.getByTestId('modal-overlay'));
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
   it('does not close on overlay click when closeOnOverlayClick is false', async () => {
     const user = userEvent.setup();
     const onClose = vi.fn();
-    const { container } = render(<TwoButtonModal onClose={onClose} closeOnOverlayClick={false} />);
+    render(<TwoButtonModal onClose={onClose} closeOnOverlayClick={false} />);
 
-    await user.click(container.querySelector('.modal-overlay'));
+    await user.click(screen.getByTestId('modal-overlay'));
     expect(onClose).not.toHaveBeenCalled();
   });
 
