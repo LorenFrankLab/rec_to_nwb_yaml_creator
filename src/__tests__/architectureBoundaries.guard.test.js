@@ -120,7 +120,7 @@ export function importSpecifiers(text) {
 
 /**
  * Resolve a specifier to a src-relative POSIX path with the extension stripped. Handles both
- * relative specifiers and the `@/*` → `src/*` alias (configured in vitest.config.js's
+ * relative specifiers and the `@/*` → `src/*` alias (configured in vite.config.ts's
  * resolve.alias), so an aliased `@/pages/...` import cannot bypass the guard. Returns null
  * for bare modules (react, prop-types, …), which are out of scope.
  * @param fromRel

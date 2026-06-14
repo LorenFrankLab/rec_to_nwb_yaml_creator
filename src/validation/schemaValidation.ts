@@ -4,11 +4,11 @@
  * Validates model against NWB JSON schema and returns unified Issue[] format.
  */
 
+import Ajv from 'ajv';
 import addFormats from 'ajv-formats';
 import JsonSchemaFile from '../nwb_schema.json';
 import { normalizeAjvPath } from './paths';
 import type { ValidationIssue, ValidationModel } from './issueTypes';
-const Ajv = require('ajv');
 
 // Compile AJV validator once at module load for performance
 // Recompiling on every validation call would cause significant performance degradation

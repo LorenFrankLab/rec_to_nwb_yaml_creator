@@ -32,7 +32,7 @@ npm-debug.log.*
 build
 
 # Config files
-vitest.config.js
+vite.config.ts
 playwright.config.js
 
 # eslint ignores hidden directories by default:

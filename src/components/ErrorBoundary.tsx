@@ -111,8 +111,10 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
               Reload Application
             </button>
 
-            {/* Show error details in development mode */}
-            {process.env.NODE_ENV === 'development' && this.state.error && (
+            {/* Show error details in development mode. `import.meta.env.MODE` mirrors the former
+                `process.env.NODE_ENV` exactly across Vite dev ('development') / build ('production')
+                / Vitest ('test'), so the dev-only block shows/hides identically. */}
+            {import.meta.env.MODE === 'development' && this.state.error && (
               <details className="error-boundary-details">
                 <summary>
                   Error Details (Development Only)

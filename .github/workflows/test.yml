@@ -39,8 +39,12 @@ jobs:
       - name: Check schema version
         run: node scripts/check-schema-version.mjs --expected-version 1.0.1
 
-      - name: Run linter
-        run: npm run lint
+      - name: Run linter (warnings-as-errors gate)
+        # `lint:ci` runs ESLint with --max-warnings 0. This is the warnings-as-errors gate that
+        # CRA's `CI=true react-scripts build` used to provide; the Vite build does not run ESLint,
+        # so the strictness lives here instead. Scope is the whole repo (stricter than CRA, which
+        # only linted the build graph).
+        run: npm run lint:ci
 
       - name: Run CSS linter (stylelint)
         # Warn-level for now (defaultSeverity is "warning"): this runs and reports token /
@@ -230,14 +234,10 @@ jobs:
         run: npm ci
 
       - name: Build production bundle
-        # CI=true ARMS the build gate (Phase 9b): Create React App treats ESLint warnings as build
-        # errors, so the build now FAILS on any new build-surface warning — drift is caught again.
-        # The former ~79 build-surface warnings were resolved by (a) fixing the genuine correctness
-        # warnings (unused-var, react-hooks/exhaustive-deps, jsx-a11y) and (b) turning off the
-        # @param/@returns JSDoc TYPE rules in .eslintrc.js (redundant with the .js→.ts migration,
-        # where they're already off). Do NOT revert to CI=false; if a new build-surface warning
-        # appears, fix it (or, for a documentation rule, reconsider the rule level deliberately).
-        run: CI=true npm run build
+        # `npm run build` is now `vite build` (was `react-scripts build`). Vite does NOT run ESLint
+        # during the build, so the warnings-as-errors gate moved to the `lint:ci` step in the test
+        # job (eslint --max-warnings 0). This step verifies the production bundle compiles.
+        run: npm run build
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4

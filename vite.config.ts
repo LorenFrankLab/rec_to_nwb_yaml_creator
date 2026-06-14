@@ -1,3 +1,4 @@
+/// <reference types="vitest/config" />
 import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
 import path from 'path';
@@ -5,8 +6,21 @@ import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-export default defineConfig({
+// ONE config for BOTH the app build (was `react-scripts`) and the Vitest test lane (was the
+// separate `vitest.config.js`). Vite and Vitest share this file; the `test` block below is the
+// former vitest.config.js merged in unchanged, so the test transform is byte-stable.
+export default defineConfig(({ command }) => ({
+  // GitHub Pages serves the PRODUCTION app under /rec_to_nwb_yaml_creator/ (was CRA's `homepage`
+  // field). CRA applied that base only to the build and served dev at `/`; mirror that — a global
+  // base would move the dev server to `/rec_to_nwb_yaml_creator/` and break Playwright + the
+  // kill-stale-:3000 workflow, which drive `http://localhost:3000/`.
+  base: command === 'build' ? '/rec_to_nwb_yaml_creator/' : '/',
   plugins: [react()],
+  // Keep CRA's output dir so `gh-pages -d build` (deploy) and the CI build-artifact path are unchanged.
+  build: { outDir: 'build' },
+  // Match the port Playwright's webServer + baseURL expect (and the kill-stale-:3000 workflow).
+  server: { port: 3000 },
+  preview: { port: 3000 },
   esbuild: {
     // This codebase mixes JSX across extensions — `.jsx` components/tests, `.tsx`
     // modules, and any legacy JSX-in-`.js` — so the transform must parse JSX regardless
@@ -23,6 +37,13 @@ export default defineConfig({
       loader: {
         '.js': 'jsx',
       },
+    },
+  },
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, './src'),
+      '@tests': path.resolve(__dirname, './src/__tests__'),
+      '@fixtures': path.resolve(__dirname, './src/__tests__/fixtures'),
     },
   },
   test: {
@@ -65,11 +86,4 @@ export default defineConfig({
     testTimeout: 30000,
     hookTimeout: 10000,
   },
-  resolve: {
-    alias: {
-      '@': path.resolve(__dirname, './src'),
-      '@tests': path.resolve(__dirname, './src/__tests__'),
-      '@fixtures': path.resolve(__dirname, './src/__tests__/fixtures'),
-    },
-  },
-});
+}));

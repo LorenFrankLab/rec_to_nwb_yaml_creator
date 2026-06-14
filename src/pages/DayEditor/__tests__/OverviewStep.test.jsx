@@ -227,7 +227,6 @@ describe('OverviewStep', () => {
   });
 
   it('breadcrumb and Edit-Animal hrefs resolve to the Animal Editor route', async () => {
-    const user = userEvent.setup();
     render(
       <OverviewStep
         animal={mockAnimal}
