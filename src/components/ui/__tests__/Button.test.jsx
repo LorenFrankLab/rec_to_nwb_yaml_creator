@@ -46,4 +46,26 @@ describe('Button (canonical primitive)', () => {
     );
     expect(screen.getByRole('button', { name: 'Save changes' })).toHaveAttribute('title', 'Save');
   });
+
+  it('applies a distinct class per variant and the small size (CSS-Module hashed)', () => {
+    // Assert the wiring (each prop maps to its own scoped class) without coupling to
+    // the hashed class names — restrained `dangerSubtle` must differ from filled `danger`,
+    // and `small` must add a class on top of the variant.
+    const { rerender } = render(<Button variant="danger">X</Button>);
+    const danger = screen.getByRole('button').className;
+
+    rerender(<Button variant="dangerSubtle">X</Button>);
+    const dangerSubtle = screen.getByRole('button').className;
+    expect(dangerSubtle).not.toBe(danger);
+
+    rerender(<Button variant="neutral">X</Button>);
+    const neutral = screen.getByRole('button').className;
+    expect(neutral).not.toBe(danger);
+    expect(neutral).not.toBe(dangerSubtle);
+
+    rerender(<Button variant="dangerSubtle" size="small">X</Button>);
+    const subtleSmall = screen.getByRole('button').className;
+    expect(subtleSmall).not.toBe(dangerSubtle);
+    expect(subtleSmall.split(' ').length).toBeGreaterThan(dangerSubtle.split(' ').length);
+  });
 });
