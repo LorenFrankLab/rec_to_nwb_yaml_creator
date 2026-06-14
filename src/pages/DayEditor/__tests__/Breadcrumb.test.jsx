@@ -66,8 +66,8 @@ describe('Breadcrumb', () => {
 
     const { container } = render(<Breadcrumb items={items} />);
 
-    // Find separators (›)
-    const separators = container.querySelectorAll('.breadcrumb-separator');
+    // Find separators (›) by their presentational test id (the class name is CSS-Module-hashed).
+    const separators = container.querySelectorAll('[data-testid="breadcrumb-separator"]');
     expect(separators.length).toBe(2); // One less than items count
   });
 
