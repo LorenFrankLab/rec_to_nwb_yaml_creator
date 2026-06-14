@@ -58,10 +58,11 @@
     "yaml": "^2.2.2"
   },
   "scripts": {
-    "start": "react-scripts start",
+    "start": "vite",
     "predeploy": "npm run build",
     "deploy": "gh-pages -d build",
-    "build": "react-scripts build",
+    "build": "vite build",
+    "preview": "vite preview",
     "test": "vitest",
     "test:ui": "vitest --ui",
     "test:coverage": "vitest --coverage --testTimeout=120000",
@@ -121,6 +122,7 @@
     "stylelint-config-standard-scss": "^15.0.1",
     "stylelint-declaration-strict-value": "^1.11.1",
     "typescript": "^5.9.3",
+    "vite": "^7.1.12",
     "vitest": "^4.0.1"
   }
 }

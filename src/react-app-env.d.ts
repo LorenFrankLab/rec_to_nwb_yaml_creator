@@ -1,9 +1,9 @@
-/// <reference types="react-scripts" />
+/// <reference types="vite/client" />
 
-// react-scripts' bundled types declare CSS Modules (`*.module.css` / `*.module.scss`) and
-// asset imports, but NOT bare side-effect stylesheet imports. Declare those so a `.tsx`
+// `vite/client` declares CSS Modules (`*.module.css` / `*.module.scss`), asset imports, and
+// `import.meta.env`, but NOT bare side-effect stylesheet imports. Declare those so a `.tsx`
 // component's `import './X.css'` / `import './X.scss'` type-checks (the value is unused —
-// the import is purely for its CSS side effect, bundled by webpack).
+// the import is purely for its CSS side effect, bundled by Vite).
 declare module '*.css';
 declare module '*.scss';
 

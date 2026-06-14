@@ -9,7 +9,7 @@ import { faDownload, faCircleInfo } from "@fortawesome/free-solid-svg-icons";
 
 library.add(faDownload, faCircleInfo);
 
-// The #root element is guaranteed by public/index.html (CRA's mount point).
+// The #root element is guaranteed by index.html (the Vite entry / mount point).
 const root = createRoot(document.getElementById('root') as HTMLElement);
 
 root.render(
