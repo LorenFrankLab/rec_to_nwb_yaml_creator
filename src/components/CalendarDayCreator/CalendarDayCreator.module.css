@@ -5,26 +5,26 @@
 /* Passed as the Modal content className: the overlay, box (background, border,
    radius, shadow, max-width, padding), and title come from the shared Modal
    primitive. Only the calendar's own column layout lives here. */
-.calendar-day-creator {
+.dayCreator {
   display: flex;
   flex-direction: column;
   gap: 1rem;
 }
 
 /* Header */
-.calendar-header {
+.header {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
 }
 
-.calendar-nav {
+.nav {
   display: flex;
   align-items: center;
   gap: 0.5rem;
 }
 
-.calendar-month-year {
+.monthYear {
   flex: 1;
   text-align: center;
   font-size: 1rem;
@@ -32,7 +32,7 @@
   color: var(--color-text-primary, #212121);
 }
 
-.btn-nav {
+.btnNav {
   padding: 0.375rem 0.75rem;
   font-size: 1rem;
   background-color: var(--color-white, #fff);
@@ -42,16 +42,16 @@
   transition: background-color 0.2s, border-color 0.2s;
 }
 
-.btn-nav:hover {
+.btnNav:hover {
   background-color: var(--color-gray-100, #f5f5f5);
   border-color: var(--color-gray-400, #bdbdbd);
 }
 
-.btn-nav:active {
+.btnNav:active {
   background-color: var(--color-gray-200, #eee);
 }
 
-.btn-today {
+.btnToday {
   padding: 0.375rem 0.75rem;
   font-size: 0.875rem;
   font-weight: 500;
@@ -63,26 +63,26 @@
   transition: background-color 0.2s, color 0.2s;
 }
 
-.btn-today:hover {
+.btnToday:hover {
   background-color: var(--color-primary, var(--color-primary));
   color: var(--color-white, #fff);
 }
 
 /* Grid */
-.calendar-grid {
+.grid {
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
 }
 
-.calendar-weekdays {
+.weekdays {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
   gap: 0.25rem;
   margin-bottom: 0.5rem;
 }
 
-.calendar-weekday {
+.weekday {
   padding: 0.5rem;
   text-align: center;
   font-size: 0.875rem;
@@ -90,7 +90,7 @@
   color: var(--color-grey-600, #666);
 }
 
-.calendar-days {
+.days {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
   gap: 0.25rem;
@@ -100,12 +100,12 @@
    `display: contents` lets the seven day cells participate directly in the parent 7-column grid
    (otherwise the six week wrappers become the grid items and each stacks its cells vertically).
    The role="row" semantics are retained in the accessibility tree. */
-.calendar-week {
+.week {
   display: contents;
 }
 
 /* Day Cell */
-.calendar-day {
+.day {
   position: relative;
   display: flex;
   align-items: center;
@@ -122,12 +122,12 @@
   transition: all 0.2s;
 }
 
-.calendar-day:hover:not(.calendar-day--disabled) {
+.day:hover:not(.dayDisabled) {
   background-color: var(--color-gray-100, #f5f5f5);
   border-color: var(--color-gray-400, #bdbdbd);
 }
 
-.calendar-day:focus {
+.day:focus {
   outline: 2px solid var(--color-primary, var(--color-primary));
   outline-offset: 2px;
 }
@@ -137,42 +137,42 @@
 /* Adjacent-month cells are still interactive (only existing days are disabled), so
    their day numbers must meet AA. grey-600 reads as dimmed yet stays >= 4.5:1 on the
    white and hover-grey cell backgrounds (was #bdbdbd at 1.88:1). */
-.calendar-day--other-month {
+.dayOtherMonth {
   color: var(--color-grey-600, #666);
 }
 
-.calendar-day--today {
+.dayToday {
   border: 2px solid var(--color-primary, var(--color-primary));
   font-weight: 600;
 }
 
-.calendar-day--selected {
+.daySelected {
   background-color: var(--color-primary, var(--color-primary));
   color: var(--color-white, #fff);
   border-color: var(--color-primary, var(--color-primary));
 }
 
-.calendar-day--selected:hover {
+.daySelected:hover {
   background-color: #1976d2;
   border-color: #1976d2;
 }
 
-.calendar-day--existing {
+.dayExisting {
   background-color: var(--color-success, #4caf50);
   color: var(--color-white, #fff);
   border-color: var(--color-success, #4caf50);
 }
 
-.calendar-day--disabled {
+.dayDisabled {
   cursor: not-allowed;
   opacity: 0.7;
 }
 
-.calendar-day-number {
+.dayNumber {
   font-size: 0.875rem;
 }
 
-.calendar-day-checkmark {
+.dayCheckmark {
   position: absolute;
   top: 2px;
   right: 2px;
@@ -180,7 +180,7 @@
 }
 
 /* Legend */
-.calendar-legend {
+.legend {
   display: flex;
   align-items: center;
   gap: 1rem;
@@ -189,25 +189,25 @@
   border-radius: 4px;
 }
 
-.legend-title {
+.legendTitle {
   font-size: 0.875rem;
   font-weight: 600;
   color: var(--color-grey-600, #666);
 }
 
-.legend-items {
+.legendItems {
   display: flex;
   flex-wrap: wrap;
   gap: 1rem;
 }
 
-.legend-item {
+.legendItem {
   display: flex;
   align-items: center;
   gap: 0.375rem;
 }
 
-.legend-indicator {
+.legendIndicator {
   width: 1.5rem;
   height: 1.5rem;
   border: 1px solid var(--color-border, #e0e0e0);
@@ -218,39 +218,39 @@
   font-size: 0.75rem;
 }
 
-.legend-indicator--available {
+.legendIndicatorAvailable {
   background-color: var(--color-white, #fff);
 }
 
-.legend-indicator--selected {
+.legendIndicatorSelected {
   background-color: var(--color-primary, var(--color-primary));
 }
 
-.legend-indicator--existing {
+.legendIndicatorExisting {
   background-color: var(--color-success, #4caf50);
   color: var(--color-white, #fff);
 }
 
-.legend-indicator--today {
+.legendIndicatorToday {
   border: 2px solid var(--color-primary, var(--color-primary));
   background-color: var(--color-white, #fff);
 }
 
-.legend-label {
+.legendLabel {
   font-size: 0.875rem;
   color: var(--color-grey-600, #666);
 }
 
 /* Actions */
-.calendar-actions {
+.actions {
   display: flex;
   gap: 0.5rem;
   justify-content: flex-end;
 }
 
-.btn-primary,
-.btn-secondary,
-.btn-close {
+.btnPrimary,
+.btnSecondary,
+.btnClose {
   padding: 0.5rem 1rem;
   font-size: 0.875rem;
   font-weight: 500;
@@ -260,64 +260,64 @@
   transition: background-color 0.2s, opacity 0.2s;
 }
 
-.btn-primary {
+.btnPrimary {
   color: var(--color-white, #fff);
   background-color: var(--color-primary, var(--color-primary));
 }
 
-.btn-primary:hover:not(:disabled) {
+.btnPrimary:hover:not(:disabled) {
   background-color: #1976d2;
 }
 
-.btn-primary:disabled {
+.btnPrimary:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
 
-.btn-secondary {
+.btnSecondary {
   color: var(--color-text-primary, #212121);
   background-color: var(--color-gray-100, #f5f5f5);
   border: 1px solid var(--color-border, #e0e0e0);
 }
 
-.btn-secondary:hover:not(:disabled) {
+.btnSecondary:hover:not(:disabled) {
   background-color: var(--color-gray-200, #eee);
 }
 
-.btn-secondary:disabled {
+.btnSecondary:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
 
-.btn-close {
+.btnClose {
   color: var(--color-grey-600, #666);
   background-color: transparent;
   border: 1px solid var(--color-border, #e0e0e0);
 }
 
-.btn-close:hover {
+.btnClose:hover {
   background-color: var(--color-gray-100, #f5f5f5);
 }
 
 /* Responsive */
 @media (max-width: 600px) {
-  .calendar-day-creator {
+  .dayCreator {
     padding: 1rem;
   }
 
-  .calendar-day {
+  .day {
     font-size: 0.75rem;
     padding: 0.25rem;
   }
 
-  .legend-items {
+  .legendItems {
     flex-direction: column;
     gap: 0.5rem;
   }
 }
 
 /* Inline error shown when day creation fails (replaces a blocking dialog). */
-.calendar-create-error {
+.createError {
   margin: 0.75rem 0;
   padding: 0.75rem 1rem;
   background-color: #ffebee;

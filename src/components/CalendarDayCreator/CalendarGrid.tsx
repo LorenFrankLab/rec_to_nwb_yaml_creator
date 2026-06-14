@@ -9,6 +9,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import type { KeyboardEvent as ReactKeyboardEvent } from 'react';
 import { CalendarDay } from './CalendarDay';
+import styles from './CalendarDayCreator.module.css';
 
 const WEEK_LENGTH = 7;
 
@@ -201,7 +202,7 @@ export function CalendarGrid({
     // role="grid" is a composite widget; the keydown handler drives its roving tabindex.
     // eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions
     <div
-      className="calendar-grid"
+      className={styles.grid}
       role="grid"
       aria-label={gridLabel}
       aria-multiselectable="true"
@@ -210,9 +211,9 @@ export function CalendarGrid({
       {/* Week day headers — in their own rowgroup so the grid's direct children are all
           row/rowgroup (a valid WAI-ARIA grid ownership chain). */}
       <div role="rowgroup">
-        <div className="calendar-weekdays" role="row">
+        <div className={styles.weekdays} role="row">
           {weekDays.map((day) => (
-            <div key={day} className="calendar-weekday" role="columnheader">
+            <div key={day} className={styles.weekday} role="columnheader">
               {day}
             </div>
           ))}
@@ -220,9 +221,9 @@ export function CalendarGrid({
       </div>
 
       {/* Date cells — a rowgroup of one role="row" per week (chunks of seven). */}
-      <div className="calendar-days" role="rowgroup">
+      <div className={styles.days} role="rowgroup">
         {weeks.map((week) => (
-          <div key={week[0].date} className="calendar-week" role="row">
+          <div key={week[0].date} className={styles.week} role="row">
             {week.map(({ date, isCurrentMonth }) => {
               const isActive = date === activeDate;
               return (

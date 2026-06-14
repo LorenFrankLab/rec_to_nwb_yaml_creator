@@ -4,6 +4,8 @@
  * Displays current month/year and provides navigation controls.
  */
 
+import styles from './CalendarDayCreator.module.css';
+
 /**
  * Get month name from 0-indexed month number (0 = January).
  */
@@ -34,12 +36,12 @@ export function CalendarHeader({ currentMonth, onPreviousMonth, onNextMonth, onT
   const monthName = getMonthName(month);
 
   return (
-    <div className="calendar-header">
-      <div className="calendar-nav">
+    <div className={styles.header}>
+      <div className={styles.nav}>
         <button
           type="button"
           onClick={onPreviousMonth}
-          className="btn-nav"
+          className={styles.btnNav}
           aria-label="Previous month"
         >
           ◀
@@ -47,14 +49,14 @@ export function CalendarHeader({ currentMonth, onPreviousMonth, onNextMonth, onT
 
         {/* aria-live so a screen-reader user hears the new month when navigating prev/next/today
             (the displayed month otherwise changes silently). */}
-        <div className="calendar-month-year" aria-live="polite" aria-atomic="true">
+        <div className={styles.monthYear} aria-live="polite" aria-atomic="true">
           {monthName} {year}
         </div>
 
         <button
           type="button"
           onClick={onNextMonth}
-          className="btn-nav"
+          className={styles.btnNav}
           aria-label="Next month"
         >
           ▶
@@ -63,7 +65,7 @@ export function CalendarHeader({ currentMonth, onPreviousMonth, onNextMonth, onT
         <button
           type="button"
           onClick={onToday}
-          className="btn-today"
+          className={styles.btnToday}
         >
           Today
         </button>
