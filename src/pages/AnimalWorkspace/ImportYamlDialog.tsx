@@ -108,6 +108,43 @@ export default function ImportYamlDialog({ onClose }: ImportYamlDialogProps) {
 
   const unimportable = [...parseFailures, ...(plan?.unimportable ?? [])];
 
+  // The action row lives in Modal's sticky footer and changes per phase, so the
+  // (potentially long) preview list scrolls while the confirm/cancel stay reachable.
+  let footer;
+  if (phase === 'pick') {
+    footer = (
+      <div className="import-actions">
+        <button type="button" className="btn-secondary" onClick={onClose}>
+          Cancel
+        </button>
+      </div>
+    );
+  } else if (phase === 'preview' && plan) {
+    footer = (
+      <div className="import-actions">
+        <button type="button" className="btn-secondary" onClick={onClose}>
+          Cancel
+        </button>
+        <button
+          type="button"
+          className="btn-primary"
+          onClick={handleConfirm}
+          disabled={plan.animals.length === 0}
+        >
+          Confirm import
+        </button>
+      </div>
+    );
+  } else if (phase === 'result' && result) {
+    footer = (
+      <div className="import-actions">
+        <button type="button" className="btn-primary" onClick={onClose}>
+          Done
+        </button>
+      </div>
+    );
+  }
+
   return (
     <Modal
       isOpen
@@ -116,6 +153,7 @@ export default function ImportYamlDialog({ onClose }: ImportYamlDialogProps) {
       titleId={titleId}
       className="import-yaml-dialog"
       closeOnOverlayClick={false}
+      footer={footer}
     >
       {phase === 'pick' && (
         <PickPhase
@@ -124,7 +162,6 @@ export default function ImportYamlDialog({ onClose }: ImportYamlDialogProps) {
           setIsDragging={setIsDragging}
           onInputChange={onInputChange}
           onDrop={onDrop}
-          onCancel={onClose}
         />
       )}
 
@@ -135,14 +172,10 @@ export default function ImportYamlDialog({ onClose }: ImportYamlDialogProps) {
           parseFailureCount={parseFailures.length}
           resolutions={resolutions}
           setResolution={setResolution}
-          onConfirm={handleConfirm}
-          onCancel={onClose}
         />
       )}
 
-      {phase === 'result' && result && (
-        <ResultPhase result={result} onClose={onClose} />
-      )}
+      {phase === 'result' && result && <ResultPhase result={result} />}
     </Modal>
   );
 }
@@ -195,14 +228,12 @@ interface PickPhaseProps {
   onInputChange: (e: ChangeEvent<HTMLInputElement>) => void;
   /** Drop handler. */
   onDrop: (e: ReactDragEvent<HTMLDivElement>) => void;
-  /** Cancel / close handler. */
-  onCancel: () => void;
 }
 
 /**
  * PICK phase: the multi-file input + drop zone.
  */
-function PickPhase({ inputRef, isDragging, setIsDragging, onInputChange, onDrop, onCancel }: PickPhaseProps) {
+function PickPhase({ inputRef, isDragging, setIsDragging, onInputChange, onDrop }: PickPhaseProps) {
   return (
     <div className="import-pick">
       <p id="import-pick-help">
@@ -247,12 +278,6 @@ function PickPhase({ inputRef, isDragging, setIsDragging, onInputChange, onDrop,
           onChange={onInputChange}
         />
       </div>
-
-      <div className="import-actions">
-        <button type="button" className="btn-secondary" onClick={onCancel}>
-          Cancel
-        </button>
-      </div>
     </div>
   );
 }
@@ -268,14 +293,11 @@ interface PreviewPhaseProps {
   resolutions: Record<string, string>;
   /** Set a conflict animal's resolution. */
   setResolution: (subjectId: string, value: string) => void;
-  /** Apply the plan. */
-  onConfirm: () => void;
-  /** Cancel / close. */
-  onCancel: () => void;
 }
 
 /**
- * PREVIEW phase: summary, per-animal cards, un-importable list, Confirm/Cancel.
+ * PREVIEW phase: summary, per-animal cards, un-importable list. The Confirm/Cancel
+ * action row is rendered by the parent into Modal's sticky footer.
  */
 function PreviewPhase({
   plan,
@@ -283,8 +305,6 @@ function PreviewPhase({
   parseFailureCount,
   resolutions,
   setResolution,
-  onConfirm,
-  onCancel,
 }: PreviewPhaseProps) {
   const { summary } = plan;
   const unimportableCount = unimportable.length;
@@ -330,20 +350,6 @@ function PreviewPhase({
           </ul>
         </section>
       )}
-
-      <div className="import-actions">
-        <button type="button" className="btn-secondary" onClick={onCancel}>
-          Cancel
-        </button>
-        <button
-          type="button"
-          className="btn-primary"
-          onClick={onConfirm}
-          disabled={plan.animals.length === 0}
-        >
-          Confirm import
-        </button>
-      </div>
     </section>
   );
 }
@@ -472,14 +478,13 @@ export function groupCreatedDaysByAnimal(createdAnimals: string[] = [], createdD
 interface ResultPhaseProps {
   /** The applyImportPlan summary. */
   result: ReturnType<typeof applyImportPlan>;
-  /** Close the dialog. */
-  onClose: () => void;
 }
 
 /**
- * RESULT phase: a brief summary of what was written, plus any failures.
+ * RESULT phase: a brief summary of what was written, plus any failures. The Done
+ * action is rendered by the parent into Modal's sticky footer.
  */
-function ResultPhase({ result, onClose }: ResultPhaseProps) {
+function ResultPhase({ result }: ResultPhaseProps) {
   const { createdAnimals, createdDays, skipped, failed } = result;
   // What the result object EXPOSES: `createdAnimals` is the list of created animal subject ids,
   // and `createdDays` is the list of created day ids, each formatted by `generateDayId` as
@@ -524,12 +529,6 @@ function ResultPhase({ result, onClose }: ResultPhaseProps) {
           </ul>
         </section>
       )}
-
-      <div className="import-actions">
-        <button type="button" className="btn-primary" onClick={onClose}>
-          Done
-        </button>
-      </div>
     </section>
   );
 }
