@@ -24,7 +24,7 @@ import { parseImportFiles } from '../../features/importYaml';
 import { planImport } from '../../state/yamlImportPlan';
 import type { ImportPlan, ImportPlanAnimal } from '../../state/yamlImportPlan';
 import { applyImportPlan } from '../../state/yamlImportApply';
-import './ImportYamlDialog.css';
+import styles from './ImportYamlDialog.module.css';
 
 /** A file that could not be parsed/imported (parse-failure or plan-unimportable entry). */
 interface UnimportableEntry {
@@ -113,7 +113,7 @@ export default function ImportYamlDialog({ onClose }: ImportYamlDialogProps) {
   let footer;
   if (phase === 'pick') {
     footer = (
-      <div className="import-actions">
+      <div className={styles.actions}>
         <button type="button" className="btn-secondary" onClick={onClose}>
           Cancel
         </button>
@@ -121,7 +121,7 @@ export default function ImportYamlDialog({ onClose }: ImportYamlDialogProps) {
     );
   } else if (phase === 'preview' && plan) {
     footer = (
-      <div className="import-actions">
+      <div className={styles.actions}>
         <button type="button" className="btn-secondary" onClick={onClose}>
           Cancel
         </button>
@@ -137,7 +137,7 @@ export default function ImportYamlDialog({ onClose }: ImportYamlDialogProps) {
     );
   } else if (phase === 'result' && result) {
     footer = (
-      <div className="import-actions">
+      <div className={styles.actions}>
         <button type="button" className="btn-primary" onClick={onClose}>
           Done
         </button>
@@ -151,7 +151,7 @@ export default function ImportYamlDialog({ onClose }: ImportYamlDialogProps) {
       onClose={onClose}
       title="Import YAML files"
       titleId={titleId}
-      className="import-yaml-dialog"
+      className={styles.dialog}
       closeOnOverlayClick={false}
       footer={footer}
     >
@@ -235,7 +235,7 @@ interface PickPhaseProps {
  */
 function PickPhase({ inputRef, isDragging, setIsDragging, onInputChange, onDrop }: PickPhaseProps) {
   return (
-    <div className="import-pick">
+    <div className={styles.pick}>
       <p id="import-pick-help">
         Bring existing <code>{'{mmddYYYY}_{subject}_metadata.yml'}</code> files into the workspace.
         Each file becomes a recording day; days are grouped into animals by subject id, and config
@@ -244,7 +244,7 @@ function PickPhase({ inputRef, isDragging, setIsDragging, onInputChange, onDrop 
       </p>
 
       <div
-        className={`import-drop-zone${isDragging ? ' is-dragging' : ''}`}
+        className={`${styles.dropZone}${isDragging ? ` ${styles.isDragging}` : ''}`}
         role="button"
         tabIndex={0}
         aria-label="Drop YAML files here, or use the file picker below"
@@ -263,14 +263,14 @@ function PickPhase({ inputRef, isDragging, setIsDragging, onInputChange, onDrop 
         onDrop={onDrop}
       >
         <p>Drag and drop YAML files here</p>
-        <p className="import-drop-or">or</p>
-        <label className="import-file-label" htmlFor="import-file-input">
+        <p className={styles.dropOr}>or</p>
+        <label className={styles.fileLabel} htmlFor="import-file-input">
           Choose YAML files
         </label>
         <input
           id="import-file-input"
           ref={inputRef}
-          className="import-file-input"
+          className={styles.fileInput}
           type="file"
           multiple
           accept=".yml,.yaml"
@@ -312,8 +312,8 @@ function PreviewPhase({
   // plan.unimportable); parse failures are NOT among them — so total picked = fileCount + parseFailures.
   const totalFiles = summary.fileCount + parseFailureCount;
   return (
-    <section className="import-preview" aria-label="Import preview">
-      <p className="import-summary">
+    <section aria-label="Import preview">
+      <p className={styles.summary}>
         {totalFiles} file
         {totalFiles === 1 ? '' : 's'} → {summary.animalCount} animal
         {summary.animalCount === 1 ? '' : 's'}, {summary.dayCount} recording day
@@ -324,7 +324,7 @@ function PreviewPhase({
         .
       </p>
 
-      <div className="import-animal-cards">
+      <div className={styles.animalCards}>
         {plan.animals.map((animalPlan) => (
           <AnimalCard
             key={animalPlan.subjectId}
@@ -336,15 +336,15 @@ function PreviewPhase({
       </div>
 
       {unimportable.length > 0 && (
-        <section className="import-unimportable" aria-label="Files that could not be imported">
+        <section className={styles.unimportable} aria-label="Files that could not be imported">
           <h3>Files that could not be imported</h3>
           <ul>
             {unimportable.map((entry, i) => (
               <li key={`${entry.sourceName}-${i}`}>
-                <span className="import-unimportable-name">{entry.sourceName}</span>
-                <span className="import-unimportable-reason">{entry.reason}</span>
+                <span className={styles.unimportableName}>{entry.sourceName}</span>
+                <span className={styles.unimportableReason}>{entry.reason}</span>
                 {/* Presentation-only "what to fix", derived from the raw reason string above. */}
-                <span className="import-unimportable-hint">{remediationHint(entry.reason)}</span>
+                <span className={styles.unimportableHint}>{remediationHint(entry.reason)}</span>
               </li>
             ))}
           </ul>
@@ -371,15 +371,15 @@ function AnimalCard({ animalPlan, resolution, setResolution }: AnimalCardProps) 
   const dayCount = animalPlan.days.length;
   const versionCount = animalPlan.configVersions.length;
   return (
-    <div className="import-animal-card" role="group" aria-label={`Animal ${animalPlan.subjectId}`}>
-      <h3 className="import-animal-name">{animalPlan.subjectId}</h3>
-      <p className="import-animal-meta">
+    <div className={styles.animalCard} role="group" aria-label={`Animal ${animalPlan.subjectId}`}>
+      <h3 className={styles.animalName}>{animalPlan.subjectId}</h3>
+      <p className={styles.animalMeta}>
         {dayCount} recording day{dayCount === 1 ? '' : 's'} ·{' '}
         {versionCount} hardware configuration{versionCount === 1 ? '' : 's'}
       </p>
 
       {versionCount > 0 && (
-        <ul className="import-config-versions">
+        <ul className={styles.configVersions}>
           {animalPlan.configVersions.map((cv) => (
             <li key={cv.version}>
               Configuration {cv.version} (from {cv.date})
@@ -389,7 +389,7 @@ function AnimalCard({ animalPlan, resolution, setResolution }: AnimalCardProps) 
       )}
 
       {animalPlan.divergences.length > 0 && (
-        <ul className="import-divergences">
+        <ul className={styles.divergences}>
           {animalPlan.divergences.map((d, i) => (
             <li key={`${d.field}-${i}`} role="alert">
               <strong>{d.field}:</strong> {d.detail}
@@ -399,7 +399,7 @@ function AnimalCard({ animalPlan, resolution, setResolution }: AnimalCardProps) 
       )}
 
       {animalPlan.conflict === 'exists' && (
-        <fieldset className="import-resolution" role="alert">
+        <fieldset className={styles.resolution} role="alert">
           <legend>
             An animal named “{animalPlan.subjectId}” already exists in the workspace. Choose how to
             import these files:
@@ -409,7 +409,7 @@ function AnimalCard({ animalPlan, resolution, setResolution }: AnimalCardProps) 
             { value: 'skip', label: 'Skip (import nothing for this animal)' },
             { value: 'replace', label: 'Replace existing animal' },
           ].map((opt) => (
-            <label key={opt.value} className="import-resolution-option">
+            <label key={opt.value} className={styles.resolutionOption}>
               <input
                 type="radio"
                 name={`resolution-${animalPlan.subjectId}`}
@@ -494,7 +494,7 @@ function ResultPhase({ result }: ResultPhaseProps) {
   // still in `createdDays`; we surface any such animal id too so no created day is unnamed.)
   const createdByAnimal = groupCreatedDaysByAnimal(createdAnimals, createdDays);
   return (
-    <section className="import-result" aria-label="Import result">
+    <section aria-label="Import result">
       <p>
         Imported {createdAnimals.length} animal{createdAnimals.length === 1 ? '' : 's'} and{' '}
         {createdDays.length} recording day{createdDays.length === 1 ? '' : 's'}.
@@ -502,14 +502,14 @@ function ResultPhase({ result }: ResultPhaseProps) {
       </p>
 
       {createdByAnimal.length > 0 && (
-        <ul className="import-result-created">
+        <ul className={styles.resultCreated}>
           {createdByAnimal.map(({ animalId, dates }) => (
             <li key={animalId}>
-              <span className="import-result-animal">{animalId}</span>
+              <span className={styles.resultAnimal}>{animalId}</span>
               {dates.length > 0 && (
                 <>
                   {' — '}
-                  <span className="import-result-dates">{dates.join(', ')}</span>
+                  <span className={styles.resultDates}>{dates.join(', ')}</span>
                 </>
               )}
             </li>
