@@ -75,10 +75,31 @@ header, so it now carries its own styling); unstyled decorative classes dropped.
 (shared UI primitives):** Modal, Button (+ friction D), OverflowMenu, banners, SaveIndicator all on CSS
 Modules.
 
-**Next:** Phase 3 app-shell/nav (`AnimalSwitcher` + AppLayout app-bar/primary-nav/section-nav — the
-section-nav styles currently live in AnimalView.css) → Phase 4 page areas → Phase 1 globals
-(focus-ring/max-width/links) → Phase 5 stylelint ratchet (tokenize the modules' verbatim values + z-index
-scale, then ratchet `*.module.*` to error).
+**Phase 3 (app shell / navigation) — COMPLETE** (merge `f3b1db5`; branch `css-phase3-app-shell-nav` kept).
+Three colocated CSS Modules, one branch / three commits / one gate:
+- **AnimalSwitcher** (`a892354`): `AnimalSwitcher.css` → `AnimalSwitcher.module.css` (self-contained; the
+  unstyled `animal-switcher-current` marker dropped).
+- **AnimalView section-nav** (`0119dd4`): the grouped LEFT nav extracted from the global `AnimalView.css`
+  into a colocated `SectionNav.module.css`. Verified-safe because the Day Editor stepper mirrors the
+  `section-nav-*` class NAMES but ships its own self-contained rules scoped under `.day-editor-body`
+  (DayEditor.scss) and renders literal classes — every `.section-nav*` integration test queries the Day
+  Editor, so hashing the AnimalView-only names left them green. The `.animal-view-body` grid + the rest of
+  AnimalView.css stay global for the Phase 4 page-area pass.
+- **AppLayout app-shell** (`8d46e9f`): app-bar / primary-nav / load-notice moved from the global `index.css`
+  into a colocated `AppLayout.module.css`. **Frozen-App.scss cross-file contract preserved:** the nav keeps
+  its literal `primary-nav` hook class alongside scoped `styles.primaryNav` so the App.scss
+  `body:has(.primary-nav) .home-region` banner rule still matches; `.home-region` (App.scss) and
+  `.shortcuts-trigger` (ShortcutsHelp.scss) stay literal global and are targeted from the bar via
+  `:global(...)` (verified in the bundle as `._appBar_… .home-region{margin:0}`); `skip-link` /
+  `visually-hidden` also stay global. index.css now holds only `:root` tokens + the sr-only utility.
+
+Gate: typecheck clean, lint:ci exit 0, vite build OK, 4790 vitest pass, Playwright spot-check visually
+identical on all three surfaces (workspace app-bar, animal-view section-nav + AnimalSwitcher trigger/popup).
+NOTE: extracting app-shell ownership necessarily made a *subtractive* edit to index.css (removing the
+component rules); Phase 1 still owns the *additive* globals lockdown (tokens/reset/base-type/focus/max-width).
+
+**Next:** Phase 1 globals (focus-ring/max-width/links) → Phase 4 page areas → Phase 5 stylelint ratchet
+(tokenize the modules' verbatim values + z-index scale, then ratchet `*.module.*` to error).
 
 ## Phased order
 Each phase: migrate the component's styles into a colocated `*.module.css`, reference via
