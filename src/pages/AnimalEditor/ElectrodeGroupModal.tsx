@@ -158,8 +158,36 @@ function ElectrodeGroupForm({ mode, group = null, knownRegions = [], onSave, onC
   };
 
   return (
-    <form className="electrode-group-modal-form">
-      {/* Device Type (single source: valueList deviceTypes()) */}
+    <Modal
+      isOpen
+      onClose={onCancel}
+      title={mode === 'edit' ? 'Edit Electrode Group' : 'Add Electrode Group'}
+      titleId="electrode-group-modal-title"
+      className="electrode-group-modal-content"
+      footer={
+        <div className="form-actions">
+          <button
+            type="button"
+            className="btn-cancel"
+            onClick={onCancel}
+            aria-label="Cancel and close modal"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            className="btn-save"
+            onClick={handleSave}
+            disabled={!isFormValid()}
+            aria-label="Save electrode group configuration"
+          >
+            Save
+          </button>
+        </div>
+      }
+    >
+      <form className="electrode-group-modal-form">
+        {/* Device Type (single source: valueList deviceTypes()) */}
       <div className="form-group">
         <label htmlFor="device_type">
           Device Type <span className="required">*</span>
@@ -329,27 +357,8 @@ function ElectrodeGroupForm({ mode, group = null, knownRegions = [], onSave, onC
         </p>
       )}
 
-      {/* Buttons */}
-      <div className="form-actions">
-        <button
-          type="button"
-          className="btn-cancel"
-          onClick={onCancel}
-          aria-label="Cancel and close modal"
-        >
-          Cancel
-        </button>
-        <button
-          type="button"
-          className="btn-save"
-          onClick={handleSave}
-          disabled={!isFormValid()}
-          aria-label="Save electrode group configuration"
-        >
-          Save
-        </button>
-      </div>
-    </form>
+      </form>
+    </Modal>
   );
 }
 
@@ -371,18 +380,14 @@ interface ElectrodeGroupModalProps {
 /**
  * ElectrodeGroupModal - Add/edit an electrode group. Dialog accessibility (focus
  * trap, focus return, ESC/overlay close, scroll lock) is provided by the shared
- * Modal primitive.
+ * Modal primitive, which ElectrodeGroupForm renders directly so the Save/Cancel
+ * actions ride in the sticky footer (reachable without scrolling a tall form)
+ * while sharing the form's state. The form mounts only while open, so its state
+ * initializes fresh on each open.
  */
-const ElectrodeGroupModal = ({ isOpen, mode = 'add', group = null, knownRegions = [], onSave, onCancel }: ElectrodeGroupModalProps) => (
-  <Modal
-    isOpen={isOpen}
-    onClose={onCancel}
-    title={mode === 'edit' ? 'Edit Electrode Group' : 'Add Electrode Group'}
-    titleId="electrode-group-modal-title"
-    className="electrode-group-modal-content"
-  >
+const ElectrodeGroupModal = ({ isOpen, mode = 'add', group = null, knownRegions = [], onSave, onCancel }: ElectrodeGroupModalProps) =>
+  isOpen ? (
     <ElectrodeGroupForm mode={mode} group={group} knownRegions={knownRegions} onSave={onSave} onCancel={onCancel} />
-  </Modal>
-);
+  ) : null;
 
 export default ElectrodeGroupModal;
