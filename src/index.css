@@ -19,6 +19,37 @@ body {
   border: 0;
 }
 
+/* ===== App-level base globals (Phase 1 — globals lockdown) ===== */
+
+/* Friction G — base link colour. The frozen App.scss `a {}` sets `text-decoration`/`margin` but no
+   colour, so otherwise-unstyled links (e.g. the footer) fall back to the browser-default bright
+   blue. Give them the brand colour from the token; component links (primary-nav, section-nav, …)
+   carry their own class-based colours at higher specificity, so this only affects bare links. */
+a {
+  color: var(--color-primary);
+}
+
+/* Friction A/B — focus-ring discipline. The page `<main id="main-content">` is `tabindex="-1"` and
+   is focused PROGRAMMATICALLY on every route change (so screen readers announce the new view). The
+   browser then drew its default outline as a jarring full-page blue box — and inconsistently so
+   (blue on days/validation vs the AnimalView panel's teal), which is friction B. `main` is never in
+   the Tab order, so it is only ever focused programmatically; suppress its focus box unconditionally
+   (`:not(:focus-visible)` can't gate this — Chromium treats the script-focus as focus-visible). The
+   legacy form uses a `<div>` (not `<main>`), and interactive controls + the AnimalView panel keep
+   their own `:focus-visible` rings. */
+main#main-content:focus {
+  outline: none;
+}
+
+/* Friction C — cap + centre the modern page content (it was edge-to-edge). Modern views render a
+   `<main id="main-content">`; the legacy form uses a `<div id="main-content">`, so it is untouched.
+   The Day Editor's main already manages its own width (`.day-editor-content`, 1200px), so it is
+   excluded. The app-bar and footer stay full-width by design. */
+main#main-content:not(.day-editor-content) {
+  max-width: 1280px;
+  margin-inline: auto;
+}
+
 /* The workspace app-shell chrome (app-bar / primary-nav / load-notice) now lives in the colocated
    src/layouts/AppLayout.module.css (Phase 3 — app shell / navigation). The nav keeps a literal
    `primary-nav` hook class so the frozen App.scss `body:has(.primary-nav) .home-region` banner rule
