@@ -87,7 +87,7 @@ describe('AnimalView — save indicator in the header', () => {
   it('shows "Saving…" in the header while a debounced write is in flight', () => {
     mockPersistence.hasPendingWrite = true;
     renderView();
-    const header = document.querySelector('.animal-view-header');
+    const header = document.querySelector('[data-testid="animal-view-header"]');
     expect(header).not.toBeNull();
     expect(within(header).getByText(/saving…/i)).toBeInTheDocument();
   });
@@ -95,7 +95,7 @@ describe('AnimalView — save indicator in the header', () => {
   it('shows the confirmed "Saved" cue in the header after a write lands', () => {
     mockPersistence.lastSaved = new Date().toISOString();
     renderView();
-    const header = document.querySelector('.animal-view-header');
+    const header = document.querySelector('[data-testid="animal-view-header"]');
     expect(within(header).getByText(/saved/i)).toBeInTheDocument();
   });
 
@@ -108,7 +108,7 @@ describe('AnimalView — save indicator in the header', () => {
   it('renders the indicator in the header band regardless of which tab is active', () => {
     mockPersistence.hasPendingWrite = true;
     renderView('another-tab');
-    const header = document.querySelector('.animal-view-header');
+    const header = document.querySelector('[data-testid="animal-view-header"]');
     expect(within(header).getByText(/saving…/i)).toBeInTheDocument();
   });
 });
