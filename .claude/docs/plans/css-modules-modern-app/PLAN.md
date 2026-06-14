@@ -132,8 +132,28 @@ typecheck clean, lint:ci exit 0, vite build OK, 4790 vitest.
   two unstyled marker classes `import-preview`/`import-result` dropped (aria-labels retained). Recon
   CONFIRMED-SAFE held: no cross-file or test references to `import-*`. Verified the class map 1:1 (every
   `styles.X` resolves to a module rule) + Playwright PICK-phase visual identical.
-- **REMAINING Phase 4 (next session):** Home, AnimalWorkspace, setup tables (E), DayEditor Breadcrumb +
-  IssueOwnershipHint, ValidationSummary (H), CalendarDayCreator.
+- **DONE — Breadcrumb + IssueOwnershipHint** (merge `0b6c169`; branch `css-phase4-breadcrumb-ownership`
+  kept; commits `a2f1782`, `dea9c9d`). Both verified cleanly self-contained (distinctive `breadcrumb-*` /
+  `issue-ownership-*` prefixes; OverviewStep only renders `<Breadcrumb>`). Two test class-assertions
+  decoupled: `.breadcrumb-separator` → a `data-testid` on the aria-hidden separator; `.issue-ownership-hint`
+  → the `[data-ownership-pattern]` attribute the test already asserts. Playwright spot-check of the day
+  editor breadcrumb + validation ownership pills visually identical.
+- **DONE — CalendarDayCreator** (merge `b25ea67`; branch `css-phase4-calendar` kept; commit `f7b52d9`).
+  5-file component (CalendarDayCreator/Header/Grid/Day/Legend) → one colocated module imported by all
+  five. `calendar-*`/`legend-*`/`btn-nav|today|close` are owned-only; the calendar's own
+  `btn-primary`/`btn-secondary` were a GLOBAL name-collision with AnimalWorkspace.css + Home.css —
+  scoping them to the module is strictly beneficial. 1:1 class bijection (34=34). getComputedStyle
+  confirmed `daySelected` = `#1565c0` (the earlier "gray" was the `:hover` override, identical cascade
+  to the original). NB the recon's "self-contained" guess for Home was WRONG (see below).
+- **Phase 4 grouping correction:** the four "looked self-contained" files were NOT uniform — Breadcrumb +
+  IssueOwnershipHint are clean (done together); CalendarDayCreator is a 5-file component (own cycle); and
+  **Home.css is genuinely entangled** (it redefines shared `btn-primary`/`btn-secondary` and uses the
+  shared-name `form-actions` [15+ modal consumers], `list-item` [element components + frozen App.scss],
+  `validation-summary` [the workspace ValidationSummary is embedded in Home's form, deliberately scoped
+  under `.animal-creation-form`], `validation-warning` [BadChannels/DayEditor]). Home gets its own cycle
+  with `:global()` for those shared names.
+- **REMAINING Phase 4:** Home (entangled — `:global` shared names), AnimalWorkspace, setup tables (E),
+  ValidationSummary (H).
 
 **Recon map for the remaining files (read before migrating — these are the section-nav-style hazards).**
 Classes that MUST stay GLOBAL (literal, shared across files / JS-applied / queried by tests — do NOT hash;
