@@ -234,65 +234,25 @@
   }
 }
 
-/* ===== Action Buttons in Table ===== */
+/* ===== Action Buttons in Table =====
+   Edit/Delete are the <Button> primitive (variant="neutral" / "dangerSubtle",
+   size="small"); the primitive owns color/border/padding/focus/disabled. This
+   rule only adds the table-cell layout the primitive can't: inter-button spacing
+   and the square 48px touch target. */
 
 .cameras-table tbody tr td button {
-  padding: 0.4rem 0.8rem;
-  border: none;
-  border-radius: 4px;
-  font-size: var(--font-size-sm);
-  font-weight: 500;
-  cursor: pointer;
-  transition: all var(--transition-fast);
-  font-family: inherit;
   margin-right: var(--spacing-xs);
   min-height: 48px; // WCAG AA touch target
   min-width: 48px;
-
-  &:focus {
-    outline: 2px solid var(--color-primary);
-    outline-offset: 2px;
-  }
-
-  &:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
 
   &:last-child {
     margin-right: 0;
   }
 }
 
-.button-small {
-  background-color: var(--color-grey-100);
-  color: var(--color-grey-900);
-  border: 1px solid var(--color-grey-300);
-
-  &:hover:not(:disabled) {
-    background-color: var(--color-grey-200);
-    border-color: var(--color-grey-600);
-  }
-
-  &:active:not(:disabled) {
-    background-color: var(--color-grey-300);
-  }
-}
-
-.button-danger {
-  background-color: var(--color-error);
-  color: var(--color-white);
-  border: 1px solid #b71c1c;
-
-  &:hover:not(:disabled) {
-    background-color: #b71c1c;
-    box-shadow: 0 2px 4px rgb(211 47 47 / 20%);
-  }
-
-  &:active:not(:disabled) {
-    background-color: #7f0000;
-  }
-}
+/* (Edit/Delete colors are now the <Button> primitive's `neutral` / `dangerSubtle`
+   variants — the legacy `.button-small` / `.button-danger` color rules were removed
+   with the migration to the primitive.) */
 
 /* ===== Status Badges ===== */
 
@@ -430,7 +390,7 @@
     }
   }
 
-  .button-small {
+  .cameras-table tbody tr td button {
     padding: 0.3rem 0.6rem;
     font-size: 0.8rem;
   }
@@ -594,8 +554,7 @@
     display: none;
   }
 
-  .button-small,
-  .button-danger {
+  .cameras-table tbody tr td button {
     display: none;
   }
 

@@ -195,20 +195,22 @@ export default function CamerasSection({ animal, onFieldUpdate, onEdit, onAdd, o
                 })()}
               </td>
               <td data-label="Actions">
-                <button
-                  className="button-small"
+                <Button
+                  variant="neutral"
+                  size="small"
                   onClick={() => handleEditClick(camera.id)}
                   aria-label={`Edit camera ${camera.id}`}
                 >
                   Edit
-                </button>
-                <button
-                  className="button-small button-danger"
+                </Button>
+                <Button
+                  variant="dangerSubtle"
+                  size="small"
                   onClick={() => handleDeleteClick(camera)}
                   aria-label={`Delete camera ${camera.id}`}
                 >
                   Delete
-                </button>
+                </Button>
               </td>
             </tr>
           ))}

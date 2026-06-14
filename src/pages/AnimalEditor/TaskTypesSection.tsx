@@ -138,20 +138,22 @@ export default function TaskTypesSection({ animal, onFieldUpdate, onAdd, onEdit,
                     </span>
                   </td>
                   <td data-label="Actions">
-                    <button
-                      className="button-small"
+                    <Button
+                      variant="neutral"
+                      size="small"
                       onClick={() => onEdit?.(type?.id)}
                       aria-label={`Edit task type ${type?.task_name || ''}`}
                     >
                       Edit
-                    </button>
-                    <button
-                      className="button-small button-danger"
+                    </Button>
+                    <Button
+                      variant="dangerSubtle"
+                      size="small"
                       onClick={() => onDelete?.(type)}
                       aria-label={`Delete task type ${type?.task_name || ''}`}
                     >
                       Delete
-                    </button>
+                    </Button>
                   </td>
                 </tr>
               );

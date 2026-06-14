@@ -1,4 +1,5 @@
 import { useId } from 'react';
+import Button from '../../components/ui/Button';
 import type { Camera, Task } from '../../state/workspaceTypes';
 import './AssociatedVideosEditor.scss';
 
@@ -195,14 +196,14 @@ export default function AssociatedVideosEditor({ videos = [], cameras = [], task
                   )}
                 </div>
 
-                <button
-                  type="button"
-                  className="button-small button-danger"
+                <Button
+                  variant="dangerSubtle"
+                  size="small"
                   onClick={() => removeRow(index)}
                   aria-label={`Remove video ${label}`}
                 >
                   Remove
-                </button>
+                </Button>
 
                 {(cameraStale || epochStale) && (
                   <div id={staleId} className="inline-error" role="alert">

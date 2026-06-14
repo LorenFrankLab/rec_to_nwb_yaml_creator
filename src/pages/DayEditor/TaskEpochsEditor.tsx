@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useId } from 'react';
+import Button from '../../components/ui/Button';
 import './TaskEpochsEditor.scss';
 
 /** Editor-local row: epoch number plus optional start/end times (times are not persisted). */
@@ -191,14 +192,14 @@ export default function TaskEpochsEditor({ initialEpochs = [], onChange }: TaskE
                     aria-invalid={reversed}
                     aria-describedby={reversed ? errorId : undefined}
                   />
-                  <button
-                    type="button"
-                    className="button-small button-danger"
+                  <Button
+                    variant="dangerSubtle"
+                    size="small"
                     onClick={() => removeRow(index)}
                     aria-label={`Remove epoch row ${index + 1}`}
                   >
                     Remove
-                  </button>
+                  </Button>
                 </div>
                 {reversed && (
                   <div id={errorId} className="inline-error" role="alert">

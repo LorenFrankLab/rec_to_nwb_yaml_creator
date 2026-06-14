@@ -1,4 +1,5 @@
 import { useId } from 'react';
+import Button from '../../components/ui/Button';
 import type { Task } from '../../state/workspaceTypes';
 import './AssociatedFilesEditor.scss';
 
@@ -186,14 +187,14 @@ export default function AssociatedFilesEditor({ files = [], tasks = [], onChange
                   )}
                 </div>
 
-                <button
-                  type="button"
-                  className="button-small button-danger"
+                <Button
+                  variant="dangerSubtle"
+                  size="small"
                   onClick={() => removeRow(index)}
                   aria-label={`Remove file ${label}`}
                 >
                   Remove
-                </button>
+                </Button>
 
                 {epochStale && (
                   <div id={staleId} className="inline-error" role="alert">

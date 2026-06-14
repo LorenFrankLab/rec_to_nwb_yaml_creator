@@ -68,3 +68,37 @@
 .danger:hover:not(:disabled) {
   filter: brightness(0.92);
 }
+
+/* Restrained destructive — red text on white with a neutral border, so a table full
+   of row-level Delete actions reads as quiet, not a wall of filled red. The filled
+   `.danger` stays for the one consequential confirm. (--color-error is 5.62:1 on white
+   and 4.92:1 on --color-error-light, so both rest and hover meet WCAG AA.) */
+.dangerSubtle {
+  color: var(--color-error);
+  background-color: var(--color-white);
+  border: 1px solid var(--color-grey-300);
+}
+
+.dangerSubtle:hover:not(:disabled) {
+  background-color: var(--color-error-light);
+  border-color: var(--color-error);
+}
+
+/* Quiet grey action (e.g. a table row's Edit) that pairs with `.dangerSubtle`. */
+.neutral {
+  color: var(--color-grey-900);
+  background-color: var(--color-grey-100);
+  border: 1px solid var(--color-grey-300);
+}
+
+.neutral:hover:not(:disabled) {
+  background-color: var(--color-grey-200);
+  border-color: var(--color-grey-600);
+}
+
+/* Compact size for dense table-row actions. Keeps the 44px min touch target
+   (WCAG 2.5.5) from the base rule; only the padding and type scale down. */
+.small {
+  padding: 0.4rem 0.8rem;
+  font-size: var(--font-size-sm);
+}

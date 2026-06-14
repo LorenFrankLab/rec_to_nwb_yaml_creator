@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { ConfirmDialog } from '../../components/Modal';
+import Button from '../../components/ui/Button';
 import { duplicateTaskEpochs } from '../../validation/taskEpochs';
 import type { Task, Camera } from '../../state/workspaceTypes';
 import './TasksTable.scss';
@@ -244,17 +245,17 @@ export default function TasksTable({
                   </span>
                 </td>
                 <td data-label="Actions">
-                  <button type="button" className="button-small" onClick={() => onEdit(index)}>
+                  <Button variant="neutral" size="small" onClick={() => onEdit(index)}>
                     Edit
-                  </button>
-                  <button
-                    type="button"
-                    className="button-small button-danger"
+                  </Button>
+                  <Button
+                    variant="dangerSubtle"
+                    size="small"
                     onClick={() => setPendingDeleteIndex(index)}
                     aria-label={`Delete task ${task.task_name || index + 1}`}
                   >
                     Delete
-                  </button>
+                  </Button>
                 </td>
               </tr>
             );

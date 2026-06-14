@@ -4,6 +4,7 @@ import type { IdentityDivergence, IdentityRegistryEntry } from './identitySafety
 import { getDataAcqDevices } from '../../state/workspaceSelectors';
 import type { Animal, TechnicalDefaults } from '../../state/workspaceTypes';
 import Modal from '../../components/Modal/Modal';
+import Button from '../../components/ui/Button';
 import './DataAcqSection.scss';
 
 /** The four string fields that define a recording-system catalog entry. */
@@ -384,26 +385,26 @@ export default function DataAcqSection({ animal, onFieldUpdate, dataAcqRegistry 
                   {index === 0 && <span className="recording-system-default-badge">Default</span>}
                 </td>
                 <td data-label="Actions">
-                  <button
-                    type="button"
-                    className="button-small"
+                  <Button
+                    variant="neutral"
+                    size="small"
                     onClick={() => openEdit(index)}
                     aria-label={`Edit recording system ${d.name}`}
                   >
                     Edit
-                  </button>
+                  </Button>
                   {/* Always present (consistent with the Electrode Groups / Cameras tabs), but
                       disabled for the last system — the schema requires at least one. */}
-                  <button
-                    type="button"
-                    className="button-small button-danger"
+                  <Button
+                    variant="dangerSubtle"
+                    size="small"
                     onClick={() => deleteAt(index)}
                     disabled={catalog.length <= 1}
                     title={catalog.length <= 1 ? 'The animal must have at least one recording system' : undefined}
                     aria-label={`Delete recording system ${d.name}`}
                   >
                     Delete
-                  </button>
+                  </Button>
                 </td>
               </tr>
             );

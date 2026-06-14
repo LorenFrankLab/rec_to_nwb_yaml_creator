@@ -67,18 +67,13 @@
     }
   }
 
+  /* Order/Edit/Remove are the <Button> primitive (neutral / dangerSubtle, small); it owns
+     color/border/padding/focus/disabled. This only adds the inter-button gap + touch target. */
   tbody tr td button {
-    padding: 0.4rem 0.7rem;
-    border-radius: 4px;
-    font-size: var(--font-size-sm);
-    cursor: pointer;
-    font-family: inherit;
     margin-right: var(--spacing-xs);
     min-height: 44px;
     min-width: 44px;
 
-    &:focus { outline: 2px solid var(--color-primary); outline-offset: 2px; }
-    &:disabled { opacity: 0.4; cursor: not-allowed; }
     &:last-child { margin-right: 0; }
   }
 
@@ -86,6 +81,8 @@
     display: inline-flex;
     gap: var(--spacing-xs);
 
+    /* The ↑/↓ reorder buttons stay compact (overrides the primitive's small padding
+       and the touch-target min-width above). */
     .order-button {
       min-width: 2.2rem;
       padding: 0.3rem 0.4rem;

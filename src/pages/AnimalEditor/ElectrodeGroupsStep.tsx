@@ -7,6 +7,7 @@ import {
 import type { ElectrodeGroup } from '../../state/workspaceTypes';
 import { animalElectrodeSetupNeedsSync } from '../../domain/workflowStatus';
 import { getChannelCount, getShankCount } from '../../utils/deviceTypeUtils';
+import Button from '../../components/ui/Button';
 import './ElectrodeGroupsStep.scss';
 
 /**
@@ -216,20 +217,22 @@ export default function ElectrodeGroupsStep({ animal, onFieldUpdate, onEdit, onA
                 })()}
               </td>
               <td data-label="Actions">
-                <button
-                  className="button-small"
+                <Button
+                  variant="neutral"
+                  size="small"
                   onClick={() => handleEditClick(group.id)}
                   aria-label={`Edit electrode group ${group.id}`}
                 >
                   Edit
-                </button>
-                <button
-                  className="button-small button-danger"
+                </Button>
+                <Button
+                  variant="dangerSubtle"
+                  size="small"
                   onClick={() => handleDeleteClick(group)}
                   aria-label={`Delete electrode group ${group.id}`}
                 >
                   Delete
-                </button>
+                </Button>
               </td>
             </tr>
           ))}
