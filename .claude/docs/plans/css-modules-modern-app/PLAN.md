@@ -174,8 +174,17 @@ typecheck clean, lint:ci exit 0, vite build OK, 4790 vitest.
   decoupling: `.day-session-desc` → `[data-testid]`; setup-card-item todo/blocking assertions → visible
   state label via `closest('li')` (`.day-row-status`/`.status-chip` queries unchanged — stay global).
   Bijection 50⊆54; getComputedStyle confirmed needs_fixing `#c62828` + dot, desc ellipsis, danger text.
-- **REMAINING Phase 4:** ValidationSummary (friction H), AnimalEditor setup tables (friction E, fix
-  in place — no module migration).
+- **DONE — ValidationSummary + friction H** (merge `46487e1`; branch `css-phase4-validationsummary`
+  kept; commit `9080286`). 5-component migration (index, BatchExportPreflight, DayStatusTable,
+  EffectiveDayReview, ExportReport). Hashed owned `validation-summary-*`/`batch-export-preflight-*`/
+  `effective-day-review-*`/`count*`; kept `:global()` `status-chip`(+`--*` runtime variant, scoped under
+  hashed `.table`), `visually-hidden`, `btn-primary`; left literal the 7 unstyled marker classes + the
+  `validation-summary` base hook (ExportReport region class flows via a `className` prop, pre-resolved in
+  index). **Friction H** (consistent disclosure bars): the two VS `<details>` bars + the shared
+  `DayLifecycleLegend` bar all inherited the frozen App.scss `details{border:1px solid black;…}`; scoped
+  around it in BOTH modules (App.scss untouched) → grey-200 border, token padding, weight-500 summary, no
+  open-state underline. getComputedStyle confirmed grey-200 (was black) on both bars.
+- **REMAINING Phase 4:** AnimalEditor setup tables (friction E, fix in place — no module migration).
 
 **Recon map for the remaining files (read before migrating — these are the section-nav-style hazards).**
 Classes that MUST stay GLOBAL (literal, shared across files / JS-applied / queried by tests — do NOT hash;
