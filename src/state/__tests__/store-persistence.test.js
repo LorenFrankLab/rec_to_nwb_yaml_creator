@@ -7,7 +7,7 @@
  * lastSaved is set only after a confirmed write.
  */
 
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, afterEach, vi } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useStore } from '../store';
 import {

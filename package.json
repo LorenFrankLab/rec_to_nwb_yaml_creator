@@ -75,6 +75,7 @@
     "eject": "react-scripts eject",
     "lint": "eslint --fix --ext .js,.jsx,.ts,.tsx .",
     "lint:check": "eslint --ext .js,.jsx,.ts,.tsx .",
+    "lint:ci": "eslint --ext .js,.jsx,.ts,.tsx . --max-warnings 0",
     "lint:css": "stylelint \"src/**/*.{css,scss}\"",
     "lint:css:fix": "stylelint \"src/**/*.{css,scss}\" --fix",
     "prepare": "husky"

@@ -350,8 +350,6 @@ describe('BrainRegionAutocomplete', () => {
       expect(label).not.toBeNull();
       expect(input).not.toBeNull();
 
-      // Get the raw HTML to see what's actually rendered
-      const labelHTML = label.outerHTML;
       const inputId = input.getAttribute('id');
 
       // Verify that the label's htmlFor attribute matches the input's id
