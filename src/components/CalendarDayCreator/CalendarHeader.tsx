@@ -4,14 +4,10 @@
  * Displays current month/year and provides navigation controls.
  */
 
-import PropTypes from 'prop-types';
-
 /**
- * Get month name from 0-indexed month number
- * @param {number} month - 0-indexed month (0 = January)
- * @returns {string} Month name
+ * Get month name from 0-indexed month number (0 = January).
  */
-function getMonthName(month) {
+function getMonthName(month: number): string {
   const months = [
     'January', 'February', 'March', 'April', 'May', 'June',
     'July', 'August', 'September', 'October', 'November', 'December'
@@ -19,16 +15,21 @@ function getMonthName(month) {
   return months[month];
 }
 
+interface CalendarHeaderProps {
+  /** The displayed month, `month` 0-indexed (0 = January). */
+  currentMonth: { year: number; month: number };
+  /** Callback for previous month. */
+  onPreviousMonth: () => void;
+  /** Callback for next month. */
+  onNextMonth: () => void;
+  /** Callback for jump to today. */
+  onToday: () => void;
+}
+
 /**
  * CalendarHeader - Month navigation header
- *
- * @param {object} props
- * @param {object} props.currentMonth - { year, month }
- * @param {Function} props.onPreviousMonth - Callback for previous month
- * @param {Function} props.onNextMonth - Callback for next month
- * @param {Function} props.onToday - Callback for jump to today
  */
-export function CalendarHeader({ currentMonth, onPreviousMonth, onNextMonth, onToday }) {
+export function CalendarHeader({ currentMonth, onPreviousMonth, onNextMonth, onToday }: CalendarHeaderProps) {
   const { year, month } = currentMonth;
   const monthName = getMonthName(month);
 
@@ -70,13 +71,3 @@ export function CalendarHeader({ currentMonth, onPreviousMonth, onNextMonth, onT
     </div>
   );
 }
-
-CalendarHeader.propTypes = {
-  currentMonth: PropTypes.shape({
-    year: PropTypes.number.isRequired,
-    month: PropTypes.number.isRequired,
-  }).isRequired,
-  onPreviousMonth: PropTypes.func.isRequired,
-  onNextMonth: PropTypes.func.isRequired,
-  onToday: PropTypes.func.isRequired,
-};

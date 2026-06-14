@@ -7,20 +7,22 @@
  */
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import PropTypes from 'prop-types';
+import type { KeyboardEvent as ReactKeyboardEvent } from 'react';
 import { CalendarDay } from './CalendarDay';
 
 const WEEK_LENGTH = 7;
 
+/** One calendar cell: a date and whether it belongs to the displayed month (vs padding). */
+interface CalendarCell {
+  date: string;
+  isCurrentMonth: boolean;
+}
+
 /**
- * Get array of dates to display in calendar grid
- * Includes padding days from previous/next months
- *
- * @param {number} year - Full year (e.g., 2025)
- * @param {number} month - 0-indexed month (0 = January)
- * @returns {object[]} Array of date objects with { date, isCurrentMonth }
+ * Get array of dates to display in calendar grid, including padding days from previous/next
+ * months. `month` is 0-indexed (0 = January).
  */
-function getCalendarDays(year, month) {
+function getCalendarDays(year: number, month: number): CalendarCell[] {
   const firstDay = new Date(year, month, 1);
   const lastDay = new Date(year, month + 1, 0);
 
@@ -65,21 +67,26 @@ function getCalendarDays(year, month) {
   return days;
 }
 
+interface CalendarGridProps {
+  /** The displayed month, `month` 0-indexed (0 = January). */
+  currentMonth: { year: number; month: number };
+  /** Set of selected date strings. */
+  selectedDates: Set<string>;
+  /** Array of existing day dates (`YYYY-MM-DD`). */
+  existingDays: string[];
+  /** Callback for date selection (toggle). Reads only `event.shiftKey` (range vs toggle). */
+  onDateSelect: (date: string, event: { shiftKey: boolean }) => void;
+}
+
 /**
  * CalendarGrid - Renders calendar grid with day cells
- *
- * @param {object} props
- * @param {object} props.currentMonth - { year, month }
- * @param {Set<string>} props.selectedDates - Set of selected date strings
- * @param {string[]} props.existingDays - Array of existing day dates
- * @param {Function} props.onDateSelect - Callback for date selection (toggle)
  */
 export function CalendarGrid({
   currentMonth,
   selectedDates,
   existingDays,
   onDateSelect,
-}) {
+}: CalendarGridProps) {
   const { year, month } = currentMonth;
   const days = getCalendarDays(year, month);
 
@@ -111,7 +118,7 @@ export function CalendarGrid({
   // Set true only by an arrow-key move, so we move DOM focus to the new cell on navigation but NOT
   // on initial mount / month change (the Modal owns the initial focus there).
   const focusAfterNavRef = useRef(false);
-  const activeCellRef = useRef(null);
+  const activeCellRef = useRef<HTMLButtonElement>(null);
 
   // Reset the roving target whenever the displayed month changes.
   useEffect(() => {
@@ -128,7 +135,7 @@ export function CalendarGrid({
   }, [activeDate]);
 
   const moveActiveBy = useCallback(
-    (delta) => {
+    (delta: number) => {
       const index = allDates.indexOf(activeDate);
       if (index === -1) return;
       const nextIndex = Math.min(allDates.length - 1, Math.max(0, index + delta));
@@ -140,7 +147,7 @@ export function CalendarGrid({
   );
 
   const moveActiveTo = useCallback(
-    (nextIndex) => {
+    (nextIndex: number) => {
       const clamped = Math.min(allDates.length - 1, Math.max(0, nextIndex));
       focusAfterNavRef.current = true;
       setActiveDate(allDates[clamped]);
@@ -149,7 +156,7 @@ export function CalendarGrid({
   );
 
   const handleGridKeyDown = useCallback(
-    (event) => {
+    (event: ReactKeyboardEvent<HTMLDivElement>) => {
       const index = allDates.indexOf(activeDate);
       if (index === -1) return;
       switch (event.key) {
@@ -185,7 +192,7 @@ export function CalendarGrid({
   );
 
   // Split the 42 cells into six weekly rows of seven, so AT grid navigation reads weeks × days.
-  const weeks = [];
+  const weeks: CalendarCell[][] = [];
   for (let i = 0; i < days.length; i += WEEK_LENGTH) {
     weeks.push(days.slice(i, i + WEEK_LENGTH));
   }
@@ -238,13 +245,3 @@ export function CalendarGrid({
     </div>
   );
 }
-
-CalendarGrid.propTypes = {
-  currentMonth: PropTypes.shape({
-    year: PropTypes.number.isRequired,
-    month: PropTypes.number.isRequired,
-  }).isRequired,
-  selectedDates: PropTypes.instanceOf(Set).isRequired,
-  existingDays: PropTypes.arrayOf(PropTypes.string).isRequired,
-  onDateSelect: PropTypes.func.isRequired,
-};

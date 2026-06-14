@@ -8,7 +8,6 @@
  * AND its description, so the status is never conveyed by color alone (WCAG 1.4.1).
  */
 
-import PropTypes from 'prop-types';
 import {
   DAY_LIFECYCLE_ORDER,
   DAY_LIFECYCLE_LABEL,
@@ -16,13 +15,15 @@ import {
 } from '../../domain/dayLifecycle';
 import styles from './DayLifecycleLegend.module.css';
 
-/**
- * @param {object} props
- * @param {string} [props.summaryText] - The collapsed-state toggle label. Defaults to a question
- *   so the affordance reads as optional help, not a required step.
- * @returns {JSX.Element}
- */
-export default function DayLifecycleLegend({ summaryText = 'What do these statuses mean?' }) {
+interface DayLifecycleLegendProps {
+  /**
+   * The collapsed-state toggle label. Defaults to a question so the affordance reads as optional
+   * help, not a required step.
+   */
+  summaryText?: string;
+}
+
+export default function DayLifecycleLegend({ summaryText = 'What do these statuses mean?' }: DayLifecycleLegendProps) {
   return (
     // aria-label gives the disclosure a stable accessible name; <details> already exposes a
     // group/disclosure role implicitly, so no explicit role is needed.
@@ -42,11 +43,3 @@ export default function DayLifecycleLegend({ summaryText = 'What do these status
     </details>
   );
 }
-
-DayLifecycleLegend.propTypes = {
-  summaryText: PropTypes.string,
-};
-
-DayLifecycleLegend.defaultProps = {
-  summaryText: 'What do these statuses mean?',
-};

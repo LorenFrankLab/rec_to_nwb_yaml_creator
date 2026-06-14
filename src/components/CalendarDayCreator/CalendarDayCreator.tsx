@@ -6,35 +6,37 @@
  */
 
 import { useState, useCallback, useId } from 'react';
-import PropTypes from 'prop-types';
 import Modal from '../Modal/Modal';
 import { CalendarGrid } from './CalendarGrid';
 import { CalendarHeader } from './CalendarHeader';
 import { CalendarLegend } from './CalendarLegend';
 import './CalendarDayCreator.css';
 
+/** A calendar date split into 1-indexed components (`month` 1 = January, `day` 1-based). */
+interface DateParts {
+  year: number;
+  month: number;
+  day: number;
+}
+
 /**
- * Get date range between two dates (inclusive)
- * Handles DST transitions correctly by working with date components directly
- *
- * @param {string} startDate - ISO date string (YYYY-MM-DD)
- * @param {string} endDate - ISO date string (YYYY-MM-DD)
- * @returns {string[]} Array of ISO date strings
+ * Get date range between two dates (inclusive). Handles DST transitions correctly by working with
+ * date components directly. Both args are ISO date strings (`YYYY-MM-DD`).
  */
-function getDateRange(startDate, endDate) {
-  const dates = [];
+function getDateRange(startDate: string, endDate: string): string[] {
+  const dates: string[] = [];
 
   // Parse date strings to components (avoids DST issues)
-  const parseDate = (dateStr) => {
+  const parseDate = (dateStr: string): DateParts => {
     const [year, month, day] = dateStr.split('-').map(Number);
     return { year, month, day };
   };
 
   // Convert date components to comparable value
-  const toComparable = ({ year, month, day }) => year * 10000 + month * 100 + day;
+  const toComparable = ({ year, month, day }: DateParts) => year * 10000 + month * 100 + day;
 
   // Add one day to date components
-  const addDay = ({ year, month, day }) => {
+  const addDay = ({ year, month, day }: DateParts): DateParts => {
     // Get days in current month
     const daysInMonth = new Date(year, month, 0).getDate();
 
@@ -48,7 +50,7 @@ function getDateRange(startDate, endDate) {
   };
 
   // Format date components to ISO string
-  const formatDate = ({ year, month, day }) =>
+  const formatDate = ({ year, month, day }: DateParts) =>
     `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
 
   let start = parseDate(startDate);
@@ -82,13 +84,13 @@ function getDateRange(startDate, endDate) {
  *
  * Pure (the wall-clock `fallbackDate` is injected) so it is unit-testable without mocking the
  * clock. Tolerates a malformed `existingDays` and rejects non-real calendar dates (e.g. a
- * persisted `2023-13-99`) rather than opening on an impossible month.
- *
- * @param {string[]} existingDays - The animal's existing recording-day dates (`YYYY-MM-DD`).
- * @param {Date} fallbackDate - The wall-clock date to use when there is no timeline.
- * @returns {{ year: number, month: number }} `month` is 0-indexed (0 = January).
+ * persisted `2023-13-99`) rather than opening on an impossible month. Returns `{ year, month }`
+ * with `month` 0-indexed (0 = January).
  */
-export function getInitialCalendarMonth(existingDays, fallbackDate) {
+export function getInitialCalendarMonth(
+  existingDays: string[],
+  fallbackDate: Date
+): { year: number; month: number } {
   const fallback = { year: fallbackDate.getFullYear(), month: fallbackDate.getMonth() };
 
   const list = Array.isArray(existingDays) ? existingDays : [];
@@ -114,16 +116,21 @@ export function getInitialCalendarMonth(existingDays, fallbackDate) {
   return { year: year + 1, month: 0 }; // Dec 31 → January next year
 }
 
+interface CalendarDayCreatorProps {
+  /** Current animal ID. */
+  animalId: string;
+  /** Array of existing day dates (`YYYY-MM-DD`). */
+  existingDays?: string[];
+  /** Callback when days are created (the selected dates, sorted). */
+  onCreateDays: (dates: string[]) => void | Promise<void>;
+  /** Callback to close the calendar. */
+  onClose?: () => void;
+}
+
 /**
  * CalendarDayCreator - Interactive calendar for creating recording days
- *
- * @param {object} props
- * @param {string} props.animalId - Current animal ID
- * @param {string[]} props.existingDays - Array of existing day dates (YYYY-MM-DD)
- * @param {Function} props.onCreateDays - Callback when days are created
- * @param {Function} props.onClose - Callback to close calendar
  */
-export function CalendarDayCreator({ animalId, existingDays = [], onCreateDays, onClose }) {
+export function CalendarDayCreator({ animalId, existingDays = [], onCreateDays, onClose }: CalendarDayCreatorProps) {
   // Stable id wiring the shared Modal's title to aria-labelledby.
   const titleId = useId();
 
@@ -136,9 +143,9 @@ export function CalendarDayCreator({ animalId, existingDays = [], onCreateDays, 
   );
 
   // Selected dates (Set for O(1) lookup)
-  const [selectedDates, setSelectedDates] = useState(new Set());
+  const [selectedDates, setSelectedDates] = useState<Set<string>>(new Set());
   // Inline error shown if day creation fails (replaces a blocking alert()).
-  const [createError, setCreateError] = useState(null);
+  const [createError, setCreateError] = useState<string | null>(null);
 
   /**
    * Navigate to previous month
@@ -183,7 +190,7 @@ export function CalendarDayCreator({ animalId, existingDays = [], onCreateDays, 
    * - Shift+Click: Select range from first selected to clicked date
    */
   const handleDateSelect = useCallback(
-    (date, event) => {
+    (date: string, event: { shiftKey: boolean }) => {
       // Prevent selection of existing days
       if (existingDays.includes(date)) return;
 
@@ -233,7 +240,7 @@ export function CalendarDayCreator({ animalId, existingDays = [], onCreateDays, 
       if (onClose) onClose();
     } catch (error) {
       console.error('Failed to create days:', error);
-      setCreateError(`Failed to create days: ${error.message}`);
+      setCreateError(`Failed to create days: ${(error as Error).message}`);
     }
   }, [selectedDates, onCreateDays, onClose]);
 
@@ -296,15 +303,3 @@ export function CalendarDayCreator({ animalId, existingDays = [], onCreateDays, 
     </Modal>
   );
 }
-
-CalendarDayCreator.propTypes = {
-  animalId: PropTypes.string.isRequired,
-  existingDays: PropTypes.arrayOf(PropTypes.string),
-  onCreateDays: PropTypes.func.isRequired,
-  onClose: PropTypes.func,
-};
-
-CalendarDayCreator.defaultProps = {
-  existingDays: [],
-  onClose: undefined,
-};
