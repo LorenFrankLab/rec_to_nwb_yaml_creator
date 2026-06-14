@@ -152,8 +152,19 @@ typecheck clean, lint:ci exit 0, vite build OK, 4790 vitest.
   `validation-summary` [the workspace ValidationSummary is embedded in Home's form, deliberately scoped
   under `.animal-creation-form`], `validation-warning` [BadChannels/DayEditor]). Home gets its own cycle
   with `:global()` for those shared names.
-- **REMAINING Phase 4:** Home (entangled — `:global` shared names), AnimalWorkspace, setup tables (E),
-  ValidationSummary (H).
+- **DONE — Home (animal-creation form)** (merge `dc9c9e0`; branch `css-phase4-home` kept; commit
+  `a993c0e`). The most entangled Phase-4 surface. Ownership split: HASHED the 8 Home-owned classes
+  (animal-creation-container/-form, form-section, radio-group/-label, add-item-button,
+  first-time-user-notice, + the form's OWN validation-summary error box — hashing it removed the
+  `.animal-creation-form .validation-summary` leak-prevention scope hack); kept `:global()` the 5 shared
+  rules Home.css used to DEFINE for other consumers (`.list-item` [src/element/*], `.form-actions`,
+  `.btn-primary`/`.btn-secondary`, `.validation-warning` [load-order collision w/ DayEditor.scss — kept
+  global so the current winner is unchanged]); left literal the classes defined in OTHER stylesheets
+  (`.form-field`/`.required`/`.validation-hint`/`.validation-error`/`.invalid`). 1:1 hashed bijection
+  (8=8); error box verified red via getComputedStyle. **Pattern for entangled files (reused next on
+  AnimalWorkspace): hash owned, `:global()` the shared rules THIS file defines, leave literal the rules
+  OTHER files define.**
+- **REMAINING Phase 4:** AnimalWorkspace, ValidationSummary (H), setup tables (E).
 
 **Recon map for the remaining files (read before migrating — these are the section-nav-style hazards).**
 Classes that MUST stay GLOBAL (literal, shared across files / JS-applied / queried by tests — do NOT hash;
