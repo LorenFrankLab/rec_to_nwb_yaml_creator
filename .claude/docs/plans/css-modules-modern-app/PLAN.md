@@ -120,8 +120,41 @@ Verified in-browser (Playwright + getComputedStyle): footer link `#1565c0`; main
 while focused; modern mains 1280 centered, DayEditor 1200, legacy `<div>` uncapped + form renders. Gate:
 typecheck clean, lint:ci exit 0, vite build OK, 4790 vitest.
 
-**Next:** Phase 4 page areas → Phase 5 stylelint ratchet (tokenize the modules' verbatim values + z-index
-scale, then ratchet `*.module.*` to error).
+**Phase 4 (page areas) — IN PROGRESS.**
+- **DONE — AnimalView page area** (merge `bd005ad`; branch `css-phase4-animalview` kept):
+  `ConfigVersionContext.css` → module (`41c128c`); `AnimalView.css` rest → `AnimalView.module.css`
+  (`dd2a751`). `repair-target-highlight` is a JS-applied (`classList.add`) literal class SHARED with the
+  Day Editor → kept GLOBAL via `:global([data-field-path].repair-target-highlight)` (verified global in
+  bundle). The saveIndicator test's `.animal-view-header` scope query decoupled to a `data-testid`.
+- **REMAINING Phase 4 (next session):** Home, AnimalWorkspace (+ImportYamlDialog), setup tables (E),
+  DayEditor Breadcrumb + IssueOwnershipHint, ValidationSummary (H), CalendarDayCreator.
+
+**Recon map for the remaining files (read before migrating — these are the section-nav-style hazards).**
+Classes that MUST stay GLOBAL (literal, shared across files / JS-applied / queried by tests — do NOT hash;
+use `:global()` if the rule must live in a module):
+- `error-state*` (ErrorState.css — shared utility, already known).
+- `status-chip` + variants — shared by AnimalWorkspace.css, ValidationSummary.css, DayEditor.scss (each
+  scopes its own variants). A test queries `.status-chip` / `.day-row-status` / `.day-session-desc` in
+  `RecordingDaysTab.dayRow.test.jsx`.
+- `btn-primary` / `btn-secondary` (AnimalWorkspace.css) and `button-primary` / `button-secondary` /
+  `table-actions` / `status-badge*` / `section-header` (the AnimalEditor setup tables) — shared across
+  DayEditor + components + all four setup tables. The four setup tables (`CamerasSection.scss`,
+  `ElectrodeGroupsStep.scss`, `TaskTypesSection.scss`, `DataAcqSection.scss`) are ENTANGLED on these — a
+  clean module migration needs all four done together with `:global()` for the shared names. **For friction
+  E it is NOT necessary to module-migrate them: the truncation lives in DESCENDANT selectors**
+  (`.cameras-table td:nth-child(2..5) { max-width:0; white-space:nowrap; text-overflow:ellipsis }` —
+  CamerasSection.scss ~172; same pattern TaskTypesSection.scss ~41; AnimalWorkspace `.day-session-desc`
+  `max-width:26rem`+nowrap) — **fix the truncation IN PLACE** (the `max-width:0` + `table-layout:fixed`
+  combo is what truncates "despite ample width") without hashing the shared classes.
+- `visually-hidden` (global utility), `empty-state` (used as scoped `.cameras-section.empty-state` etc.).
+Confirmed COLOCATED-SAFE (no shared classes per recon): `ImportYamlDialog.css` (all `import-*`; btn-* are
+NOT redefined, only referenced), `AnimalView.css` (done). Friction **H** (disclosure bars): ValidationSummary's
+`<details>` bars carry only `cursor:pointer` — the inconsistent height/border comes from the FROZEN App.scss
+global `details { border:1px solid black; … }` element rule that modern bars inherit; scope around it (don't
+touch App.scss).
+
+**Next:** finish Phase 4 → Phase 5 stylelint ratchet (tokenize the modules' verbatim values + z-index scale,
+then ratchet `*.module.*` to error).
 
 ## Phased order
 Each phase: migrate the component's styles into a colocated `*.module.css`, reference via
