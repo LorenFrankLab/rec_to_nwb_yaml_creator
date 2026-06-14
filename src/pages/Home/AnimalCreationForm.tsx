@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { isValidSpecies } from '../../validation/dandiSubject';
 import type { AnimalCreationFormData } from '../../domain/animalCreation';
-import './Home.css';
+import styles from './Home.module.css';
 
 /** The local (all-string) form state for the animal-creation form. */
 interface AnimalFormState {
@@ -294,12 +294,12 @@ function AnimalCreationForm({
   };
 
   return (
-    <form className="animal-creation-form" onSubmit={handleSubmit} aria-label="Animal creation form">
+    <form className={styles.animalCreationForm} onSubmit={handleSubmit} aria-label="Animal creation form">
       <h1>Create New Animal</h1>
 
       {/* Validation Summary */}
       {Object.keys(fieldErrors).length > 0 && (
-        <div id="validation-summary" role="alert" aria-live="assertive" className="validation-summary">
+        <div id="validation-summary" role="alert" aria-live="assertive" className={styles.validationSummary}>
           <strong>Please fix the following errors:</strong>
           <ul>
             {Object.entries(fieldErrors).map(([field, error]) => (
@@ -322,7 +322,7 @@ function AnimalCreationForm({
       )}
 
       {/* Subject Section */}
-      <div className="form-section">
+      <div className={styles.formSection}>
         <h2>Subject Information</h2>
 
         {/* Subject ID */}
@@ -411,13 +411,13 @@ function AnimalCreationForm({
         {/* Sex */}
         <fieldset className="form-field">
           <legend className="required">Sex</legend>
-          <div className="radio-group">
+          <div className={styles.radioGroup}>
             {[
               { value: 'M', label: 'Male (M)' },
               { value: 'F', label: 'Female (F)' },
               { value: 'U', label: 'Unknown (U)' },
             ].map(({ value, label }) => (
-              <label key={value} className="radio-label">
+              <label key={value} className={styles.radioLabel}>
                 <input
                   type="radio"
                   name="sex"
@@ -536,7 +536,7 @@ function AnimalCreationForm({
       </div>
 
       {/* Experimenters Section */}
-      <div className="form-section">
+      <div className={styles.formSection}>
         <h2>Experimenters</h2>
 
         {/* Experimenter Names */}
@@ -568,7 +568,7 @@ function AnimalCreationForm({
                 )}
               </div>
             ))}
-            <button type="button" onClick={addExperimenter} className="add-item-button">
+            <button type="button" onClick={addExperimenter} className={styles.addItemButton}>
               + Add Experimenter
             </button>
           </div>
