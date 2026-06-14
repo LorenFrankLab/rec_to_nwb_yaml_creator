@@ -30,7 +30,7 @@ import { useValidationSummaryActions } from './useValidationSummaryActions';
 import ExportReport from './ExportReport';
 import BatchExportPreflight from './BatchExportPreflight';
 import DayStatusTable from './DayStatusTable';
-import './ValidationSummary.css';
+import styles from './ValidationSummary.module.css';
 
 // Back-compat: the per-animal AnimalView "Validation & Export" tab and the row tests import these
 // from this module. The implementations now live in `./validationSummaryRows` (Phase 9c).
@@ -98,21 +98,21 @@ export function ValidationSummary({ animalKey }: { animalKey?: string } = {}) {
   // `<main id="main-content">` (AnimalView owns the page landmark) and NOT the page-level h1.
   const Wrapper: ElementType = scoped ? 'section' : 'main';
   const wrapperProps = scoped
-    ? { className: 'validation-summary validation-summary--scoped', 'aria-label': 'Validation and export for this animal' }
+    ? { className: `validation-summary ${styles.scoped}`, 'aria-label': 'Validation and export for this animal' }
     : { id: 'main-content', tabIndex: -1, role: 'main', 'aria-labelledby': 'validation-heading' };
 
   return (
     <Wrapper {...wrapperProps}>
       {scoped ? (
-        <header className="validation-summary-scoped-header">
+        <header className={styles.scopedHeader}>
           <h2>This animal — readiness &amp; export</h2>
-          <p className="validation-summary-scoped-subhead" data-testid="validation-scope">
+          <p className={styles.scopedSubhead} data-testid="validation-scope">
             Showing: {animalKey} — {rows.length} {rows.length === 1 ? 'day' : 'days'}
           </p>
           {/* This tab handles ONE animal; the cross-animal batch preflight + export lives at the
               chrome-level Validation & Export screen (Task 4.4) — link up to it so the relationship
               is explicit, not hidden. */}
-          <p className="validation-summary-scoped-uplink">
+          <p className={styles.scopedUplink}>
             <a href="#/validation">Validate &amp; export all animals →</a>
           </p>
         </header>
@@ -122,27 +122,27 @@ export function ValidationSummary({ animalKey }: { animalKey?: string } = {}) {
 
       {!hasDays ? (
         scoped ? (
-          <p className="validation-summary-empty">
+          <p className={styles.empty}>
             This animal has no recording days yet. Add a recording day to see its readiness and
             export here.
           </p>
         ) : (
-          <p className="validation-summary-empty">
+          <p className={styles.empty}>
             No recording days yet. Create an animal and a recording day to see its
             validation status here. <a href="#/workspace">Go to Workspace</a>.
           </p>
         )
       ) : (
         <>
-          <p data-testid="summary-counts" className="validation-summary-counts">
-            <span className="count count--valid">{counts.valid} valid</span>
+          <p data-testid="summary-counts" className={styles.counts}>
+            <span className={`${styles.count} ${styles.countValid}`}>{counts.valid} valid</span>
             {' / '}
-            <span className="count count--error">{counts.error} with errors</span>
+            <span className={`${styles.count} ${styles.countError}`}>{counts.error} with errors</span>
             {' / '}
-            <span className="count count--incomplete">{counts.incomplete} incomplete</span>
+            <span className={`${styles.count} ${styles.countIncomplete}`}>{counts.incomplete} incomplete</span>
           </p>
 
-          <div className="validation-summary-actions">
+          <div className={styles.actions}>
             <button
               type="button"
               onClick={handleValidateAll}
@@ -168,7 +168,7 @@ export function ValidationSummary({ animalKey }: { animalKey?: string } = {}) {
               // pair it with a visible, programmatically-associated explanation (aria-describedby).
               <p
                 id="export-valid-disabled-reason"
-                className="validation-summary-hint validation-summary-disabled-reason"
+                className={`${styles.hint} validation-summary-disabled-reason`}
               >
                 {exportValidDisabledReason}
               </p>
@@ -179,7 +179,7 @@ export function ValidationSummary({ animalKey }: { animalKey?: string } = {}) {
               needed to take the action, so they live behind a collapsed disclosure — the actions
               and counts above stay visually dominant. The task-critical disabled reason stays
               inline (shown only when Export is blocked). */}
-          <details className="validation-summary-hint validation-summary-export-help">
+          <details className={`${styles.hint} ${styles.exportHelp}`}>
             <summary>What gets exported?</summary>
             <p>
               <strong>Export Valid Only</strong> downloads one YAML file per day that passes every
@@ -194,7 +194,7 @@ export function ValidationSummary({ animalKey }: { animalKey?: string } = {}) {
               day is actually present — then it is task-critical (Export Valid Only silently skips
               it), so surface it inline rather than behind the disclosure. */}
           {rows.some((row) => row.orphaned) && (
-            <p className="validation-summary-hint validation-summary-relink-note" role="note">
+            <p className={`${styles.hint} validation-summary-relink-note`} role="note">
               Some recovered days are <em>not in a day list</em> — re-link them
               (&quot;Add to day list&quot;) before they can be exported.
             </p>
@@ -214,7 +214,7 @@ export function ValidationSummary({ animalKey }: { animalKey?: string } = {}) {
           <div
             role="status"
             aria-atomic="true"
-            className="validation-summary-status"
+            className={styles.status}
           >
             {actionMessage}
           </div>
@@ -231,7 +231,7 @@ export function ValidationSummary({ animalKey }: { animalKey?: string } = {}) {
           />
 
           <ExportReport
-            className="validation-summary-skipped"
+            className={styles.skipped}
             detailLabel="Export parity diff"
             message={
               skippedReport.length === 1
@@ -242,7 +242,7 @@ export function ValidationSummary({ animalKey }: { animalKey?: string } = {}) {
           />
 
           <ExportReport
-            className="validation-summary-overridden"
+            className={styles.overridden}
             detailLabel="Export parity diff"
             message={
               overriddenReport.length === 1
@@ -253,7 +253,7 @@ export function ValidationSummary({ animalKey }: { animalKey?: string } = {}) {
           />
 
           <ExportReport
-            className="validation-summary-failed"
+            className={styles.failed}
             detailLabel="Export error"
             message={
               failedReport.length === 1

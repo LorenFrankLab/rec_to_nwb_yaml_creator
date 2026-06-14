@@ -7,6 +7,7 @@ import {
   describeConfigVersionLabel,
 } from './validationSummaryRows';
 import type { SummaryRow } from './validationSummaryRows';
+import styles from './ValidationSummary.module.css';
 
 const noop = () => {};
 
@@ -48,8 +49,8 @@ export default function DayStatusTable({
     // The table can be wider than a phone viewport (6 columns of dense scan/session text), so
     // it scrolls horizontally WITHIN this container instead of forcing the whole page to
     // overflow — the page stays at the viewport width at ~390px and no cell is clipped off.
-    <div className="validation-summary-table-scroll">
-      <table className="validation-summary-table">
+    <div className={styles.tableScroll}>
+      <table className={styles.table}>
         <caption className="visually-hidden">
           Recording days across all animals with validation status
         </caption>
@@ -74,7 +75,7 @@ export default function DayStatusTable({
                 {subjectLabel(animal)}
                 {orphaned && (
                   <span
-                    className="validation-summary-orphan-note"
+                    className={styles.orphanNote}
                     title="This day record is not listed in its animal's recording-day index (the index is corrupt, missing, or doesn't reference it). It is shown here so it isn't lost; open it to review or re-link it."
                   >
                     {' '}⚠ not in day list
@@ -82,7 +83,7 @@ export default function DayStatusTable({
                 )}
                 {wrongOwner && (
                   <span
-                    className="validation-summary-orphan-note"
+                    className={styles.orphanNote}
                     title={`This day is listed under ${subjectLabel(animal)} but its record belongs to ${describeOwner(day.animalId)}. It is NOT exported with this animal's metadata; remove it from this animal so it returns to its real owner.`}
                   >
                     {' '}⚠ belongs to {describeOwner(day.animalId)}
@@ -94,7 +95,7 @@ export default function DayStatusTable({
                 {day.session?.session_id || '—'}
                 {scan?.sessionDescription && (
                   <span
-                    className="validation-summary-session-description"
+                    className={styles.sessionDescription}
                     data-testid={`session-description-${day.id}`}
                   >
                     {scan.sessionDescription}
@@ -110,13 +111,13 @@ export default function DayStatusTable({
                     and whose body is the read-only effective-setup-for-this-day review. */}
                 {scan ? (
                   scoped ? (
-                    <details className="validation-summary-effective" data-testid={`effective-${day.id}`}>
-                      <summary className="validation-summary-scan">
+                    <details className={styles.effective} data-testid={`effective-${day.id}`}>
+                      <summary className={styles.scan}>
                         {describeConfigVersionLabel(scan.version, scan.historical)}
                         {' · '}
                         {scan.cameras} {scan.cameras === 1 ? 'camera' : 'cameras'}
                         {scan.cameraCalibration && (
-                          <span className="validation-summary-scan-cameras">
+                          <span className={styles.scanCameras}>
                             {' ('}
                             {scan.cameraCalibration}
                             {')'}
@@ -128,12 +129,12 @@ export default function DayStatusTable({
                       <EffectiveDayReview animal={animal as unknown as Animal} day={dayRaw as unknown as Day} />
                     </details>
                   ) : (
-                    <span className="validation-summary-scan">
+                    <span className={styles.scan}>
                       {describeConfigVersionLabel(scan.version, scan.historical)}
                       {' · '}
                       {scan.cameras} {scan.cameras === 1 ? 'camera' : 'cameras'}
                       {scan.cameraCalibration && (
-                        <span className="validation-summary-scan-cameras">
+                        <span className={styles.scanCameras}>
                           {' ('}
                           {scan.cameraCalibration}
                           {')'}

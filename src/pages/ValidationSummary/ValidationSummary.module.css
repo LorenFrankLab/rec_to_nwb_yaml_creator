@@ -1,55 +1,56 @@
-/* Validation Summary — cross-day overview page. */
+/* Validation Summary — cross-day overview page (colocated CSS Module).
+ *
+ * `:global()` classes: `.status-chip`/`.status-chip--*` are rendered with a runtime `-${variant}`
+ * suffix (scoped under the hashed table); `.visually-hidden` is the global a11y utility; `.btn-primary`
+ * is the shared button. Everything else is owned and scoped.
+ */
 
-.validation-summary-counts {
+.counts {
   font-size: 1rem;
   font-weight: 500;
 }
 
-.validation-summary-counts .count {
+.counts .count {
   white-space: nowrap;
 }
 
-.validation-summary-counts .count--valid {
+.counts .countValid {
   color: #2e7d32;
 }
 
-.validation-summary-counts .count--error {
+.counts .countError {
   color: #c62828;
 }
 
-.validation-summary-counts .count--incomplete {
+.counts .countIncomplete {
   /* #bf360c keeps AA contrast (≥4.5:1) on the white page background. */
   color: #bf360c;
 }
 
-.validation-summary-hint {
+.hint {
   color: #444;
   margin: 0 0 0.75rem;
 }
 
 /* Details-on-demand export rules — the summary is the only always-visible bit. */
-.validation-summary-export-help > summary {
-  cursor: pointer;
-}
-
-.validation-summary-export-help > p {
+.exportHelp > p {
   margin: 0.5rem 0 0;
 }
 
-.validation-summary-actions {
+.actions {
   display: flex;
   gap: 0.75rem;
   margin: 1rem 0;
 }
 
-.validation-summary-status {
+.status {
   min-height: 1.25rem;
   margin: 0.5rem 0;
   font-weight: 500;
 }
 
-.validation-summary-skipped,
-.validation-summary-failed {
+.skipped,
+.failed {
   border: 1px solid #c62828;
   border-radius: 4px;
   background-color: #fdecea;
@@ -58,7 +59,7 @@
 }
 
 /* Debug-override downloads (strict mode off): warn, don't alarm. */
-.validation-summary-overridden {
+.overridden {
   border: 1px solid #bf360c;
   border-radius: 4px;
   background-color: #fff3e0;
@@ -66,14 +67,14 @@
   margin: 0.5rem 0 1rem;
 }
 
-.validation-summary-skipped ul,
-.validation-summary-overridden ul,
-.validation-summary-failed ul {
+.skipped ul,
+.overridden ul,
+.failed ul {
   margin: 0.5rem 0 0;
   padding-left: 1.25rem;
 }
 
-.validation-summary-diff {
+.diff {
   background-color: #fff;
   border: 1px solid #f5c6cb;
   border-radius: 4px;
@@ -84,32 +85,32 @@
   white-space: pre-wrap;
 }
 
-.validation-summary-empty {
+.empty {
   padding: 2rem 0;
   color: #555;
 }
 
 /* The 6-column day table can be wider than a phone viewport; scroll it horizontally WITHIN this
    container so the page itself never overflows at ~390px and no cell is clipped off-screen. */
-.validation-summary-table-scroll {
+.tableScroll {
   overflow-x: auto;
   max-width: 100%;
 }
 
-.validation-summary-table {
+.table {
   width: 100%;
   border-collapse: collapse;
   margin-top: 0.5rem;
 }
 
-.validation-summary-table th,
-.validation-summary-table td {
+.table th,
+.table td {
   text-align: left;
   padding: 0.5rem 0.75rem;
   border-bottom: 1px solid #e0e0e0;
 }
 
-.validation-summary-table th {
+.table th {
   font-weight: 600;
   border-bottom: 2px solid #bdbdbd;
 }
@@ -118,8 +119,9 @@
    primary (non-color) status cue; color is a secondary reinforcement (WCAG 1.4.1 — do not rely
    on color alone). A live-valid day is one of ready / validated / exported; error & incomplete
    keep the live tally colors that match the counts row. Colors are design tokens so the chips,
-   the Animal-Days dots, and the shared legend swatches stay in lockstep. */
-.validation-summary-table .status-chip {
+   the Animal-Days dots, and the shared legend swatches stay in lockstep. The chip class names are
+   rendered with a runtime `--${variant}` suffix, so they are kept `:global()` (scoped to the table). */
+.table :global(.status-chip) {
   display: inline-block;
   padding: 0.2rem 0.55rem;
   border-radius: 12px;
@@ -129,42 +131,42 @@
 }
 
 /* Live-valid but not yet saved as validated: "Ready to export". Outline-blue (light bg). */
-.validation-summary-table .status-chip--ready {
+.table :global(.status-chip--ready) {
   background-color: var(--color-primary-light);
   color: var(--color-primary); /* 5.03:1 on primary-light (AA) */
 }
 
 /* Persisted validation saved (and still live-valid): "Validated". Green, distinct from ready. */
-.validation-summary-table .status-chip--validated,
-.validation-summary-table .status-chip--valid {
+.table :global(.status-chip--validated),
+.table :global(.status-chip--valid) {
   background-color: var(--color-success-light);
   color: var(--color-success); /* 4.56:1 on success-light (AA) */
 }
 
 /* Exported (downloaded at least once, still live-valid): solid blue — the committed/terminal
    form of the ready-blue, distinct from ready's outline treatment. White on primary = 5.75:1. */
-.validation-summary-table .status-chip--exported {
+.table :global(.status-chip--exported) {
   background-color: var(--color-primary);
   color: var(--color-white);
 }
 
-.validation-summary-table .status-chip--error {
+.table :global(.status-chip--error) {
   background-color: var(--color-error-light);
   color: var(--color-error); /* 4.92:1 on error-light (AA) */
 }
 
-.validation-summary-table .status-chip--incomplete {
+.table :global(.status-chip--incomplete) {
   background-color: var(--color-warning-light);
   color: var(--color-warning); /* 5.11:1 on warning-light (AA) */
 }
 
 /* WCAG 2.5.8 target size: batch action buttons are at least 44px tall. */
-.validation-summary-actions button {
+.actions button {
   min-height: 44px;
 }
 
 /* Batch export preflight — the "what will be encoded?" confidence check before downloading. */
-.batch-export-preflight {
+.batchExportPreflight {
   margin: 1rem 0;
   padding: 1rem 1.25rem;
   border: 1px solid #90caf9;
@@ -177,12 +179,12 @@
   overflow-wrap: anywhere;
 }
 
-.batch-export-preflight h2 {
+.batchExportPreflight h2 {
   font-size: 1.05rem;
   margin: 0 0 0.5rem;
 }
 
-.batch-export-preflight-list {
+.batchExportPreflightList {
   list-style: none;
   margin: 0.5rem 0;
   padding: 0;
@@ -191,7 +193,7 @@
   gap: 0.35rem;
 }
 
-.batch-export-preflight-item {
+.batchExportPreflightItem {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
@@ -201,37 +203,37 @@
   overflow-wrap: anywhere;
 }
 
-.batch-export-preflight-label {
+.batchExportPreflightLabel {
   font-weight: 600;
   min-width: 0;
   overflow-wrap: anywhere;
 }
 
-.batch-export-preflight-detail {
+.batchExportPreflightDetail {
   color: #444;
   min-width: 0;
   overflow-wrap: anywhere;
 }
 
-.batch-export-preflight-error {
+.batchExportPreflightError {
   color: #c62828;
   font-weight: 600;
 }
 
-.batch-export-preflight-actions {
+.batchExportPreflightActions {
   display: flex;
   gap: 0.5rem;
   margin-top: 0.5rem;
 }
 
-.batch-export-preflight-actions button {
+.batchExportPreflightActions button {
   min-height: 44px;
   padding: 0.5rem 1rem;
   cursor: pointer;
 }
 
 /* Orphaned day record (not in its animal's index) — surfaced so it isn't lost. */
-.validation-summary-orphan-note {
+.orphanNote {
   font-size: 0.75rem;
   font-weight: 600;
   color: #bf360c;
@@ -239,7 +241,7 @@
 }
 
 /* Session description under the session id — secondary context, so muted and on its own line. */
-.validation-summary-session-description {
+.sessionDescription {
   display: block;
   font-size: 0.8125rem;
   color: #555;
@@ -247,45 +249,41 @@
 
 /* Batch-row scan detail (config version · cameras · opto state) — muted so it reads as
    at-a-glance context, not a primary value. */
-.validation-summary-scan {
+.scan {
   font-size: 0.8125rem;
   color: #555;
 }
 
 /* Per-camera calibration (name + meters_per_pixel) — muted further so it reads as a detail
    of the camera count, not a competing primary value. */
-.validation-summary-scan-cameras {
+.scanCameras {
   color: #777;
 }
 
 /* Phase 3-5: per-animal Validation & Export tab. The scoped header replaces the page h1; the
    Setup cell becomes an expander whose body is the read-only effective-setup-for-this-day review. */
-.validation-summary--scoped {
+.scoped {
   min-width: 0;
 }
 
-.validation-summary-scoped-header h2 {
+.scopedHeader h2 {
   margin: 0 0 0.15rem;
   font-size: 1.15rem;
 }
 
-.validation-summary-scoped-subhead {
+.scopedSubhead {
   margin: 0 0 0.25rem;
   font-family: var(--mono-font, monospace);
   font-size: 0.8rem;
   color: #6a6557;
 }
 
-.validation-summary-scoped-uplink {
+.scopedUplink {
   margin: 0 0 1rem;
   font-size: 0.8rem;
 }
 
-.validation-summary-effective > summary {
-  cursor: pointer;
-}
-
-.effective-day-review {
+.effectiveDayReview {
   margin: 0.5rem 0 0.25rem;
   padding: 0.5rem 0.7rem;
   border-left: 3px solid #cfe0e0;
@@ -293,14 +291,14 @@
   border-radius: 0 6px 6px 0;
 }
 
-.effective-day-review-caption {
+.effectiveDayReviewCaption {
   margin: 0 0 0.4rem;
   font-size: 0.8rem;
   font-weight: 600;
   color: #46443d;
 }
 
-.effective-day-review-list {
+.effectiveDayReviewList {
   margin: 0;
   display: grid;
   grid-template-columns: max-content 1fr;
@@ -308,19 +306,57 @@
   font-size: 0.8rem;
 }
 
-.effective-day-review-row {
+.effectiveDayReviewRow {
   display: contents;
 }
 
-.effective-day-review-list dt {
+.effectiveDayReviewList dt {
   color: #6a6557;
 }
 
-.effective-day-review-list dd {
+.effectiveDayReviewList dd {
   margin: 0;
   color: #2b2a25;
 
   /* Long values must wrap within the grid cell, not widen the page at narrow viewports. */
   min-width: 0;
   overflow-wrap: anywhere;
+}
+
+/* ── Friction H: consistent disclosure bars ───────────────────────────────────────────────────
+   The two modern <details> bars ("What gets exported?" = .exportHelp, the per-day "Setup" expander
+   = .effective) inherit the FROZEN App.scss global rule `details { border:1px solid black; … }` plus
+   its bold `details summary` and `[open] summary { border-bottom:1px solid black }`. Left alone they
+   read as heavy legacy boxes (and disagree with the lighter shared DayLifecycleLegend bar). We scope
+   AROUND the global here (App.scss is frozen — untouched) with higher-specificity class selectors so
+   both bars become lightweight, token-driven disclosures consistent with the legend. */
+.exportHelp,
+.effective {
+  border: 1px solid var(--color-grey-200);
+  border-radius: var(--radius-sm);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  background: none;
+}
+
+.exportHelp[open],
+.effective[open] {
+  /* Cancel the legacy `[open] { padding: 0.5em }` so open/closed heights match. */
+  padding: var(--spacing-xs) var(--spacing-sm);
+}
+
+.exportHelp > summary,
+.effective > summary {
+  /* Cancel the legacy bold + negative-margin summary chrome; match the legend's quiet summary. */
+  margin: 0;
+  padding: var(--spacing-xs) 0;
+  font-weight: 500;
+  color: var(--color-grey-700);
+  cursor: pointer;
+}
+
+.exportHelp[open] > summary,
+.effective[open] > summary {
+  /* Drop the legacy black underline under an open summary. */
+  border-bottom: 0;
+  margin-bottom: var(--spacing-xs);
 }
