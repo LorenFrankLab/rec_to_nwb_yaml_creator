@@ -1,4 +1,5 @@
 import type { PersistenceStatus } from '../../state/workspaceTypes';
+import styles from './SaveIndicator.module.css';
 
 interface SaveIndicatorProps {
   /**
@@ -36,7 +37,7 @@ export default function SaveIndicator({ persistence }: SaveIndicatorProps) {
   if (!enabled) {
     return (
       <div
-        className="save-indicator not-persisted"
+        className={styles.saveIndicator}
         role="status"
         aria-live="polite"
         aria-label="Not saved — changes are in memory only"
@@ -49,8 +50,8 @@ export default function SaveIndicator({ persistence }: SaveIndicatorProps) {
   // A failed write takes precedence over any earlier success.
   if (error) {
     return (
-      <div className="save-indicator error" role="alert" aria-live="assertive">
-        <span className="icon" aria-hidden="true">✗</span>
+      <div className={`${styles.saveIndicator} ${styles.error}`} role="alert" aria-live="assertive">
+        <span aria-hidden="true">✗</span>
         <span>{error}</span>
       </div>
     );
@@ -59,12 +60,12 @@ export default function SaveIndicator({ persistence }: SaveIndicatorProps) {
   if (pending) {
     return (
       <div
-        className="save-indicator saving"
+        className={`${styles.saveIndicator} ${styles.saving}`}
         role="status"
         aria-live="polite"
         aria-label="Saving changes"
       >
-        <span className="spinner" aria-hidden="true">⟳</span>
+        <span className={styles.spinner} aria-hidden="true">⟳</span>
         <span>Saving…</span>
       </div>
     );
@@ -77,12 +78,12 @@ export default function SaveIndicator({ persistence }: SaveIndicatorProps) {
 
   return (
     <div
-      className="save-indicator saved"
+      className={`${styles.saveIndicator} ${styles.saved}`}
       role="status"
       aria-live="polite"
       aria-label={`Saved ${timeAgo}`}
     >
-      <span className="checkmark" aria-hidden="true">✓</span>
+      <span aria-hidden="true">✓</span>
       <span>Saved {timeAgo}</span>
     </div>
   );
