@@ -2,9 +2,10 @@
  * ConfigVersionContext — electrode reconfiguration timeline on the electrode-groups panel
  * (Task 3.4, ephys slice — tabbed-workspace-ia). Quiet, informational framing: a left rule and
  * muted text, NOT a warning colour — a reconfiguration is normal, not an error.
+ * Colocated CSS Module (Phase 4 — page areas); local names scoped, values kept verbatim.
  */
 
-.config-version-context {
+.context {
   margin: 0 0 1.1rem;
   padding: 0.6rem 0.85rem;
   border-left: 3px solid #cfe0e0;
@@ -12,19 +13,19 @@
   border-radius: 0 6px 6px 0;
 }
 
-.config-version-context-intro {
+.intro {
   margin: 0 0 0.4rem;
   font-size: 0.85rem;
   color: #46443d;
 }
 
-.config-version-context-list {
+.list {
   margin: 0;
   padding-left: 1.1rem;
   font-size: 0.85rem;
   color: #46443d;
 }
 
-.config-version-context-list li {
+.list li {
   margin: 0.15rem 0;
 }

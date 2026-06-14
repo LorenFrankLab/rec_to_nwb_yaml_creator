@@ -10,7 +10,7 @@
  * Single-version animals (no reconfiguration) render nothing — there is no boundary to explain.
  */
 import { getConfigHistory } from '../../state/workspaceSelectors';
-import './ConfigVersionContext.css';
+import styles from './ConfigVersionContext.module.css';
 
 interface ConfigVersionContextProps {
   /** The animal whose configuration history to describe (read through the tolerant selector). */
@@ -25,12 +25,12 @@ export default function ConfigVersionContext({ animal }: ConfigVersionContextPro
   const ordered = [...history].sort((a, b) => (a.version ?? 0) - (b.version ?? 0));
 
   return (
-    <section className="config-version-context" role="note" aria-label="Electrode configuration history">
-      <p className="config-version-context-intro">
+    <section className={styles.context} role="note" aria-label="Electrode configuration history">
+      <p className={styles.intro}>
         This animal&apos;s electrode configuration was changed during the study. Recording days keep
         the version that was active when they ran:
       </p>
-      <ul className="config-version-context-list">
+      <ul className={styles.list}>
         {ordered.slice(1).map((snapshot, index) => {
           const previous = ordered[index];
           // Render the whole sentence as ONE text node so it reads as a single sentence (and so
