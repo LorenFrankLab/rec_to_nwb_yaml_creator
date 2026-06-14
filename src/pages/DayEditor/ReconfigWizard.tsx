@@ -170,6 +170,24 @@ export default function ReconfigWizard({
       role="alertdialog"
       describedById={summaryId}
       className="reconfig-wizard"
+      footer={
+        <div className="form-actions">
+          <button
+            type="button"
+            className="btn-cancel"
+            onClick={() => onClose()}
+            aria-label="Cancel and close"
+          >
+            Cancel
+          </button>
+          {/* type="button" (not submit): the action row now lives in Modal's footer,
+              outside the <form>. Enter in a field still submits via the form's onSubmit,
+              which calls the same handleApply. */}
+          <button type="button" className="btn-primary" onClick={handleApply}>
+            Create version & apply to {movingDays.length} {movingDays.length === 1 ? 'day' : 'days'}
+          </button>
+        </div>
+      }
     >
       <p id={summaryId} className="reconfig-summary">
         This creates a new configuration version starting {day.date}. This day and
@@ -230,20 +248,6 @@ export default function ReconfigWizard({
             {error}
           </p>
         )}
-
-        <div className="form-actions">
-          <button
-            type="button"
-            className="btn-cancel"
-            onClick={() => onClose()}
-            aria-label="Cancel and close"
-          >
-            Cancel
-          </button>
-          <button type="submit" className="btn-primary">
-            Create version & apply to {movingDays.length} {movingDays.length === 1 ? 'day' : 'days'}
-          </button>
-        </div>
       </form>
     </Modal>
   );
