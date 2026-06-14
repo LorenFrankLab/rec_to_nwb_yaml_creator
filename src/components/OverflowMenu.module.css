@@ -1,11 +1,14 @@
-/* OverflowMenu — reusable ⋮ menu-button (Phase 4, Task 4.1). */
+/* OverflowMenu — reusable ⋮ menu-button (Phase 4, Task 4.1). Scoped CSS Module.
+   NOTE: values preserved verbatim from the former global OverflowMenu.css (pure ownership
+   migration, zero visual change). Token + z-index-scale alignment is deferred to the stylelint
+   ratchet phase. */
 
-.overflow-menu {
+.menu {
   position: relative;
   display: inline-block;
 }
 
-.overflow-menu-trigger {
+.trigger {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -21,17 +24,17 @@
   cursor: pointer;
 }
 
-.overflow-menu-trigger:hover {
+.trigger:hover {
   background: #f0f0f0;
 }
 
-.overflow-menu-trigger:focus-visible,
-.overflow-menu-item:focus-visible {
+.trigger:focus-visible,
+.item:focus-visible {
   outline: 2px solid #2563eb;
   outline-offset: 1px;
 }
 
-.overflow-menu-list {
+.list {
   position: absolute;
   right: 0;
   z-index: 20;
@@ -45,7 +48,7 @@
   box-shadow: 0 6px 18px rgb(0 0 0 / 15%);
 }
 
-.overflow-menu-item {
+.item {
   display: block;
   width: 100%;
   padding: 0.5rem 0.75rem;
@@ -58,11 +61,11 @@
   cursor: pointer;
 }
 
-.overflow-menu-item:hover:not([aria-disabled='true']) {
+.item:hover:not([aria-disabled='true']) {
   background: #f0f4ff;
 }
 
-.overflow-menu-item[aria-disabled='true'] {
+.item[aria-disabled='true'] {
   color: #9aa0a6;
   cursor: default;
 }

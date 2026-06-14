@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import type { KeyboardEvent as ReactKeyboardEvent } from 'react';
-import './OverflowMenu.css';
+import styles from './OverflowMenu.module.css';
 
 interface OverflowMenuItem {
   key: string;
@@ -190,11 +190,11 @@ export default function OverflowMenu({ label, items, buttonClassName }: Overflow
   };
 
   return (
-    <div className="overflow-menu">
+    <div className={styles.menu}>
       <button
         ref={triggerRef}
         type="button"
-        className={`overflow-menu-trigger${buttonClassName ? ` ${buttonClassName}` : ''}`}
+        className={`${styles.trigger}${buttonClassName ? ` ${buttonClassName}` : ''}`}
         aria-label={label}
         aria-haspopup="menu"
         aria-expanded={open}
@@ -211,7 +211,7 @@ export default function OverflowMenu({ label, items, buttonClassName }: Overflow
           id={menuId}
           role="menu"
           aria-label={label}
-          className="overflow-menu-list"
+          className={styles.list}
           onKeyDown={handleMenuKeyDown}
         >
           {items.map((item, index) => (
@@ -222,7 +222,7 @@ export default function OverflowMenu({ label, items, buttonClassName }: Overflow
                 ref={(el) => {
                   itemRefs.current[index] = el;
                 }}
-                className="overflow-menu-item"
+                className={styles.item}
                 // Roving tabindex: only the active item is in the tab order; the rest are -1.
                 tabIndex={index === activeIndex ? 0 : -1}
                 // APG: a disabled menuitem stays perceivable/focusable via aria-disabled (NOT the
