@@ -63,7 +63,7 @@ describe('IssueOwnershipHint', () => {
     const { container } = render(
       <IssueOwnershipHint issue={{ code: 'empty_location', path: '' }} />
     );
-    const hint = container.querySelector('.issue-ownership-hint');
+    const hint = container.querySelector('[data-ownership-pattern]');
     expect(hint).toHaveAttribute('data-ownership-pattern', 'configuration_version');
   });
 

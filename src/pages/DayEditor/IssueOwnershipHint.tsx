@@ -1,6 +1,6 @@
 import { ownershipForIssue } from '../../domain/workflowOwnership';
 import type { RepairableIssue } from '../../domain/repairRouting';
-import './IssueOwnershipHint.css';
+import styles from './IssueOwnershipHint.module.css';
 
 interface IssueOwnershipHintProps {
   /** Issue to describe; forwarded verbatim to `ownershipForIssue` (which is total). */
@@ -23,10 +23,10 @@ interface IssueOwnershipHintProps {
 export default function IssueOwnershipHint({ issue }: IssueOwnershipHintProps) {
   const descriptor = ownershipForIssue(issue);
   return (
-    <span className="issue-ownership-hint" data-ownership-pattern={descriptor.pattern}>
-      <span className="issue-ownership-action">{descriptor.primaryAction}</span>
+    <span className={styles.hint} data-ownership-pattern={descriptor.pattern}>
+      <span className={styles.action}>{descriptor.primaryAction}</span>
       {descriptor.reachesBeyondDay && (
-        <span className="issue-ownership-reach">Affects more than this day</span>
+        <span className={styles.reach}>Affects more than this day</span>
       )}
     </span>
   );

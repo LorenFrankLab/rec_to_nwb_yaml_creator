@@ -1,4 +1,4 @@
-import './Breadcrumb.css';
+import styles from './Breadcrumb.module.css';
 
 interface BreadcrumbItem {
   label: string;
@@ -27,24 +27,28 @@ export default function Breadcrumb({ items }: BreadcrumbProps) {
   if (!items || items.length === 0) return null;
 
   return (
-    <nav aria-label="Breadcrumb" className="breadcrumb">
-      <ol className="breadcrumb-list">
+    <nav aria-label="Breadcrumb" className={styles.breadcrumb}>
+      <ol className={styles.list}>
         {items.map((item, index) => {
           const isLast = index === items.length - 1;
 
           return (
-            <li key={index} className="breadcrumb-item">
+            <li key={index} className={styles.item}>
               {item.href && !isLast ? (
                 <>
-                  <a href={item.href} className="breadcrumb-link">
+                  <a href={item.href} className={styles.link}>
                     {item.label}
                   </a>
-                  <span className="breadcrumb-separator" aria-hidden="true">
+                  <span
+                    className={styles.separator}
+                    data-testid="breadcrumb-separator"
+                    aria-hidden="true"
+                  >
                     ›
                   </span>
                 </>
               ) : (
-                <span className="breadcrumb-current" aria-current={isLast ? 'page' : undefined}>
+                <span className={styles.current} aria-current={isLast ? 'page' : undefined}>
                   {item.label}
                 </span>
               )}
