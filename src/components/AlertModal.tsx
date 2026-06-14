@@ -63,13 +63,15 @@ const AlertModal = ({ isOpen, message, title = 'Alert', onClose, type = 'info' }
           {title}
         </>
       }
+      footer={
+        <button type="button" onClick={onClose} className="alert-modal-close" aria-label="Close alert">
+          Close
+        </button>
+      }
     >
       <p id={messageId} className="alert-modal-message">
         {message}
       </p>
-      <button type="button" onClick={onClose} className="alert-modal-close" aria-label="Close alert">
-        Close
-      </button>
     </Modal>
   );
 };

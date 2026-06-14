@@ -213,6 +213,16 @@ export default function DataAcqSection({ animal, onFieldUpdate, dataAcqRegistry 
       title={editing?.mode === 'add' ? 'Add Recording System' : 'Edit Recording System'}
       titleId={titleId}
       className="recording-system-modal"
+      footer={
+        <div className="recording-system-editor-actions">
+          <button type="button" className="button-secondary" onClick={closeEditor}>
+            Cancel
+          </button>
+          <button type="button" className="button-primary" onClick={saveEditor}>
+            Save recording system
+          </button>
+        </div>
+      }
     >
       <form className="data-acq-form" aria-label="Recording system editor">
         <div className="form-group">
@@ -307,14 +317,6 @@ export default function DataAcqSection({ animal, onFieldUpdate, dataAcqRegistry 
           </div>
         )}
 
-        <div className="recording-system-editor-actions">
-          <button type="button" className="button-secondary" onClick={closeEditor}>
-            Cancel
-          </button>
-          <button type="button" className="button-primary" onClick={saveEditor}>
-            Save recording system
-          </button>
-        </div>
       </form>
     </Modal>
   );

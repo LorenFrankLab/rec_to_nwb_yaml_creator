@@ -30,7 +30,20 @@ export default function ShortcutsHelp({ isOpen, onClose }: ShortcutsHelpProps) {
   const titleId = `${baseId}-title`;
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Keyboard shortcuts" titleId={titleId} className="shortcuts-help">
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Keyboard shortcuts"
+      titleId={titleId}
+      className="shortcuts-help"
+      footer={
+        <div className="form-actions">
+          <button type="button" className="btn-primary" onClick={onClose}>
+            Close
+          </button>
+        </div>
+      }
+    >
       <table className="shortcuts-help-table">
         <thead>
           <tr>
@@ -54,11 +67,6 @@ export default function ShortcutsHelp({ isOpen, onClose }: ShortcutsHelpProps) {
           ))}
         </tbody>
       </table>
-      <div className="form-actions">
-        <button type="button" className="btn-primary" onClick={onClose}>
-          Close
-        </button>
-      </div>
     </Modal>
   );
 }

@@ -31,6 +31,19 @@ export default function DuplicateDayModal({ isOpen, source = null, date, error, 
       title="Duplicate recording day"
       titleId="duplicate-day-title"
       describedById="duplicate-day-desc"
+      footer={
+        <div className="modal-actions">
+          <button type="button" className="btn-secondary" onClick={onClose}>
+            Cancel
+          </button>
+          {/* type="button" (not submit): the action row now lives in Modal's footer,
+              outside the <form>. Enter in the date field still submits via the form's
+              onSubmit, which calls the same onSubmit handler. */}
+          <button type="button" className="btn-primary" onClick={onSubmit}>
+            Duplicate day
+          </button>
+        </div>
+      }
     >
       <form
         onSubmit={(e) => {
@@ -58,14 +71,6 @@ export default function DuplicateDayModal({ isOpen, source = null, date, error, 
             {error}
           </p>
         )}
-        <div className="modal-actions">
-          <button type="button" className="btn-secondary" onClick={onClose}>
-            Cancel
-          </button>
-          <button type="submit" className="btn-primary">
-            Duplicate day
-          </button>
-        </div>
       </form>
     </Modal>
   );
