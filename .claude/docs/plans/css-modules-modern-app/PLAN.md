@@ -43,6 +43,19 @@ workflows **work**; the friction is polish/consistency, and it maps onto the buc
 (These are CSS-architecture targets, not blockers — the app is functional. Several are design calls the
 maintainer should confirm: de-weighting `Delete`, adding a max-width layout, the focus-ring treatment.)
 
+## Status (CSS track — merged into `modern`, not pushed)
+Done so far (each a branch → full gate → `--no-ff` merge): OverflowMenu, WarningAcknowledgement,
+ReconfigurationContextBanner (→ CSS Modules); modal `:user-invalid` premature-invalid fix; **Modal
+ownership → `Modal.module.scss`** (`e3eb8f7`); **Modal `footer` sticky-footer slot + ConfirmDialog**
+(`79601af`); **friction-F sticky footer on every tall live form modal** — CameraModal (`62db840`),
+ElectrodeGroupModal (`8fc99b9`), TaskType + TaskInstance (`5ac1542`). **Friction F is fixed on all
+surfaces that actually clip.** Remaining footer migrations are the short direct-child dialogs
+(AnimalDeleteDialog, AnimalProfileDialog, CopyFromAnimalDialog, DuplicateDayModal, CalendarDayCreator,
+ShortcutsHelp, CameraReferenceDialog, DataAcqSection, AlertModal, ImportYamlDialog, ReconfigWizard) —
+consistency, not clip-fixes. `TaskModal.tsx` is test-only/unused in the live app → skipped. Next after
+the footer sweep: Button restrained-destructive (D), SaveIndicator, app-shell/nav, page areas, then the
+stylelint ratchet (tokenize the modules' verbatim values + z-index scale).
+
 ## Phased order
 Each phase: migrate the component's styles into a colocated `*.module.css`, reference via
 `className={styles.x}`, delete the old global file, verify (typecheck · full vitest · `vite build` ·
