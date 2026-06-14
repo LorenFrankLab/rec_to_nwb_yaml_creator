@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Removed
+
+- **Deleted dead code `src/components/rawPropTypes.ts` + its test.** The tolerant custom PropTypes
+  validators (`rawArray`/`rawRecord`) were used only by repair-destination components that dropped
+  PropTypes when they became TypeScript, leaving the module orphaned (only its own test imported it).
+  No live or legacy source referenced it. `npm run typecheck` + `CI=true` build clean; full suite
+  green (4787, −6 from the removed test).
+
 ### Changed
 
 - **Live TypeScript migration COMPLETE — the entire live app is now TypeScript; only the frozen legacy single-page form (slated for deletion) remains `.jsx`/`.js` — cycles 15–16.**
