@@ -21,19 +21,19 @@ if (typeof window !== 'undefined' && !window.HTMLElement.prototype.scrollIntoVie
 // jsdom) is left untouched.
 if (typeof window !== 'undefined' && !window.localStorage) {
   const createMemoryStorage = () => {
-    let store = new Map();
+    let store = new Map<string, string>();
     return {
-      getItem: (key) => (store.has(String(key)) ? store.get(String(key)) : null),
-      setItem: (key, value) => {
+      getItem: (key: string) => (store.has(String(key)) ? store.get(String(key)) : null),
+      setItem: (key: string, value: string) => {
         store.set(String(key), String(value));
       },
-      removeItem: (key) => {
+      removeItem: (key: string) => {
         store.delete(String(key));
       },
       clear: () => {
-        store = new Map();
+        store = new Map<string, string>();
       },
-      key: (index) => Array.from(store.keys())[index] ?? null,
+      key: (index: number) => Array.from(store.keys())[index] ?? null,
       get length() {
         return store.size;
       },

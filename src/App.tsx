@@ -10,7 +10,6 @@
  * @module App
  */
 
-import React from 'react';
 import { AppLayout } from './layouts/AppLayout';
 
 /**
@@ -21,8 +20,6 @@ import { AppLayout } from './layouts/AppLayout';
  * - ARIA landmarks and accessibility structure
  * - Skip links for keyboard navigation
  * - Screen reader announcements for route changes
- *
- * @returns {JSX.Element} The AppLayout component
  */
 export function App() {
   return <AppLayout />;
