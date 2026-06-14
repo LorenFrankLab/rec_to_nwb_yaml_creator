@@ -87,23 +87,13 @@
     }
   }
 
-  /* Action buttons keep the WCAG AA touch target (the global .button-small only sets colors). */
+  /* Edit/Delete are the <Button> primitive (neutral / dangerSubtle, small); it owns
+     color/border/padding/focus. This only adds the table-cell gap + WCAG touch target. */
   tbody tr td button {
-    padding: 0.4rem 0.8rem;
-    border-radius: 4px;
-    font-size: var(--font-size-sm);
-    font-weight: 500;
-    cursor: pointer;
-    transition: all var(--transition-fast);
-    font-family: inherit;
     margin-right: var(--spacing-xs);
     min-height: 48px;
     min-width: 48px;
 
-    &:focus {
-      outline: 2px solid var(--color-primary);
-      outline-offset: 2px;
-    }
     &:last-child { margin-right: 0; }
   }
 }
@@ -225,8 +215,7 @@
 
 @media print {
   .task-types-section .table-actions,
-  .task-types-table .button-small,
-  .task-types-table .button-danger {
+  .task-types-table tbody tr td button {
     display: none;
   }
 }

@@ -102,24 +102,26 @@ export default function TaskInstancesTable({
                 <tr key={`${instance?.taskTypeId ?? 'inst'}-${index}`} className={type ? '' : 'task-instance-dangling'}>
                   <td data-label="Order">
                     <div className="task-instance-order">
-                      <button
-                        type="button"
-                        className="button-small order-button"
+                      <Button
+                        variant="neutral"
+                        size="small"
+                        className="order-button"
                         disabled={index === 0}
                         onClick={() => onReorder(index, index - 1)}
                         aria-label={`Move ${label} earlier`}
                       >
                         ↑
-                      </button>
-                      <button
-                        type="button"
-                        className="button-small order-button"
+                      </Button>
+                      <Button
+                        variant="neutral"
+                        size="small"
+                        className="order-button"
                         disabled={index === instances.length - 1}
                         onClick={() => onReorder(index, index + 1)}
                         aria-label={`Move ${label} later`}
                       >
                         ↓
-                      </button>
+                      </Button>
                     </div>
                   </td>
                   <td data-label="Task" title={label}>
@@ -135,22 +137,22 @@ export default function TaskInstancesTable({
                   <td data-label="Cameras">{cameraIds.length > 0 ? cameraIds.map(cameraLabel).join(', ') : '—'}</td>
                   <td data-label="Epochs">{epochs.length > 0 ? epochs.join(', ') : '—'}</td>
                   <td data-label="Actions">
-                    <button
-                      type="button"
-                      className="button-small"
+                    <Button
+                      variant="neutral"
+                      size="small"
                       onClick={() => onEdit(index)}
                       aria-label={`Edit ${label} for this day`}
                     >
                       Edit
-                    </button>
-                    <button
-                      type="button"
-                      className="button-small button-danger"
+                    </Button>
+                    <Button
+                      variant="dangerSubtle"
+                      size="small"
                       onClick={() => onRemove(index)}
                       aria-label={`Remove ${label} from this day`}
                     >
                       Remove
-                    </button>
+                    </Button>
                   </td>
                 </tr>
               );
