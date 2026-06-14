@@ -7,7 +7,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Migrated the build tool from Create React App (`react-scripts`) to Vite — behavior-preserving;
+  the app remains a client-side SPA on GitHub Pages.** CRA was deprecated (Feb 2025). The repo was
+  already half on Vite (Vitest), so this consolidated the two toolchains into one `vite.config.ts`
+  that drives both the app build and the test lane.
+  - `vite.config.ts` (former `vitest.config.js` merged in + app build config): conditional `base`
+    (`/rec_to_nwb_yaml_creator/` for the production build, `/` for dev so Playwright is unaffected),
+    `build.outDir: 'build'` (keeps `gh-pages -d build` + the CI artifact path), dev/preview port 3000.
+  - `index.html` moved `public/` → repo root (Vite entry) with a module `<script src="/src/index.tsx">`.
+  - `process.env.NODE_ENV` → `import.meta.env.MODE` (ErrorBoundary); `react-app-env.d.ts` references
+    `vite/client`; scripts: `start`/`build` → `vite`, added `preview`.
+  - **Bug fixed in the move:** `schemaValidation.ts` used `const Ajv = require('ajv')` (CommonJS),
+    which webpack tolerated but Vite (native ESM) does not — it crashed the app to a blank root with
+    `require is not defined`. Converted to `import Ajv from 'ajv'`. It was the only `require()` in source.
+  - **ESLint gate:** CRA's `CI=true react-scripts build` treated warnings as errors; Vite's build does
+    not run ESLint, so that strictness moved to a `lint:ci` script (`eslint --max-warnings 0`) wired into
+    the CI lint job (whole-repo scope — stricter than CRA). Fixed the 7 pre-existing warnings it surfaced.
+  - Verified each phase: typecheck, full suite (4787), `vite build`, the production bundle rendering with
+    zero console errors served exactly as GitHub Pages does, and e2e (104).
+
 ### Removed
+
+- **Removed `react-scripts` and its ~927-package transitive tree (CRA toolchain — webpack, Babel, Jest).**
+  Promoted to direct deps what react-scripts had provided transitively but the project still needs:
+  `eslint` + `eslint-config-react-app` (the `.eslintrc.js` `"react-app"` preset; same versions, no behavior
+  change), and `ajv-formats` (imported in source). Removed the `eject` script. `.npmrc legacy-peer-deps`
+  is left in place for now — its removal (no longer forced by react-scripts' TS peer pin) is a separate
+  follow-up that needs a clean `npm ci` validation.
 
 - **Deleted dead code `src/components/rawPropTypes.ts` + its test.** The tolerant custom PropTypes
   validators (`rawArray`/`rawRecord`) were used only by repair-destination components that dropped
