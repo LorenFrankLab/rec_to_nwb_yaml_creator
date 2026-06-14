@@ -42,13 +42,6 @@
   font-size: 10px;
 }
 
-.trigger:focus-visible,
-.switch:focus-visible,
-.new:focus-visible {
-  outline: 2px solid var(--color-primary, #0d5c63);
-  outline-offset: 1px;
-}
-
 /* Popup */
 .popup {
   position: absolute;
@@ -157,4 +150,13 @@
   color: var(--color-primary, #0d5c63);
   font-family: var(--mono-font, monospace);
   flex: none;
+}
+
+/* Focus rings last so the base .trigger/.switch/.new rules precede this higher-specificity
+   state (satisfies no-descending-specificity; this only sets `outline`, so order is cosmetic). */
+.trigger:focus-visible,
+.switch:focus-visible,
+.new:focus-visible {
+  outline: 2px solid var(--color-primary, #0d5c63);
+  outline-offset: 1px;
 }

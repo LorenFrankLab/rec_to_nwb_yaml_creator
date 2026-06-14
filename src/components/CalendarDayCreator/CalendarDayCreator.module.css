@@ -122,14 +122,16 @@
   transition: all 0.2s;
 }
 
-.day:hover:not(.dayDisabled) {
-  background-color: var(--color-gray-100, #f5f5f5);
-  border-color: var(--color-gray-400, #bdbdbd);
-}
-
+/* :focus before the higher-specificity :hover:not() so source order matches specificity
+   (no-descending-specificity); they set different properties, so order is cosmetic. */
 .day:focus {
   outline: 2px solid var(--color-primary, var(--color-primary));
   outline-offset: 2px;
+}
+
+.day:hover:not(.dayDisabled) {
+  background-color: var(--color-gray-100, #f5f5f5);
+  border-color: var(--color-gray-400, #bdbdbd);
 }
 
 /* Day States */
@@ -265,13 +267,13 @@
   background-color: var(--color-primary, var(--color-primary));
 }
 
-.btnPrimary:hover:not(:disabled) {
-  background-color: var(--color-primary-hover);
-}
-
 .btnPrimary:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+.btnPrimary:hover:not(:disabled) {
+  background-color: var(--color-primary-hover);
 }
 
 .btnSecondary {
@@ -280,13 +282,13 @@
   border: 1px solid var(--color-border, #e0e0e0);
 }
 
-.btnSecondary:hover:not(:disabled) {
-  background-color: var(--color-gray-200, #eee);
-}
-
 .btnSecondary:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+.btnSecondary:hover:not(:disabled) {
+  background-color: var(--color-gray-200, #eee);
 }
 
 .btnClose {
