@@ -98,8 +98,30 @@ identical on all three surfaces (workspace app-bar, animal-view section-nav + An
 NOTE: extracting app-shell ownership necessarily made a *subtractive* edit to index.css (removing the
 component rules); Phase 1 still owns the *additive* globals lockdown (tokens/reset/base-type/focus/max-width).
 
-**Next:** Phase 1 globals (focus-ring/max-width/links) → Phase 4 page areas → Phase 5 stylelint ratchet
-(tokenize the modules' verbatim values + z-index scale, then ratchet `*.module.*` to error).
+**Phase 1 (globals lockdown) — COMPLETE** (merge `3887f59`; branch `css-phase1-globals` kept). Added the
+app-level base globals to `index.css` (the only phase that ADDS to it; Phase 3 had already made the
+*subtractive* app-shell extraction):
+- **Friction G — base links:** `a { color: var(--color-primary) }`. The frozen App.scss `a {}` sets
+  text-decoration/margin but no colour, so bare links (the footer) fell back to browser-default bright
+  blue. Maintainer chose app-wide (tints the legacy footer too — cosmetic). Component links keep their
+  own class colours.
+- **Friction A/B — focus discipline:** `main#main-content:focus { outline: none }`. KEY FINDING: the page
+  `<main>` (tabindex=-1, focused programmatically on route change for SR announcement) is treated as
+  `:focus-visible` by Chromium, so `:not(:focus-visible)` can't gate it (the first attempt left the box).
+  Since `main` is never in the Tab order it's only ever focused programmatically → suppress its focus box
+  unconditionally. Removed the jarring full-page blue box AND the blue/teal inconsistency (B). Interactive
+  controls + the AnimalView panel keep their own `:focus-visible` rings.
+- **Friction C — max-width container:** `main#main-content:not(.day-editor-content) { max-width: 1280px;
+  margin-inline: auto }`. Maintainer chose 1280px, modern-only. Modern views render a `<main>` (legacy
+  uses a `<div>`, untouched); the Day Editor already manages its own 1200px (`.day-editor-content`, kept
+  via the `:not()` exclusion). App-bar + footer stay full-width by design.
+
+Verified in-browser (Playwright + getComputedStyle): footer link `#1565c0`; main `outline-style:none`
+while focused; modern mains 1280 centered, DayEditor 1200, legacy `<div>` uncapped + form renders. Gate:
+typecheck clean, lint:ci exit 0, vite build OK, 4790 vitest.
+
+**Next:** Phase 4 page areas → Phase 5 stylelint ratchet (tokenize the modules' verbatim values + z-index
+scale, then ratchet `*.module.*` to error).
 
 ## Phased order
 Each phase: migrate the component's styles into a colocated `*.module.css`, reference via
