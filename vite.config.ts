@@ -19,7 +19,9 @@ export default defineConfig(({ command }) => ({
   // Keep CRA's output dir so `gh-pages -d build` (deploy) and the CI build-artifact path are unchanged.
   build: { outDir: 'build' },
   // Match the port Playwright's webServer + baseURL expect (and the kill-stale-:3000 workflow).
-  server: { port: 3000 },
+  // `open` preserves CRA's auto-open-browser-on-`npm start` dev convenience, but only outside CI
+  // (Playwright runs `npm start` with CI=true as its webServer — it must not spawn a browser).
+  server: { port: 3000, open: !process.env.CI },
   preview: { port: 3000 },
   esbuild: {
     // This codebase mixes JSX across extensions — `.jsx` components/tests, `.tsx`

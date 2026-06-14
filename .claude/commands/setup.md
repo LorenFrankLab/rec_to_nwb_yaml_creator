@@ -14,19 +14,19 @@ Follow these steps in order:
 
 Run: `test -f .nvmrc && cat .nvmrc || echo "ERROR: .nvmrc not found"`
 
-Expected: Should display Node version (e.g., "20.19.5")
+Expected: Should display Node version (e.g., "26.0.0")
 
 ### 2. Switch to correct Node version
 
 Run: `nvm use`
 
-Expected output should include: "Now using node v20.19.5" or similar
+Expected output should include: "Now using node v26.0.0" or similar
 
 ### 3. Verify Node version matches
 
 Run: `node --version`
 
-Expected: Should show "v20.19.5" (matching .nvmrc)
+Expected: Should show "v26.0.0" (matching .nvmrc)
 
 ### 4. Install/verify dependencies
 
@@ -44,14 +44,14 @@ Expected: Should show a large number (800+)
 
 Run: `npm test -- --version`
 
-Expected: Should display react-scripts test runner version without errors
+Expected: Should display the Vitest version without errors (the test runner is Vitest, not CRA/Jest)
 
 ## Success Report
 
 After completing all steps, announce:
 
 ```
-✓ Environment ready: Node v20.19.5, dependencies installed
+✓ Environment ready: Node v26.0.0, dependencies installed
 ✓ Ready to proceed with development tasks
 ```
 

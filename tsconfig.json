@@ -7,11 +7,11 @@
     "target": "ES2020",
     "module": "esnext",
     "baseUrl": ".",
-    // NOTE: jsconfig's `paths` ("@/*" -> "src/*") is intentionally NOT carried here.
-    // Create React App (react-scripts) requires `compilerOptions.paths` to be
-    // undefined and silently rewrites tsconfig.json on every build otherwise. No
-    // build-included source imports via "@/"; that alias is resolved for the test
-    // runner by `resolve.alias` in vitest.config.js, which is independent of tsconfig.
+    // NOTE: the `@/*` -> `src/*` alias is currently resolved for BOTH the build and the
+    // test lane by `resolve.alias` in vite.config.ts, not here. No build-included source
+    // imports via "@/". (It used to be kept out because Create React App forbade
+    // `compilerOptions.paths` and rewrote tsconfig.json; that constraint is gone now that
+    // the build is Vite, so adding `paths` here is a possible future cleanup.)
 
     // --- TypeScript bootstrap ---
     "allowJs": true,
@@ -23,8 +23,8 @@
     "forceConsistentCasingInFileNames": true,
     "lib": ["DOM", "DOM.Iterable", "ES2020"],
 
-    // --- Required/suggested by react-scripts' verifyTypeScriptSetup so the
-    //     production build never has to rewrite this file (keeps it stable) ---
+    // --- Recommended for the Vite/esbuild single-file transform (isolatedModules is
+    //     required by esbuild; the rest were carried over from the CRA setup) ---
     "isolatedModules": true,
     "allowSyntheticDefaultImports": true,
     "noFallthroughCasesInSwitch": true

@@ -61,8 +61,8 @@ npm install  # Reads package-lock.json for exact versions
 
 # 5. Verify environment
 node --version    # Should show: v20.19.5
-npm test          # Should run without errors
-npm start         # Should launch dev server
+npx vitest run    # Should run without errors (one-shot; `npm test` starts Vitest watch mode)
+npm start         # Should launch the Vite dev server (opens a browser)
 ```
 
 ### Without a Version Manager (no nvm)
@@ -107,7 +107,7 @@ npm install
 npm test
 
 # 3. Verify all tests pass
-npm test -- --watchAll=false
+npx vitest run
 
 # 4. Commit changes
 git add .nvmrc package-lock.json
@@ -126,7 +126,7 @@ npm install package-name
 git status
 
 # 3. Test thoroughly
-npm test -- --watchAll=false
+npx vitest run
 
 # 4. Commit both files
 git add package.json package-lock.json
@@ -139,12 +139,13 @@ git commit -m "feat: add package-name for [purpose]"
 
 - The app's **direct** `yaml` dependency is kept patched (`>=2.8.3`) for
   [GHSA-48c2-rrv3-qjmp](https://github.com/advisories/GHSA-48c2-rrv3-qjmp).
-- The **remaining** findings are **transitive** dependencies of `react-scripts@5.0.1`
-  (webpack-dev-server, postcss, an old `yaml@1.10.2` via cssnano/cosmiconfig, etc.). They are
-  **build/dev-time only**, not shipped to users at runtime, and are **accepted as known debt**.
-- **Do NOT run `npm audit fix --force`** — it attempts to downgrade/replace `react-scripts` and breaks
-  the build. Clearing these requires migrating off Create React App (e.g. to Vite), which is a
-  separate, larger effort and out of scope for routine dependency maintenance.
+- The **remaining** findings are **transitive** dependencies of the build/dev toolchain — Vite,
+  Vitest, ESLint, Stylelint, and Babel (via `@vitejs/plugin-react`) and their trees (e.g. an old
+  `yaml@1.x` via `cosmiconfig`). They are **build/dev-time only**, not shipped to users at runtime,
+  and are **accepted as known debt**.
+- **Do NOT run `npm audit fix --force`** — it can downgrade/replace toolchain packages and break the
+  build or tests. (The CRA→Vite migration already removed `react-scripts` and its large transitive
+  vulnerability tree; what remains is the maintained Vite/Vitest toolchain's own transitive debt.)
 
 ### Troubleshooting
 

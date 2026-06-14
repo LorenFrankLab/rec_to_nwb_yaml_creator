@@ -335,15 +335,17 @@ The codebase is incrementally adopting TypeScript. `.ts`/`.tsx` and `.js`/`.jsx`
 **coexist** — `tsconfig.json` sets `allowJs: true` (so JS imports TS and vice versa) and
 `checkJs: false` (so `.js` files are parsed but not type-checked).
 
-**The production build does NOT type-check.** `react-scripts build` compiles TypeScript with
-Babel, which strips types without checking them — so a type error never fails the build. The
+**The production build does NOT type-check.** `vite build` compiles TypeScript with esbuild,
+which strips types without checking them — so a type error never fails the build. The
 **only** thing that type-checks is `npm run typecheck` (`tsc --noEmit`), which runs as its own
 CI job. If you change a `.ts` file, run `npm run typecheck` before claiming it works; the build
 passing tells you nothing about types.
 
-`tsconfig.json` deliberately omits the `@/*` path alias (react-scripts forbids
-`compilerOptions.paths` and rewrites the file otherwise). No build-included source uses `@/`;
-the alias is resolved for tests by `resolve.alias` in `vitest.config.js`.
+`tsconfig.json` currently omits the `@/*` path alias; the alias is resolved (for both the build
+and the test lane) by `resolve.alias` in `vite.config.ts`. No build-included source uses `@/`.
+(The historical reason for keeping it out of tsconfig — react-scripts forbidding
+`compilerOptions.paths` and rewriting the file — no longer applies now that the build is Vite, so
+re-adding tsconfig `paths` is a possible future cleanup.)
 
 **Conversion guidance:** type the lowest-churn, highest-leverage **pure** modules first
 (`io/`, then `state/`, then `domain/`/`validation/`) — not components. A pure module with a
@@ -385,12 +387,14 @@ styles to a module only when a phase touches it.
 style debt. It runs at **warn-level** (`defaultSeverity: "warning"` in `.stylelintrc.json`) so it
 reports without failing the gate today; a later phase ratchets it to error-level.
 
-> Note: `.npmrc` sets `legacy-peer-deps=true`. react-scripts@5 pins `typescript` as an optional peer
-> at `^3||^4` while this project uses `typescript@5`, so without it any new `npm install` fails
-> ERESOLVE on that optional-peer mismatch. It keeps install and `npm ci` tolerant and in sync.
-> **Trade-off:** `legacy-peer-deps` stops npm auto-installing *peer* dependencies tree-wide, so when a
-> dependency relies on a peer you need at runtime or in tests (e.g. `@testing-library/dom` for
-> `@testing-library/react`), **declare that peer explicitly** in `devDependencies`/`dependencies`.
+> Note: `.npmrc` sets `legacy-peer-deps=true`. This was originally required because react-scripts@5
+> pinned `typescript` as an optional peer at `^3||^4` while this project uses `typescript@5`. The
+> CRA→Vite migration **removed react-scripts**, so that specific conflict is gone — but the setting is
+> **kept for now** (its removal needs a clean `rm -rf node_modules && npm ci` validation for ERESOLVE
+> risk; tracked as a follow-up). **Trade-off (still applies while it's on):** `legacy-peer-deps` stops
+> npm auto-installing *peer* dependencies tree-wide, so when a dependency relies on a peer you need at
+> runtime or in tests (e.g. `@testing-library/dom` for `@testing-library/react`), **declare that peer
+> explicitly** in `devDependencies`/`dependencies`.
 
 ## Using Playwright (for Claude)
 
