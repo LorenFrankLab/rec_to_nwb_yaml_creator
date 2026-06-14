@@ -58,8 +58,20 @@ state; wrapper renders `isOpen ? <Form/> : null`); (2) **submit→button** when 
 (`type="submit"` → `type="button" onClick`, form's onSubmit still handles Enter). Multi-phase
 ImportYamlDialog hoists a per-phase `footer` to the top-level Modal and drops each sub-phase's action row.
 
-**Next:** Button restrained-destructive variant (D) → SaveIndicator → app-shell/nav → page areas → the
-stylelint ratchet (tokenize the modules' verbatim values + z-index scale).
+**Friction D (Button restrained-destructive) — COMPLETE** (`39c3d85`). The Button primitive gained
+token-driven `dangerSubtle` (restrained red-text) + `neutral` (quiet grey) variants and a `small` size
+(`c3f64d7`); every live table's row Edit/Delete (+ ↑/↓ reorder / Remove) migrated to `<Button>` so the
+app reads quiet instead of a wall of filled red — Cameras (`40aeb7c`), then ElectrodeGroups/TaskTypes/
+DataAcq/TasksTable/TaskInstances/AssociatedFiles/AssociatedVideos/TaskEpochs (`cfa7e34`). Per-section
+recipe: trim each in-cell `… tbody tr td button` element selector (it set `border:none`+padding at
+specificity 0,1,4 and would override the primitive) down to just gap + WCAG touch target; remove the dead
+`.button-small`/`.button-danger` color rules; retarget responsive + print rules to the element selector.
+`TaskModal.tsx` keeps the legacy classes (test-only/unused). The filled `danger` is reserved for the
+confirm dialog.
+
+**Next (remaining Phase 2 + later phases):** SaveIndicator → Phase 3 app-shell/nav → Phase 4 page areas →
+Phase 1 globals (focus-ring/max-width/links) → Phase 5 stylelint ratchet (tokenize the modules' verbatim
+values + z-index scale, then ratchet `*.module.*` to error).
 
 ## Phased order
 Each phase: migrate the component's styles into a colocated `*.module.css`, reference via
