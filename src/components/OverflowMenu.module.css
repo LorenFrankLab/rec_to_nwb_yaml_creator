@@ -17,7 +17,7 @@
   padding: 0;
   font-size: 1.25rem;
   line-height: 1;
-  color: #444;
+  color: var(--color-grey-800);
   background: transparent;
   border: 1px solid transparent;
   border-radius: 4px;
@@ -37,12 +37,12 @@
 .list {
   position: absolute;
   right: 0;
-  z-index: 20;
+  z-index: var(--z-popover);
   min-width: 12rem;
   margin: 0.25rem 0 0;
   padding: 0.25rem;
   list-style: none;
-  background: #fff;
+  background: var(--color-white);
   border: 1px solid #d0d0d0;
   border-radius: 6px;
   box-shadow: 0 6px 18px rgb(0 0 0 / 15%);
@@ -54,7 +54,7 @@
   padding: 0.5rem 0.75rem;
   font-size: 0.9rem;
   text-align: left;
-  color: #1a1a1a;
+  color: var(--color-grey-900);
   background: transparent;
   border: none;
   border-radius: 4px;
@@ -66,6 +66,6 @@
 }
 
 .item[aria-disabled='true'] {
-  color: #9aa0a6;
+  color: var(--color-grey-400);
   cursor: default;
 }

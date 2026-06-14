@@ -15,14 +15,14 @@
 .lead {
   margin: 0 0 0.4rem;
   font-size: 0.85rem;
-  color: #6a4a1b;
+  color: var(--color-ink-warm);
 }
 
 .list {
   margin: 0 0 0.5rem;
   padding-left: 1.1rem;
   font-size: 0.82rem;
-  color: #46443d;
+  color: var(--color-ink-warm);
 }
 
 .day {
@@ -35,5 +35,5 @@
   gap: 0.45rem;
   font-size: 0.85rem;
   font-weight: 600;
-  color: #2b2a25;
+  color: var(--color-grey-900);
 }
