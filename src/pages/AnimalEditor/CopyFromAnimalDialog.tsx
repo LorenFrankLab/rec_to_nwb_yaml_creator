@@ -383,6 +383,21 @@ export default function CopyFromAnimalDialog({
       title={title}
       titleId={titleId}
       className="copy-from-animal-modal"
+      footer={
+        <div className="modal-actions">
+          <button type="button" onClick={handleCancel} className="button-secondary">
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={handleCopy}
+            disabled={!canCopy}
+            className="button-primary"
+          >
+            Copy
+          </button>
+        </div>
+      }
     >
       <div className="modal-body">
         {availableAnimals.length === 0 ? (
@@ -502,20 +517,6 @@ export default function CopyFromAnimalDialog({
           </>
         )}
       </div>
-
-      <footer className="modal-actions">
-        <button type="button" onClick={handleCancel} className="button-secondary">
-          Cancel
-        </button>
-        <button
-          type="button"
-          onClick={handleCopy}
-          disabled={!canCopy}
-          className="button-primary"
-        >
-          Copy
-        </button>
-      </footer>
     </Modal>
   );
 }

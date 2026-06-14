@@ -129,6 +129,16 @@ export default function AnimalProfileDialog({
         title="Edit animal profile"
         titleId={titleId}
         className="animal-profile-dialog"
+        footer={
+          <div className="form-actions">
+            <button type="button" className="btn-cancel" onClick={onClose}>
+              Cancel
+            </button>
+            <button type="button" className="button-primary" disabled={!isDirty} onClick={handleSaveClick}>
+              Save profile changes
+            </button>
+          </div>
+        }
       >
         <p className="animal-profile-blast-radius" role="note">
           Shared subject facts. Editing them updates {blastRadius}. Nothing here belongs to a single
@@ -221,15 +231,6 @@ export default function AnimalProfileDialog({
               onChange={(e) => setField('description', e.target.value)}
             />
           </div>
-        </div>
-
-        <div className="form-actions">
-          <button type="button" className="btn-cancel" onClick={onClose}>
-            Cancel
-          </button>
-          <button type="button" className="button-primary" disabled={!isDirty} onClick={handleSaveClick}>
-            Save profile changes
-          </button>
         </div>
       </Modal>
 

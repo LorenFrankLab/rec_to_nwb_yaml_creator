@@ -76,6 +76,23 @@ export default function AnimalDeleteDialog({
       closeOnOverlayClick={false}
       describedById={messageId}
       className="confirm-dialog animal-delete-dialog"
+      footer={
+        <div className="form-actions">
+          <button type="button" className="btn-cancel" onClick={onCancel}>
+            Cancel
+          </button>
+          <button
+            type="button"
+            className="btn-danger"
+            disabled={!matches}
+            // Names why it's disabled for assistive tech until the typed name matches.
+            aria-describedby={matches ? undefined : messageId}
+            onClick={handleConfirm}
+          >
+            Delete animal
+          </button>
+        </div>
+      }
     >
       <p id={messageId} className="confirm-dialog-message">
         Delete <strong>{animalId}</strong> and its {cascade.ownedDayCount}{' '}
@@ -108,22 +125,6 @@ export default function AnimalDeleteDialog({
             if (e.key === 'Enter') handleConfirm();
           }}
         />
-      </div>
-
-      <div className="form-actions">
-        <button type="button" className="btn-cancel" onClick={onCancel}>
-          Cancel
-        </button>
-        <button
-          type="button"
-          className="btn-danger"
-          disabled={!matches}
-          // Names why it's disabled for assistive tech until the typed name matches.
-          aria-describedby={matches ? undefined : messageId}
-          onClick={handleConfirm}
-        >
-          Delete animal
-        </button>
       </div>
     </Modal>
   );
