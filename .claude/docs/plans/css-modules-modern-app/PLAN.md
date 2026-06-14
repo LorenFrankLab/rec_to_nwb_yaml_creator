@@ -184,7 +184,21 @@ typecheck clean, lint:ci exit 0, vite build OK, 4790 vitest.
   `DayLifecycleLegend` bar all inherited the frozen App.scss `details{border:1px solid black;…}`; scoped
   around it in BOTH modules (App.scss untouched) → grey-200 border, token padding, weight-500 summary, no
   open-state underline. getComputedStyle confirmed grey-200 (was black) on both bars.
-- **REMAINING Phase 4:** AnimalEditor setup tables (friction E, fix in place — no module migration).
+- **DONE — friction E (setup-table truncation, fix in place)** (merge `0e2d4a6`; branch
+  `css-phase4-frictionE` kept; commit `24b6413`). CamerasSection.scss + TaskTypesSection.scss switched
+  `table-layout: fixed` → `auto` and `max-width: 0` → `max-width: 20rem` on the free-text columns. Root
+  cause (measured in-browser): under fixed layout the 4 text columns collapsed to an equal ~96px share
+  (content needed 119–175px) → readable values truncated to "overh…" and headers collided, despite
+  unused page width. Auto layout sizes columns to content; the existing `overflow-x: auto` scroll wrapper
+  keeps Edit/Delete reachable. NO module migration of the entangled setup-table SCSS (per brief). The
+  AnimalWorkspace `.day-session-desc` `max-width: 26rem` is a deliberate one-line cap (not the `0`
+  collapse) — left unchanged. getComputedStyle confirmed auto layout + zero truncation on both tables.
+
+**PHASE 4 COMPLETE.** All live page areas migrated to colocated CSS Modules (ImportYamlDialog, Breadcrumb,
+IssueOwnershipHint, CalendarDayCreator, Home, AnimalWorkspace, ValidationSummary) + friction H (consistent
+disclosure bars) + friction E (setup-table truncation). The 4 setup-table SCSS files (Cameras/
+ElectrodeGroups/TaskTypes/DataAcq) remain global by design (entangled shared `button-*`/`table-actions`/
+`status-badge*`/`section-header`); ErrorState stays a shared global utility. **Next: Phase 5 ratchet.**
 
 **Recon map for the remaining files (read before migrating — these are the section-nav-style hazards).**
 Classes that MUST stay GLOBAL (literal, shared across files / JS-applied / queried by tests — do NOT hash;
