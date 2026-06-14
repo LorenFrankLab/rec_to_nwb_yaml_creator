@@ -69,9 +69,16 @@ specificity 0,1,4 and would override the primitive) down to just gap + WCAG touc
 `TaskModal.tsx` keeps the legacy classes (test-only/unused). The filled `danger` is reserved for the
 confirm dialog.
 
-**Next (remaining Phase 2 + later phases):** SaveIndicator → Phase 3 app-shell/nav → Phase 4 page areas →
-Phase 1 globals (focus-ring/max-width/links) → Phase 5 stylelint ratchet (tokenize the modules' verbatim
-values + z-index scale, then ratchet `*.module.*` to error).
+**SaveIndicator → CSS Module — DONE** (`e908fe5`): `.save-indicator*` moved out of the global DayEditor.scss
+into a colocated `SaveIndicator.module.css` (it renders in both the Day Editor stepper and the AnimalView
+header, so it now carries its own styling); unstyled decorative classes dropped. **This completes Phase 2
+(shared UI primitives):** Modal, Button (+ friction D), OverflowMenu, banners, SaveIndicator all on CSS
+Modules.
+
+**Next:** Phase 3 app-shell/nav (`AnimalSwitcher` + AppLayout app-bar/primary-nav/section-nav — the
+section-nav styles currently live in AnimalView.css) → Phase 4 page areas → Phase 1 globals
+(focus-ring/max-width/links) → Phase 5 stylelint ratchet (tokenize the modules' verbatim values + z-index
+scale, then ratchet `*.module.*` to error).
 
 ## Phased order
 Each phase: migrate the component's styles into a colocated `*.module.css`, reference via
