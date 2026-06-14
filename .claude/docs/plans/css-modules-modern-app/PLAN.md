@@ -262,9 +262,14 @@ genuinely-distinct NEW tokens added to `index.css` (exact hexes, AA on white): `
 `--color-ink-warm #46443d`, `--color-teal #0d5c63`. z-index 40/20→`--z-popover`. Consolidations are small
 INTENTIONAL shifts landing on documented-AA token pairs (no contrast regression). Config: allow
 `:global`/`:local` + `currentcolor`; modules error-level EXCEPT `selector-class-pattern`/
-`keyframes-name-pattern` (CSS Modules use camelCase) and `no-descending-specificity` (kept warning —
-pre-existing verbatim style debt). `lint:css` exit 0 (0 module errors, 317 warnings all in global/legacy);
-every no-fallback module `var()` resolves (no silent missing-color regressions).
+`keyframes-name-pattern` (CSS Modules legitimately use camelCase identifiers — convention, not debt).
+`lint:css` exit 0; every no-fallback module `var()` resolves (no silent missing-color regressions).
+
+**Module lane now PRISTINE (`887cc5e`, `e928d9b`):** the 6 `no-descending-specificity` warnings
+(AnimalSwitcher/OverflowMenu/CalendarDayCreator — focus/disabled rules after a higher-specificity
+:hover) were cleared by reordering the property-disjoint pairs (focus→outline, hover→bg, disabled→
+opacity; byte-identical render), then `no-descending-specificity` was promoted to **error** for modules
+so it can't silently regress. Module stylelint lane: **0 errors, 0 warnings.**
 
 **🎉 CSS-MODULES TRACK COMPLETE (Phases 1–5).** All live (modern) surfaces on colocated CSS Modules with
 design tokens; stylelint ratcheted to error for modules. Frictions A/B/C/D/E/F/G/H all addressed. Remaining
