@@ -10,7 +10,7 @@ import Modal from '../Modal/Modal';
 import { CalendarGrid } from './CalendarGrid';
 import { CalendarHeader } from './CalendarHeader';
 import { CalendarLegend } from './CalendarLegend';
-import './CalendarDayCreator.css';
+import styles from './CalendarDayCreator.module.css';
 
 /** A calendar date split into 1-indexed components (`month` 1 = January, `day` 1-based). */
 interface DateParts {
@@ -250,14 +250,14 @@ export function CalendarDayCreator({ animalId, existingDays = [], onCreateDays, 
       onClose={() => onClose && onClose()}
       title="Recording Days Calendar"
       titleId={titleId}
-      className="calendar-day-creator"
+      className={styles.dayCreator}
       footer={
-        <div className="calendar-actions">
+        <div className={styles.actions}>
           <button
             type="button"
             onClick={handleClearSelection}
             disabled={selectedDates.size === 0}
-            className="btn-secondary"
+            className={styles.btnSecondary}
           >
             Clear Selection
           </button>
@@ -266,14 +266,14 @@ export function CalendarDayCreator({ animalId, existingDays = [], onCreateDays, 
             type="button"
             onClick={handleCreateDays}
             disabled={selectedDates.size === 0}
-            className="btn-primary"
+            className={styles.btnPrimary}
             aria-label={`Create ${selectedDates.size} recording day${selectedDates.size === 1 ? '' : 's'}`}
           >
             Create {selectedDates.size} {selectedDates.size === 1 ? 'Day' : 'Days'}
           </button>
 
           {onClose && (
-            <button type="button" onClick={onClose} className="btn-close" aria-label="Close calendar">
+            <button type="button" onClick={onClose} className={styles.btnClose} aria-label="Close calendar">
               ✕
             </button>
           )}
@@ -297,7 +297,7 @@ export function CalendarDayCreator({ animalId, existingDays = [], onCreateDays, 
       <CalendarLegend />
 
       {createError && (
-        <div className="calendar-create-error" role="alert">
+        <div className={styles.createError} role="alert">
           {createError}
         </div>
       )}

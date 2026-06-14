@@ -9,6 +9,7 @@
 
 import { useCallback } from 'react';
 import type { Ref, MouseEvent as ReactMouseEvent, KeyboardEvent as ReactKeyboardEvent } from 'react';
+import styles from './CalendarDayCreator.module.css';
 
 interface CalendarDayProps {
   /** ISO date string (YYYY-MM-DD). */
@@ -50,12 +51,12 @@ export function CalendarDay({
 
   // Determine CSS classes
   const classes = [
-    'calendar-day',
-    !isCurrentMonth && 'calendar-day--other-month',
-    isSelected && 'calendar-day--selected',
-    isExisting && 'calendar-day--existing',
-    isToday && 'calendar-day--today',
-    isExisting && 'calendar-day--disabled',
+    styles.day,
+    !isCurrentMonth && styles.dayOtherMonth,
+    isSelected && styles.daySelected,
+    isExisting && styles.dayExisting,
+    isToday && styles.dayToday,
+    isExisting && styles.dayDisabled,
   ]
     .filter(Boolean)
     .join(' ');
@@ -119,8 +120,8 @@ export function CalendarDay({
       // reached via the arrow keys.
       tabIndex={isActive ? 0 : -1}
     >
-      <span className="calendar-day-number">{dayNumber}</span>
-      {isExisting && <span className="calendar-day-checkmark" aria-hidden="true">✓</span>}
+      <span className={styles.dayNumber}>{dayNumber}</span>
+      {isExisting && <span className={styles.dayCheckmark} aria-hidden="true">✓</span>}
     </button>
   );
 }
