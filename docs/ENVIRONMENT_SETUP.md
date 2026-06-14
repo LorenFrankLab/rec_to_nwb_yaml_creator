@@ -15,7 +15,7 @@ This project uses a **contained environment** approach to ensure:
 ### 1. .nvmrc (Node Version Control)
 
 - **Location:** `.nvmrc` (project root)
-- **Content:** `20.19.5`
+- **Content:** `26.0.0`
 - **Purpose:** Locks Node.js version for all developers and CI/CD
 - **Usage:** Run `nvm use` to automatically switch to correct version
 
@@ -60,35 +60,36 @@ nvm use  # Reads .nvmrc automatically
 npm install  # Reads package-lock.json for exact versions
 
 # 5. Verify environment
-node --version    # Should show: v20.19.5
+node --version    # Should show: v26.0.0
 npx vitest run    # Should run without errors (one-shot; `npm test` starts Vitest watch mode)
 npm start         # Should launch the Vite dev server (opens a browser)
 ```
 
 ### Without a Version Manager (no nvm)
 
-`nvm` is not required. If you don't have a version manager, obtain Node `20.19.5` another way, then
+`nvm` is not required. If you don't have a version manager, obtain Node `26.0.0` another way, then
 `npm ci`:
 
 ```bash
-# Option A — Homebrew (macOS/Linux)
-brew install node@20
-# Put node@20 on your PATH (Homebrew prints the exact line; one of):
-brew link --overwrite node@20
+# Option A — Homebrew (macOS/Linux). NOTE: a versioned `node@26` formula may not exist yet;
+# if `brew install node@26` fails, use nvm (above — it reads .nvmrc) or install Node 26.x another way.
+brew install node@26
+# Put node@26 on your PATH (Homebrew prints the exact line; one of):
+brew link --overwrite node@26
 # or, without linking:
-export PATH="$(brew --prefix node@20)/bin:$PATH"
+export PATH="$(brew --prefix node@26)/bin:$PATH"
 
-# Option B — alternatives: corepack or volta can also pin Node 20.19.5.
+# Option B — alternatives: corepack or volta can also pin Node 26.0.0.
 #   (Mentioned as options only — do NOT add them as project dependencies.)
 
 # Then, in the repo:
 npm ci            # Reproducible install from package-lock.json
-node --version    # Should report v20.19.5 (the pinned, CI-tested version)
+node --version    # Should report v26.0.0 (the pinned, CI-tested version)
 npx vitest run    # Should run without errors
 ```
 
-> **Note:** `20.19.5` is the supported, CI-tested version. Newer Node majors may install and pass
-> tests locally, but they are **not** the supported/CI version — pin to 20.x when in doubt.
+> **Note:** `26.0.0` is the supported, CI-tested version. Newer Node majors may install and pass
+> tests locally, but they are **not** the supported/CI version — pin to 26.x when in doubt.
 
 ## Maintenance
 

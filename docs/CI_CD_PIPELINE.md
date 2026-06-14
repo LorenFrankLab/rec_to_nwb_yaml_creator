@@ -38,9 +38,9 @@ The pipeline consists of 4 independent jobs that run in parallel (where possible
 **Steps:**
 
 1. Checkout repository
-2. Setup Node.js v20.19.5 (from `.nvmrc`)
+2. Setup Node.js v26.0.0 (from `.nvmrc`)
 3. Install dependencies (`npm ci`)
-4. Run linter (`npm run lint`)
+4. Run linter (`npm run lint:ci` — ESLint with `--max-warnings 0`)
 5. Run baseline tests (`npm run test:baseline`)
 6. Run unit tests (`npm test -- run unit`)
 7. Run integration tests (`npm run test:integration`)
@@ -50,7 +50,8 @@ The pipeline consists of 4 independent jobs that run in parallel (where possible
 
 **Failure Conditions:**
 
-- Linter errors (not warnings)
+- Linter errors **or warnings** (`lint:ci` runs `--max-warnings 0` — this is the warnings-as-errors
+  gate that CRA's `CI=true react-scripts build` used to provide before the Vite migration)
 - Baseline test failures
 - Coverage threshold not met (80% for lines, functions, branches, statements)
 
@@ -66,7 +67,7 @@ The pipeline consists of 4 independent jobs that run in parallel (where possible
 **Steps:**
 
 1. Checkout repository
-2. Setup Node.js v20.19.5
+2. Setup Node.js v26.0.0
 3. Install dependencies
 4. Install Playwright browsers (Chromium, Firefox, WebKit)
 5. Run E2E tests (`npm run test:e2e`)
@@ -116,7 +117,7 @@ The pipeline consists of 4 independent jobs that run in parallel (where possible
 **Steps:**
 
 1. Checkout repository
-2. Setup Node.js v20.19.5
+2. Setup Node.js v26.0.0
 3. Install dependencies
 4. Build production bundle (`npm run build`)
 5. Upload build artifacts
@@ -167,7 +168,7 @@ The pipeline uses the exact Node.js version specified in `.nvmrc`:
 ```yaml
 - uses: actions/setup-node@v4
   with:
-    node-version-file: '.nvmrc'  # Currently v20.19.5
+    node-version-file: '.nvmrc'  # Currently v26.0.0
     cache: 'npm'
 ```
 
@@ -214,7 +215,7 @@ Tests in `src/__tests__/integration/` that test interactions between components.
 
 ### Coverage Requirements
 
-Defined in `vitest.config.js`:
+Defined in `vite.config.ts`:
 
 ```javascript
 coverage: {
@@ -383,7 +384,7 @@ sha256sum src/trodes_to_nwb/nwb_schema.json
 npm run test:coverage
 
 # Add tests for uncovered code
-# Or adjust thresholds in vitest.config.js (with approval)
+# Or adjust thresholds in vite.config.ts (with approval)
 ```
 
 ## Local Testing
@@ -438,7 +439,7 @@ Planned improvements for the CI/CD pipeline:
 - [TESTING_PLAN.md](TESTING_PLAN.md) - Comprehensive testing strategy
 - [REVIEW.md](REVIEW.md) - Known issues and bugs
 - [CLAUDE.md](../CLAUDE.md) - Development workflow and guidelines
-- [vitest.config.js](../vitest.config.js) - Test configuration
+- [vite.config.ts](../vite.config.ts) - Test configuration
 - [playwright.config.js](../playwright.config.js) - E2E test configuration
 
 ## Questions?

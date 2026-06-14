@@ -56,7 +56,7 @@ not on the animal-level Channel Maps tab (which is for wiring/mapping only).
 
 ## Requirements
 
-- **Node.js `20.19.5`** — the version pinned in [`.nvmrc`](.nvmrc). Other Node majors are untested
+- **Node.js `26.0.0`** — the version pinned in [`.nvmrc`](.nvmrc). Other Node majors are untested
   (see [docs/ENVIRONMENT_SETUP.md](docs/ENVIRONMENT_SETUP.md) for installing this version, with and
   without a version manager).
 
