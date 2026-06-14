@@ -59,92 +59,8 @@
   align-items: start;
 }
 
-.section-nav {
-  border-right: 1px solid var(--border-color, #ddd7c9);
-  padding: 1rem 0.7rem;
-}
-
-.section-nav-group {
-  margin-bottom: 1.1rem;
-}
-
-.section-nav-group-label {
-  font-family: var(--mono-font, monospace);
-  font-size: 0.6rem;
-  letter-spacing: 0.15em;
-  text-transform: uppercase;
-  color: #6a6557;
-  padding: 0 0.55rem 0.4rem;
-}
-
-.section-nav-item {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  text-decoration: none;
-  color: inherit;
-  padding: 0.5rem 0.55rem;
-  font-size: 0.9rem;
-  font-weight: 500;
-  border: 1px solid transparent;
-  border-bottom: 1px solid var(--border-color, #ddd7c9);
-}
-
-.section-nav-item:last-child {
-  border-bottom: 1px solid transparent;
-}
-
-.section-nav-item:hover {
-  background: #fbfaf6;
-  border-radius: 8px;
-}
-
-.section-nav-item.is-active {
-  background: #eef4f4;
-  border: 1px solid #cfe0e0;
-  border-radius: 8px;
-  color: #0d5c63;
-  font-weight: 600;
-  box-shadow: inset 3px 0 0 #0d5c63;
-}
-
-.section-nav-item-name {
-  flex: 1;
-}
-
-/* Neutral hollow-○ "todo" ring on a never-configured setup section (decision 11). Colour-free
-   on purpose — it signals "not set up yet" without the anxiety of a warning colour; the
-   accessible name carries "— not set up". */
-.section-nav-todo {
-  flex: none;
-  width: 0.75rem;
-  text-align: center;
-  color: #6a6557;
-  font-size: 0.85rem;
-  line-height: 1;
-}
-
-/* Decision 10: right-aligned item count (information scent) + a trailing › so each row reads as a
-   navigable button at rest. Both are aria-hidden visual cues. */
-.section-nav-count {
-  flex: none;
-  font-family: var(--mono-font, monospace);
-  font-size: 0.7rem;
-  color: #6a6557;
-}
-
-.section-nav-chev {
-  flex: none;
-  color: #9a9384;
-  font-size: 0.85rem;
-  font-weight: 600;
-  line-height: 1;
-}
-
-.section-nav-item.is-active .section-nav-count,
-.section-nav-item.is-active .section-nav-chev {
-  color: #0d5c63;
-}
+/* The grouped LEFT section-nav (the navigable column of `.animal-view-body`) now owns its styles
+   in the colocated SectionNav.module.css (Phase 3 — app shell / navigation). */
 
 .animal-view-panel {
   padding: 1.1rem 1.5rem 2rem;
@@ -188,15 +104,11 @@
   margin-top: 0;
 }
 
-/* Narrow viewports: stack the nav above the panel (responsive refinement in Task 1.6). */
+/* Narrow viewports: stack the nav above the panel (responsive refinement in Task 1.6). The
+   `.section-nav` half of this collapse moved with the nav into SectionNav.module.css. */
 @media (max-width: 1040px) {
   .animal-view-body {
     grid-template-columns: 1fr;
-  }
-
-  .section-nav {
-    border-right: none;
-    border-bottom: 1px solid var(--border-color, #ddd7c9);
   }
 }
 
@@ -206,15 +118,4 @@
   outline: 3px solid #f9a825;
   outline-offset: 2px;
   border-radius: 3px;
-}
-
-/* Red ● on a section that holds an export-blocking error (decision 11 / Phase 3a.5). Colour PLUS
-   the accessible name "— blocks export" (the dot is aria-hidden) so it never relies on colour alone. */
-.section-nav-blocking {
-  flex: none;
-  width: 0.75rem;
-  text-align: center;
-  color: #c0392b;
-  font-size: 0.7rem;
-  line-height: 1;
 }
