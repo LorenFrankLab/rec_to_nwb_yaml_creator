@@ -44,6 +44,7 @@ import ConfigVersionContext from './ConfigVersionContext';
 import { ValidationSummary, buildAnimalRows } from '../ValidationSummary';
 import '../../components/ErrorState.css';
 import './AnimalView.css';
+import navStyles from './SectionNav.module.css';
 
 /**
  * Per-tab scope descriptor shown under the panel heading: the one-line framing of a section's
@@ -503,10 +504,10 @@ export function AnimalView({ animalId, tab }: AnimalViewProps) {
       />
 
       <div className="animal-view-body">
-        <nav className="section-nav" aria-label="Animal sections">
+        <nav className={navStyles.nav} aria-label="Animal sections">
           {SECTION_GROUPS.map((group) => (
-            <div className="section-nav-group" key={group.label}>
-              <div className="section-nav-group-label">{group.label}</div>
+            <div className={navStyles.group} key={group.label}>
+              <div className={navStyles.groupLabel}>{group.label}</div>
               {group.items.map((item) => {
                 const active = tab === item.key;
                 // A BLOCKING export error (red ●) outranks a never-configured TODO (hollow ○): the
@@ -523,12 +524,12 @@ export function AnimalView({ animalId, tab }: AnimalViewProps) {
                   <a
                     key={item.key}
                     href={`#/animal/${animalId}/${item.key}`}
-                    className={`section-nav-item ${active ? 'is-active' : ''}`}
+                    className={`${navStyles.item} ${active ? navStyles.isActive : ''}`}
                     aria-current={active ? 'page' : undefined}
                     aria-label={ariaLabel}
                     onClick={(event) => handleNavClick(event, item.key)}
                   >
-                    <span className="section-nav-item-name">{item.label}</span>
+                    <span className={navStyles.itemName}>{item.label}</span>
                     {/* Decision 10 trailing affordance: name · [● blocking] · count · › — all
                         aria-hidden visual "information scent" (the link's accessible name still
                         carries the blocking/todo meaning via aria-label, so SR users are unaffected
@@ -536,16 +537,16 @@ export function AnimalView({ animalId, tab }: AnimalViewProps) {
                         shows its count (e.g. Cameras ● 2); a never-configured section shows the
                         neutral hollow-○ ring IN the count slot (no bare "0"). */}
                     {isBlocking && (
-                      <span className="section-nav-blocking" aria-hidden="true">●</span>
+                      <span className={navStyles.blocking} aria-hidden="true">●</span>
                     )}
                     {isTodo ? (
-                      <span className="section-nav-todo" aria-hidden="true">○</span>
+                      <span className={navStyles.todo} aria-hidden="true">○</span>
                     ) : (
-                      <span className="section-nav-count" aria-hidden="true">
+                      <span className={navStyles.count} aria-hidden="true">
                         {sectionCounts?.[item.key]}
                       </span>
                     )}
-                    <span className="section-nav-chev" aria-hidden="true">›</span>
+                    <span className={navStyles.chev} aria-hidden="true">›</span>
                   </a>
                 );
               })}

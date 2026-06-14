@@ -2,7 +2,7 @@ import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import type { KeyboardEvent as ReactKeyboardEvent } from 'react';
 import { getPresentDayCount } from '../domain/dayRecovery';
 import OverflowMenu from './OverflowMenu';
-import './AnimalSwitcher.css';
+import styles from './AnimalSwitcher.module.css';
 
 interface AnimalSwitcherProps {
   /** The animal currently being viewed (shown in the trigger, marked `aria-current`). */
@@ -111,22 +111,22 @@ export default function AnimalSwitcher({
   const dayCountFor = (animalId: string) => getPresentDayCount(animalId, animals[animalId], days);
 
   return (
-    <div className="animal-switcher">
+    <div className={styles.switcher}>
       <button
         ref={triggerRef}
         type="button"
-        className="animal-switcher-trigger"
+        className={styles.trigger}
         aria-label={`Switch animal (current: ${currentAnimalId})`}
         aria-haspopup="true"
         aria-expanded={open}
         aria-controls={open ? popupId : undefined}
         onClick={() => (open ? close(false) : setOpen(true))}
       >
-        <span className="animal-switcher-av" aria-hidden="true">
+        <span className={styles.av} aria-hidden="true">
           {String(currentAnimalId).slice(0, 2)}
         </span>
-        <span className="animal-switcher-current">{currentAnimalId}</span>
-        <span className="animal-switcher-chev" aria-hidden="true">
+        <span>{currentAnimalId}</span>
+        <span className={styles.chev} aria-hidden="true">
           {open ? '▴' : '▾'}
         </span>
       </button>
@@ -137,10 +137,10 @@ export default function AnimalSwitcher({
           id={popupId}
           role="group"
           aria-label="Switch animal"
-          className="animal-switcher-popup"
+          className={styles.popup}
           onKeyDown={handlePopupKeyDown}
         >
-          <div className="animal-switcher-label" aria-hidden="true">
+          <div className={styles.label} aria-hidden="true">
             Animals
           </div>
           {animalIds.map((animalId, index) => {
@@ -149,28 +149,28 @@ export default function AnimalSwitcher({
             return (
               <div
                 key={animalId}
-                className={`animal-switcher-row${isCurrent ? ' is-current' : ''}`}
+                className={`${styles.row}${isCurrent ? ` ${styles.isCurrent}` : ''}`}
               >
                 <a
                   ref={(el) => {
                     rowRefs.current[index] = el;
                   }}
                   href={`#/animal/${animalId}/days`}
-                  className="animal-switcher-switch"
+                  className={styles.switch}
                   aria-current={isCurrent ? 'true' : undefined}
                   onClick={() => close(false)}
                 >
-                  <span className="animal-switcher-av" aria-hidden="true">
+                  <span className={styles.av} aria-hidden="true">
                     {animalId.slice(0, 2)}
                   </span>
-                  <span className="animal-switcher-name">{animalId}</span>
+                  <span className={styles.name}>{animalId}</span>
                 </a>
-                <span className="animal-switcher-count" aria-hidden="true">
+                <span className={styles.count} aria-hidden="true">
                   {count} {count === 1 ? 'day' : 'days'}
                 </span>
                 <OverflowMenu
                   label={`${animalId} actions`}
-                  buttonClassName="animal-switcher-kebab"
+                  buttonClassName={styles.kebab}
                   items={[
                     {
                       key: 'open',
@@ -201,19 +201,19 @@ export default function AnimalSwitcher({
               </div>
             );
           })}
-          <div className="animal-switcher-sep" role="separator" />
+          <div className={styles.sep} role="separator" />
           <button
             ref={(el) => {
               rowRefs.current[animalIds.length] = el;
             }}
             type="button"
-            className="animal-switcher-new"
+            className={styles.new}
             onClick={() => {
               close(false);
               onRequestCreate();
             }}
           >
-            <span className="animal-switcher-plus" aria-hidden="true">
+            <span className={styles.plus} aria-hidden="true">
               +
             </span>
             New animal…
