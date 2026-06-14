@@ -8,12 +8,12 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 export default defineConfig({
   plugins: [react()],
   esbuild: {
-    // This codebase puts JSX in plain `.js` files (e.g. App.js, index.js), so the
-    // transform must parse JSX regardless of extension. The `tsx` loader is a strict
-    // superset of `jsx`: it strips TypeScript syntax AND parses JSX, so one loader
-    // covers JSX-in-`.js`, `.jsx` components, and `.ts`/`.tsx` modules. (`tsx` is a
-    // no-op for TypeScript stripping on files that contain no TypeScript, so existing
-    // `.js`/`.jsx` parsing is unchanged.)
+    // This codebase mixes JSX across extensions — `.jsx` components/tests, `.tsx`
+    // modules, and any legacy JSX-in-`.js` — so the transform must parse JSX regardless
+    // of extension. The `tsx` loader is a strict superset of `jsx`: it strips TypeScript
+    // syntax AND parses JSX, so one loader covers JSX-in-`.js`, `.jsx` components, and
+    // `.ts`/`.tsx` modules. (`tsx` is a no-op for TypeScript stripping on files that
+    // contain no TypeScript, so existing `.js`/`.jsx` parsing is unchanged.)
     loader: 'tsx',
     include: /src\/.*\.(jsx?|tsx?)$/,
     exclude: [],
@@ -28,7 +28,7 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'jsdom',
-    setupFiles: ['./src/setupTests.js'],
+    setupFiles: ['./src/setupTests.ts'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html', 'lcov'],
@@ -41,9 +41,9 @@ export default defineConfig({
         'src/**/*.{test,spec}.{js,jsx,ts,tsx}',
         'src/**/__tests__/**',
         'src/**/__mocks__/**',
-        'src/setupTests.js',
+        'src/setupTests.ts',
         'src/**/*.d.ts',
-        'src/index.js',
+        'src/index.tsx',
         'src/reportWebVitals.js',
       ],
       // Thresholds MUST be nested here in Vitest 4 (keys placed directly on `coverage` are silently

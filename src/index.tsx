@@ -1,4 +1,3 @@
-import React from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App';
 import { StoreProvider } from './state/StoreContext';
@@ -10,7 +9,8 @@ import { faDownload, faCircleInfo } from "@fortawesome/free-solid-svg-icons";
 
 library.add(faDownload, faCircleInfo);
 
-const root = createRoot(document.getElementById('root'));
+// The #root element is guaranteed by public/index.html (CRA's mount point).
+const root = createRoot(document.getElementById('root') as HTMLElement);
 
 root.render(
   <ErrorBoundary>

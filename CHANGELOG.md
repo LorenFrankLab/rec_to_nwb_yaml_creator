@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Typed the app root — `App.js`/`index.js`→`.tsx`, `setupTests.js`→`.ts` (refactor only, behavior-preserving) — cycle 14.**
+  The React entry (`index`), the root component (`App`), and the global Vitest setup (`setupTests`).
+  Dropped stray `import React`; `createRoot(document.getElementById('root') as HTMLElement)` (the
+  `#root` mount is guaranteed by `public/index.html`); the in-memory `localStorage` polyfill's
+  params are typed (`key: string`, `value: string`, `index: number`) over a `Map<string, string>`.
+  Added a `declare module 'jest-axe';` shim to `src/react-app-env.d.ts` (jest-axe ships no types and
+  there is no `@types/jest-axe`, so a `.ts` setup file importing `toHaveNoViolations` would fail
+  TS7016). `vitest.config.js` `setupFiles` + coverage excludes updated `.js`→`.ts`/`.tsx`;
+  react-scripts auto-detects `src/index.tsx` as the build entry. `npm run typecheck` and `CI=true`
+  build clean; full suite (4793, exercising `setupTests.ts` globally) + e2e (104) pass.
 - **Typed `pages/AnimalView` + `layouts/AppLayout` — all 3 files `.jsx`→`.tsx` (refactor only, behavior-preserving) — page cycle 13. `pages/` and `layouts/` are now 100% TypeScript.**
   The tabbed animal shell (`pages/AnimalView/index`, `ConfigVersionContext`) and the app routing
   layout (`layouts/AppLayout`). Props→interfaces; the pure helpers (`shouldInterceptNavDiscard`,
