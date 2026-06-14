@@ -57,27 +57,62 @@ function TaskInstanceForm({ mode, instance, taskTypes, onSave, onCancel, onDefin
     onSave({ taskTypeId, task_epochs: epochs });
   };
 
+  const title = mode === 'edit' ? 'Edit task for this day' : 'Add task to this day';
+
   if (taskTypes.length === 0) {
     return (
-      <div className="task-instance-form task-instance-empty">
-        <p>
-          This animal has no task types yet. Define a task once on the animal, then pick it here for
-          each day that ran it.
-        </p>
-        <div className="form-actions">
-          <button type="button" className="btn-cancel" onClick={onCancel}>
-            Cancel
-          </button>
-          <button type="button" className="btn-save" onClick={onDefineNewType}>
-            Define a new task type
-          </button>
+      <Modal
+        isOpen
+        onClose={onCancel}
+        title={title}
+        titleId="task-instance-modal-title"
+        className="task-instance-modal-content"
+        footer={
+          <div className="form-actions">
+            <button type="button" className="btn-cancel" onClick={onCancel}>
+              Cancel
+            </button>
+            <button type="button" className="btn-save" onClick={onDefineNewType}>
+              Define a new task type
+            </button>
+          </div>
+        }
+      >
+        <div className="task-instance-form task-instance-empty">
+          <p>
+            This animal has no task types yet. Define a task once on the animal, then pick it here for
+            each day that ran it.
+          </p>
         </div>
-      </div>
+      </Modal>
     );
   }
 
   return (
-    <form className="task-instance-form">
+    <Modal
+      isOpen
+      onClose={onCancel}
+      title={title}
+      titleId="task-instance-modal-title"
+      className="task-instance-modal-content"
+      footer={
+        <div className="form-actions">
+          <button type="button" className="btn-cancel" onClick={onCancel} aria-label="Cancel and close modal">
+            Cancel
+          </button>
+          <button
+            type="button"
+            className="btn-save"
+            onClick={handleSave}
+            disabled={!canSave}
+            aria-label="Save task for this day"
+          >
+            Save
+          </button>
+        </div>
+      }
+    >
+      <form className="task-instance-form">
       <div className="form-group">
         <label htmlFor="task-instance-type">Task type</label>
         <select
@@ -104,21 +139,8 @@ function TaskInstanceForm({ mode, instance, taskTypes, onSave, onCancel, onDefin
         <TaskEpochsEditor initialEpochs={epochs} onChange={handleEpochsChange} />
       </div>
 
-      <div className="form-actions">
-        <button type="button" className="btn-cancel" onClick={onCancel} aria-label="Cancel and close modal">
-          Cancel
-        </button>
-        <button
-          type="button"
-          className="btn-save"
-          onClick={handleSave}
-          disabled={!canSave}
-          aria-label="Save task for this day"
-        >
-          Save
-        </button>
-      </div>
-    </form>
+      </form>
+    </Modal>
   );
 }
 
@@ -140,16 +162,12 @@ interface TaskInstanceModalProps {
 }
 
 /**
- * TaskInstanceModal — modal wrapper around {@link TaskInstanceForm}. Dialog a11y comes from Modal.
+ * TaskInstanceModal — modal wrapper around {@link TaskInstanceForm}, which renders the shared Modal
+ * directly so the Save/Cancel actions ride in the sticky footer while sharing the form's state. The
+ * form mounts only while open, so its state initializes fresh on each open.
  */
-const TaskInstanceModal = ({ isOpen, mode = 'add', instance = null, taskTypes, onSave, onCancel, onDefineNewType }: TaskInstanceModalProps) => (
-  <Modal
-    isOpen={isOpen}
-    onClose={onCancel}
-    title={mode === 'edit' ? 'Edit task for this day' : 'Add task to this day'}
-    titleId="task-instance-modal-title"
-    className="task-instance-modal-content"
-  >
+const TaskInstanceModal = ({ isOpen, mode = 'add', instance = null, taskTypes, onSave, onCancel, onDefineNewType }: TaskInstanceModalProps) =>
+  isOpen ? (
     <TaskInstanceForm
       mode={mode}
       instance={instance}
@@ -158,7 +176,6 @@ const TaskInstanceModal = ({ isOpen, mode = 'add', instance = null, taskTypes, o
       onCancel={onCancel}
       onDefineNewType={onDefineNewType}
     />
-  </Modal>
-);
+  ) : null;
 
 export default TaskInstanceModal;

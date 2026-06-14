@@ -91,8 +91,31 @@ function TaskTypeForm({ mode, taskType = null, cameras, nameError = null, onSave
   };
 
   return (
-    <form className="task-type-modal-form">
-      <div className="form-group">
+    <Modal
+      isOpen
+      onClose={onCancel}
+      title={mode === 'edit' ? 'Edit Task Type' : 'Add Task Type'}
+      titleId="task-type-modal-title"
+      className="task-type-modal-content"
+      footer={
+        <div className="form-actions">
+          <button type="button" className="btn-cancel" onClick={onCancel} aria-label="Cancel and close modal">
+            Cancel
+          </button>
+          <button
+            type="button"
+            className="btn-save"
+            onClick={handleSave}
+            disabled={!isFormValid()}
+            aria-label="Save task type"
+          >
+            Save
+          </button>
+        </div>
+      }
+    >
+      <form className="task-type-modal-form">
+        <div className="form-group">
         <label htmlFor="task_name">Task name</label>
         <input
           id="task_name"
@@ -169,21 +192,8 @@ function TaskTypeForm({ mode, taskType = null, cameras, nameError = null, onSave
         </span>
       </fieldset>
 
-      <div className="form-actions">
-        <button type="button" className="btn-cancel" onClick={onCancel} aria-label="Cancel and close modal">
-          Cancel
-        </button>
-        <button
-          type="button"
-          className="btn-save"
-          onClick={handleSave}
-          disabled={!isFormValid()}
-          aria-label="Save task type"
-        >
-          Save
-        </button>
-      </div>
-    </form>
+      </form>
+    </Modal>
   );
 }
 
@@ -206,16 +216,12 @@ interface TaskTypeModalProps {
 
 /**
  * TaskTypeModal — add/edit an animal task type. Dialog a11y (focus trap/return, ESC/overlay close,
- * scroll lock) comes from the shared Modal primitive.
+ * scroll lock) comes from the shared Modal primitive, which TaskTypeForm renders directly so the
+ * Save/Cancel actions ride in the sticky footer while sharing the form's state. The form mounts
+ * only while open, so its state initializes fresh on each open.
  */
-const TaskTypeModal = ({ isOpen, mode = 'add', taskType = null, animal, nameError = null, onSave, onCancel }: TaskTypeModalProps) => (
-  <Modal
-    isOpen={isOpen}
-    onClose={onCancel}
-    title={mode === 'edit' ? 'Edit Task Type' : 'Add Task Type'}
-    titleId="task-type-modal-title"
-    className="task-type-modal-content"
-  >
+const TaskTypeModal = ({ isOpen, mode = 'add', taskType = null, animal, nameError = null, onSave, onCancel }: TaskTypeModalProps) =>
+  isOpen ? (
     <TaskTypeForm
       mode={mode}
       taskType={taskType}
@@ -224,7 +230,6 @@ const TaskTypeModal = ({ isOpen, mode = 'add', taskType = null, animal, nameErro
       onSave={onSave}
       onCancel={onCancel}
     />
-  </Modal>
-);
+  ) : null;
 
 export default TaskTypeModal;
