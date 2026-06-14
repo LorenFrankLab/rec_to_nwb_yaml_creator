@@ -45,15 +45,20 @@ maintainer should confirm: de-weighting `Delete`, adding a max-width layout, the
 
 ## Status (CSS track — merged into `modern`, not pushed)
 Done so far (each a branch → full gate → `--no-ff` merge): OverflowMenu, WarningAcknowledgement,
-ReconfigurationContextBanner (→ CSS Modules); modal `:user-invalid` premature-invalid fix; **Modal
-ownership → `Modal.module.scss`** (`e3eb8f7`); **Modal `footer` sticky-footer slot + ConfirmDialog**
-(`79601af`); **friction-F sticky footer on every tall live form modal** — CameraModal (`62db840`),
-ElectrodeGroupModal (`8fc99b9`), TaskType + TaskInstance (`5ac1542`). **Friction F is fixed on all
-surfaces that actually clip.** Remaining footer migrations are the short direct-child dialogs
-(AnimalDeleteDialog, AnimalProfileDialog, CopyFromAnimalDialog, DuplicateDayModal, CalendarDayCreator,
-ShortcutsHelp, CameraReferenceDialog, DataAcqSection, AlertModal, ImportYamlDialog, ReconfigWizard) —
-consistency, not clip-fixes. `TaskModal.tsx` is test-only/unused in the live app → skipped. Next after
-the footer sweep: Button restrained-destructive (D), SaveIndicator, app-shell/nav, page areas, then the
+ReconfigurationContextBanner (→ CSS Modules); modal `:user-invalid` premature-invalid fix.
+
+**Friction F (Modal) — COMPLETE.** Modal ownership → `Modal.module.scss` (`e3eb8f7`); backward-compatible
+`footer` sticky-footer slot + ConfirmDialog (`79601af`); then the sticky footer migrated across **every
+live Modal consumer**: CameraModal (`62db840`), ElectrodeGroupModal (`8fc99b9`), TaskType+TaskInstance
+(`5ac1542`), AnimalDelete/AnimalProfile/CopyFromAnimal (`5c11217`), Shortcuts/CameraReference/DuplicateDay/
+Calendar/DataAcq/Alert (`3e17c71`), and the two wizards ImportYamlDialog + ReconfigWizard (`bfcbf9e`).
+`TaskModal.tsx` is test-only/unused in the live app → intentionally skipped. Two patterns proved & reused:
+(1) **form-relocation** for stateful `*Form` modals (move `<Modal>` into the form so `footer` reaches form
+state; wrapper renders `isOpen ? <Form/> : null`); (2) **submit→button** when an action lives in a `<form>`
+(`type="submit"` → `type="button" onClick`, form's onSubmit still handles Enter). Multi-phase
+ImportYamlDialog hoists a per-phase `footer` to the top-level Modal and drops each sub-phase's action row.
+
+**Next:** Button restrained-destructive variant (D) → SaveIndicator → app-shell/nav → page areas → the
 stylelint ratchet (tokenize the modules' verbatim values + z-index scale).
 
 ## Phased order
