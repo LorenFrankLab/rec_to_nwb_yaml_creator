@@ -1,4 +1,4 @@
-import './WarningAcknowledgement.css';
+import styles from './WarningAcknowledgement.module.css';
 
 interface WarningAcknowledgementItem {
   key: string;
@@ -38,14 +38,14 @@ export default function WarningAcknowledgement({
   const dayCount = items.length;
 
   return (
-    <section className="export-warning-ack" role="group" aria-label="Outstanding warnings to review">
-      <p className="export-warning-ack-lead">
+    <section className={styles.banner} role="group" aria-label="Outstanding warnings to review">
+      <p className={styles.lead}>
         {dayCount} {dayCount === 1 ? 'day has' : 'days have'} non-blocking warnings. They won&apos;t
         stop export, but review them first — a silent issue can multiply across days:
       </p>
-      <ul className="export-warning-ack-list">
+      <ul className={styles.list}>
         {items.map((item) => (
-          <li key={item.key} className="export-warning-ack-day">
+          <li key={item.key} className={styles.day}>
             <strong>{item.label}</strong>
             <ul>
               {item.warnings.map((warning, index) => (
@@ -55,7 +55,7 @@ export default function WarningAcknowledgement({
           </li>
         ))}
       </ul>
-      <label className="export-warning-ack-confirm">
+      <label className={styles.confirm}>
         <input
           type="checkbox"
           checked={acknowledged}
