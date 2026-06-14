@@ -4,6 +4,7 @@ import type { Animal, Day } from '../../state/workspaceTypes';
 import { getDayWorkflowStatus } from '../../domain/workflowStatus';
 import { buildPreflightSummary } from '../../domain/preflightSummary';
 import { resolveRigConstant } from '../../domain/rigConstants';
+import styles from './ValidationSummary.module.css';
 
 /**
  * EffectiveDayReview — read-only "what THIS day actually used" review (Phase 3-5, Task 3.3a:
@@ -44,21 +45,21 @@ export default function EffectiveDayReview({ animal, day }: { animal: Animal; da
   const mult = resolveRigConstant(day.technical, animal.technicalDefaults, 'times_period_multiplier');
 
   return (
-    <div className="effective-day-review" role="group" aria-label="Effective setup for this day">
-      <p className="effective-day-review-caption">
+    <div className={styles.effectiveDayReview} role="group" aria-label="Effective setup for this day">
+      <p className={styles.effectiveDayReviewCaption}>
         What this day used (read-only)
         {snapshot?.date ? ` — configuration from ${snapshot.date}` : ''}
         {workflow.isHistoricalConfiguration ? ' · historical, may differ from the current setup tabs' : ''}
         {snapshot?.description ? ` · ${snapshot.description}` : ''}
       </p>
-      <dl className="effective-day-review-list">
+      <dl className={styles.effectiveDayReviewList}>
         {summary.map((entry) => (
-          <div key={entry.label} className="effective-day-review-row">
+          <div key={entry.label} className={styles.effectiveDayReviewRow}>
             <dt>{entry.label}</dt>
             <dd>{entry.value}</dd>
           </div>
         ))}
-        <div className="effective-day-review-row">
+        <div className={styles.effectiveDayReviewRow}>
           <dt>Rig constants</dt>
           <dd>
             raw_data_to_volts {raw.display}

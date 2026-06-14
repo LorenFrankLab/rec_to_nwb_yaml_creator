@@ -1,3 +1,5 @@
+import styles from './ValidationSummary.module.css';
+
 /** One affected day in an {@link ExportReport}. */
 interface ExportReportItem {
   dayId: string;
@@ -38,7 +40,7 @@ export default function ExportReport({ message, items, detailLabel, className }:
             ({item.dayId})
             {item.detail && (
               <pre
-                className="validation-summary-diff"
+                className={styles.diff}
                 aria-label={`${detailLabel} for ${item.subjectId} ${item.date}`}
               >
                 {item.detail}
