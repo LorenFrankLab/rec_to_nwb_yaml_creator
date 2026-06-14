@@ -149,11 +149,12 @@
 .cameras-table {
   width: 100%;
 
-  /* Fixed layout so long camera/lens/model names can't widen the table past the viewport and
-     push the Actions column (Edit/Delete) off-screen. Long text in the name columns truncates
-     with an ellipsis (full value stays in `title`); the scroll wrapper above is the fallback
-     when even the fixed columns can't all fit. */
-  table-layout: fixed;
+  /* Auto layout so each free-text column sizes to its content instead of being squeezed into an
+     equal share of the leftover (with `table-layout: fixed` the four name columns collapsed to
+     ~96px and truncated readable values like "overhead_camera" → "overh…" even though the page had
+     unused width — friction E). The scroll wrapper above (overflow-x: auto) keeps the Actions
+     column reachable when the full-content table is wider than the panel. */
+  table-layout: auto;
   border-collapse: collapse;
   background-color: var(--color-white);
   border: 1px solid var(--color-grey-200);
@@ -168,9 +169,12 @@
   th:nth-child(7), td:nth-child(7) { width: 5rem; }   /* Status */
   th:nth-child(8), td:nth-child(8) { width: 9.5rem; } /* Actions */
 
-  /* Truncate the free-text columns (Name / Manufacturer / Model / Lens). */
+  /* Free-text columns (Name / Manufacturer / Model / Lens): size to content up to a generous cap,
+     then ellipsis a pathological value (full text stays in `title`). The cap REPLACES the old
+     `max-width: 0`, which — under `table-layout: fixed` — collapsed these columns and forced the
+     premature truncation. */
   td:nth-child(2), td:nth-child(3), td:nth-child(4), td:nth-child(5) {
-    max-width: 0; /* with table-layout:fixed, lets the cell honor overflow + ellipsis */
+    max-width: 20rem;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;

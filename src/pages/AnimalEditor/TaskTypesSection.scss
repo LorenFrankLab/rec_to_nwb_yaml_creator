@@ -25,7 +25,13 @@
 
 .task-types-table {
   width: 100%;
-  table-layout: fixed; /* long names/descriptions truncate instead of widening past the viewport */
+
+  /* Auto layout so each free-text column sizes to its content rather than being squeezed into an
+     equal share of the leftover (`table-layout: fixed` collapsed the Name/Description/Environment
+     columns and truncated readable values even with unused page width — friction E). The scroll
+     wrapper above (overflow-x: auto) keeps Edit/Delete reachable when the table is wider than the
+     panel. */
+  table-layout: auto;
   border-collapse: collapse;
   background-color: var(--color-white);
   border: 1px solid var(--color-grey-200);
@@ -38,8 +44,11 @@
   th:nth-child(5), td:nth-child(5) { width: 5rem; }   /* Status */
   th:nth-child(6), td:nth-child(6) { width: 9.5rem; } /* Actions */
 
+  /* Free-text columns size to content up to a generous cap, then ellipsis (full text in `title`).
+     The cap REPLACES the old `max-width: 0`, which under `table-layout: fixed` collapsed these
+     columns and forced the premature truncation. */
   td:nth-child(1), td:nth-child(2), td:nth-child(3), td:nth-child(4) {
-    max-width: 0; /* with table-layout:fixed, lets the cell honor overflow + ellipsis */
+    max-width: 20rem;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
