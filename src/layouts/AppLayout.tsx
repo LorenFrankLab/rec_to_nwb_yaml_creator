@@ -28,6 +28,7 @@ import { ValidationSummary } from '../pages/ValidationSummary';
 import { AnimalView } from '../pages/AnimalView';
 import { LegacyFormView } from '../pages/LegacyFormView';
 import logo from '../logo.png';
+import styles from './AppLayout.module.css';
 
 /**
  * Get view name for screen reader announcements.
@@ -306,9 +307,16 @@ export function AppLayout() {
         // keyboard-shortcuts trigger pushed to the right. The primary nav is the workspace's
         // single navigation landmark; the "Use Legacy Editor" toggle is hidden until the
         // cutover enables `showLegacyToggle`.
-        <div className="app-bar">
+        <div className={styles.appBar}>
           <div className="home-region" role="banner">{logoLink}</div>
-          <nav className="primary-nav" role="navigation" aria-label="Primary">
+          {/* The literal `primary-nav` class is kept as the DOM hook the frozen App.scss
+              `body:has(.primary-nav) .home-region` banner rule depends on; `styles.primaryNav`
+              carries the styling moved out of index.css. */}
+          <nav
+            className={`primary-nav ${styles.primaryNav}`}
+            role="navigation"
+            aria-label="Primary"
+          >
             <a
               href="#/workspace"
               aria-current={currentRoute.view === 'workspace' ? 'page' : undefined}
@@ -321,7 +329,7 @@ export function AppLayout() {
                 selector is omitted and the plain nav stands. */}
             {currentRoute.view === 'animal-view' && animals[currentRoute.params.animalId] && (
               <>
-                <span className="primary-nav-sep" aria-hidden="true">▸</span>
+                <span className={styles.primaryNavSep} aria-hidden="true">▸</span>
                 <AnimalSwitcher
                   currentAnimalId={currentRoute.params.animalId}
                   animals={animals}
@@ -342,7 +350,7 @@ export function AppLayout() {
               Validation &amp; Export
             </a>
             {isFeatureEnabled('showLegacyToggle') && (
-              <a href="#/" className="legacy-toggle">
+              <a href="#/" className={styles.legacyToggle}>
                 Use Legacy Editor
               </a>
             )}
@@ -356,11 +364,11 @@ export function AppLayout() {
       {/* Notice when previously-saved workspace data could not be restored, so a
           discarded (corrupt / incompatible-version) workspace is never silent. */}
       {persistence.loadNotice && (
-        <div className="load-notice" role="alert">
+        <div className={styles.loadNotice} role="alert">
           <span>{persistence.loadNotice}</span>
           <button
             type="button"
-            className="load-notice-dismiss"
+            className={styles.loadNoticeDismiss}
             onClick={persistence.dismissLoadNotice}
             aria-label="Dismiss notice"
           >
