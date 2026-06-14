@@ -135,4 +135,37 @@ describe('Modal', () => {
     );
     expect(container.firstChild).toBeNull();
   });
+
+  describe('footer slot', () => {
+    it('renders the footer in a pinned region with the body above it', () => {
+      render(
+        <Modal isOpen onClose={() => {}} title="T" titleId="t" footer={<button type="button">Save</button>}>
+          <p>body content</p>
+        </Modal>
+      );
+
+      const body = screen.getByTestId('modal-body');
+      const footer = screen.getByTestId('modal-footer');
+
+      // Body holds the children; footer holds the action(s) — not the other way round.
+      expect(body).toHaveTextContent('body content');
+      expect(footer).toContainElement(screen.getByRole('button', { name: 'Save' }));
+      // The action row lives OUTSIDE the scrollable body (so it stays reachable).
+      expect(body).not.toContainElement(footer);
+      // DOM order: body precedes footer within the dialog.
+      expect(body.compareDocumentPosition(footer) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    });
+
+    it('renders children directly with no body/footer wrappers when no footer is given', () => {
+      render(
+        <Modal isOpen onClose={() => {}} title="T" titleId="t">
+          <p>plain body</p>
+        </Modal>
+      );
+
+      expect(screen.queryByTestId('modal-body')).toBeNull();
+      expect(screen.queryByTestId('modal-footer')).toBeNull();
+      expect(screen.getByText('plain body')).toBeInTheDocument();
+    });
+  });
 });

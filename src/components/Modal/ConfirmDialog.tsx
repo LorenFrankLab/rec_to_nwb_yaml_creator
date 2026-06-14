@@ -56,22 +56,24 @@ const ConfirmDialog = ({
       closeOnOverlayClick={!destructive}
       describedById={messageId}
       className="confirm-dialog"
+      footer={
+        <div className="form-actions">
+          <button type="button" className="btn-cancel" onClick={onCancel}>
+            {cancelLabel}
+          </button>
+          <button
+            type="button"
+            className={destructive ? 'btn-danger' : 'btn-save'}
+            onClick={onConfirm}
+          >
+            {confirmLabel}
+          </button>
+        </div>
+      }
     >
       <p id={messageId} className="confirm-dialog-message">
         {message}
       </p>
-      <div className="form-actions">
-        <button type="button" className="btn-cancel" onClick={onCancel}>
-          {cancelLabel}
-        </button>
-        <button
-          type="button"
-          className={destructive ? 'btn-danger' : 'btn-save'}
-          onClick={onConfirm}
-        >
-          {confirmLabel}
-        </button>
-      </div>
     </Modal>
   );
 };
