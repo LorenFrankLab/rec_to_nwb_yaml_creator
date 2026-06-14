@@ -40,7 +40,7 @@ describe('RecordingDaysTab — day row contract (decision 12)', () => {
 
   it('shows the session description muted under the date when present, truncatable (Task 2.5b)', () => {
     const { container } = renderRealistic();
-    const desc = container.querySelector('.day-session-desc');
+    const desc = container.querySelector('[data-testid="day-session-desc"]');
     expect(desc).toBeInTheDocument();
     expect(desc).toHaveTextContent('Day 45 of chronic recording, W-track alternation');
     // The full text is on `title` so a CSS-ellipsis truncation stays recoverable on hover.
@@ -51,7 +51,7 @@ describe('RecordingDaysTab — day row contract (decision 12)', () => {
     const { container } = renderRealistic((day) => {
       delete day.session.session_description;
     });
-    expect(container.querySelector('.day-session-desc')).not.toBeInTheDocument();
+    expect(container.querySelector('[data-testid="day-session-desc"]')).not.toBeInTheDocument();
     // The bare date still reads fine.
     expect(screen.getByRole('link', { name: /2023-06-22/i })).toBeInTheDocument();
   });

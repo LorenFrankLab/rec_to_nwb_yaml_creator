@@ -4,6 +4,7 @@ import {
   SECTION_STATUS,
 } from '../../domain/sectionStatus';
 import type { Animal, Day } from '../../state/workspaceTypes';
+import styles from './AnimalWorkspace.module.css';
 
 /**
  * The first-run "Set up this animal" card sections, in the same order and with the same keys as
@@ -44,9 +45,9 @@ export default function AnimalSetupCard({ animalId, animal, days, hasOtherAnimal
   // reads (no second mapping), so the card's per-section state can't contradict the nav.
   const setupBlockingSections = getAnimalBlockingSections(animal, days);
   return (
-    <section className="setup-card" aria-label="Set up this animal">
-      <h3 className="setup-card-heading">Set up this animal</h3>
-      <p className="setup-card-intro">
+    <section className={styles.setupCard} aria-label="Set up this animal">
+      <h3 className={styles.setupCardHeading}>Set up this animal</h3>
+      <p className={styles.setupCardIntro}>
         Configure the shared hardware this animal&apos;s recording days will
         reference. Add only what your recordings use — a behavior-only day needs no
         electrodes, and each section is referenced per day.
@@ -54,14 +55,14 @@ export default function AnimalSetupCard({ animalId, animal, days, hasOtherAnimal
       {hasOtherAnimals && (
         <button
           type="button"
-          className="setup-card-copy-button button-secondary"
+          className={`${styles.setupCardCopyButton} button-secondary`}
           onClick={onCopyFromAnimal}
           aria-label="Copy from another animal — electrode groups, cameras, recording system"
         >
           Copy from another animal…
         </button>
       )}
-      <ul className="setup-card-list">
+      <ul className={styles.setupCardList}>
         {SETUP_CARD_SECTIONS.map((section) => {
           // Three honest states that AGREE with the section-nav (decision 11): a section
           // that holds an export-BLOCKING error reads "Needs fixing" (never "Done"), so
@@ -73,18 +74,20 @@ export default function AnimalSetupCard({ animalId, animal, days, hasOtherAnimal
             getAnimalSectionStatus(animal, section.key) === SECTION_STATUS.TODO;
           const stateLabel = blocking ? 'Needs fixing' : todo ? 'To do' : 'Done';
           const actionVerb = blocking ? 'Fix' : todo ? 'Set up' : 'Review';
+          // `done` is the default green state styled on the state pill itself — it has no row
+          // modifier rule, so it contributes no class (was an unstyled `setup-card-item-done` marker).
           const itemModifier = blocking
-            ? 'setup-card-item-blocking'
+            ? styles.setupCardItemBlocking
             : todo
-              ? 'setup-card-item-todo'
-              : 'setup-card-item-done';
+              ? styles.setupCardItemTodo
+              : '';
           return (
-            <li key={section.key} className={`setup-card-item ${itemModifier}`}>
-              <span className="setup-card-item-name">{section.label}</span>
-              <span className="setup-card-item-hint">{section.hint}</span>
-              <span className="setup-card-item-state">{stateLabel}</span>
+            <li key={section.key} className={`${styles.setupCardItem} ${itemModifier}`}>
+              <span className={styles.setupCardItemName}>{section.label}</span>
+              <span className={styles.setupCardItemHint}>{section.hint}</span>
+              <span className={styles.setupCardItemState}>{stateLabel}</span>
               <a
-                className="setup-card-item-action"
+                className={styles.setupCardItemAction}
                 href={`#/animal/${animalId}/${section.key}`}
                 // A links-list reader hears six actions; name each by its section
                 // ("Set up Cameras", not a non-unique "Set up →"). The arrow is decorative.

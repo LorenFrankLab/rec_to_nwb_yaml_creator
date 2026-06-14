@@ -21,7 +21,7 @@ import AnimalDeleteDialog from '../../components/AnimalDeleteDialog';
 import AnimalProfileDialog from '../../components/AnimalProfileDialog';
 import AnimalCreationForm from '../Home/AnimalCreationForm';
 import ImportYamlDialog from './ImportYamlDialog';
-import './AnimalWorkspace.css';
+import styles from './AnimalWorkspace.module.css';
 
 /**
  * AnimalWorkspace Component
@@ -115,7 +115,7 @@ export function AnimalWorkspace() {
       {showCreate ? (
         /* Inline create-animal panel (Task 4.2): the existing AnimalCreationForm, hosted ON the
            picker. On success we navigate to the new animal's days route; cancel just closes it. */
-        <section className="create-animal-panel" aria-label="Create animal">
+        <section className={styles.createAnimalPanel} aria-label="Create animal">
           <AnimalCreationForm
             onSubmit={handleCreate}
             onCancel={() => setShowCreate(false)}
@@ -126,18 +126,18 @@ export function AnimalWorkspace() {
       ) : !hasAnimals ? (
         /* Empty State: No Animals */
         <div className="empty-state" role="region" aria-label="Empty workspace">
-          <p className="empty-message">No animals created yet.</p>
+          <p className={styles.emptyMessage}>No animals created yet.</p>
           <p>Create your first animal to start managing recording sessions.</p>
           <button
             type="button"
-            className="create-animal-link"
+            className={styles.createAnimalLink}
             onClick={() => setShowCreate(true)}
           >
             Create Animal
           </button>
           <button
             type="button"
-            className="import-yaml-link"
+            className={styles.importYamlLink}
             onClick={() => setShowImport(true)}
           >
             Import YAML…
@@ -145,13 +145,13 @@ export function AnimalWorkspace() {
         </div>
       ) : (
         /* Animal picker: each card links to the animal's tabbed view. */
-        <nav className="animal-list" aria-label="Animal list">
-          <div className="animal-list-header">
+        <nav className={styles.animalList} aria-label="Animal list">
+          <div className={styles.animalListHeader}>
             <h2>Animals</h2>
-            <div className="animal-list-actions">
+            <div className={styles.animalListActions}>
               <button
                 type="button"
-                className="btn-import-yaml"
+                className={styles.btnImportYaml}
                 aria-label="Import YAML files"
                 onClick={() => setShowImport(true)}
               >
@@ -159,7 +159,7 @@ export function AnimalWorkspace() {
               </button>
               <button
                 type="button"
-                className="btn-create-animal"
+                className={styles.btnCreateAnimal}
                 aria-label="Create new animal"
                 onClick={() => setShowCreate(true)}
               >
@@ -174,19 +174,19 @@ export function AnimalWorkspace() {
             const dayCount = getPresentDayCount(animalId, animal, days);
 
             return (
-              <div key={animalId} className="animal-card">
+              <div key={animalId} className={styles.animalCard}>
                 {/* The card link and the ⋮ menu are SIBLINGS: a menu button can't be nested in the
                     navigation <a> (interactive-in-interactive), and keeping them apart means the
                     destructive Delete can't be hit while opening the animal. */}
-                <a className="animal-card-link" href={`#/animal/${animalId}/days`}>
-                  <div className="animal-name">{animalId}</div>
-                  <div className="animal-day-count">
+                <a className={styles.animalCardLink} href={`#/animal/${animalId}/days`}>
+                  <div className={styles.animalName}>{animalId}</div>
+                  <div className={styles.animalDayCount}>
                     {dayCount} {dayCount === 1 ? 'day' : 'days'}
                   </div>
                 </a>
                 <OverflowMenu
                   label={`Actions for ${animalId}`}
-                  buttonClassName="animal-card-menu"
+                  buttonClassName={styles.animalCardMenu}
                   items={[
                     {
                       key: 'open',
