@@ -102,11 +102,11 @@ describe('AlertModal', () => {
   describe('Click outside handling', () => {
     it('should call onClose when overlay is clicked', async () => {
       const onClose = vi.fn();
-      const { container } = render(<AlertModal isOpen={true} message="Test" onClose={onClose} />);
+      const { getByTestId } = render(<AlertModal isOpen={true} message="Test" onClose={onClose} />);
 
-      // Overlay is now provided by the shared Modal primitive.
-      const overlay = container.querySelector('.modal-overlay');
-      await user.click(overlay);
+      // Overlay is now provided by the shared Modal primitive (presentational
+      // backdrop, reached via its data-testid since its class is hashed).
+      await user.click(getByTestId('modal-overlay'));
 
       expect(onClose).toHaveBeenCalledTimes(1);
     });

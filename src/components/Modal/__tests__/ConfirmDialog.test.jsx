@@ -35,7 +35,7 @@ describe('ConfirmDialog', () => {
     // Cancel button
     let onConfirm = vi.fn();
     let onCancel = vi.fn();
-    const { unmount, container } = render(
+    const { unmount } = render(
       <ConfirmDialog {...baseProps} onConfirm={onConfirm} onCancel={onCancel} />
     );
     await user.click(screen.getByRole('button', { name: 'Cancel' }));
@@ -47,7 +47,7 @@ describe('ConfirmDialog', () => {
     expect(onCancel).toHaveBeenCalledTimes(2);
 
     // Overlay click
-    await user.click(container.querySelector('.modal-overlay'));
+    await user.click(screen.getByTestId('modal-overlay'));
     expect(onCancel).toHaveBeenCalledTimes(3);
     expect(onConfirm).not.toHaveBeenCalled();
     unmount();

@@ -3,9 +3,11 @@
  *
  * The overlay / content box / title come from the shared Modal primitive; only the
  * dialog-specific body (info text, animal list, copy preview, actions) lives here,
- * scoped under the className passed to Modal.
+ * scoped under the `copy-from-animal-modal` class passed to Modal's `className` prop.
+ * (Not compounded with `.modal-content` — that class is now a hashed CSS-Module
+ * name the shared Modal owns, so this global stylesheet can't reference it.)
  */
-.modal-content.copy-from-animal-modal {
+.copy-from-animal-modal {
   .info-message {
     color: #5f6368;
     line-height: 1.5;

@@ -89,8 +89,10 @@ describe('useGlobalShortcuts', () => {
 
   it('ignores shortcuts while a modal is open', () => {
     const handlers = mount();
+    // A shared <Modal> marks its open dialog with aria-modal="true"; the guard keys
+    // off that semantic contract, not the (hashed) overlay class.
     const overlay = document.createElement('div');
-    overlay.className = 'modal-overlay';
+    overlay.setAttribute('aria-modal', 'true');
     document.body.appendChild(overlay);
 
     press('?');

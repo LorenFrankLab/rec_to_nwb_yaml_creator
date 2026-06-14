@@ -22,12 +22,14 @@ function isEditableTarget(el: HTMLElement | null): boolean {
 }
 
 /**
- * Whether any shared `<Modal>` (which renders `.modal-overlay`) is open.
+ * Whether any shared `<Modal>` is open. Identified by `aria-modal="true"`, the
+ * ARIA contract the shared Modal sets on its content box (a stable, semantic hook
+ * rather than the overlay's now-hashed CSS-Module class).
  *
  * @returns
  */
 function isModalOpen() {
-  return typeof document !== 'undefined' && !!document.querySelector('.modal-overlay');
+  return typeof document !== 'undefined' && !!document.querySelector('[aria-modal="true"]');
 }
 
 /**

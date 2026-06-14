@@ -383,10 +383,10 @@ describe('ElectrodeGroupModal', () => {
   describe('Backdrop click handling', () => {
     it('should call onCancel when backdrop is clicked', async () => {
       const onCancel = vi.fn();
-      const { container } = render(
+      render(
         <ElectrodeGroupModal isOpen mode="add" onSave={() => {}} onCancel={onCancel} />
       );
-      await user.click(container.querySelector('.modal-overlay'));
+      await user.click(screen.getByTestId('modal-overlay'));
       expect(onCancel).toHaveBeenCalledTimes(1);
     });
 

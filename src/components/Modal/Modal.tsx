@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import type { MouseEvent as ReactMouseEvent, ReactNode } from 'react';
-import './Modal.scss';
+import styles from './Modal.module.scss';
 
 const FOCUSABLE =
   'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), ' +
@@ -102,23 +102,31 @@ const Modal = ({
   if (!isOpen) return null;
 
   const handleOverlayClick = (e: ReactMouseEvent<HTMLDivElement>) => {
-    if (closeOnOverlayClick && (e.target as HTMLElement).classList.contains('modal-overlay')) {
+    // The content box stops propagation, so this handler only fires for clicks
+    // landing directly on the backdrop — target === currentTarget identifies that
+    // without depending on the (now hashed) overlay class name.
+    if (closeOnOverlayClick && e.target === e.currentTarget) {
       onClose();
     }
   };
 
   return (
-    <div className="modal-overlay" onClick={handleOverlayClick} role="presentation">
+    <div
+      className={styles.overlay}
+      onClick={handleOverlayClick}
+      role="presentation"
+      data-testid="modal-overlay"
+    >
       <div
         ref={contentRef}
-        className={`modal-content ${className}`.trim()}
+        className={`${styles.content} ${className}`.trim()}
         role={role}
         aria-modal="true"
         aria-labelledby={titleId}
         aria-describedby={describedById}
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 id={titleId} className="modal-title">
+        <h2 id={titleId} className={styles.title}>
           {title}
         </h2>
         {children}
