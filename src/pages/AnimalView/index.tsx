@@ -43,7 +43,7 @@ import { useAnimalFieldUpdate } from '../AnimalEditor/wiring/useAnimalFieldUpdat
 import ConfigVersionContext from './ConfigVersionContext';
 import { ValidationSummary, buildAnimalRows } from '../ValidationSummary';
 import '../../components/ErrorState.css';
-import './AnimalView.css';
+import styles from './AnimalView.module.css';
 import navStyles from './SectionNav.module.css';
 
 /**
@@ -220,7 +220,7 @@ function renderPanel({ tab, animalId, animal, onPendingEditsChange, onFieldUpdat
             // NONE state specifically (not the setup-status TODO, which also covers PARTIAL): a
             // partially-configured animal IS using opto, so "Not used" would be wrong there — the
             // section-nav shows "incomplete" for that case instead.
-            <p className="animal-view-status-chip" data-testid="opto-status-chip">
+            <p className={styles.statusChip} data-testid="opto-status-chip">
               Not used — no stimulation
             </p>
           )}
@@ -229,7 +229,7 @@ function renderPanel({ tab, animalId, animal, onPendingEditsChange, onFieldUpdat
       );
     default:
       return (
-        <div className="section-placeholder">
+        <div className={styles.placeholder}>
           <h2>{TAB_LABEL[tab] || 'Section'}</h2>
           <p>
             This section moves here in a later phase. For now, configure it in{' '}
@@ -450,21 +450,21 @@ export function AnimalView({ animalId, tab }: AnimalViewProps) {
 
   return (
     <main id="main-content" tabIndex={-1} role="main" aria-labelledby="animal-view-heading">
-      <header className="animal-view-header">
+      <header className={styles.header} data-testid="animal-view-header">
         <h1 id="animal-view-heading">{animal.id}</h1>
-        <span className="animal-view-idbadge">animal ID</span>
-        {facts && <span className="animal-view-facts">{facts}</span>}
+        <span className={styles.idbadge}>animal ID</span>
+        {facts && <span className={styles.facts}>{facts}</span>}
         {/* Save-confidence cue — the SAME shared SaveIndicator the Day Editor shows, reading the
             SAME workspace persistence state (`useStoreContext().persistence`), so an animal-level
             setup edit gets the same "Saving… / Saved" feedback day edits already get. It is NOT an
             optimistic local timestamp; it reflects real autosave outcomes (display-only — no export
             bytes, no validation rule). Lives in the header band so it shows on every tab. */}
-        <div className="animal-view-header-save">
+        <div className={styles.headerSave}>
           <SaveIndicator persistence={persistence} />
         </div>
         {/* Per-animal lifecycle ⋮ — the SAME reusable menu + type-to-confirm dialog as the picker
             card, so animal delete reads one truth from either surface (Task 4.1). */}
-        <div className="animal-view-header-actions">
+        <div className={styles.headerActions}>
           <OverflowMenu
             label={`Actions for ${animal.id}`}
             items={[
@@ -503,7 +503,7 @@ export function AnimalView({ animalId, tab }: AnimalViewProps) {
         onRepair={handleRepair}
       />
 
-      <div className="animal-view-body">
+      <div className={styles.body}>
         <nav className={navStyles.nav} aria-label="Animal sections">
           {SECTION_GROUPS.map((group) => (
             <div className={navStyles.group} key={group.label}>
@@ -555,13 +555,13 @@ export function AnimalView({ animalId, tab }: AnimalViewProps) {
         </nav>
 
         <section
-          className="animal-view-panel"
+          className={styles.panel}
           aria-label={TAB_LABEL[tab] || 'Section'}
           tabIndex={-1}
           ref={panelRef}
         >
           {TAB_SCOPE[tab] && (
-            <p className="animal-view-panel-scope" data-testid={`panel-scope-${tab}`}>
+            <p className={styles.panelScope} data-testid={`panel-scope-${tab}`}>
               {TAB_SCOPE[tab]}
             </p>
           )}
