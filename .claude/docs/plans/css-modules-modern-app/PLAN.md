@@ -126,8 +126,14 @@ typecheck clean, lint:ci exit 0, vite build OK, 4790 vitest.
   (`dd2a751`). `repair-target-highlight` is a JS-applied (`classList.add`) literal class SHARED with the
   Day Editor → kept GLOBAL via `:global([data-field-path].repair-target-highlight)` (verified global in
   bundle). The saveIndicator test's `.animal-view-header` scope query decoupled to a `data-testid`.
-- **REMAINING Phase 4 (next session):** Home, AnimalWorkspace (+ImportYamlDialog), setup tables (E),
-  DayEditor Breadcrumb + IssueOwnershipHint, ValidationSummary (H), CalendarDayCreator.
+- **DONE — ImportYamlDialog** (merge `3aedc33`; branch `css-phase4-importyaml` kept; commit `38b9a02`):
+  `ImportYamlDialog.css` → `ImportYamlDialog.module.css` (all `import-*` → single-word scoped names,
+  values verbatim). Shared `btn-primary`/`btn-secondary` (AnimalWorkspace.css) kept literal global; the
+  two unstyled marker classes `import-preview`/`import-result` dropped (aria-labels retained). Recon
+  CONFIRMED-SAFE held: no cross-file or test references to `import-*`. Verified the class map 1:1 (every
+  `styles.X` resolves to a module rule) + Playwright PICK-phase visual identical.
+- **REMAINING Phase 4 (next session):** Home, AnimalWorkspace, setup tables (E), DayEditor Breadcrumb +
+  IssueOwnershipHint, ValidationSummary (H), CalendarDayCreator.
 
 **Recon map for the remaining files (read before migrating — these are the section-nav-style hazards).**
 Classes that MUST stay GLOBAL (literal, shared across files / JS-applied / queried by tests — do NOT hash;
