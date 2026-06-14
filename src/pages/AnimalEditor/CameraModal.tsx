@@ -125,8 +125,36 @@ function CameraForm({ mode, camera = null, existingCameras, onSave, onCancel, di
   };
 
   return (
-    <form className="camera-modal-form">
-      {/* Camera ID (read-only, auto-assigned) */}
+    <Modal
+      isOpen
+      onClose={onCancel}
+      title={mode === 'edit' ? 'Edit Camera' : 'Add Camera'}
+      titleId="camera-modal-title"
+      className="camera-modal-content"
+      footer={
+        <div className="form-actions">
+          <button
+            type="button"
+            className="btn-cancel"
+            onClick={onCancel}
+            aria-label="Cancel and close modal"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            className="btn-save"
+            onClick={handleSave}
+            disabled={!isFormValid()}
+            aria-label="Save camera configuration"
+          >
+            Save
+          </button>
+        </div>
+      }
+    >
+      <form className="camera-modal-form">
+        {/* Camera ID (read-only, auto-assigned) */}
       <div className="form-group">
         <label htmlFor="camera_id">Camera ID</label>
         <input id="camera_id" type="text" name="id" value={formData.id} readOnly disabled />
@@ -250,28 +278,8 @@ function CameraForm({ mode, camera = null, existingCameras, onSave, onCancel, di
           </button>
         </div>
       )}
-
-      {/* Buttons */}
-      <div className="form-actions">
-        <button
-          type="button"
-          className="btn-cancel"
-          onClick={onCancel}
-          aria-label="Cancel and close modal"
-        >
-          Cancel
-        </button>
-        <button
-          type="button"
-          className="btn-save"
-          onClick={handleSave}
-          disabled={!isFormValid()}
-          aria-label="Save camera configuration"
-        >
-          Save
-        </button>
-      </div>
-    </form>
+      </form>
+    </Modal>
   );
 }
 
@@ -296,16 +304,13 @@ interface CameraModalProps {
 
 /**
  * CameraModal - Add/edit a camera. Dialog accessibility (focus trap, focus return,
- * ESC/overlay close, scroll lock) is provided by the shared Modal primitive.
+ * ESC/overlay close, scroll lock) is provided by the shared Modal primitive, which
+ * CameraForm renders directly so the Save/Cancel actions ride in the sticky footer
+ * (reachable without scrolling a tall form) while sharing the form's state. The form
+ * mounts only while open, so its state initializes fresh on each open.
  */
-const CameraModal = ({ isOpen, mode = 'add', camera = null, existingCameras = [], onSave, onCancel, divergence = null, onUseNewName = null }: CameraModalProps) => (
-  <Modal
-    isOpen={isOpen}
-    onClose={onCancel}
-    title={mode === 'edit' ? 'Edit Camera' : 'Add Camera'}
-    titleId="camera-modal-title"
-    className="camera-modal-content"
-  >
+const CameraModal = ({ isOpen, mode = 'add', camera = null, existingCameras = [], onSave, onCancel, divergence = null, onUseNewName = null }: CameraModalProps) =>
+  isOpen ? (
     <CameraForm
       mode={mode}
       camera={camera}
@@ -315,7 +320,6 @@ const CameraModal = ({ isOpen, mode = 'add', camera = null, existingCameras = []
       divergence={divergence}
       onUseNewName={onUseNewName}
     />
-  </Modal>
-);
+  ) : null;
 
 export default CameraModal;
