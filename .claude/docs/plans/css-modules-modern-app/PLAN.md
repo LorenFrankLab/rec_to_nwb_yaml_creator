@@ -252,9 +252,27 @@ for **F**), **OverflowMenu**, banners (`ReconfigurationContextBanner`, `WarningA
 setup tables (truncation **E**), `DayEditor` (`Breadcrumb`, `IssueOwnershipHint`, …), `ValidationSummary`
 (disclosures **H**), `CalendarDayCreator`.
 
-### Phase 5 — Ratchet
-Ratchet `stylelint` to **error** for `*.module.css` only; leave any remaining global/legacy CSS on warn
-or excluded until the legacy form is deleted.
+### Phase 5 — Ratchet — COMPLETE (merge `da0f5b7`; branch `css-phase5-stylelint-ratchet` kept; commit `a3c70c5`)
+Tokenized every `color`/`background-color`/`z-index` raw value in the CSS Modules, then ratcheted
+`stylelint` to **error** for `*.module.{css,scss}` only (global/legacy stay warn). **Palette: CONSOLIDATE
+(maintainer-chosen best practice)** — folded the components' hardcoded near-duplicate colors onto existing
+semantic tokens (5 reds→`--color-error`; ambers→`--color-warning`; near-dupe greys→grey scale; tints→
+`*-light`/`grey-100`; `#2a6db5`→primary; `#1b5e20`→success) rather than minting ~33 one-offs. Only THREE
+genuinely-distinct NEW tokens added to `index.css` (exact hexes, AA on white): `--color-ink-muted #6a6557`,
+`--color-ink-warm #46443d`, `--color-teal #0d5c63`. z-index 40/20→`--z-popover`. Consolidations are small
+INTENTIONAL shifts landing on documented-AA token pairs (no contrast regression). Config: allow
+`:global`/`:local` + `currentcolor`; modules error-level EXCEPT `selector-class-pattern`/
+`keyframes-name-pattern` (CSS Modules use camelCase) and `no-descending-specificity` (kept warning —
+pre-existing verbatim style debt). `lint:css` exit 0 (0 module errors, 317 warnings all in global/legacy);
+every no-fallback module `var()` resolves (no silent missing-color regressions).
+
+**🎉 CSS-MODULES TRACK COMPLETE (Phases 1–5).** All live (modern) surfaces on colocated CSS Modules with
+design tokens; stylelint ratcheted to error for modules. Frictions A/B/C/D/E/F/G/H all addressed. Remaining
+GLOBAL by design: the frozen legacy `App.scss`/form (slated for deletion); the 4 entangled AnimalEditor
+setup-table SCSS (`button-*`/`table-actions`/`status-badge*`/`section-header` shared classes); `ErrorState`
+(shared utility); `index.css` (tokens/reset/base). Possible future cleanup: dedupe the App.scss-duplicated
+`.visually-hidden`; the CalendarDayCreator `var(--color-gray-*, #hex)` American-spelled fallbacks (work via
+fallback, not flagged); migrate the setup-table SCSS once the shared setup-table classes are detangled.
 
 ## Verification per phase
 `npm run typecheck` · `npx vitest run` · `vite build` · `npm run lint:css` (warn) · targeted e2e +
