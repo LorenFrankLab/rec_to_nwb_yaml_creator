@@ -1,19 +1,19 @@
 /* ImportYamlDialog layout. Button styling (.btn-primary / .btn-secondary) is shared from
-   AnimalWorkspace.css; this file owns only the import-specific structure. */
+   AnimalWorkspace.css and stays global; this module owns only the import-specific structure. */
 
-.import-yaml-dialog {
+.dialog {
   max-width: 640px;
   width: 100%;
 }
 
-.import-pick code {
+.pick code {
   font-size: 0.85em;
   background: #f0f0f0;
   padding: 0.1em 0.3em;
   border-radius: 3px;
 }
 
-.import-drop-zone {
+.dropZone {
   border: 2px dashed #b0b0b0;
   border-radius: 8px;
   padding: 1.5rem;
@@ -23,17 +23,17 @@
   background: #fafafa;
 }
 
-.import-drop-zone.is-dragging {
+.dropZone.isDragging {
   border-color: #2a6db5;
   background: #eef5fc;
 }
 
-.import-drop-or {
+.dropOr {
   color: #777;
   margin: 0.5rem 0;
 }
 
-.import-file-label {
+.fileLabel {
   display: inline-block;
   padding: 0.4rem 0.9rem;
   border: 1px solid #2a6db5;
@@ -43,7 +43,7 @@
 }
 
 /* The native file input is visually hidden but accessible (label + aria-label drive it). */
-.import-file-input {
+.fileInput {
   position: absolute;
   width: 1px;
   height: 1px;
@@ -54,46 +54,46 @@
   border: 0;
 }
 
-.import-summary {
+.summary {
   font-weight: 600;
 }
 
-.import-animal-cards {
+.animalCards {
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
 }
 
-.import-animal-card {
+.animalCard {
   border: 1px solid #ddd;
   border-radius: 6px;
   padding: 0.75rem 1rem;
 }
 
-.import-animal-name {
+.animalName {
   margin: 0 0 0.25rem;
   font-size: 1.1rem;
 }
 
-.import-animal-meta {
+.animalMeta {
   margin: 0 0 0.5rem;
   color: #444;
 }
 
-.import-config-versions {
+.configVersions {
   margin: 0 0 0.5rem;
   padding-left: 1.25rem;
   color: #555;
   font-size: 0.9rem;
 }
 
-.import-divergences {
+.divergences {
   list-style: none;
   margin: 0 0 0.5rem;
   padding: 0;
 }
 
-.import-divergences li {
+.divergences li {
   background: #fff7e6;
   border-left: 3px solid #e0a106;
   padding: 0.4rem 0.6rem;
@@ -102,7 +102,7 @@
   font-size: 0.9rem;
 }
 
-.import-resolution {
+.resolution {
   border: 1px solid #d99;
   background: #fdf2f2;
   border-radius: 4px;
@@ -110,18 +110,18 @@
   margin-top: 0.5rem;
 }
 
-.import-resolution legend {
+.resolution legend {
   font-weight: 600;
   font-size: 0.9rem;
 }
 
-.import-resolution-option {
+.resolutionOption {
   display: block;
   margin: 0.25rem 0;
   font-size: 0.9rem;
 }
 
-.import-unimportable {
+.unimportable {
   margin-top: 1rem;
   border: 1px solid #d99;
   background: #fdf2f2;
@@ -129,34 +129,34 @@
   padding: 0.5rem 1rem;
 }
 
-.import-unimportable h3 {
+.unimportable h3 {
   margin: 0.5rem 0;
   font-size: 1rem;
 }
 
-.import-unimportable ul {
+.unimportable ul {
   margin: 0;
   padding-left: 1.25rem;
 }
 
-.import-unimportable-name {
+.unimportableName {
   font-weight: 600;
   margin-right: 0.5rem;
 }
 
-.import-unimportable-reason {
+.unimportableReason {
   color: #a33;
 }
 
 /* The remediation hint ("what to fix"), shown under the raw reason. */
-.import-unimportable-hint {
+.unimportableHint {
   display: block;
   margin-top: 0.15rem;
   color: #333;
   font-size: 0.9rem;
 }
 
-.import-unimportable-hint code {
+.unimportableHint code {
   font-size: 0.85em;
   background: #fbe2e2;
   padding: 0.05em 0.3em;
@@ -164,26 +164,26 @@
 }
 
 /* RESULT phase: the named created animals + their day dates. */
-.import-result-created {
+.resultCreated {
   margin: 0 0 0.75rem;
   padding-left: 1.25rem;
   max-height: 14rem;
   overflow-y: auto;
 }
 
-.import-result-created li {
+.resultCreated li {
   margin-bottom: 0.25rem;
 }
 
-.import-result-animal {
+.resultAnimal {
   font-weight: 600;
 }
 
-.import-result-dates {
+.resultDates {
   color: #444;
 }
 
-.import-actions {
+.actions {
   display: flex;
   justify-content: flex-end;
   gap: 0.5rem;
