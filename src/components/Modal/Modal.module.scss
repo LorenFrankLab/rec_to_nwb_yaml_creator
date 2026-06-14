@@ -59,15 +59,53 @@
   color: #333;
 }
 
-.content::-webkit-scrollbar {
+/**
+ * Footer variant (Modal `footer` prop): the content box becomes a
+ * header / scrollable body / pinned footer column so a tall dialog's actions
+ * stay reachable without scrolling. The box stops scrolling itself; only the
+ * body scrolls. Padding moves off the box onto the regions so the body scrolls
+ * edge-to-edge while the title and footer stay pinned — for a SHORT dialog the
+ * geometry is identical to the no-footer layout (2rem inset on all sides, the
+ * 1.5rem title gap, and the action row's own divider/spacing).
+ */
+.withFooter {
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  overflow: hidden;
+}
+
+.withFooter .title {
+  padding: 2rem 2rem 0;
+}
+
+.body {
+  flex: 1 1 auto;
+  padding: 0 2rem;
+  overflow-y: auto;
+}
+
+.footer {
+  flex-shrink: 0;
+
+  // Opaque so the scrolled body doesn't show through the pinned footer, and the
+  // box's bottom inset (which the action row's own top divider/spacing pairs with).
+  padding: 0 2rem 2rem;
+  background-color: white;
+}
+
+.content::-webkit-scrollbar,
+.body::-webkit-scrollbar {
   width: 8px;
 }
 
-.content::-webkit-scrollbar-track {
+.content::-webkit-scrollbar-track,
+.body::-webkit-scrollbar-track {
   background: transparent;
 }
 
-.content::-webkit-scrollbar-thumb {
+.content::-webkit-scrollbar-thumb,
+.body::-webkit-scrollbar-thumb {
   background: #ccc;
   border-radius: 4px;
 }
