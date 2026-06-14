@@ -1,5 +1,5 @@
 import { getConfigHistory } from '../state/workspaceSelectors';
-import './ReconfigurationContextBanner.css';
+import styles from './ReconfigurationContextBanner.module.css';
 
 /** The subset of the parsed route context this banner reads (from {@link useReconfigContext}). */
 interface RouteContext {
@@ -54,7 +54,7 @@ export default function ReconfigurationContextBanner({
 
   return (
     <div
-      className={`configuration-edit-context ${contextIsLatest ? '' : 'configuration-edit-context-warning'}`}
+      className={contextIsLatest ? styles.banner : `${styles.banner} ${styles.warning}`}
       role="status"
     >
       {contextIsLatest
