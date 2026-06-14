@@ -96,10 +96,11 @@ describe('Set up this animal card — first-run onboarding', () => {
     renderPane('remy', { remy: configuredAnimal });
     const card = screen.getByRole('region', { name: /set up this animal/i });
     // Cameras + electrodes are configured → not flagged todo; optogenetics is not configured.
-    const cameras = within(card).getByText('Cameras').closest('.setup-card-item');
-    const optogenetics = within(card).getByText('Optogenetics').closest('.setup-card-item');
-    expect(cameras.className).not.toMatch(/setup-card-item-todo/);
-    expect(optogenetics.className).toMatch(/setup-card-item-todo/);
+    // Assert the user-visible per-section state label (the CSS-Module modifier class is hashed).
+    const cameras = within(card).getByText('Cameras').closest('li');
+    const optogenetics = within(card).getByText('Optogenetics').closest('li');
+    expect(within(cameras).queryByText('To do')).not.toBeInTheDocument();
+    expect(within(optogenetics).getByText('To do')).toBeInTheDocument();
   });
 
   it('marks a configured section "Needs fixing" (NOT "Done") when it holds an export-blocking error', () => {
@@ -118,7 +119,7 @@ describe('Set up this animal card — first-run onboarding', () => {
     renderPane('remy', { remy: animal }, { [day.id]: day });
 
     const card = screen.getByRole('region', { name: /set up this animal/i });
-    const eg = within(card).getByText('Electrode Groups').closest('.setup-card-item');
+    const eg = within(card).getByText('Electrode Groups').closest('li');
     expect(within(eg).getByText(/needs fixing/i)).toBeInTheDocument();
     expect(within(eg).queryByText(/^done$/i)).not.toBeInTheDocument();
   });

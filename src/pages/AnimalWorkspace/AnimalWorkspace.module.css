@@ -1,39 +1,49 @@
 /**
- * AnimalWorkspace Component Styles
+ * AnimalWorkspace Component Styles (colocated CSS Module)
  *
  * Layout:
  * - Sidebar: Animal list with selection
  * - Main area: Day list with validation status
  * - Empty states for no animals/days
+ *
+ * OWNERSHIP NOTE: a few classes are kept `:global()` (byte-identical to the previous globals) because
+ * they are SHARED across components or queried dynamically/by tests:
+ *   - `.btn-primary` / `.btn-secondary` — the workspace's canonical button rules; ImportYamlDialog
+ *     (a module) references them literally, and Home/CalendarDayCreator no longer define them globally.
+ *   - `.status-chip` (+ variants) — also defined by ValidationSummary.css; a test asserts its absence.
+ *   - `.empty-state` — a shared name defined (scoped) by several setup-table stylesheets too.
+ *   - `.visually-hidden` — global a11y utility (also defined in index.css).
+ *   - `.day-row-status` (+ ::before + variants) — applied with a DYNAMIC `-${variant}` suffix and
+ *     queried by the day-row test; kept global so the runtime-built class name resolves.
  */
 
-.workspace-content {
+.workspaceContent {
   display: flex;
   gap: 2rem;
   margin-top: 1rem;
 }
 
 /* Animal List Sidebar */
-.animal-list {
+.animalList {
   flex: 0 0 250px;
   border-right: 1px solid #ddd;
   padding-right: 1rem;
 }
 
-.animal-list-header {
+.animalListHeader {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 1rem;
 }
 
-.animal-list h2 {
+.animalList h2 {
   font-size: 1.2rem;
   margin: 0;
 }
 
 /* Now a <button> (opens the inline create panel) — keep the outlined look, add a pointer cursor. */
-.btn-create-animal {
+.btnCreateAnimal {
   display: inline-flex;
   align-items: center;
   padding: 0.375rem 0.75rem;
@@ -50,7 +60,7 @@
   white-space: nowrap;
 }
 
-.btn-create-animal:hover {
+.btnCreateAnimal:hover {
   background-color: var(--color-primary);
   color: white;
 }
@@ -58,7 +68,7 @@
 /* The card is a row: a flex-filling <a> link to #/animal/:id/days plus a trailing ⋮ menu
    (Phase 4). The card chrome (border/background/hover) lives on the container so the whole row
    reads as one card, while the link keeps the reset link styling. */
-.animal-card {
+.animalCard {
   display: flex;
   align-items: center;
   gap: 0.25rem;
@@ -70,19 +80,19 @@
   transition: background-color 0.2s, border-color 0.2s;
 }
 
-.animal-card:hover {
+.animalCard:hover {
   background-color: #f5f5f5;
   border-color: #999;
 }
 
-.animal-card:focus-within {
+.animalCard:focus-within {
   outline: 2px solid var(--color-primary);
   outline-offset: 2px;
 }
 
 /* The navigation link fills the card and resets link styling so it reads as a card, not
    underlined link text. */
-.animal-card-link {
+.animalCardLink {
   flex: 1;
   min-width: 0;
   padding: 0.75rem;
@@ -93,50 +103,50 @@
 }
 
 /* Keep the ⋮ trigger out of the card padding so it doesn't crowd the day count. */
-.animal-card-menu {
+.animalCardMenu {
   margin-right: 0.5rem;
 }
 
-.animal-name {
+.animalName {
   font-size: 1rem;
   margin-bottom: 0.25rem;
 }
 
-.animal-day-count {
+.animalDayCount {
   font-size: 0.875rem;
   color: #666;
 }
 
 /* Day Management Main Area */
-.day-management {
+.dayManagement {
   flex: 1;
 }
 
-.day-list-header {
+.dayListHeader {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 1rem;
 }
 
-.day-list-header h2 {
+.dayListHeader h2 {
   font-size: 1.3rem;
   margin: 0;
 }
 
-.day-actions {
+.dayActions {
   display: flex;
   gap: 0.5rem;
   align-items: center;
 }
 
-.add-day-group {
+.addDayGroup {
   display: flex;
   gap: 0.5rem;
   align-items: center;
 }
 
-.date-input {
+.dateInput {
   padding: 0.5rem;
   border: 1px solid #ccc;
   border-radius: 4px;
@@ -145,12 +155,13 @@
   cursor: pointer;
 }
 
-.date-input:focus {
+.dateInput:focus {
   outline: 2px solid var(--color-primary);
   outline-offset: 2px;
 }
 
-.visually-hidden {
+/* GLOBAL a11y utility (also defined in index.css). */
+:global(.visually-hidden) {
   position: absolute;
   width: 1px;
   height: 1px;
@@ -162,8 +173,9 @@
   border-width: 0;
 }
 
-.btn-primary,
-.btn-secondary {
+/* GLOBAL shared button rules (ImportYamlDialog references these literally). */
+:global(.btn-primary),
+:global(.btn-secondary) {
   padding: 0.5rem 1rem;
   border: 1px solid #ccc;
   border-radius: 4px;
@@ -172,33 +184,33 @@
   white-space: nowrap;
 }
 
-.btn-primary {
+:global(.btn-primary) {
   background-color: var(--color-primary);
   color: white;
   border-color: var(--color-primary);
 }
 
-.btn-primary:hover {
+:global(.btn-primary):hover {
   background-color: #1976d2;
 }
 
-.btn-secondary {
+:global(.btn-secondary) {
   background-color: white;
   color: #333;
 }
 
-.btn-secondary:hover {
+:global(.btn-secondary):hover {
   background-color: #f5f5f5;
 }
 
 /* Day List */
-.day-list {
+.dayList {
   list-style: none;
   padding: 0;
   margin: 0;
 }
 
-.day-item {
+.dayItem {
   display: flex;
   align-items: stretch;
   gap: 0.5rem;
@@ -206,7 +218,7 @@
 }
 
 /* The navigation card grows; the lifecycle action sits beside it (not inside the link). */
-.day-link {
+.dayLink {
   flex: 1;
 
   /* A flex item defaults to `min-width: auto`, so it won't shrink below its content's
@@ -228,34 +240,34 @@
   transition: background-color 0.2s, border-color 0.2s;
 }
 
-.day-link:hover {
+.dayLink:hover {
   background-color: #fafafa;
   border-color: #999;
 }
 
-.day-info {
+.dayInfo {
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
 
   /* Allow the info column to shrink so the session-desc ellipsis works and the column doesn't
-     force the card wide (pairs with `.day-link { min-width: 0 }`). */
+     force the card wide (pairs with `.dayLink { min-width: 0 }`). */
   min-width: 0;
 }
 
-.day-date {
+.dayDate {
   font-size: 1rem;
   font-weight: 600;
 }
 
-.day-session-id {
+.daySessionId {
   font-size: 0.875rem;
   color: #666;
 }
 
 /* Decision 12: the muted session description under the date (recognition aid), truncated to one
    line — the full text stays available via the element's `title`. */
-.day-session-desc {
+.daySessionDesc {
   font-size: 0.8125rem;
   color: #6a6557;
   font-style: italic;
@@ -265,7 +277,7 @@
   max-width: 26rem;
 }
 
-.day-status {
+.dayStatus {
   display: flex;
   gap: 0.5rem;
 
@@ -277,8 +289,9 @@
 
 /* Decision 12: ONE plain-language day status (replaces the Draft/Validated/Exported chip
    cluster). A leading dot keys the variant by colour without relying on colour alone (the words
-   carry the meaning). */
-.day-row-status {
+   carry the meaning). GLOBAL because the row applies it with a dynamic `-${variant}` suffix and a
+   test queries `.day-row-status`. */
+:global(.day-row-status) {
   display: inline-flex;
   align-items: baseline;
   gap: 0.4rem;
@@ -291,7 +304,7 @@
   min-width: 0;
 }
 
-.day-row-status::before {
+:global(.day-row-status)::before {
   content: '';
   width: 0.5rem;
   height: 0.5rem;
@@ -300,32 +313,33 @@
   background-color: currentcolor;
 }
 
-.day-row-status-draft {
+:global(.day-row-status-draft) {
   color: var(--color-grey-700);
   font-weight: 500;
 }
 
 /* `ready` (live export-ready, not yet saved) — blue, matching the shared DAY_LIFECYCLE legend
    swatch; distinct from the green `validated` (saved) state. */
-.day-row-status-ready {
+:global(.day-row-status-ready) {
   color: var(--color-primary);
 }
 
 /* `validated` (persisted) reads green; the live "Ready to export" phrase is the blue `ready`
    variant above, so the saved state is visually distinct from live readiness. */
-.day-row-status-validated {
+:global(.day-row-status-validated) {
   color: var(--color-success);
 }
 
-.day-row-status-exported {
+:global(.day-row-status-exported) {
   color: var(--color-primary-hover);
 }
 
-.day-row-status-needs_fixing {
+:global(.day-row-status-needs_fixing) {
   color: var(--color-error);
 }
 
-.status-chip {
+/* GLOBAL status chip (also defined by ValidationSummary.css; a test asserts its absence here). */
+:global(.status-chip) {
   padding: 0.25rem 0.5rem;
   border-radius: 12px;
   font-size: 0.75rem;
@@ -333,40 +347,40 @@
   text-transform: uppercase;
 }
 
-.status-chip.draft {
+:global(.status-chip.draft) {
   background-color: #fff3e0;
   color: #e65100;
 }
 
-.status-chip.validated {
+:global(.status-chip.validated) {
   background-color: #e8f5e9;
   color: #2e7d32;
 }
 
-.status-chip.exported {
+:global(.status-chip.exported) {
   background-color: #e3f2fd;
   color: #1976d2;
 }
 
-.status-chip.error {
+:global(.status-chip.error) {
   background-color: #fdecea;
   color: #c62828;
 }
 
 /* Dangling day reference (no resolvable record) — surfaced, not dropped. */
-.day-link-missing {
+.dayLinkMissing {
   cursor: default;
   border-color: #ffcdd2;
   background-color: #fff5f5;
 }
 
 /* Orphaned day record (not in the animal's index) — surfaced so it isn't lost. */
-.day-item-orphan .day-link {
+.dayItemOrphan .dayLink {
   border-color: #ffe0b2;
   background-color: #fff8e1;
 }
 
-.day-orphan-note {
+.dayOrphanNote {
   margin-left: 0.5rem;
   font-size: 0.75rem;
   font-weight: 600;
@@ -376,12 +390,12 @@
 /* Lifecycle cleanup (Task 8): secondary/destructive delete actions. Deliberately understated
    (text button, no fill) so they never compete with the primary navigate/setup/export actions,
    but clearly destructive (danger red, alertdialog confirm). */
-.day-item-actions {
+.dayItemActions {
   display: flex;
   align-items: center;
 }
 
-.btn-danger-text {
+.btnDangerText {
   background: none;
   border: 1px solid transparent;
   color: #c62828;
@@ -392,12 +406,12 @@
   white-space: nowrap;
 }
 
-.btn-danger-text:hover {
+.btnDangerText:hover {
   background-color: #fdecea;
   text-decoration: underline;
 }
 
-.btn-danger-text:focus-visible {
+.btnDangerText:focus-visible {
   outline: 2px solid #c62828;
   outline-offset: 2px;
 }
@@ -405,7 +419,7 @@
 /* The non-destructive "Duplicate day…" row action — same compact text-button shape as the danger
    variant but neutral, so the two row actions read as a matched pair (the class was previously
    undefined, leaving the button unstyled). */
-.btn-secondary-text {
+.btnSecondaryText {
   background: none;
   border: 1px solid transparent;
   color: var(--color-grey-700);
@@ -416,19 +430,19 @@
   white-space: nowrap;
 }
 
-.btn-secondary-text:hover {
+.btnSecondaryText:hover {
   background-color: var(--color-grey-100);
   text-decoration: underline;
 }
 
-.btn-secondary-text:focus-visible {
+.btnSecondaryText:focus-visible {
   outline: 2px solid var(--color-primary);
   outline-offset: 2px;
 }
 
 /* Carry-forward toggle: make the whole label a comfortable tap target (the class was previously
    undefined, so the hit area was just the bare checkbox glyph). */
-.carry-forward-toggle {
+.carryForwardToggle {
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -444,7 +458,7 @@
    layer for the ~390px testing path. */
 @media (max-width: 640px) {
   /* Heading over its actions, full width. */
-  .day-list-header {
+  .dayListHeader {
     flex-direction: column;
     align-items: stretch;
     gap: 0.75rem;
@@ -452,37 +466,37 @@
 
   /* Primary action over the carry-forward toggle (toggle gets the full row, not a squeezed
      column beside the button). */
-  .day-actions {
+  .dayActions {
     flex-direction: column;
     align-items: stretch;
   }
 
   /* Comfortable touch target for the full-width primary action on the phone testing path. */
-  .day-actions .btn-primary {
+  .dayActions :global(.btn-primary) {
     min-height: 44px;
   }
 
   /* The first-run setup card's row is a 4-column grid on desktop; stack it so the action link and
      state don't squeeze into one-word columns at phone width. */
-  .setup-card-item {
+  .setupCardItem {
     grid-template-columns: 1fr;
     gap: 0.25rem;
     align-items: start;
   }
 
-  .setup-card-item-action {
+  .setupCardItemAction {
     justify-self: start;
   }
 
   /* Day row → stacked card: the navigation card on top, the row actions below it. */
-  .day-item {
+  .dayItem {
     flex-direction: column;
     align-items: stretch;
   }
 
   /* Card content stacks the date/description over the status (instead of squeezing them side by
      side at a phone width). */
-  .day-link {
+  .dayLink {
     flex-direction: column;
     align-items: flex-start;
     gap: 0.5rem;
@@ -490,7 +504,7 @@
 
   /* Separate the destructive action from the primary: actions sit below the card on their own
      row, with Duplicate at the left and Delete pushed to the right, divided from the card. */
-  .day-item-actions {
+  .dayItemActions {
     justify-content: space-between;
     gap: 0.5rem;
     border-top: 1px solid var(--color-grey-200);
@@ -498,21 +512,21 @@
   }
 }
 
-/* Empty States */
-.empty-state {
+/* Empty States — GLOBAL `.empty-state` (a shared name also defined, scoped, by setup-table CSS). */
+:global(.empty-state) {
   text-align: center;
   padding: 3rem 2rem;
   color: #666;
 }
 
-.empty-message {
+.emptyMessage {
   font-size: 1.1rem;
   font-weight: 500;
   margin-bottom: 0.5rem;
 }
 
 /* Now a <button> (opens the inline create panel) — reset the user-agent button chrome. */
-.create-animal-link {
+.createAnimalLink {
   display: inline-block;
   margin-top: 1rem;
   padding: 0.75rem 1.5rem;
@@ -528,16 +542,16 @@
 }
 
 /* Inline create-animal panel (Task 4.2): hosts the AnimalCreationForm on the picker. */
-.create-animal-panel {
+.createAnimalPanel {
   margin-top: 1rem;
 }
 
-.create-animal-link:hover {
+.createAnimalLink:hover {
   background-color: #1976d2;
 }
 
 /* Empty-state "Import YAML…" — secondary affordance beside the loud "Create Animal" button. */
-.import-yaml-link {
+.importYamlLink {
   display: inline-block;
   margin-top: 1rem;
   margin-left: 0.5rem;
@@ -552,19 +566,19 @@
   transition: background-color 0.2s, color 0.2s;
 }
 
-.import-yaml-link:hover {
+.importYamlLink:hover {
   background-color: var(--color-primary);
   color: white;
 }
 
 /* Picker header actions: "Import YAML…" + "+ New Animal" sit together at the right. */
-.animal-list-actions {
+.animalListActions {
   display: flex;
   gap: 0.5rem;
 }
 
-/* Same outlined look as .btn-create-animal so the two header actions read as a pair. */
-.btn-import-yaml {
+/* Same outlined look as .btnCreateAnimal so the two header actions read as a pair. */
+.btnImportYaml {
   display: inline-flex;
   align-items: center;
   padding: 0.375rem 0.75rem;
@@ -580,7 +594,7 @@
   white-space: nowrap;
 }
 
-.btn-import-yaml:hover {
+.btnImportYaml:hover {
   background-color: var(--color-primary);
   color: white;
 }
@@ -588,7 +602,7 @@
 /* First-run "Set up this animal" card (Task 2.3) — the LOUD onboarding affordance, shown until
    the animal is established. A prominent (teal-edged) card so it leads the tab for a new animal;
    it disappears once setup + days exist, so its weight is acceptable. */
-.setup-card {
+.setupCard {
   margin-bottom: 1.5rem;
   padding: 1rem 1.25rem;
   border: 1px solid var(--color-primary, #0d5c63);
@@ -597,23 +611,23 @@
   background-color: #f6fafb;
 }
 
-.setup-card-heading {
+.setupCardHeading {
   font-size: 1.05rem;
   margin: 0 0 0.25rem;
 }
 
-.setup-card-intro {
+.setupCardIntro {
   margin: 0 0 0.75rem;
   font-size: 0.875rem;
   color: #555;
 }
 
-/* Sits between the intro and the section list; base look comes from .button-secondary. */
-.setup-card-copy-button {
+/* Sits between the intro and the section list; base look comes from the shared .button-secondary. */
+.setupCardCopyButton {
   margin: 0 0 0.75rem;
 }
 
-.setup-card-list {
+.setupCardList {
   list-style: none;
   padding: 0;
   margin: 0;
@@ -623,7 +637,7 @@
 }
 
 /* name · hint · state · action — the hint says WHEN a section applies (none is mandatory). */
-.setup-card-item {
+.setupCardItem {
   display: grid;
   grid-template-columns: minmax(8rem, 1fr) minmax(6rem, auto) auto auto;
   gap: 0.75rem;
@@ -634,18 +648,18 @@
   border-radius: 4px;
 }
 
-.setup-card-item-name {
+.setupCardItemName {
   font-weight: 600;
   font-size: 0.9rem;
 }
 
-.setup-card-item-hint {
+.setupCardItemHint {
   font-size: 0.8rem;
   color: #6a6557;
   font-style: italic;
 }
 
-.setup-card-item-state {
+.setupCardItemState {
   font-size: 0.7rem;
   font-weight: 600;
   text-transform: uppercase;
@@ -658,18 +672,18 @@
 }
 
 /* Neutral todo (mirrors the section-nav hollow-○ ring — not an anxiety colour). */
-.setup-card-item-todo .setup-card-item-state {
+.setupCardItemTodo .setupCardItemState {
   color: #46443d;
   background-color: #efeae0;
 }
 
 /* Blocking (mirrors the section-nav red ● — this section blocks export and must be fixed). */
-.setup-card-item-blocking .setup-card-item-state {
+.setupCardItemBlocking .setupCardItemState {
   color: #b3261e;
   background-color: #f6e0de;
 }
 
-.setup-card-item-action {
+.setupCardItemAction {
   justify-self: end;
   padding: 0.375rem 0.75rem;
   font-size: 0.8rem;
@@ -682,7 +696,7 @@
   transition: background-color 0.2s, color 0.2s;
 }
 
-.setup-card-item-action:hover {
+.setupCardItemAction:hover {
   background-color: var(--color-primary);
   color: white;
 }
@@ -690,7 +704,7 @@
 /* Existing-data review state — recovered/imported data is not silently trusted.
    Neutral by default (a calm "review before export" prompt); amber only when there is
    actual corruption to repair, so the alarming styling isn't trained away on clean data. */
-.existing-data-review {
+.existingDataReview {
   margin-bottom: 1.5rem;
   padding: 1rem 1.25rem;
   border: 1px solid #ddd;
@@ -698,34 +712,34 @@
   background-color: #f7f7f7;
 }
 
-.existing-data-review-corrupt {
+.existingDataReviewCorrupt {
   border-color: #ffe0b2;
   background-color: #fff8e1;
 }
 
-.existing-data-review-heading {
+.existingDataReviewHeading {
   font-size: 1rem;
   margin: 0 0 0.25rem;
 }
 
-.existing-data-review-intro {
+.existingDataReviewIntro {
   margin: 0 0 0.5rem;
   font-size: 0.875rem;
   color: #555;
 }
 
-.existing-data-review-corrupt .existing-data-review-intro {
+.existingDataReviewCorrupt .existingDataReviewIntro {
   color: #5d4037;
 }
 
-.existing-data-review-corrupt-note {
+.existingDataReviewCorruptNote {
   margin: 0 0 0.5rem;
   font-size: 0.875rem;
   font-weight: 600;
   color: #c62828;
 }
 
-.existing-data-review-link {
+.existingDataReviewLink {
   display: inline-block;
   margin-top: 0.5rem;
   font-size: 0.85rem;
@@ -733,7 +747,7 @@
 }
 
 /* Calendar Container */
-.calendar-container {
+.calendarContainer {
   margin-bottom: 1.5rem;
   display: flex;
   justify-content: center;

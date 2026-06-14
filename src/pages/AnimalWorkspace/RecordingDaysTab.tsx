@@ -51,6 +51,7 @@ import AnimalSetupCard from './AnimalSetupCard';
 import ExistingDataReview from './ExistingDataReview';
 import DayList from './DayList';
 import DuplicateDayModal from './DuplicateDayModal';
+import styles from './AnimalWorkspace.module.css';
 
 /** A pending per-day delete descriptor (named even after the store row changes). */
 interface PendingDeleteDay {
@@ -361,11 +362,11 @@ export function RecordingDaysTab({ animalId }: RecordingDaysTabProps) {
     <>
       {/* Selected Animal: Day List */}
       <div>
-        <header className="day-list-header">
+        <header className={styles.dayListHeader}>
           <h2 id="day-list-heading">
             Recording Days for {selectedAnimal.id}
           </h2>
-          <div className="day-actions">
+          <div className={styles.dayActions}>
             {/* No aria-label: the visible text IS the accessible name (label parity), so voice
                 control / screen readers find the control by what it says. `aria-expanded` conveys
                 the open/closed state; the visible text already flips Add Recording Days ↔ Hide
@@ -378,7 +379,7 @@ export function RecordingDaysTab({ animalId }: RecordingDaysTabProps) {
               {showCalendar ? 'Hide Calendar' : 'Add Recording Days'}
             </button>
             {mostRecentDayId && (
-              <label className="carry-forward-toggle">
+              <label className={styles.carryForwardToggle}>
                 <input
                   type="checkbox"
                   checked={carryForward}
@@ -421,7 +422,7 @@ export function RecordingDaysTab({ animalId }: RecordingDaysTabProps) {
 
         {/* Calendar for creating multiple days */}
         {showCalendar && (
-          <div className="calendar-container">
+          <div className={styles.calendarContainer}>
             <CalendarDayCreator
               animalId={selectedAnimalId}
               existingDays={getExistingDays()}

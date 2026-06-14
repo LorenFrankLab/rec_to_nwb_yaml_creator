@@ -6,6 +6,7 @@ import { DAY_LIFECYCLE } from '../../domain/dayLifecycle';
 import { humanizeValidationMessage } from '../../domain/humanizeValidationMessage';
 import { DAY_STATUS, dayHasArtifacts, describeOwner } from '../../domain/dayRecovery';
 import type { DayClassificationRow } from '../../domain/dayRecovery';
+import styles from './AnimalWorkspace.module.css';
 
 // The day-row status separator between "Needs fixing" and its reason (em-dash, padded).
 const NEEDS_FIXING_SEPARATOR = ' — ';
@@ -88,17 +89,17 @@ export default function DayList({
        which makes Safari + VoiceOver drop the implicit list role — the explicit role restores
        it. The jsx-a11y rule can't see the CSS, so it's suppressed deliberately. */
     // eslint-disable-next-line jsx-a11y/no-redundant-roles
-    <ul className="day-list" role="list">
+    <ul className={styles.dayList} role="list">
       {classification.map(({ dayId, record, status }) => {
         // A dangling reference (no record) is surfaced, not dropped — otherwise a
         // recovered day disappears. Consistent with the cross-day Validation summary.
         if (status === DAY_STATUS.DANGLING_REFERENCE) {
           return (
-            <li key={dayId} className="day-item day-item-missing">
-              <div className="day-link day-link-missing" role="alert">
-                <div className="day-info">
-                  <span className="day-date">{dayId}</span>
-                  <span className="day-session-id">
+            <li key={dayId} className={styles.dayItem}>
+              <div className={`${styles.dayLink} ${styles.dayLinkMissing}`} role="alert">
+                <div className={styles.dayInfo}>
+                  <span className={styles.dayDate}>{dayId}</span>
+                  <span className={styles.daySessionId}>
                     Saved record missing or corrupt —{' '}
                     <a href={`#/animal/${animalId}/export`}>
                       review in this animal&apos;s Validation &amp; Export
@@ -106,7 +107,7 @@ export default function DayList({
                     .
                   </span>
                 </div>
-                <div className="day-status">
+                <div className={styles.dayStatus}>
                   <span className="status-chip error">Missing record</span>
                 </div>
               </div>
@@ -119,16 +120,16 @@ export default function DayList({
         // exportable). Surface a warning + an in-place unlink repair.
         if (status === DAY_STATUS.WRONG_OWNER) {
           return (
-            <li key={dayId} className="day-item day-item-missing">
-              <div className="day-link day-link-missing" role="alert">
-                <div className="day-info">
-                  <span className="day-date">{(record as Record<string, unknown>).date as string || dayId}</span>
-                  <span className="day-session-id">
+            <li key={dayId} className={styles.dayItem}>
+              <div className={`${styles.dayLink} ${styles.dayLinkMissing}`} role="alert">
+                <div className={styles.dayInfo}>
+                  <span className={styles.dayDate}>{(record as Record<string, unknown>).date as string || dayId}</span>
+                  <span className={styles.daySessionId}>
                     Belongs to {describeOwner((record as Record<string, unknown>).animalId)} — listed here by mistake; not
                     exported with this animal.
                   </span>
                 </div>
-                <div className="day-status">
+                <div className={styles.dayStatus}>
                   <button
                     type="button"
                     className="btn-secondary"
@@ -190,22 +191,28 @@ export default function DayList({
         const rowStatusLabel = humanizeNeedsFixingLabel(displayStatus.label);
 
         return (
-          <li key={dayId} className={`day-item ${isOrphan ? 'day-item-orphan' : ''}`}>
-            <a href={`#/day/${dayId}`} className="day-link">
-              <div className="day-info">
-                <span className="day-date">
+          <li key={dayId} className={`${styles.dayItem} ${isOrphan ? styles.dayItemOrphan : ''}`}>
+            <a href={`#/day/${dayId}`} className={styles.dayLink}>
+              <div className={styles.dayInfo}>
+                <span className={styles.dayDate}>
                   {date}
                   {isOrphan && (
-                    <span className="day-orphan-note"> ⚠ not in day list</span>
+                    <span className={styles.dayOrphanNote}> ⚠ not in day list</span>
                   )}
                 </span>
                 {sessionDescription && (
-                  <span className="day-session-desc" title={sessionDescription}>
+                  <span
+                    className={styles.daySessionDesc}
+                    data-testid="day-session-desc"
+                    title={sessionDescription}
+                  >
                     {sessionDescription}
                   </span>
                 )}
               </div>
-              <div className="day-status">
+              <div className={styles.dayStatus}>
+                {/* `day-row-status` (+ dynamic `-${variant}` suffix) is kept GLOBAL in the module so
+                    the runtime-built class name resolves; a day-row test also queries it. */}
                 <span className={`day-row-status day-row-status-${displayStatus.variant}`}>
                   {rowStatusLabel}
                 </span>
@@ -216,10 +223,10 @@ export default function DayList({
                 opening the day. Only on ordinary (OK) rows — recovered/wrong-owner
                 rows have their own repair paths above. */}
             {status === DAY_STATUS.OK && (
-              <div className="day-item-actions">
+              <div className={styles.dayItemActions}>
                 <button
                   type="button"
-                  className="btn-secondary-text"
+                  className={styles.btnSecondaryText}
                   onClick={() => onDuplicateDay({ dayId, date })}
                   aria-label={`Duplicate recording day ${date || dayId}…`}
                 >
@@ -227,7 +234,7 @@ export default function DayList({
                 </button>
                 <button
                   type="button"
-                  className="btn-danger-text"
+                  className={styles.btnDangerText}
                   onClick={() =>
                     onDeleteDay({
                       dayId,

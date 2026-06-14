@@ -1,6 +1,7 @@
 import RawCorruptionBanner from '../../components/RawCorruptionBanner';
 import type { Animal } from '../../state/workspaceTypes';
 import type { RawShapeIssue } from '../../validation/rawShape';
+import styles from './AnimalWorkspace.module.css';
 
 interface ExistingDataReviewProps {
   /** The animal under review (for the Validation & Export links). */
@@ -44,11 +45,11 @@ export default function ExistingDataReview({
 }: ExistingDataReviewProps) {
   return (
     <section
-      className={`existing-data-review ${hasCorruption ? 'existing-data-review-corrupt' : ''}`}
+      className={`${styles.existingDataReview} ${hasCorruption ? styles.existingDataReviewCorrupt : ''}`}
       aria-label="Existing data review"
     >
-      <h3 className="existing-data-review-heading">Review existing data</h3>
-      <p className="existing-data-review-intro">
+      <h3 className={styles.existingDataReviewHeading}>Review existing data</h3>
+      <p className={styles.existingDataReviewIntro}>
         Found {dayCount} recording {dayCount === 1 ? 'day' : 'days'} and{' '}
         {configCount} hardware {configCount === 1 ? 'configuration' : 'configurations'} for{' '}
         {animal.id}.{' '}
@@ -61,7 +62,7 @@ export default function ExistingDataReview({
           are fine; only the animal's index is corrupt) — surfaced here for
           re-import/recreation. */}
       {daysCorrupt && (
-        <p className="existing-data-review-corrupt-note" role="alert">
+        <p className={styles.existingDataReviewCorruptNote} role="alert">
           This animal&apos;s recording-day list is corrupt (expected a list), so
           its index can&apos;t be read.{' '}
           {orphanDayIds.length > 0
@@ -70,7 +71,7 @@ export default function ExistingDataReview({
         </p>
       )}
       {orphanDayIds.length > 0 && (
-        <p className="existing-data-review-corrupt-note" role="alert">
+        <p className={styles.existingDataReviewCorruptNote} role="alert">
           {orphanDayIds.length} recovered recording{' '}
           {orphanDayIds.length === 1 ? 'day is' : 'days are'} not listed in
           this animal&apos;s day index (shown below as &quot;not in day list&quot;).{' '}
@@ -81,7 +82,7 @@ export default function ExistingDataReview({
         </p>
       )}
       {wrongOwnerDayIds.length > 0 && (
-        <p className="existing-data-review-corrupt-note" role="alert">
+        <p className={styles.existingDataReviewCorruptNote} role="alert">
           {wrongOwnerDayIds.length} day{' '}
           {wrongOwnerDayIds.length === 1 ? 'is' : 'are'} listed here but
           belong to a different animal (shown below as &quot;belongs to …&quot;).
@@ -97,7 +98,7 @@ export default function ExistingDataReview({
         onRepair={onRepair}
       />
       <a
-        className="existing-data-review-link"
+        className={styles.existingDataReviewLink}
         href={`#/animal/${animalId}/export`}
       >
         Open this animal&apos;s Validation &amp; Export
