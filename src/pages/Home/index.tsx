@@ -9,7 +9,7 @@ import { useStoreContext } from '../../state/StoreContext';
 import { buildAnimalFromForm, getDefaultExperimenters } from '../../domain/animalCreation';
 import type { AnimalCreationFormData } from '../../domain/animalCreation';
 import AnimalCreationForm from './AnimalCreationForm';
-import './Home.css';
+import styles from './Home.module.css';
 
 /**
  * Home - Animal Creation Container
@@ -51,9 +51,9 @@ export function Home() {
 
   return (
     <main id="main-content" tabIndex={-1} role="main">
-      <div className="animal-creation-container">
+      <div className={styles.animalCreationContainer}>
         {showCancelAsSkip && (
-          <div className="first-time-user-notice" role="note">
+          <div className={styles.firstTimeUserNotice} role="note">
             <p>
               <strong>Welcome!</strong> To get started, create your first animal subject.
             </p>

@@ -1,10 +1,21 @@
-/* Home.css - Animal Creation Form Styling */
+/* Home.module.css - Animal Creation Form Styling */
 
 /* Design tokens (--color-*, --spacing-*, etc.) are defined globally in src/index.css,
-   which loads on every route, so no stylesheet @import is needed here. */
+   which loads on every route, so no stylesheet @import is needed here.
+
+   OWNERSHIP NOTE: a handful of class names used by this form are NOT owned here — they are
+   GLOBAL rules that other components also consume, so they are kept `:global()` in this module
+   (byte-identical to the previous global rules) rather than hashed:
+     - `.list-item`  — also rendered by the shared src/element/* list components.
+     - `.form-actions` — the shared modal/form action-row layout (many consumers).
+     - `.btn-primary` / `.btn-secondary` — shared button classes (also defined by AnimalWorkspace.css).
+     - `.validation-warning` — a global warning style that DayEditor.scss ALSO defines (load-order
+       collision); keeping it `:global()` preserves whatever currently wins (zero visual change).
+   The form ALSO uses `.form-field` / `.required` / `.validation-hint` / `.validation-error` /
+   `.invalid`, which are defined entirely in other global stylesheets — untouched here. */
 
 /* Page container - centered form card */
-.animal-creation-container {
+.animalCreationContainer {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -14,7 +25,7 @@
 }
 
 /* Form card */
-.animal-creation-form {
+.animalCreationForm {
   background-color: var(--color-white);
   border-radius: 8px;
   box-shadow: 0 4px 12px rgb(0 0 0 / 10%);
@@ -23,7 +34,7 @@
   width: 100%;
 }
 
-.animal-creation-form h1 {
+.animalCreationForm h1 {
   margin-top: 0;
   margin-bottom: var(--spacing-lg);
   font-size: var(--font-size-xl);
@@ -32,7 +43,7 @@
 }
 
 /* Form sections - reuse the shared form-field pattern */
-.form-section {
+.formSection {
   background-color: var(--color-white);
   border: 1px solid var(--color-grey-200);
   border-radius: 4px;
@@ -40,7 +51,7 @@
   margin-bottom: var(--spacing-lg);
 }
 
-.form-section h2 {
+.formSection h2 {
   margin-top: 0;
   margin-bottom: var(--spacing-md);
   font-size: var(--font-size-lg);
@@ -48,13 +59,13 @@
 }
 
 /* Radio buttons (new) */
-.radio-group {
+.radioGroup {
   display: flex;
   gap: var(--spacing-md);
   flex-wrap: wrap;
 }
 
-.radio-label {
+.radioLabel {
   display: flex;
   align-items: center;
   gap: var(--spacing-xs);
@@ -62,25 +73,25 @@
   font-size: var(--font-size-base);
 }
 
-.radio-label input[type='radio'] {
+.radioLabel input[type='radio'] {
   cursor: pointer;
   width: 18px;
   height: 18px;
 }
 
-/* Dynamic list items */
-.list-item {
+/* Dynamic list items (GLOBAL — also rendered by the shared src/element/* list components). */
+:global(.list-item) {
   display: flex;
   gap: var(--spacing-sm);
   align-items: flex-start;
   margin-bottom: var(--spacing-sm);
 }
 
-.list-item input {
+:global(.list-item) input {
   flex: 1;
 }
 
-.list-item button {
+:global(.list-item) button {
   flex-shrink: 0;
   padding: var(--spacing-xs) var(--spacing-sm);
   background-color: var(--color-grey-200);
@@ -90,11 +101,11 @@
   font-size: var(--font-size-sm);
 }
 
-.list-item button:hover {
+:global(.list-item) button:hover {
   background-color: var(--color-grey-300);
 }
 
-.add-item-button {
+.addItemButton {
   margin-top: var(--spacing-xs);
   padding: var(--spacing-sm) var(--spacing-md);
   background-color: var(--color-primary-light);
@@ -106,13 +117,13 @@
   font-weight: 500;
 }
 
-.add-item-button:hover {
+.addItemButton:hover {
   background-color: var(--color-primary);
   color: var(--color-white);
 }
 
-/* Form actions */
-.form-actions {
+/* Form actions (GLOBAL — shared action-row layout used across modals/forms). */
+:global(.form-actions) {
   display: flex;
   gap: var(--spacing-md);
   justify-content: flex-end;
@@ -121,7 +132,8 @@
   border-top: 1px solid var(--color-grey-200);
 }
 
-.btn-primary {
+/* Buttons (GLOBAL — shared `.btn-primary`/`.btn-secondary`, also defined by AnimalWorkspace.css). */
+:global(.btn-primary) {
   padding: var(--spacing-sm) var(--spacing-lg);
   background-color: var(--color-primary);
   color: var(--color-white);
@@ -133,17 +145,17 @@
   transition: background-color var(--transition-fast);
 }
 
-.btn-primary:hover:not(:disabled) {
+:global(.btn-primary):hover:not(:disabled) {
   background-color: var(--color-primary-hover);
 }
 
-.btn-primary:disabled {
+:global(.btn-primary):disabled {
   background-color: var(--color-grey-300);
   cursor: not-allowed;
   opacity: 0.6;
 }
 
-.btn-secondary {
+:global(.btn-secondary) {
   padding: var(--spacing-sm) var(--spacing-lg);
   background-color: transparent;
   color: var(--color-grey-700);
@@ -154,17 +166,16 @@
   transition: all var(--transition-fast);
 }
 
-.btn-secondary:hover {
+:global(.btn-secondary):hover {
   background-color: var(--color-grey-100);
   border-color: var(--color-grey-400);
 }
 
-/* Validation summary (LEGACY animal-creation form only).
-   SCOPED under `.animal-creation-form` so this error-box styling no longer matches the
-   WORKSPACE component `src/pages/ValidationSummary/` (which also uses `.validation-summary`).
-   Leaving it unscoped painted every per-animal "Validation & Export" panel error-pink even
-   when the animal was fully valid. The workspace component keeps its own neutral stylesheet. */
-.animal-creation-form .validation-summary {
+/* Validation summary (this animal-creation form's OWN error box). Now hashed (Home-only), so the
+   prior `.animal-creation-form .validation-summary` scope hack — which existed solely to stop this
+   red error styling from leaking to the WORKSPACE component that shares the `validation-summary`
+   NAME — is no longer needed: the hashed class can only match this form's box. */
+.validationSummary {
   background-color: var(--color-error-light);
   border: 1px solid var(--color-error);
   border-radius: 4px;
@@ -172,24 +183,25 @@
   margin-bottom: var(--spacing-lg);
 }
 
-.animal-creation-form .validation-summary strong {
+.validationSummary strong {
   color: var(--color-error);
   display: block;
   margin-bottom: var(--spacing-xs);
 }
 
-.animal-creation-form .validation-summary ul {
+.validationSummary ul {
   margin: 0;
   padding-left: var(--spacing-lg);
 }
 
-.animal-creation-form .validation-summary a {
+.validationSummary a {
   color: var(--color-error);
   text-decoration: underline;
 }
 
-/* Warning messages */
-.validation-warning {
+/* Warning messages (GLOBAL — DayEditor.scss also defines `.validation-warning`; keep `:global()`
+   so the current load-order winner is preserved unchanged). */
+:global(.validation-warning) {
   display: flex;
   align-items: flex-start;
   gap: var(--spacing-xs);
@@ -203,7 +215,7 @@
 }
 
 /* First-time user notice */
-.first-time-user-notice {
+.firstTimeUserNotice {
   background-color: var(--color-primary-light);
   border: 1px solid var(--color-primary);
   border-radius: 4px;
@@ -211,28 +223,28 @@
   margin-bottom: var(--spacing-lg);
 }
 
-.first-time-user-notice p {
+.firstTimeUserNotice p {
   margin: var(--spacing-xs) 0;
   color: var(--color-grey-800);
 }
 
 /* Responsive */
 @media (max-width: 768px) {
-  .animal-creation-form {
+  .animalCreationForm {
     padding: var(--spacing-lg);
   }
 
-  .form-actions {
+  :global(.form-actions) {
     flex-direction: column-reverse;
   }
 
-  .form-actions button,
-  .form-actions a {
+  :global(.form-actions) button,
+  :global(.form-actions) a {
     width: 100%;
     text-align: center;
   }
 
-  .radio-group {
+  .radioGroup {
     flex-direction: column;
   }
 }
