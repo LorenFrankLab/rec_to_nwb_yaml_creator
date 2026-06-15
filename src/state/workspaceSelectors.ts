@@ -145,6 +145,21 @@ export const getAnimalDayIds = (animal: unknown): DayId[] =>
   asArray<DayId>(asRecord(animal).days);
 
 /**
+ * Whether the animal's recording-day index is present but corrupt — a value that is not a list.
+ * {@link getAnimalDayIds} deliberately launders such an index to `[]` so callers render safely, which
+ * would otherwise hide the corruption behind a misleading "No recording days yet". This DETECTS it so a
+ * review surface can surface the corrupt-index notice. (A detector, not a laundering read — its home is
+ * here alongside the canonical selectors, per the read-layer guard.)
+ *
+ * @param animal - The animal record.
+ * @returns True when the `days` index is present and not an array.
+ */
+export const isAnimalDaysIndexCorrupt = (animal: unknown): boolean => {
+  const index = asRecord(animal).days;
+  return index != null && !Array.isArray(index);
+};
+
+/**
  * The id of the animal's latest-dated day present in `days`, or null. Day dates are `YYYY-MM-DD`
  * (lexicographic compare == chronological). Tolerates a corrupt animal, a missing `days` map, a
  * dangling id, or a record without a string `date`.

@@ -14,6 +14,7 @@ import {
   getAnimalExperimenters,
   getExperimenterNames,
   getAnimalDayIds,
+  isAnimalDaysIndexCorrupt,
   getMostRecentDayId,
   getDaySession,
   getDayTasks,
@@ -131,6 +132,23 @@ describe('workspaceSelectors — string-or-undefined day fields', () => {
     }
     expect(getDayDataAcqDeviceName(undefined)).toBeUndefined();
     expect(getDayDataAcqDeviceName(null)).toBeUndefined();
+  });
+});
+
+describe('isAnimalDaysIndexCorrupt — surfaces a non-list day index', () => {
+  it('is false for a missing index, an empty list, and a populated list', () => {
+    expect(isAnimalDaysIndexCorrupt(undefined)).toBe(false);
+    expect(isAnimalDaysIndexCorrupt(null)).toBe(false);
+    expect(isAnimalDaysIndexCorrupt({})).toBe(false);
+    expect(isAnimalDaysIndexCorrupt({ days: [] })).toBe(false);
+    expect(isAnimalDaysIndexCorrupt({ days: ['d1'] })).toBe(false);
+  });
+
+  it('is true for a present-but-corrupt index (object or string), which getAnimalDayIds launders to []', () => {
+    expect(isAnimalDaysIndexCorrupt({ days: { 0: 'd1' } })).toBe(true);
+    expect(isAnimalDaysIndexCorrupt({ days: 'd1' })).toBe(true);
+    // The corruption the detector exists to surface: the canonical selector hides it as [].
+    expect(getAnimalDayIds({ days: { 0: 'd1' } })).toEqual([]);
   });
 });
 

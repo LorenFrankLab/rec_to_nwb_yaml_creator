@@ -12,6 +12,12 @@ export type {
   ValidationSummaryViewModel,
   DayStatusRowViewModel,
 } from './validationSummaryViewModel';
+export { buildAnimalWorkspaceViewModel } from './animalWorkspaceViewModel';
+export type {
+  AnimalWorkspaceViewModel,
+  AnimalCardViewModel,
+  ExistingDataReviewViewModel,
+} from './animalWorkspaceViewModel';
 
 export type {
   WorkflowSeverity,
