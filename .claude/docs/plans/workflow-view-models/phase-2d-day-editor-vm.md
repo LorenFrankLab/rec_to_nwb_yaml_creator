@@ -93,10 +93,10 @@ green.
 
 | Test | Asserts |
 | --- | --- |
-| `dayEditorViewModel.test.ts` — 2d-1 steps/breadcrumb | step `SectionViewModel.status`es + `overall` reproduce the current stepper for ready / draft / needs-fixing days; crumbs reproduce `Workspace › Animal: X › Day: date`; corrupt config yields one `error` issue, no throw. |
-| — 2d-2 inherited/default | a field set on the day → `source:'day'`; unset but on the animal → `'inherited'`; unset everywhere → `'default'`; values match `mergeDayMetadata`/`EffectiveDayReview`. |
-| — 2d-3 issues/export | each issue's `ownership`/`reachesBeyondDay`/`repair` matches `ownershipForIssue`/`repairTargetForIssue` (i.e. what `IssueOwnershipHint` renders); export disabled reason matches today's Export step. |
-| — 2d-4 bad channels | an un-acked monotonic removal yields a `blockedRemovals` entry with the ack `WorkflowAction`; export `disabledReason` reflects the block. |
+| `dayEditorViewModel.test.ts` — 2d-1 shell/steps/breadcrumb | each `StepViewModel.status` (domain `StepStatus`) + `active` + `overall` reproduce the current stepper for ready / draft / needs-fixing days; `breadcrumb` reproduces `Workspace › Animal: X › Day: date`; corrupt config yields one `error` issue + `shell.state` set, no throw. |
+| — 2d-2 inherited/default | each `FieldValueViewModel.source` is `'day'` when set on the day, `'inherited'` when unset but on the animal, `'default'`/`'derived'` otherwise; values match `mergeDayMetadata`/`EffectiveDayReview`. |
+| — 2d-3 issues/export | each issue's `ownership`/`reachesBeyondDay`/`repair` matches `ownershipForIssue`/`repairTargetForIssue` (i.e. what `IssueOwnershipHint` renders); `export` (`ExportGateViewModel`) `reason` + `action.disabledReason` match today's Export step; `notices` reproduce the malformed-collection/stale-override prompts. |
+| — 2d-4 bad channels | `badChannels.marks` reproduces per-channel `marked`/`priorBad`/`requiresAck`/`acked`; an un-acked monotonic removal yields a `blockedRemovals` (`IssueViewModel`) entry with the ack command action; export `disabledReason` reflects the block. |
 | baselines | byte-identical. |
 
 ## Fixtures

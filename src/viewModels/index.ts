@@ -7,6 +7,8 @@
 
 export type {
   WorkflowSeverity,
+  DayStatus,
+  StepStatus,
   WorkflowAction,
   WorkflowCommand,
   IssueViewModel,
