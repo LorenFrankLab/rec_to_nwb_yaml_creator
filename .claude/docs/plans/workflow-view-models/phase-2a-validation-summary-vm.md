@@ -39,6 +39,11 @@ tested in parallel. Wiring is [phase-3](phase-3-wire-pages.md).
 - Create `src/viewModels/validationSummaryViewModel.ts` exporting
   `buildValidationSummaryViewModel(workspace, animalId?)` and the page VM type:
 
+  The batch-export preflight and the run reports use the shared
+  [`DayPreflightViewModel`](shared-contracts.md#extended-vocabulary-realized-contract-gap-types) and
+  [`BatchRunResultViewModel`](shared-contracts.md#extended-vocabulary-realized-contract-gap-types)
+  (Phase 1) — do not re-coin per-day preflight or report shapes here:
+
   ```ts
   export interface ValidationSummaryViewModel {
     scope: { animalId?: string; subhead?: string };      // animal-scoped vs all-animals
@@ -46,16 +51,21 @@ tested in parallel. Wiring is [phase-3](phase-3-wire-pages.md).
     days: DayStatusRowViewModel[];                        // extends DayRowViewModel with the table's scan cells
     batchExport: {
       action: WorkflowAction;                            // 'Export Valid Only' (+disabledReason when blocked)
-      preflight: BatchExportPreflightViewModel | null;   // null until the user opens the confirm step
+      preflight: {                                        // null until the user opens the confirm step
+        days: DayPreflightViewModel[];
+        warnings: IssueViewModel[];                       // outstanding warnings to acknowledge
+        confirm: WorkflowAction;                          // disabledReason while warnings unacked
+      } | null;
     };
-    reports: ExportReportViewModel[];                    // skipped / overridden / failed / stale / validate-errors
+    reports: BatchRunResultViewModel;                    // skipped / overridden / failed / stale / validate-errors
     empty?: { message: string };
   }
   ```
 
   Define `DayStatusRowViewModel` as `DayRowViewModel` plus the table-specific scan fields
-  (`configVersionLabel`, `cameras`, `cameraCalibration`, `opto`, `orphaned`/`wrongOwner` flags) the
-  current `DayStatusTable` shows. Keep all fields plain data.
+  (`configVersionLabel`, `cameras`, `cameraCalibration`, `opto`) the current `DayStatusTable` shows;
+  the orphan/wrong-owner state rides on the shared `DayRowViewModel.recovery`/`recoveryDetail`/
+  `exportEligibility` fields rather than bespoke flags. Keep all fields plain data.
 - Create `src/viewModels/dayRowViewModel.ts` in this phase. It owns the shared row-status→label + recovery
   + action translation from the existing `SummaryRow`/day-list concepts into `DayRowViewModel`. 2b must
   reuse this helper rather than creating a parallel day-row path.

@@ -38,7 +38,8 @@ section-nav (status rings) + active-tab descriptor, as data. The section-nav is 
 - Move `SECTION_GROUPS` and the nav status computation out of the component into the builder. Each
   `SectionViewModel.status` comes from `getAnimalSectionStatus` + `getAnimalBlockingSections` mapped via
   the [severity invariant](shared-contracts.md#severity-mapping-invariant); `summary`/`issueCount`/`action`
-  reproduce the current ring + count + link.
+  reproduce the current ring + count + link. Non-numeric counts (optogenetics 'used'/'incomplete',
+  'N ready') ride on `SectionViewModel.countLabel`; a not-started section uses `showCount: false`.
 - Preserve the existing tab keys/labels/order and the `Recording Days` / `Validation & Export` counts
   shown in the `Day work` group (those read day state, not just section status — keep the same source).
 - Keep the `?field=` repair-anchor mapping (tab → primary `data-field-path`) as a small pure export the

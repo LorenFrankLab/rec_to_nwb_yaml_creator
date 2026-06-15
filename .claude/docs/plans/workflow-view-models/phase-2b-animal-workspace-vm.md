@@ -55,7 +55,9 @@ and 2c). No UI change here.
 
 - The `dayRows` builder MUST produce the same `DayRowViewModel` shape as 2a. Reuse
   `src/viewModels/dayRowViewModel.ts` from 2a for the shared row-status→label + recovery + action
-  translation. If AnimalWorkspace needs extra row fields, extend the page-specific row type around the
+  translation. The recovery branch populates the shared `DayRowViewModel.recovery` +
+  `recoveryDetail` (owner description + repair) and the lifecycle word rides on `lifecycle`/
+  `statusLabel`. If AnimalWorkspace needs extra row fields, extend the page-specific row type around the
   shared helper rather than forking the shared status/label/recovery logic.
 - `setupSections` maps `SETUP_CARD_SECTIONS` × (`getAnimalSectionStatus`, `getAnimalBlockingSections`) →
   `SectionViewModel[]` with the action verb + href the card renders today.

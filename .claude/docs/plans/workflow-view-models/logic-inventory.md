@@ -372,6 +372,17 @@ section lists rules a builder would otherwise have to reinvent.
 - **Builder-local confirmations/minor choices:** settle **C3, C9, C10, C19** in the relevant builder PR
   unless Phase 1 needs them to keep the shared contracts coherent.
 
+> **Realized in Phase 1:** the full vocabulary above was landed in `src/viewModels/types.ts` and
+> [shared-contracts.md](shared-contracts.md) in lockstep — the additive fields on the core types
+> (`WorkflowAction.intent`, `WorkflowCommand.confirmCaveat`, `SectionViewModel.countLabel`/`showCount`,
+> `DayRowViewModel.lifecycle`/`exportEligibility`/`recoveryDetail`) plus the new types
+> `DayRecoveryViewModel`, `DayPreflightViewModel`, `BatchRunReportViewModel`/`BatchRunResultViewModel`,
+> `StepViewModel`, `FieldValueViewModel`, `ExportGateViewModel`, `BadChannelMarkViewModel`,
+> `BreadcrumbViewModel`, `DayEditorShellViewModel`, `RecoveryNoticeViewModel`. The 2a–2d phase sketches
+> were updated to consume these shared types instead of inline shapes, so none are dead. (C7 is a
+> documentation rule on `WorkflowSeverity`, not a field; C3/C9/C10/C19 remain builder-local.)
+> Shipped `src/` doc-comments describe each field in plain terms and carry no `C#`/phase references.
+
 ## Domain gaps
 
 Decisions that *should* be REUSE (pure domain truth) but are currently **reimplemented inline** in a
