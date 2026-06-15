@@ -466,11 +466,15 @@ function buildRepairAction(
   // command id is the repairCommand type (the page maps it to its existing onRepair handler for now);
   // the label names exactly what is reset (`actionLabel`) so a destructive reset is never ambiguous.
   if (issue.repairCommand != null) {
-    const cmd = issue.repairCommand as { type?: unknown; key?: unknown; field?: unknown };
+    const cmd = issue.repairCommand as { type?: unknown; key?: unknown; field?: unknown; acks?: unknown };
     const command: WorkflowCommand = { id: String(cmd.type ?? ''), target: { dayId } };
     const payload: Record<string, unknown> = {};
     if (cmd.key != null) payload.key = cmd.key;
     if (cmd.field != null) payload.field = cmd.field;
+    // The bad-channel ack repair carries `acks` ({ [ntrodeId]: channels }); carry it so the command
+    // layer reaches the `acknowledgeBadChannelRemovals` executor instead of dispatching it acks-less
+    // (a silent no-op). Same off-export ack the in-grid Devices flow records.
+    if (cmd.acks != null) payload.acks = cmd.acks;
     if (Object.keys(payload).length > 0) command.payload = payload;
     return { label: issue.actionLabel || target.label, command, intent: 'fix' };
   }
@@ -880,6 +884,14 @@ function buildBlockedRemovals(
     .map((issue) => {
       const path = issue.path || issue.instancePath;
       const ownership = ownershipForIssue(issue);
+      // Carry the off-export acks the command layer needs to clear THIS block straight from the
+      // source issue's repair command (`{ [ntrodeId]: channels }` — the prior-bad channels the day
+      // un-marked). The command adapter maps the singular id onto the `acknowledgeBadChannelRemovals`
+      // executor with these acks, so the ack is recorded without re-deriving the regression.
+      const acks = (issue.repairCommand as { acks?: unknown } | undefined)?.acks;
+      const payload: Record<string, unknown> = {};
+      if (path) payload.fieldPath = path;
+      if (acks != null) payload.acks = acks;
       const vm: IssueViewModel = {
         severity: 'error',
         message: humanizeValidationMessage(issue.message),
@@ -890,7 +902,7 @@ function buildBlockedRemovals(
           command: {
             id: 'acknowledgeBadChannelRemoval',
             target: { dayId, animalId: ownerKey ?? undefined },
-            ...(path ? { payload: { fieldPath: path } } : {}),
+            ...(Object.keys(payload).length > 0 ? { payload } : {}),
           },
           intent: 'fix',
         },
