@@ -27,8 +27,8 @@ import {
   isRecord,
   buildAnimalDaysByKey,
   subjectLabel,
-} from './validationSummaryRows';
-import type { SummaryRow } from './validationSummaryRows';
+} from '../../viewModels/validationSummaryRows';
+import type { SummaryRow } from '../../viewModels/validationSummaryRows';
 
 /** A per-day line in one of the assertive batch reports / the validate-errors list. */
 interface ReportItem {

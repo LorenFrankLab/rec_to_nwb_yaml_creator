@@ -34,7 +34,7 @@ import {
   SECTION_STATUS,
 } from '../domain/sectionStatus';
 import type { Animal, Day } from '../state/workspaceTypes';
-import { buildAnimalRows } from '../pages/ValidationSummary/validationSummaryRows';
+import { buildAnimalRows } from './validationSummaryRows';
 import type { SectionViewModel } from './types';
 
 /** The animal header: the store-key id and the read-only species/sex facts shown beside it. */

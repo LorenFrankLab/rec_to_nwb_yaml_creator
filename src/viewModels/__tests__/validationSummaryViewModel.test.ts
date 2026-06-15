@@ -10,8 +10,8 @@
 import { describe, it, expect } from 'vitest';
 import { buildValidationSummaryViewModel } from '../validationSummaryViewModel';
 import { variantToSeverity } from '../dayRowViewModel';
-import { buildRows, dayChipDisplay } from '../../pages/ValidationSummary/validationSummaryRows';
-import type { SummaryRow } from '../../pages/ValidationSummary/validationSummaryRows';
+import { buildRows, dayChipDisplay } from '../validationSummaryRows';
+import type { SummaryRow } from '../validationSummaryRows';
 import { describeOwner } from '../../domain/dayRecovery';
 import { buildRealisticWorkspace } from '../../__tests__/fixtures/workspaceBuilders';
 
