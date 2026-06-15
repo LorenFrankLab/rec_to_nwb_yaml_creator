@@ -187,6 +187,52 @@ describe('OverviewStep', () => {
     expect(screen.getByText(/Auto-generated from animal ID and date/i)).toBeInTheDocument();
   });
 
+  it('prefers the provided overview view-model for displayed values, help text, and the weight placeholder', async () => {
+    // Phase 3-e: the DayEditorStepper passes `vm.overview.fields`; the step renders the DISPLAYED
+    // read-only values, help text, and the weight placeholder from it (not re-derived inline). The
+    // sentinel values below differ from what the inline derivation would produce, so a passing
+    // assertion proves the view-model is the source rendered.
+    const user = userEvent.setup();
+    const overviewFields = [
+      { fieldPath: 'session.session_id', label: 'Session ID', value: 'remy_VM', source: 'derived', readOnly: true, helpText: 'VM session id help' },
+      { fieldPath: 'session.experiment_description', label: 'Experiment Description', value: '', source: 'default', helpText: 'VM experiment help' },
+      { fieldPath: 'session.weight', label: 'Recording-day weight (grams)', value: '', source: 'default', fallbackValue: '999 (animal baseline)', helpText: 'VM weight help' },
+      { fieldPath: 'subject.subject_id', label: 'Subject ID', value: 'VM_SUBJECT', source: 'inherited', inheritedFrom: 'animal', readOnly: true },
+      { fieldPath: 'subject.sex', label: 'Sex', value: 'VM_SEX', source: 'inherited', inheritedFrom: 'animal', readOnly: true },
+      { fieldPath: 'subject.genotype', label: 'Genotype', value: 'VM_GENO', source: 'inherited', inheritedFrom: 'animal', readOnly: true },
+      { fieldPath: 'experimenters.experimenter_name', label: 'Names', value: 'VM Names', source: 'inherited', inheritedFrom: 'animal', readOnly: true },
+      { fieldPath: 'experimenters.lab', label: 'Lab', value: 'VM Lab', source: 'inherited', inheritedFrom: 'animal', readOnly: true },
+      { fieldPath: 'experimenters.institution', label: 'Institution', value: 'VM Inst', source: 'inherited', inheritedFrom: 'animal', readOnly: true },
+    ];
+    render(
+      <OverviewStep
+        animal={mockAnimal}
+        day={mockDay}
+        mergedDay={mockMergedDay}
+        onFieldUpdate={vi.fn()}
+        onSubjectUpdate={vi.fn()}
+        overviewFields={overviewFields}
+      />
+    );
+
+    // Default-visible Session Metadata reads from the view-model.
+    expect(screen.getByDisplayValue('remy_VM')).toBeInTheDocument();
+    expect(screen.getByText('VM session id help')).toBeInTheDocument();
+    expect(screen.getByText('VM experiment help')).toBeInTheDocument();
+    expect(screen.getByText('VM weight help')).toBeInTheDocument();
+    expect(screen.getByLabelText(/recording-day weight/i)).toHaveAttribute(
+      'placeholder',
+      '999 (animal baseline)'
+    );
+
+    // Read-only inherited values (in the collapsed section) also read from the view-model.
+    await user.click(screen.getByRole('button', { name: /inherited subject metadata/i }));
+    await waitFor(() => expect(screen.getByText('Subject Information')).toBeInTheDocument());
+    for (const v of ['VM_SUBJECT', 'VM_SEX', 'VM_GENO', 'VM Names', 'VM Lab', 'VM Inst']) {
+      expect(screen.getByDisplayValue(v)).toBeInTheDocument();
+    }
+  });
+
   it('marks required editable fields with asterisks', () => {
     render(
       <OverviewStep

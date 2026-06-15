@@ -14,7 +14,7 @@ import type { RepairCommand, RepairCommandContext } from '../../state/repairComm
 import { animalSetupTabForFieldPath } from '../../domain/validation';
 import type { RepairableIssue } from '../../domain/repairRouting';
 import { buildDayEditorViewModel } from '../../viewModels/dayEditorViewModel';
-import type { BreadcrumbViewModel, StepViewModel } from '../../viewModels/types';
+import type { BreadcrumbViewModel, FieldValueViewModel, StepViewModel } from '../../viewModels/types';
 import { DayEditorProvider } from './DayEditorContext';
 import type { DayEditorBundle } from './DayEditorContext';
 import DayEditorSectionNav from './DayEditorSectionNav';
@@ -48,6 +48,8 @@ interface StepSectionProps {
   copyableDioSources?: CopyableDioSource[];
   /** The view-model breadcrumb trail (Overview step renders it). */
   breadcrumb?: BreadcrumbViewModel;
+  /** The view-model's Overview field slice (Overview step renders its displayed values/help). */
+  overviewFields?: FieldValueViewModel[];
 }
 
 /**
@@ -168,11 +170,12 @@ export default function DayEditorStepper() {
     [model.workspace, ownerKey]
   );
 
-  // The day-editor view-model: the shell load-state, the breadcrumb trail, and the section steps
-  // (each step's status + the Validation "N to fix" count) — built from the SAME workspace + the live
-  // active section, so the nav scent + the not-found shell render the builder's truth instead of
-  // re-deriving step status / to-fix counts here. (The overview / issues / export / bad-channel
-  // slices are wired in the later DayEditor sub-slices; the write handlers below stay raw.)
+  // The day-editor view-model: the shell load-state, the breadcrumb trail, the section steps
+  // (each step's status + the Validation "N to fix" count), and the Overview field slice
+  // (`vm.overview.fields`) — built from the SAME workspace + the live active section, so the nav
+  // scent, the not-found shell, and the Overview displayed values render the builder's truth instead
+  // of re-deriving them here. (The issues / export / bad-channel slices are wired in the later
+  // DayEditor sub-slices; the write handlers below stay raw.)
   const vm = useMemo(
     () => buildDayEditorViewModel(model.workspace, dayId, currentStep),
     [model.workspace, dayId, currentStep]
@@ -446,6 +449,7 @@ export default function DayEditorStepper() {
               focusRequest={focusRequest}
               copyableDioSources={copyableDioSources}
               breadcrumb={vm.breadcrumb}
+              overviewFields={vm.overview.fields}
             />
           </DayEditorProvider>
 

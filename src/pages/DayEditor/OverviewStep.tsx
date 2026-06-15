@@ -18,7 +18,7 @@ import {
 } from '../../state/workspaceSelectors';
 import { useDayEditorContext } from './DayEditorContext';
 import type { DayEditorBundle } from './DayEditorContext';
-import type { BreadcrumbViewModel } from '../../viewModels/types';
+import type { BreadcrumbViewModel, FieldValueViewModel } from '../../viewModels/types';
 
 interface OverviewStepProps extends DayEditorBundle {
   /** Writes a subject field through to the animal record (e.g. `('species', value)`). */
@@ -29,6 +29,13 @@ interface OverviewStepProps extends DayEditorBundle {
   onRepair?: (issue: unknown) => void;
   /** The view-model breadcrumb trail; an isolated render without it falls back to assembling its own. */
   breadcrumb?: BreadcrumbViewModel;
+  /**
+   * The day-editor view-model's Overview field slice (`vm.overview.fields`). The DayEditorStepper
+   * passes it so the DISPLAYED inherited/default/derived values, help text, and the weight
+   * placeholder render from the view-model; an isolated render that omits it falls back to deriving
+   * the same values inline (so the rendered output is identical either way).
+   */
+  overviewFields?: FieldValueViewModel[];
 }
 
 // The day-owned collections this step owns (raw-shape reset surface).
@@ -68,6 +75,15 @@ export default function OverviewStep(props: OverviewStepProps) {
   const experimenterNames = getExperimenterNames(animal);
   const keywords = getDayKeywords(day);
   const dayDateKey = String(day.date ?? '').replace(/-/g, '');
+
+  // Phase 3-e: the Overview field view-model, keyed by field path. The DayEditorStepper passes
+  // `vm.overview.fields`; an isolated render omits it, so each `overviewField(path)?.x ?? inline`
+  // below prefers the view-model when present and falls back to the identical inline derivation
+  // otherwise. The view-model supplies DISPLAY only (read-only values, help text, the weight
+  // placeholder) — the editable inputs keep their day-owned `defaultValue` so the merge's effective
+  // value (e.g. the inherited animal-baseline weight) never silently pre-fills a day-owned input.
+  const fieldsByPath = new Map((props.overviewFields ?? []).map((field) => [field.fieldPath, field]));
+  const overviewField = (path: string) => fieldsByPath.get(path);
 
   const [fieldErrors, setFieldErrors] = useState<Record<string, { message: string } | null>>({});
   // Write-only: the setter drives the species-repair validation flow (below); the value itself
@@ -184,8 +200,11 @@ export default function OverviewStep(props: OverviewStepProps) {
         <div className="form-grid">
           <ReadOnlyField
             label="Session ID"
-            value={session.session_id}
-            helpText={`Auto-generated from animal ID and date: ${ownerKey}_${dayDateKey}`}
+            value={overviewField('session.session_id')?.value ?? session.session_id}
+            helpText={
+              overviewField('session.session_id')?.helpText
+              ?? `Auto-generated from animal ID and date: ${ownerKey}_${dayDateKey}`
+            }
           />
 
           <div className="form-field">
@@ -232,7 +251,8 @@ export default function OverviewStep(props: OverviewStepProps) {
               aria-required="true"
             />
             <span className="field-help-text">
-              Describes the overall experiment. Required for export and written to the NWB file.
+              {overviewField('session.experiment_description')?.helpText
+                ?? 'Describes the overall experiment. Required for export and written to the NWB file.'}
             </span>
             {fieldErrors['session.experiment_description'] && (
               <span className="validation-error" role="alert">
@@ -260,9 +280,10 @@ export default function OverviewStep(props: OverviewStepProps) {
               defaultValue={session.weight ?? ''}
               aria-describedby="session-weight-help"
               placeholder={
-                typeof subject.weight === 'number'
+                overviewField('session.weight')?.fallbackValue
+                ?? (typeof subject.weight === 'number'
                   ? `${subject.weight} (animal baseline)`
-                  : 'e.g. 450'
+                  : 'e.g. 450')
               }
               onBlur={(e) => {
                 // Guard against NaN reaching state from a partially-valid number entry — write
@@ -272,12 +293,13 @@ export default function OverviewStep(props: OverviewStepProps) {
               }}
             />
             <span id="session-weight-help" className="field-help-text">
-              {session.weight !== undefined
-                ? 'Weight recorded for this session — the value exported for this day.'
-                : typeof subject.weight === 'number'
-                  ? `No weight set for this day — the animal baseline (${subject.weight} g) will be `
-                    + `exported as a fallback. Enter this session's weight to set it for this day.`
-                  : 'Enter the weight recorded for this session (exported for this day).'}
+              {overviewField('session.weight')?.helpText
+                ?? (session.weight !== undefined
+                  ? 'Weight recorded for this session — the value exported for this day.'
+                  : typeof subject.weight === 'number'
+                    ? `No weight set for this day — the animal baseline (${subject.weight} g) will be `
+                      + `exported as a fallback. Enter this session's weight to set it for this day.`
+                    : 'Enter the weight recorded for this session (exported for this day).')}
             </span>
           </div>
 
@@ -330,9 +352,15 @@ export default function OverviewStep(props: OverviewStepProps) {
               </div>
 
               <div className="form-grid">
-                <ReadOnlyField label="Subject ID" value={subject.subject_id} />
-                <ReadOnlyField label="Sex" value={subject.sex} />
-                <ReadOnlyField label="Genotype" value={subject.genotype} />
+                <ReadOnlyField
+                  label="Subject ID"
+                  value={overviewField('subject.subject_id')?.value ?? subject.subject_id}
+                />
+                <ReadOnlyField label="Sex" value={overviewField('subject.sex')?.value ?? subject.sex} />
+                <ReadOnlyField
+                  label="Genotype"
+                  value={overviewField('subject.genotype')?.value ?? subject.genotype}
+                />
 
                 <div className="form-field">
                   <label htmlFor="subject-date-of-birth">Date of Birth</label>
@@ -410,15 +438,18 @@ export default function OverviewStep(props: OverviewStepProps) {
               <div className="form-grid">
                 <ReadOnlyField
                   label="Names"
-                  value={experimenterNames.join(', ')}
+                  value={
+                    overviewField('experimenters.experimenter_name')?.value
+                    ?? experimenterNames.join(', ')
+                  }
                 />
                 <ReadOnlyField
                   label="Lab"
-                  value={experimenters.lab}
+                  value={overviewField('experimenters.lab')?.value ?? experimenters.lab}
                 />
                 <ReadOnlyField
                   label="Institution"
-                  value={experimenters.institution}
+                  value={overviewField('experimenters.institution')?.value ?? experimenters.institution}
                 />
               </div>
             </div>
