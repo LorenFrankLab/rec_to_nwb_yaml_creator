@@ -73,6 +73,34 @@ describe('commandHandlers — store-write descriptor commands', () => {
   });
 });
 
+describe('commandHandlers — store-write commands no-op on missing required inputs (safe boundary)', () => {
+  it('deleteDay no-ops when the target dayId is absent (never deleteDay("undefined"))', () => {
+    const actions = spyActions();
+    commandHandlers({ actions }).deleteDay({ id: 'deleteDay', target: { animalId: 'remy' } });
+    expect(actions.deleteDay).not.toHaveBeenCalled();
+  });
+
+  it('duplicateDay no-ops when the transient date is absent', () => {
+    const actions = spyActions();
+    commandHandlers({ actions }).duplicateDay({ id: 'duplicateDay', target: { dayId: 'd1' } });
+    expect(actions.duplicateDay).not.toHaveBeenCalled();
+  });
+
+  it('removeDayReference no-ops when animalId or dayId is absent', () => {
+    const actions = spyActions();
+    const run = commandHandlers({ actions });
+    run.removeDayReference({ id: 'removeDayReference', target: { dayId: 'd1' } });
+    run.removeDayReference({ id: 'removeDayReference', target: { animalId: 'remy' } });
+    expect(actions.removeDayReference).not.toHaveBeenCalled();
+  });
+
+  it('createAnimal no-ops when the animalId input is absent', () => {
+    const actions = spyActions();
+    commandHandlers({ actions }).createAnimal({ id: 'createAnimal' }, { subject: {} });
+    expect(actions.createAnimal).not.toHaveBeenCalled();
+  });
+});
+
 describe('commandHandlers — repair descriptor commands delegate to applyRepairCommand', () => {
   it('resetDayCollection clears the named day collection via updateDay', () => {
     const actions = spyActions();

@@ -68,6 +68,10 @@ export type CommandInput = Record<string, unknown> | undefined;
 /** A resolved handler: runs one descriptor (+ any transient input) against the store. */
 export type CommandHandler = (command: WorkflowCommand, input?: CommandInput) => void;
 
+/** A present, non-empty string — the bar a store-write id/target must clear before a write runs. */
+const isNonEmptyString = (value: unknown): value is string =>
+  typeof value === 'string' && value.length > 0;
+
 /**
  * VM descriptor ids that are NOT a 1:1 repair-executor type but adapt onto one. The validation-list
  * "Acknowledge un-marking" / blocked-removal descriptors use the singular id; the executor type is
@@ -151,25 +155,45 @@ const STORE_WRITE_IDS = [
 export function commandHandlers(ctx: CommandContext): Record<string, CommandHandler> {
   const { actions } = ctx;
   const storeWrite: Record<(typeof STORE_WRITE_IDS)[number], CommandHandler> = {
-    deleteDay: (command) =>
-      actions.deleteDay(
-        String(command.target?.dayId),
-        command.target?.animalId != null ? String(command.target.animalId) : undefined
-      ),
-    duplicateDay: (command, input) =>
-      actions.duplicateDay(String(command.target?.dayId), String(input?.date)),
-    removeDayReference: (command) =>
-      actions.removeDayReference(String(command.target?.animalId), String(command.target?.dayId)),
-    relinkDayReference: (command) =>
-      actions.relinkDayReference(String(command.target?.animalId), String(command.target?.dayId)),
-    unlinkDayReference: (command) =>
-      actions.unlinkDayReference(String(command.target?.animalId), String(command.target?.dayId)),
-    createAnimal: (_command, input) =>
+    deleteDay: (command) => {
+      // Same safe boundary the repair executor enforces (missing required id → no-op, never a write
+      // with a coerced "undefined" that would throw `Day "undefined" not found` downstream). The VM
+      // always supplies the target; this only guards a malformed/partial descriptor.
+      const dayId = command.target?.dayId;
+      if (!isNonEmptyString(dayId)) return;
+      const animalId = command.target?.animalId;
+      actions.deleteDay(dayId, isNonEmptyString(animalId) ? animalId : undefined);
+    },
+    duplicateDay: (command, input) => {
+      const dayId = command.target?.dayId;
+      const date = input?.date;
+      if (!isNonEmptyString(dayId) || !isNonEmptyString(date)) return;
+      actions.duplicateDay(dayId, date);
+    },
+    removeDayReference: (command) => {
+      const { animalId, dayId } = command.target ?? {};
+      if (!isNonEmptyString(animalId) || !isNonEmptyString(dayId)) return;
+      actions.removeDayReference(animalId, dayId);
+    },
+    relinkDayReference: (command) => {
+      const { animalId, dayId } = command.target ?? {};
+      if (!isNonEmptyString(animalId) || !isNonEmptyString(dayId)) return;
+      actions.relinkDayReference(animalId, dayId);
+    },
+    unlinkDayReference: (command) => {
+      const { animalId, dayId } = command.target ?? {};
+      if (!isNonEmptyString(animalId) || !isNonEmptyString(dayId)) return;
+      actions.unlinkDayReference(animalId, dayId);
+    },
+    createAnimal: (_command, input) => {
+      const animalId = input?.animalId;
+      if (!isNonEmptyString(animalId)) return;
       actions.createAnimal(
-        String(input?.animalId),
+        animalId,
         (input?.subject ?? {}) as Record<string, unknown>,
         (input?.metadata ?? undefined) as Record<string, unknown> | undefined
-      ),
+      );
+    },
   };
 
   // Repair ids share one handler that delegates to the single executor.
