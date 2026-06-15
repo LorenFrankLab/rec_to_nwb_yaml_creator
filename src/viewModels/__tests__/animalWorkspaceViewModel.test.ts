@@ -273,6 +273,26 @@ describe('buildAnimalWorkspaceViewModel — recovery / review', () => {
     expect(sel.review?.wrongOwnerNote).toMatch(/2 day are listed here but belong to a different animal/);
   });
 
+  it('raw-shape corruption of an animal collection surfaces a repair notice + review (no day-class corruption)', () => {
+    const { animal, day } = loadRealistic();
+    // The animal's cameras collection is corrupt (a non-array). The live page drives its review on
+    // this via validateRawAnimal, independent of any day-index / recovered / wrong-owner corruption —
+    // the VM must surface it as a structured repair notice rather than leaving the UI to re-detect it.
+    const corrupt = { ...animal, cameras: 'corrupt' as unknown as typeof animal.cameras };
+    const sel = buildAnimalWorkspaceViewModel(
+      { animals: { [animal.id]: corrupt }, days: { [day.id]: day } },
+      animal.id
+    ).selectedAnimal!;
+    expect(sel.daysCorrupt).toBe(false); // the day INDEX is fine; only a raw collection is corrupt
+    expect(sel.review?.hasCorruption).toBe(true);
+    const camerasNotice = sel.review?.rawCorruptionNotices.find(
+      (n) => n.repair.target?.fieldPath === 'cameras'
+    );
+    expect(camerasNotice).toBeDefined();
+    expect(camerasNotice?.kind).toBe('malformed-collection');
+    expect(typeof camerasNotice?.repair.id).toBe('string');
+  });
+
   it('a clean established animal has no review state', () => {
     const { animal, day } = loadRealistic();
     const sel = buildAnimalWorkspaceViewModel(wrap(animal, day), animal.id).selectedAnimal!;

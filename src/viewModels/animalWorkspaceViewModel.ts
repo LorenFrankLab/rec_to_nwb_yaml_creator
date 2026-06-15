@@ -43,8 +43,15 @@ import {
   SECTION_STATUS,
 } from '../domain/sectionStatus';
 import { DOWNSTREAM_NOT_DELETED_NOTE } from '../domain/animalDeleteCascade';
+import { validateRawAnimal } from '../validation/rawShape';
 import { buildDayRowViewModel } from './dayRowViewModel';
-import type { DayRowViewModel, DayStatus, SectionViewModel, WorkflowAction } from './types';
+import type {
+  DayRowViewModel,
+  DayStatus,
+  RecoveryNoticeViewModel,
+  SectionViewModel,
+  WorkflowAction,
+} from './types';
 
 /** One animal in the picker: its id, the present-day-record count, and its tabbed-view link. */
 export interface AnimalCardViewModel {
@@ -58,8 +65,9 @@ export interface AnimalCardViewModel {
 
 /**
  * The "Review existing data" state for a recovered/imported animal — the corrupt-index, recovered,
- * and wrong-owner notices the page surfaces (each already pluralized), plus the found-days/configs
- * lead line and the Validation & Export link.
+ * and wrong-owner notices the page surfaces (each already pluralized), the raw-shape corruption
+ * notices with their executable repairs, plus the found-days/configs lead line and the Validation &
+ * Export link.
  */
 export interface ExistingDataReviewViewModel {
   /** Lead line: 'Found N recording days and M hardware configurations for <id>. <corruption note>'. */
@@ -72,6 +80,12 @@ export interface ExistingDataReviewViewModel {
   recoveredNote?: string;
   /** The wrong-owner note, when one or more listed days belong to another animal. */
   wrongOwnerNote?: string;
+  /**
+   * Raw-shape corruption of the animal's own collections (cameras / configuration history /
+   * data-acq devices loaded as non-arrays) — each with its executable repair command, so the UI
+   * doesn't have to re-run raw validation to render the repairs.
+   */
+  rawCorruptionNotices: RecoveryNoticeViewModel[];
   /** Link to this animal's Validation & Export tab. */
   reviewLink: WorkflowAction;
 }
@@ -313,11 +327,30 @@ function buildReview(
   const wrongOwnerIds = classification
     .filter((d) => d.status === DAY_STATUS.WRONG_OWNER)
     .map((d) => d.dayId);
-  // The page also drives this on raw-shape corruption (validateRawAnimal); that is a separate
-  // corruption concern surfaced by the RawCorruptionBanner, which the page mounts unconditionally
-  // inside the review. The view-model exposes the day-classification notices + the corrupt-index flag;
-  // it leaves the raw-shape banner to the component (it owns its own self-hiding repair UI).
-  const hasCorruption = daysCorrupt || orphanIds.length > 0 || wrongOwnerIds.length > 0;
+  // Raw-shape corruption of the animal's OWN collections (cameras / configurationHistory /
+  // data_acq_device loaded as non-arrays) — the SAME `validateRawAnimal` set the page's review drives
+  // on (RecordingDaysTab `hasCorruption`). Surfaced here as structured repair notices so a VM-driven
+  // UI renders the repairs from data instead of re-running raw validation (and mounting its own
+  // self-detecting banner) — the logic leak this layer exists to remove.
+  const rawCorruptionNotices: RecoveryNoticeViewModel[] = validateRawAnimal(animal).map((issue) => {
+    const command = issue.repairCommand as { type?: string } | undefined;
+    return {
+      kind:
+        issue.code === 'missing_configuration_history'
+          ? 'badchannel-corruption'
+          : 'malformed-collection',
+      message: issue.message,
+      repair: {
+        id: command?.type ?? 'repairAnimalCollection',
+        target: { animalId, fieldPath: issue.field },
+      },
+    };
+  });
+  const hasCorruption =
+    daysCorrupt ||
+    orphanIds.length > 0 ||
+    wrongOwnerIds.length > 0 ||
+    rawCorruptionNotices.length > 0;
   if (!hasCorruption) return undefined;
 
   const dayCount = classification.filter((d) => isPresentRecordStatus(d.status)).length;
@@ -332,6 +365,7 @@ function buildReview(
   const review: ExistingDataReviewViewModel = {
     summary: lead,
     hasCorruption,
+    rawCorruptionNotices,
     reviewLink: {
       label: "Open this animal's Validation & Export",
       href: `#/animal/${animalId}/export`,
