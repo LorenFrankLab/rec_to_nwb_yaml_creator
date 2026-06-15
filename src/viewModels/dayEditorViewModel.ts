@@ -807,7 +807,10 @@ function staleOverrideNotice(
 
 /**
  * Build the per-channel bad-channel mark state from the merged channel map + the monotonicity
- * domain. For each ntrode row, every channel in its `map` gets a mark VM: `marked` from the row's
+ * domain. For each ntrode row, every CONVERTER-VALID channel id gets a mark VM — the row's `map`
+ * keys for a single-shank (or multi-shank later) row, but the full probe-wide range `0..N-1` for a
+ * multi-shank group's FIRST row (the ids trodes_to_nwb honors, via `validBadChannelIds`), so a
+ * prior-bad channel on another shank is not dropped. Each mark carries `marked` from the row's
  * effective `bad_channels`; `priorBad` from the earlier-same-config union (`priorBadChannels`);
  * `acked` from the day's off-export ack store; `requiresAck` when a marked-bad-on-an-earlier-day
  * channel is now un-marked and not yet acknowledged (the monotonicity exception).

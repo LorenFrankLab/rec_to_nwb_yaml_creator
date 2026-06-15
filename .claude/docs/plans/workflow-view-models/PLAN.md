@@ -13,6 +13,20 @@ depth); 3-g wired the Devices bad-channel monotonicity un-mark gate to `vm.badCh
 fixed `buildBadChannelMarks` to mark a multi-shank first row's probe-wide channels, not just its own
 shank's map keys). **Next: Phase 4 (commands)**, then 5 (boundary matrix), 6 (UI).
 
+**Deferred follow-up (logged, NOT blocking — post-Phase-3 review):**
+
+- **Full ExportStep VM ownership of the blocked state.** ExportStep currently renders its lifecycle
+  status + blocked repair list from the VM (`exportGate.lifecycleStatusLabel` / `vm.issues`) but keeps
+  its own export gate inline: the download HARD-STOP (`handleDownload`) is the SOLE authoritative gate
+  (defense in depth — keep it independent), and the blocked-state DOM (separate merge-error + unlinked
+  `<p>`s, the `errorCount`-based reason line, the `blockingSteps` buttons) is multi-conditional in a way
+  the current single-reason `ExportGateViewModel` can't byte-reproduce. To make ExportStep render the
+  blocked message/reason/blockingSteps from `vm.export`, ENRICH `ExportGateViewModel` to a multi-part
+  blocked shape (separate `mergeFailed`/`dayExportable` flags + per-condition copy + button-ready
+  blocking steps), keep the independent `handleDownload` re-check, and prove byte-identical blocked
+  rendering across all four reason paths (merge-error / unlinked / validation-errors / incomplete-steps).
+  Its own gated cycle; not part of the Phase-3 plumbing pass.
+
 **Phase-3 carry-forward (incl. the merged Phase-2 review fixups):**
 
 - DayEditor nav is LOCAL (the router only accepts `#/day/:id`; the section nav is button/local-state).
