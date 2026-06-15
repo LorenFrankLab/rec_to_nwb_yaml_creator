@@ -4,9 +4,9 @@
 
 Replace each page's inline derived logic with a single `build…ViewModel(...)` call and render the
 result. **Plumbing, not redesign** — the rendered output (and the YAML) is identical; only the *source*
-of the rendered values changes. Each of the four pages ships as **its own branch → full gate → merge**
-PR (the repo's established per-surface cadence), in this order: ValidationSummary → AnimalWorkspace →
-AnimalView → DayEditor (mirrors the build order; ValidationSummary proves the wiring recipe first).
+of the rendered values changes. Each surface ships as **its own branch → full gate → merge** PR, with the
+large DayEditor surface split into smaller branches. Order: ValidationSummary → AnimalWorkspace →
+AnimalView → DayEditor sub-slices (mirrors the build order; ValidationSummary proves the wiring recipe first).
 
 **Inputs to read first (per page):** the page's components listed in its matching builder phase
 ([2a](phase-2a-validation-summary-vm.md) / [2b](phase-2b-animal-workspace-vm.md) /
@@ -24,10 +24,10 @@ AnimalView → DayEditor (mirrors the build order; ValidationSummary proves the 
 3. **Remove the domain-logic imports from the page** (`getDayRowStatus`, `getAnimalSectionStatus`,
    `DAY_LIFECYCLE`, `classifyAnimalDays`, `dayChipDisplay`, …). After this phase those imports live only
    in `src/viewModels/**`. This is the end-state metric in [overview.md → Metrics](overview.md#metrics).
-4. Actions: render `vm.*.action`/`actions` — label, `href`, and `disabledReason` (→ disabled + the
-   existing `aria-describedby`/`title`). The `command` id still maps to the *existing* handler for now
-   (the page keeps its current `onClick`); phase-4 swaps the handler resolution. Do not change write
-   behavior in this phase.
+4. Actions: render `vm.*.action`/`actions` — label, `href`, `command.target`, and `disabledReason`
+   (→ disabled + the existing `aria-describedby`/`title`). The `command.id` still maps to the *existing*
+   handler for now (the page keeps its current `onClick`); phase-4 swaps the handler resolution. Do not
+   change write behavior in this phase.
 5. **No layout/markup/CSS change** beyond deleting dead branches and re-pointing values. CSS Modules,
    class names, `data-testid`s stay.
 6. **Tests:** existing page tests must pass. Where a test asserted an intermediate computed value that no
@@ -38,16 +38,20 @@ AnimalView → DayEditor (mirrors the build order; ValidationSummary proves the 
 
 - **3-a ValidationSummary** — wire `index.tsx` + `DayStatusTable.tsx` (+ `BatchExportPreflight`,
   `ExportReport`) to `buildValidationSummaryViewModel`. Remove the inline counts/row/preflight derivation
-  (already moved to the builder in 2a; this deletes the page's now-unused local computation and the
-  `validationSummaryRows`/`useValidationSummaryActions` derive imports from the page).
+  now replaced by the builder. This is also where the live derive code in `useValidationSummaryActions`
+  is cleaned up or redirected to shared pure helpers; do it under this full page gate, not in additive 2a.
 - **3-b AnimalWorkspace** — wire `index.tsx`, `DayList.tsx`, `AnimalSetupCard.tsx`, `ExistingDataReview`,
   `RecordingDaysTab` to `buildAnimalWorkspaceViewModel`. Remove the `DayList` status→label/recovery
   derivation and the setup-card status/verb derivation (now in the builder + shared `dayRowViewModel`).
 - **3-c AnimalView** — wire `index.tsx` to `buildAnimalViewModel` for the section-nav groups/rings/counts
   and the active-panel descriptor. Remove the in-component `SECTION_GROUPS` status computation.
-- **3-d DayEditor** — wire the stepper, Overview (incl. inherited/default field badges from `vm.overview`),
-  ValidationStep issue list, BadChannelsEditor blocker/ack, and Breadcrumb to `buildDayEditorViewModel`.
-  Largest wiring; do it last. Remove the per-component status/issue/inherited derivation.
+- **3-d DayEditor shell/steps/breadcrumb** — wire the stepper shell and breadcrumb to the 2d-1 fields.
+- **3-e DayEditor overview sources** — wire Overview's inherited/default values to `vm.overview.fields`.
+- **3-f DayEditor issues/export** — wire ValidationStep issue list and ExportStep disabled reason to the
+  2d-3 fields.
+- **3-g DayEditor bad channels** — wire BadChannelsEditor blocker/ack display to the 2d-4 fields.
+  Each DayEditor wiring is its own small branch/gate; remove only the per-component derivation covered by
+  that sub-slice.
 
 ## Deliberately not in this phase
 

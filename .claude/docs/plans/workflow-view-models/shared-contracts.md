@@ -17,6 +17,7 @@ layer (phase-4), not here.
 
 - [`WorkflowSeverity`](#workflowseverity)
 - [`WorkflowAction`](#workflowaction)
+- [`WorkflowCommand`](#workflowcommand)
 - [`IssueViewModel`](#issueviewmodel)
 - [`SectionViewModel`](#sectionviewmodel)
 - [`DayRowViewModel`](#dayrowviewmodel)
@@ -38,17 +39,43 @@ MAP those onto `WorkflowSeverity`. See [Severity mapping invariant](#severity-ma
 ```ts
 export interface WorkflowAction {
   label: string;
-  /** Hash route to navigate to, e.g. `#/animal/remy/electrode-groups?field=…`. Mutually informative
-   *  with `command`: a link-style action sets `href`; a write-style action sets `command`. */
+  /** Hash route to navigate to, e.g. `#/animal/remy/electrode-groups?field=…`.
+   *  Mutually informative with `command`: a link-style action sets `href`; a write-style
+   *  action sets `command`. */
   href?: string;
-  /** Intent identifier resolved by the phase-4 command layer (e.g. `createRecordingDay`). NOT a
-   *  function — the component maps the id to a bound handler. */
-  command?: string;
+  /** Intent descriptor resolved by the command layer. NOT a function — the component maps
+   *  `command.id` to a bound handler. The builder supplies stable target/context; the component
+   *  supplies only transient user-entered values (for example a typed date). */
+  command?: WorkflowCommand;
   /** When present the action is disabled and this string is the user-facing reason (drives
    *  `aria-describedby` + `title`). A non-null `disabledReason` means "render disabled". */
   disabledReason?: string;
 }
 ```
+
+## WorkflowCommand
+
+Plain-data command metadata carried by an action. This prevents pages from re-discovering the target of a
+write action while still keeping builders callback-free.
+
+```ts
+export interface WorkflowCommand {
+  /** Intent identifier resolved by `commandHandlers`, e.g. `createRecordingDay`, `deleteDay`, `exportValidOnly`. */
+  id: string;
+  /** Stable target/context known by the builder: day id, animal id, section key, field path, etc. */
+  target?: {
+    animalId?: string;
+    dayId?: string;
+    section?: string;
+    fieldPath?: string;
+  };
+  /** Optional plain-data payload known at render time. Components may merge in transient form values. */
+  payload?: Record<string, unknown>;
+}
+```
+
+Phase 4 may tighten `id` into a literal union once the full command inventory is known. Until then the
+contract still requires the target/payload to be plain data, not nested workspace objects or callbacks.
 
 ## IssueViewModel
 

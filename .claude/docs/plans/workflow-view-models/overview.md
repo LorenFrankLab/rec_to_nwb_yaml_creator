@@ -44,7 +44,7 @@ Composition/display logic that the builders will absorb (the "trapped" logic —
 - `src/pages/DayEditor/*` — stepper step status, Overview field state, inherited/default display,
   bad-channel blocker/ack, breadcrumb.
 
-Left alone: `src/state/useWorkspace.js` (store + actions), the YAML codec (`src/io/`), `nwb_schema.json`,
+Left alone: `src/state/useWorkspace.ts` (store + actions), the YAML codec (`src/io/`), `nwb_schema.json`,
 the validation core (`src/validation/`), all CSS Modules, the frozen legacy form.
 
 ## Scope and dependency policy
@@ -54,7 +54,9 @@ the validation core (`src/validation/`), all CSS Modules, the frozen legacy form
 - A pure, tested `src/viewModels/` layer that reproduces today's statuses/messages/actions for the four
   modern surfaces (ValidationSummary, AnimalWorkspace, AnimalView, DayEditor).
 - An intent-level `src/viewModels/commands` (or `src/workflow/commands`) layer where the UI calls user
-  intent (`createRecordingDay`, `markBadChannels`, …) rather than editing nested objects.
+  intent (`createRecordingDay`, `markBadChannels`, …) rather than editing nested objects. View-model
+  actions carry plain-data command descriptors (`id` + stable target/context); pages add only transient
+  user-entered input.
 - Pages become thin renderers of view-models; workflow rules are testable without React.
 - A boundary-test matrix that becomes the safety net for later UI experiments.
 
@@ -112,9 +114,10 @@ user-visible until Phase 6, which is opt-in experimentation gated by the Phase 5
    either way) — decide before starting Phase 3.
 2. **`src/viewModels/` vs `src/workflow/`?** This plan uses `src/viewModels/` (the builders are
    view-models; the command sub-layer lives at `src/viewModels/commands/`). Cosmetic; pick before Phase 1.
-3. **Phase 4 command id representation** — string ids resolved by a UI-side map, vs a typed
-   `Command` union. Current answer: string ids in the view-model (keeps view-models data-only per the
-   contract); the page maps id → bound `workspaceActions` handler. Revisit if the map gets unwieldy.
+3. **Phase 4 command type tightening** — `WorkflowCommand.id` starts as `string` plus plain-data
+   `target`/`payload` so the builders can land without blocking on a complete command inventory. Once
+   Phase 4 enumerates all commands, tighten `id` to a literal union if it improves type safety without
+   making the page wiring noisy.
 
 ## Estimated Effort
 

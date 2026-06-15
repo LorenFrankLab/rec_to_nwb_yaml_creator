@@ -23,8 +23,8 @@ realization. Do not weaken the "plain data only" rule.
 ## Tasks
 
 - Create `src/viewModels/types.ts` containing exactly the exported types from
-  [shared-contracts.md](shared-contracts.md): `WorkflowSeverity`, `WorkflowAction`, `IssueViewModel`,
-  `SectionViewModel`, `DayRowViewModel` — plus any field added by a phase-0 contract gap (update
+  [shared-contracts.md](shared-contracts.md): `WorkflowSeverity`, `WorkflowAction`, `WorkflowCommand`,
+  `IssueViewModel`, `SectionViewModel`, `DayRowViewModel` — plus any field added by a phase-0 contract gap (update
   shared-contracts.md in the same PR if so, keeping the doc and the code in lockstep).
 - Each type carries a NumPy-style-equivalent TS doc-comment: what it represents and (for severity) the
   source→`WorkflowSeverity` mapping, citing the domain enum file. Do NOT reference plan phases in the
@@ -46,7 +46,7 @@ realization. Do not weaken the "plain data only" rule.
 | Test | Asserts |
 | --- | --- |
 | `npm run typecheck` | `src/viewModels/types.ts` compiles under `strict` with no errors. |
-| `viewModels/__tests__/types.smoke.test.ts` | Trivial construction of one of each type type-checks and round-trips (guards against an accidental `any`; e.g. a `WorkflowAction` with `disabledReason` set). |
+| `viewModels/__tests__/types.smoke.test.ts` | Trivial construction of one of each type type-checks and round-trips (guards against an accidental `any`; e.g. a `WorkflowAction` with `disabledReason` and a `WorkflowCommand.target` set). |
 
 ## Fixtures
 

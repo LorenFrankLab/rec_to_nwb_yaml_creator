@@ -25,8 +25,8 @@ and 2c). No UI change here.
   [src/domain/sectionStatus.ts:92,131](../../../src/domain/sectionStatus.ts),
   [src/domain/workflowStatus.ts:413](../../../src/domain/workflowStatus.ts).
 - Phase-0 [logic-inventory.md](phase-0-inventory.md) AnimalWorkspace section, especially the
-  DayList↔validationSummaryRows duplication note (the row status→label appears in both — this builder and
-  2a should produce identical `DayRowViewModel`s; if they can't share one helper, record why).
+  DayList↔validationSummaryRows duplication note (the row status→label appears in both — this builder must
+  consume the `dayRowViewModel` helper introduced in 2a).
 
 **Contracts referenced:** [`DayRowViewModel`](shared-contracts.md#dayrowviewmodel),
 [`SectionViewModel`](shared-contracts.md#sectionviewmodel), [`WorkflowAction`](shared-contracts.md#workflowaction),
@@ -53,15 +53,17 @@ and 2c). No UI change here.
   }
   ```
 
-- The `dayRows` builder MUST produce the same `DayRowViewModel` shape as 2a. Extract the shared
-  row-status→label + recovery + actions logic into a single helper
-  (`src/viewModels/dayRowViewModel.ts`) and have BOTH 2a and 2b call it — this resolves the
-  DayList↔validationSummaryRows duplication the phase-0 audit flags. If a true shared helper isn't
-  possible (the two surfaces genuinely differ), document the difference in the helper's doc-comment.
+- The `dayRows` builder MUST produce the same `DayRowViewModel` shape as 2a. Reuse
+  `src/viewModels/dayRowViewModel.ts` from 2a for the shared row-status→label + recovery + action
+  translation. If AnimalWorkspace needs extra row fields, extend the page-specific row type around the
+  shared helper rather than forking the shared status/label/recovery logic.
 - `setupSections` maps `SETUP_CARD_SECTIONS` × (`getAnimalSectionStatus`, `getAnimalBlockingSections`) →
   `SectionViewModel[]` with the action verb + href the card renders today.
-- Row/animal actions become `WorkflowAction`s with `command` ids (`'duplicateDay'`, `'deleteDay'`,
-  `'unlinkDay'`, `'createAnimal'`) — described here, resolved in phase-4.
+- Row/animal actions become `WorkflowAction`s with command descriptors
+  (`{ id: 'duplicateDay', target: { dayId } }`, `{ id: 'deleteDay', target: { dayId } }`,
+  `{ id: 'unlinkDay', target: { animalId, dayId } }`, `{ id: 'createAnimal' }`) — described here,
+  resolved in phase-4. The builder supplies stable target/context; the component supplies only transient
+  user input.
 
 ## Deliberately not in this phase
 
@@ -87,5 +89,5 @@ Reuse `buildRealisticWorkspace` + the RecordingDaysTab test fixtures; share the 
 ## Review
 
 Dispatch `code-reviewer`. Confirm parity with current `DayList`/`AnimalSetupCard` output; the shared
-`dayRowViewModel` helper is used by both 2a and 2b (no divergent copy); plain-data; typecheck/lint:ci/
+`dayRowViewModel` helper from 2a is reused (no divergent copy); plain-data; typecheck/lint:ci/
 baselines green; no plan-phase strings; no page wiring.

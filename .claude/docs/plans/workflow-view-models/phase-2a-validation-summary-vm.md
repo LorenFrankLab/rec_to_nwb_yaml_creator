@@ -17,9 +17,8 @@ tested in parallel. Wiring is [phase-3](phase-3-wire-pages.md).
   `buildAnimalDaysByKey` (157), `subjectLabel` (285). This is ~90% of the builder already, in non-VM
   shape; the builder wraps/normalizes it to the contract types.
 - [src/pages/ValidationSummary/useValidationSummaryActions.ts:84](../../../src/pages/ValidationSummary/useValidationSummaryActions.ts)
-  — the readiness counts, `exportValidDisabled`/reason, and batch-export preflight derivation. Split the
-  **derive** parts (counts, disabled reason, preflight summary) out of the hook into the builder; leave
-  the **write** parts (validate/export handlers) in the hook for now (they become phase-4 commands).
+  — the action-time readiness/export derivation. Read this to reproduce today's disabled-reason copy and
+  preflight shape in the VM tests, but do NOT move live hook logic in this phase (the builder is additive).
 - [src/pages/ValidationSummary/index.tsx](../../../src/pages/ValidationSummary/index.tsx) — what the page
   actually renders (counts row, the two `<ExportReport>` groups' messages, the disabled-reason copy), so
   the VM reproduces those exact strings.
@@ -57,22 +56,27 @@ tested in parallel. Wiring is [phase-3](phase-3-wire-pages.md).
   Define `DayStatusRowViewModel` as `DayRowViewModel` plus the table-specific scan fields
   (`configVersionLabel`, `cameras`, `cameraCalibration`, `opto`, `orphaned`/`wrongOwner` flags) the
   current `DayStatusTable` shows. Keep all fields plain data.
-- Implement the builder by composing `buildRows`/`buildAnimalRows` and the derive-half of
-  `useValidationSummaryActions`. Map each row's `DAY_LIFECYCLE` variant → `WorkflowSeverity` via the
+- Create `src/viewModels/dayRowViewModel.ts` in this phase. It owns the shared row-status→label + recovery
+  + action translation from the existing `SummaryRow`/day-list concepts into `DayRowViewModel`. 2b must
+  reuse this helper rather than creating a parallel day-row path.
+- Implement the builder by composing `buildRows`/`buildAnimalRows` and additive pure derivation helpers in
+  `src/viewModels/validationSummaryViewModel.ts` (counts, disabled reason, empty copy). Map each row's
+  `DAY_LIFECYCLE` variant → `WorkflowSeverity` via the
   [invariant table](shared-contracts.md#severity-mapping-invariant). Reuse `dayChipDisplay` for the
   label so the chip text is identical.
-- Move the derive logic OUT of `useValidationSummaryActions` into the builder (counts, `exportValidDisabled`
-  + its reason string, the preflight summary builder), so the hook keeps only state + write handlers.
-  Name the old derivation site that's removed: the count/disabled/preflight-summary computations in
-  `useValidationSummaryActions.ts` — re-export from the builder and have the hook import them, OR delete
-  them from the hook in the same PR (no parallel copies).
-- `batchExport.action.command` is the string id `'exportValidOnly'` (resolved in phase-4); for now the
-  page keeps calling the hook handler — the VM just *describes* the action + disabled reason.
+- Do not extract or delete code from `useValidationSummaryActions` yet. If the builder needs a pure helper
+  that is currently buried in that hook, copy the current behavior into the additive builder with an
+  explicit parity test. The live hook cleanup happens in Phase 3-a when the page is actually wired, so
+  there is no hidden behavior edit in this phase.
+- `batchExport.action.command` is `{ id: 'exportValidOnly' }` (resolved in phase-4); for now the page keeps
+  calling the hook handler — the VM just *describes* the action + disabled reason.
 
 ## Deliberately not in this phase
 
 - Do NOT wire `index.tsx` / `DayStatusTable.tsx` to consume the VM (that's [phase-3](phase-3-wire-pages.md)).
   The page logic stays; the builder runs only in tests.
+- Do NOT move live derive code out of `useValidationSummaryActions` (that's [phase-3](phase-3-wire-pages.md)
+  3-a, when the page and hook are rewired together under the full page gate).
 - Do NOT touch the write handlers (validate-all, run-export) — they become phase-4 commands.
 - Do NOT build the other three surfaces' VMs.
 
@@ -98,6 +102,7 @@ corrupt-config day, orphan day) in the test file or a shared `conftest`-equivale
 ## Review
 
 Dispatch `code-reviewer` against the diff. Confirm: builder reproduces current statuses/labels/counts
-(parity tests are real comparisons, not tautologies); derive logic was MOVED out of the hook (no parallel
-copy); the VM is plain data (no functions/JSX); `npm run typecheck`/`lint:ci`/`baselines` green; no
+(parity tests are real comparisons, not tautologies); live hook logic was NOT moved in this additive
+phase; the shared `dayRowViewModel` helper was introduced here for 2b reuse; the VM is plain data
+(no functions/JSX); `npm run typecheck`/`lint:ci`/`baselines` green; no
 plan-phase strings in code; the "Deliberately not in this phase" list held (no `index.tsx` wiring).

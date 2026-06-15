@@ -3,9 +3,10 @@
 [← back to PLAN.md](PLAN.md) · [overview](overview.md)
 
 Build `buildDayEditorViewModel(workspace, dayId)` — the largest surface, done last so the shared
-vocabulary is proven on the other three first. Covers the stepper step statuses, the Overview field
-state (including inherited/default values), the per-issue classification (blocking/warning + ownership +
-repair), and the bad-channel monotonicity blocker/ack state.
+vocabulary is proven on the other three first. Ship it as **four sub-slices** rather than one large PR:
+2d-1 shell/steps/breadcrumb, 2d-2 overview field sources, 2d-3 issues/repair/export gate, 2d-4
+bad-channel monotonicity/ack state. Each sub-slice extends the same builder and keeps previous tests
+green.
 
 **Inputs to read first:**
 
@@ -54,17 +55,28 @@ repair), and the bad-channel monotonicity blocker/ack state.
   }
   ```
 
-- Compose existing functions: step status from `getDayWorkflowStatus`; effective field values + their
-  `source` from `mergeDayMetadata` compared against the day override vs animal default vs schema default;
-  issue classification from `ownershipForIssue`/`repairTargetForIssue`; bad-channel blockers from
-  `badChannelMonotonicity`. Do NOT reimplement any of these — the builder assembles them.
+- Sub-slice **2d-1 shell/steps/breadcrumb**: create the builder skeleton, `breadcrumb`, `steps`, and
+  `overall`. Compose `getDayWorkflowStatus`/existing step-status helpers; catch corrupt merge/config
+  errors and represent them as `error` state rather than throwing.
+- Sub-slice **2d-2 overview field sources**: add `overview.fields` with `source: 'day' | 'inherited' |
+  'default'`. Effective values come from `mergeDayMetadata` compared against the day override vs animal
+  default vs schema/default value; do not reimplement merge rules.
+- Sub-slice **2d-3 issues/repair/export gate**: add `issues` and `export.action`. Issue classification
+  comes from `ownershipForIssue`/`repairTargetForIssue`; export blocking reason comes from existing
+  domain export-gate helpers.
+- Sub-slice **2d-4 bad-channel monotonicity/ack**: add `badChannels.failed` and `badChannels.blockedRemovals`
+  from `badChannelMonotonicity`, with ack actions represented as command descriptors.
+- Compose existing functions throughout: step status from `getDayWorkflowStatus`; effective field values +
+  their `source` from `mergeDayMetadata`; issue classification from `ownershipForIssue`/`repairTargetForIssue`;
+  bad-channel blockers from `badChannelMonotonicity`. Do NOT reimplement any of these — the builder
+  assembles them.
 - The inherited/default distinction is the highest-value extraction here (it's the request's
   "inherited/default values" item and is currently spread across `OverviewStep`/`EffectiveDayReview`):
   every overview field declares `source`, so the UI can later show "inherited from animal" / "default"
   badges without re-deriving.
 - `mergeDayMetadata` THROWS on a corrupt config — the builder MUST catch and surface a single
   `error`-severity issue (mirroring how `DayList`/`getDayRowStatus(...,null)` handle it today), never
-  throw out of the builder.
+  throw out of the builder. This guard lands in 2d-1 so later sub-slices inherit it.
 - Map all step rings + overall + export gate via the [severity invariant](shared-contracts.md#severity-mapping-invariant).
 
 ## Deliberately not in this phase
@@ -77,12 +89,10 @@ repair), and the bad-channel monotonicity blocker/ack state.
 
 | Test | Asserts |
 | --- | --- |
-| `dayEditorViewModel.test.ts` — steps | step `SectionViewModel.status`es + `overall` reproduce the current stepper for ready / draft / needs-fixing days. |
-| — inherited/default | a field set on the day → `source:'day'`; unset but on the animal → `'inherited'`; unset everywhere → `'default'`; values match `mergeDayMetadata`/`EffectiveDayReview`. |
-| — issues | each issue's `ownership`/`reachesBeyondDay`/`repair` matches `ownershipForIssue`/`repairTargetForIssue` (i.e. what `IssueOwnershipHint` renders). |
-| — corrupt config | a day whose pinned config is corrupt yields one `error` issue, no throw. |
-| — bad channels | an un-acked monotonic removal yields a `blockedRemovals` entry with the ack `WorkflowAction`; export `disabledReason` reflects the block. |
-| — breadcrumb | crumbs reproduce `Workspace › Animal: X › Day: date`. |
+| `dayEditorViewModel.test.ts` — 2d-1 steps/breadcrumb | step `SectionViewModel.status`es + `overall` reproduce the current stepper for ready / draft / needs-fixing days; crumbs reproduce `Workspace › Animal: X › Day: date`; corrupt config yields one `error` issue, no throw. |
+| — 2d-2 inherited/default | a field set on the day → `source:'day'`; unset but on the animal → `'inherited'`; unset everywhere → `'default'`; values match `mergeDayMetadata`/`EffectiveDayReview`. |
+| — 2d-3 issues/export | each issue's `ownership`/`reachesBeyondDay`/`repair` matches `ownershipForIssue`/`repairTargetForIssue` (i.e. what `IssueOwnershipHint` renders); export disabled reason matches today's Export step. |
+| — 2d-4 bad channels | an un-acked monotonic removal yields a `blockedRemovals` entry with the ack `WorkflowAction`; export `disabledReason` reflects the block. |
 | baselines | byte-identical. |
 
 ## Fixtures
@@ -92,7 +102,7 @@ day, and an un-acked-bad-channel-removal day (shared fixtures dir).
 
 ## Review
 
-Dispatch `code-reviewer`. Confirm: steps/issues/field-sources/bad-channel-blockers reproduce current
-behavior (parity tests are real); `mergeDayMetadata` throw is caught→surfaced (not propagated);
-builder composes domain fns (no reimplementation); plain data; typecheck/lint:ci/baselines green; no
-plan-phase strings; no component wiring.
+Dispatch `code-reviewer` for each sub-slice. Confirm: the sub-slice reproduces current behavior (parity
+tests are real); `mergeDayMetadata` throw is caught→surfaced (not propagated) starting in 2d-1; builder
+composes domain fns (no reimplementation); plain data; typecheck/lint:ci/baselines green; no plan-phase
+strings; no component wiring.

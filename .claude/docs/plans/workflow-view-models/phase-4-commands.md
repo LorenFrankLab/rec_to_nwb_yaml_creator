@@ -15,13 +15,14 @@ already carry resolve to real handlers, and it's the write-side counterpart to t
 - [src/state/StoreContext](../../../src/state/StoreContext.tsx) — how components get `{ model, actions }`.
 - `src/state/workspaceUtils.ts` / `workspaceSelectors.ts` — any read needed to translate an intent into
   an action arg.
-- The `command` ids emitted by the builders (phases 2a–2d): `exportValidOnly`, `duplicateDay`,
-  `deleteDay`, `unlinkDay`, `createAnimal`, plus the DayEditor write intents below.
+- The `command` descriptors emitted by the builders (phases 2a–2d): `{ id, target, payload }` for
+  `exportValidOnly`, `duplicateDay`, `deleteDay`, `unlinkDay`, `createAnimal`, plus the DayEditor write
+  intents below.
 - Phase-0 [logic-inventory.md](phase-0-inventory.md) rows marked **COMMAND**.
 
-**Contracts referenced:** [`WorkflowAction.command`](shared-contracts.md#workflowaction) — the string id
-a command resolves; the view-model stays data-only (the *resolution* lives here / in the page, not in the
-VM).
+**Contracts referenced:** [`WorkflowAction.command`](shared-contracts.md#workflowaction) /
+[`WorkflowCommand`](shared-contracts.md#workflowcommand) — the plain-data descriptor a command resolves;
+the view-model stays data-only (the *resolution* lives here / in the page, not in the VM).
 
 ## Tasks
 
@@ -41,13 +42,21 @@ VM).
   export const applyConfigurationChange = (actions, { animalId, change }) => …;
   ```
 
-- Provide one resolution map `commandHandlers(actions)` → `Record<commandId, (args) => void>` so a page
-  can do `const run = commandHandlers(actions); <button onClick={() => run[action.command](args)}>`. Keep
-  args explicit (intent-shaped), not raw nested objects.
+- Provide one resolution map `commandHandlers(actions)` → `Record<commandId, (descriptor, input?) => void>`
+  so a page can do:
+
+  ```ts
+  const run = commandHandlers(actions);
+  <button onClick={() => run[action.command.id](action.command, transientInput)} />
+  ```
+
+  The descriptor's `target`/`payload` comes from the VM. The optional `transientInput` is only for values
+  the user just typed/selected and the builder cannot know at render time. Keep inputs intent-shaped, not
+  raw nested workspace objects.
 - Migrate each page's write call sites (the handlers Phase 3 left pointing at the old inline edits) to
-  call the command by id. Remove the old inline nested-object edit code paths in the same PR (no parallel
-  write paths). This can be one PR per surface or one command PR — recommend **one command PR** since the
-  wrappers are small and share the resolution map; split only if a surface's writes are large.
+  call the command descriptor. Remove the old inline nested-object edit code paths in the same PR (no
+  parallel write paths). This can be one PR per surface or one command PR — recommend **one command PR**
+  since the wrappers are small and share the resolution map; split only if a surface's writes are large.
 - Bad-channel commands MUST preserve the monotonicity model exactly (`markBadChannels` carries forward;
   `acknowledgeBadChannelRemoval` records the off-export ack; un-mark without ack still blocks export).
   These wrap the existing `badChannelMonotonicity`-backed actions — do not reimplement the rules.
