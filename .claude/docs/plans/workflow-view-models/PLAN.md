@@ -29,8 +29,19 @@ agreement BETWEEN builders (a missing-field day reads error on ValidationSummary
 DayEditor; an animal-setup blocker lights the AnimalView ring + closes the export gate + errors the day
 row; the three recovery classes match across both day-list surfaces), the full severity-mapping table,
 and a runtime descriptor-coverage check (every emitted `WorkflowCommand.id` is in
-`WORKFLOW_COMMAND_CATALOG`). Net-new tests only, no source change. **Next: Phase 6 (workflow UI,
-gated — a menu + guardrails, not one PR).**
+`WORKFLOW_COMMAND_CATALOG`). Net-new tests only, no source change.
+
+**Post-phase-5 comprehensive review (merged) — six follow-ups:** (1) relocated `validationSummaryRows`
+`pages/`→`viewModels/` and added a `viewmodel-imports-page` architecture guard (the view-models no
+longer depend back on a page); (2) tightened `WorkflowCommand.id` to the catalog-derived
+`WorkflowCommandId` literal union (a typo'd id is now a compile error); (3) made
+`buildDayEditorViewModel` honor its "never throws" contract (guards the post-merge
+`computeStepStatus`/`validateDay`, fails closed on an un-routed-issue contract violation); (4) closed
+boundary-test gaps (corrupt/unknown-input no-throw matrix over all 4 builders, ack-without-acks no-op,
+`counts.incomplete` non-zero, the `orphan_no_owner` recovery branch); (5) fixed Phase-3 comment rot
+(dead "mirrors X" page-symbol citations) + scaffolding-doc citations; (6) documented the
+`WorkflowSeverity` `warning` contract (per-issue today; reserved for a future row/section badge).
+**Next: Phase 6 (workflow UI, gated — a menu + guardrails, not one PR).**
 
 **Deferred follow-up (logged, NOT blocking — post-Phase-3 review):**
 
