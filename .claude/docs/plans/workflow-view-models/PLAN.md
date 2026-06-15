@@ -2,15 +2,17 @@
 
 **Status:** Phases 0–2 complete (pure read-layer built/tested/merged). **Phase 3 in progress** — wiring
 the four pages to render the VMs, one surface PR at a time (7 total: 3-a…3-g, DayEditor split into 4).
-**3-a…3-e merged** — ValidationSummary, AnimalWorkspace, AnimalView, the DayEditor shell, and the
-DayEditor Overview field sources each render their builders; golden baselines byte-identical; Playwright
-confirmed the rendered surfaces. 3-d extracted the shared `resolveDayOwner` selector (stepper + VM read
-one owner truth) and established the VM-in-stepper threading (the stepper builds the view-model and
-passes slices to the step components as section-specific props); 3-e wired Overview's read-only values,
-help text, and the weight placeholder to `vm.overview.fields` while keeping the editable inputs'
-day-owned `defaultValue`. Next: **3-f (DayEditor issues/export)** → then 3-g (bad channels). Each
-surface PR needs a Playwright MCP visual spot-check + golden baselines. Then Phase 4 (commands),
-5 (boundary matrix), 6 (UI).
+**3-a…3-f merged** — ValidationSummary, AnimalWorkspace, AnimalView, the DayEditor shell, Overview
+field sources, and the Validation + Export surfaces each render their builders; golden baselines
+byte-identical; Playwright confirmed the rendered surfaces. 3-d extracted the shared `resolveDayOwner`
+selector and established the VM-in-stepper threading; 3-e wired Overview's read-only values/help/weight
+placeholder; 3-f (split into 3-f-1 VM enrichment + 3-f-2 component wiring) enriched IssueViewModel
+(ownership action / workflow category / repair display metadata, executable-repair precedence) +
+ExportGateViewModel (lifecycle readiness), converted the shared repair components
+(RepairActions/RepairActionButton/IssueOwnershipHint) to render IssueViewModel, and wired
+ValidationStep + ExportStep to `vm.issues`/`vm.export` (ExportStep keeps its independent download gate —
+defense in depth). Next: **3-g (DayEditor bad channels)**. Each surface PR needs a Playwright MCP
+visual spot-check + golden baselines. Then Phase 4 (commands), 5 (boundary matrix), 6 (UI).
 
 **Phase-3 carry-forward (incl. the merged Phase-2 review fixups):**
 
@@ -39,7 +41,8 @@ surface PR needs a Playwright MCP visual spot-check + golden baselines. Then Pha
 | &nbsp;&nbsp;3-c — AnimalView | ✅ done — section-nav rings/counts + header facts + panel descriptor render `buildAnimalViewModel` |
 | &nbsp;&nbsp;3-d — DayEditor shell/steps/breadcrumb | ✅ done — stepper renders `vm.steps`/`vm.shell`/`vm.breadcrumb`; `resolveDayOwner` extracted → selectors |
 | &nbsp;&nbsp;3-e — DayEditor overview sources | ✅ done — OverviewStep renders `vm.overview.fields` (read-only values + help + weight placeholder); editable inputs keep day-owned `defaultValue` |
-| &nbsp;&nbsp;3-f/g — DayEditor issues/export · bad channels | ⏳ next (3-f issues/export) |
+| &nbsp;&nbsp;3-f — DayEditor issues/export | ✅ done — ValidationStep + ExportStep render `vm.issues`/`vm.export`; shared repair components consume `IssueViewModel`; VM enriched (3-f-1) then wired (3-f-2); ExportStep download gate kept independent |
+| &nbsp;&nbsp;3-g — DayEditor bad channels | ⏳ next |
 | 4 — commands | ▫️ pending |
 | 5 — boundary tests | ▫️ pending |
 | 6 — workflow UI | ▫️ pending |
