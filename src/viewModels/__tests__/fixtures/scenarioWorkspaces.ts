@@ -26,9 +26,27 @@ export interface Scenario {
 
 const clone = (value: unknown): any => structuredClone(value);
 
-/** The realistic animal + its single export-ready day (untyped JS fixture; narrowed here). */
-export const loadRealistic = (): { animal: Idable; day: Idable } =>
-  buildRealisticWorkspace() as { animal: Idable; day: Idable };
+/**
+ * The realistic animal + its single export-ready day, made INTERNALLY CONSISTENT for the view-model
+ * surfaces. The export-parity fixture leaves `devices.electrode_groups` / `ntrode_*` empty (the merge
+ * reads the configuration snapshot, not `devices`), but production `createAnimal` snapshots `devices`
+ * INTO `configurationHistory`, so the two always agree. We mirror that here — copy the snapshot back
+ * into `devices` — so a "complete animal" is genuinely complete: the AnimalView setup rings (which
+ * read current `animal.devices.*` by design) reflect the same configuration the day exports with,
+ * instead of a spurious "electrode groups not set up" on an export-ready animal.
+ */
+export const loadRealistic = (): { animal: Idable; day: Idable } => {
+  const { animal, day } = buildRealisticWorkspace() as { animal: Idable; day: Idable };
+  const a = animal as Record<string, any>;
+  const snapshot = a.configurationHistory?.[0]?.devices;
+  if (snapshot && a.devices) {
+    a.devices.electrode_groups = structuredClone(snapshot.electrode_groups ?? []);
+    a.devices.ntrode_electrode_group_channel_map = structuredClone(
+      snapshot.ntrode_electrode_group_channel_map ?? []
+    );
+  }
+  return { animal, day };
+};
 
 /** Wrap one animal + one day into a workspace. */
 export const wrap = (animal: Idable, day: Idable): Workspace => ({
