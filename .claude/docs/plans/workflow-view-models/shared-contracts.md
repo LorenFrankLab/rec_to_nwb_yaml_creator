@@ -99,12 +99,31 @@ export interface IssueViewModel {
   fieldPath?: string;
   /** Ownership pattern from `ownershipForIssue` (src/domain/workflowOwnership). Verbatim string. */
   ownership: string;
+  /** The ownership pattern's primary action ("Fix shared animal setup", …) — IssueOwnershipHint's text. */
+  ownershipAction?: string;
   /** True when fixing this reaches beyond the day in front of the user (blast-radius cue). */
   reachesBeyondDay: boolean;
+  /** Workflow category (`workflowCategoryForIssue`) + its label — the bucket the list groups by. */
+  category?: WorkflowCategory;
+  categoryLabel?: string;
   /** Where to go to fix it (route + label), from `repairTargetForIssue`. */
   repair?: WorkflowAction;
+  /** Repair display metadata (Phase 3-f, mirrors RepairActionButton + repairButtonKey): the editable
+   *  surface; whether the repair runs a command in place ('execute' — `repair.command.id` is the
+   *  repairCommand type) or navigates ('navigate' — carries `repairFocusPath`); and the collapse key
+   *  so several issues sharing one fix render one button. Absent when there is no repair. */
+  repairSurface?: 'animal' | 'day';
+  repairKind?: 'execute' | 'navigate';
+  repairFocusPath?: string;
+  repairDedupKey?: string;
 }
 ```
+
+`ownershipAction`/`category`/`categoryLabel`/`repair*` are set by the day-editor issue list
+(`toIssueViewModel`) — every rendered issue carries them; synthetic gate issues (the merge-error
+placeholder) that are not shown in the grouped list may omit the optional ones. `buildRepairAction`
+checks `repairCommand` FIRST (matching `RepairActionButton`), so a raw-shape/merge-error repair stays
+an executable button rather than degrading to an animal-deep-link navigation.
 
 ## SectionViewModel
 
@@ -238,6 +257,12 @@ export interface ExportGateViewModel {
   blockingSteps: SectionViewModel[];
   message: string;
   action: WorkflowAction;     // export action, disabledReason while blocked
+  /** Lifecycle readiness for an OPEN gate (Phase 3-f, from `lifecycleForValidDay`): the variant, its
+   *  short status label (DAY_LIFECYCLE_LABEL — Export step's status line), and the full readiness
+   *  sentence the Validation summary shows. Set only when `open`. */
+  lifecycle?: 'ready' | 'validated' | 'exported';
+  lifecycleStatusLabel?: string;
+  readyMessage?: string;
 }
 
 /** Per-channel bad-channel mark state, carrying the monotonicity (prior-bad → needs-ack) rule. */

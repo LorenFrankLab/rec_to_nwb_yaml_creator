@@ -21,6 +21,7 @@
  */
 
 import type { StepStatus } from '../domain/stepStatus';
+import type { WorkflowCategory } from '../domain/workflowCategories';
 
 /**
  * The single severity vocabulary the modern UI renders. It does not replace the domain status enums
@@ -128,10 +129,47 @@ export interface IssueViewModel {
   fieldPath?: string;
   /** Ownership pattern from `ownershipForIssue` (src/domain/workflowOwnership). Verbatim string. */
   ownership: string;
+  /**
+   * The ownership pattern's primary action ("Fix shared animal setup", "Select the item used on this
+   * day", …), from `ownershipForIssue().primaryAction` — the text `IssueOwnershipHint` renders. Set
+   * by the day-editor issue list (`toIssueViewModel`); omitted by synthetic gate issues that are not
+   * rendered through the ownership hint.
+   */
+  ownershipAction?: string;
   /** True when fixing this reaches beyond the day in front of the user (blast-radius cue). */
   reachesBeyondDay: boolean;
+  /**
+   * Workflow category (`workflowCategoryForIssue`) — the bucket the repair/validation list groups by.
+   * Set for every rendered day-editor issue; omitted by synthetic gate issues not shown in the list.
+   */
+  category?: WorkflowCategory;
+  /** User-facing category label (`WORKFLOW_CATEGORY_LABELS[category]`) — the group heading. */
+  categoryLabel?: string;
   /** Where to go to fix it (route + label), from `repairTargetForIssue` (src/domain/repairRouting). */
   repair?: WorkflowAction;
+  /**
+   * The editable surface of the repair (`'animal'` | `'day'`) — drives the repair button's
+   * `data-repair-surface` and (for a navigate repair) the nav target. Absent when there is no repair
+   * (`repairTargetForIssue` surface `'none'`).
+   */
+  repairSurface?: 'animal' | 'day';
+  /**
+   * Whether the repair runs a serializable command in place (`'execute'`) or navigates to the owning
+   * surface (`'navigate'`). Mirrors `RepairActionButton`'s precedence: an issue carrying a
+   * `repairCommand` is executable; otherwise it navigates. Absent when there is no repair.
+   */
+  repairKind?: 'execute' | 'navigate';
+  /**
+   * The focus target a navigate repair hands to the owning surface (the control to highlight) —
+   * `issue.focusPath || issue.path`. Absent for an executable repair or when there is no anchor.
+   */
+  repairFocusPath?: string;
+  /**
+   * Collapse key for the repair BUTTON: several issues can share one underlying fix, so every message
+   * shows but only one button per unique (surface, step, focus, command) renders. Mirrors
+   * `RepairActions`' `repairButtonKey`. Absent when there is no repair.
+   */
+  repairDedupKey?: string;
 }
 
 /**
@@ -329,6 +367,22 @@ export interface ExportGateViewModel {
   message: string;
   /** The export action (with `disabledReason` while blocked). */
   action: WorkflowAction;
+  /**
+   * The lifecycle classification of an exportable day (`lifecycleForValidDay`) — only set when
+   * `open`. Lets the readiness surfaces show the persisted-history word (`ready` is live-valid,
+   * `validated` has a saved validation, `exported` has been downloaded) without re-deriving it.
+   */
+  lifecycle?: 'ready' | 'validated' | 'exported';
+  /**
+   * The short lifecycle status label ('Ready to export' | 'Validated' | 'Exported',
+   * `DAY_LIFECYCLE_LABEL[lifecycle]`) — the Export step's status line. Only set when `open`.
+   */
+  lifecycleStatusLabel?: string;
+  /**
+   * The full readiness sentence the Validation summary shows when ready (e.g. 'Validated — all checks
+   * pass. This validation has been saved.'). Only set when `open`.
+   */
+  readyMessage?: string;
 }
 
 /**

@@ -20,6 +20,8 @@ import { validateDay } from '../../domain/dayValidationComposer';
 import { isExportEnabled } from '../../domain/stepGate';
 import { ownershipForIssue } from '../../domain/workflowOwnership';
 import { repairTargetForIssue } from '../../domain/repairRouting';
+import { workflowCategoryForIssue, WORKFLOW_CATEGORY_LABELS } from '../../domain/workflowCategories';
+import { repairButtonKey } from '../../pages/DayEditor/RepairActions';
 import { priorBadChannels } from '../../domain/badChannelMonotonicity';
 import type { Animal, Day } from '../../state/workspaceTypes';
 
@@ -415,6 +417,113 @@ describe('buildDayEditorViewModel — issues / repair / export', () => {
     expect(vm.export.open).toBe(false);
     expect(vm.export.reason).toBe('unlinked-day');
     expect(vm.export.action.disabledReason).toContain('day list');
+  });
+
+  it("each issue carries its ownership action + workflow category (the grouped-list data)", () => {
+    const { animal, day } = brokenDayWorkspace();
+    const vm = buildDayEditorViewModel(wrap(animal, day), day.id);
+    const merged = mergeDayMetadata(animal as unknown as Animal, day as unknown as Day);
+    const domainIssues = validateDay(
+      day as unknown as Record<string, unknown>,
+      merged,
+      animal,
+      [day] as unknown as Day[]
+    ).filter((i) => i.severity === 'error' || i.severity === 'warning');
+
+    domainIssues.forEach((domainIssue, idx) => {
+      const issue = vm.issues[idx];
+      const category = workflowCategoryForIssue(domainIssue);
+      expect(issue.ownershipAction).toBe(ownershipForIssue(domainIssue).primaryAction);
+      expect(issue.category).toBe(category);
+      expect(issue.categoryLabel).toBe(WORKFLOW_CATEGORY_LABELS[category]);
+    });
+  });
+
+  it("each issue's repair metadata (surface/kind/focus/dedup) mirrors RepairActionButton + repairButtonKey", () => {
+    const { animal, day } = brokenDayWorkspace();
+    const vm = buildDayEditorViewModel(wrap(animal, day), day.id);
+    const merged = mergeDayMetadata(animal as unknown as Animal, day as unknown as Day);
+    const domainIssues = validateDay(
+      day as unknown as Record<string, unknown>,
+      merged,
+      animal,
+      [day] as unknown as Day[]
+    ).filter((i) => i.severity === 'error' || i.severity === 'warning');
+
+    domainIssues.forEach((domainIssue, idx) => {
+      const issue = vm.issues[idx];
+      const target = repairTargetForIssue(domainIssue);
+      if (target.surface === 'none') {
+        expect(issue.repair).toBeUndefined();
+        expect(issue.repairKind).toBeUndefined();
+        return;
+      }
+      expect(issue.repairSurface).toBe(target.surface);
+      // Executable when the issue carries a repairCommand, else navigate (RepairActionButton precedence).
+      expect(issue.repairKind).toBe(domainIssue.repairCommand != null ? 'execute' : 'navigate');
+      // The collapse key must match the page's repairButtonKey so the VM-driven list dedups identically.
+      expect(issue.repairDedupKey).toBe(repairButtonKey(domainIssue));
+      // A navigate repair carries the focus anchor it hands the owning surface.
+      if (issue.repairKind === 'navigate') {
+        const focus = domainIssue.focusPath || domainIssue.path;
+        if (focus != null) expect(issue.repairFocusPath).toBe(focus);
+      }
+    });
+  });
+
+  it('an issue carrying a repairCommand becomes an executable repair (command id = the repair type, no href)', () => {
+    const { animal, day } = loadRealistic();
+    // An empty configurationHistory makes mergeDayMetadata throw; the builder falls back to merged={}
+    // and the raw-animal rebuild issue (carrying a repairCommand) surfaces in the issue list.
+    const broken = clone(animal);
+    broken.configurationHistory = [];
+    const vm = buildDayEditorViewModel(wrap(broken, day), day.id);
+
+    const exec = vm.issues.find((i) => i.repairKind === 'execute');
+    expect(exec).toBeDefined();
+    expect(exec?.repair?.href).toBeUndefined();
+    expect(exec?.repair?.command?.id).toBe('rebuildConfigurationHistory');
+  });
+
+  it('an OPEN export gate carries the day lifecycle readiness (live-ready)', () => {
+    const { animal, day } = loadRealistic();
+    const vm = buildDayEditorViewModel(wrap(animal, day), day.id);
+    expect(vm.export.open).toBe(true);
+    expect(vm.export.lifecycle).toBe('ready');
+    expect(vm.export.lifecycleStatusLabel).toBe('Ready to export');
+    expect(vm.export.readyMessage).toBe('Ready to export — all checks pass.');
+  });
+
+  it('a saved-validated exportable day reads the validated lifecycle + readiness sentence', () => {
+    const { animal, day } = loadRealistic();
+    const validated = clone(day);
+    validated.state = { validated: true };
+    const vm = buildDayEditorViewModel(wrap(animal, validated), validated.id);
+    expect(vm.export.open).toBe(true);
+    expect(vm.export.lifecycle).toBe('validated');
+    expect(vm.export.lifecycleStatusLabel).toBe('Validated');
+    expect(vm.export.readyMessage).toBe('Validated — all checks pass. This validation has been saved.');
+  });
+
+  it('a downloaded-exported day reads the exported lifecycle + readiness sentence', () => {
+    const { animal, day } = loadRealistic();
+    const exported = clone(day);
+    exported.state = { exported: true };
+    const vm = buildDayEditorViewModel(wrap(animal, exported), exported.id);
+    expect(vm.export.lifecycle).toBe('exported');
+    expect(vm.export.lifecycleStatusLabel).toBe('Exported');
+    expect(vm.export.readyMessage).toBe(
+      'Exported — all checks still pass. This day’s YAML has been downloaded.'
+    );
+  });
+
+  it('a BLOCKED export gate carries no lifecycle readiness', () => {
+    const { animal, day } = brokenDayWorkspace();
+    const vm = buildDayEditorViewModel(wrap(animal, day), day.id);
+    expect(vm.export.open).toBe(false);
+    expect(vm.export.lifecycle).toBeUndefined();
+    expect(vm.export.lifecycleStatusLabel).toBeUndefined();
+    expect(vm.export.readyMessage).toBeUndefined();
   });
 
   it('a malformed day collection becomes a malformed-collection notice with a reset command', () => {
