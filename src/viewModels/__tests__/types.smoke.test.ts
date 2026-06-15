@@ -16,6 +16,7 @@ import type {
   DayRowViewModel,
   DayRecoveryViewModel,
   DayPreflightViewModel,
+  BatchRunReportViewModel,
   BatchRunResultViewModel,
   StepViewModel,
   FieldValueViewModel,
@@ -124,8 +125,9 @@ describe('view-model vocabulary — composite/leaf types', () => {
 
   it('constructs a StepViewModel and a FieldValueViewModel', () => {
     const step: StepViewModel = {
-      key: 'validation', label: 'Validation', status: 'error', statusLabel: 'Has errors',
-      issueCount: 2, active: true, href: '#/day/remy-2023-06-22/validation',
+      // 'incomplete' is a StepStatus, not a WorkflowSeverity — exercises the domain-typed step status.
+      key: 'overview', label: 'Overview', status: 'incomplete', statusLabel: 'Incomplete',
+      issueCount: 2, active: true, href: '#/day/remy-2023-06-22/overview',
     };
     const field: FieldValueViewModel = {
       fieldPath: 'session.weight', label: 'Weight', value: '450',
@@ -142,7 +144,7 @@ describe('view-model vocabulary — composite/leaf types', () => {
       action: { label: 'Export', command: { id: 'exportDay' }, disabledReason: 'Fix 2 validation errors to export.' },
     };
     const mark: BadChannelMarkViewModel = {
-      ntrodeId: 1, channel: 3, marked: false, priorBad: true, requiresAck: true, acked: false,
+      ntrodeId: '1', channel: 3, marked: false, priorBad: true, requiresAck: true, acked: false,
     };
     expect(gate.reason).toBe('validation-errors');
     expect(mark.requiresAck).toBe(true);
@@ -175,6 +177,16 @@ describe('view-model vocabulary — type guards', () => {
     const badField: FieldValueViewModel = { fieldPath: 'x', label: 'X', value: '1', source: 'maybe' };
     // @ts-expect-error 'broken' is not an ExportGateViewModel reason — proves the union holds.
     const badGate: ExportGateViewModel = { open: false, reason: 'broken', blockingIssues: [], blockingSteps: [], message: 'x', action: { label: 'X' } };
-    expect([badSeverity, badAction, badIssue, badField, badGate]).toHaveLength(5);
+    // @ts-expect-error 'ready' is a WorkflowSeverity but not a StepStatus — proves StepViewModel.status is StepStatus.
+    const badStep: StepViewModel = { key: 'x', label: 'X', status: 'ready', statusLabel: 'X', active: false };
+    // @ts-expect-error 'bogus' is not a DayStatus — proves DayRowViewModel.recovery is the frozen union.
+    const badRecovery: DayRowViewModel = { dayId: 'x', date: 'd', status: 'ready', statusLabel: 'L', recovery: 'bogus', actions: [] };
+    // @ts-expect-error 'unknown' is not a BatchRunReportViewModel kind — proves the union holds.
+    const badReport: BatchRunReportViewModel = { kind: 'unknown', items: [] };
+    // @ts-expect-error a numeric ntrodeId is rejected — proves BadChannelMarkViewModel.ntrodeId is a string.
+    const badMark: BadChannelMarkViewModel = { ntrodeId: 1, channel: 0, marked: false, priorBad: false, requiresAck: false, acked: false };
+    // @ts-expect-error 'other' is not a RecoveryNoticeViewModel kind — proves the union holds.
+    const badNotice: RecoveryNoticeViewModel = { kind: 'other', message: 'x', repair: { id: 'r' } };
+    expect([badSeverity, badAction, badIssue, badField, badGate, badStep, badRecovery, badReport, badMark, badNotice]).toHaveLength(10);
   });
 });

@@ -20,6 +20,8 @@
  * runtime code.
  */
 
+import type { StepStatus } from '../domain/stepStatus';
+
 /**
  * The single severity vocabulary the modern UI renders. It does not replace the domain status enums
  * — builders map those onto it and must not re-derive readiness. The canonical mapping (each builder
@@ -42,6 +44,25 @@
  * `getAnimalBlockingSections` (src/domain/sectionStatus.ts), `DAY_STATUS` (src/domain/dayRecovery.ts).
  */
 export type WorkflowSeverity = 'ready' | 'todo' | 'warning' | 'error';
+
+/**
+ * A recording day's recovery classification — the closed `DAY_STATUS` set (src/domain/dayRecovery).
+ * The view-model freezes it as a union; a builder translates the domain enum (whose values are typed
+ * as `string`) onto it at the boundary.
+ */
+export type DayStatus =
+  | 'ok'
+  | 'dangling_reference'
+  | 'recovered_unlinked'
+  | 'orphan_no_owner'
+  | 'wrong_owner';
+
+/**
+ * Re-export of the day-editor step status (src/domain/stepStatus) so the step view-model can carry the
+ * stepper's full 4-state fidelity (`valid` ✓ / `incomplete` ⚠ / `error` ✗ / `pending` ○) rather than
+ * collapsing `incomplete` and `pending` into one {@link WorkflowSeverity}.
+ */
+export type { StepStatus };
 
 /**
  * Plain-data command metadata carried by a write-style {@link WorkflowAction}. Lets a page invoke
@@ -146,11 +167,8 @@ export interface SectionViewModel {
  * status string) with the owner description and the repair affordance to surface.
  */
 export interface DayRecoveryViewModel {
-  /**
-   * DAY_STATUS classification (src/domain/dayRecovery): 'ok' | 'dangling_reference' |
-   * 'recovered_unlinked' | 'orphan_no_owner' | 'wrong_owner'.
-   */
-  status: string;
+  /** DAY_STATUS classification (src/domain/dayRecovery). */
+  status: DayStatus;
   /** 'Belongs to <owner>'-style description, from `describeOwner`. */
   ownerDescription?: string;
   /** The recovery note shown on the row. */
@@ -177,11 +195,8 @@ export interface DayRowViewModel {
   statusLabel: string;
   /** First line of the session description, when present. */
   sessionDescription?: string;
-  /**
-   * Day classification from `classifyAnimalDays` / `DAY_STATUS` (src/domain/dayRecovery): one of
-   * 'ok' | 'dangling_reference' | 'recovered_unlinked' | 'orphan_no_owner' | 'wrong_owner'.
-   */
-  recovery: string;
+  /** Day classification from `classifyAnimalDays` / `DAY_STATUS` (src/domain/dayRecovery). */
+  recovery: DayStatus;
   /** Row actions (duplicate / delete / unlink / re-link), with `disabledReason` where relevant. */
   actions: WorkflowAction[];
   /**
@@ -226,8 +241,8 @@ export interface DayPreflightViewModel {
 
 /** One bucket of a batch run's per-day outcomes. */
 export interface BatchRunReportViewModel {
-  /** Outcome kind: 'skipped' | 'overridden' | 'failed' | 'stale' | 'validate-error'. */
-  kind: string;
+  /** Outcome kind. */
+  kind: 'skipped' | 'overridden' | 'failed' | 'stale' | 'validate-error';
   items: Array<{ dayId: string; subjectId: string; date: string; detail?: string }>;
 }
 
@@ -240,16 +255,18 @@ export interface BatchRunResultViewModel {
 
 /**
  * One step of the day-editor stepper. Like a {@link SectionViewModel} but for a linear stepper: it
- * adds the `active` (current-step) flag. The status glyph and CSS class are derived from `status` by
- * the component.
+ * adds the `active` (current-step) flag, and carries the domain {@link StepStatus} (not
+ * {@link WorkflowSeverity}) so the stepper keeps its full 4-state fidelity — `incomplete` (⚠) and
+ * `pending` (○) are distinct, where both would otherwise collapse to one severity. The status glyph
+ * and CSS class are derived from `status` by the component.
  */
 export interface StepViewModel {
   /** Step key, e.g. 'overview' | 'devices' | 'validation' | 'export'. */
   key: string;
   /** Display label. */
   label: string;
-  /** Mapped to the {@link WorkflowSeverity} invariant. */
-  status: WorkflowSeverity;
+  /** The per-step status (src/domain/stepStatus): 'valid' | 'incomplete' | 'error' | 'pending'. */
+  status: StepStatus;
   /** Accessible status text, e.g. 'Complete' | 'Has errors' | 'Not started'. */
   statusLabel: string;
   /** Count shown on the step (e.g. the Validation step's 'N to fix'); absent when not shown. */
@@ -312,8 +329,11 @@ export interface ExportGateViewModel {
  * explicit acknowledgement before export.
  */
 export interface BadChannelMarkViewModel {
-  /** The ntrode (electrode group) id this channel belongs to. */
-  ntrodeId: number;
+  /**
+   * The ntrode (electrode group) id this channel belongs to. A string because bad-channel maps are
+   * keyed by `String(ntrode_id)` at lookup (and recovered/imported maps are string-keyed at runtime).
+   */
+  ntrodeId: string;
   /** The probe-local channel index. */
   channel: number;
   /** Whether the channel is currently marked failed. */
@@ -349,8 +369,8 @@ export interface DayEditorShellViewModel {
  * fix-this-data prompt rather than a validation failure.
  */
 export interface RecoveryNoticeViewModel {
-  /** Notice kind, e.g. 'malformed-collection' | 'stale-override' | 'badchannel-corruption'. */
-  kind: string;
+  /** Notice kind. */
+  kind: 'malformed-collection' | 'stale-override' | 'badchannel-corruption';
   /** The user-facing notice text. */
   message: string;
   /** The repair command (e.g. reset the collection, remove the override). */

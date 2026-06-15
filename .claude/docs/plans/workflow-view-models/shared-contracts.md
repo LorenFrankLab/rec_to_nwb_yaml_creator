@@ -134,9 +134,9 @@ export interface DayRowViewModel {
   status: WorkflowSeverity;
   statusLabel: string;       // 'Ready to export' | 'Needs fixing — …' | 'Re-link to export' | …
   sessionDescription?: string;
-  /** Day classification from `classifyAnimalDays` (src/domain/dayRecovery DAY_STATUS): one of
-   *  'ok' | 'dangling_reference' | 'recovered_unlinked' | 'orphan_no_owner' | 'wrong_owner'. */
-  recovery: string;
+  /** Day classification from `classifyAnimalDays` (src/domain/dayRecovery DAY_STATUS) — the frozen
+   *  `DayStatus` union (see Extended vocabulary). */
+  recovery: DayStatus;
   actions: WorkflowAction[]; // duplicate / delete / unlink / re-link, with disabledReason where relevant
   /** Lifecycle refinement when status === 'ready' — a saved day reads 'validated', a downloaded day
    *  'exported'; status alone collapses all three to 'ready'. */
@@ -157,10 +157,20 @@ rule. The additive fields on the core types above (`WorkflowAction.intent`, `Wor
 `SectionViewModel.countLabel`/`showCount`, `DayRowViewModel.lifecycle`/`exportEligibility`/`recoveryDetail`)
 are part of this set.
 
+Closed vocabularies are frozen as real unions; the day-editor step status reuses the domain
+`StepStatus` (`src/domain/stepStatus`) to keep its 4-state fidelity rather than collapsing into
+`WorkflowSeverity`:
+
 ```ts
+/** The closed DAY_STATUS set (src/domain/dayRecovery); builders translate the string-typed enum onto it. */
+export type DayStatus =
+  | 'ok' | 'dangling_reference' | 'recovered_unlinked' | 'orphan_no_owner' | 'wrong_owner';
+
+// StepStatus is re-exported from src/domain/stepStatus: 'valid' | 'incomplete' | 'error' | 'pending'.
+
 /** Structured recovery detail for a day not in its normal place — complements DayRowViewModel.recovery. */
 export interface DayRecoveryViewModel {
-  status: string;             // DAY_STATUS classification (dayRecovery)
+  status: DayStatus;          // DAY_STATUS classification (dayRecovery)
   ownerDescription?: string;  // 'Belongs to <owner>', from describeOwner
   message?: string;           // the recovery note shown on the row
   repair?: WorkflowAction;    // re-link / unlink / remove reference
@@ -181,7 +191,7 @@ export interface DayPreflightViewModel {
 
 /** One bucket of a batch run's per-day outcomes. */
 export interface BatchRunReportViewModel {
-  kind: string;               // 'skipped' | 'overridden' | 'failed' | 'stale' | 'validate-error'
+  kind: 'skipped' | 'overridden' | 'failed' | 'stale' | 'validate-error';
   items: Array<{ dayId: string; subjectId: string; date: string; detail?: string }>;
 }
 
@@ -195,7 +205,7 @@ export interface BatchRunResultViewModel {
 export interface StepViewModel {
   key: string;                // 'overview' | 'devices' | 'validation' | 'export' | …
   label: string;
-  status: WorkflowSeverity;
+  status: StepStatus;         // domain step status — keeps ⚠ incomplete vs ○ pending distinct
   statusLabel: string;        // 'Complete' | 'Has errors' | 'Not started' …
   issueCount?: number;        // e.g. the Validation step's 'N to fix'
   active: boolean;
@@ -227,7 +237,7 @@ export interface ExportGateViewModel {
 
 /** Per-channel bad-channel mark state, carrying the monotonicity (prior-bad → needs-ack) rule. */
 export interface BadChannelMarkViewModel {
-  ntrodeId: number;
+  ntrodeId: string;           // bad-channel maps are keyed by String(ntrode_id) at lookup
   channel: number;            // probe-local index
   marked: boolean;
   priorBad: boolean;          // failed on an earlier same-config day
@@ -249,7 +259,7 @@ export interface DayEditorShellViewModel {
 
 /** An advisory recovery/cleanup notice (malformed collection, stale override, …) with its repair command. */
 export interface RecoveryNoticeViewModel {
-  kind: string;               // 'malformed-collection' | 'stale-override' | 'badchannel-corruption' | …
+  kind: 'malformed-collection' | 'stale-override' | 'badchannel-corruption';
   message: string;
   repair: WorkflowCommand;
 }
