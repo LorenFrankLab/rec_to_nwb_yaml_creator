@@ -1,4 +1,5 @@
 import type { Animal, Day } from '../../state/workspaceTypes';
+import type { WorkflowCommand } from '../../viewModels/types';
 import type { DayStatusRowViewModel } from '../../viewModels/validationSummaryViewModel';
 import EffectiveDayReview from './EffectiveDayReview';
 import styles from './ValidationSummary.module.css';
@@ -16,12 +17,12 @@ interface DayStatusTableProps {
    * other rendered value; this is the narrow escape hatch for that one read-only detail panel.
    */
   effectiveRecords?: Record<string, { animal: Animal; day: Day }>;
-  /** `(animalKey, dayId) => void` — drop a dangling reference. */
-  onRemoveDayReference?: (animalKey: string, dayId: string) => void;
-  /** `(animalKey, dayId) => void` — unlink a wrong-owner day. */
-  onUnlinkDayReference?: (animalKey: string, dayId: string) => void;
-  /** `(animalKey, dayId) => void` — re-link a recovered day. */
-  onRelinkDayReference?: (animalKey: string, dayId: string) => void;
+  /**
+   * Dispatch a row's recovery repair (remove dangling ref / unlink wrong-owner / re-link recovered).
+   * The command is the VM's own `row.recoveryDetail.repair.command` — the page resolves it through
+   * the command layer, so this table never reconstructs the intent/target.
+   */
+  onRepairCommand?: (command: WorkflowCommand) => void;
 }
 
 /**
@@ -41,10 +42,13 @@ export default function DayStatusTable({
   rows,
   scoped,
   effectiveRecords = {},
-  onRemoveDayReference = noop,
-  onUnlinkDayReference = noop,
-  onRelinkDayReference = noop,
+  onRepairCommand = noop,
 }: DayStatusTableProps) {
+  // Dispatch a row's VM-carried recovery repair command (no-op if the row has none).
+  const repair = (row: DayStatusRowViewModel) => {
+    const command = row.recoveryDetail?.repair?.command;
+    if (command) onRepairCommand(command);
+  };
   return (
     // The table can be wider than a phone viewport (6 columns of dense scan/session text), so
     // it scrolls horizontally WITHIN this container instead of forcing the whole page to
@@ -173,7 +177,7 @@ export default function DayStatusTable({
                     <button
                       type="button"
                       className="validation-summary-repair"
-                      onClick={() => onRemoveDayReference(row.animalKey, row.dayId)}
+                      onClick={() => repair(row)}
                       aria-label={`Remove dangling day reference ${row.dayId} from ${row.subjectLabel}`}
                     >
                       Remove day reference
@@ -184,7 +188,7 @@ export default function DayStatusTable({
                     <button
                       type="button"
                       className="validation-summary-repair"
-                      onClick={() => onUnlinkDayReference(row.animalKey, row.dayId)}
+                      onClick={() => repair(row)}
                       aria-label={`Remove ${dateText} from ${row.subjectLabel} (it belongs to ${owner})`}
                     >
                       Remove from this animal
@@ -210,7 +214,7 @@ export default function DayStatusTable({
                         <button
                           type="button"
                           className="validation-summary-repair"
-                          onClick={() => onRelinkDayReference(row.animalKey, row.dayId)}
+                          onClick={() => repair(row)}
                           aria-label={`Add ${dateText} back to ${row.subjectLabel}'s day list`}
                         >
                           Add to day list

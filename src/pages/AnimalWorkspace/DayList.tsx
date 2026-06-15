@@ -1,4 +1,4 @@
-import type { DayRowViewModel } from '../../viewModels/types';
+import type { DayRowViewModel, WorkflowCommand } from '../../viewModels/types';
 import styles from './AnimalWorkspace.module.css';
 
 interface DayListProps {
@@ -6,15 +6,19 @@ interface DayListProps {
   rows: DayRowViewModel[];
   /** Whether the day-index reference is malformed (empty-state copy). */
   daysCorrupt: boolean;
-  /** The owning animal (for the dangling-row export link + the unlink dispatch). */
+  /** The owning animal (for the dangling-row export link). */
   animalId: string;
-  /** `(animalId, dayId) => void` — unlink a wrong-owner day. */
-  onUnlinkDayReference: (animalId: string, dayId: string) => void;
-  /** `({ dayId, date }) => void` — open the duplicate picker. */
-  onDuplicateDay: (arg: { dayId: string; date?: string }) => void;
-  /** `(dayId) => void` — open the delete confirm (the parent assembles its descriptor). */
-  onDeleteDay: (dayId: string) => void;
+  /** Dispatch a row's recovery repair (the VM's `recoveryDetail.repair.command`, e.g. unlink). */
+  onRepairCommand: (command: WorkflowCommand) => void;
+  /** Open the duplicate picker for a row's `duplicateDay` command (the parent confirms, then runs it). */
+  onDuplicateDay: (command: WorkflowCommand) => void;
+  /** Open the delete confirm for a row's `deleteDay` command (the parent confirms, then runs it). */
+  onDeleteDay: (command: WorkflowCommand) => void;
 }
+
+/** The command carried by the row action with the given id (delete / duplicate). */
+const rowCommand = (row: DayRowViewModel, id: string): WorkflowCommand | undefined =>
+  row.actions.find((action) => action.command?.id === id)?.command;
 
 /**
  * The per-animal recording-day list: the empty state, and one row per classified day (ok /
@@ -27,7 +31,7 @@ export default function DayList({
   rows,
   daysCorrupt,
   animalId,
-  onUnlinkDayReference,
+  onRepairCommand,
   onDuplicateDay,
   onDeleteDay,
 }: DayListProps) {
@@ -85,6 +89,7 @@ export default function DayList({
         // exportable). Surface a warning + an in-place unlink repair.
         if (row.recovery === 'wrong_owner') {
           const owner = row.recoveryDetail?.ownerDescription;
+          const unlinkCommand = row.recoveryDetail?.repair?.command;
           return (
             <li key={dayId} className={styles.dayItem}>
               <div className={`${styles.dayLink} ${styles.dayLinkMissing}`} role="alert">
@@ -96,7 +101,7 @@ export default function DayList({
                   <button
                     type="button"
                     className="btn-secondary"
-                    onClick={() => onUnlinkDayReference(animalId, dayId)}
+                    onClick={() => unlinkCommand && onRepairCommand(unlinkCommand)}
                     aria-label={`Remove ${dateText} from ${animalId} (belongs to ${owner})`}
                   >
                     Remove from this animal
@@ -145,22 +150,32 @@ export default function DayList({
                 rows have their own repair paths above. */}
             {row.recovery === 'ok' && (
               <div className={styles.dayItemActions}>
-                <button
-                  type="button"
-                  className={styles.btnSecondaryText}
-                  onClick={() => onDuplicateDay({ dayId, date: row.date })}
-                  aria-label={`Duplicate recording day ${dateText}…`}
-                >
-                  Duplicate day…
-                </button>
-                <button
-                  type="button"
-                  className={styles.btnDangerText}
-                  onClick={() => onDeleteDay(dayId)}
-                  aria-label={`Delete recording day ${dateText}…`}
-                >
-                  Delete day…
-                </button>
+                {(() => {
+                  // Bubble the row's OWN duplicate/delete command descriptors up; the parent confirms,
+                  // then dispatches them through the command layer (no reconstruction here).
+                  const duplicateCommand = rowCommand(row, 'duplicateDay');
+                  const deleteCommand = rowCommand(row, 'deleteDay');
+                  return (
+                    <>
+                      <button
+                        type="button"
+                        className={styles.btnSecondaryText}
+                        onClick={() => duplicateCommand && onDuplicateDay(duplicateCommand)}
+                        aria-label={`Duplicate recording day ${dateText}…`}
+                      >
+                        Duplicate day…
+                      </button>
+                      <button
+                        type="button"
+                        className={styles.btnDangerText}
+                        onClick={() => deleteCommand && onDeleteDay(deleteCommand)}
+                        aria-label={`Delete recording day ${dateText}…`}
+                      >
+                        Delete day…
+                      </button>
+                    </>
+                  );
+                })()}
               </div>
             )}
           </li>
