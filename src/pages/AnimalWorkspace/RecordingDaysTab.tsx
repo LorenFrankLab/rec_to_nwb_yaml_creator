@@ -38,7 +38,8 @@ import { dayHasArtifacts } from '../../domain/dayRecovery';
 import { DOWNSTREAM_NOT_DELETED_NOTE } from '../../domain/animalDeleteCascade';
 import { buildAnimalWorkspaceViewModel } from '../../viewModels/animalWorkspaceViewModel';
 import type { RecoveryNoticeViewModel } from '../../viewModels/types';
-import { applyRepairCommand } from '../../state/repairCommands';
+import { commandHandlers, applyRepair } from '../../viewModels/commands';
+import type { CommandActions } from '../../viewModels/commands';
 import { CalendarDayCreator } from '../../components/CalendarDayCreator/CalendarDayCreator';
 import DayLifecycleLegend from '../../components/DayLifecycleLegend/DayLifecycleLegend';
 import { ConfirmDialog } from '../../components/Modal';
@@ -102,6 +103,14 @@ export function RecordingDaysTab({ animalId }: RecordingDaysTabProps) {
     [model.workspace, selectedAnimalId]
   );
 
+  // Day-reference / day-CRUD writes route through the descriptor command layer (one named write
+  // surface). Editable field writes (calendar createDay, copy-from-animal updateAnimal) stay local —
+  // they are not VM-emitted command descriptors.
+  const run = useMemo(
+    () => commandHandlers({ actions: actions as unknown as CommandActions }),
+    [actions]
+  );
+
   // The raw records stay for the WRITE paths (carry-forward create source, copy-from-animal, repair
   // execution, the delete-confirm descriptor); the display all comes from the view-model above.
   const selectedAnimal = selectedAnimalId ? animals[selectedAnimalId] : null;
@@ -118,8 +127,9 @@ export function RecordingDaysTab({ animalId }: RecordingDaysTabProps) {
     if (!target?.dayId) return;
     // Pass the owning animal explicitly: the delete button only renders on this selected animal's
     // OK rows, and an OK row can have a record with no `animalId` (corrupt import) — the store
-    // would otherwise fail to clean the index. The UI knows the owner, so name it.
-    actions.deleteDay(target.dayId, selectedAnimalId);
+    // would otherwise fail to clean the index. The UI knows the owner, so name it (the descriptor
+    // target the command layer forwards as `deleteDay(dayId, ownerAnimalId)`).
+    run.deleteDay({ id: 'deleteDay', target: { animalId: selectedAnimalId, dayId: target.dayId } });
   }
 
   /**
@@ -170,7 +180,10 @@ export function RecordingDaysTab({ animalId }: RecordingDaysTabProps) {
       return;
     }
     try {
-      actions.duplicateDay(source.dayId, duplicateDate);
+      run.duplicateDay(
+        { id: 'duplicateDay', target: { animalId: selectedAnimalId, dayId: source.dayId } },
+        { date: duplicateDate }
+      );
       cancelDuplicateDay();
     } catch (error) {
       setDuplicateError((error as Error).message);
@@ -184,16 +197,16 @@ export function RecordingDaysTab({ animalId }: RecordingDaysTabProps) {
    */
   function handleRepair(notice: RecoveryNoticeViewModel) {
     if (!selectedAnimalId) return;
-    // The view-model descriptor identifies the animal-collection reset (resetAnimalCameras /
-    // resetDataAcqDevice / rebuildConfigurationHistory) — all animal-surface commands that carry
-    // only a `type`, so the executable command IS the descriptor's id. Same executor as before.
-    applyRepairCommand(
-      { type: notice.repair.id },
+    // Run the notice's repair descriptor (an animal-collection reset: resetAnimalCameras /
+    // resetDataAcqDevice / rebuildConfigurationHistory) through the command layer's repair adapter,
+    // which delegates to the SAME `applyRepairCommand` executor as before — no parallel dispatcher.
+    applyRepair(
       {
-        actions,
+        actions: actions as unknown as CommandActions,
         animalId: selectedAnimalId,
         animal: selectedAnimal ?? undefined,
-      }
+      },
+      notice.repair
     );
   }
 
@@ -392,7 +405,9 @@ export function RecordingDaysTab({ animalId }: RecordingDaysTabProps) {
           rows={dayRows}
           daysCorrupt={daysCorrupt}
           animalId={selectedAnimalId}
-          onUnlinkDayReference={actions.unlinkDayReference}
+          onUnlinkDayReference={(aid, dayId) =>
+            run.unlinkDayReference({ id: 'unlinkDayReference', target: { animalId: aid, dayId } })
+          }
           onDuplicateDay={openDuplicateDay}
           onDeleteDay={openDeleteDay}
         />

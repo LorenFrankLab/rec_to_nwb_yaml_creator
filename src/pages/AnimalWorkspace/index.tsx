@@ -13,6 +13,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useStoreContext } from '../../state/StoreContext';
 import { buildAnimalWorkspaceViewModel } from '../../viewModels/animalWorkspaceViewModel';
+import { commandHandlers } from '../../viewModels/commands';
+import type { CommandActions } from '../../viewModels/commands';
 import { buildAnimalFromForm, getDefaultExperimenters } from '../../domain/animalCreation';
 import type { AnimalCreationFormData } from '../../domain/animalCreation';
 import { getAnimalDayIds } from '../../state/workspaceSelectors';
@@ -36,6 +38,13 @@ export function AnimalWorkspace() {
   // renders its empty state instead of crashing on Object.keys(undefined). The raw maps stay for
   // the interaction handlers (create/delete/profile dialogs); the picker's display comes from the VM.
   const { animals = {}, days = {} } = model.workspace;
+
+  // createAnimal routes through the descriptor command layer (the VM's `primaryAction` command).
+  // deleteAnimal / profile edits stay on the store actions — they are not VM-emitted descriptors.
+  const run = useMemo(
+    () => commandHandlers({ actions: actions as unknown as CommandActions }),
+    [actions]
+  );
 
   // The picker view-model: the animal cards (id + present-day count + link) and the empty state.
   const vm = useMemo(() => buildAnimalWorkspaceViewModel(model.workspace), [model.workspace]);
@@ -80,7 +89,7 @@ export function AnimalWorkspace() {
     // would silently navigate "into the new animal" while the create failed. The form already
     // enforces uniqueness; on collision we don't create or navigate.
     if (animals[animalId]) return;
-    actions.createAnimal(animalId, subject, metadata);
+    run.createAnimal({ id: 'createAnimal' }, { animalId, subject, metadata });
     window.location.hash = `#/animal/${animalId}/days`;
   };
 
