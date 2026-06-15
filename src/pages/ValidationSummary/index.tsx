@@ -26,6 +26,8 @@ import type { ElementType } from 'react';
 import { useStoreContext } from '../../state/StoreContext';
 import type { Animal, Day } from '../../state/workspaceTypes';
 import { buildValidationSummaryViewModel } from '../../viewModels/validationSummaryViewModel';
+import { commandHandlers } from '../../viewModels/commands';
+import type { CommandActions } from '../../viewModels/commands';
 import DayLifecycleLegend from '../../components/DayLifecycleLegend/DayLifecycleLegend';
 import { buildRows, buildAnimalRows } from './validationSummaryRows';
 import { useValidationSummaryActions } from './useValidationSummaryActions';
@@ -98,6 +100,11 @@ export function ValidationSummary({ animalKey }: { animalKey?: string } = {}) {
     cancelExport,
     runExport,
   } = useValidationSummaryActions({ rows, workspace, actions });
+
+  // The day-reference repairs route through the descriptor command layer (one named write surface)
+  // rather than calling the store actions directly. The row's (animalId, dayId) is the descriptor
+  // target the builder would carry.
+  const run = useMemo(() => commandHandlers({ actions: actions as unknown as CommandActions }), [actions]);
 
   const hasDays = vm.days.length > 0;
 
@@ -300,9 +307,15 @@ export function ValidationSummary({ animalKey }: { animalKey?: string } = {}) {
             rows={vm.days}
             scoped={scoped}
             effectiveRecords={effectiveRecords}
-            onRemoveDayReference={actions.removeDayReference}
-            onUnlinkDayReference={actions.unlinkDayReference}
-            onRelinkDayReference={actions.relinkDayReference}
+            onRemoveDayReference={(animalId, dayId) =>
+              run.removeDayReference({ id: 'removeDayReference', target: { animalId, dayId } })
+            }
+            onUnlinkDayReference={(animalId, dayId) =>
+              run.unlinkDayReference({ id: 'unlinkDayReference', target: { animalId, dayId } })
+            }
+            onRelinkDayReference={(animalId, dayId) =>
+              run.relinkDayReference({ id: 'relinkDayReference', target: { animalId, dayId } })
+            }
           />
         </>
       )}

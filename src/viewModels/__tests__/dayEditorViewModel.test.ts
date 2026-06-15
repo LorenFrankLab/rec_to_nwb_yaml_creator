@@ -11,8 +11,10 @@
  * Grouped by the four concern areas: shell/steps/breadcrumb, overview field sources,
  * issues/export/notices, and bad channels.
  */
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { buildDayEditorViewModel } from '../dayEditorViewModel';
+import { commandHandlers } from '../commands/commandHandlers';
+import type { CommandActions } from '../commands/commandHandlers';
 import { buildRealisticWorkspace } from '../../__tests__/fixtures/workspaceBuilders';
 import { mergeDayMetadata } from '../../state/workspaceUtils';
 import { computeStepStatus } from '../../domain/stepStatus';
@@ -644,9 +646,49 @@ describe('buildDayEditorViewModel — bad channels', () => {
     const blocker = vm.badChannels.blockedRemovals[0];
     expect(blocker.repair?.command?.id).toBe('acknowledgeBadChannelRemoval');
     expect(blocker.repair?.command?.target?.dayId).toBe(later.id);
+    // The descriptor carries the off-export acks the command layer needs to clear the block (the
+    // regressing ntrode's prior-bad channels) — so the adapter can reach the executor without
+    // re-deriving them. ntrode 1, channel 0 (the prior-bad channel the later day un-marked).
+    expect(blocker.repair?.command?.payload?.acks).toEqual({ 1: [0] });
 
     expect(vm.export.open).toBe(false);
     expect(vm.export.action.disabledReason).toBeDefined();
+  });
+
+  it('the consumed vm.issues acknowledge repair is executable and carries its acks', () => {
+    // The same `bad_channel_unfailed_without_ack` issue surfaces in vm.issues (the list ValidationStep
+    // + ExportStep render). Its executable repair must carry the acks too, or the "Acknowledge
+    // un-marking" button would dispatch the executor with no acks and silently no-op.
+    const { ws, later } = twoDayRegressionWorkspace(false);
+    const vm = buildDayEditorViewModel(ws, later.id);
+    const issue = vm.issues.find((i) => i.repair?.command?.id === 'acknowledgeBadChannelRemovals');
+    expect(issue).toBeDefined();
+    expect(issue?.repairKind).toBe('execute');
+    expect(issue?.repair?.command?.payload?.acks).toEqual({ 1: [0] });
+  });
+
+  it('running the acknowledge command through the resolver clears the export block (real seam)', () => {
+    const { ws, later } = twoDayRegressionWorkspace(false);
+    let vm = buildDayEditorViewModel(ws, later.id);
+    const descriptor = vm.badChannels.blockedRemovals[0].repair!.command!;
+
+    // Resolve the descriptor through the command layer with a real-ish updateDay that writes the
+    // ack into the workspace day (updateDay replaces `state` with the merged value the executor
+    // builds — the day starts with no state here, so a shallow apply matches the store action).
+    const updateDay = vi.fn((dayId: string, patch: Record<string, unknown>) => {
+      ws.days[dayId] = { ...(ws.days[dayId] as Record<string, unknown>), ...patch } as typeof ws.days[string];
+    });
+    const actions = { updateDay } as unknown as CommandActions;
+    const day = ws.days[later.id] as Parameters<typeof commandHandlers>[0]['day'];
+    commandHandlers({ actions, dayId: later.id, day })[descriptor.id](descriptor);
+    expect(updateDay).toHaveBeenCalledWith(later.id, { state: { badChannelRemovalAcks: { 1: [0] } } });
+
+    // Re-built from the acknowledged workspace, the monotonicity block is gone.
+    vm = buildDayEditorViewModel(ws, later.id);
+    expect(vm.badChannels.blockedRemovals.length).toBe(0);
+    expect(vm.badChannels.marks.find((m) => m.ntrodeId === '1' && m.channel === 0)?.requiresAck).toBe(
+      false
+    );
   });
 
   it('an acknowledged removal clears the blocker and marks the channel acked', () => {
