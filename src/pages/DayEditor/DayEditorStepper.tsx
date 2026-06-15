@@ -6,15 +6,15 @@ import { useDayIdFromUrl } from '../../hooks/useDayIdFromUrl';
 import { mergeDayMetadata } from '../../state/workspaceUtils';
 import {
   getAnimalSubject,
-  getAnimalDayIds,
   getCopyableDioSources,
+  resolveDayOwner,
 } from '../../state/workspaceSelectors';
 import { applyRepairCommand } from '../../state/repairCommands';
 import type { RepairCommand, RepairCommandContext } from '../../state/repairCommands';
-import { computeStepStatus, animalSetupTabForFieldPath, validateDay } from '../../domain/validation';
+import { animalSetupTabForFieldPath } from '../../domain/validation';
 import type { RepairableIssue } from '../../domain/repairRouting';
-import type { StepStatus } from '../../domain/stepStatus';
-import { describeOwner } from '../../domain/dayRecovery';
+import { buildDayEditorViewModel } from '../../viewModels/dayEditorViewModel';
+import type { BreadcrumbViewModel, StepViewModel } from '../../viewModels/types';
 import { DayEditorProvider } from './DayEditorContext';
 import type { DayEditorBundle } from './DayEditorContext';
 import DayEditorSectionNav from './DayEditorSectionNav';
@@ -27,7 +27,6 @@ import ValidationStep from './ValidationStep';
 import ExportStep from './ExportStep';
 import type { CopyableDioSource } from './BehavioralEventsDisplay';
 import ErrorState from './ErrorState';
-import type { Animal } from '../../state/workspaceTypes';
 
 /** A repair-routed focus request: the target field path + a monotonic token to retrigger the effect. */
 interface FocusRequest {
@@ -47,13 +46,14 @@ interface StepSectionProps {
   onRepair?: (issue: RepairableIssue) => void;
   focusRequest?: FocusRequest | null;
   copyableDioSources?: CopyableDioSource[];
+  /** The view-model breadcrumb trail (Overview step renders it). */
+  breadcrumb?: BreadcrumbViewModel;
 }
 
 /**
- * Section-nav structure: the five sections grouped for the tabbed nav, in display order.
- * Labels are display-only (richer than the bare step ids) — the `id` is the step key used
- * for `currentStep`, `computeStepStatus`, and the component lookup. The 5 components are
- * unchanged: 5 nav items, never split.
+ * Section-nav structure: the sections grouped for the tabbed nav, in display order. Labels are
+ * display-only (richer than the bare step ids) — the `id` is the step key used for `currentStep`,
+ * the component lookup, and to match each group item to its view-model step (`vm.steps`).
  */
 const SECTION_GROUPS = [
   { label: 'Session', items: [{ id: 'overview', label: 'Overview' }] },
@@ -124,39 +124,15 @@ export default function DayEditorStepper() {
     }, [goToStep])
   );
 
-  // Get day and animal from store. Resolve the OWNER KEY robustly: normally `day.animalId`, but a
-  // recovered/imported day can have a missing/stale `animalId` while still being listed in some
-  // animal's index — fall back to the animal whose index references this day, so the editor opens
-  // under its real owner instead of dead-ending on "Animal not found". `ownerKey` (not the record's
-  // `animal.id` field) is the store key used for every animal write below.
-  // `dayId` is `string | null` (the early-return below handles null); a null index is a harmless
-  // miss (`undefined`) at runtime, so the erased cast keeps the lookup byte-identical.
+  // Get day + its owning animal from the store. `resolveDayOwner` is the SHARED selector the
+  // day-editor view-model also resolves with (the previously-duplicated inline copies were extracted
+  // there), so a recovered/imported day (missing/stale/non-string `animalId`) opens under one owner truth:
+  // normally `day.animalId`, falling back to the animal whose index references this day's store key
+  // ONLY when the day declares no owner, and staying unresolved for a present-but-unresolvable owner
+  // (→ "Animal not found"). `ownerKey` (not the record's `animal.id` field) is the store key every
+  // animal write below uses.
   const day = model.workspace?.days?.[dayId as string];
-  const animalsMap: Record<string, Animal> = model.workspace?.animals ?? {};
-  // The owner key MUST be a string before it is used as a map key. A corrupt import can persist a
-  // non-string `animalId` (object/number); coercing one to a property name would invent a phantom
-  // key (`animalsMap['[object Object]']`) and diverge from dayRecovery's WRONG_OWNER classification.
-  // A non-string owner is therefore treated as "no resolvable owner" (ownerKey = null).
-  let ownerKey = typeof day?.animalId === 'string' ? day.animalId : null;
-  let animal = ownerKey != null ? animalsMap[ownerKey] : null;
-  // Fall back to the indexing animal ONLY when the day declares NO owner (`animalId` absent) —
-  // the legitimate recovered-missing-animalId case. A PRESENT but unresolvable `animalId` (e.g.
-  // "ghost", an object, or a number) means the day belongs to a different/absent owner; it must NOT
-  // open under whichever animal happens to index it (that would let a wrong-owner day export as the
-  // wrong subject). It stays unresolved → "Animal not found", matching the batch wrong-owner/orphan
-  // block. Only the truly owner-less case (`animalId == null`) takes the indexing-animal fallback.
-  if (!animal && day && day.animalId == null) {
-    // Match by the store MAP KEY (`dayId`, from the URL) — that is what an animal's `days` index
-    // holds. For well-formed data `day.id === dayId`, but a corrupt import can let the record's
-    // own `id` field drift from its map key, so the map key is the reliable membership test.
-    const indexingKey = Object.keys(animalsMap).find((key) =>
-      getAnimalDayIds(animalsMap[key]).includes(dayId as string)
-    );
-    if (indexingKey != null) {
-      ownerKey = indexingKey;
-      animal = animalsMap[indexingKey];
-    }
-  }
+  const { ownerKey, animal } = resolveDayOwner(model.workspace, dayId);
 
   // Merge animal + day for validation (must be before early returns to follow Rules of Hooks).
   // mergeDayMetadata throws BY DESIGN on a malformed animal (missing/non-array
@@ -192,30 +168,23 @@ export default function DayEditorStepper() {
     [model.workspace, ownerKey]
   );
 
-  // Compute step validation status (must be before early returns to follow Rules of Hooks)
-  const stepStatus = useMemo((): Record<string, StepStatus> => {
-    if (!day || !mergedDay) {
-      return {
-        overview: 'incomplete',
-        devices: 'incomplete',
-        epochs: 'incomplete',
-        behavioral: 'incomplete',
-        validation: 'incomplete',
-        export: 'error',
-      };
-    }
-    return computeStepStatus(day, mergedDay, animal, animalDays);
-  }, [day, mergedDay, animal, animalDays]);
-
-  // To-fix count shown on the Validation nav item: the number of blocking (error-severity)
-  // issues the day still has. Cheap reuse of the same validator ExportStep gates on, so the
-  // nav scent can never disagree with the export block.
-  const toFixCount = useMemo(() => {
-    if (!day || !mergedDay) return 0;
-    return validateDay(day, mergedDay, animal, animalDays).filter(
-      (issue) => issue.severity === 'error'
-    ).length;
-  }, [day, mergedDay, animal, animalDays]);
+  // The day-editor view-model: the shell load-state, the breadcrumb trail, and the section steps
+  // (each step's status + the Validation "N to fix" count) — built from the SAME workspace + the live
+  // active section, so the nav scent + the not-found shell render the builder's truth instead of
+  // re-deriving step status / to-fix counts here. (The overview / issues / export / bad-channel
+  // slices are wired in the later DayEditor sub-slices; the write handlers below stay raw.)
+  const vm = useMemo(
+    () => buildDayEditorViewModel(model.workspace, dayId, currentStep),
+    [model.workspace, dayId, currentStep]
+  );
+  // Grouped steps for the section nav: the static Session/Recording/Finish grouping over the
+  // view-model's flat step list (matched by key).
+  const navGroups = SECTION_GROUPS.map((group) => ({
+    label: group.label,
+    steps: group.items
+      .map((item) => vm.steps.find((step) => step.key === item.id))
+      .filter((step): step is StepViewModel => step != null),
+  }));
 
   // Repair-action navigation. A repair routes to the step that owns the fix and,
   // when a field target is available, focuses/highlights that control after the
@@ -401,17 +370,11 @@ export default function DayEditorStepper() {
     export: ExportStep,
   };
 
-  // Early returns AFTER all hooks (Rules of Hooks requirement)
-  if (!dayId) {
-    return <ErrorState message="No day ID provided in URL" />;
-  }
-
-  if (!day) {
-    return <ErrorState message={`Day not found: ${dayId}`} />;
-  }
-
-  if (!animal) {
-    return <ErrorState message={`Animal not found: ${describeOwner(day.animalId)}`} />;
+  // Early returns AFTER all hooks (Rules of Hooks requirement). The not-found message comes from the
+  // view-model's shell state (no-day-id / day-not-found / animal-not-found); the guards stay so the
+  // non-null narrowing of `day`/`animal` below holds.
+  if (!dayId || !day || !animal) {
+    return <ErrorState message={vm.shell.message ?? ''} />;
   }
 
   // The active step component. Each step reads its shared bundle from DayEditorContext, so the
@@ -464,11 +427,8 @@ export default function DayEditorStepper() {
 
       <div className="day-editor-body">
         <DayEditorSectionNav
-          groups={SECTION_GROUPS}
-          currentStep={currentStep}
-          stepStatus={stepStatus}
+          groups={navGroups}
           onNavigate={(id) => setCurrentStep(id)}
-          toFixCount={toFixCount}
         />
 
         <main
@@ -485,6 +445,7 @@ export default function DayEditorStepper() {
               onRepair={handleRepair}
               focusRequest={focusRequest}
               copyableDioSources={copyableDioSources}
+              breadcrumb={vm.breadcrumb}
             />
           </DayEditorProvider>
 

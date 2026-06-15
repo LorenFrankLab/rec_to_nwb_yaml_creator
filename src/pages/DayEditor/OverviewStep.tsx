@@ -18,6 +18,7 @@ import {
 } from '../../state/workspaceSelectors';
 import { useDayEditorContext } from './DayEditorContext';
 import type { DayEditorBundle } from './DayEditorContext';
+import type { BreadcrumbViewModel } from '../../viewModels/types';
 
 interface OverviewStepProps extends DayEditorBundle {
   /** Writes a subject field through to the animal record (e.g. `('species', value)`). */
@@ -26,6 +27,8 @@ interface OverviewStepProps extends DayEditorBundle {
   focusRequest?: { fieldPath?: string; token?: number } | null;
   /** Executes an issue's `repairCommand` in place (resets a malformed session record). */
   onRepair?: (issue: unknown) => void;
+  /** The view-model breadcrumb trail; an isolated render without it falls back to assembling its own. */
+  breadcrumb?: BreadcrumbViewModel;
 }
 
 // The day-owned collections this step owns (raw-shape reset surface).
@@ -136,9 +139,10 @@ export default function OverviewStep(props: OverviewStepProps) {
   // Count validation errors for ARIA announcement
   const errorCount = Object.values(fieldErrors).filter(Boolean).length;
 
-  // Breadcrumb items. The top crumb is the WORKSPACE (the new-model home / animal list), not the
-  // orphaned `#/home` page or the legacy form — keep the in-app trail inside the new model.
-  const breadcrumbItems = [
+  // Breadcrumb items from the view-model (Workspace › Animal › Day). An isolated render that doesn't
+  // pass the view-model breadcrumb falls back to assembling the same trail from the bundle (the top
+  // crumb is the WORKSPACE — the new-model home — never the legacy form).
+  const breadcrumbItems = props.breadcrumb?.items ?? [
     { label: 'Workspace', href: '#/workspace' },
     { label: `Animal: ${ownerKey}`, href: `#/animal/${ownerKey}/days` },
     { label: `Day: ${day.date}` },

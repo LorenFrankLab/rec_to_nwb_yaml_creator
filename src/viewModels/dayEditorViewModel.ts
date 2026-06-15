@@ -39,6 +39,7 @@ import {
   getAnimalExperimenters,
   getExperimenterNames,
   getDaySession,
+  resolveDayOwner,
 } from '../state/workspaceSelectors';
 import { computeStepStatus } from '../domain/stepStatus';
 import { isExportEnabled } from '../domain/stepGate';
@@ -144,46 +145,8 @@ const FAIL_CLOSED_STEP_STATUS: Record<string, StepStatus> = {
   export: 'error',
 };
 
-// ──────────────────────────────────────────────────────────────────────────────────────────
-// Owner resolution (shell) — the editor's robust owner-key resolution: normally `day.animalId`,
-// falling back to the animal whose index references the day ONLY when the day declares no owner.
-// This mirrors the day-editor stepper's inline resolution; there is no existing pure domain
-// function for it yet (a known gap), so it is reproduced here read-only — no behavior change.
-// ──────────────────────────────────────────────────────────────────────────────────────────
-
-/** A resolved day owner: the store key the day's animal is indexed by, plus the animal record. */
-interface ResolvedOwner {
-  ownerKey: string | null;
-  animal: Animal | null;
-}
-
-/**
- * Resolve a day's owning animal the way the day-editor stepper does: a string `day.animalId` is
- * the owner; a day that declares NO owner (`animalId == null`) falls back to whichever animal's
- * index references this day's store key; a present-but-unresolvable owner stays unresolved (so a
- * wrong-owner day dead-ends on "Animal not found" rather than opening under the wrong subject).
- */
-function resolveDayOwner(
-  dayId: string,
-  day: Record<string, unknown>,
-  animalsMap: Record<string, unknown>
-): ResolvedOwner {
-  const declared = day.animalId;
-  let ownerKey: string | null = typeof declared === 'string' ? declared : null;
-  let animal: unknown = ownerKey != null ? animalsMap[ownerKey] : null;
-
-  if (!isRecord(animal) && declared == null) {
-    const indexingKey = Object.keys(animalsMap).find((key) =>
-      getAnimalDayIds(animalsMap[key]).includes(dayId)
-    );
-    if (indexingKey != null) {
-      ownerKey = indexingKey;
-      animal = animalsMap[indexingKey];
-    }
-  }
-
-  return { ownerKey, animal: isRecord(animal) ? (animal as unknown as Animal) : null };
-}
+// Owner resolution (shell) lives in `resolveDayOwner` (state/workspaceSelectors) — the SAME selector
+// the day-editor stepper resolves with, so a recovered/imported day opens under one owner truth.
 
 // ──────────────────────────────────────────────────────────────────────────────────────────
 // Shell / steps / breadcrumb.
@@ -914,7 +877,7 @@ export function buildDayEditorViewModel(
   }
   const day = dayRaw;
 
-  const { ownerKey, animal } = resolveDayOwner(dayId, day, animalsMap);
+  const { ownerKey, animal } = resolveDayOwner(workspace, dayId);
   if (!animal) {
     return emptyShellViewModel(
       { state: 'animal-not-found', message: `Animal not found: ${describeOwner(day.animalId)}` },

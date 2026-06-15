@@ -30,6 +30,7 @@
  */
 
 import type {
+  Animal,
   Camera,
   TaskType,
   BehavioralEvent,
@@ -157,6 +158,65 @@ export const getAnimalDayIds = (animal: unknown): DayId[] =>
 export const isAnimalDaysIndexCorrupt = (animal: unknown): boolean => {
   const index = asRecord(animal).days;
   return index != null && !Array.isArray(index);
+};
+
+/** A resolved recording-day owner: the store key its animal is indexed by, plus the animal record. */
+export interface ResolvedDayOwner {
+  /** The store key the day's owning animal is indexed by; null when no owner could be resolved. */
+  ownerKey: string | null;
+  /** The owning animal record; null when unresolvable. */
+  animal: Animal | null;
+}
+
+/** Whether `value` is a non-null, non-array object record. */
+const isRecordValue = (value: unknown): value is Record<string, unknown> =>
+  value !== null && typeof value === 'object' && !Array.isArray(value);
+
+/**
+ * Resolve a recording day's owning animal the way the Day Editor opens it. A string `day.animalId`
+ * is the owner; a day that declares NO owner (`animalId == null`, a recovered record with a
+ * missing/dropped id) falls back to whichever animal's index references this day's store key; a
+ * PRESENT-but-unresolvable owner (a non-string `animalId`, or a "ghost"/wrong-owner id) stays
+ * unresolved, so a wrong-owner day dead-ends on "Animal not found" rather than opening under the
+ * wrong subject. Tolerates a missing day / malformed workspace (returns no owner).
+ *
+ * Extracted from the Day-Editor stepper's + view-model's previously-duplicated inline copies so both
+ * read one truth — a recovered/imported day resolves its owner identically wherever it is opened.
+ *
+ * @param workspace - `{ animals, days }`.
+ * @param dayId - The day's store key (the id the URL / an animal's index holds).
+ * @returns The resolved owner key + animal (both null when unresolvable).
+ */
+export const resolveDayOwner = (
+  workspace: unknown,
+  dayId: string | null | undefined
+): ResolvedDayOwner => {
+  const ws = asRecord(workspace);
+  const animalsMap = asRecord<Record<string, unknown>>(ws.animals);
+  const daysMap = asRecord<Record<string, unknown>>(ws.days);
+  const day = dayId != null ? daysMap[dayId] : undefined;
+  const declared = asRecord(day).animalId;
+
+  // A non-string `animalId` is treated as "no resolvable owner" — coercing one (object/number) to a
+  // property name would invent a phantom key and diverge from dayRecovery's WRONG_OWNER classification.
+  let ownerKey: string | null = typeof declared === 'string' ? declared : null;
+  let animal: unknown = ownerKey != null ? animalsMap[ownerKey] : null;
+
+  // ONLY the truly owner-less case (`animalId == null`) takes the indexing-animal fallback. A present
+  // but unresolvable owner must NOT open under whichever animal happens to index it (that would let a
+  // wrong-owner day export as the wrong subject). Match by the store MAP KEY (`dayId`), what an
+  // animal's `days` index actually holds.
+  if (!isRecordValue(animal) && declared == null && isRecordValue(day) && dayId != null) {
+    const indexingKey = Object.keys(animalsMap).find((key) =>
+      getAnimalDayIds(animalsMap[key]).includes(dayId)
+    );
+    if (indexingKey != null) {
+      ownerKey = indexingKey;
+      animal = animalsMap[indexingKey];
+    }
+  }
+
+  return { ownerKey, animal: isRecordValue(animal) ? (animal as unknown as Animal) : null };
 };
 
 /**
