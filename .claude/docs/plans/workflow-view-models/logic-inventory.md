@@ -20,7 +20,7 @@ Each surface has a decision table:
 | **Where computed today** | `file:line` of the inline code. |
 | **Inputs it reads** | The data/functions the decision consumes. |
 | **Target home** | `REUSE` (already a pure `src/domain/*`/selector fn — builder just calls it), `EXTRACT` (display/label/action assembly that moves into a Phase-2 builder), or `COMMAND` (a write/intent that moves to the Phase-4 command layer). |
-| **Notes** | Caveats; for DayEditor, the Phase-2d sub-slice (1 stepper · 2 Overview fields · 3 bad channels · 4 issues/gate/breadcrumb). |
+| **Notes** | Caveats; for DayEditor, the Phase-2d sub-slice (2d-1 shell/steps/breadcrumb · 2d-2 Overview fields · 2d-3 issues/repair/export gate · 2d-4 bad channels). |
 
 **Classification legend (Target home):**
 
@@ -67,7 +67,7 @@ Files: `src/pages/ValidationSummary/index.tsx`, `validationSummaryRows.ts`,
 | Blocking vs warning split (errors block export; warnings only require ack) | useValidationSummaryActions.ts:185 (valid-only) + 216 (warning filter); BatchExportPreflight.tsx:34 (confirmDisabled) | `row.chip`, `validateDay` severities, `warningItems.length`, `warningsAcknowledged` | EXTRACT (preflight VM) — REUSE `validateDay`; ack gate COMMAND | Errors excluded upstream (chip!=='valid'); warnings gate Confirm. |
 | Confirm-export disabled reason (unacked warnings) | BatchExportPreflight.tsx:34; guarded again at useValidationSummaryActions.ts:254 | `warningItems.length`, `warningsAcknowledged` | EXTRACT (preflight VM `WorkflowAction.disabledReason`) + COMMAND `runBatchExport` guard | Defense-in-depth: VM expresses disable, command re-guards. |
 | Stale-at-confirm re-check: recovery status changed since preflight | useValidationSummaryActions.ts:273-303 | `classifyWorkspaceDays(workspace)` (live), tuple `statusKey`, `isExportableDayStatus` | COMMAND `runBatchExport` (re-derivation) — REUSE `classifyWorkspaceDays`, `isExportableDayStatus` | Live re-classification at action time; the policy check is reused, the orchestration is the command. |
-| Stale-at-confirm re-check: day no longer valid / unreadable | useValidationSummaryActions.ts:304-327 | `computeStepStatus`+`mergeDayMetadata`+`deriveChip` (live) | COMMAND `runBatchExport` — REUSE `computeStepStatus`/`deriveChip` | Re-validation distinguishes "no longer valid" from "became unreadable (throw)". |
+| Stale-at-confirm re-check: day no longer valid / unreadable | useValidationSummaryActions.ts:304-327 | `computeStepStatus`+`mergeDayMetadata`+`deriveChip` (live) | COMMAND `runBatchExport` — REUSE `computeStepStatus`; `deriveChip` is page-local → EXTRACT/promote with the row builder | Re-validation distinguishes "no longer valid" from "became unreadable (throw)". |
 | Shadow-export parity gate + strict-mode skip/override | useValidationSummaryActions.ts:259 (`isFeatureEnabled('shadowExportStrict')`), 330-367 | `checkShadowExport`, `isFeatureEnabled`, `strict` | COMMAND `runBatchExport` — REUSE `checkShadowExport`, `isFeatureEnabled` | skip(strict)/override(strict-off) branching is orchestration; parity truth is reused. |
 | Export filename + download | useValidationSummaryActions.ts:344-348 | `mergeDayMetadata`, `day.experimentDate`, `formatDeterministicFilename`, `downloadYamlFile` | COMMAND `runBatchExport` — REUSE `formatDeterministicFilename`/`mergeDayMetadata` | Injects filename-only EXPERIMENT_DATE key (merge doesn't carry it). |
 | Persist `day.state.exported` after download | useValidationSummaryActions.ts:355-361 | `day.state` | COMMAND `markDayExported` (per-day) under `runBatchExport` | Nested-object edit → command intent. |
@@ -360,13 +360,17 @@ section lists rules a builder would otherwise have to reinvent.
 | C18 | Destructive-command caveat ("downstream not deleted") | AnimalWorkspace | `WorkflowCommand.confirmCaveat?: string` (or `warnsDownstream?: boolean`) |
 | C19 | Nav-discard intercept decision (modified/non-primary click falls through) | AnimalView | minor: `NavDiscardDecision { intercept: boolean }` or fold into command preconditions; can stay component-local |
 
-**Phase-1 recommendation:** land the small, certain additions to the existing types in
-[shared-contracts.md](shared-contracts.md) now — **C1, C2, C6, C7, C8, C12, C13, C15, C16, C18** —
-because they extend types the builders use directly. Treat **C4, C5, C11, C14, C17** as *new* VM types
-introduced by the builder that owns them (preflight/batch by 2a; step VM, field VM, gate, bad-channel,
-and recovery notices by 2d) — define them in `types.ts` in Phase 1 as the inventory specifies, so 2a–2d
-don't each invent a divergent shape. **C3, C9, C10, C19** are confirmations/minor and can be settled in
-the relevant builder's PR.
+**Phase-1 recommendation:** split the contract work explicitly:
+
+- **Existing shared-type field additions:** land **C1, C2, C6, C7, C8, C18** in
+  [shared-contracts.md](shared-contracts.md) and `src/viewModels/types.ts` because they extend
+  `DayRowViewModel`, `SectionViewModel`, or `WorkflowCommand`.
+- **New shared VM types:** define **C4, C5, C11, C12, C13, C14, C15, C16, C17** in
+  [shared-contracts.md](shared-contracts.md) and `src/viewModels/types.ts` during Phase 1, even though the
+  owning builders first populate them (preflight/batch by 2a; step VM, field VM, gate, bad-channel,
+  breadcrumb, shell, and recovery notices by 2d). This keeps 2a-2d from inventing divergent shapes.
+- **Builder-local confirmations/minor choices:** settle **C3, C9, C10, C19** in the relevant builder PR
+  unless Phase 1 needs them to keep the shared contracts coherent.
 
 ## Domain gaps
 
