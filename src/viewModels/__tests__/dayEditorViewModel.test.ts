@@ -124,13 +124,21 @@ describe('buildDayEditorViewModel — shell / steps / breadcrumb', () => {
     }
   });
 
-  it('the overview step is active by default; every step links to its route', () => {
+  it('defaults the active step to overview, and steps carry no route (local nav)', () => {
     const { animal, day } = loadRealistic();
     const vm = buildDayEditorViewModel(wrap(animal, day), day.id);
     expect(vm.steps.find((s) => s.active)?.key).toBe('overview');
+    // The section nav is button/local-state — there is no `#/day/:id/:step` route, so steps carry no href.
     for (const step of vm.steps) {
-      expect(step.href).toBe(`#/day/${day.id}/${step.key}`);
+      expect(step.href).toBeUndefined();
     }
+  });
+
+  it('marks the passed-in active step as active (the editor owns local nav state)', () => {
+    const { animal, day } = loadRealistic();
+    const vm = buildDayEditorViewModel(wrap(animal, day), day.id, 'devices');
+    expect(vm.steps.find((s) => s.active)?.key).toBe('devices');
+    expect(vm.steps.filter((s) => s.active)).toHaveLength(1);
   });
 
   it('the Validation step shows the blocking-issue count when a day needs fixing', () => {
@@ -333,6 +341,18 @@ describe('buildDayEditorViewModel — issues / repair / export', () => {
         expect(issue.repair).toBeDefined();
       }
     });
+  });
+
+  it('a day-surface repair is a local navigate-day-section command, not a (non-existent) step route', () => {
+    const { animal, day } = brokenDayWorkspace();
+    const vm = buildDayEditorViewModel(wrap(animal, day), day.id);
+    // The blank session_description is a day-level (day-surface) error; its repair navigates locally
+    // to the owning step + focuses the field — there is no `#/day/:id/:step` route to link to.
+    const dayRepair = vm.issues.find((i) => i.repair?.command?.id === 'navigateDaySection')?.repair;
+    expect(dayRepair).toBeDefined();
+    expect(dayRepair?.href).toBeUndefined();
+    expect(dayRepair?.command?.target?.dayId).toBe(day.id);
+    expect(typeof dayRepair?.command?.target?.section).toBe('string');
   });
 
   it('export is open and the action enabled for a fully-valid day', () => {

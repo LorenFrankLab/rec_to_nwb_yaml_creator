@@ -71,6 +71,7 @@ import type {
   StepStatus,
   StepViewModel,
   WorkflowAction,
+  WorkflowCommand,
   WorkflowSeverity,
 } from './types';
 
@@ -206,13 +207,14 @@ function buildBreadcrumb(ownerKey: string | null, dayDate: unknown): BreadcrumbV
 
 /**
  * Build the section stepper. Each step carries the domain {@link StepStatus} (keeping the 4-state
- * fidelity ✓/⚠/✗/○), its accessible status label, the active flag, and a step link; the Validation
- * step also carries the "N to fix" count (the number of blocking issues).
+ * fidelity ✓/⚠/✗/○), its accessible status label, and the active flag; the Validation step also
+ * carries the "N to fix" count (the number of blocking issues). Steps carry NO `href` — the section
+ * nav is button/local-state (there is no `#/day/:id/:step` route), so a renderer navigates locally
+ * using `step.key`.
  */
 function buildSteps(
   stepStatus: Record<string, StepStatus>,
   toFixCount: number,
-  dayId: string,
   activeStep: string
 ): StepViewModel[] {
   return STEP_ORDER.map(({ key, label }) => {
@@ -223,7 +225,6 @@ function buildSteps(
       status,
       statusLabel: STEP_STATUS_LABEL[status],
       active: key === activeStep,
-      href: `#/day/${dayId}/${key}`,
     };
     // The Validation step shows its blocking-issue count (the same validator the export block uses),
     // and only when there is at least one — mirroring the nav's "N to fix" affordance.
@@ -471,12 +472,16 @@ function buildRepairAction(
     return { label: target.label, href, intent: 'fix' };
   }
 
-  // Day surface: route to the owning Day-Editor step (with an optional field focus anchor).
+  // Day surface: the editor navigates to the owning step LOCALLY (the section nav is button/local
+  // state, not a route) and focuses the field — so this is a navigate-day-section command, not an
+  // href (there is no `#/day/:id/:step` route). The component maps the command id to its local
+  // setCurrentStep + focus handler.
   const step = target.step ?? 'validation';
-  const href = focusPath
-    ? `#/day/${dayId}/${step}?field=${encodeURIComponent(focusPath)}`
-    : `#/day/${dayId}/${step}`;
-  return { label: target.label, href, intent: 'fix' };
+  const command: WorkflowCommand = {
+    id: 'navigateDaySection',
+    target: { dayId, section: step, ...(focusPath ? { fieldPath: focusPath } : {}) },
+  };
+  return { label: target.label, command, intent: 'fix' };
 }
 
 /**
@@ -610,7 +615,11 @@ function buildBlockingSteps(
       status,
       summary: `${label} — needs completion`,
       issueCount: 0,
-      action: { label: `Fix in ${label}`, href: `#/day/${dayId}/${step}`, intent: 'fix' },
+      action: {
+        label: `Fix in ${label}`,
+        command: { id: 'navigateDaySection', target: { dayId, section: step } },
+        intent: 'fix',
+      },
     };
   });
 }
@@ -836,7 +845,7 @@ function emptyShellViewModel(
   dayDate: unknown
 ): DayEditorViewModel {
   const id = dayId ?? '';
-  const steps = buildSteps(FAIL_CLOSED_STEP_STATUS, 0, id, DEFAULT_STEP);
+  const steps = buildSteps(FAIL_CLOSED_STEP_STATUS, 0, DEFAULT_STEP);
   const action: WorkflowAction = {
     label: 'Download YAML',
     command: { id: 'exportDay', target: { dayId: id } },
@@ -869,12 +878,16 @@ function emptyShellViewModel(
  * @param workspace - `model.workspace` ({ animals, days }).
  * @param dayId - The recording-day store key to edit (from the URL); `null`/absent → the
  *   `no-day-id` shell state.
+ * @param activeStep - The section the editor is currently showing (the page's local nav state).
+ *   Defaults to the first step (the editor's initial state). The section nav is button/local-state,
+ *   not routed, so the active step is a render-time input rather than something the VM derives.
  * @returns The page view-model — pure data, no React. Never throws: a corrupt animal config (which
  *   `mergeDayMetadata` throws on) is caught and surfaced as an `error`-severity, merge-error gate.
  */
 export function buildDayEditorViewModel(
   workspace: unknown,
-  dayId: string | null | undefined
+  dayId: string | null | undefined,
+  activeStep: string = DEFAULT_STEP
 ): DayEditorViewModel {
   const ws = isRecord(workspace) ? workspace : {};
   const animalsMap: Record<string, unknown> = isRecord(ws.animals) ? ws.animals : {};
@@ -951,7 +964,7 @@ export function buildDayEditorViewModel(
   // path even though the raw-shape animal issue is still surfaced in `issues`/`notices`.
   const toFixCount = mergeFailed ? 0 : rawErrorIssues.length;
 
-  const steps = buildSteps(stepStatus, toFixCount, dayId, DEFAULT_STEP);
+  const steps = buildSteps(stepStatus, toFixCount, activeStep);
 
   // ── Issues ── error + warning issues only (info is dropped from the surfaced issue list).
   const issues: IssueViewModel[] = rawIssues
