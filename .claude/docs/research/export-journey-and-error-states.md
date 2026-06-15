@@ -62,10 +62,15 @@ Batching (one vs range vs scattered) · gaps (carry-forward from last recorded s
 config change (re-implant fork) · the tiny real per-day delta (epochs + weight + bad channels; files
 derive).
 
-## 3. Per-day export state (what makes correction tractable)
+## 3. Per-day export state (OPTIONAL enhancement — baseline is fire-and-forget)
 
-Because the animal is a single source of truth and the YAML is a *snapshot*, the app must track each
-day's export state so it can answer "I fixed something — what do I regenerate?":
+**Scoping decision:** export stays **fire-and-forget** in the baseline — validate → download; the user
+owns knowing what to re-generate. The app does *not* need to track export history. The state model
+below is a **nice-to-have** for a later iteration; the correction flows in §4 are written so they work
+**without** it.
+
+If/when added, because the animal is a single source of truth and the YAML is a *snapshot*, tracking a
+day's export state lets the app answer "I fixed something — what do I regenerate?":
 
 | State | Meaning |
 |---|---|
@@ -74,7 +79,7 @@ day's export state so it can answer "I fixed something — what do I regenerate?
 | **exported · current** | exported, and the file matches current data |
 | **exported · stale** | exported, but an upstream edit (animal/config) or a day edit changed inputs since → **needs re-export** |
 
-This state model is the backbone of every correction flow below.
+(Optional layer only — §4 does not depend on it.)
 
 ## 4. Secondary states — correcting errors & mistakes
 
@@ -89,14 +94,15 @@ The user jumps to the field, fixes, re-validates. (Corpus: every §5/§6 complia
 
 ### B. Correcting **animal-static** data after the fact (the blast-radius case)
 The user realizes genotype/DOB/subject_id was wrong. Single-source-of-truth means **one edit fixes it
-everywhere** — but it also makes every already-exported day **stale**. So the flow is: edit the animal
-once → the app shows *"this changes N days; M were already exported"* → offer **batch re-export** of the
-affected days. This is the structural answer to the corpus's worst errors (mec10's two genotypes, Seth's
-two DOBs): they can't recur (one value), and when the one value is fixed, nothing is left behind.
+everywhere** — the user edits the animal once and every day now reads the corrected value. At edit time
+the app can show *"used by N days"* so the blast radius is visible, then the user **re-exports the days
+they need** (batch select). This is the structural answer to the corpus's worst errors (mec10's two
+genotypes, Seth's two DOBs): they can't recur (one value). *(Auto-flagging which exported files are now
+stale is the optional §3 layer — not required here.)*
 
 ### C. Correcting a **single day** after creation/export
-Typo in epochs, wrong file, wrong weight. Re-open that day → fix → its state flips to *exported · stale*
-→ re-export just that day. No effect on siblings.
+Typo in epochs, wrong file, wrong weight. Re-open that day → fix → re-export just that day. No effect on
+siblings.
 
 ### D. **Carry-forward gone wrong** (silent inheritance)
 The new day inherited a value that should have changed (a swapped camera, a board change that altered
@@ -143,8 +149,9 @@ later (draft persists); undo an accidental field edit. Destructive actions on ex
 - **Gate, don't merely warn**, for cost-of-error fields (the silent-failure ones) — block export with a
   located, plain-language reason.
 - **Fix in context** — the error links to the exact day/field; no hunting.
-- **Propagate + re-export** — fixing shared (animal/config) data marks dependent days stale and offers
-  batch re-export; nothing silently left behind.
+- **Propagate, then re-export** — fixing shared (animal/config) data updates every day at once (one
+  source of truth); the app shows the blast radius ("used by N days") and the user re-exports the
+  affected days. (Auto-tracking which exported files are stale is the optional §3 layer.)
 - **Carry-forward is visible & diffable** — never a silent auto-fill of scientific data.
 - **Monotonic-by-default with explicit, acknowledged overrides** (bad channels).
 - **Reversible** — drafts persist; deletes/edits are undoable; destructive acts on exported data warn.
