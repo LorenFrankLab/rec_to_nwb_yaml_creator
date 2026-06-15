@@ -16,6 +16,7 @@ import { buildDayEditorViewModel } from '../dayEditorViewModel';
 import { commandHandlers } from '../commands/commandHandlers';
 import type { CommandActions } from '../commands/commandHandlers';
 import { buildRealisticWorkspace } from '../../__tests__/fixtures/workspaceBuilders';
+import { twoDayRegression } from './fixtures/scenarioWorkspaces';
 import { mergeDayMetadata } from '../../state/workspaceUtils';
 import { computeStepStatus } from '../../domain/stepStatus';
 import { validateDay } from '../../domain/dayValidationComposer';
@@ -588,41 +589,12 @@ describe('buildDayEditorViewModel — bad channels', () => {
     expect(vm.badChannels.marks.every((m) => !m.priorBad && !m.requiresAck)).toBe(true);
   });
 
-  /**
-   * Build a two-day animal: an earlier day marks ntrode 1 channel 0 bad; the later day un-marks it.
-   * Without an ack that later day's removal is an un-acked monotonic regression.
-   */
-  function twoDayRegressionWorkspace(acked: boolean) {
-    const { animal, day } = loadRealistic();
-    const earlier = clone(day);
-    earlier.id = 'remy-2023-06-21';
-    earlier.date = '2023-06-21';
-    earlier.deviceOverrides = { bad_channels: { 1: [0] } } as unknown as typeof earlier.deviceOverrides;
-
-    const later = clone(day);
-    later.id = 'remy-2023-06-22';
-    later.date = '2023-06-22';
-    // Later day does NOT mark channel 0 of ntrode 1 bad (a removal of the prior-bad channel).
-    later.deviceOverrides = { bad_channels: {} } as unknown as typeof later.deviceOverrides;
-    if (acked) {
-      later.state = {
-        ...(later.state as Record<string, unknown>),
-        badChannelRemovalAcks: { 1: [0] },
-      } as unknown as typeof later.state;
-    }
-
-    const animalWithDays = clone(animal);
-    animalWithDays.days = [earlier.id, later.id];
-
-    const ws: Workspace = {
-      animals: { [animalWithDays.id]: animalWithDays },
-      days: { [earlier.id]: earlier, [later.id]: later },
-    };
-    return { ws, animal: animalWithDays, earlier, later };
-  }
+  // The two-day monotonic-regression workspace is the SHARED scenario fixture (`twoDayRegression`),
+  // so this suite and the cross-surface matrix draw it from one source. `workspace` is aliased to the
+  // local `ws` name the assertions below use.
 
   it('an un-acked monotonic removal yields a blockedRemovals entry with an ack command', () => {
-    const { ws, animal, later } = twoDayRegressionWorkspace(false);
+    const { workspace: ws, animal, later } = twoDayRegression(false);
 
     // Precondition: the monotonicity domain sees ntrode 1 channel 0 as prior-bad on the later day.
     const prior = priorBadChannels(
@@ -659,7 +631,7 @@ describe('buildDayEditorViewModel — bad channels', () => {
     // The same `bad_channel_unfailed_without_ack` issue surfaces in vm.issues (the list ValidationStep
     // + ExportStep render). Its executable repair must carry the acks too, or the "Acknowledge
     // un-marking" button would dispatch the executor with no acks and silently no-op.
-    const { ws, later } = twoDayRegressionWorkspace(false);
+    const { workspace: ws, later } = twoDayRegression(false);
     const vm = buildDayEditorViewModel(ws, later.id);
     const issue = vm.issues.find((i) => i.repair?.command?.id === 'acknowledgeBadChannelRemovals');
     expect(issue).toBeDefined();
@@ -668,7 +640,7 @@ describe('buildDayEditorViewModel — bad channels', () => {
   });
 
   it('running the acknowledge command through the resolver clears the export block (real seam)', () => {
-    const { ws, later } = twoDayRegressionWorkspace(false);
+    const { workspace: ws, later } = twoDayRegression(false);
     let vm = buildDayEditorViewModel(ws, later.id);
     const descriptor = vm.badChannels.blockedRemovals[0].repair!.command!;
 
@@ -692,7 +664,7 @@ describe('buildDayEditorViewModel — bad channels', () => {
   });
 
   it('an acknowledged removal clears the blocker and marks the channel acked', () => {
-    const { ws, later } = twoDayRegressionWorkspace(true);
+    const { workspace: ws, later } = twoDayRegression(true);
     const vm = buildDayEditorViewModel(ws, later.id);
 
     const mark = vm.badChannels.marks.find((m) => m.ntrodeId === '1' && m.channel === 0);
