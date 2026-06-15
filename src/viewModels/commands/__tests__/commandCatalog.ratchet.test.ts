@@ -27,12 +27,14 @@ const builderSources = (): string => {
 /**
  * Literal command ids a builder emits: `id: '<x>'` inside a `command`/`repair` descriptor. The `\b`
  * before `id` excludes substrings like `valid: 'Complete'` (which contains "id: 'Complete'"); the
- * dynamic repair ids (`id: String(cmd.type)`) are covered separately via REPAIR_COMMAND_TYPES.
+ * capture is the FULL single-quoted literal (`[^']+`, not `[A-Za-z]+`) so a future id with a digit
+ * or hyphen — e.g. `export-day` — can't slip past the catalog unclassified. The dynamic repair ids
+ * (`id: String(cmd.type)`) are covered separately via REPAIR_COMMAND_TYPES.
  */
 const emittedLiteralIds = (): Set<string> => {
   const ids = new Set<string>();
   const source = builderSources();
-  for (const match of source.matchAll(/\bid: '([A-Za-z]+)'/g)) ids.add(match[1]);
+  for (const match of source.matchAll(/\bid: '([^']+)'/g)) ids.add(match[1]);
   return ids;
 };
 
