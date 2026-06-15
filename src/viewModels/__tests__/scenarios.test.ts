@@ -88,6 +88,32 @@ describe('scenario: complete animal, no days', () => {
     expect(vs.days).toEqual([]);
     expect(vs.empty).toBeDefined();
   });
+
+  it('a complete animal reads its configured setup rings as done (not a spurious todo)', () => {
+    // The complete animal's electrodes + recording system ARE configured, so neither reads 'todo'.
+    // This is the consistent counterpart to the under-configured case above: a "complete animal"
+    // never shows "not set up" rings while its day exports.
+    expect(ring(workspace, animalId, 'electrode-groups')?.status).not.toBe('todo');
+    expect(ring(workspace, animalId, 'recording-system')?.status).not.toBe('todo');
+  });
+});
+
+// ── decision lock: what the AnimalView setup ring reflects ───────────────────────────────────────
+
+describe('AnimalView setup ring reflects the current editable configuration (animal.devices.*)', () => {
+  // DECISION (locked here): the setup rings answer "is THIS animal's CURRENT setup configured?",
+  // reading `animal.devices.*` (the source the setup tabs edit) — NOT a day's pinned configuration
+  // snapshot. A day's pinned-config export-readiness is a separate question owned by the day editor /
+  // ValidationSummary. Production `createAnimal` keeps `devices` and `configurationHistory[0]` in
+  // sync, so the ring and a latest-pinned day agree; this test pins the source so a future change is
+  // a deliberate decision, not an accident.
+  it('a configured device set reads the ring as done; an empty one reads todo', () => {
+    const complete = fx.realisticReady();
+    expect(ring(complete.workspace, complete.animalId, 'electrode-groups')?.status).not.toBe('todo');
+
+    const bare = fx.incompleteAnimal();
+    expect(ring(bare.workspace, bare.animalId, 'electrode-groups')?.status).toBe('todo');
+  });
 });
 
 // ── 4. day missing an export-required field — three surfaces AGREE it is an error ────────────────
@@ -274,8 +300,10 @@ describe('severity-mapping invariant (full table)', () => {
     expect(vsRow(workspace, animalId, dayId)?.status).toBe('error');
   });
 
-  it('SECTION_STATUS.TODO → todo (a never-configured setup section)', () => {
-    const { workspace, animalId } = fx.realisticReady();
+  it('SECTION_STATUS.TODO → todo (a genuinely never-configured setup section)', () => {
+    // A truly under-configured animal (empty devices AND empty config) — NOT the realistic animal,
+    // whose devices are populated, so its 'todo' would have been a fixture artifact, not a real state.
+    const { workspace, animalId } = fx.incompleteAnimal();
     expect(ring(workspace, animalId, 'electrode-groups')?.status).toBe('todo');
   });
 
