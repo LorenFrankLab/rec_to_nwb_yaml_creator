@@ -2,15 +2,21 @@
 
 [← back to PLAN.md](PLAN.md) · [overview](overview.md)
 
-This is the payoff, not a single PR. With read state (builders) and write intent (commands) separated and
-locked by the [Phase 5 matrix](phase-5-boundary-tests.md), the UI can change *shape* while the
-view-model/command tests stay mostly unchanged. Each idea below is its own brainstorm → branch → gate →
-merge cycle; this file is the menu + the guardrails, deliberately without fixed task lists (the designs
-aren't decided — that's what `brainstorming` is for when you pick one up).
+This is the payoff, not a single PR. With read state (builders) and VM-emitted write descriptors resolved
+by commands, then locked by the [Phase 5 matrix](phase-5-boundary-tests.md), the UI can change *shape*
+while the view-model/descriptor-command tests stay mostly unchanged. Each idea below is its own
+brainstorm → branch → gate → merge cycle; this file is the menu + the guardrails, deliberately without
+fixed task lists (the designs aren't decided — that's what `brainstorming` is for when you pick one up).
 
 **Do not start a Phase-6 experiment by editing components blind.** Start from the relevant `build…ViewModel`:
 if the UI wants a fact the VM doesn't expose, ADD it to the VM (with a test) first, then render it. The
 rule that keeps this phase safe: **components read view-models; they never re-derive workflow state.**
+
+Write-side rule: Phase 4 intentionally commandified only VM-emitted descriptors, not every editable field
+write. If a Phase-6 experiment wants to freely swap or redesign editable controls (for example task/epoch
+editing, camera usage, overview blur writes, or bad-channel checkbox flows), first promote that specific
+write to an intent command in the experiment's branch, add command tests, then change the UI. Do not
+pre-commandify unrelated field writes as part of the experiment.
 
 ## Enabled experiments (each independent)
 
@@ -36,6 +42,9 @@ rule that keeps this phase safe: **components read view-models; they never re-de
 - The [Phase 5 matrix](phase-5-boundary-tests.md) must stay green. If an experiment needs new VM fields,
   add fields + tests; do not change existing severity/label semantics without updating the
   [contract](shared-contracts.md) and the matrix in the same PR.
+- If an experiment needs a new field-write command, add it narrowly with tests and route only the affected
+  controls through it. Existing non-commandified field writes may remain local when the experiment does not
+  change their interaction model.
 - Golden baselines stay byte-identical unless the experiment deliberately changes export (then it's a
   separate, flagged decision with trodes_to_nwb coordination per CLAUDE.md — out of scope for pure UI).
 - Each experiment: `brainstorming` first (the design is open), then its own branch → full gate →
@@ -45,9 +54,9 @@ rule that keeps this phase safe: **components read view-models; they never re-de
 
 There is no single "done" — the phase is open-ended. The *success criterion* is structural: a UI
 experiment can change the rendered shape of any of the four surfaces while
-`src/viewModels/__tests__/**` (builders + commands + matrix) stays green with at most additive changes.
-If an experiment forces broad rewrites of the VM tests, the separation leaked — stop and fix the boundary
-before continuing.
+`src/viewModels/__tests__/**` (builders + descriptor commands + matrix) stays green with at most additive
+changes. If an experiment forces broad rewrites of the VM tests, or exposes an editable write that must be
+shared across multiple UI shapes, stop and fix that boundary before continuing.
 
 ## Deliberately not in this phase
 

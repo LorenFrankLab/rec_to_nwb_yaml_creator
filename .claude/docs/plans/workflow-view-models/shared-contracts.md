@@ -64,7 +64,7 @@ write action while still keeping builders callback-free.
 
 ```ts
 export interface WorkflowCommand {
-  /** Intent identifier resolved by `commandHandlers`, e.g. `createRecordingDay`, `deleteDay`, `exportValidOnly`. */
+  /** Intent identifier resolved by `commandHandlers`, e.g. `duplicateDay`, `deleteDay`, `exportValidOnly`. */
   id: string;
   /** Stable target/context known by the builder: day id, animal id, section key, field path, etc. */
   target?: {
@@ -81,8 +81,9 @@ export interface WorkflowCommand {
 }
 ```
 
-Phase 4 may tighten `id` into a literal union once the full command inventory is known. Until then the
-contract still requires the target/payload to be plain data, not nested workspace objects or callbacks.
+Phase 4 may tighten `id` into a literal union once the VM-emitted descriptor inventory is known. Until
+then the contract still requires the target/payload to be plain data, not nested workspace objects or
+callbacks. Field-write command ids can be added later as UI experiments promote those writes.
 
 ## IssueViewModel
 

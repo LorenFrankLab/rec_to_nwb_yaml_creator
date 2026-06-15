@@ -11,7 +11,17 @@ precedence) + ExportGateViewModel (lifecycle readiness), converted the shared re
 + ExportStep to `vm.issues`/`vm.export` (ExportStep keeps its independent download gate — defense in
 depth); 3-g wired the Devices bad-channel monotonicity un-mark gate to `vm.badChannels.marks` (and
 fixed `buildBadChannelMarks` to mark a multi-shank first row's probe-wide channels, not just its own
-shank's map keys). **Next: Phase 4 (commands)**, then 5 (boundary matrix), 6 (UI).
+shank's map keys). **Phase 4 COMPLETE** — `src/viewModels/commands/` resolves the VM-emitted
+`WorkflowCommand` descriptors through thin handlers over the existing workspace actions / repair
+executor (descriptor-only; no new write logic): `commandHandlers(ctx)` wraps the store-write ids 1:1
+and routes repair ids via `toRepairCommand`→`applyRepairCommand` (no parallel dispatcher; the singular
+`acknowledgeBadChannelRemoval` adapts onto the plural executor type). A closed `WORKFLOW_COMMAND_CATALOG`
++ descriptor-coverage ratchet keep the id set honest. The VM store-write buttons (ValidationSummary
+day-refs; RecordingDaysTab delete/duplicate/unlink + repair notice; AnimalWorkspace createAnimal) now
+route through the resolver — editable field writes stay local. Fixed the ack repair descriptors to
+carry `acks` (both `buildBlockedRemovals` + `buildRepairAction`) so the acknowledge command reaches the
+executor instead of silently no-op'ing (off-export; baselines byte-identical). **Next: Phase 5
+(boundary matrix)**, then 6 (UI).
 
 **Deferred follow-up (logged, NOT blocking — post-Phase-3 review):**
 
@@ -40,6 +50,18 @@ shank's map keys). **Next: Phase 4 (commands)**, then 5 (boundary matrix), 6 (UI
   point BOTH `DayEditorStepper` and `buildDayEditorViewModel` at it (touching the stepper is in scope
   during wiring); the builder's inline copy is currently locked by owner-resolution parity tests.
 
+**Phase-4 carry-forward (logged, NOT blocking):**
+
+- The DayEditor + AnimalEditor executable-repair buttons still call `applyRepairCommand` directly
+  (`DayEditorStepper.handleRepair`, `useAnimalFieldUpdate.handleRepair`) — they consume the raw
+  `RepairableIssue.repairCommand`, not a VM descriptor, so they reuse the single executor but don't
+  yet route through `commandHandlers`. The resolver's repair branch + the now-acks-carrying descriptors
+  are the growth surface; route those buttons through `commandHandlers` when the DayEditor repair
+  plumbing (RepairActions/RepairActionButton) is next touched.
+- `src/pages/Home/index.tsx` still calls `actions.createAnimal(...)` directly (Home was out of the
+  Phase-4 file set and doesn't render the AnimalWorkspace VM `primaryAction`); fold it into the
+  resolver in a later cleanup so `createAnimal` has one resolution path.
+
 | Phase | Status |
 | --- | --- |
 | 0 — logic inventory | ✅ done — [logic-inventory.md](logic-inventory.md) |
@@ -56,17 +78,17 @@ shank's map keys). **Next: Phase 4 (commands)**, then 5 (boundary matrix), 6 (UI
 | &nbsp;&nbsp;3-e — DayEditor overview sources | ✅ done — OverviewStep renders `vm.overview.fields` (read-only values + help + weight placeholder); editable inputs keep day-owned `defaultValue` |
 | &nbsp;&nbsp;3-f — DayEditor issues/export | ✅ done — ValidationStep + ExportStep render `vm.issues`/`vm.export`; shared repair components consume `IssueViewModel`; VM enriched (3-f-1) then wired (3-f-2); ExportStep download gate kept independent |
 | &nbsp;&nbsp;3-g — DayEditor bad channels | ✅ done — Devices un-mark gate reads `vm.badChannels.marks`; `buildBadChannelMarks` fixed to mark a multi-shank first row's probe-wide channels |
-| 4 — commands | ▫️ next |
-| 5 — boundary tests | ▫️ pending |
+| 4 — descriptor commands | ✅ done — `src/viewModels/commands/` (`commandHandlers` + `commandCatalog` + ratchet); VM store-write buttons routed through the resolver; ack repair descriptors carry `acks`; baselines byte-identical |
+| 5 — boundary tests | ▫️ next |
 | 6 — workflow UI | ▫️ pending |
 
 Make the modern UI *render* workflow state instead of *discovering* it. Today the four modern surfaces
 (ValidationSummary, AnimalWorkspace, AnimalView, DayEditor) each recompute section status, export
 readiness, blocking-vs-warning, next repair target, inherited/default values, and button enabled/disabled
-reasons inline. This plan inserts a pure, tested **view-model layer** (read) plus an **intent-command
-layer** (write) between the existing `src/domain/*` truth functions and the pages, so pages become thin
-renderers and the workflow logic becomes independently testable — the foundation for safely iterating on
-workflow UX.
+reasons inline. This plan inserts a pure, tested **view-model layer** (read) plus a **descriptor command
+layer** for VM-emitted write actions between the existing `src/domain/*` truth functions and the pages, so
+pages become thin renderers and the workflow logic becomes independently testable — the foundation for
+safely iterating on workflow UX.
 
 ## Reading order
 
@@ -93,7 +115,7 @@ For agent invocation, **load only the slice you need**:
   - [phase-2c-animal-view-vm.md](phase-2c-animal-view-vm.md) — `buildAnimalViewModel` (section-nav rings).
   - [phase-2d-day-editor-vm.md](phase-2d-day-editor-vm.md) — `buildDayEditorViewModel` (largest; inherited/default + bad-channel + issues).
   - [phase-3-wire-pages.md](phase-3-wire-pages.md) — wire the pages to render the VMs (one PR per surface; DayEditor split into sub-slices).
-  - [phase-4-commands.md](phase-4-commands.md) — intent commands wrapping `workspaceActions`.
+  - [phase-4-commands.md](phase-4-commands.md) — descriptor commands resolving VM-emitted write actions.
   - [phase-5-boundary-tests.md](phase-5-boundary-tests.md) — cross-surface scenario matrix (the safety net).
   - [phase-6-workflow-ui.md](phase-6-workflow-ui.md) — enabled UI experiments (a menu + guardrails, not one PR).
 

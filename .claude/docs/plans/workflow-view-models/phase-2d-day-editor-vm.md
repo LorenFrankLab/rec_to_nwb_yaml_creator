@@ -85,9 +85,10 @@ green.
 
 ## Deliberately not in this phase
 
-- No wiring of any DayEditor component (phase-3). No write/command handlers — bad-channel marking,
-  field edits, ack, config change are all phase-4 commands (this VM only *describes* their actions +
-  disabled reasons). No new validation rules.
+- No wiring of any DayEditor component (phase-3). No write/command handlers. This VM describes the
+  action/blocker descriptors it owns (export, navigation, repair/ack affordances); editable field writes
+  such as bad-channel marking, overview blur, task edits, and config forms stay with the existing handlers
+  until a later UI experiment promotes a specific write to an intent command. No new validation rules.
 
 ## Validation slice
 

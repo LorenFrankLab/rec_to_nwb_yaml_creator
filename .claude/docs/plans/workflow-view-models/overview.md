@@ -53,10 +53,10 @@ the validation core (`src/validation/`), all CSS Modules, the frozen legacy form
 
 - A pure, tested `src/viewModels/` layer that reproduces today's statuses/messages/actions for the four
   modern surfaces (ValidationSummary, AnimalWorkspace, AnimalView, DayEditor).
-- An intent-level `src/viewModels/commands` (or `src/workflow/commands`) layer where the UI calls user
-  intent (`createRecordingDay`, `markBadChannels`, …) rather than editing nested objects. View-model
-  actions carry plain-data command descriptors (`id` + stable target/context); pages add only transient
-  user-entered input.
+- An intent-level `src/viewModels/commands` (or `src/workflow/commands`) layer where VM-emitted actions
+  carry plain-data command descriptors (`id` + stable target/context) and pages resolve those descriptors
+  through tested handlers. Editable field writes that are not VM descriptors are promoted incrementally
+  later, when a UI experiment actually needs that boundary.
 - Pages become thin renderers of view-models; workflow rules are testable without React.
 - A boundary-test matrix that becomes the safety net for later UI experiments.
 
@@ -94,14 +94,15 @@ No new runtime dependencies. The view-model + command layers are plain TS compos
 | A dead view-model layer accumulates if Phase 3 stalls | Phase 2 builders are tested pure functions (not dead — they're the spec); Open Question 1 offers a per-surface vertical-slice alternative if the team wants no gap. |
 | `WorkflowSeverity` can't express a real state discovered mid-build | The 4-value vocabulary is validated across ALL four builders (Phases 2a–2d) before any UI commits to it; a gap surfaces as a contract change in shared-contracts.md, not a silent component workaround. |
 | Phase 3 wiring introduces a visual regression | Each page-wiring is its own branch+gate+merge with a Playwright spot-check + golden baselines (the repo's established CSS-track cadence). |
-| Command layer drifts from store semantics | Phase 4 commands are thin wrappers over existing `workspaceActions`; they add intent naming, not new write logic, and are covered by the Phase 5 matrix. |
+| Command layer drifts from store semantics | Phase 4 commands are thin wrappers over existing `workspaceActions` / `applyRepairCommand`; they add descriptor resolution, not new write logic, and are covered by the Phase 5 matrix. |
 
 ## Rollout Strategy
 
 Incremental, no feature flag. View-models ship as additive internal modules (Phases 1–2, no UI change).
 Pages migrate one at a time (Phase 3), each behind its own PR + gate; if a wiring regresses it reverts
-independently. Commands (Phase 4) wrap existing actions, so writes behave identically. Nothing is
-user-visible until Phase 6, which is opt-in experimentation gated by the Phase 5 test matrix.
+independently. Commands (Phase 4) resolve existing VM descriptors through existing actions/executors, so
+writes behave identically. Nothing is user-visible until Phase 6, which is opt-in experimentation gated by
+the Phase 5 test matrix.
 
 ## Open Questions
 
@@ -116,11 +117,13 @@ user-visible until Phase 6, which is opt-in experimentation gated by the Phase 5
    view-models; the command sub-layer lives at `src/viewModels/commands/`). Cosmetic; pick before Phase 1.
 3. **Phase 4 command type tightening** — `WorkflowCommand.id` starts as `string` plus plain-data
    `target`/`payload` so the builders can land without blocking on a complete command inventory. Once
-   Phase 4 enumerates all commands, tighten `id` to a literal union if it improves type safety without
-   making the page wiring noisy.
+   Phase 4 enumerates the VM-emitted descriptor ids, tighten `id` to a literal union if it improves type
+   safety without making the page wiring noisy. Field-write command ids can extend the union later as
+   Phase-6 experiments promote them.
 
 ## Estimated Effort
 
 Net additive. Rough diff sizing: phase-1 ~40 LOC (types); each phase-2 builder ~120–250 LOC + ~150–300
 LOC tests (DayEditor largest); phase-3 wirings ~30–80 LOC removed-from-component / re-pointed per page;
-phase-4 ~150 LOC wrappers + tests; phase-5 ~300 LOC scenario tests. Phase-6 is open-ended and not sized.
+phase-4 ~100–150 LOC descriptor handlers + tests; phase-5 ~300 LOC scenario tests. Phase-6 is open-ended
+and not sized.
