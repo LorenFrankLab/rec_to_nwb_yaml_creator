@@ -202,6 +202,13 @@ export const wrongOwner = (): Required<Scenario> => ({
   dayId: 'd1',
 });
 
+/** A day record whose declared owner does not exist and which no animal indexes (orphan, no owner). */
+export const orphanNoOwner = (): Required<Scenario> => ({
+  workspace: { animals: {}, days: { d1: { id: 'd1', animalId: 'ghost', date: '2023-07-01' } } },
+  animalId: 'ghost',
+  dayId: 'd1',
+});
+
 /** A real day record whose owner is present but does NOT list it (recovered, unlinked). */
 export const recoveredUnlinked = (): Required<Scenario> => {
   const { animal, day } = loadRealistic();

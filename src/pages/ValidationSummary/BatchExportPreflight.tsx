@@ -1,5 +1,5 @@
 import WarningAcknowledgement from '../../components/WarningAcknowledgement';
-import { describeConfigVersionLabel } from './validationSummaryRows';
+import { describeConfigVersionLabel } from '../../viewModels/validationSummaryRows';
 import type { PendingExport } from './useValidationSummaryActions';
 import styles from './ValidationSummary.module.css';
 

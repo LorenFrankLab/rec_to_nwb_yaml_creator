@@ -16,7 +16,7 @@ import {
   getAnimalBlockingSections,
   SECTION_STATUS,
 } from '../../domain/sectionStatus';
-import { buildAnimalRows } from '../../pages/ValidationSummary/validationSummaryRows';
+import { buildAnimalRows } from '../validationSummaryRows';
 import { buildRealisticWorkspace } from '../../__tests__/fixtures/workspaceBuilders';
 
 type Workspace = { animals: Record<string, unknown>; days: Record<string, unknown> };

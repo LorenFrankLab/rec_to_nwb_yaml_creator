@@ -34,7 +34,7 @@ import {
   SECTION_STATUS,
 } from '../domain/sectionStatus';
 import type { Animal, Day } from '../state/workspaceTypes';
-import { buildAnimalRows } from '../pages/ValidationSummary/validationSummaryRows';
+import { buildAnimalRows } from './validationSummaryRows';
 import type { SectionViewModel } from './types';
 
 /** The animal header: the store-key id and the read-only species/sex facts shown beside it. */
@@ -119,8 +119,8 @@ const TAB_LABEL: Record<string, string> = Object.fromEntries(
 
 /**
  * Per-tab scope descriptor shown under the panel heading: the one-line framing of a section's
- * ownership/blast-radius. Only tabs with a defined framing carry an entry (mirrors the page's
- * TAB_SCOPE — setup tabs extracted so far).
+ * ownership/blast-radius. Only tabs with a defined framing carry an entry; AnimalView renders it
+ * from `activePanel.scope` (it holds no parallel copy).
  */
 const TAB_SCOPE: Record<string, string> = {
   'electrode-groups':

@@ -2,8 +2,10 @@
  * Architecture guard: enforce the domain-boundary ownership contract structurally.
  *
  * Allowed dependency direction only:
- *   - pages → domain/state helpers (the export-truth deciders);
+ *   - pages → domain/state/viewModels helpers (the export-truth deciders + the view-model layer);
  *   - NEVER domain/state → pages (a reversed import);
+ *   - NEVER viewModels → pages (the view-models are the read/write layer pages CONSUME, so they must
+ *     not depend back on a page — the inversion that would re-trap workflow logic in a page);
  *   - NEVER page → a SIBLING page folder for app-wide domain behavior.
  *
  * The recurring risk this prevents: app-wide validation/repair/converter behavior becoming
@@ -89,6 +91,12 @@ export function importViolation(fromRel, toRel, allowlist = CROSS_PAGE_ALLOWLIST
     return { rule: 'domain-or-state-imports-page' };
   }
 
+  // The view-model layer is what pages CONSUME; it must not import back into a page (that inversion
+  // would re-trap workflow logic in a page, the exact thing the read/write layers exist to remove).
+  if (fromRel.startsWith('viewModels/') && toRel.startsWith('pages/')) {
+    return { rule: 'viewmodel-imports-page' };
+  }
+
   const fromPage = fromRel.match(/^pages\/([^/]+)\//);
   const toPage = toRel.match(/^pages\/([^/]+)\//);
   if (fromPage && toPage && fromPage[1] !== toPage[1] && !allowlist.has(toRel)) {
@@ -142,6 +150,16 @@ describe('architecture boundaries — classifier (synthetic)', () => {
   it('flags a state module importing a page (reversed import)', () => {
     expect(importViolation('state/useWorkspace.js', 'pages/DayEditor/validation'))
       .toEqual({ rule: 'domain-or-state-imports-page' });
+  });
+
+  it('flags a view-model importing a page (the read/write layer must not depend back on a page)', () => {
+    expect(importViolation('viewModels/validationSummaryViewModel.ts', 'pages/ValidationSummary/validationSummaryRows'))
+      .toEqual({ rule: 'viewmodel-imports-page' });
+  });
+
+  it('allows view-models → domain/state and view-models → a sibling view-model', () => {
+    expect(importViolation('viewModels/validationSummaryViewModel.ts', 'domain/workflowStatus')).toBeNull();
+    expect(importViolation('viewModels/animalViewModel.ts', 'viewModels/validationSummaryRows')).toBeNull();
   });
 
   it('flags a page importing app-wide behavior from a sibling page folder', () => {

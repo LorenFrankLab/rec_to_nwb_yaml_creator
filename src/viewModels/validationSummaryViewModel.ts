@@ -5,7 +5,7 @@
  * ValidationSummary page renders: the per-day rows (status, recovery, repair), the valid/error/
  * incomplete counts, the batch-action affordances (with their disabled reasons), and the empty/
  * re-link page notes. It composes the existing pure row helpers in
- * `pages/ValidationSummary/validationSummaryRows` (the React-free module that already flattens +
+ * `viewModels/validationSummaryRows` (the React-free module that already flattens +
  * classifies the days) and the shared {@link buildDayRowViewModel}; it does not re-derive any rule.
  *
  * The runtime batch-action results — the preflight that appears once the user opens the confirm step,
@@ -19,8 +19,8 @@ import {
   dayChipDisplay,
   describeConfigVersionLabel,
   subjectLabel,
-} from '../pages/ValidationSummary/validationSummaryRows';
-import type { SummaryRow } from '../pages/ValidationSummary/validationSummaryRows';
+} from './validationSummaryRows';
+import type { SummaryRow } from './validationSummaryRows';
 import { buildDayRowViewModel } from './dayRowViewModel';
 import type {
   BatchRunResultViewModel,

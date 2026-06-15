@@ -11,7 +11,8 @@
  * It COMPOSES domain truth rather than re-deriving it:
  *   - step status from `computeStepStatus` (with the editor's fail-closed fallback when the merge
  *     is unavailable), and the Validation step's "N to fix" from `validateDay`;
- *   - the export gate from `isExportEnabled` / `exportBlockReason` + the day-in-index policy
+ *   - the export gate from `isExportEnabled` + an inline block-reason priority (merge-error /
+ *     unlinked-day / validation-errors / incomplete-steps) + the day-in-index policy
  *     (`getAnimalDayIds`) — the exact AND-of-three the Export step gates on;
  *   - issue ownership / reach from `ownershipForIssue`, repair routing from `repairTargetForIssue`,
  *     humanized text from `humanizeValidationMessage`;
@@ -79,6 +80,7 @@ import type {
   StepViewModel,
   WorkflowAction,
   WorkflowCommand,
+  WorkflowCommandId,
   WorkflowSeverity,
 } from './types';
 
@@ -128,7 +130,7 @@ const STEP_ORDER: ReadonlyArray<{ key: string; label: string }> = [
 /** The default active step the editor opens on. */
 const DEFAULT_STEP = 'overview';
 
-/** The accessible status label per step status (matches DayEditorSectionNav's getStatusLabel). */
+/** The accessible status label per step status — rendered verbatim by DayEditorSectionNav (it reads `step.statusLabel`). */
 const STEP_STATUS_LABEL: Record<StepStatus, string> = {
   valid: 'Complete',
   incomplete: 'Incomplete',
@@ -139,8 +141,8 @@ const STEP_STATUS_LABEL: Record<StepStatus, string> = {
 /**
  * The fail-closed step-status map the editor uses when the day/merge is unavailable (corrupt
  * animal config, day not yet resolvable): every data-entry step reads `incomplete` and `export`
- * reads `error`, so a day that cannot be merged can never read ready. Mirrors the stepper's
- * hand-written fallback literal.
+ * reads `error`, so a day that cannot be merged can never read ready. This map is the sole
+ * fail-closed source the stepper renders (it consumes the view-model; no parallel literal in the page).
  */
 const FAIL_CLOSED_STEP_STATUS: Record<string, StepStatus> = {
   overview: 'incomplete',
@@ -420,8 +422,8 @@ export function toIssueViewModel(
     vm.repair = repair;
     // Repair display metadata mirrors RepairActionButton: an issue carrying a repairCommand is
     // executable (runs in place); otherwise it navigates to the owning surface, carrying the focus
-    // anchor. `repairDedupKey` mirrors RepairActions.repairButtonKey so several issues sharing one
-    // underlying fix collapse to a single button (every message still shows).
+    // anchor. `repairDedupKey` is the collapse key RepairActions reads (as `issue.repairDedupKey`), so
+    // several issues sharing one underlying fix collapse to a single button (every message still shows).
     vm.repairSurface = target.surface as 'animal' | 'day';
     vm.repairKind = issue.repairCommand != null ? 'execute' : 'navigate';
     vm.repairDedupKey = repairDedupKey(issue, target.surface, target.step);
@@ -434,8 +436,8 @@ export function toIssueViewModel(
 }
 
 /**
- * The collapse key for an issue's repair BUTTON — mirrors `RepairActions.repairButtonKey` so the
- * view-model and the (now VM-driven) repair list dedup identically: `surface:step:focus:command`,
+ * The collapse key for an issue's repair BUTTON — read by RepairActions (as `issue.repairDedupKey`) so
+ * the view-model and the (VM-driven) repair list dedup identically: `surface:step:focus:command`,
  * where the executable command (type + key/field) is part of the key so two issues sharing a
  * destination but carrying DIFFERENT repairCommands are not collapsed.
  */
@@ -467,7 +469,11 @@ function buildRepairAction(
   // the label names exactly what is reset (`actionLabel`) so a destructive reset is never ambiguous.
   if (issue.repairCommand != null) {
     const cmd = issue.repairCommand as { type?: unknown; key?: unknown; field?: unknown; acks?: unknown };
-    const command: WorkflowCommand = { id: String(cmd.type ?? ''), target: { dayId } };
+    // A repairCommand with no `type` can't be executed; render no button (the message + ownership hint
+    // still show) rather than an inert one with an un-catalogued empty id. Real repairCommands always
+    // carry a `type` from REPAIR_COMMAND_TYPES (a catalogued WorkflowCommandId), so the cast is sound.
+    if (cmd.type == null) return undefined;
+    const command: WorkflowCommand = { id: String(cmd.type) as WorkflowCommandId, target: { dayId } };
     const payload: Record<string, unknown> = {};
     if (cmd.key != null) payload.key = cmd.key;
     if (cmd.field != null) payload.field = cmd.field;
@@ -731,7 +737,9 @@ function buildNotices(
         issue.code === 'missing_configuration_history' ? 'badchannel-corruption' : 'malformed-collection',
       message: issue.message,
       repair: {
-        id: command?.type ?? 'repairAnimalCollection',
+        // A raw-animal repairCommand carries a catalogued reset type (resetAnimalCameras /
+        // resetDataAcqDevice / rebuildConfigurationHistory); the fallback is the catalogued no-op id.
+        id: (command?.type ?? 'repairAnimalCollection') as WorkflowCommandId,
         target: { animalId: ownerKey ?? undefined, fieldPath: issue.field },
       },
     });
@@ -961,7 +969,9 @@ function emptyShellViewModel(
  *   Defaults to the first step (the editor's initial state). The section nav is button/local-state,
  *   not routed, so the active step is a render-time input rather than something the VM derives.
  * @returns The page view-model — pure data, no React. Never throws: a corrupt animal config (which
- *   `mergeDayMetadata` throws on) is caught and surfaced as an `error`-severity, merge-error gate.
+ *   `mergeDayMetadata` throws on) AND a validation/step-status contract violation (an un-routed issue
+ *   code, which `validateDay`/`computeStepStatus` throw on) are both caught and surfaced as an
+ *   `error`-severity, fail-closed export gate (the latter is logged for diagnosis).
  */
 export function buildDayEditorViewModel(
   workspace: unknown,
@@ -1024,19 +1034,28 @@ export function buildDayEditorViewModel(
   const animalDays =
     ownerKey != null ? getAnimalDays({ animals: animalsMap, days: daysMap }, ownerKey) : [];
 
-  // ── Step status + overall ──
-  const stepStatus: Record<string, StepStatus> = mergeFailed
-    ? { ...FAIL_CLOSED_STEP_STATUS }
-    : computeStepStatus(day, merged, animal, animalDays);
-
-  // The authoritative issue list (the same one the export gate + the rendered repair lists share).
-  // On a merge failure, validate the empty merged model so the raw-shape animal issue still surfaces.
-  const rawIssues = validateDay(
-    day as unknown as Record<string, unknown>,
-    merged,
-    animal,
-    animalDays
-  );
+  // ── Step status + authoritative issue list (the export gate + rendered repair lists share it) ──
+  // Both computeStepStatus and validateDay can throw on a repair-routing CONTRACT VIOLATION (a new
+  // issue code with no owner mapping — a programming error, not corrupt data). Guard them: on a throw,
+  // fail closed exactly like the merge-error path (a closed gate + the merge-error blocker) and LOG the
+  // real error, rather than letting it white-screen the day editor. Unreachable with the current issue
+  // set (every code routes), so this only protects against a future un-routed code reaching production.
+  let stepStatus: Record<string, StepStatus>;
+  let rawIssues: RepairableIssue[];
+  try {
+    stepStatus = mergeFailed
+      ? { ...FAIL_CLOSED_STEP_STATUS }
+      : computeStepStatus(day, merged, animal, animalDays);
+    // On a merge failure, validate the empty merged model so the raw-shape animal issue still surfaces.
+    rawIssues = validateDay(day as unknown as Record<string, unknown>, merged, animal, animalDays);
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error(`[day-editor-vm] validation could not complete for day "${dayId}":`, err);
+    mergeFailed = true;
+    merged = {};
+    stepStatus = { ...FAIL_CLOSED_STEP_STATUS };
+    rawIssues = [];
+  }
   const rawErrorIssues = rawIssues.filter((issue) => issue.severity === 'error');
   // The Validation step's "N to fix" scent matches the stepper, which shows NO count when the merge
   // failed (it cannot compute a trustworthy readiness) — so suppress the count on the merge-failed

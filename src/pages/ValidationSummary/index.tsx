@@ -13,7 +13,8 @@
  *   mode is skipped and reported with its diff, never downloaded.
  *
  * Phase 9c split this file (formerly ~1100 LOC) into focused pieces with no behavior change:
- *   - {@link module:pages/ValidationSummary/validationSummaryRows} — the pure row-building/display helpers;
+ *   - {@link module:viewModels/validationSummaryRows} — the pure row-building/display helpers (relocated
+ *     to the view-model layer so it isn't a page dependency of the builders);
  *   - {@link module:pages/ValidationSummary/useValidationSummaryActions} — the batch-action state + handlers;
  *   - `ExportReport` / `BatchExportPreflight` / `DayStatusTable` — the presentational pieces.
  * This module owns the page composition.
@@ -29,7 +30,7 @@ import { buildValidationSummaryViewModel } from '../../viewModels/validationSumm
 import { commandHandlers } from '../../viewModels/commands';
 import type { CommandActions } from '../../viewModels/commands';
 import DayLifecycleLegend from '../../components/DayLifecycleLegend/DayLifecycleLegend';
-import { buildRows, buildAnimalRows } from './validationSummaryRows';
+import { buildRows, buildAnimalRows } from '../../viewModels/validationSummaryRows';
 import { useValidationSummaryActions } from './useValidationSummaryActions';
 import ExportReport from './ExportReport';
 import BatchExportPreflight from './BatchExportPreflight';

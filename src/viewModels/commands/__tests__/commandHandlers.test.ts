@@ -159,4 +159,23 @@ describe('toRepairCommand — descriptor → executor RepairCommand', () => {
     };
     expect(toRepairCommand(cmd)).toEqual({ type: 'removeBadChannelOverrideKey', key: '3' });
   });
+
+  it('omits acks when the ack descriptor carries none (no malformed ack write)', () => {
+    // The Phase-4 fix threads `acks` through the descriptor; WITHOUT them the adapter must not invent a
+    // bogus `acks` — the executor then no-ops (it guards `isRecord(acks)`), so the monotonicity block
+    // is never silently cleared by an empty payload.
+    expect(toRepairCommand({ id: 'acknowledgeBadChannelRemoval' })).toEqual({
+      type: 'acknowledgeBadChannelRemovals',
+    });
+  });
+});
+
+describe('commandHandlers — ack without acks is a safe no-op (fails toward "block remains")', () => {
+  it('acknowledgeBadChannelRemoval with no acks does not write the ack state', () => {
+    const actions = spyActions();
+    const run = commandHandlers({ actions, dayId: 'd1', day: {} as never });
+    run.acknowledgeBadChannelRemoval({ id: 'acknowledgeBadChannelRemoval', target: { dayId: 'd1' } });
+    // No acks → applyRepairCommand no-ops → the day's ack state is never touched.
+    expect(actions.updateDay).not.toHaveBeenCalled();
+  });
 });

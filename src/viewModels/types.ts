@@ -22,6 +22,7 @@
 
 import type { StepStatus } from '../domain/stepStatus';
 import type { WorkflowCategory } from '../domain/workflowCategories';
+import type { WorkflowCommandId } from './commands/commandCatalog';
 
 /**
  * The single severity vocabulary the modern UI renders. It does not replace the domain status enums
@@ -40,6 +41,13 @@ import type { WorkflowCategory } from '../domain/workflowCategories';
  *
  * `todo` renders NEUTRAL (a "not set up yet" cue, no warning color) — distinct from `warning`, which
  * flags a non-blocking problem.
+ *
+ * **Where `warning` lives today.** Non-blocking advisories are carried per-ISSUE
+ * ({@link IssueViewModel}`.severity === 'warning'`) — a day with only warnings still reads `ready`/
+ * exportable at the row and section level (the day-row and section builders emit `ready`/`todo`/`error`,
+ * never `warning`). `warning` is in this union so a Phase-6 UI can add a row/section warning BADGE
+ * (e.g. "ready, but N advisories"); when it does, that builder must add the field + a test rather than
+ * inferring it. The mapping row above documents the intended row/section meaning, not a current emitter.
  *
  * Source enums: `DAY_LIFECYCLE` (src/domain/dayLifecycle.ts), `SECTION_STATUS` /
  * `getAnimalBlockingSections` (src/domain/sectionStatus.ts), `DAY_STATUS` (src/domain/dayRecovery.ts).
@@ -65,6 +73,9 @@ export type DayStatus =
  */
 export type { StepStatus };
 
+/** Re-export the closed command-id union so consumers can constrain dispatch from the vocabulary hub. */
+export type { WorkflowCommandId };
+
 /**
  * Plain-data command metadata carried by a write-style {@link WorkflowAction}. Lets a page invoke
  * user intent (`createRecordingDay`, `deleteDay`, `exportValidOnly`, …) without re-discovering the
@@ -72,8 +83,12 @@ export type { StepStatus };
  * transient user-entered values (e.g. a typed date) at call time.
  */
 export interface WorkflowCommand {
-  /** Intent identifier resolved by the command layer, e.g. `createRecordingDay`, `deleteDay`. */
-  id: string;
+  /**
+   * Intent identifier resolved by the command layer — a member of the closed
+   * {@link WorkflowCommandId} set (the keys of `WORKFLOW_COMMAND_CATALOG`), so a typo'd or invented
+   * id is a compile error, not a silent runtime miss. E.g. `deleteDay`, `exportValidOnly`.
+   */
+  id: WorkflowCommandId;
   /** Stable target/context known by the builder: animal id, day id, section key, field path. */
   target?: {
     animalId?: string;
@@ -166,8 +181,8 @@ export interface IssueViewModel {
   repairFocusPath?: string;
   /**
    * Collapse key for the repair BUTTON: several issues can share one underlying fix, so every message
-   * shows but only one button per unique (surface, step, focus, command) renders. Mirrors
-   * `RepairActions`' `repairButtonKey`. Absent when there is no repair.
+   * shows but only one button per unique (surface, step, focus, command) renders. `RepairActions`
+   * reads this directly off the issue to dedup. Absent when there is no repair.
    */
   repairDedupKey?: string;
 }

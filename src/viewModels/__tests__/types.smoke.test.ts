@@ -86,7 +86,7 @@ describe('view-model vocabulary — core types', () => {
       status: 'wrong_owner',
       ownerDescription: 'Belongs to bean',
       message: 'This day belongs to another animal.',
-      repair: { label: 'Re-link', command: { id: 'unlinkDay', target: { animalId: 'remy', dayId: 'x' } } },
+      repair: { label: 'Re-link', command: { id: 'unlinkDayReference', target: { animalId: 'remy', dayId: 'x' } } },
     };
     const row: DayRowViewModel = {
       dayId: 'remy-2023-06-22',
@@ -187,7 +187,10 @@ describe('view-model vocabulary — type guards', () => {
     // @ts-expect-error a numeric ntrodeId is rejected — proves BadChannelMarkViewModel.ntrodeId is a string.
     const badMark: BadChannelMarkViewModel = { ntrodeId: 1, channel: 0, marked: false, priorBad: false, requiresAck: false, acked: false };
     // @ts-expect-error 'other' is not a RecoveryNoticeViewModel kind — proves the union holds.
-    const badNotice: RecoveryNoticeViewModel = { kind: 'other', message: 'x', repair: { id: 'r' } };
-    expect([badSeverity, badAction, badIssue, badField, badGate, badStep, badRecovery, badReport, badMark, badNotice]).toHaveLength(10);
+    const badNotice: RecoveryNoticeViewModel = { kind: 'other', message: 'x', repair: { id: 'resetDayCollection' } };
+    // @ts-expect-error 'notACommand' is not a WorkflowCommandId — proves command.id is the closed
+    // catalog union, not `string` (a typo'd/invented id is a compile error).
+    const badCommandId: WorkflowCommand = { id: 'notACommand' };
+    expect([badSeverity, badAction, badIssue, badField, badGate, badStep, badRecovery, badReport, badMark, badNotice, badCommandId]).toHaveLength(11);
   });
 });

@@ -9,14 +9,14 @@
  * the batch-export handlers, and the table all consume one source of these decisions.
  */
 
-import { mergeDayMetadata } from '../../state/workspaceUtils';
-import { getAnimalSubject } from '../../state/workspaceSelectors';
-import type { Animal, Day } from '../../state/workspaceTypes';
-import { computeStepStatus } from '../../domain/validation';
-import { getDayWorkflowStatus } from '../../domain/workflowStatus';
-import { DAY_LIFECYCLE_LABEL, lifecycleForValidDay } from '../../domain/dayLifecycle';
-import { describeDayOptoState } from '../../domain/optoStatus';
-import { classifyWorkspaceDays, DAY_STATUS, describeOwner } from '../../domain/dayRecovery';
+import { mergeDayMetadata } from '../state/workspaceUtils';
+import { getAnimalSubject } from '../state/workspaceSelectors';
+import type { Animal, Day } from '../state/workspaceTypes';
+import { computeStepStatus } from '../domain/validation';
+import { getDayWorkflowStatus } from '../domain/workflowStatus';
+import { DAY_LIFECYCLE_LABEL, lifecycleForValidDay } from '../domain/dayLifecycle';
+import { describeDayOptoState } from '../domain/optoStatus';
+import { classifyWorkspaceDays, DAY_STATUS, describeOwner } from '../domain/dayRecovery';
 
 /** A per-day validation chip variant. */
 export type ChipType = 'valid' | 'error' | 'incomplete';
