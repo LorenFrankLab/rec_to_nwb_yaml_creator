@@ -193,6 +193,14 @@ export interface DayRowViewModel {
   status: WorkflowSeverity;
   /** 'Ready to export' | 'Needs fixing — …' | 'Re-link to export' | 'Missing record' | …. */
   statusLabel: string;
+  /**
+   * The surface's own display variant for the status CSS class — the un-collapsed variant the
+   * surface's status function returned (`dayChipDisplay` / `getDayRowStatus`), e.g. `ready` /
+   * `validated` / `exported` / `error` / `incomplete` / `needs_fixing` / `draft`. Distinct from the
+   * lossy {@link WorkflowSeverity} `status`: a `validated` and an `exported` day both map to `ready`
+   * severity, so the chip class needs this un-collapsed value to stay visually distinct.
+   */
+  chipVariant: string;
   /** First line of the session description, when present. */
   sessionDescription?: string;
   /** Day classification from `classifyAnimalDays` / `DAY_STATUS` (src/domain/dayRecovery). */
@@ -373,6 +381,8 @@ export interface RecoveryNoticeViewModel {
   kind: 'malformed-collection' | 'stale-override' | 'badchannel-corruption';
   /** The user-facing notice text. */
   message: string;
+  /** The repair button's label (e.g. 'Reset cameras', 'Rebuild device configuration history'). */
+  actionLabel?: string;
   /** The repair command (e.g. reset the collection, remove the override). */
   repair: WorkflowCommand;
 }
