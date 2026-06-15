@@ -51,6 +51,11 @@ import {
   STEP_LABELS,
 } from '../domain/repairRouting';
 import type { RepairableIssue } from '../domain/repairRouting';
+import {
+  workflowCategoryForIssue,
+  WORKFLOW_CATEGORY_LABELS,
+} from '../domain/workflowCategories';
+import { lifecycleForValidDay, DAY_LIFECYCLE_LABEL } from '../domain/dayLifecycle';
 import { describeOwner } from '../domain/dayRecovery';
 import { humanizeValidationMessage } from '../domain/humanizeValidationMessage';
 import {
@@ -393,19 +398,50 @@ function toIssueViewModel(
 ): IssueViewModel {
   const ownership = ownershipForIssue(issue);
   const target = repairTargetForIssue(issue);
+  const category = workflowCategoryForIssue(issue);
   const path = issue.path || issue.instancePath;
 
   const vm: IssueViewModel = {
     severity: issue.severity === 'warning' ? 'warning' : 'error',
     message: humanizeValidationMessage(issue.message),
     ownership: ownership.pattern,
+    // The ownership pattern's primary action + reach + category are the data IssueOwnershipHint and
+    // the category-grouped list render, surfaced so the component re-derives nothing.
+    ownershipAction: ownership.primaryAction,
     reachesBeyondDay: ownership.reachesBeyondDay,
+    category,
+    categoryLabel: WORKFLOW_CATEGORY_LABELS[category],
   };
   if (path != null) vm.fieldPath = path;
 
   const repair = buildRepairAction(issue, target, dayId, ownerKey);
-  if (repair) vm.repair = repair;
+  if (repair) {
+    vm.repair = repair;
+    // Repair display metadata mirrors RepairActionButton: an issue carrying a repairCommand is
+    // executable (runs in place); otherwise it navigates to the owning surface, carrying the focus
+    // anchor. `repairDedupKey` mirrors RepairActions.repairButtonKey so several issues sharing one
+    // underlying fix collapse to a single button (every message still shows).
+    vm.repairSurface = target.surface as 'animal' | 'day';
+    vm.repairKind = issue.repairCommand != null ? 'execute' : 'navigate';
+    vm.repairDedupKey = repairDedupKey(issue, target.surface, target.step);
+    if (vm.repairKind === 'navigate') {
+      const focus = issue.focusPath || issue.path;
+      if (focus != null) vm.repairFocusPath = focus;
+    }
+  }
   return vm;
+}
+
+/**
+ * The collapse key for an issue's repair BUTTON — mirrors `RepairActions.repairButtonKey` so the
+ * view-model and the (now VM-driven) repair list dedup identically: `surface:step:focus:command`,
+ * where the executable command (type + key/field) is part of the key so two issues sharing a
+ * destination but carrying DIFFERENT repairCommands are not collapsed.
+ */
+function repairDedupKey(issue: RepairableIssue, surface: string, step: string | null): string {
+  const cmd = issue.repairCommand as { type?: unknown; key?: unknown; field?: unknown } | undefined;
+  const command = cmd ? `${String(cmd.type ?? '')}:${String(cmd.key ?? cmd.field ?? '')}` : '';
+  return `${surface}:${step ?? ''}:${issue.focusPath || issue.path || ''}:${command}`;
 }
 
 /**
@@ -421,6 +457,22 @@ function buildRepairAction(
 ): WorkflowAction | undefined {
   if (target.surface === 'none') return undefined;
   const focusPath = issue.focusPath || issue.path || issue.instancePath;
+
+  // Executable repair takes precedence (mirrors RepairActionButton): an issue carrying a serializable
+  // repairCommand PERFORMS the documented reset in place rather than navigating to a destination that
+  // may render a blank empty state — this is what keeps the merge-error/raw-shape repairs (rebuild
+  // configuration history, reset cameras) as executable buttons, NOT animal-deep-link navigations. The
+  // command id is the repairCommand type (the page maps it to its existing onRepair handler for now);
+  // the label names exactly what is reset (`actionLabel`) so a destructive reset is never ambiguous.
+  if (issue.repairCommand != null) {
+    const cmd = issue.repairCommand as { type?: unknown; key?: unknown; field?: unknown };
+    const command: WorkflowCommand = { id: String(cmd.type ?? ''), target: { dayId } };
+    const payload: Record<string, unknown> = {};
+    if (cmd.key != null) payload.key = cmd.key;
+    if (cmd.field != null) payload.field = cmd.field;
+    if (Object.keys(payload).length > 0) command.payload = payload;
+    return { label: issue.actionLabel || target.label, command, intent: 'fix' };
+  }
 
   if (target.surface === 'animal') {
     if (ownerKey == null) {
@@ -453,6 +505,32 @@ function buildRepairAction(
  * Reproduces the four blocked-reason branches (merge-error / unlinked-day / validation-errors /
  * incomplete-steps) and the blocking-step list (a prerequisite step not valid, owner = animal/day).
  */
+/**
+ * The readiness fields for an OPEN export gate, from the day's persisted lifecycle
+ * (`lifecycleForValidDay`): the lifecycle variant, its short status label
+ * (`DAY_LIFECYCLE_LABEL`), and the full readiness sentence the Validation summary shows. The prose
+ * is read verbatim from the lifecycle label so it can never drift from the other day surfaces.
+ */
+function buildReadiness(dayState: unknown): {
+  lifecycle: 'ready' | 'validated' | 'exported';
+  lifecycleStatusLabel: string;
+  readyMessage: string;
+} {
+  const lifecycle = lifecycleForValidDay(dayState) as 'ready' | 'validated' | 'exported';
+  let readyMessage: string;
+  switch (lifecycle) {
+    case 'exported':
+      readyMessage = `${DAY_LIFECYCLE_LABEL.exported} — all checks still pass. This day’s YAML has been downloaded.`;
+      break;
+    case 'validated':
+      readyMessage = `${DAY_LIFECYCLE_LABEL.validated} — all checks pass. This validation has been saved.`;
+      break;
+    default:
+      readyMessage = `${DAY_LIFECYCLE_LABEL.ready} — all checks pass.`;
+  }
+  return { lifecycle, lifecycleStatusLabel: DAY_LIFECYCLE_LABEL[lifecycle], readyMessage };
+}
+
 function buildExportGate(opts: {
   mergeFailed: boolean;
   dayId: string;
@@ -461,8 +539,9 @@ function buildExportGate(opts: {
   errorIssues: IssueViewModel[];
   dayExportable: boolean;
   merged: Record<string, unknown>;
+  dayState: unknown;
 }): ExportGateViewModel {
-  const { mergeFailed, dayId, ownerKey, stepStatus, errorIssues, dayExportable, merged } = opts;
+  const { mergeFailed, dayId, ownerKey, stepStatus, errorIssues, dayExportable, merged, dayState } = opts;
 
   const gateOpen = isExportEnabled(stepStatus);
   const open = errorIssues.length === 0 && gateOpen && dayExportable && !mergeFailed;
@@ -476,12 +555,18 @@ function buildExportGate(opts: {
   };
 
   if (open) {
+    // An exportable day's persisted lifecycle (live-ready / saved-validated / downloaded-exported),
+    // surfaced so the readiness surfaces render the persisted-history word without re-deriving it.
+    const { lifecycle, lifecycleStatusLabel, readyMessage } = buildReadiness(dayState);
     return {
       open: true,
       blockingIssues: [],
       blockingSteps: [],
       message: 'Ready to export.',
       action,
+      lifecycle,
+      lifecycleStatusLabel,
+      readyMessage,
     };
   }
 
@@ -967,6 +1052,7 @@ export function buildDayEditorViewModel(
     errorIssues,
     dayExportable,
     merged,
+    dayState: (day as { state?: unknown }).state,
   });
 
   return {
