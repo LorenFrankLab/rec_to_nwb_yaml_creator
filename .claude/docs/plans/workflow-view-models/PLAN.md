@@ -2,12 +2,13 @@
 
 **Status:** Phases 0–2 complete (pure read-layer built/tested/merged). **Phase 3 in progress** — wiring
 the four pages to render the VMs, one surface PR at a time (7 total: 3-a…3-g, DayEditor split into 4).
-**3-a (ValidationSummary) + 3-b (AnimalWorkspace) + 3-c (AnimalView) merged** — each renders its builder;
-golden baselines byte-identical; Playwright confirmed the rendered surfaces (status chips, day-row chips,
-section-nav rings/counts) match. Next: **3-d (DayEditor shell/steps/breadcrumb)** — the first DayEditor
-sub-slice (LOCAL nav: pass the stepper's currentStep as activeStep; extract resolveDayOwner → selectors).
-Each surface PR needs a Playwright MCP visual spot-check + golden baselines. Then Phase 4 (commands),
-5 (boundary matrix), 6 (UI).
+**3-a…3-d merged** — ValidationSummary, AnimalWorkspace, AnimalView, and the DayEditor shell each render
+their builders; golden baselines byte-identical; Playwright confirmed the rendered surfaces. 3-d also
+extracted the shared `resolveDayOwner` selector (stepper + VM read one owner truth) and established the
+VM-in-stepper threading (the stepper builds the view-model and passes slices to the step components as
+section-specific props). Next: **3-e (DayEditor overview field sources)** → then 3-f (issues/export),
+3-g (bad channels). Each surface PR needs a Playwright MCP visual spot-check + golden baselines. Then
+Phase 4 (commands), 5 (boundary matrix), 6 (UI).
 
 **Phase-3 carry-forward (incl. the merged Phase-2 review fixups):**
 
@@ -34,7 +35,8 @@ Each surface PR needs a Playwright MCP visual spot-check + golden baselines. The
 | &nbsp;&nbsp;3-a — ValidationSummary | ✅ done — page renders `buildValidationSummaryViewModel` (`chipVariant` now shared; `statusTitle`/`animalKey` local) |
 | &nbsp;&nbsp;3-b — AnimalWorkspace | ✅ done — picker + pane render `buildAnimalWorkspaceViewModel`; promoted shared `chipVariant`; VM gained `actionLabel`/`recoveredCount` |
 | &nbsp;&nbsp;3-c — AnimalView | ✅ done — section-nav rings/counts + header facts + panel descriptor render `buildAnimalViewModel` |
-| &nbsp;&nbsp;3-d/e/f/g — DayEditor (4 sub-slices) | ⏳ next (3-d shell/steps/breadcrumb) |
+| &nbsp;&nbsp;3-d — DayEditor shell/steps/breadcrumb | ✅ done — stepper renders `vm.steps`/`vm.shell`/`vm.breadcrumb`; `resolveDayOwner` extracted → selectors |
+| &nbsp;&nbsp;3-e/f/g — DayEditor overview · issues/export · bad channels | ⏳ next (3-e overview fields) |
 | 4 — commands | ▫️ pending |
 | 5 — boundary tests | ▫️ pending |
 | 6 — workflow UI | ▫️ pending |
