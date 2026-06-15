@@ -1,9 +1,15 @@
 # Workflow View-Models Implementation Plan
 
-**Status:** Phases 0–2c complete. Execution shape: **build-all-then-wire** (Open Question 1 resolved);
-full view-model vocabulary frozen up front (Open Question on Phase-1 scope resolved → land all gap
-types/fields now). Next: Phase 2d (`buildDayEditorViewModel` — the largest; 4 sub-slices, implemented
-in one builder), then Phase 3 wiring.
+**Status:** Phases 0–2 complete — the entire pure view-model read-layer is built, tested, and merged
+(build-all-then-wire stage 1 done). Execution shape: **build-all-then-wire**; full vocabulary frozen
+up front. Next: **Phase 3** — wire the four pages to render the VMs (one PR per surface; DayEditor
+split; each needs a Playwright MCP visual spot-check + golden baselines). Then Phase 4 (commands),
+5 (boundary matrix), 6 (UI).
+
+**Phase-3 carry-forward:** extract the shared `resolveDayOwner(workspace, dayId)` into
+`workspaceSelectors` (the deferred D2 gap) and point BOTH `DayEditorStepper` and
+`buildDayEditorViewModel` at it (touching the stepper is in scope during wiring); the builder's inline
+copy is currently locked by owner-resolution parity tests.
 
 | Phase | Status |
 | --- | --- |
@@ -12,9 +18,8 @@ in one builder), then Phase 3 wiring.
 | 2a — ValidationSummary VM | ✅ done — `validationSummaryViewModel.ts` + shared `dayRowViewModel.ts` |
 | 2b — AnimalWorkspace VM | ✅ done — `animalWorkspaceViewModel.ts` (+ D1 selector) |
 | 2c — AnimalView VM | ✅ done — `animalViewModel.ts` |
-| 2d — DayEditor VM (4 sub-slices) | ⏳ next |
-| 2d — DayEditor VM (4 sub-slices) | ▫️ pending |
-| 3 — wire pages | ▫️ pending |
+| 2d — DayEditor VM (4 sub-slices) | ✅ done — `dayEditorViewModel.ts` |
+| 3 — wire pages | ⏳ next |
 | 4 — commands | ▫️ pending |
 | 5 — boundary tests | ▫️ pending |
 | 6 — workflow UI | ▫️ pending |
