@@ -5,6 +5,14 @@
  * composite view-models live in their own builder modules and are re-exported here as they land.
  */
 
+export { buildDayRowViewModel } from './dayRowViewModel';
+export type { DayRowInput } from './dayRowViewModel';
+export { buildValidationSummaryViewModel } from './validationSummaryViewModel';
+export type {
+  ValidationSummaryViewModel,
+  DayStatusRowViewModel,
+} from './validationSummaryViewModel';
+
 export type {
   WorkflowSeverity,
   DayStatus,
