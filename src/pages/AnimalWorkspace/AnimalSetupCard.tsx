@@ -1,31 +1,21 @@
-import {
-  getAnimalSectionStatus,
-  getAnimalBlockingSections,
-  SECTION_STATUS,
-} from '../../domain/sectionStatus';
-import type { Animal, Day } from '../../state/workspaceTypes';
+import type { SectionViewModel } from '../../viewModels/types';
 import styles from './AnimalWorkspace.module.css';
 
 /**
- * The first-run "Set up this animal" card sections, in the same order and with the same keys as
- * the section-nav "Animal setup" group (so the card and the nav rings read ONE truth via
- * {@link getAnimalSectionStatus}). The `hint` states honestly WHEN a section applies — none is
- * mandatory, because a behavior-only day needs no electrodes (overview decision 7).
+ * The static per-section hints, keyed by the setup-section key. They state honestly WHEN a section
+ * applies — none is mandatory, because a behavior-only day needs no electrodes (overview decision 7).
+ * The section list + its status/verb now come from the view-model; only this advisory copy is local.
  */
-const SETUP_CARD_SECTIONS = [
-  { key: 'electrode-groups', label: 'Electrode Groups', hint: 'if ephys' },
-  { key: 'recording-system', label: 'Recording System', hint: 'data acquisition' },
-  { key: 'cameras', label: 'Cameras', hint: 'if video' },
-  { key: 'optogenetics', label: 'Optogenetics', hint: 'if opto' },
-];
+const SECTION_HINTS: Record<string, string> = {
+  'electrode-groups': 'if ephys',
+  'recording-system': 'data acquisition',
+  cameras: 'if video',
+  optogenetics: 'if opto',
+};
 
 interface AnimalSetupCardProps {
-  /** The animal whose setup this card drives (for the section links). */
-  animalId: string;
-  /** The animal record (read for per-section status). */
-  animal: Animal;
-  /** The workspace days map (read for blocking-section derivation). */
-  days: Record<string, Day>;
+  /** The first-run setup-card sections, from `buildAnimalWorkspaceViewModel` (status + verb + link). */
+  sections: SectionViewModel[];
   /** Whether a "Copy from another animal…" affordance applies. */
   hasOtherAnimals: boolean;
   /** Opens the copy-from-animal dialog. */
@@ -33,17 +23,13 @@ interface AnimalSetupCardProps {
 }
 
 /**
- * The first-run onboarding card for a new/under-configured animal. Extracted from
- * `pages/AnimalWorkspace/RecordingDaysTab.jsx` (Phase 9c-2) with no behavior change. Reads the SAME
- * per-section todo/blocking state as the section-nav rings ({@link getAnimalSectionStatus} /
- * {@link getAnimalBlockingSections}), so "todo" isn't signalled three ways and the card can't tell
- * the user a section is fine while the nav shows it red. The parent decides WHETHER to render it
- * (it disappears once the animal is established).
+ * The first-run onboarding card for a new/under-configured animal. Renders the per-section setup
+ * state straight from the view-model's `setupSections` — the same `getAnimalSectionStatus` /
+ * `getAnimalBlockingSections` truth the section-nav rings read, so "todo" isn't signalled two ways and
+ * the card can't tell the user a section is fine while the nav shows it red. The parent decides
+ * WHETHER to render it (it disappears once the animal is established).
  */
-export default function AnimalSetupCard({ animalId, animal, days, hasOtherAnimals, onCopyFromAnimal }: AnimalSetupCardProps) {
-  // Which setup sections hold an export-blocking error — the SAME source the section-nav red ●
-  // reads (no second mapping), so the card's per-section state can't contradict the nav.
-  const setupBlockingSections = getAnimalBlockingSections(animal, days);
+export default function AnimalSetupCard({ sections, hasOtherAnimals, onCopyFromAnimal }: AnimalSetupCardProps) {
   return (
     <section className={styles.setupCard} aria-label="Set up this animal">
       <h3 className={styles.setupCardHeading}>Set up this animal</h3>
@@ -63,37 +49,30 @@ export default function AnimalSetupCard({ animalId, animal, days, hasOtherAnimal
         </button>
       )}
       <ul className={styles.setupCardList}>
-        {SETUP_CARD_SECTIONS.map((section) => {
-          // Three honest states that AGREE with the section-nav (decision 11): a section
-          // that holds an export-BLOCKING error reads "Needs fixing" (never "Done"), so
-          // the onboarding card can't tell the user a section is fine while the nav shows
-          // it red. Blocking outranks the neutral never-configured "To do".
-          const blocking = setupBlockingSections.has(section.key);
-          const todo =
-            !blocking &&
-            getAnimalSectionStatus(animal, section.key) === SECTION_STATUS.TODO;
-          const stateLabel = blocking ? 'Needs fixing' : todo ? 'To do' : 'Done';
-          const actionVerb = blocking ? 'Fix' : todo ? 'Set up' : 'Review';
-          // `done` is the default green state styled on the state pill itself — it has no row
-          // modifier rule, so it contributes no class (was an unstyled `setup-card-item-done` marker).
-          const itemModifier = blocking
-            ? styles.setupCardItemBlocking
-            : todo
-              ? styles.setupCardItemTodo
-              : '';
+        {sections.map((section) => {
+          // Three honest states that AGREE with the section-nav (decision 11): a section that holds
+          // an export-BLOCKING error reads "Needs fixing" (never "Done"), so the onboarding card
+          // can't tell the user a section is fine while the nav shows it red. The view-model already
+          // mapped the status; `done` (ready) is the default green pill and contributes no modifier.
+          const itemModifier =
+            section.status === 'error'
+              ? styles.setupCardItemBlocking
+              : section.status === 'todo'
+                ? styles.setupCardItemTodo
+                : '';
           return (
             <li key={section.key} className={`${styles.setupCardItem} ${itemModifier}`}>
               <span className={styles.setupCardItemName}>{section.label}</span>
-              <span className={styles.setupCardItemHint}>{section.hint}</span>
-              <span className={styles.setupCardItemState}>{stateLabel}</span>
+              <span className={styles.setupCardItemHint}>{SECTION_HINTS[section.key]}</span>
+              <span className={styles.setupCardItemState}>{section.summary}</span>
               <a
                 className={styles.setupCardItemAction}
-                href={`#/animal/${animalId}/${section.key}`}
+                href={section.action?.href}
                 // A links-list reader hears six actions; name each by its section
                 // ("Set up Cameras", not a non-unique "Set up →"). The arrow is decorative.
-                aria-label={`${actionVerb} ${section.label}`}
+                aria-label={`${section.action?.label} ${section.label}`}
               >
-                {actionVerb} <span aria-hidden="true">→</span>
+                {section.action?.label} <span aria-hidden="true">→</span>
               </a>
             </li>
           );
@@ -102,4 +81,3 @@ export default function AnimalSetupCard({ animalId, animal, days, hasOtherAnimal
     </section>
   );
 }
-

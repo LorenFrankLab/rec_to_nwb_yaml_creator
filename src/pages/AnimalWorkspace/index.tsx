@@ -10,9 +10,9 @@
  * @see src/state/workspaceTypes.js for the workspace data model (typedefs)
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useStoreContext } from '../../state/StoreContext';
-import { getPresentDayCount } from '../../domain/dayRecovery';
+import { buildAnimalWorkspaceViewModel } from '../../viewModels/animalWorkspaceViewModel';
 import { buildAnimalFromForm, getDefaultExperimenters } from '../../domain/animalCreation';
 import type { AnimalCreationFormData } from '../../domain/animalCreation';
 import { getAnimalDayIds } from '../../state/workspaceSelectors';
@@ -33,10 +33,13 @@ export function AnimalWorkspace() {
   const { model, actions } = useStoreContext();
 
   // Default the required sections so a workspace that somehow reaches here without them
-  // renders its empty state instead of crashing on Object.keys(undefined).
+  // renders its empty state instead of crashing on Object.keys(undefined). The raw maps stay for
+  // the interaction handlers (create/delete/profile dialogs); the picker's display comes from the VM.
   const { animals = {}, days = {} } = model.workspace;
-  const animalIds = Object.keys(animals);
-  const hasAnimals = animalIds.length > 0;
+
+  // The picker view-model: the animal cards (id + present-day count + link) and the empty state.
+  const vm = useMemo(() => buildAnimalWorkspaceViewModel(model.workspace), [model.workspace]);
+  const hasAnimals = vm.animals.length > 0;
 
   // The animal id whose delete dialog is open (null when closed). Deleting is the highest-blast-
   // radius action, so it routes through the shared type-to-confirm AnimalDeleteDialog rather than a
@@ -126,7 +129,7 @@ export function AnimalWorkspace() {
       ) : !hasAnimals ? (
         /* Empty State: No Animals */
         <div className="empty-state" role="region" aria-label="Empty workspace">
-          <p className={styles.emptyMessage}>No animals created yet.</p>
+          <p className={styles.emptyMessage}>{vm.empty?.message}</p>
           <p>Create your first animal to start managing recording sessions.</p>
           <button
             type="button"
@@ -167,49 +170,42 @@ export function AnimalWorkspace() {
               </button>
             </div>
           </div>
-          {animalIds.map((animalId) => {
-            const animal = animals[animalId];
-            // Count day RECORDS present (indexed + recovered), via the shared recovery count, so a
-            // missing/corrupt index doesn't under-count an animal with recovered records.
-            const dayCount = getPresentDayCount(animalId, animal, days);
-
-            return (
-              <div key={animalId} className={styles.animalCard}>
-                {/* The card link and the ⋮ menu are SIBLINGS: a menu button can't be nested in the
-                    navigation <a> (interactive-in-interactive), and keeping them apart means the
-                    destructive Delete can't be hit while opening the animal. */}
-                <a className={styles.animalCardLink} href={`#/animal/${animalId}/days`}>
-                  <div className={styles.animalName}>{animalId}</div>
-                  <div className={styles.animalDayCount}>
-                    {dayCount} {dayCount === 1 ? 'day' : 'days'}
-                  </div>
-                </a>
-                <OverflowMenu
-                  label={`Actions for ${animalId}`}
-                  buttonClassName={styles.animalCardMenu}
-                  items={[
-                    {
-                      key: 'open',
-                      label: 'Open',
-                      onSelect: () => {
-                        window.location.hash = `#/animal/${animalId}/days`;
-                      },
+          {vm.animals.map(({ id: animalId, dayCount, href }) => (
+            <div key={animalId} className={styles.animalCard}>
+              {/* The card link and the ⋮ menu are SIBLINGS: a menu button can't be nested in the
+                  navigation <a> (interactive-in-interactive), and keeping them apart means the
+                  destructive Delete can't be hit while opening the animal. */}
+              <a className={styles.animalCardLink} href={href}>
+                <div className={styles.animalName}>{animalId}</div>
+                <div className={styles.animalDayCount}>
+                  {dayCount} {dayCount === 1 ? 'day' : 'days'}
+                </div>
+              </a>
+              <OverflowMenu
+                label={`Actions for ${animalId}`}
+                buttonClassName={styles.animalCardMenu}
+                items={[
+                  {
+                    key: 'open',
+                    label: 'Open',
+                    onSelect: () => {
+                      window.location.hash = href;
                     },
-                    {
-                      key: 'edit-profile',
-                      label: 'Edit profile…',
-                      onSelect: () => setPendingProfileAnimalId(animalId),
-                    },
-                    {
-                      key: 'delete',
-                      label: 'Delete animal…',
-                      onSelect: () => setPendingDeleteAnimalId(animalId),
-                    },
-                  ]}
-                />
-              </div>
-            );
-          })}
+                  },
+                  {
+                    key: 'edit-profile',
+                    label: 'Edit profile…',
+                    onSelect: () => setPendingProfileAnimalId(animalId),
+                  },
+                  {
+                    key: 'delete',
+                    label: 'Delete animal…',
+                    onSelect: () => setPendingDeleteAnimalId(animalId),
+                  },
+                ]}
+              />
+            </div>
+          ))}
         </nav>
       )}
 

@@ -78,6 +78,8 @@ export interface ExistingDataReviewViewModel {
   corruptIndexNote?: string;
   /** The recovered-days note, when one or more records are not in the index. */
   recoveredNote?: string;
+  /** How many recovered (orphan) days the note covers — drives the note's it/them grammar + count. */
+  recoveredCount?: number;
   /** The wrong-owner note, when one or more listed days belong to another animal. */
   wrongOwnerNote?: string;
   /**
@@ -340,6 +342,7 @@ function buildReview(
           ? 'badchannel-corruption'
           : 'malformed-collection',
       message: issue.message,
+      actionLabel: issue.actionLabel,
       repair: {
         id: command?.type ?? 'repairAnimalCollection',
         target: { animalId, fieldPath: issue.field },
@@ -383,6 +386,7 @@ function buildReview(
     review.recoveredNote =
       `${orphanIds.length} recovered recording ${orphanIds.length === 1 ? 'day is' : 'days are'} ` +
       'not listed in this animal\'s day index (shown below as "not in day list").';
+    review.recoveredCount = orphanIds.length;
   }
   if (wrongOwnerIds.length > 0) {
     review.wrongOwnerNote =

@@ -23,9 +23,8 @@ import {
   getAnimalDevices,
   getAnimalElectrodeGroups,
   getAnimalNtrodeMaps,
-  getAnimalSubject,
-  getConfigHistory,
   getDataAcqDevices,
+  getDaySession,
   getMostRecentDayId,
 } from '../../state/workspaceSelectors';
 import {
@@ -35,15 +34,11 @@ import {
 import type { NtrodeMap } from '../../state/workspaceTypes';
 import CopyFromAnimalDialog from '../AnimalEditor/CopyFromAnimalDialog';
 import type { CopyPayload } from '../AnimalEditor/CopyFromAnimalDialog';
-import {
-  classifyAnimalDays,
-  DAY_STATUS,
-  isPresentRecordStatus,
-} from '../../domain/dayRecovery';
+import { dayHasArtifacts } from '../../domain/dayRecovery';
 import { DOWNSTREAM_NOT_DELETED_NOTE } from '../../domain/animalDeleteCascade';
-import { validateRawAnimal } from '../../validation/rawShape';
+import { buildAnimalWorkspaceViewModel } from '../../viewModels/animalWorkspaceViewModel';
+import type { RecoveryNoticeViewModel } from '../../viewModels/types';
 import { applyRepairCommand } from '../../state/repairCommands';
-import type { RepairCommand } from '../../state/repairCommands';
 import { CalendarDayCreator } from '../../components/CalendarDayCreator/CalendarDayCreator';
 import DayLifecycleLegend from '../../components/DayLifecycleLegend/DayLifecycleLegend';
 import { ConfirmDialog } from '../../components/Modal';
@@ -99,52 +94,20 @@ export function RecordingDaysTab({ animalId }: RecordingDaysTabProps) {
 
   const { animals = {}, days = {} } = model.workspace;
 
+  // The per-animal view-model: the day rows, the first-run setup sections, the existing-data review
+  // state (corrupt index / recovered / wrong-owner / raw-collection repairs), and the carry-forward
+  // affordance — all decided in the builder, so this pane renders rather than re-derives them.
+  const vm = useMemo(
+    () => buildAnimalWorkspaceViewModel(model.workspace, selectedAnimalId),
+    [model.workspace, selectedAnimalId]
+  );
+
+  // The raw records stay for the WRITE paths (carry-forward create source, copy-from-animal, repair
+  // execution, the delete-confirm descriptor); the display all comes from the view-model above.
   const selectedAnimal = selectedAnimalId ? animals[selectedAnimalId] : null;
-  // The animal's latest-dated existing day — the carry-forward source. null when there is none
-  // (so the toggle is hidden and creation falls back to a blank day).
+  // The animal's latest-dated existing day — the carry-forward source for createDay. null when there
+  // is none (so the toggle is hidden and creation falls back to a blank day).
   const mostRecentDayId = getMostRecentDayId(selectedAnimal, days);
-  // A recovered/imported animal can carry a malformed (non-array) `days`. `getAnimalDayIds`
-  // safely reads it as [], so without this explicit flag the workspace would launder it to
-  // "No recording days yet" and hide the problem. Surface it as a corrupt-reference state.
-  const selectedDaysCorrupt =
-    !!selectedAnimal && selectedAnimal.days != null && !Array.isArray(selectedAnimal.days);
-  // The single domain classifier decides each day's recovery status (ok / dangling_reference /
-  // recovered_unlinked), so the day list, the counts, and the review state all read ONE truth
-  // instead of each re-deriving "what kind of day is this?". Recovered-unlinked records are
-  // surfaced (never laundered into "No recording days yet") and re-linked from the Validation
-  // summary; they are NOT exported until re-linked (see dayRecovery's policy).
-  const selectedDayClassification = useMemo(
-    () => (selectedAnimal ? classifyAnimalDays(selectedAnimalId, selectedAnimal, days) : []),
-    [selectedAnimalId, selectedAnimal, days]
-  );
-  // The animal's exportable day RECORDS (OK status), sorted by date — the cross-day context the
-  // bad-channel monotonicity export gate needs to know which channels were marked bad on an
-  // earlier same-config day. Mirrors the `getAnimalDays` selector's OK-only, date-sorted view so
-  // a row's "Needs fixing — …un-failed…" status matches the Day Editor's gate.
-  //
-  // Memoized so it is a STABLE array built once per data change, not rebuilt for every row in the
-  // list render below. The per-row `getDayRowStatus(...)` call still reduces this array to compute
-  // each day's prior same-config bad-channel union (`priorBadChannels`), so the bad-channel
-  // monotonicity status is O(days) per row → O(days²) for the whole list. That is acceptable for
-  // realistic day counts; for very long chronic studies (CLAUDE.md notes 200+ days) a future pass
-  // could precompute one cumulative per-version prior-bad map and hand each row only its own slice.
-  // Memoizing the inputs (here) avoids the redundant rebuild without changing monotonicity SEMANTICS.
-  const selectedAnimalDays = useMemo(
-    () =>
-      selectedDayClassification
-        .filter((d) => d.status === DAY_STATUS.OK && d.record)
-        .map((d) => d.record!)
-        .sort((a, b) => String(a?.date ?? '').localeCompare(String(b?.date ?? ''))),
-    [selectedDayClassification]
-  );
-  const selectedOrphanDayIds = selectedDayClassification
-    .filter((d) => d.status === DAY_STATUS.RECOVERED_UNLINKED)
-    .map((d) => d.dayId);
-  // Days indexed by THIS animal whose record belongs to a different animal (wrong owner). Surfaced
-  // with a repair so the user can unlink them, not silently shown as ordinary recording days.
-  const selectedWrongOwnerDayIds = selectedDayClassification
-    .filter((d) => d.status === DAY_STATUS.WRONG_OWNER)
-    .map((d) => d.dayId);
 
   /**
    * Commit the pending recording-day deletion through the store's `deleteDay`.
@@ -157,6 +120,20 @@ export function RecordingDaysTab({ animalId }: RecordingDaysTabProps) {
     // OK rows, and an OK row can have a record with no `animalId` (corrupt import) — the store
     // would otherwise fail to clean the index. The UI knows the owner, so name it.
     actions.deleteDay(target.dayId, selectedAnimalId);
+  }
+
+  /**
+   * Open the delete confirm for a day, assembling its descriptor (date / session id / downloaded-
+   * artifacts caveat) from the live record — the day list signals only which day to delete.
+   */
+  function openDeleteDay(dayId: string) {
+    const rec = days[dayId];
+    setPendingDeleteDay({
+      dayId,
+      date: rec?.date,
+      sessionId: getDaySession(rec).session_id as string | undefined,
+      hasArtifacts: dayHasArtifacts(rec),
+    });
   }
 
   /**
@@ -205,13 +182,19 @@ export function RecordingDaysTab({ animalId }: RecordingDaysTabProps) {
    * so recovered/imported corruption can be cleared from the review state without leaving the
    * workspace.
    */
-  function handleRepair(issue: { repairCommand?: unknown } | null | undefined) {
-    if (!issue?.repairCommand || !selectedAnimalId) return;
-    applyRepairCommand(issue.repairCommand as RepairCommand, {
-      actions,
-      animalId: selectedAnimalId,
-      animal: selectedAnimal ?? undefined,
-    });
+  function handleRepair(notice: RecoveryNoticeViewModel) {
+    if (!selectedAnimalId) return;
+    // The view-model descriptor identifies the animal-collection reset (resetAnimalCameras /
+    // resetDataAcqDevice / rebuildConfigurationHistory) — all animal-surface commands that carry
+    // only a `type`, so the executable command IS the descriptor's id. Same executor as before.
+    applyRepairCommand(
+      { type: notice.repair.id },
+      {
+        actions,
+        animalId: selectedAnimalId,
+        animal: selectedAnimal ?? undefined,
+      }
+    );
   }
 
   /**
@@ -262,15 +245,12 @@ export function RecordingDaysTab({ animalId }: RecordingDaysTabProps) {
 
   /** Get existing days (ISO date strings) for selected animal. */
   function getExistingDays(): string[] {
-    if (!selectedAnimal) return [];
-    // Use the recovery classifier so the calendar's duplicate-date guard accounts for recovered
-    // records too (ok + recovered-unlinked), not just the index — otherwise a recovered day's
-    // date could be re-created as a collision. Tolerates a malformed/missing index.
-    return selectedDayClassification
-      .filter(
-        (d) => isPresentRecordStatus(d.status)
-      )
-      .map((d) => d.record?.date)
+    // Present-day dates (ok + recovered-unlinked) from the view-model rows so the calendar's
+    // duplicate-date guard accounts for recovered records too, not just the index — otherwise a
+    // recovered day's date could be re-created as a collision.
+    return (vm.selectedAnimal?.dayRows ?? [])
+      .filter((row) => row.recovery === 'ok' || row.recovery === 'recovered_unlinked')
+      .map((row) => row.date)
       .filter((x): x is string => Boolean(x));
   }
 
@@ -335,28 +315,13 @@ export function RecordingDaysTab({ animalId }: RecordingDaysTabProps) {
   const hasOtherAnimals =
     Object.keys(animals).filter((id) => id !== selectedAnimalId).length > 0;
 
-  // Raw-shape corruption drives the existing-data review state below.
-  const rawIssues = validateRawAnimal(selectedAnimal);
-  // Count the recording-day RECORDS actually present (indexed + recovered), not just the index
-  // length — otherwise a missing/corrupt index would say "Found 0 recording days" while recovered
-  // records render below.
-  const dayCount = selectedDayClassification.filter((d) => isPresentRecordStatus(d.status)).length;
-  const configCount = getConfigHistory(selectedAnimal).length;
-  // The setup card is the first-run onboarding affordance: show it until the animal is ESTABLISHED
-  // — a subject is set AND it has at least one recording day. Behavior-only days are valid, so
-  // "established" does NOT require any particular hardware section.
-  const subjectPresent = Boolean(getAnimalSubject(selectedAnimal).subject_id);
-  const showSetupCard = !(subjectPresent && dayCount > 0);
-  // Existing data needs an explicit review state ONLY when there is something to review: raw-shape
-  // corruption, a corrupt days reference, or recovered/wrong-owner day records. A clean, established
-  // animal (days present, nothing corrupt) does NOT show this banner — it would otherwise compete
-  // with "Add Recording Days" forever after the first day.
-  const hasCorruption =
-    rawIssues.length > 0 ||
-    selectedDaysCorrupt ||
-    selectedOrphanDayIds.length > 0 ||
-    selectedWrongOwnerDayIds.length > 0;
-  const showReview = hasCorruption;
+  // The view-model's selected-animal slice — present whenever the animal record is (same guard).
+  // It owns the setup-card presence, the review state (the corrupt-index / recovered / wrong-owner /
+  // raw-collection notices), the day rows, the days-corrupt empty-state flag, and the carry-forward
+  // display — this pane no longer re-derives any of them.
+  const selected = vm.selectedAnimal;
+  if (!selected) return null;
+  const { dayRows, setupSections, showSetupCard, daysCorrupt, review, carryForward: carryForwardVm } = selected;
 
   return (
     <>
@@ -378,14 +343,14 @@ export function RecordingDaysTab({ animalId }: RecordingDaysTabProps) {
             >
               {showCalendar ? 'Hide Calendar' : 'Add Recording Days'}
             </button>
-            {mostRecentDayId && (
+            {carryForwardVm.available && (
               <label className={styles.carryForwardToggle}>
                 <input
                   type="checkbox"
                   checked={carryForward}
                   onChange={(e) => setCarryForward(e.target.checked)}
                 />
-                Start each new day from the last day ({days[mostRecentDayId]?.date}) — review &amp;
+                Start each new day from the last day ({carryForwardVm.lastDayDate}) — review &amp;
                 adjust per day
               </label>
             )}
@@ -395,30 +360,16 @@ export function RecordingDaysTab({ animalId }: RecordingDaysTabProps) {
         {/* First-run "Set up this animal" card + the (separate) existing-data review state.
             The card is the LOUD onboarding affordance for a new/under-configured animal; the
             review state is a different concern (recovered/imported review). Both read the SAME
-            per-section / classification truth the component derives above. */}
+            view-model the builder derives. */}
         {showSetupCard && (
           <AnimalSetupCard
-            animalId={selectedAnimalId}
-            animal={selectedAnimal}
-            days={days}
+            sections={setupSections}
             hasOtherAnimals={hasOtherAnimals}
             onCopyFromAnimal={() => setCopyDialogOpen(true)}
           />
         )}
 
-        {showReview && (
-          <ExistingDataReview
-            animalId={selectedAnimalId}
-            animal={selectedAnimal}
-            dayCount={dayCount}
-            configCount={configCount}
-            hasCorruption={hasCorruption}
-            daysCorrupt={selectedDaysCorrupt}
-            orphanDayIds={selectedOrphanDayIds}
-            wrongOwnerDayIds={selectedWrongOwnerDayIds}
-            onRepair={handleRepair}
-          />
-        )}
+        {review && <ExistingDataReview review={review} onRepair={handleRepair} />}
 
         {/* Calendar for creating multiple days */}
         {showCalendar && (
@@ -435,17 +386,15 @@ export function RecordingDaysTab({ animalId }: RecordingDaysTabProps) {
         {/* One shared legend for the day-row status words, reused from the Validation Summary so
             the lifecycle vocabulary is defined once. Shown only when there are day rows to triage;
             collapsed by default so it never crowds the list. */}
-        {selectedDayClassification.length > 0 && <DayLifecycleLegend />}
+        {dayRows.length > 0 && <DayLifecycleLegend />}
 
         <DayList
-          classification={selectedDayClassification}
-          daysCorrupt={selectedDaysCorrupt}
+          rows={dayRows}
+          daysCorrupt={daysCorrupt}
           animalId={selectedAnimalId}
-          animal={selectedAnimal}
-          animalDays={selectedAnimalDays}
           onUnlinkDayReference={actions.unlinkDayReference}
           onDuplicateDay={openDuplicateDay}
-          onDeleteDay={setPendingDeleteDay}
+          onDeleteDay={openDeleteDay}
         />
       </div>
 

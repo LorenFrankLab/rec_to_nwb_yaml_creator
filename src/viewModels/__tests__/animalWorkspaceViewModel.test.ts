@@ -85,6 +85,9 @@ describe('buildAnimalWorkspaceViewModel — day rows parity', () => {
     expect(row.recovery).toBe('ok');
     expect(row.status).toBe('ready');
     expect(row.statusLabel).toBe('Ready to export');
+    // The un-collapsed display variant drives the `day-row-status-${chipVariant}` CSS class — kept
+    // distinct from the lossy `ready` severity (a validated/exported day shares the severity).
+    expect(row.chipVariant).toBe('ready');
     expect(row.lifecycle).toBe('ready');
     expect(row.exportEligibility).toBe('eligible');
     expect(row.href).toBe(`#/day/${day.id}`);
@@ -129,6 +132,7 @@ describe('buildAnimalWorkspaceViewModel — day rows parity', () => {
     expect(row.recovery).toBe('dangling_reference');
     expect(row.status).toBe('error');
     expect(row.statusLabel).toBe('Missing record');
+    expect(row.chipVariant).toBe('error');
     expect(row.href).toBeUndefined();
     expect(row.actions).toEqual([]);
     expect(row.recoveryDetail?.repair?.command).toEqual({
@@ -258,6 +262,7 @@ describe('buildAnimalWorkspaceViewModel — recovery / review', () => {
     const sel = buildAnimalWorkspaceViewModel(ws, animal.id).selectedAnimal!;
     expect(sel.review?.recoveredNote).toMatch(/1 recovered recording day is/);
     expect(sel.review?.recoveredNote).toMatch(/not in day list/);
+    expect(sel.review?.recoveredCount).toBe(1);
     expect(sel.dayRows[0].recovery).toBe('recovered_unlinked');
   });
 
@@ -290,6 +295,7 @@ describe('buildAnimalWorkspaceViewModel — recovery / review', () => {
     );
     expect(camerasNotice).toBeDefined();
     expect(camerasNotice?.kind).toBe('malformed-collection');
+    expect(camerasNotice?.actionLabel).toBe('Reset cameras');
     expect(typeof camerasNotice?.repair.id).toBe('string');
   });
 

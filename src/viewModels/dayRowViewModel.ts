@@ -101,6 +101,8 @@ export function buildDayRowViewModel(input: DayRowInput): DayRowViewModel {
     href,
     status: variantToSeverity(display.variant),
     statusLabel: display.label,
+    // The un-collapsed display variant for the status CSS class — `status` (severity) is lossy.
+    chipVariant: display.variant,
     sessionDescription,
     recovery,
     actions: [],

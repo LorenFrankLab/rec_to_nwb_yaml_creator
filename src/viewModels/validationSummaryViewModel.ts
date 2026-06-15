@@ -31,12 +31,9 @@ import type {
   WorkflowAction,
 } from './types';
 
-/** A ValidationSummary table row: the shared day-row plus the table's per-day scan cells. */
+/** A ValidationSummary table row: the shared day-row plus the table's per-day scan cells.
+ *  (`chipVariant`, the status-chip CSS modifier, is inherited from {@link DayRowViewModel}.) */
 export interface DayStatusRowViewModel extends DayRowViewModel {
-  /** The status-chip CSS modifier (`ready`/`validated`/`exported`/`error`/`incomplete`) from
-   *  `dayChipDisplay`. Distinct from the lossy `status` ({@link WorkflowSeverity}): the chip needs the
-   *  un-collapsed variant to keep `validated`/`exported`/`incomplete` visually distinct. */
-  chipVariant: string;
   /** The status-chip's hover tooltip — set only for the unreadable / missing-record error rows whose
    *  chip carries repair guidance; absent (no `title`) for every other row. */
   statusTitle?: string;
@@ -117,7 +114,6 @@ function toDayStatusRow(row: SummaryRow): DayStatusRowViewModel {
 
   const out: DayStatusRowViewModel = {
     ...base,
-    chipVariant: display.variant,
     animalKey: row.animalKey,
     subjectLabel: subjectLabel(row.animal),
   };

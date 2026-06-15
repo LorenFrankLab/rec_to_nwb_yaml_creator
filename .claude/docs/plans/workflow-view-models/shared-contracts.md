@@ -133,6 +133,11 @@ export interface DayRowViewModel {
   href?: string;             // `#/day/<id>` — absent for unresolvable rows
   status: WorkflowSeverity;
   statusLabel: string;       // 'Ready to export' | 'Needs fixing — …' | 'Re-link to export' | …
+  /** The surface's un-collapsed display variant for the status CSS class (`dayChipDisplay` /
+   *  `getDayRowStatus` variant: ready/validated/exported/error/incomplete/needs_fixing/draft).
+   *  `status` (severity) is lossy — validated/exported both map to 'ready' — so the chip class needs
+   *  this. Set centrally by `buildDayRowViewModel`; both surfaces render `…-${chipVariant}`. */
+  chipVariant: string;
   sessionDescription?: string;
   /** Day classification from `classifyAnimalDays` (src/domain/dayRecovery DAY_STATUS) — the frozen
    *  `DayStatus` union (see Extended vocabulary). */
