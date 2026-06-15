@@ -21,7 +21,6 @@ import { isExportEnabled } from '../../domain/stepGate';
 import { ownershipForIssue } from '../../domain/workflowOwnership';
 import { repairTargetForIssue } from '../../domain/repairRouting';
 import { workflowCategoryForIssue, WORKFLOW_CATEGORY_LABELS } from '../../domain/workflowCategories';
-import { repairButtonKey } from '../../pages/DayEditor/RepairActions';
 import { priorBadChannels } from '../../domain/badChannelMonotonicity';
 import type { Animal, Day } from '../../state/workspaceTypes';
 
@@ -461,8 +460,13 @@ describe('buildDayEditorViewModel — issues / repair / export', () => {
       expect(issue.repairSurface).toBe(target.surface);
       // Executable when the issue carries a repairCommand, else navigate (RepairActionButton precedence).
       expect(issue.repairKind).toBe(domainIssue.repairCommand != null ? 'execute' : 'navigate');
-      // The collapse key must match the page's repairButtonKey so the VM-driven list dedups identically.
-      expect(issue.repairDedupKey).toBe(repairButtonKey(domainIssue));
+      // The collapse key has the canonical `surface:step:focus:command` shape so the VM-driven repair
+      // list dedups several issues sharing one fix into a single button (this is the sole home of the
+      // formula now that RepairActions reads `repairDedupKey`).
+      const cmd = domainIssue.repairCommand as { type?: unknown; key?: unknown; field?: unknown } | undefined;
+      const command = cmd ? `${String(cmd.type ?? '')}:${String(cmd.key ?? cmd.field ?? '')}` : '';
+      const expectedKey = `${target.surface}:${target.step ?? ''}:${domainIssue.focusPath || domainIssue.path || ''}:${command}`;
+      expect(issue.repairDedupKey).toBe(expectedKey);
       // A navigate repair carries the focus anchor it hands the owning surface.
       if (issue.repairKind === 'navigate') {
         const focus = domainIssue.focusPath || domainIssue.path;

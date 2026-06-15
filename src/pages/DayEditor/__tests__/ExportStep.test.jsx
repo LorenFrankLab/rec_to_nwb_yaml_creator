@@ -10,6 +10,17 @@ import { mergeDayMetadata } from '../../../state/workspaceUtils';
 import { computeStepStatus } from '../../../domain/validation';
 import { validate } from '../../../validation';
 import * as validationModule from '../../../validation';
+import { buildDayEditorViewModel } from '../../../viewModels/dayEditorViewModel';
+
+// Phase 3-f: ExportStep renders its blocked repair list from `vm.issues` and its lifecycle status
+// from `vm.export` (the DayEditorStepper threads both). This helper builds the view-model from the
+// SAME workspace ExportStep merges internally, so the threaded slices match the component's own gate.
+// (ExportStep keeps its independent download gate — defense in depth — so passing the slices does not
+// change which days it blocks.)
+const renderExport = (animal, day, extraProps = {}) => {
+  const vm = buildDayEditorViewModel({ animals: { [animal.id]: animal }, days: { [day.id]: day } }, day.id);
+  return render(<ExportStep animal={animal} day={day} issues={vm.issues} exportGate={vm.export} {...extraProps} />);
+};
 
 const UNSTABLE = {
   ok: false,
@@ -64,7 +75,7 @@ describe('ExportStep', () => {
     const downloadSpy = vi.spyOn(yaml, 'downloadYamlFile').mockImplementation(() => {});
     const { animal, day } = buildRealisticWorkspace();
 
-    render(<ExportStep animal={animal} day={day} />);
+    renderExport(animal, day);
 
     expect(screen.getByText(/06222023_remy_metadata\.yml/)).toBeInTheDocument();
 
@@ -77,7 +88,7 @@ describe('ExportStep', () => {
   it('names the persisted lifecycle status (Validated) on an exportable, saved day', () => {
     const { animal, day } = buildRealisticWorkspace();
     day.state = { draft: false, validated: true, exported: false };
-    render(<ExportStep animal={animal} day={day} />);
+    renderExport(animal, day);
     // The Export step uses the SAME shared vocabulary as Animal Days / Day Validation, so a saved
     // day reads "Validated" here too (never a contradictory phrase).
     expect(screen.getByTestId('export-lifecycle-status')).toHaveTextContent('Validated');
@@ -85,7 +96,7 @@ describe('ExportStep', () => {
 
   it('reads a not-yet-saved exportable day as "Ready to export"', () => {
     const { animal, day } = buildRealisticWorkspace(); // realistic fixture day is state.draft
-    render(<ExportStep animal={animal} day={day} />);
+    renderExport(animal, day);
     expect(screen.getByTestId('export-lifecycle-status')).toHaveTextContent('Ready to export');
   });
 
@@ -97,7 +108,7 @@ describe('ExportStep', () => {
 
     // Pass store actions (the DayEditor provides these via context; an isolated render passes them
     // as props) so the export can record the lifecycle transition.
-    render(<ExportStep animal={animal} day={day} actions={{ updateDay }} />);
+    renderExport(animal, day, { actions: { updateDay } });
 
     await user.click(screen.getByRole('button', { name: /download/i }));
 
@@ -112,7 +123,7 @@ describe('ExportStep', () => {
     const user = userEvent.setup();
     const { animal, day } = buildRealisticWorkspace();
 
-    render(<ExportStep animal={animal} day={day} />);
+    renderExport(animal, day);
 
     expect(screen.queryByText(/session_id: remy_20230622/)).not.toBeInTheDocument();
 
@@ -127,7 +138,7 @@ describe('ExportStep', () => {
     vi.spyOn(shadow, 'checkShadowExport').mockReturnValue(UNSTABLE);
     const { animal, day } = buildRealisticWorkspace();
 
-    render(<ExportStep animal={animal} day={day} />);
+    renderExport(animal, day);
     await user.click(screen.getByRole('button', { name: /download/i }));
 
     expect(downloadSpy).not.toHaveBeenCalled();
@@ -140,7 +151,7 @@ describe('ExportStep', () => {
     vi.spyOn(yaml, 'downloadYamlFile').mockImplementation(() => {});
     const { animal, day } = buildRealisticWorkspace();
 
-    render(<ExportStep animal={animal} day={day} />);
+    renderExport(animal, day);
     await user.click(screen.getByRole('button', { name: /download yaml/i }));
 
     expect(screen.getByText(/downloaded 06222023_remy_metadata\.yml/i)).toBeInTheDocument();
@@ -152,7 +163,7 @@ describe('ExportStep', () => {
     vi.spyOn(shadow, 'checkShadowExport').mockReturnValue(UNSTABLE);
     const { animal, day } = buildRealisticWorkspace();
 
-    render(<ExportStep animal={animal} day={day} />);
+    renderExport(animal, day);
     const downloadButton = screen.getByRole('button', { name: /download yaml/i });
 
     await user.click(downloadButton);
@@ -167,7 +178,7 @@ describe('ExportStep', () => {
     const downloadSpy = vi.spyOn(yaml, 'downloadYamlFile').mockImplementation(() => {});
     const { animal, day } = buildExportErrorWorkspace();
 
-    render(<ExportStep animal={animal} day={day} onNavigate={vi.fn()} />);
+    renderExport(animal, day, { onNavigate: vi.fn() });
 
     // The blocking reason is visible before the user even clicks.
     expect(screen.getByText(/validation error/i)).toBeInTheDocument();
@@ -192,7 +203,7 @@ describe('ExportStep', () => {
     ]);
     const { animal, day } = buildRealisticWorkspace();
 
-    render(<ExportStep animal={animal} day={day} onNavigate={vi.fn()} />);
+    renderExport(animal, day, { onNavigate: vi.fn() });
 
     const blocked = screen.getByRole('alert');
     expect(within(blocked).getByText('A data acquisition device is required')).toBeInTheDocument();
@@ -204,7 +215,7 @@ describe('ExportStep', () => {
     const shadowSpy = vi.spyOn(shadow, 'checkShadowExport');
     const { animal, day } = buildExportErrorWorkspace();
 
-    render(<ExportStep animal={animal} day={day} onNavigate={vi.fn()} />);
+    renderExport(animal, day, { onNavigate: vi.fn() });
     await user.click(screen.getByRole('button', { name: /download yaml/i }));
 
     expect(shadowSpy).not.toHaveBeenCalled();
@@ -223,7 +234,7 @@ describe('ExportStep', () => {
     expect(validate(merged).filter((i) => i.severity === 'error')).toHaveLength(0);
     expect(computeStepStatus(day, merged).export).toBe('valid');
 
-    render(<ExportStep animal={animal} day={day} onNavigate={vi.fn()} />);
+    renderExport(animal, day, { onNavigate: vi.fn() });
 
     const downloadButton = screen.getByRole('button', { name: /download yaml/i });
     // The button is disabled and a blocking reason is shown up front.
@@ -243,7 +254,7 @@ describe('ExportStep', () => {
     // must point the user to the required setup shown below instead.
     const { animal, day } = buildAllChannelsBadWorkspace();
 
-    render(<ExportStep animal={animal} day={day} onNavigate={vi.fn()} />);
+    renderExport(animal, day, { onNavigate: vi.fn() });
 
     const blocked = screen.getByRole('alert');
     expect(within(blocked).getByText(/complete the required setup shown below before exporting/i)).toBeInTheDocument();
@@ -254,7 +265,7 @@ describe('ExportStep', () => {
   it('keeps the "Resolve N validation errors" message when there ARE error-severity issues', () => {
     const { animal, day } = buildExportErrorWorkspace();
 
-    render(<ExportStep animal={animal} day={day} onNavigate={vi.fn()} />);
+    renderExport(animal, day, { onNavigate: vi.fn() });
 
     const blocked = screen.getByRole('alert');
     expect(within(blocked).getByText(/resolve \d+ validation error/i)).toBeInTheDocument();
@@ -268,7 +279,7 @@ describe('ExportStep', () => {
     const onNavigate = vi.fn();
     const { animal, day } = buildAllChannelsBadWorkspace();
 
-    render(<ExportStep animal={animal} day={day} onNavigate={onNavigate} />);
+    renderExport(animal, day, { onNavigate });
 
     const repairButton = screen.getByRole('button', { name: /fix in devices/i });
     await user.click(repairButton);
@@ -285,7 +296,7 @@ describe('ExportStep', () => {
     animal.configurationHistory[0].devices.electrode_groups = [];
     animal.configurationHistory[0].devices.ntrode_electrode_group_channel_map = [];
 
-    render(<ExportStep animal={animal} day={day} onNavigate={onNavigate} />);
+    renderExport(animal, day, { onNavigate });
 
     await user.click(screen.getByRole('button', { name: /fix in animal setup/i }));
     expect(onNavigate).toHaveBeenCalledWith('animal', undefined);
@@ -301,7 +312,7 @@ describe('ExportStep', () => {
     // Keep electrode groups; strip only the channel maps.
     animal.configurationHistory[0].devices.ntrode_electrode_group_channel_map = [];
 
-    render(<ExportStep animal={animal} day={day} onNavigate={onNavigate} />);
+    renderExport(animal, day, { onNavigate });
 
     await user.click(screen.getByRole('button', { name: /fix in animal setup/i }));
     expect(onNavigate).toHaveBeenCalledWith('animal', 'electrode_groups');
@@ -312,7 +323,7 @@ describe('ExportStep', () => {
     // must render (blocked) and surface the repairable reason instead of crashing.
     const { animal, day } = buildRealisticWorkspace();
     animal.configurationHistory = 'corrupt';
-    expect(() => render(<ExportStep animal={animal} day={day} onNavigate={vi.fn()} />)).not.toThrow();
+    expect(() => renderExport(animal, day, { onNavigate: vi.fn() })).not.toThrow();
     expect(screen.getByText(/could not be assembled|missing or corrupt/i)).toBeInTheDocument();
   });
 
@@ -324,7 +335,7 @@ describe('ExportStep', () => {
     const onRepair = vi.fn();
     const { animal, day } = buildRealisticWorkspace();
     animal.configurationHistory = [];
-    render(<ExportStep animal={animal} day={day} onNavigate={vi.fn()} onRepair={onRepair} />);
+    renderExport(animal, day, { onNavigate: vi.fn(), onRepair });
 
     expect(screen.getByRole('button', { name: /download yaml/i })).toBeDisabled();
     expect(screen.getByText(/configuration history is missing or empty/i)).toBeInTheDocument();
@@ -338,12 +349,13 @@ describe('ExportStep', () => {
   it('blocks export AND surfaces a routable repair when animal.cameras is corrupt (raw-animal gate)', () => {
     const { animal, day } = buildRealisticWorkspace();
     animal.cameras = 'nope';
-    render(<ExportStep animal={animal} day={day} onNavigate={vi.fn()} />);
-    // The download is blocked AND the raw-animal issue renders a repair action routed to
-    // the Animal Editor (not a dead-end disabled button with no surfaced fix).
+    renderExport(animal, day, { onNavigate: vi.fn() });
+    // The download is blocked AND the raw-animal issue renders an executable repair (the
+    // view-model classifies the commandable cameras corruption as an in-place reset, Phase 3-f) —
+    // not a dead-end disabled button with no surfaced fix.
     expect(screen.getByRole('button', { name: /download yaml/i })).toBeDisabled();
     expect(screen.getByText(/cameras.*is corrupt|corrupt.*list/i)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /fix in animal setup/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /reset cameras/i })).toBeInTheDocument();
   });
 
   it('offers a repair action per error that routes to the editable owner with the field target', async () => {
@@ -351,7 +363,7 @@ describe('ExportStep', () => {
     const onNavigate = vi.fn();
     const { animal, day } = buildExportErrorWorkspace();
 
-    render(<ExportStep animal={animal} day={day} onNavigate={onNavigate} />);
+    renderExport(animal, day, { onNavigate });
 
     // The targeted_x type error is device geometry — editable only in the Animal Editor —
     // so the repair routes to the 'animal' surface, not the Day-Editor Devices step.
@@ -364,7 +376,7 @@ describe('ExportStep', () => {
   it('shows a preflight summary derived from the merged day on a valid day', () => {
     const { animal, day } = buildRealisticWorkspace();
 
-    render(<ExportStep animal={animal} day={day} onNavigate={vi.fn()} />);
+    renderExport(animal, day, { onNavigate: vi.fn() });
 
     const preflight = screen.getByRole('region', { name: /preflight/i });
     // Section labels present, derived from mergedDay (not duplicate component state).
@@ -398,7 +410,7 @@ describe('ExportStep', () => {
     // here is absent and would otherwise render as "—".
     delete day.configurationVersion;
 
-    render(<ExportStep animal={animal} day={day} onNavigate={vi.fn()} />);
+    renderExport(animal, day, { onNavigate: vi.fn() });
 
     const preflight = screen.getByRole('region', { name: /preflight/i });
     expect(within(preflight).getByText(/version 1\b/i)).toBeInTheDocument();
@@ -415,7 +427,7 @@ describe('ExportStep', () => {
       appliedToDays: [],
     });
 
-    render(<ExportStep animal={animal} day={day} onNavigate={vi.fn()} />);
+    renderExport(animal, day, { onNavigate: vi.fn() });
 
     const preflight = screen.getByRole('region', { name: /preflight/i });
     expect(within(preflight).getByText(/version 1 \(historical\)/i)).toBeInTheDocument();
@@ -432,7 +444,7 @@ describe('ExportStep', () => {
     });
     delete day.configurationVersion; // unpinned, two versions → wrong-geometry risk → blocked
 
-    render(<ExportStep animal={animal} day={day} onNavigate={vi.fn()} />);
+    renderExport(animal, day, { onNavigate: vi.fn() });
 
     // Export is blocked: no preflight, a blocking explanation, and a disabled download.
     expect(screen.queryByRole('region', { name: /preflight/i })).not.toBeInTheDocument();
@@ -445,7 +457,7 @@ describe('ExportStep', () => {
     // The record exists, but the animal's index doesn't list it (recovered/unlinked).
     animal.days = [];
 
-    render(<ExportStep animal={animal} day={day} onNavigate={vi.fn()} />);
+    renderExport(animal, day, { onNavigate: vi.fn() });
 
     expect(screen.queryByRole('region', { name: /preflight/i })).not.toBeInTheDocument();
     expect(screen.getByText(/not in .*day list/i)).toBeInTheDocument();
@@ -460,7 +472,7 @@ describe('ExportStep', () => {
       { severity: 'warning', code: 'epoch_overlap', path: 'tasks[0].task_epochs', message: 'epochs overlap' },
     ]);
 
-    render(<ExportStep animal={animal} day={day} onNavigate={vi.fn()} />);
+    renderExport(animal, day, { onNavigate: vi.fn() });
 
     const preflight = screen.getByRole('region', { name: /preflight/i });
     expect(within(preflight).getByText(/1 warning to review \(does not block export\)/i)).toBeInTheDocument();
@@ -471,7 +483,7 @@ describe('ExportStep', () => {
     const downloadSpy = vi.spyOn(yaml, 'downloadYamlFile').mockImplementation(() => {});
     const { animal, day } = buildExportErrorWorkspace();
 
-    render(<ExportStep animal={animal} day={day} onNavigate={vi.fn()} />);
+    renderExport(animal, day, { onNavigate: vi.fn() });
 
     // Defeat the visual disabled guard so the click reaches handleDownload, proving
     // the in-handler validation guard (not just the disabled attribute) fails closed.
@@ -485,7 +497,7 @@ describe('ExportStep', () => {
   it('does not show the preflight summary on an export-blocked day', () => {
     const { animal, day } = buildExportErrorWorkspace();
 
-    render(<ExportStep animal={animal} day={day} onNavigate={vi.fn()} />);
+    renderExport(animal, day, { onNavigate: vi.fn() });
 
     expect(screen.queryByRole('region', { name: /preflight/i })).not.toBeInTheDocument();
   });
@@ -497,7 +509,7 @@ describe('ExportStep', () => {
     vi.spyOn(shadow, 'checkShadowExport').mockReturnValue(UNSTABLE);
     const { animal, day } = buildRealisticWorkspace();
 
-    render(<ExportStep animal={animal} day={day} />);
+    renderExport(animal, day);
     await user.click(screen.getByRole('button', { name: /download/i }));
 
     expect(downloadSpy).toHaveBeenCalledTimes(1);

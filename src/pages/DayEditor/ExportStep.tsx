@@ -4,14 +4,15 @@ import { mergeDayMetadata, resolveDayConfig } from '../../state/workspaceUtils';
 import { getAnimalDayIds } from '../../state/workspaceSelectors';
 import { computeStepStatus, validateDay, STEP_LABELS } from '../../domain/validation';
 import { getDayWorkflowStatus } from '../../domain/workflowStatus';
-import { DAY_LIFECYCLE_LABEL, lifecycleForValidDay } from '../../domain/dayLifecycle';
 import { buildPreflightSummary } from '../../domain/preflightSummary';
 import { isExportEnabled } from './stepGate';
 import { isFeatureEnabled } from '../../featureFlags';
 import { checkShadowExport } from '../../domain/shadowExport';
 import RepairActions from './RepairActions';
+import type { RepairDispatch } from './RepairActions';
 import { useDayEditorContext } from './DayEditorContext';
 import type { DayEditorBundle } from './DayEditorContext';
+import type { IssueViewModel, ExportGateViewModel } from '../../viewModels/types';
 import './DayEditor.scss';
 
 /** A blocking/override notice with an optional first-difference diff report. */
@@ -23,8 +24,12 @@ interface ExportNotice {
 interface ExportStepProps extends DayEditorBundle {
   /** Routes a repair action to the step that owns the fix (and an optional field target). */
   onNavigate?: (stepId: string, fieldPath?: string) => void;
-  /** Executes an issue's `repairCommand` in place (threaded from DayEditorStepper). */
-  onRepair?: (issue: unknown) => void;
+  /** Executes an issue's repair command in place (reconstructed from the view-model). */
+  onRepair?: (dispatch: RepairDispatch) => void;
+  /** The classified issue list from the view-model (`vm.issues`) — the blocked repair list renders it. */
+  issues?: IssueViewModel[];
+  /** The export gate from the view-model (`vm.export`) — its lifecycle status label is rendered. */
+  exportGate?: ExportGateViewModel;
 }
 
 /**
@@ -50,7 +55,12 @@ export default function ExportStep(props: ExportStepProps) {
   // passes the same fields as props). `onNavigate`/`onRepair` are section-specific, so they stay
   // direct props.
   const { animal, day, animalKey = undefined, animalDays = [], actions = undefined } = useDayEditorContext(props);
-  const { onNavigate = () => {}, onRepair } = props;
+  const { onNavigate = () => {}, onRepair, issues = [], exportGate } = props;
+  // The blocked repair list renders the view-model's classified ERROR issues (Phase 3-f) — same
+  // content/order as the independent gate's `validationErrors` below (both are validateDay's error
+  // filter over the same merged day), but carrying the ownership/category/repair classification the
+  // RepairActions list reads instead of re-deriving.
+  const vmErrorIssues = issues.filter((issue) => issue.severity === 'error');
   // The store OWNER KEY (resolved by DayEditorStepper); a stale/missing `animal.id` record field
   // must not misroute a recovered animal's re-link/repair links. Falls back to `animal.id` for
   // isolated renders that don't pass it.
@@ -233,7 +243,7 @@ export default function ExportStep(props: ExportStepProps) {
           reads "Validated" (or "Exported"), an unsaved-but-passing day "Ready to export". */}
       {!exportBlocked && (
         <p className="export-lifecycle-status" data-testid="export-lifecycle-status">
-          Status: <strong>{DAY_LIFECYCLE_LABEL[lifecycleForValidDay(day?.state) as keyof typeof DAY_LIFECYCLE_LABEL]}</strong>
+          Status: <strong>{exportGate?.lifecycleStatusLabel}</strong>
         </p>
       )}
 
@@ -264,7 +274,7 @@ export default function ExportStep(props: ExportStepProps) {
           </p>
           {validationErrors.length > 0 && (
             <RepairActions
-              issues={validationErrors}
+              issues={vmErrorIssues}
               onNavigate={onNavigate}
               animalId={ownerKey}
               onRepair={onRepair}

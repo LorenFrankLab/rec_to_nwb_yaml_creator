@@ -391,7 +391,7 @@ function readOnlyInherited(fieldPath: string, label: string, value: unknown): Fi
  * `repairTargetForIssue` (a route + label — an animal-surface fix deep-links the owning setup tab;
  * a day-surface fix points at the owning step; a none-surface issue carries no repair).
  */
-function toIssueViewModel(
+export function toIssueViewModel(
   issue: RepairableIssue,
   dayId: string,
   ownerKey: string | null

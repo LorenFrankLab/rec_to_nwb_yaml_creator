@@ -1,10 +1,9 @@
-import { ownershipForIssue } from '../../domain/workflowOwnership';
-import type { RepairableIssue } from '../../domain/repairRouting';
+import type { IssueViewModel } from '../../viewModels/types';
 import styles from './IssueOwnershipHint.module.css';
 
 interface IssueOwnershipHintProps {
-  /** Issue to describe; forwarded verbatim to `ownershipForIssue` (which is total). */
-  issue?: RepairableIssue | null;
+  /** The classified issue view-model whose ownership pattern/action/reach this hint renders. */
+  issue: IssueViewModel;
 }
 
 /**
@@ -15,17 +14,16 @@ interface IssueOwnershipHintProps {
  * fix this is, and it flags when correcting the issue reaches beyond the day in front of them (the
  * phase's blast-radius transparency promise).
  *
- * It is purely additive vocabulary: it does NOT route or re-decide the repair (the route + label
- * stay on {@link RepairActionButton}, owned by `repairTargetForIssue`), and it does NOT regroup
- * issues (grouping stays on the workflow category). The copy is read verbatim from the single
- * ownership descriptor (`ownershipForIssue`), so it cannot drift from the matrix.
+ * It renders the classification straight off the {@link IssueViewModel} (Phase 3-f): the
+ * `ownership` pattern + `ownershipAction` + `reachesBeyondDay` the builder resolved from
+ * `ownershipForIssue`, so the hint re-decides nothing. It does NOT route the repair (that stays on
+ * {@link RepairActionButton}) and does NOT regroup issues (grouping is the workflow category).
  */
 export default function IssueOwnershipHint({ issue }: IssueOwnershipHintProps) {
-  const descriptor = ownershipForIssue(issue);
   return (
-    <span className={styles.hint} data-ownership-pattern={descriptor.pattern}>
-      <span className={styles.action}>{descriptor.primaryAction}</span>
-      {descriptor.reachesBeyondDay && (
+    <span className={styles.hint} data-ownership-pattern={issue.ownership}>
+      <span className={styles.action}>{issue.ownershipAction}</span>
+      {issue.reachesBeyondDay && (
         <span className={styles.reach}>Affects more than this day</span>
       )}
     </span>
