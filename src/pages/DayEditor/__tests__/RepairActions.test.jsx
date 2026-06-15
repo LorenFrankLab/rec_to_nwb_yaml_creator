@@ -2,14 +2,21 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import RepairActions from '../RepairActions';
+import { toIssueViewModel } from '../../../viewModels/dayEditorViewModel';
+
+// Phase 3-f: RepairActions renders the day-editor view-model's classified IssueViewModel list. These
+// tests drive REAL validator codes through the real builder (`toIssueViewModel`) so the code → render
+// pipeline (ownership hint, repair surface/kind/route, dedup, category grouping) is exercised
+// end-to-end, then assert the component's rendering + routing. The code → classification mapping is
+// additionally locked in dayEditorViewModel.test.ts.
+const vm = (rawIssue) => toIssueViewModel(rawIssue, 'remy-2023-06-22', 'remy');
 
 describe('RepairActions', () => {
-  // Phase 8.7 Task 9: every issue carries an ownership-pattern hint (the safe next action +
-  // cross-day reach) alongside its message — without changing routing or grouping.
+  // Every issue carries an ownership-pattern hint (the safe next action + cross-day reach).
   it('renders the ownership-pattern hint next to each issue (animal-setup reaches beyond the day)', () => {
     render(
       <RepairActions
-        issues={[{ path: 'electrode_groups[0].location', code: 'empty_location', repairSurface: 'animal', message: 'Electrode group 0 has an empty location.' }]}
+        issues={[vm({ path: 'electrode_groups[0].location', code: 'empty_location', repairSurface: 'animal', message: 'Electrode group 0 has an empty location.' })]}
         onNavigate={vi.fn()}
         animalId="remy"
       />
@@ -24,7 +31,7 @@ describe('RepairActions', () => {
   it('flags a day-local repair without a cross-day reach cue', () => {
     render(
       <RepairActions
-        issues={[{ path: 'session_description', code: 'required', message: 'session description is required' }]}
+        issues={[vm({ path: 'session_description', code: 'required', message: 'session description is required' })]}
         onNavigate={vi.fn()}
       />
     );
@@ -37,7 +44,7 @@ describe('RepairActions', () => {
     const onNavigate = vi.fn();
     render(
       <RepairActions
-        issues={[{ path: 'session_description', code: 'required', message: 'session description is required' }]}
+        issues={[vm({ path: 'session_description', code: 'required', message: 'session description is required' })]}
         onNavigate={onNavigate}
       />
     );
@@ -55,14 +62,14 @@ describe('RepairActions', () => {
     const onNavigate = vi.fn();
     render(
       <RepairActions
-        issues={[{
+        issues={[vm({
           path: 'electrode_groups[0].location',
           focusPath: 'deviceOverrides.electrode_groups',
           ownerSurface: 'day',
           step: 'devices',
           code: 'required',
           message: 'electrode group location is required',
-        }]}
+        })]}
         onNavigate={onNavigate}
       />
     );
@@ -75,12 +82,12 @@ describe('RepairActions', () => {
     const onNavigate = vi.fn();
     render(
       <RepairActions
-        issues={[{
+        issues={[vm({
           path: 'electrode_groups[0].location',
           code: 'empty_location',
           repairSurface: 'animal',
           message: 'Electrode group 0 has an empty location.',
-        }]}
+        })]}
         onNavigate={onNavigate}
         animalId="remy"
       />
@@ -98,7 +105,7 @@ describe('RepairActions', () => {
     const onNavigate = vi.fn();
     render(
       <RepairActions
-        issues={[{ path: 'electrode_groups[0].targeted_x', code: 'type', message: 'must be number' }]}
+        issues={[vm({ path: 'electrode_groups[0].targeted_x', code: 'type', message: 'must be number' })]}
         onNavigate={onNavigate}
         animalId="remy"
       />
@@ -113,14 +120,14 @@ describe('RepairActions', () => {
     const onNavigate = vi.fn();
     render(
       <RepairActions
-        issues={[{
+        issues={[vm({
           path: 'ntrode_electrode_group_channel_map[0]',
           field: 'bad_channels',
           step: 'devices',
           code: 'bad_channel_out_of_range',
           repairSurface: 'day',
           message: 'bad channel out of range',
-        }]}
+        })]}
         onNavigate={onNavigate}
       />
     );
@@ -137,7 +144,7 @@ describe('RepairActions', () => {
       { code: 'required', path: 'electrode_groups[0].location', focusPath: 'deviceOverrides.electrode_groups', ownerSurface: 'day', step: 'devices', message: 'electrode group location is required' },
       { code: 'shadowed_geometry_override', path: 'deviceOverrides.electrode_groups', focusPath: 'deviceOverrides.electrode_groups', ownerSurface: 'day', step: 'devices', message: 'this day overrides the saved geometry' },
     ];
-    render(<RepairActions issues={issues} onNavigate={vi.fn()} />);
+    render(<RepairActions issues={issues.map(vm)} onNavigate={vi.fn()} />);
     expect(screen.getByText(/location is required/i)).toBeInTheDocument();
     expect(screen.getByText(/overrides the saved geometry/i)).toBeInTheDocument();
     expect(screen.getAllByRole('button', { name: /fix in devices/i })).toHaveLength(1);
@@ -157,17 +164,19 @@ describe('RepairActions', () => {
       repairCommand: { type: 'resetDayCollection', field: 'tasks' },
       message: "This day's \"tasks\" is corrupt (expected a list).",
     };
-    render(<RepairActions issues={[issue]} onNavigate={onNavigate} onRepair={onRepair} />);
+    render(<RepairActions issues={[vm(issue)]} onNavigate={onNavigate} onRepair={onRepair} />);
 
     // The button reads as a destructive reset that names what it resets — not "Fix in …".
     const button = screen.getByRole('button', { name: /reset tasks/i });
     await user.click(button);
-    expect(onRepair).toHaveBeenCalledWith(issue);
+    // onRepair receives the dispatch reconstructed from the view-model command (type + payload).
+    expect(onRepair).toHaveBeenCalledWith(
+      expect.objectContaining({ repairCommand: { type: 'resetDayCollection', field: 'tasks' }, repairSurface: 'day' })
+    );
     expect(onNavigate).not.toHaveBeenCalled();
   });
 
-  it('falls back to a navigate button when no onRepair is wired (backward compatible)', async () => {
-    const user = userEvent.setup();
+  it('renders the executable reset button for a commandable issue (the view-model commits it to execute)', () => {
     const onNavigate = vi.fn();
     const issue = {
       path: 'cameras',
@@ -178,12 +187,12 @@ describe('RepairActions', () => {
       repairCommand: { type: 'resetAnimalCameras' },
       message: "This animal's \"cameras\" is corrupt (expected a list).",
     };
-    render(<RepairActions issues={[issue]} onNavigate={onNavigate} animalId="remy" />);
+    render(<RepairActions issues={[vm(issue)]} onNavigate={onNavigate} animalId="remy" />);
 
-    // With no executor wired, the commandable issue still routes to its editable owner.
-    const button = screen.getByRole('button', { name: /fix in animal setup/i });
-    await user.click(button);
-    expect(onNavigate).toHaveBeenCalledWith('animal', 'cameras');
+    // The view-model classified this commandable issue as an executable repair (Phase 3-f), so the
+    // button names the reset action — not "Fix in …". (The Day Editor always wires onRepair.)
+    expect(screen.getByRole('button', { name: /reset cameras/i })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /fix in animal setup/i })).not.toBeInTheDocument();
   });
 
   it('does NOT collapse two issues that share a focusPath but carry DIFFERENT executable commands', async () => {
@@ -207,7 +216,7 @@ describe('RepairActions', () => {
         message: 'whole overrides corrupt',
       },
     ];
-    render(<RepairActions issues={issues} onNavigate={vi.fn()} onRepair={onRepair} />);
+    render(<RepairActions issues={issues.map(vm)} onNavigate={vi.fn()} onRepair={onRepair} />);
     // Both executable buttons render (distinct commands), not collapsed to one.
     expect(screen.getByRole('button', { name: /remove failed-channel override/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /remove device overrides/i })).toBeInTheDocument();
@@ -223,7 +232,7 @@ describe('RepairActions', () => {
           { code: 'empty_location', path: 'electrode_groups[0].location', message: 'location is empty' },
           { code: 'duplicate_task_epoch', path: 'tasks[0].task_epochs', message: 'duplicate epoch' },
           { code: 'bad_channel_out_of_range', path: 'ntrode_electrode_group_channel_map[0].bad_channels', message: 'channel 9 out of range' },
-        ]}
+        ].map(vm)}
         onNavigate={vi.fn()}
       />
     );
@@ -261,7 +270,7 @@ describe('RepairActions', () => {
             actionLabel: 'Remove failed-channel override',
             message: 'corrupt override',
           },
-        ]}
+        ].map(vm)}
         onNavigate={vi.fn()}
         onRepair={vi.fn()}
       />
@@ -279,7 +288,7 @@ describe('RepairActions', () => {
         issues={[
           { path: 'subject.subject_id', code: 'subject_id_slash', message: 'Subject ID … recreate the animal …' },
           { path: 'session_id', code: 'session_id_slash', message: 'Session ID … fix the Subject ID …' },
-        ]}
+        ].map(vm)}
         onNavigate={vi.fn()}
       />
     );

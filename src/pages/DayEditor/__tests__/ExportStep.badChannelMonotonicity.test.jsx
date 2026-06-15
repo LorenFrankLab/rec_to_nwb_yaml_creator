@@ -5,6 +5,7 @@ import ExportStep from '../ExportStep';
 import * as yaml from '../../../io/yaml';
 import { restoreFlags } from '../../../featureFlags';
 import { buildRealisticWorkspace } from '../../../__tests__/fixtures/workspaceBuilders';
+import { buildDayEditorViewModel } from '../../../viewModels/dayEditorViewModel';
 
 /**
  * A two-day, same-`configurationVersion` animal where day 2's effective bad-channel set is a
@@ -46,10 +47,23 @@ describe('ExportStep — bad-channel monotonicity export gate', () => {
   it('BLOCKS download for a day that silently un-fails an earlier same-config bad channel (animalDays threaded)', async () => {
     const user = userEvent.setup();
     const downloadSpy = vi.spyOn(yaml, 'downloadYamlFile').mockImplementation(() => {});
-    const { animal, day2, animalDays } = buildRegressingTwoDayAnimal();
+    const { animal, day1, day2, animalDays } = buildRegressingTwoDayAnimal();
+    // The blocked repair list renders the view-model's classified issues (Phase 3-f); build the
+    // view-model over the full animal index so the cross-day monotonicity issue is present.
+    const vm = buildDayEditorViewModel(
+      { animals: { [animal.id]: animal }, days: { [day1.id]: day1, [day2.id]: day2 } },
+      day2.id
+    );
 
     render(
-      <ExportStep animal={animal} day={day2} animalDays={animalDays} onNavigate={vi.fn()} />
+      <ExportStep
+        animal={animal}
+        day={day2}
+        animalDays={animalDays}
+        issues={vm.issues}
+        exportGate={vm.export}
+        onNavigate={vi.fn()}
+      />
     );
 
     const downloadButton = screen.getByRole('button', { name: /download yaml/i });

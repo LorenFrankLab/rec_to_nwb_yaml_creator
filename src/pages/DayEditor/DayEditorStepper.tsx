@@ -14,7 +14,13 @@ import type { RepairCommand, RepairCommandContext } from '../../state/repairComm
 import { animalSetupTabForFieldPath } from '../../domain/validation';
 import type { RepairableIssue } from '../../domain/repairRouting';
 import { buildDayEditorViewModel } from '../../viewModels/dayEditorViewModel';
-import type { BreadcrumbViewModel, FieldValueViewModel, StepViewModel } from '../../viewModels/types';
+import type {
+  BreadcrumbViewModel,
+  ExportGateViewModel,
+  FieldValueViewModel,
+  IssueViewModel,
+  StepViewModel,
+} from '../../viewModels/types';
 import { DayEditorProvider } from './DayEditorContext';
 import type { DayEditorBundle } from './DayEditorContext';
 import DayEditorSectionNav from './DayEditorSectionNav';
@@ -50,6 +56,10 @@ interface StepSectionProps {
   breadcrumb?: BreadcrumbViewModel;
   /** The view-model's Overview field slice (Overview step renders its displayed values/help). */
   overviewFields?: FieldValueViewModel[];
+  /** The view-model's classified issue list (Validation + Export steps render it). */
+  issues?: IssueViewModel[];
+  /** The view-model's export gate (Validation readiness + Export step lifecycle status). */
+  exportGate?: ExportGateViewModel;
 }
 
 /**
@@ -173,9 +183,9 @@ export default function DayEditorStepper() {
   // The day-editor view-model: the shell load-state, the breadcrumb trail, the section steps
   // (each step's status + the Validation "N to fix" count), and the Overview field slice
   // (`vm.overview.fields`) — built from the SAME workspace + the live active section, so the nav
-  // scent, the not-found shell, and the Overview displayed values render the builder's truth instead
-  // of re-deriving them here. (The issues / export / bad-channel slices are wired in the later
-  // DayEditor sub-slices; the write handlers below stay raw.)
+  // scent, the not-found shell, the Overview displayed values, and the Validation/Export issue list +
+  // export gate render the builder's truth instead of re-deriving them here. (The bad-channel slice is
+  // wired in the later 3-g sub-slice; the write handlers below stay raw.)
   const vm = useMemo(
     () => buildDayEditorViewModel(model.workspace, dayId, currentStep),
     [model.workspace, dayId, currentStep]
@@ -450,6 +460,8 @@ export default function DayEditorStepper() {
               copyableDioSources={copyableDioSources}
               breadcrumb={vm.breadcrumb}
               overviewFields={vm.overview.fields}
+              issues={vm.issues}
+              exportGate={vm.export}
             />
           </DayEditorProvider>
 
