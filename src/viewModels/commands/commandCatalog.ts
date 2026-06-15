@@ -17,8 +17,12 @@
 /** How a command id is resolved. See the file overview for what each category means. */
 export type CommandCategory = 'store' | 'repair' | 'page';
 
-/** Every command id a builder emits, classified. */
-export const WORKFLOW_COMMAND_CATALOG: Readonly<Record<string, CommandCategory>> = Object.freeze({
+/**
+ * Every command id a builder emits, classified. Declared `as const satisfies …` (not annotated
+ * `Record<string, CommandCategory>`) so the KEY union survives — {@link WorkflowCommandId} derives
+ * the closed id set from it, giving `WorkflowCommand.id` compile-time membership instead of `string`.
+ */
+export const WORKFLOW_COMMAND_CATALOG = Object.freeze({
   // Store-write: a thin 1:1 wrapper over a workspace action.
   deleteDay: 'store',
   duplicateDay: 'store',
@@ -50,4 +54,7 @@ export const WORKFLOW_COMMAND_CATALOG: Readonly<Record<string, CommandCategory>>
   exportValidOnly: 'page',
   validateAllDays: 'page',
   removeDeviceOverride: 'page',
-});
+} as const) satisfies Readonly<Record<string, CommandCategory>>;
+
+/** The closed set of command ids a builder may emit — the keys of {@link WORKFLOW_COMMAND_CATALOG}. */
+export type WorkflowCommandId = keyof typeof WORKFLOW_COMMAND_CATALOG;

@@ -58,10 +58,11 @@ describe('command catalog ratchet', () => {
   });
 
   it('classifies every executor repair type (the dynamic `cmd.type` ids) as a repair command', () => {
+    // The catalog now has literal keys (no string index signature, so WorkflowCommandId can derive
+    // from it); read it as a plain record for the arbitrary-string `type` lookup.
+    const catalog: Record<string, string | undefined> = WORKFLOW_COMMAND_CATALOG;
     for (const type of REPAIR_COMMAND_TYPES) {
-      expect(WORKFLOW_COMMAND_CATALOG[type], `repair type "${type}" must be catalogued as repair`).toBe(
-        'repair'
-      );
+      expect(catalog[type], `repair type "${type}" must be catalogued as repair`).toBe('repair');
     }
   });
 

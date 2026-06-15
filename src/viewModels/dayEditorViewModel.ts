@@ -79,6 +79,7 @@ import type {
   StepViewModel,
   WorkflowAction,
   WorkflowCommand,
+  WorkflowCommandId,
   WorkflowSeverity,
 } from './types';
 
@@ -467,7 +468,11 @@ function buildRepairAction(
   // the label names exactly what is reset (`actionLabel`) so a destructive reset is never ambiguous.
   if (issue.repairCommand != null) {
     const cmd = issue.repairCommand as { type?: unknown; key?: unknown; field?: unknown; acks?: unknown };
-    const command: WorkflowCommand = { id: String(cmd.type ?? ''), target: { dayId } };
+    // A repairCommand with no `type` can't be executed; render no button (the message + ownership hint
+    // still show) rather than an inert one with an un-catalogued empty id. Real repairCommands always
+    // carry a `type` from REPAIR_COMMAND_TYPES (a catalogued WorkflowCommandId), so the cast is sound.
+    if (cmd.type == null) return undefined;
+    const command: WorkflowCommand = { id: String(cmd.type) as WorkflowCommandId, target: { dayId } };
     const payload: Record<string, unknown> = {};
     if (cmd.key != null) payload.key = cmd.key;
     if (cmd.field != null) payload.field = cmd.field;
@@ -731,7 +736,9 @@ function buildNotices(
         issue.code === 'missing_configuration_history' ? 'badchannel-corruption' : 'malformed-collection',
       message: issue.message,
       repair: {
-        id: command?.type ?? 'repairAnimalCollection',
+        // A raw-animal repairCommand carries a catalogued reset type (resetAnimalCameras /
+        // resetDataAcqDevice / rebuildConfigurationHistory); the fallback is the catalogued no-op id.
+        id: (command?.type ?? 'repairAnimalCollection') as WorkflowCommandId,
         target: { animalId: ownerKey ?? undefined, fieldPath: issue.field },
       },
     });

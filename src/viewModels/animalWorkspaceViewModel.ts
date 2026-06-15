@@ -51,6 +51,7 @@ import type {
   RecoveryNoticeViewModel,
   SectionViewModel,
   WorkflowAction,
+  WorkflowCommandId,
 } from './types';
 
 /** One animal in the picker: its id, the present-day-record count, and its tabbed-view link. */
@@ -344,7 +345,9 @@ function buildReview(
       message: issue.message,
       actionLabel: issue.actionLabel,
       repair: {
-        id: command?.type ?? 'repairAnimalCollection',
+        // A raw-animal repairCommand carries a catalogued reset type; the fallback is the catalogued
+        // no-op id. Cast to the closed command-id union (the runtime value is always a catalog key).
+        id: (command?.type ?? 'repairAnimalCollection') as WorkflowCommandId,
         target: { animalId, fieldPath: issue.field },
       },
     };

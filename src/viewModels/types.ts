@@ -22,6 +22,7 @@
 
 import type { StepStatus } from '../domain/stepStatus';
 import type { WorkflowCategory } from '../domain/workflowCategories';
+import type { WorkflowCommandId } from './commands/commandCatalog';
 
 /**
  * The single severity vocabulary the modern UI renders. It does not replace the domain status enums
@@ -65,6 +66,9 @@ export type DayStatus =
  */
 export type { StepStatus };
 
+/** Re-export the closed command-id union so consumers can constrain dispatch from the vocabulary hub. */
+export type { WorkflowCommandId };
+
 /**
  * Plain-data command metadata carried by a write-style {@link WorkflowAction}. Lets a page invoke
  * user intent (`createRecordingDay`, `deleteDay`, `exportValidOnly`, …) without re-discovering the
@@ -72,8 +76,12 @@ export type { StepStatus };
  * transient user-entered values (e.g. a typed date) at call time.
  */
 export interface WorkflowCommand {
-  /** Intent identifier resolved by the command layer, e.g. `createRecordingDay`, `deleteDay`. */
-  id: string;
+  /**
+   * Intent identifier resolved by the command layer — a member of the closed
+   * {@link WorkflowCommandId} set (the keys of `WORKFLOW_COMMAND_CATALOG`), so a typo'd or invented
+   * id is a compile error, not a silent runtime miss. E.g. `deleteDay`, `exportValidOnly`.
+   */
+  id: WorkflowCommandId;
   /** Stable target/context known by the builder: animal id, day id, section key, field path. */
   target?: {
     animalId?: string;
