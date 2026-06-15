@@ -101,9 +101,9 @@ export function ValidationSummary({ animalKey }: { animalKey?: string } = {}) {
     runExport,
   } = useValidationSummaryActions({ rows, workspace, actions });
 
-  // The day-reference repairs route through the descriptor command layer (one named write surface)
-  // rather than calling the store actions directly. The row's (animalId, dayId) is the descriptor
-  // target the builder would carry.
+  // The day-reference repairs route through the descriptor command layer (one named write surface):
+  // the table dispatches each row's own `recoveryDetail.repair.command`, and this resolves it — the
+  // page never reconstructs the intent/target.
   const run = useMemo(() => commandHandlers({ actions: actions as unknown as CommandActions }), [actions]);
 
   const hasDays = vm.days.length > 0;
@@ -307,15 +307,7 @@ export function ValidationSummary({ animalKey }: { animalKey?: string } = {}) {
             rows={vm.days}
             scoped={scoped}
             effectiveRecords={effectiveRecords}
-            onRemoveDayReference={(animalId, dayId) =>
-              run.removeDayReference({ id: 'removeDayReference', target: { animalId, dayId } })
-            }
-            onUnlinkDayReference={(animalId, dayId) =>
-              run.unlinkDayReference({ id: 'unlinkDayReference', target: { animalId, dayId } })
-            }
-            onRelinkDayReference={(animalId, dayId) =>
-              run.relinkDayReference({ id: 'relinkDayReference', target: { animalId, dayId } })
-            }
+            onRepairCommand={(command) => run[command.id]?.(command)}
           />
         </>
       )}

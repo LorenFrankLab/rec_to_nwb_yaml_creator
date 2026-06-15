@@ -37,7 +37,7 @@ import type { CopyPayload } from '../AnimalEditor/CopyFromAnimalDialog';
 import { dayHasArtifacts } from '../../domain/dayRecovery';
 import { DOWNSTREAM_NOT_DELETED_NOTE } from '../../domain/animalDeleteCascade';
 import { buildAnimalWorkspaceViewModel } from '../../viewModels/animalWorkspaceViewModel';
-import type { RecoveryNoticeViewModel } from '../../viewModels/types';
+import type { RecoveryNoticeViewModel, WorkflowCommand } from '../../viewModels/types';
 import { commandHandlers, applyRepair } from '../../viewModels/commands';
 import type { CommandActions } from '../../viewModels/commands';
 import { CalendarDayCreator } from '../../components/CalendarDayCreator/CalendarDayCreator';
@@ -51,6 +51,8 @@ import styles from './AnimalWorkspace.module.css';
 
 /** A pending per-day delete descriptor (named even after the store row changes). */
 interface PendingDeleteDay {
+  /** The VM's `deleteDay` command — dispatched on confirm (carries the target + caveat). */
+  command: WorkflowCommand;
   dayId: string;
   date?: string;
   sessionId?: string;
@@ -81,7 +83,7 @@ export function RecordingDaysTab({ animalId }: RecordingDaysTabProps) {
   // Pending per-day DUPLICATE (null when closed): the source row descriptor (dayId/date). The
   // single-date picker writes its chosen date into `duplicateDate`; `duplicateError` surfaces a
   // collision or a store throw inside the dialog (mirroring how create errors are surfaced).
-  const [pendingDuplicateDay, setPendingDuplicateDay] = useState<{ dayId: string; date?: string } | null>(null);
+  const [pendingDuplicateDay, setPendingDuplicateDay] = useState<{ dayId: string; date?: string; command: WorkflowCommand } | null>(null);
   const [duplicateDate, setDuplicateDate] = useState('');
   const [duplicateError, setDuplicateError] = useState('');
   // Carry-forward day creation: default ON. When on, a new day seeds its day-owned content
@@ -124,21 +126,24 @@ export function RecordingDaysTab({ animalId }: RecordingDaysTabProps) {
   function confirmDeleteDay() {
     const target = pendingDeleteDay;
     setPendingDeleteDay(null);
-    if (!target?.dayId) return;
-    // Pass the owning animal explicitly: the delete button only renders on this selected animal's
-    // OK rows, and an OK row can have a record with no `animalId` (corrupt import) — the store
-    // would otherwise fail to clean the index. The UI knows the owner, so name it (the descriptor
-    // target the command layer forwards as `deleteDay(dayId, ownerAnimalId)`).
-    run.deleteDay({ id: 'deleteDay', target: { animalId: selectedAnimalId, dayId: target.dayId } });
+    if (!target) return;
+    // Dispatch the VM's own deleteDay command (its target already names the owning animal — the
+    // selected animal's OK row — so the store can clean the index even for a record with no
+    // `animalId`). The command layer forwards it as `deleteDay(dayId, ownerAnimalId)`.
+    run[target.command.id]?.(target.command);
   }
 
   /**
-   * Open the delete confirm for a day, assembling its descriptor (date / session id / downloaded-
-   * artifacts caveat) from the live record — the day list signals only which day to delete.
+   * Open the delete confirm for a day's `deleteDay` command, assembling the display descriptor (date /
+   * session id / downloaded-artifacts caveat) from the live record. The command (with its target) is
+   * stashed for dispatch on confirm — the day list bubbles up the row's own descriptor.
    */
-  function openDeleteDay(dayId: string) {
+  function openDeleteDay(command: WorkflowCommand) {
+    const dayId = command.target?.dayId;
+    if (!dayId) return;
     const rec = days[dayId];
     setPendingDeleteDay({
+      command,
       dayId,
       date: rec?.date,
       sessionId: getDaySession(rec).session_id as string | undefined,
@@ -147,12 +152,15 @@ export function RecordingDaysTab({ animalId }: RecordingDaysTabProps) {
   }
 
   /**
-   * Open the single-date duplicate picker for a source row (resets any prior chosen date/error).
+   * Open the single-date duplicate picker for a source row's `duplicateDay` command (resets any prior
+   * chosen date/error). The command is stashed for dispatch on confirm.
    */
-  function openDuplicateDay(source: { dayId: string; date?: string }) {
+  function openDuplicateDay(command: WorkflowCommand) {
+    const dayId = command.target?.dayId;
+    if (!dayId) return;
     setDuplicateDate('');
     setDuplicateError('');
-    setPendingDuplicateDay(source);
+    setPendingDuplicateDay({ dayId, date: days[dayId]?.date, command });
   }
 
   /** Close the duplicate picker without duplicating. */
@@ -180,10 +188,8 @@ export function RecordingDaysTab({ animalId }: RecordingDaysTabProps) {
       return;
     }
     try {
-      run.duplicateDay(
-        { id: 'duplicateDay', target: { animalId: selectedAnimalId, dayId: source.dayId } },
-        { date: duplicateDate }
-      );
+      // Dispatch the source row's own duplicateDay command with the chosen date as transient input.
+      run[source.command.id]?.(source.command, { date: duplicateDate });
       cancelDuplicateDay();
     } catch (error) {
       setDuplicateError((error as Error).message);
@@ -405,9 +411,7 @@ export function RecordingDaysTab({ animalId }: RecordingDaysTabProps) {
           rows={dayRows}
           daysCorrupt={daysCorrupt}
           animalId={selectedAnimalId}
-          onUnlinkDayReference={(aid, dayId) =>
-            run.unlinkDayReference({ id: 'unlinkDayReference', target: { animalId: aid, dayId } })
-          }
+          onRepairCommand={(command) => run[command.id]?.(command)}
           onDuplicateDay={openDuplicateDay}
           onDeleteDay={openDeleteDay}
         />
