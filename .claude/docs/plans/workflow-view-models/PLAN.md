@@ -1,17 +1,17 @@
 # Workflow View-Models Implementation Plan
 
-**Status:** Phases 0–2a complete. Execution shape: **build-all-then-wire** (Open Question 1 resolved);
+**Status:** Phases 0–2b complete. Execution shape: **build-all-then-wire** (Open Question 1 resolved);
 full view-model vocabulary frozen up front (Open Question on Phase-1 scope resolved → land all gap
-types/fields now). Next: Phase 2b (`buildAnimalWorkspaceViewModel`), reusing the shared
-`dayRowViewModel` helper landed in 2a.
+types/fields now). Next: Phase 2c (`buildAnimalViewModel` — section-nav rings). 2b realized the D1
+domain gap explicitly (`isAnimalDaysIndexCorrupt` in workspaceSelectors).
 
 | Phase | Status |
 | --- | --- |
 | 0 — logic inventory | ✅ done — [logic-inventory.md](logic-inventory.md) |
 | 1 — contracts/types | ✅ done — `src/viewModels/types.ts` (full vocabulary) |
 | 2a — ValidationSummary VM | ✅ done — `validationSummaryViewModel.ts` + shared `dayRowViewModel.ts` |
-| 2b — AnimalWorkspace VM | ⏳ next |
-| 2c — AnimalView VM | ▫️ pending |
+| 2b — AnimalWorkspace VM | ✅ done — `animalWorkspaceViewModel.ts` (+ D1 selector) |
+| 2c — AnimalView VM | ⏳ next |
 | 2d — DayEditor VM (4 sub-slices) | ▫️ pending |
 | 3 — wire pages | ▫️ pending |
 | 4 — commands | ▫️ pending |
