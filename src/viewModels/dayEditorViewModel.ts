@@ -968,7 +968,9 @@ function emptyShellViewModel(
  *   Defaults to the first step (the editor's initial state). The section nav is button/local-state,
  *   not routed, so the active step is a render-time input rather than something the VM derives.
  * @returns The page view-model — pure data, no React. Never throws: a corrupt animal config (which
- *   `mergeDayMetadata` throws on) is caught and surfaced as an `error`-severity, merge-error gate.
+ *   `mergeDayMetadata` throws on) AND a validation/step-status contract violation (an un-routed issue
+ *   code, which `validateDay`/`computeStepStatus` throw on) are both caught and surfaced as an
+ *   `error`-severity, fail-closed export gate (the latter is logged for diagnosis).
  */
 export function buildDayEditorViewModel(
   workspace: unknown,
@@ -1031,19 +1033,28 @@ export function buildDayEditorViewModel(
   const animalDays =
     ownerKey != null ? getAnimalDays({ animals: animalsMap, days: daysMap }, ownerKey) : [];
 
-  // ── Step status + overall ──
-  const stepStatus: Record<string, StepStatus> = mergeFailed
-    ? { ...FAIL_CLOSED_STEP_STATUS }
-    : computeStepStatus(day, merged, animal, animalDays);
-
-  // The authoritative issue list (the same one the export gate + the rendered repair lists share).
-  // On a merge failure, validate the empty merged model so the raw-shape animal issue still surfaces.
-  const rawIssues = validateDay(
-    day as unknown as Record<string, unknown>,
-    merged,
-    animal,
-    animalDays
-  );
+  // ── Step status + authoritative issue list (the export gate + rendered repair lists share it) ──
+  // Both computeStepStatus and validateDay can throw on a repair-routing CONTRACT VIOLATION (a new
+  // issue code with no owner mapping — a programming error, not corrupt data). Guard them: on a throw,
+  // fail closed exactly like the merge-error path (a closed gate + the merge-error blocker) and LOG the
+  // real error, rather than letting it white-screen the day editor. Unreachable with the current issue
+  // set (every code routes), so this only protects against a future un-routed code reaching production.
+  let stepStatus: Record<string, StepStatus>;
+  let rawIssues;
+  try {
+    stepStatus = mergeFailed
+      ? { ...FAIL_CLOSED_STEP_STATUS }
+      : computeStepStatus(day, merged, animal, animalDays);
+    // On a merge failure, validate the empty merged model so the raw-shape animal issue still surfaces.
+    rawIssues = validateDay(day as unknown as Record<string, unknown>, merged, animal, animalDays);
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error(`[day-editor-vm] validation could not complete for day "${dayId}":`, err);
+    mergeFailed = true;
+    merged = {};
+    stepStatus = { ...FAIL_CLOSED_STEP_STATUS };
+    rawIssues = [];
+  }
   const rawErrorIssues = rawIssues.filter((issue) => issue.severity === 'error');
   // The Validation step's "N to fix" scent matches the stepper, which shows NO count when the merge
   // failed (it cannot compute a trustworthy readiness) — so suppress the count on the merge-failed
