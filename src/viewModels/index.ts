@@ -18,6 +18,13 @@ export type {
   AnimalCardViewModel,
   ExistingDataReviewViewModel,
 } from './animalWorkspaceViewModel';
+export { buildAnimalViewModel } from './animalViewModel';
+export type {
+  AnimalViewModel,
+  AnimalHeaderViewModel,
+  AnimalSectionGroupViewModel,
+  AnimalActivePanelViewModel,
+} from './animalViewModel';
 
 export type {
   WorkflowSeverity,
