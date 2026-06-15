@@ -42,6 +42,13 @@ import type { WorkflowCommandId } from './commands/commandCatalog';
  * `todo` renders NEUTRAL (a "not set up yet" cue, no warning color) — distinct from `warning`, which
  * flags a non-blocking problem.
  *
+ * **Where `warning` lives today.** Non-blocking advisories are carried per-ISSUE
+ * ({@link IssueViewModel}`.severity === 'warning'`) — a day with only warnings still reads `ready`/
+ * exportable at the row and section level (the day-row and section builders emit `ready`/`todo`/`error`,
+ * never `warning`). `warning` is in this union so a Phase-6 UI can add a row/section warning BADGE
+ * (e.g. "ready, but N advisories"); when it does, that builder must add the field + a test rather than
+ * inferring it. The mapping row above documents the intended row/section meaning, not a current emitter.
+ *
  * Source enums: `DAY_LIFECYCLE` (src/domain/dayLifecycle.ts), `SECTION_STATUS` /
  * `getAnimalBlockingSections` (src/domain/sectionStatus.ts), `DAY_STATUS` (src/domain/dayRecovery.ts).
  */
@@ -174,8 +181,8 @@ export interface IssueViewModel {
   repairFocusPath?: string;
   /**
    * Collapse key for the repair BUTTON: several issues can share one underlying fix, so every message
-   * shows but only one button per unique (surface, step, focus, command) renders. Mirrors
-   * `RepairActions`' `repairButtonKey`. Absent when there is no repair.
+   * shows but only one button per unique (surface, step, focus, command) renders. `RepairActions`
+   * reads this directly off the issue to dedup. Absent when there is no repair.
    */
   repairDedupKey?: string;
 }

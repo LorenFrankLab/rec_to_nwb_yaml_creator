@@ -9,9 +9,9 @@
  * It composes domain truth rather than re-deriving it: `classifyAnimalDays` + `getDayRowStatus` for
  * the per-day status, the shared {@link buildDayRowViewModel} for the row shape, `getAnimalSectionStatus`
  * + `getAnimalBlockingSections` for the setup sections, and `getPresentDayCount` for the card counts.
- * The recording-day list's display label is re-derived here by composing the same domain functions the
- * page component does (merge → status → orphan re-link override → humanize), because that display logic
- * lives inline in the page rather than in a separately-exported pure module.
+ * The recording-day list's display label is composed here from the domain functions (merge → status →
+ * orphan re-link override → humanize); the page renders this builder's output rather than deriving the
+ * label itself.
  *
  * Pure and React-free; returns plain data only.
  */
@@ -331,10 +331,9 @@ function buildReview(
     .filter((d) => d.status === DAY_STATUS.WRONG_OWNER)
     .map((d) => d.dayId);
   // Raw-shape corruption of the animal's OWN collections (cameras / configurationHistory /
-  // data_acq_device loaded as non-arrays) — the SAME `validateRawAnimal` set the page's review drives
-  // on (RecordingDaysTab `hasCorruption`). Surfaced here as structured repair notices so a VM-driven
-  // UI renders the repairs from data instead of re-running raw validation (and mounting its own
-  // self-detecting banner) — the logic leak this layer exists to remove.
+  // data_acq_device loaded as non-arrays) — the SAME `validateRawAnimal` set the page's review reads.
+  // Surfaced here as structured repair notices, which `ExistingDataReview` renders directly; the page
+  // no longer re-runs raw validation or self-detects corruption.
   const rawCorruptionNotices: RecoveryNoticeViewModel[] = validateRawAnimal(animal).map((issue) => {
     const command = issue.repairCommand as { type?: string } | undefined;
     return {

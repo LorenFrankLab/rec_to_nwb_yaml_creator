@@ -11,7 +11,8 @@
  * It COMPOSES domain truth rather than re-deriving it:
  *   - step status from `computeStepStatus` (with the editor's fail-closed fallback when the merge
  *     is unavailable), and the Validation step's "N to fix" from `validateDay`;
- *   - the export gate from `isExportEnabled` / `exportBlockReason` + the day-in-index policy
+ *   - the export gate from `isExportEnabled` + an inline block-reason priority (merge-error /
+ *     unlinked-day / validation-errors / incomplete-steps) + the day-in-index policy
  *     (`getAnimalDayIds`) — the exact AND-of-three the Export step gates on;
  *   - issue ownership / reach from `ownershipForIssue`, repair routing from `repairTargetForIssue`,
  *     humanized text from `humanizeValidationMessage`;
@@ -129,7 +130,7 @@ const STEP_ORDER: ReadonlyArray<{ key: string; label: string }> = [
 /** The default active step the editor opens on. */
 const DEFAULT_STEP = 'overview';
 
-/** The accessible status label per step status (matches DayEditorSectionNav's getStatusLabel). */
+/** The accessible status label per step status — rendered verbatim by DayEditorSectionNav (it reads `step.statusLabel`). */
 const STEP_STATUS_LABEL: Record<StepStatus, string> = {
   valid: 'Complete',
   incomplete: 'Incomplete',
@@ -140,8 +141,8 @@ const STEP_STATUS_LABEL: Record<StepStatus, string> = {
 /**
  * The fail-closed step-status map the editor uses when the day/merge is unavailable (corrupt
  * animal config, day not yet resolvable): every data-entry step reads `incomplete` and `export`
- * reads `error`, so a day that cannot be merged can never read ready. Mirrors the stepper's
- * hand-written fallback literal.
+ * reads `error`, so a day that cannot be merged can never read ready. This map is the sole
+ * fail-closed source the stepper renders (it consumes the view-model; no parallel literal in the page).
  */
 const FAIL_CLOSED_STEP_STATUS: Record<string, StepStatus> = {
   overview: 'incomplete',
@@ -421,8 +422,8 @@ export function toIssueViewModel(
     vm.repair = repair;
     // Repair display metadata mirrors RepairActionButton: an issue carrying a repairCommand is
     // executable (runs in place); otherwise it navigates to the owning surface, carrying the focus
-    // anchor. `repairDedupKey` mirrors RepairActions.repairButtonKey so several issues sharing one
-    // underlying fix collapse to a single button (every message still shows).
+    // anchor. `repairDedupKey` is the collapse key RepairActions reads (as `issue.repairDedupKey`), so
+    // several issues sharing one underlying fix collapse to a single button (every message still shows).
     vm.repairSurface = target.surface as 'animal' | 'day';
     vm.repairKind = issue.repairCommand != null ? 'execute' : 'navigate';
     vm.repairDedupKey = repairDedupKey(issue, target.surface, target.step);
@@ -435,8 +436,8 @@ export function toIssueViewModel(
 }
 
 /**
- * The collapse key for an issue's repair BUTTON — mirrors `RepairActions.repairButtonKey` so the
- * view-model and the (now VM-driven) repair list dedup identically: `surface:step:focus:command`,
+ * The collapse key for an issue's repair BUTTON — read by RepairActions (as `issue.repairDedupKey`) so
+ * the view-model and the (VM-driven) repair list dedup identically: `surface:step:focus:command`,
  * where the executable command (type + key/field) is part of the key so two issues sharing a
  * destination but carrying DIFFERENT repairCommands are not collapsed.
  */
@@ -1040,7 +1041,7 @@ export function buildDayEditorViewModel(
   // real error, rather than letting it white-screen the day editor. Unreachable with the current issue
   // set (every code routes), so this only protects against a future un-routed code reaching production.
   let stepStatus: Record<string, StepStatus>;
-  let rawIssues;
+  let rawIssues: RepairableIssue[];
   try {
     stepStatus = mergeFailed
       ? { ...FAIL_CLOSED_STEP_STATUS }

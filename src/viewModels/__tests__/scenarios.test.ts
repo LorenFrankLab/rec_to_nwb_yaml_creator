@@ -1,11 +1,13 @@
 /**
  * Cross-surface scenario matrix — the workflow-view-model safety net (Phase 5).
  *
- * The per-builder suites (2a–2d) each test one surface; Phase 4 tests the command layer. This file
- * adds the CROSS-CUTTING matrix: scenarios that span surfaces or hit the nasty states, asserted
- * across the relevant builders so the surfaces are proven to AGREE on shared facts (day status, a
- * blocking section, a recovery classification). It is the executable form of the severity-mapping
- * invariant in shared-contracts.md, and it locks the descriptor boundary the builders emit today.
+ * The per-builder suites (`validationSummaryViewModel.test.ts`, `animalWorkspaceViewModel.test.ts`,
+ * `animalViewModel.test.ts`, `dayEditorViewModel.test.ts`) each test one surface; the command tests
+ * cover the descriptor layer. This file adds the CROSS-CUTTING matrix: scenarios that span surfaces or
+ * hit the nasty states, asserted across the relevant builders so the surfaces are proven to AGREE on
+ * shared facts (day status, a blocking section, a recovery classification). It is the executable form
+ * of the `WorkflowSeverity` mapping table (`viewModels/types.ts`), and locks the descriptor boundary
+ * the builders emit today.
  *
  * Net-new tests only — no source change. Each scenario is built once from the consolidated
  * `fixtures/scenarioWorkspaces` (one source; no copy-pasted workspaces).
@@ -321,7 +323,7 @@ describe('scenario: day recovery (dangling / wrong-owner / recovered-unlinked)',
   });
 });
 
-// ── 10. the severity-mapping invariant (one case per row of shared-contracts.md) ─────────────────
+// ── 10. the severity-mapping invariant (one case per row of the WorkflowSeverity table in types.ts) ─
 
 describe('severity-mapping invariant (full table)', () => {
   it('DAY_LIFECYCLE READY / VALIDATED / EXPORTED → ready', () => {
