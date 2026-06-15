@@ -24,6 +24,8 @@
 import { useMemo } from 'react';
 import type { ElementType } from 'react';
 import { useStoreContext } from '../../state/StoreContext';
+import type { Animal, Day } from '../../state/workspaceTypes';
+import { buildValidationSummaryViewModel } from '../../viewModels/validationSummaryViewModel';
 import DayLifecycleLegend from '../../components/DayLifecycleLegend/DayLifecycleLegend';
 import { buildRows, buildAnimalRows } from './validationSummaryRows';
 import { useValidationSummaryActions } from './useValidationSummaryActions';
@@ -58,12 +60,25 @@ export function ValidationSummary({ animalKey }: { animalKey?: string } = {}) {
     [workspace, scoped, animalKey]
   );
 
-  const counts = useMemo(() => {
-    const acc = { valid: 0, error: 0, incomplete: 0 };
-    rows.forEach(({ chip }) => {
-      acc[chip] += 1;
-    });
-    return acc;
+  // The page view-model: the valid/error/incomplete counts, the per-day rows (status, label,
+  // recovery, scan cells), the batch-action affordances + their disabled reasons, and the empty /
+  // re-link notes — all decided in the builder, so this page renders them rather than re-deriving.
+  const vm = useMemo(
+    () => buildValidationSummaryViewModel(workspace, scoped ? (animalKey as string) : undefined),
+    [workspace, scoped, animalKey]
+  );
+
+  // Raw { animal, day } records for the scoped EffectiveDayReview expander (it does its own merge);
+  // every other rendered value comes from the view-model. Keyed by day id.
+  const effectiveRecords = useMemo(() => {
+    const map: Record<string, { animal: Animal; day: Day }> = {};
+    for (const row of rows) {
+      const id = (row.day as { id?: string }).id;
+      if (typeof id === 'string') {
+        map[id] = { animal: row.animal as unknown as Animal, day: row.day as unknown as Day };
+      }
+    }
+    return map;
   }, [rows]);
 
   // The batch-action controller: the Validate All / Export Valid Only handlers + their per-run
@@ -84,15 +99,15 @@ export function ValidationSummary({ animalKey }: { animalKey?: string } = {}) {
     runExport,
   } = useValidationSummaryActions({ rows, workspace, actions });
 
-  const hasDays = rows.length > 0;
+  const hasDays = vm.days.length > 0;
 
   // When nothing is exportable (no valid days) BUT there are days with errors, "Export Valid
-  // Only" would be inert — one click reports "Exported 0 files" with no fix path. Disable it with an
-  // accessible reason instead, so the affordance doesn't mislead. (With 0 valid and only INCOMPLETE
-  // days — no errors — the button stays enabled: clicking gives the "complete the required fields"
-  // guidance, which is the right next step there.)
-  const exportValidDisabled = counts.valid === 0 && counts.error > 0;
-  const exportValidDisabledReason = 'No valid days to export — fix errors first.';
+  // Only" would be inert — one click reports "Exported 0 files" with no fix path. The builder
+  // disables it with an accessible reason instead, so the affordance doesn't mislead. (With 0 valid
+  // and only INCOMPLETE days — no errors — the button stays enabled: clicking gives the "complete the
+  // required fields" guidance, which is the right next step there.)
+  const exportValidDisabledReason = vm.batchExport.exportValid.disabledReason;
+  const exportValidDisabled = exportValidDisabledReason != null;
 
   // Scoped (embedded in AnimalView) renders a section + a scoped header — NOT a second
   // `<main id="main-content">` (AnimalView owns the page landmark) and NOT the page-level h1.
@@ -107,7 +122,7 @@ export function ValidationSummary({ animalKey }: { animalKey?: string } = {}) {
         <header className={styles.scopedHeader}>
           <h2>This animal — readiness &amp; export</h2>
           <p className={styles.scopedSubhead} data-testid="validation-scope">
-            Showing: {animalKey} — {rows.length} {rows.length === 1 ? 'day' : 'days'}
+            {vm.scope.subhead}
           </p>
           {/* This tab handles ONE animal; the cross-animal batch preflight + export lives at the
               chrome-level Validation & Export screen (Task 4.4) — link up to it so the relationship
@@ -121,25 +136,25 @@ export function ValidationSummary({ animalKey }: { animalKey?: string } = {}) {
       )}
 
       {!hasDays ? (
-        scoped ? (
-          <p className={styles.empty}>
-            This animal has no recording days yet. Add a recording day to see its readiness and
-            export here.
-          </p>
-        ) : (
-          <p className={styles.empty}>
-            No recording days yet. Create an animal and a recording day to see its
-            validation status here. <a href="#/workspace">Go to Workspace</a>.
-          </p>
-        )
+        <p className={styles.empty}>
+          {vm.empty?.message}
+          {/* The workspace link is navigation chrome shown only on the global page (the scoped tab
+              already lives inside an animal). */}
+          {!scoped && (
+            <>
+              {' '}
+              <a href="#/workspace">Go to Workspace</a>.
+            </>
+          )}
+        </p>
       ) : (
         <>
           <p data-testid="summary-counts" className={styles.counts}>
-            <span className={`${styles.count} ${styles.countValid}`}>{counts.valid} valid</span>
+            <span className={`${styles.count} ${styles.countValid}`}>{vm.counts.valid} valid</span>
             {' / '}
-            <span className={`${styles.count} ${styles.countError}`}>{counts.error} with errors</span>
+            <span className={`${styles.count} ${styles.countError}`}>{vm.counts.error} with errors</span>
             {' / '}
-            <span className={`${styles.count} ${styles.countIncomplete}`}>{counts.incomplete} incomplete</span>
+            <span className={`${styles.count} ${styles.countIncomplete}`}>{vm.counts.incomplete} incomplete</span>
           </p>
 
           <div className={styles.actions}>
@@ -191,9 +206,10 @@ export function ValidationSummary({ animalKey }: { animalKey?: string } = {}) {
           </details>
 
           {/* The re-link rule is reference material in the disclosure above EXCEPT when a recovered
-              day is actually present — then it is task-critical (Export Valid Only silently skips
-              it), so surface it inline rather than behind the disclosure. */}
-          {rows.some((row) => row.orphaned) && (
+              day is actually present (the builder sets relinkNote) — then it is task-critical
+              (Export Valid Only silently skips it), so surface it inline rather than behind the
+              disclosure. */}
+          {vm.relinkNote && (
             <p className={`${styles.hint} validation-summary-relink-note`} role="note">
               Some recovered days are <em>not in a day list</em> — re-link them
               (&quot;Add to day list&quot;) before they can be exported.
@@ -281,8 +297,9 @@ export function ValidationSummary({ animalKey }: { animalKey?: string } = {}) {
           <DayLifecycleLegend />
 
           <DayStatusTable
-            rows={rows}
+            rows={vm.days}
             scoped={scoped}
+            effectiveRecords={effectiveRecords}
             onRemoveDayReference={actions.removeDayReference}
             onUnlinkDayReference={actions.unlinkDayReference}
             onRelinkDayReference={actions.relinkDayReference}

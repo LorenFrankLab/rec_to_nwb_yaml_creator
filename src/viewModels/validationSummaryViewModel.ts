@@ -33,6 +33,15 @@ import type {
 
 /** A ValidationSummary table row: the shared day-row plus the table's per-day scan cells. */
 export interface DayStatusRowViewModel extends DayRowViewModel {
+  /** The status-chip CSS modifier (`ready`/`validated`/`exported`/`error`/`incomplete`) from
+   *  `dayChipDisplay`. Distinct from the lossy `status` ({@link WorkflowSeverity}): the chip needs the
+   *  un-collapsed variant to keep `validated`/`exported`/`incomplete` visually distinct. */
+  chipVariant: string;
+  /** The status-chip's hover tooltip — set only for the unreadable / missing-record error rows whose
+   *  chip carries repair guidance; absent (no `title`) for every other row. */
+  statusTitle?: string;
+  /** The animal index key the day is listed under — the repair-dispatch target (remove/unlink/relink). */
+  animalKey: string;
   /** The Animal column label (subject id, coerced to a string). */
   subjectLabel: string;
   /** The day's session id (the Session column), when present. */
@@ -106,7 +115,19 @@ function toDayStatusRow(row: SummaryRow): DayStatusRowViewModel {
     declaredOwner: day?.animalId,
   });
 
-  const out: DayStatusRowViewModel = { ...base, subjectLabel: subjectLabel(row.animal) };
+  const out: DayStatusRowViewModel = {
+    ...base,
+    chipVariant: display.variant,
+    animalKey: row.animalKey,
+    subjectLabel: subjectLabel(row.animal),
+  };
+  // The chip tooltip exists only for the two repair-guidance error rows; everything else has no title.
+  if (row.unreadable) {
+    out.statusTitle =
+      'This day could not be read — its device configuration is missing or corrupt. Open the editor to repair it.';
+  } else if (row.missingRecord) {
+    out.statusTitle = 'This day’s saved record is missing or corrupt. Open the editor to repair or recreate it.';
+  }
   const sessionId = day?.session?.session_id;
   if (typeof sessionId === 'string') out.sessionId = sessionId;
   if (row.scan) {
