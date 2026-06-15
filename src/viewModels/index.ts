@@ -25,6 +25,8 @@ export type {
   AnimalSectionGroupViewModel,
   AnimalActivePanelViewModel,
 } from './animalViewModel';
+export { buildDayEditorViewModel } from './dayEditorViewModel';
+export type { DayEditorViewModel } from './dayEditorViewModel';
 
 export type {
   WorkflowSeverity,
