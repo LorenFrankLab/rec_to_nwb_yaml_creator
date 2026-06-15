@@ -455,6 +455,38 @@ describe('DevicesStep', () => {
     expect(mockOnFieldUpdate).toHaveBeenCalledWith('deviceOverrides.bad_channels.0', [1, 2]);
   });
 
+  it('reads the bad-channel un-mark monotonicity gate from the view-model marks (Phase 3-g)', async () => {
+    const user = userEvent.setup();
+    // No animalDays → the inline fallback computes NO prior-bad channels. The view-model marks say
+    // ntrode 1 channel 1 was bad on an earlier same-config day (unacknowledged), so un-marking it must
+    // trigger the monotonicity confirm — proving the gate reads the marks, not the fallback.
+    const badChannelMarks = [
+      { ntrodeId: '1', channel: 1, marked: true, priorBad: true, requiresAck: false, acked: false },
+      { ntrodeId: '1', channel: 3, marked: true, priorBad: false, requiresAck: false, acked: false },
+    ];
+    const { container } = render(
+      <DevicesStep
+        animal={mockAnimal}
+        day={mockDay}
+        mergedDay={mockMergedDay}
+        onFieldUpdate={mockOnFieldUpdate}
+        badChannelMarks={badChannelMarks}
+      />
+    );
+
+    // Expand electrode group 1 (PFC, ntrode 1) to reveal its failed-channel checkboxes, then target
+    // ntrode 1's channel 1 by id (group 0 is expanded too, so the "Channel 1" label is ambiguous).
+    await user.click(screen.getAllByText(/electrode group 1: PFC/i)[0]);
+    const channel1 = container.querySelector('#channel-1-1');
+    expect(channel1).toBeChecked();
+
+    // Un-check the prior-bad channel → the monotonicity confirm appears (driven by the marks).
+    await user.click(channel1);
+    expect(screen.getByText(/un-mark a previously failed channel/i)).toBeInTheDocument();
+    // The un-mark write is deferred until confirmed (no immediate field write).
+    expect(mockOnFieldUpdate).not.toHaveBeenCalledWith('deviceOverrides.bad_channels.1', expect.anything());
+  });
+
   it('handles empty state when no electrode groups', () => {
     const noGroups = { electrode_groups: [], ntrode_electrode_group_channel_map: [] };
     const animalWithNoGroups = {

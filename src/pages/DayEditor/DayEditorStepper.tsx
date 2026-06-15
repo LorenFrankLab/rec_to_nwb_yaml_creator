@@ -15,6 +15,7 @@ import { animalSetupTabForFieldPath } from '../../domain/validation';
 import type { RepairableIssue } from '../../domain/repairRouting';
 import { buildDayEditorViewModel } from '../../viewModels/dayEditorViewModel';
 import type {
+  BadChannelMarkViewModel,
   BreadcrumbViewModel,
   ExportGateViewModel,
   FieldValueViewModel,
@@ -60,6 +61,8 @@ interface StepSectionProps {
   issues?: IssueViewModel[];
   /** The view-model's export gate (Validation readiness + Export step lifecycle status). */
   exportGate?: ExportGateViewModel;
+  /** The view-model's per-channel bad-channel mark state (Devices step's monotonicity un-mark gate). */
+  badChannelMarks?: BadChannelMarkViewModel[];
 }
 
 /**
@@ -183,9 +186,9 @@ export default function DayEditorStepper() {
   // The day-editor view-model: the shell load-state, the breadcrumb trail, the section steps
   // (each step's status + the Validation "N to fix" count), and the Overview field slice
   // (`vm.overview.fields`) — built from the SAME workspace + the live active section, so the nav
-  // scent, the not-found shell, the Overview displayed values, and the Validation/Export issue list +
-  // export gate render the builder's truth instead of re-deriving them here. (The bad-channel slice is
-  // wired in the later 3-g sub-slice; the write handlers below stay raw.)
+  // scent, the not-found shell, the Overview displayed values, the Validation/Export issue list +
+  // export gate, and the Devices step's bad-channel monotonicity marks all render the builder's truth
+  // instead of re-deriving them here. (The write handlers below stay raw — that's Phase 4.)
   const vm = useMemo(
     () => buildDayEditorViewModel(model.workspace, dayId, currentStep),
     [model.workspace, dayId, currentStep]
@@ -462,6 +465,7 @@ export default function DayEditorStepper() {
               overviewFields={vm.overview.fields}
               issues={vm.issues}
               exportGate={vm.export}
+              badChannelMarks={vm.badChannels.marks}
             />
           </DayEditorProvider>
 

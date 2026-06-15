@@ -11,6 +11,7 @@ import { isMultiShankGroup, validBadChannelIds } from '../../domain/badChannels'
 import { priorBadChannels, getBadChannelRemovalAcks } from '../../domain/badChannelMonotonicity';
 import { useDayEditorContext } from './DayEditorContext';
 import type { DayEditorBundle } from './DayEditorContext';
+import type { BadChannelMarkViewModel } from '../../viewModels/types';
 import CamerasUsedSection from './CamerasUsedSection';
 import OverrideCleanupSection from './OverrideCleanupSection';
 import ConfigVersionPanel from './ConfigVersionPanel';
@@ -35,7 +36,17 @@ import './DayEditor.scss';
  * Reads its inputs from {@link DayEditorContext} inside the Day Editor; an isolated render may
  * pass the same fields as props (the context hook falls back to them).
  */
-export default function DevicesStep(props: DayEditorBundle) {
+interface DevicesStepProps extends DayEditorBundle {
+  /**
+   * The view-model's per-channel bad-channel mark state (`vm.badChannels.marks`), threaded by the
+   * DayEditorStepper. The bad-channel monotonicity un-mark gate (which prior-bad channels need an
+   * acknowledgement) is read from it; an isolated render that omits it falls back to recomputing the
+   * same state from the monotonicity domain.
+   */
+  badChannelMarks?: BadChannelMarkViewModel[];
+}
+
+export default function DevicesStep(props: DevicesStepProps) {
   const {
     animal,
     day,
@@ -45,6 +56,7 @@ export default function DevicesStep(props: DayEditorBundle) {
     animalDays = undefined,
     actions = undefined,
   } = useDayEditorContext(props);
+  const { badChannelMarks } = props;
   // The store OWNER KEY (resolved by DayEditorStepper). Used for animal-editor links and the
   // reconfiguration write so a stale/missing `animal.id` record field can't misroute them; falls
   // back to `animal.id` for isolated renders that don't pass it.
@@ -151,17 +163,28 @@ export default function DevicesStep(props: DayEditorBundle) {
   // yet acknowledged for THIS day. Un-marking one is a monotonicity exception, so BadChannelsEditor
   // intercepts it with a confirm prompt. (Channels already acked are filtered out so a re-toggle
   // after an ack doesn't re-prompt.) Empty when there is no cross-day context (isolated renders).
+  //
+  // Phase 3-g: read this from the view-model's bad-channel marks (`vm.badChannels.marks` — prior-bad
+  // and not yet acknowledged) when the stepper threads them, so the un-mark gate renders the builder's
+  // monotonicity truth. An isolated render that omits the marks falls back to the identical inline
+  // computation from the monotonicity domain.
   const priorBadByNtrode = useMemo(() => {
+    const result: Record<string, number[]> = {};
+    if (badChannelMarks) {
+      for (const mark of badChannelMarks) {
+        if (mark.priorBad && !mark.acked) (result[mark.ntrodeId] ??= []).push(mark.channel);
+      }
+      return result;
+    }
     const prior = priorBadChannels(animal, day, Array.isArray(animalDays) ? animalDays : []);
     const acks = getBadChannelRemovalAcks(day);
-    const result: Record<string, number[]> = {};
     Object.keys(prior).forEach((ntrodeId) => {
       const acked = new Set(Array.isArray(acks[ntrodeId]) ? acks[ntrodeId] : []);
       const remaining = prior[ntrodeId].filter((ch) => !acked.has(ch));
       if (remaining.length > 0) result[ntrodeId] = remaining;
     });
     return result;
-  }, [animal, day, animalDays]);
+  }, [badChannelMarks, animal, day, animalDays]);
 
   /**
    * Record an OFF-EXPORT acknowledgment that this day deliberately un-marks `channel` on
