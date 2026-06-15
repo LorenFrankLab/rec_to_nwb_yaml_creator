@@ -34,38 +34,42 @@ green.
 
 - Create `src/viewModels/dayEditorViewModel.ts` exporting `buildDayEditorViewModel` and:
 
+  This composite is assembled entirely from the shared vocabulary defined in
+  [shared-contracts.md](shared-contracts.md) (Phase 1) — do not re-introduce the inline shapes this
+  sketch originally drafted:
+
   ```ts
   export interface DayEditorViewModel {
-    breadcrumb: Array<{ label: string; href?: string }>;
-    steps: SectionViewModel[];                  // Overview / Devices / Tasks / Behavioral / Validation / Export
+    shell: DayEditorShellViewModel;             // load state (ok / no-day-id / day-not-found / animal-not-found)
+    breadcrumb: BreadcrumbViewModel;            // Workspace › Animal › Day
+    steps: StepViewModel[];                     // Overview / Devices / Tasks / Behavioral / Validation / Export (+ active)
     overall: WorkflowSeverity;
-    overview: {
-      fields: Array<{
-        key: string; label: string; value: string;
-        source: 'day' | 'inherited' | 'default'; // inherited/default surfaced, not hidden
-        issue?: IssueViewModel;
-      }>;
-    };
-    issues: IssueViewModel[];                    // the ValidationStep list, classified + repair-routed
+    overview: { fields: FieldValueViewModel[] };// day / inherited / default / derived, surfaced not hidden
+    issues: IssueViewModel[];                   // the ValidationStep list, classified + repair-routed
     badChannels: {
-      failed: number[];
-      blockedRemovals: IssueViewModel[];         // bad_channel_unfailed_without_ack, with ack action
+      marks: BadChannelMarkViewModel[];         // per-channel state incl. prior-bad / needs-ack monotonicity
+      blockedRemovals: IssueViewModel[];        // bad_channel_unfailed_without_ack, with ack action
     };
-    export: { action: WorkflowAction };          // disabledReason when blocked
+    notices: RecoveryNoticeViewModel[];         // malformed collections / stale overrides, each with a repair command
+    export: ExportGateViewModel;                // open + reason + blockingIssues/Steps + action (disabledReason when blocked)
   }
   ```
 
-- Sub-slice **2d-1 shell/steps/breadcrumb**: create the builder skeleton, `breadcrumb`, `steps`, and
-  `overall`. Compose `getDayWorkflowStatus`/existing step-status helpers; catch corrupt merge/config
-  errors and represent them as `error` state rather than throwing.
-- Sub-slice **2d-2 overview field sources**: add `overview.fields` with `source: 'day' | 'inherited' |
-  'default'`. Effective values come from `mergeDayMetadata` compared against the day override vs animal
-  default vs schema/default value; do not reimplement merge rules.
-- Sub-slice **2d-3 issues/repair/export gate**: add `issues` and `export.action`. Issue classification
-  comes from `ownershipForIssue`/`repairTargetForIssue`; export blocking reason comes from existing
-  domain export-gate helpers.
-- Sub-slice **2d-4 bad-channel monotonicity/ack**: add `badChannels.failed` and `badChannels.blockedRemovals`
-  from `badChannelMonotonicity`, with ack actions represented as command descriptors.
+- Sub-slice **2d-1 shell/steps/breadcrumb**: create the builder skeleton, `shell`
+  (`DayEditorShellViewModel`), `breadcrumb` (`BreadcrumbViewModel`), `steps` (`StepViewModel[]`, each
+  with `active`), and `overall`. Compose `getDayWorkflowStatus`/existing step-status helpers; catch
+  corrupt merge/config errors and represent them as `error` state rather than throwing.
+- Sub-slice **2d-2 overview field sources**: add `overview.fields` as `FieldValueViewModel[]` with
+  `source: 'day' | 'inherited' | 'default' | 'derived'`. Effective values come from `mergeDayMetadata`
+  compared against the day override vs animal default vs schema/default value; do not reimplement merge
+  rules.
+- Sub-slice **2d-3 issues/repair/export gate**: add `issues` and `export` (`ExportGateViewModel`:
+  `open` + `reason` + `blockingIssues`/`blockingSteps` + `action`) and the `notices`
+  (`RecoveryNoticeViewModel[]`). Issue classification comes from `ownershipForIssue`/`repairTargetForIssue`;
+  export blocking reason comes from existing domain export-gate helpers.
+- Sub-slice **2d-4 bad-channel monotonicity/ack**: add `badChannels.marks` (`BadChannelMarkViewModel[]`
+  — per-channel `marked`/`priorBad`/`requiresAck`/`acked`) and `badChannels.blockedRemovals` from
+  `badChannelMonotonicity`, with ack actions represented as command descriptors.
 - Compose existing functions throughout: step status from `getDayWorkflowStatus`; effective field values +
   their `source` from `mergeDayMetadata`; issue classification from `ownershipForIssue`/`repairTargetForIssue`;
   bad-channel blockers from `badChannelMonotonicity`. Do NOT reimplement any of these — the builder

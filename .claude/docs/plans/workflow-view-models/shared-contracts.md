@@ -21,6 +21,7 @@ layer (phase-4), not here.
 - [`IssueViewModel`](#issueviewmodel)
 - [`SectionViewModel`](#sectionviewmodel)
 - [`DayRowViewModel`](#dayrowviewmodel)
+- [Extended vocabulary (realized contract-gap types)](#extended-vocabulary-realized-contract-gap-types)
 - [Severity mapping invariant](#severity-mapping-invariant)
 
 ## WorkflowSeverity
@@ -50,6 +51,9 @@ export interface WorkflowAction {
   /** When present the action is disabled and this string is the user-facing reason (drives
    *  `aria-describedby` + `title`). A non-null `disabledReason` means "render disabled". */
   disabledReason?: string;
+  /** The kind of setup action, distinct from the label, so a renderer can style/announce the verb
+   *  consistently: `setup` (not started), `fix` (blocking error), `review` (done). */
+  intent?: 'fix' | 'setup' | 'review';
 }
 ```
 
@@ -71,6 +75,9 @@ export interface WorkflowCommand {
   };
   /** Optional plain-data payload known at render time. Components may merge in transient form values. */
   payload?: Record<string, unknown>;
+  /** User-facing caveat to surface before a destructive command runs (e.g. already-downloaded files
+   *  are not deleted). Present only when the command has a consequence worth confirming. */
+  confirmCaveat?: string;
 }
 ```
 
@@ -109,6 +116,8 @@ export interface SectionViewModel {
   summary: string;      // one-line state, e.g. '1 group · CA1' or 'Needs fixing — Targeted x is required'
   issueCount: number;
   action?: WorkflowAction; // 'Set up' / 'Fix' / 'Review' link to the section route
+  countLabel?: string;     // pre-rendered count token when issueCount isn't the display ('N ready', 'used', 'incomplete')
+  showCount?: boolean;     // a not-started ('todo') section hides its count
 }
 ```
 
@@ -126,11 +135,133 @@ export interface DayRowViewModel {
   statusLabel: string;       // 'Ready to export' | 'Needs fixing — …' | 'Re-link to export' | …
   sessionDescription?: string;
   /** Day classification from `classifyAnimalDays` (src/domain/dayRecovery DAY_STATUS): one of
-   *  'ok' | 'dangling_reference' | 'recovered_unlinked' | 'wrong_owner'. */
+   *  'ok' | 'dangling_reference' | 'recovered_unlinked' | 'orphan_no_owner' | 'wrong_owner'. */
   recovery: string;
   actions: WorkflowAction[]; // duplicate / delete / unlink / re-link, with disabledReason where relevant
+  /** Lifecycle refinement when status === 'ready' — a saved day reads 'validated', a downloaded day
+   *  'exported'; status alone collapses all three to 'ready'. */
+  lifecycle?: 'ready' | 'validated' | 'exported';
+  /** Whether a metadata-valid day is actually exportable, or blocked pending re-link. */
+  exportEligibility?: 'eligible' | 'blocked-needs-relink';
+  /** Structured recovery detail for non-'ok' rows (owner description + repair) — see DayRecoveryViewModel. */
+  recoveryDetail?: DayRecoveryViewModel;
 }
 ```
+
+## Extended vocabulary (realized contract-gap types)
+
+These types/fields are the [logic-inventory](logic-inventory.md) contract gaps the team chose to land
+in the shared vocabulary up front (rather than per-builder), so the four builders adopt one shape. They
+live in `src/viewModels/types.ts` alongside the core types. All are plain data and obey the same hard
+rule. The additive fields on the core types above (`WorkflowAction.intent`, `WorkflowCommand.confirmCaveat`,
+`SectionViewModel.countLabel`/`showCount`, `DayRowViewModel.lifecycle`/`exportEligibility`/`recoveryDetail`)
+are part of this set.
+
+```ts
+/** Structured recovery detail for a day not in its normal place — complements DayRowViewModel.recovery. */
+export interface DayRecoveryViewModel {
+  status: string;             // DAY_STATUS classification (dayRecovery)
+  ownerDescription?: string;  // 'Belongs to <owner>', from describeOwner
+  message?: string;           // the recovery note shown on the row
+  repair?: WorkflowAction;    // re-link / unlink / remove reference
+}
+
+/** What one day will contribute to a batch export — the preflight "what this file will contain" scan. */
+export interface DayPreflightViewModel {
+  dayId: string;
+  label: string;              // subject + date
+  configLabel: string;        // e.g. 'config v2 (latest)'
+  groups: number;
+  failedChannels: number;
+  cameras: number;
+  opto: string;
+  warnings: IssueViewModel[]; // non-blocking issues to acknowledge before export
+  error?: string;             // set when the day could not be merged/scanned
+}
+
+/** One bucket of a batch run's per-day outcomes. */
+export interface BatchRunReportViewModel {
+  kind: string;               // 'skipped' | 'overridden' | 'failed' | 'stale' | 'validate-error'
+  items: Array<{ dayId: string; subjectId: string; date: string; detail?: string }>;
+}
+
+/** The result of a validate-all / batch-export run: a summary message plus per-outcome reports. */
+export interface BatchRunResultViewModel {
+  message: string;
+  reports: BatchRunReportViewModel[];
+}
+
+/** One step of the day-editor stepper — a SectionViewModel-shaped item plus the current-step flag. */
+export interface StepViewModel {
+  key: string;                // 'overview' | 'devices' | 'validation' | 'export' | …
+  label: string;
+  status: WorkflowSeverity;
+  statusLabel: string;        // 'Complete' | 'Has errors' | 'Not started' …
+  issueCount?: number;        // e.g. the Validation step's 'N to fix'
+  active: boolean;
+  href?: string;
+}
+
+/** A day-editor field whose effective value may be day-set, inherited, defaulted, or derived. */
+export interface FieldValueViewModel {
+  fieldPath: string;          // 'session.weight'
+  label: string;
+  value: string;              // stringified for display
+  source: 'day' | 'inherited' | 'default' | 'derived';
+  inheritedFrom?: string;     // when source==='inherited', e.g. 'animal'
+  fallbackValue?: string;     // placeholder shown when the day has none
+  helpText?: string;
+  readOnly?: boolean;
+  issue?: IssueViewModel;
+}
+
+/** The day-editor export gate: whether export is open, why not, and the blockers that explain it. */
+export interface ExportGateViewModel {
+  open: boolean;
+  reason?: 'validation-errors' | 'incomplete-steps' | 'merge-error' | 'unlinked-day';
+  blockingIssues: IssueViewModel[];
+  blockingSteps: SectionViewModel[];
+  message: string;
+  action: WorkflowAction;     // export action, disabledReason while blocked
+}
+
+/** Per-channel bad-channel mark state, carrying the monotonicity (prior-bad → needs-ack) rule. */
+export interface BadChannelMarkViewModel {
+  ntrodeId: number;
+  channel: number;            // probe-local index
+  marked: boolean;
+  priorBad: boolean;          // failed on an earlier same-config day
+  requiresAck: boolean;       // un-marking needs an off-export acknowledgement
+  acked: boolean;
+}
+
+/** A breadcrumb trail; the last item is the current page. */
+export interface BreadcrumbViewModel {
+  items: Array<{ label: string; href?: string }>;
+}
+
+/** The day-editor shell's load state — distinct from a day row's recovery. */
+export interface DayEditorShellViewModel {
+  state: 'ok' | 'no-day-id' | 'day-not-found' | 'animal-not-found';
+  message?: string;
+  ownerKey?: string;
+}
+
+/** An advisory recovery/cleanup notice (malformed collection, stale override, …) with its repair command. */
+export interface RecoveryNoticeViewModel {
+  kind: string;               // 'malformed-collection' | 'stale-override' | 'badchannel-corruption' | …
+  message: string;
+  repair: WorkflowCommand;
+}
+```
+
+> **Builder adoption.** These shared types replace the per-builder inline shapes the phase sketches
+> first drafted: 2a's batch preflight/result use `DayPreflightViewModel`/`BatchRunResultViewModel`; 2c's
+> opto count uses `SectionViewModel.countLabel`; 2d's steps use `StepViewModel[]`, overview fields use
+> `FieldValueViewModel[]`, export uses `ExportGateViewModel`, bad-channel state uses
+> `BadChannelMarkViewModel[]`, plus `BreadcrumbViewModel` / `DayEditorShellViewModel` /
+> `RecoveryNoticeViewModel`. Page-level composites (`ValidationSummaryViewModel`, `AnimalWorkspaceViewModel`,
+> `AnimalViewModel`, `DayEditorViewModel`) still live in their builder modules, assembled from these parts.
 
 ## Severity mapping invariant
 
