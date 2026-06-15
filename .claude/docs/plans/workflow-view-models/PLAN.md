@@ -2,10 +2,12 @@
 
 **Status:** Phases 0–2 complete (pure read-layer built/tested/merged). **Phase 3 in progress** — wiring
 the four pages to render the VMs, one surface PR at a time (7 total: 3-a…3-g, DayEditor split into 4).
-**3-a (ValidationSummary) + 3-b (AnimalWorkspace) merged** — both render their builders; golden baselines
-byte-identical; Playwright confirmed status chips still render distinct (the shared `chipVariant`
-promotion handles the lossy-severity CSS class). Next: **3-c (AnimalView)**. Each surface PR needs a
-Playwright MCP visual spot-check + golden baselines. Then Phase 4 (commands), 5 (boundary matrix), 6 (UI).
+**3-a (ValidationSummary) + 3-b (AnimalWorkspace) + 3-c (AnimalView) merged** — each renders its builder;
+golden baselines byte-identical; Playwright confirmed the rendered surfaces (status chips, day-row chips,
+section-nav rings/counts) match. Next: **3-d (DayEditor shell/steps/breadcrumb)** — the first DayEditor
+sub-slice (LOCAL nav: pass the stepper's currentStep as activeStep; extract resolveDayOwner → selectors).
+Each surface PR needs a Playwright MCP visual spot-check + golden baselines. Then Phase 4 (commands),
+5 (boundary matrix), 6 (UI).
 
 **Phase-3 carry-forward (incl. the merged Phase-2 review fixups):**
 
@@ -31,8 +33,8 @@ Playwright MCP visual spot-check + golden baselines. Then Phase 4 (commands), 5 
 | 3 — wire pages | ⏳ in progress (7 surface PRs: 3-a…3-g) |
 | &nbsp;&nbsp;3-a — ValidationSummary | ✅ done — page renders `buildValidationSummaryViewModel` (`chipVariant` now shared; `statusTitle`/`animalKey` local) |
 | &nbsp;&nbsp;3-b — AnimalWorkspace | ✅ done — picker + pane render `buildAnimalWorkspaceViewModel`; promoted shared `chipVariant`; VM gained `actionLabel`/`recoveredCount` |
-| &nbsp;&nbsp;3-c — AnimalView | ⏳ next |
-| &nbsp;&nbsp;3-d/e/f/g — DayEditor (4 sub-slices) | ▫️ pending |
+| &nbsp;&nbsp;3-c — AnimalView | ✅ done — section-nav rings/counts + header facts + panel descriptor render `buildAnimalViewModel` |
+| &nbsp;&nbsp;3-d/e/f/g — DayEditor (4 sub-slices) | ⏳ next (3-d shell/steps/breadcrumb) |
 | 4 — commands | ▫️ pending |
 | 5 — boundary tests | ▫️ pending |
 | 6 — workflow UI | ▫️ pending |
