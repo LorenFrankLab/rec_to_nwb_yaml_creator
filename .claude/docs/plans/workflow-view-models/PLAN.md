@@ -1,13 +1,14 @@
 # Workflow View-Models Implementation Plan
 
-**Status:** Phase 0 complete (logic inventory mapped). Execution shape: **build-all-then-wire** (Open
-Question 1 resolved). Next: Phase 1 (`types.ts`).
+**Status:** Phases 0–1 complete. Execution shape: **build-all-then-wire** (Open Question 1 resolved);
+full view-model vocabulary frozen up front (Open Question on Phase-1 scope resolved → land all gap
+types/fields now). Next: Phase 2a (`buildValidationSummaryViewModel`).
 
 | Phase | Status |
 | --- | --- |
 | 0 — logic inventory | ✅ done — [logic-inventory.md](logic-inventory.md) |
-| 1 — contracts/types | ⏳ next |
-| 2a — ValidationSummary VM | ▫️ pending |
+| 1 — contracts/types | ✅ done — `src/viewModels/types.ts` (full vocabulary) |
+| 2a — ValidationSummary VM | ⏳ next |
 | 2b — AnimalWorkspace VM | ▫️ pending |
 | 2c — AnimalView VM | ▫️ pending |
 | 2d — DayEditor VM (4 sub-slices) | ▫️ pending |
