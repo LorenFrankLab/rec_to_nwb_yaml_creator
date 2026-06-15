@@ -1,10 +1,11 @@
 # Workflow View-Models Implementation Plan
 
-**Status:** Phases 0–2 complete — the entire pure view-model read-layer is built, tested, and merged
-(build-all-then-wire stage 1 done). Execution shape: **build-all-then-wire**; full vocabulary frozen
-up front. Next: **Phase 3** — wire the four pages to render the VMs (one PR per surface; DayEditor
-split; each needs a Playwright MCP visual spot-check + golden baselines). Then Phase 4 (commands),
-5 (boundary matrix), 6 (UI).
+**Status:** Phases 0–2 complete (pure read-layer built/tested/merged). **Phase 3 in progress** — wiring
+the four pages to render the VMs, one surface PR at a time (7 total: 3-a…3-g, DayEditor split into 4).
+**3-a (ValidationSummary) merged** — page renders `buildValidationSummaryViewModel`; golden baselines
+byte-identical; Playwright confirmed all 5 status-chip variants still render distinct. Next: **3-b
+(AnimalWorkspace)**. Each surface PR needs a Playwright MCP visual spot-check + golden baselines. Then
+Phase 4 (commands), 5 (boundary matrix), 6 (UI).
 
 **Phase-3 carry-forward (incl. the merged Phase-2 review fixups):**
 
@@ -27,7 +28,11 @@ split; each needs a Playwright MCP visual spot-check + golden baselines). Then P
 | 2b — AnimalWorkspace VM | ✅ done — `animalWorkspaceViewModel.ts` (+ D1 selector) |
 | 2c — AnimalView VM | ✅ done — `animalViewModel.ts` |
 | 2d — DayEditor VM (4 sub-slices) | ✅ done — `dayEditorViewModel.ts` |
-| 3 — wire pages | ⏳ next |
+| 3 — wire pages | ⏳ in progress (7 surface PRs: 3-a…3-g) |
+| &nbsp;&nbsp;3-a — ValidationSummary | ✅ done — page renders `buildValidationSummaryViewModel` (VM gained `chipVariant`/`statusTitle`/`animalKey`) |
+| &nbsp;&nbsp;3-b — AnimalWorkspace | ⏳ next |
+| &nbsp;&nbsp;3-c — AnimalView | ▫️ pending |
+| &nbsp;&nbsp;3-d/e/f/g — DayEditor (4 sub-slices) | ▫️ pending |
 | 4 — commands | ▫️ pending |
 | 5 — boundary tests | ▫️ pending |
 | 6 — workflow UI | ▫️ pending |
