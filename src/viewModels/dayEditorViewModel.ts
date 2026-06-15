@@ -62,6 +62,7 @@ import {
   priorBadChannels,
   getBadChannelRemovalAcks,
 } from '../domain/badChannelMonotonicity';
+import { isMultiShankGroup, validBadChannelIds } from '../domain/badChannels';
 import { classifyDeviceOverrides } from '../domain/deviceOverrides';
 import { validateRawDay, validateRawAnimal } from '../validation/rawShape';
 import type { Animal, Day } from '../state/workspaceTypes';
@@ -820,6 +821,9 @@ function buildBadChannelMarks(
   const ntrodeMap = Array.isArray(merged.ntrode_electrode_group_channel_map)
     ? (merged.ntrode_electrode_group_channel_map as Array<Record<string, unknown>>)
     : [];
+  const electrodeGroups = Array.isArray(merged.electrode_groups)
+    ? (merged.electrode_groups as Array<Record<string, unknown>>)
+    : [];
   const prior = priorBadChannels(animal, day, animalDays);
   const acks = getBadChannelRemovalAcks(day);
 
@@ -831,9 +835,21 @@ function buildBadChannelMarks(
     );
     const priorSet = new Set(Array.isArray(prior[ntrodeId]) ? prior[ntrodeId] : []);
     const ackedSet = new Set(Array.isArray(acks[ntrodeId]) ? acks[ntrodeId] : []);
-    const channels = isRecord(ntrode.map)
-      ? Object.keys(ntrode.map).map(Number).sort((a, b) => a - b)
-      : [];
+    // The CONVERTER-VALID channel ids for this row: a multi-shank group's FIRST row carries
+    // probe-local indices 0..N-1 spanning ALL shanks (the ids trodes_to_nwb honors), so a mark must
+    // exist for each of them — NOT just this row's own `map` keys, which would drop prior-bad channels
+    // on the other shanks and silently bypass the monotonicity un-mark gate (`requiresAck`/`priorBad`).
+    // Single-shank (and multi-shank later) rows are row-local == map keys (byte-identical to before).
+    const group = electrodeGroups.find((g) => g.id === ntrode.electrode_group_id);
+    const groupNtrodes = ntrodeMap.filter((n) => n.electrode_group_id === ntrode.electrode_group_id);
+    const isMultiShankFirstRow =
+      isMultiShankGroup(group?.device_type as string, groupNtrodes.length) &&
+      groupNtrodes[0]?.ntrode_id === ntrode.ntrode_id;
+    const channels = validBadChannelIds({
+      deviceType: group?.device_type as string,
+      isMultiShankFirstRow,
+      rowMap: (isRecord(ntrode.map) ? ntrode.map : {}) as Record<string, number>,
+    }).sort((a, b) => a - b);
 
     for (const channel of channels) {
       const isMarked = marked.has(channel);

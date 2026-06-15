@@ -660,4 +660,48 @@ describe('buildDayEditorViewModel — bad channels', () => {
     expect(mark?.requiresAck).toBe(false);
     expect(vm.badChannels.blockedRemovals.length).toBe(0);
   });
+
+  it("marks a multi-shank first row's PROBE-WIDE channels (not just its own shank's map keys)", () => {
+    // A multi-shank group's first ntrode row carries probe-local ids 0..N-1 spanning ALL shanks
+    // (the ids trodes_to_nwb honors). A prior-bad channel on a non-first shank (e.g. 42 on a 64c-3s
+    // probe, outside the first row's map keys 0..20) must still become a mark with `priorBad` — else
+    // the Devices un-mark gate silently misses it. Swap the realistic config to a multi-shank group.
+    const MULTI_DEVICE = '64c-3s6mm6cm-20um-40um-sl';
+    const { animal, day } = loadRealistic();
+    const multiAnimal = clone(animal);
+    const snapshot = (multiAnimal.configurationHistory as Array<{ devices: Record<string, unknown> }>)[0];
+    snapshot.devices.electrode_groups = [
+      { id: 2, location: 'CA1', device_type: MULTI_DEVICE, description: '', targeted_location: 'CA1', targeted_x: 1, targeted_y: 1, targeted_z: 1, units: 'mm' },
+    ];
+    snapshot.devices.ntrode_electrode_group_channel_map = [
+      { ntrode_id: 10, electrode_group_id: 2, bad_channels: [], map: Object.fromEntries(Array.from({ length: 21 }, (_, i) => [i, i])) },
+      { ntrode_id: 11, electrode_group_id: 2, bad_channels: [], map: Object.fromEntries(Array.from({ length: 21 }, (_, i) => [i, 21 + i])) },
+      { ntrode_id: 12, electrode_group_id: 2, bad_channels: [], map: Object.fromEntries(Array.from({ length: 22 }, (_, i) => [i, 42 + i])) },
+    ];
+
+    const earlier = clone(day);
+    earlier.id = 'remy-2023-06-21';
+    earlier.date = '2023-06-21';
+    // Earlier day marks probe-local channel 42 (shank 3) bad — on the FIRST row (id 10), the row the
+    // converter honors. 42 is OUTSIDE the first row's map keys (0..20).
+    earlier.deviceOverrides = { bad_channels: { 10: [42] } } as unknown as typeof earlier.deviceOverrides;
+    const later = clone(day);
+    later.id = 'remy-2023-06-22';
+    later.date = '2023-06-22';
+    later.deviceOverrides = { bad_channels: { 10: [42] } } as unknown as typeof later.deviceOverrides;
+    multiAnimal.days = [earlier.id, later.id];
+
+    const ws: Workspace = {
+      animals: { [multiAnimal.id]: multiAnimal },
+      days: { [earlier.id]: earlier, [later.id]: later },
+    };
+    const vm = buildDayEditorViewModel(ws, later.id);
+
+    // The mark for probe-wide channel 42 exists (beyond the first row's map keys), is marked bad, and
+    // reads prior-bad (it was bad on the earlier same-config day).
+    const mark = vm.badChannels.marks.find((m) => m.ntrodeId === '10' && m.channel === 42);
+    expect(mark).toBeDefined();
+    expect(mark?.marked).toBe(true);
+    expect(mark?.priorBad).toBe(true);
+  });
 });
