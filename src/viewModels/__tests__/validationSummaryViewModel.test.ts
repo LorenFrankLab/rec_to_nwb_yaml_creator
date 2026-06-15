@@ -55,6 +55,10 @@ describe('buildValidationSummaryViewModel — parity (all animals)', () => {
       const display = pageDisplay(r);
       const vmRow = vm.days[i];
       expect(vmRow.statusLabel).toBe(display.label);
+      // The chip CSS modifier is the un-collapsed display variant, NOT the lossy severity — the table
+      // renders `status-chip--${chipVariant}` directly, so a validated/exported/incomplete day must
+      // keep its own chip class.
+      expect(vmRow.chipVariant).toBe(display.variant);
       expect(vmRow.status).toBe(variantToSeverity(display.variant));
       expect(vmRow.recovery).toBe(r.status);
     });
@@ -119,11 +123,33 @@ describe('buildValidationSummaryViewModel — recovery rows', () => {
     expect(row.recovery).toBe('dangling_reference');
     expect(row.status).toBe('error');
     expect(row.statusLabel).toBe('Error — missing day record');
+    expect(row.chipVariant).toBe('error');
+    expect(row.statusTitle).toBe(
+      'This day’s saved record is missing or corrupt. Open the editor to repair or recreate it.'
+    );
     expect(row.href).toBeUndefined();
     expect(row.recoveryDetail?.repair?.command).toEqual({
       id: 'removeDayReference',
       target: { animalId: 'remy', dayId: 'ghost' },
     });
+  });
+
+  it('unreadable day (config could not be merged) → cannot-read chip + repair tooltip', () => {
+    // A real record correctly owned + listed (classified `ok`), but its animal has no configuration
+    // history, so `mergeDayMetadata` throws — the row is the unreadable error chip, not a normal
+    // validation error.
+    const ws: Workspace = {
+      animals: { remy: { id: 'remy', days: ['d1'], subject: { subject_id: 'remy' } } },
+      days: { d1: { id: 'd1', animalId: 'remy', date: '2023-07-01' } },
+    };
+    const row = buildValidationSummaryViewModel(ws).days[0];
+    expect(row.recovery).toBe('ok');
+    expect(row.status).toBe('error');
+    expect(row.statusLabel).toBe('Error — cannot read');
+    expect(row.chipVariant).toBe('error');
+    expect(row.statusTitle).toBe(
+      'This day could not be read — its device configuration is missing or corrupt. Open the editor to repair it.'
+    );
   });
 
   it('wrong owner → error, belongs-to detail, unlink repair, no editor link', () => {
