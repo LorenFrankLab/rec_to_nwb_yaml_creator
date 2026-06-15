@@ -6,10 +6,18 @@ up front. Next: **Phase 3** — wire the four pages to render the VMs (one PR pe
 split; each needs a Playwright MCP visual spot-check + golden baselines). Then Phase 4 (commands),
 5 (boundary matrix), 6 (UI).
 
-**Phase-3 carry-forward:** extract the shared `resolveDayOwner(workspace, dayId)` into
-`workspaceSelectors` (the deferred D2 gap) and point BOTH `DayEditorStepper` and
-`buildDayEditorViewModel` at it (touching the stepper is in scope during wiring); the builder's inline
-copy is currently locked by owner-resolution parity tests.
+**Phase-3 carry-forward (incl. the merged Phase-2 review fixups):**
+
+- DayEditor nav is LOCAL (the router only accepts `#/day/:id`; the section nav is button/local-state).
+  `buildDayEditorViewModel(workspace, dayId, activeStep)` takes the live current step — the wiring
+  passes the stepper's `currentStep`. Steps carry no href (nav via `step.key`). Day-surface repairs +
+  export blocking-step actions are `{ id: 'navigateDaySection', target: { dayId, section, fieldPath? } }`
+  command descriptors → wire to the stepper's local setCurrentStep + focus (NOT a route).
+- AnimalWorkspace `review.rawCorruptionNotices` carries the raw-animal-corruption repairs — render
+  those from the VM instead of mounting `RawCorruptionBanner`'s own detection.
+- Deferred: extract `resolveDayOwner(workspace, dayId)` into `workspaceSelectors` (the D2 gap) and
+  point BOTH `DayEditorStepper` and `buildDayEditorViewModel` at it (touching the stepper is in scope
+  during wiring); the builder's inline copy is currently locked by owner-resolution parity tests.
 
 | Phase | Status |
 | --- | --- |
