@@ -15,6 +15,7 @@ import {
   getExperimenterNames,
   getAnimalDayIds,
   isAnimalDaysIndexCorrupt,
+  resolveDayOwner,
   getMostRecentDayId,
   getDaySession,
   getDayTasks,
@@ -259,5 +260,67 @@ describe('getCopyableDioSources — blank-name and corrupt-day handling', () => 
       },
     };
     expect(getCopyableDioSources(ws, 'other')).toEqual([]);
+  });
+});
+
+describe('resolveDayOwner', () => {
+  it('resolves a string day.animalId to that owner', () => {
+    const ws = {
+      animals: { remy: { id: 'remy', days: ['d1'] } },
+      days: { d1: { id: 'd1', animalId: 'remy' } },
+    };
+    expect(resolveDayOwner(ws, 'd1')).toEqual({ ownerKey: 'remy', animal: ws.animals.remy });
+  });
+
+  it('falls back to the indexing animal when the day declares NO owner (recovered missing animalId)', () => {
+    const ws = {
+      animals: { remy: { id: 'remy', days: ['d1'] } },
+      days: { d1: { id: 'd1' } }, // animalId absent
+    };
+    expect(resolveDayOwner(ws, 'd1')).toEqual({ ownerKey: 'remy', animal: ws.animals.remy });
+  });
+
+  it('matches by the store MAP KEY, not the record id (a corrupt record id can drift from its key)', () => {
+    const ws = {
+      animals: { remy: { id: 'remy', days: ['d1'] } },
+      days: { d1: { id: 'drifted', animalId: null } }, // record id ≠ map key, no owner
+    };
+    expect(resolveDayOwner(ws, 'd1').ownerKey).toBe('remy');
+  });
+
+  it('does NOT take the indexing fallback for a present-but-unresolvable owner (wrong-owner stays unresolved)', () => {
+    // The day is indexed by remy but declares a different owner that does not exist → unresolved,
+    // so the editor dead-ends on "Animal not found" instead of opening under remy.
+    const ws = {
+      animals: { remy: { id: 'remy', days: ['d1'] } },
+      days: { d1: { id: 'd1', animalId: 'ghost' } },
+    };
+    expect(resolveDayOwner(ws, 'd1')).toEqual({ ownerKey: 'ghost', animal: null });
+  });
+
+  it('treats a non-string animalId as no resolvable owner (never coerces it to a phantom key)', () => {
+    const ws = {
+      animals: { remy: { id: 'remy', days: ['d1'] } },
+      days: { d1: { id: 'd1', animalId: { corrupt: true } } },
+    };
+    expect(resolveDayOwner(ws, 'd1')).toEqual({ ownerKey: null, animal: null });
+  });
+
+  it('returns no owner for a missing day or malformed workspace', () => {
+    expect(resolveDayOwner({ animals: {}, days: {} }, 'nope')).toEqual({ ownerKey: null, animal: null });
+    expect(resolveDayOwner(null, 'd1')).toEqual({ ownerKey: null, animal: null });
+    expect(resolveDayOwner({ animals: {}, days: {} }, null)).toEqual({ ownerKey: null, animal: null });
+  });
+
+  it('does NOT take the indexing fallback for a non-record day record, even when indexed', () => {
+    // A corrupt import can persist a truthy-but-non-record day value. It is a dangling reference, not
+    // an openable record (dayRecovery classifies it DANGLING_REFERENCE), so it resolves no owner —
+    // the editor then dead-ends on "Day not found" rather than opening a broken record under the
+    // indexing animal. This makes the stepper agree with the view-model's day-not-found shell.
+    const ws = {
+      animals: { remy: { id: 'remy', days: ['d1'] } },
+      days: { d1: 'corrupt-non-record' },
+    };
+    expect(resolveDayOwner(ws, 'd1')).toEqual({ ownerKey: null, animal: null });
   });
 });

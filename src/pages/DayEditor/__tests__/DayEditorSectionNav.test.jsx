@@ -4,68 +4,56 @@ import userEvent from '@testing-library/user-event';
 import DayEditorSectionNav from '../DayEditorSectionNav';
 
 describe('DayEditorSectionNav', () => {
-  const groups = [
-    { label: 'Session', items: [{ id: 'overview', label: 'Overview' }] },
+  // The nav now renders grouped StepViewModels (the day-editor view-model's step slice). This helper
+  // builds the same five-section fixture the prior (stepStatus + currentStep + toFixCount) props
+  // produced, so the rendered-output assertions below are unchanged.
+  const STATUS_LABEL = {
+    valid: 'Complete',
+    incomplete: 'Incomplete',
+    error: 'Has errors',
+    pending: 'Not started',
+  };
+  const step = (key, label, status, active, issueCount) => ({
+    key,
+    label,
+    status,
+    statusLabel: STATUS_LABEL[status],
+    active,
+    ...(issueCount ? { issueCount } : {}),
+  });
+  const makeGroups = ({ active = 'overview', validationStatus = 'incomplete', validationCount } = {}) => [
+    { label: 'Session', steps: [step('overview', 'Overview', 'valid', active === 'overview')] },
     {
       label: 'Recording',
-      items: [
-        { id: 'devices', label: 'Devices & Failed Channels' },
-        { id: 'epochs', label: 'Tasks & Epochs' },
+      steps: [
+        step('devices', 'Devices & Failed Channels', 'incomplete', active === 'devices'),
+        step('epochs', 'Tasks & Epochs', 'incomplete', active === 'epochs'),
       ],
     },
     {
       label: 'Finish',
-      items: [
-        { id: 'validation', label: 'Validation' },
-        { id: 'export', label: 'Export' },
+      steps: [
+        step('validation', 'Validation', validationStatus, active === 'validation', validationCount),
+        step('export', 'Export', 'error', active === 'export'),
       ],
     },
   ];
 
-  const stepStatus = {
-    overview: 'valid',
-    devices: 'incomplete',
-    epochs: 'incomplete',
-    validation: 'incomplete',
-    export: 'error',
-  };
-
   it('renders a single navigation landmark labelled for the day editor sections', () => {
-    render(
-      <DayEditorSectionNav
-        groups={groups}
-        currentStep="overview"
-        stepStatus={stepStatus}
-        onNavigate={vi.fn()}
-      />
-    );
+    render(<DayEditorSectionNav groups={makeGroups()} onNavigate={vi.fn()} />);
     const nav = screen.getByRole('navigation', { name: /day editor sections/i });
     expect(nav).toBeInTheDocument();
   });
 
   it('renders all five sections as buttons (not links)', () => {
-    render(
-      <DayEditorSectionNav
-        groups={groups}
-        currentStep="overview"
-        stepStatus={stepStatus}
-        onNavigate={vi.fn()}
-      />
-    );
+    render(<DayEditorSectionNav groups={makeGroups()} onNavigate={vi.fn()} />);
     const buttons = screen.getAllByRole('button');
     expect(buttons).toHaveLength(5);
     expect(screen.queryAllByRole('link')).toHaveLength(0);
   });
 
   it('shows the status glyph from computeStepStatus for each section', () => {
-    const { container } = render(
-      <DayEditorSectionNav
-        groups={groups}
-        currentStep="overview"
-        stepStatus={stepStatus}
-        onNavigate={vi.fn()}
-      />
-    );
+    const { container } = render(<DayEditorSectionNav groups={makeGroups()} onNavigate={vi.fn()} />);
     const icons = Array.from(
       container.querySelectorAll('.section-nav-status-icon')
     ).map((el) => el.textContent);
@@ -74,14 +62,7 @@ describe('DayEditorSectionNav', () => {
   });
 
   it('marks the active section with aria-current="page"', () => {
-    render(
-      <DayEditorSectionNav
-        groups={groups}
-        currentStep="devices"
-        stepStatus={stepStatus}
-        onNavigate={vi.fn()}
-      />
-    );
+    render(<DayEditorSectionNav groups={makeGroups({ active: 'devices' })} onNavigate={vi.fn()} />);
     const devices = screen.getByRole('button', { name: /Devices & Failed Channels/i });
     expect(devices).toHaveAttribute('aria-current', 'page');
     expect(screen.getByRole('button', { name: /^Overview/i })).not.toHaveAttribute('aria-current');
@@ -90,14 +71,7 @@ describe('DayEditorSectionNav', () => {
   it('calls onNavigate for ANY section clicked — including Export (no gating)', async () => {
     const user = userEvent.setup();
     const onNavigate = vi.fn();
-    render(
-      <DayEditorSectionNav
-        groups={groups}
-        currentStep="overview"
-        stepStatus={stepStatus}
-        onNavigate={onNavigate}
-      />
-    );
+    render(<DayEditorSectionNav groups={makeGroups()} onNavigate={onNavigate} />);
     // Export is in an error state, yet it remains a freely-clickable tab.
     const exportButton = screen.getByRole('button', { name: /^Export/i });
     expect(exportButton).not.toHaveAttribute('aria-disabled', 'true');
@@ -106,14 +80,7 @@ describe('DayEditorSectionNav', () => {
   });
 
   it('folds the status into each accessible name', () => {
-    render(
-      <DayEditorSectionNav
-        groups={groups}
-        currentStep="overview"
-        stepStatus={stepStatus}
-        onNavigate={vi.fn()}
-      />
-    );
+    render(<DayEditorSectionNav groups={makeGroups()} onNavigate={vi.fn()} />);
     expect(screen.getByRole('button', { name: /Overview.*Complete/i })).toBeInTheDocument();
     expect(
       screen.getByRole('button', { name: /Devices & Failed Channels.*Incomplete/i })
@@ -123,13 +90,7 @@ describe('DayEditorSectionNav', () => {
 
   it('shows the to-fix count on the Validation item when provided', () => {
     render(
-      <DayEditorSectionNav
-        groups={groups}
-        currentStep="overview"
-        stepStatus={stepStatus}
-        onNavigate={vi.fn()}
-        toFixCount={3}
-      />
+      <DayEditorSectionNav groups={makeGroups({ validationCount: 3 })} onNavigate={vi.fn()} />
     );
     expect(
       screen.getByRole('button', { name: /Validation.*3 to fix/i })
@@ -139,11 +100,8 @@ describe('DayEditorSectionNav', () => {
   it('omits the to-fix count when zero', () => {
     render(
       <DayEditorSectionNav
-        groups={groups}
-        currentStep="overview"
-        stepStatus={{ ...stepStatus, validation: 'valid' }}
+        groups={makeGroups({ validationStatus: 'valid', validationCount: 0 })}
         onNavigate={vi.fn()}
-        toFixCount={0}
       />
     );
     expect(screen.queryByText(/to fix/i)).not.toBeInTheDocument();

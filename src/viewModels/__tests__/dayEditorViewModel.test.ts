@@ -83,8 +83,8 @@ describe('buildDayEditorViewModel — shell / steps / breadcrumb', () => {
     expect(vm.shell.state).toBe('animal-not-found');
   });
 
-  // Owner-resolution parity with DayEditorStepper (the three cases). Locks the resolution against
-  // drift while it is reproduced here (the shared `resolveDayOwner` extraction is deferred to wiring).
+  // Owner-resolution parity with DayEditorStepper (the three cases). Both the builder and the stepper
+  // now resolve through the shared `resolveDayOwner` selector; these lock the resolved outcome.
   it('a day that declares NO owner resolves to the animal whose index references it (fallback)', () => {
     const { animal, day } = loadRealistic();
     const ownerless = clone(day);
