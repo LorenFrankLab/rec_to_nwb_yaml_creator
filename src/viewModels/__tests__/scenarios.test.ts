@@ -57,6 +57,36 @@ describe('scenario: empty workspace', () => {
   });
 });
 
+// ── 1b. corrupt / unknown input — every builder absorbs it, never throws ────────────────────────
+// The builders take `workspace: unknown` and exist to absorb recovered/imported/localStorage-corrupted
+// blobs. This locks the "never throws" contract a Phase-6 refactor could silently break by dropping a
+// guard. (Well-formed-empty is covered above; these are the MALFORMED shapes.)
+
+describe('builders never throw on corrupt / unknown input', () => {
+  const malformed: Array<readonly [string, unknown]> = [
+    ['null', null],
+    ['a number', 42],
+    ['a string', 'workspace'],
+    ['an array', []],
+    ['animals/days as arrays', { animals: [], days: [] }],
+    ['animals as a string', { animals: 'x', days: {} }],
+    ['a non-array day index + null subject', { animals: { remy: { id: 'remy', days: 'nope', subject: null } }, days: {} }],
+    ['a non-record day record', { animals: { remy: { id: 'remy', days: ['d'] } }, days: { d: 'not-an-object' } }],
+    ['a day with a non-object session + null devices', { animals: { remy: { id: 'remy', days: ['remy-x'] } }, days: { 'remy-x': { id: 'remy-x', animalId: 'remy', session: 'nope', devices: null } } }],
+  ];
+
+  for (const [label, ws] of malformed) {
+    it(`survives ${label}`, () => {
+      expect(() => buildValidationSummaryViewModel(ws)).not.toThrow();
+      expect(() => buildValidationSummaryViewModel(ws, 'remy')).not.toThrow();
+      expect(() => buildAnimalWorkspaceViewModel(ws)).not.toThrow();
+      expect(() => buildAnimalWorkspaceViewModel(ws, 'remy')).not.toThrow();
+      expect(() => buildAnimalViewModel(ws, 'remy', 'days')).not.toThrow();
+      expect(() => buildDayEditorViewModel(ws, 'remy-x')).not.toThrow();
+    });
+  }
+});
+
 // ── 2. one incomplete animal (no subject, no days) ──────────────────────────────────────────────
 
 describe('scenario: one incomplete animal (no subject)', () => {
@@ -277,6 +307,18 @@ describe('scenario: day recovery (dangling / wrong-owner / recovered-unlinked)',
     const { workspace, animalId } = fx.recoveredUnlinked();
     expect(buildValidationSummaryViewModel(workspace, animalId).relinkNote).toBeDefined();
   });
+
+  it('orphan-no-owner: classified as such, with NO repair (the one non-ok row with no repair button)', () => {
+    // A day whose declared owner does not exist surfaces in the workspace-global ValidationSummary.
+    const { workspace, dayId } = fx.orphanNoOwner();
+    const row = buildValidationSummaryViewModel(workspace).days.find((r) => r.dayId === dayId);
+    expect(row?.recovery).toBe('orphan_no_owner');
+    // This is the only recovery class with no in-app repair target — its detail states the recovery
+    // path instead of offering a (dead) button. A Phase-6 renderer must not assume every non-ok row
+    // has a repair command.
+    expect(row?.recoveryDetail?.repair).toBeUndefined();
+    expect(row?.recoveryDetail?.message).toBeTruthy();
+  });
 });
 
 // ── 10. the severity-mapping invariant (one case per row of shared-contracts.md) ─────────────────
@@ -288,10 +330,16 @@ describe('severity-mapping invariant (full table)', () => {
     }
   });
 
-  it('DAY_LIFECYCLE DRAFT (no blocking error) → todo', () => {
+  it('an incomplete day (no blocking error) → todo, and tallies the incomplete count', () => {
     const { workspace, animalId, dayId } = fx.incompleteDay();
     expect(vsRow(workspace, animalId, dayId)?.status).toBe('todo');
-    // A DRAFT is blocked on incomplete steps, NOT a validation error.
+    // The incomplete bucket is tallied (the only non-zero coverage of counts.incomplete).
+    expect(buildValidationSummaryViewModel(workspace, animalId).counts).toEqual({
+      valid: 0,
+      error: 0,
+      incomplete: 1,
+    });
+    // It is blocked on incomplete STEPS, not a validation error.
     expect(buildDayEditorViewModel(workspace, dayId).export.reason).toBe('incomplete-steps');
   });
 
