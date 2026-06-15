@@ -20,8 +20,17 @@ and routes repair ids via `toRepairCommand`→`applyRepairCommand` (no parallel 
 day-refs; RecordingDaysTab delete/duplicate/unlink + repair notice; AnimalWorkspace createAnimal) now
 route through the resolver — editable field writes stay local. Fixed the ack repair descriptors to
 carry `acks` (both `buildBlockedRemovals` + `buildRepairAction`) so the acknowledge command reaches the
-executor instead of silently no-op'ing (off-export; baselines byte-identical). **Next: Phase 5
-(boundary matrix)**, then 6 (UI).
+executor instead of silently no-op'ing (off-export; baselines byte-identical). **Phase 5 COMPLETE** —
+the cross-surface scenario matrix (`src/viewModels/__tests__/scenarios.test.ts`) + consolidated shared
+fixtures (`__tests__/fixtures/scenarioWorkspaces.ts`, composed on `buildRealisticWorkspace`; the
+two-day regression fixture is now shared with the dayEditor suite) drive all four builders + the
+descriptor-command layer through the matrix: every row covered, cross-surface rows assert real
+agreement BETWEEN builders (a missing-field day reads error on ValidationSummary + AnimalWorkspace +
+DayEditor; an animal-setup blocker lights the AnimalView ring + closes the export gate + errors the day
+row; the three recovery classes match across both day-list surfaces), the full severity-mapping table,
+and a runtime descriptor-coverage check (every emitted `WorkflowCommand.id` is in
+`WORKFLOW_COMMAND_CATALOG`). Net-new tests only, no source change. **Next: Phase 6 (workflow UI,
+gated — a menu + guardrails, not one PR).**
 
 **Deferred follow-up (logged, NOT blocking — post-Phase-3 review):**
 
@@ -79,8 +88,8 @@ executor instead of silently no-op'ing (off-export; baselines byte-identical). *
 | &nbsp;&nbsp;3-f — DayEditor issues/export | ✅ done — ValidationStep + ExportStep render `vm.issues`/`vm.export`; shared repair components consume `IssueViewModel`; VM enriched (3-f-1) then wired (3-f-2); ExportStep download gate kept independent |
 | &nbsp;&nbsp;3-g — DayEditor bad channels | ✅ done — Devices un-mark gate reads `vm.badChannels.marks`; `buildBadChannelMarks` fixed to mark a multi-shank first row's probe-wide channels |
 | 4 — descriptor commands | ✅ done — `src/viewModels/commands/` (`commandHandlers` + `commandCatalog` + ratchet); VM store-write buttons routed through the resolver; ack repair descriptors carry `acks`; baselines byte-identical |
-| 5 — boundary tests | ▫️ next |
-| 6 — workflow UI | ▫️ pending |
+| 5 — boundary tests | ✅ done — `scenarios.test.ts` cross-surface matrix + shared `fixtures/scenarioWorkspaces.ts` (regression fixture consolidated); full severity table + runtime descriptor coverage; net-new tests, no source change |
+| 6 — workflow UI | ▫️ next |
 
 Make the modern UI *render* workflow state instead of *discovering* it. Today the four modern surfaces
 (ValidationSummary, AnimalWorkspace, AnimalView, DayEditor) each recompute section status, export
