@@ -2,13 +2,15 @@
 
 **Status:** Phases 0–2 complete (pure read-layer built/tested/merged). **Phase 3 in progress** — wiring
 the four pages to render the VMs, one surface PR at a time (7 total: 3-a…3-g, DayEditor split into 4).
-**3-a…3-d merged** — ValidationSummary, AnimalWorkspace, AnimalView, and the DayEditor shell each render
-their builders; golden baselines byte-identical; Playwright confirmed the rendered surfaces. 3-d also
-extracted the shared `resolveDayOwner` selector (stepper + VM read one owner truth) and established the
-VM-in-stepper threading (the stepper builds the view-model and passes slices to the step components as
-section-specific props). Next: **3-e (DayEditor overview field sources)** → then 3-f (issues/export),
-3-g (bad channels). Each surface PR needs a Playwright MCP visual spot-check + golden baselines. Then
-Phase 4 (commands), 5 (boundary matrix), 6 (UI).
+**3-a…3-e merged** — ValidationSummary, AnimalWorkspace, AnimalView, the DayEditor shell, and the
+DayEditor Overview field sources each render their builders; golden baselines byte-identical; Playwright
+confirmed the rendered surfaces. 3-d extracted the shared `resolveDayOwner` selector (stepper + VM read
+one owner truth) and established the VM-in-stepper threading (the stepper builds the view-model and
+passes slices to the step components as section-specific props); 3-e wired Overview's read-only values,
+help text, and the weight placeholder to `vm.overview.fields` while keeping the editable inputs'
+day-owned `defaultValue`. Next: **3-f (DayEditor issues/export)** → then 3-g (bad channels). Each
+surface PR needs a Playwright MCP visual spot-check + golden baselines. Then Phase 4 (commands),
+5 (boundary matrix), 6 (UI).
 
 **Phase-3 carry-forward (incl. the merged Phase-2 review fixups):**
 
@@ -36,7 +38,8 @@ Phase 4 (commands), 5 (boundary matrix), 6 (UI).
 | &nbsp;&nbsp;3-b — AnimalWorkspace | ✅ done — picker + pane render `buildAnimalWorkspaceViewModel`; promoted shared `chipVariant`; VM gained `actionLabel`/`recoveredCount` |
 | &nbsp;&nbsp;3-c — AnimalView | ✅ done — section-nav rings/counts + header facts + panel descriptor render `buildAnimalViewModel` |
 | &nbsp;&nbsp;3-d — DayEditor shell/steps/breadcrumb | ✅ done — stepper renders `vm.steps`/`vm.shell`/`vm.breadcrumb`; `resolveDayOwner` extracted → selectors |
-| &nbsp;&nbsp;3-e/f/g — DayEditor overview · issues/export · bad channels | ⏳ next (3-e overview fields) |
+| &nbsp;&nbsp;3-e — DayEditor overview sources | ✅ done — OverviewStep renders `vm.overview.fields` (read-only values + help + weight placeholder); editable inputs keep day-owned `defaultValue` |
+| &nbsp;&nbsp;3-f/g — DayEditor issues/export · bad channels | ⏳ next (3-f issues/export) |
 | 4 — commands | ▫️ pending |
 | 5 — boundary tests | ▫️ pending |
 | 6 — workflow UI | ▫️ pending |
