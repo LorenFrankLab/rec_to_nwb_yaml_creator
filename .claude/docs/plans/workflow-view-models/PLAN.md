@@ -1,6 +1,20 @@
 # Workflow View-Models Implementation Plan
 
-**Status:** Not started.
+**Status:** Phase 0 complete (logic inventory mapped). Execution shape: **build-all-then-wire** (Open
+Question 1 resolved). Next: Phase 1 (`types.ts`).
+
+| Phase | Status |
+| --- | --- |
+| 0 — logic inventory | ✅ done — [logic-inventory.md](logic-inventory.md) |
+| 1 — contracts/types | ⏳ next |
+| 2a — ValidationSummary VM | ▫️ pending |
+| 2b — AnimalWorkspace VM | ▫️ pending |
+| 2c — AnimalView VM | ▫️ pending |
+| 2d — DayEditor VM (4 sub-slices) | ▫️ pending |
+| 3 — wire pages | ▫️ pending |
+| 4 — commands | ▫️ pending |
+| 5 — boundary tests | ▫️ pending |
+| 6 — workflow UI | ▫️ pending |
 
 Make the modern UI *render* workflow state instead of *discovering* it. Today the four modern surfaces
 (ValidationSummary, AnimalWorkspace, AnimalView, DayEditor) each recompute section status, export
@@ -24,6 +38,9 @@ For agent invocation, **load only the slice you need**:
 - [overview.md](overview.md) — scope, non-goals, integration points (file:line), risks, rollout, open questions.
 - [shared-contracts.md](shared-contracts.md) — the view-model vocabulary (`WorkflowSeverity`,
   `WorkflowAction`, `IssueViewModel`, `SectionViewModel`, `DayRowViewModel`) + the severity-mapping invariant.
+- [logic-inventory.md](logic-inventory.md) — the Phase-0 output: every inline workflow decision per
+  surface (file:line + REUSE/EXTRACT/COMMAND), the consolidated contract gaps (C1–C19, the Phase-1
+  spec), the domain gaps (D1–D6), and the cross-surface duplication list.
 - Phases (each ships as a separable PR unless noted):
   - [phase-0-inventory.md](phase-0-inventory.md) — map the component-trapped logic (doc-only deliverable).
   - [phase-1-contracts.md](phase-1-contracts.md) — `src/viewModels/types.ts` (the shared vocabulary in code).
