@@ -15,16 +15,9 @@
 import { useEffect, useRef, useState, useMemo, type MouseEvent as ReactMouseEvent } from 'react';
 import { useStoreContext } from '../../state/StoreContext';
 import type { Animal } from '../../state/workspaceTypes';
-import { getAnimalSubject, getAnimalDayIds } from '../../state/workspaceSelectors';
-import { getPresentDayCount } from '../../domain/dayRecovery';
-import {
-  getAnimalSectionStatus,
-  getAnimalBlockingSections,
-  getAnimalSetupCounts,
-  getAnimalOptoCompleteness,
-  OPTO_COMPLETENESS,
-  SECTION_STATUS,
-} from '../../domain/sectionStatus';
+import { getAnimalDayIds } from '../../state/workspaceSelectors';
+import { getAnimalOptoCompleteness, OPTO_COMPLETENESS } from '../../domain/sectionStatus';
+import { buildAnimalViewModel } from '../../viewModels/animalViewModel';
 import { useReconfigContext } from '../../hooks/useReconfigContext';
 import { ConfirmDialog } from '../../components/Modal';
 import OverflowMenu from '../../components/OverflowMenu';
@@ -41,56 +34,10 @@ import TaskTypesContainer from '../AnimalEditor/wiring/TaskTypesContainer';
 import OptogeneticsContainer from '../AnimalEditor/wiring/OptogeneticsContainer';
 import { useAnimalFieldUpdate } from '../AnimalEditor/wiring/useAnimalFieldUpdate';
 import ConfigVersionContext from './ConfigVersionContext';
-import { ValidationSummary, buildAnimalRows } from '../ValidationSummary';
+import { ValidationSummary } from '../ValidationSummary';
 import '../../components/ErrorState.css';
 import styles from './AnimalView.module.css';
 import navStyles from './SectionNav.module.css';
-
-/**
- * Per-tab scope descriptor shown under the panel heading: the one-line framing of a section's
- * ownership/blast-radius (charter "tab → content map"). Only tabs extracted so far carry an
- * entry; later sub-phases add the rest.
- */
-const TAB_SCOPE: Record<string, string> = {
-  'electrode-groups':
-    'Shared across all recording days — a hardware change starts a new version (with an audit trail).',
-  // Recording system is an animal-wide CATALOG of acquisition systems; each recording day uses one
-  // (chosen in the day's setup), defaulting to the first. Mirrors the cameras catalog framing.
-  'recording-system': 'Animal-wide catalog — each recording day uses one.',
-  cameras: 'Catalog — referenced per day.',
-  // Task types are defined once here; each recording day picks which ones it ran and orders their
-  // epochs (in the Day Editor). Mirrors the cameras catalog framing.
-  'task-types': 'Define once — each recording day picks and orders its epochs.',
-};
-
-/**
- * Section-nav structure: grouped, in display order. Keys are the route `:tab` segments
- * (see ANIMAL_VIEW_TABS in useHashRouter).
- */
-const SECTION_GROUPS = [
-  {
-    label: 'Day work',
-    items: [
-      { key: 'days', label: 'Recording Days' },
-      { key: 'export', label: 'Validation & Export' },
-    ],
-  },
-  {
-    label: 'Animal setup',
-    items: [
-      { key: 'electrode-groups', label: 'Electrode Groups' },
-      { key: 'recording-system', label: 'Recording System' },
-      { key: 'cameras', label: 'Cameras' },
-      { key: 'task-types', label: 'Task Types' },
-      { key: 'optogenetics', label: 'Optogenetics' },
-    ],
-  },
-];
-
-/** Map of tab key -> display label, derived from SECTION_GROUPS. */
-const TAB_LABEL = Object.fromEntries(
-  SECTION_GROUPS.flatMap((g) => g.items).map((i): [string, string] => [i.key, i.label])
-);
 
 /**
  * Animal raw-collection fields whose corruption the AnimalView-level banner owns. These three span
@@ -230,7 +177,9 @@ function renderPanel({ tab, animalId, animal, onPendingEditsChange, onFieldUpdat
     default:
       return (
         <div className={styles.placeholder}>
-          <h2>{TAB_LABEL[tab] || 'Section'}</h2>
+          {/* Only reached for a tab outside the known set (the router resolves those to `days`), so
+              the heading falls back to the generic label. */}
+          <h2>Section</h2>
           <p>
             This section moves here in a later phase. For now, configure it in{' '}
             <a href={`#/animal/${animalId}/days`}>Animal Setup</a>.
@@ -273,42 +222,15 @@ export function AnimalView({ animalId, tab }: AnimalViewProps) {
   // shared useReconfigContext hook — the single source for the header banner (no per-surface forks).
   const routeContext = useReconfigContext();
 
-  // Phase 3a.5: which setup tabs hold an export-blocking error (for the section-nav red dot). Reuses
-  // the export validator + the repair-routing attribution — no second mapping. Memoized off the
-  // animal + days so it recomputes only when the data changes.
-  const blockingSections = useMemo(
-    // `animal` may be null here (the not-found guard is below); getAnimalBlockingSections tolerates
-    // a null animal (its own guard returns an empty set), so the cast is sound at runtime.
-    () => getAnimalBlockingSections(animal as Animal, model.workspace.days),
-    [animal, model.workspace.days]
+  // The page view-model: the animal header facts, the grouped section-nav (each tab's status ring +
+  // count token + link), the resolved active tab, and the active panel's heading + scope — all
+  // decided in the builder so the nav never re-derives "blocks export / not set up" or the counts.
+  // Built unconditionally (the builder tolerates an absent animal) so the hook order is stable; the
+  // not-found guard below short-circuits before any of it is rendered.
+  const vm = useMemo(
+    () => buildAnimalViewModel(model.workspace, animalId, tab),
+    [model.workspace, animalId, tab]
   );
-
-  // Decision 10: each section-nav row carries a right-aligned count (information scent). The setup
-  // counts are cheap selector reads; the day-work counts come from the SAME sources the rest of the
-  // view uses — `classifyAnimalDays` (present day records) and the export validator's per-animal
-  // rows (`buildAnimalRows`, "N ready" = valid days) — so the nav can never disagree with the days
-  // tab / the export tab. Memoized off the animal + days.
-  const sectionCounts = useMemo<Record<string, string> | null>(() => {
-    if (!animal) return null;
-    const dayCount = getPresentDayCount(animalId, animal, model.workspace.days);
-    const readyCount = buildAnimalRows(model.workspace, animalId).filter(
-      (r) => r.chip === 'valid'
-    ).length;
-    return {
-      days: String(dayCount),
-      export: `${readyCount} ready`,
-      ...Object.fromEntries(
-        Object.entries(getAnimalSetupCounts(animal)).map(([k, n]): [string, string] => [k, String(n)])
-      ),
-      // Opto count is HONEST about completeness (decision 10): COMPLETE (all four export-gated
-      // fields present) → "used"; PARTIAL (some-but-not-all) → "incomplete" so the count AGREES
-      // with the red ● "blocks export" dot the partial config already fires, instead of implying a
-      // usable setup; NONE (never configured) → the ○ todo ring owns the slot (the count isn't
-      // shown for a TODO section), so a valid unused-opto row reads as empty, not a bare "0".
-      optogenetics:
-        getAnimalOptoCompleteness(animal) === OPTO_COMPLETENESS.COMPLETE ? 'used' : 'incomplete',
-    };
-  }, [animal, animalId, model.workspace]);
 
   const panelRef = useRef<HTMLElement>(null);
   const isFirstRender = useRef(true);
@@ -424,8 +346,7 @@ export function AnimalView({ animalId, tab }: AnimalViewProps) {
     );
   }
 
-  const subject = getAnimalSubject(animal);
-  const facts = [subject.species, subject.sex].filter(Boolean).join(' · ');
+  const facts = [vm.header.speciesLabel, vm.header.sexLabel].filter(Boolean).join(' · ');
 
   /**
    * Intercept a section-nav activation when the active setup container has pending edits, so a
@@ -505,31 +426,27 @@ export function AnimalView({ animalId, tab }: AnimalViewProps) {
 
       <div className={styles.body}>
         <nav className={navStyles.nav} aria-label="Animal sections">
-          {SECTION_GROUPS.map((group) => (
+          {vm.groups.map((group) => (
             <div className={navStyles.group} key={group.label}>
               <div className={navStyles.groupLabel}>{group.label}</div>
-              {group.items.map((item) => {
-                const active = tab === item.key;
-                // A BLOCKING export error (red ●) outranks a never-configured TODO (hollow ○): the
-                // blocker is the more urgent signal, and the accessible name carries the meaning.
-                const isBlocking = blockingSections.has(item.key);
-                const isTodo =
-                  !isBlocking && getAnimalSectionStatus(animal, item.key) === SECTION_STATUS.TODO;
-                const ariaLabel = isBlocking
-                  ? `${item.label} — blocks export`
-                  : isTodo
-                    ? `${item.label} — not set up`
-                    : undefined;
+              {group.sections.map((section) => {
+                const active = tab === section.key;
+                // The builder mapped the section status (blocking ● outranks never-configured ○):
+                // 'error' → blocks export, 'todo' → not set up. The accessible name (summary) carries
+                // that meaning; a 'ready' section announces nothing beyond its label.
+                const isBlocking = section.status === 'error';
+                const isTodo = section.status === 'todo';
+                const ariaLabel = isBlocking || isTodo ? section.summary : undefined;
                 return (
                   <a
-                    key={item.key}
-                    href={`#/animal/${animalId}/${item.key}`}
+                    key={section.key}
+                    href={section.action?.href}
                     className={`${navStyles.item} ${active ? navStyles.isActive : ''}`}
                     aria-current={active ? 'page' : undefined}
                     aria-label={ariaLabel}
-                    onClick={(event) => handleNavClick(event, item.key)}
+                    onClick={(event) => handleNavClick(event, section.key)}
                   >
-                    <span className={navStyles.itemName}>{item.label}</span>
+                    <span className={navStyles.itemName}>{section.label}</span>
                     {/* Decision 10 trailing affordance: name · [● blocking] · count · › — all
                         aria-hidden visual "information scent" (the link's accessible name still
                         carries the blocking/todo meaning via aria-label, so SR users are unaffected
@@ -539,12 +456,12 @@ export function AnimalView({ animalId, tab }: AnimalViewProps) {
                     {isBlocking && (
                       <span className={navStyles.blocking} aria-hidden="true">●</span>
                     )}
-                    {isTodo ? (
-                      <span className={navStyles.todo} aria-hidden="true">○</span>
-                    ) : (
+                    {section.showCount ? (
                       <span className={navStyles.count} aria-hidden="true">
-                        {sectionCounts?.[item.key]}
+                        {section.countLabel}
                       </span>
+                    ) : (
+                      <span className={navStyles.todo} aria-hidden="true">○</span>
                     )}
                     <span className={navStyles.chev} aria-hidden="true">›</span>
                   </a>
@@ -556,13 +473,13 @@ export function AnimalView({ animalId, tab }: AnimalViewProps) {
 
         <section
           className={styles.panel}
-          aria-label={TAB_LABEL[tab] || 'Section'}
+          aria-label={vm.activePanel.label}
           tabIndex={-1}
           ref={panelRef}
         >
-          {TAB_SCOPE[tab] && (
+          {vm.activePanel.scope && (
             <p className={styles.panelScope} data-testid={`panel-scope-${tab}`}>
-              {TAB_SCOPE[tab]}
+              {vm.activePanel.scope}
             </p>
           )}
           {/* `data-field-path` marks the section a `?field=` repair deep-link highlights (3a.3). */}
