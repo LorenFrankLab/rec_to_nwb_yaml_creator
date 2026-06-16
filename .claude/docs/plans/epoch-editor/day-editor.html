@@ -63,6 +63,27 @@
   .editor select,.editor input{font:inherit;border:1px solid var(--line);border-radius:7px;padding:6px 8px}
   .editor input.path{width:100%;max-width:560px;font-family:ui-monospace,Menlo,monospace;font-size:12px;color:#3c444d}
   .editor input.fname{width:260px;font-family:ui-monospace,Menlo,monospace;font-size:12px}
+  /* grouped drill-in (What happened / Generated files / Optogenetics) */
+  .editor-v2{padding:14px 18px 16px 46px}
+  .ed-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+  .ed-title{font-weight:600;font-size:13.5px}
+  .ed-group{margin-bottom:14px}.ed-group:last-child{margin-bottom:0}
+  .ed-gh{margin:0 0 8px;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--faint);font-weight:600}
+  .ed-grid{display:grid;grid-template-columns:104px 1fr;gap:9px 14px;align-items:center}
+  .ed-grid label{color:var(--muted);font-size:12.5px}
+  .ed-grid .field{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .ed-grid select,.ed-grid input{font:inherit;border:1px solid var(--line);border-radius:7px;padding:6px 8px}
+  .ed-grid input.opto-in{border-color:var(--opto-b)}
+  .gen-panel{background:#fafbfc;border:1px solid var(--line2);border-radius:9px;padding:12px 14px}
+  .gen-panel .ed-gh{margin-top:0}
+  .gen-panel .vidcam{width:auto}
+  .gen-panel .vidrow{margin-bottom:0}
+  .rowmenu{border:1px solid var(--line);background:#fff;border-radius:7px;width:30px;height:28px;cursor:pointer;color:var(--muted);font-size:16px;line-height:1}
+  .rowmenu:hover{border-color:var(--accent);color:var(--accent)}
+  .menu .mi.danger{color:var(--bad)}.menu .mi.danger:hover{background:#fdf6f6}
+  /* exception action (No video) — visually distinct from routine (Rename) */
+  .exception-action{font:inherit;font-size:12px;color:var(--muted);background:none;border:0;cursor:pointer;padding:0 0 0 10px;margin-left:4px;border-left:1px solid var(--line)}
+  .exception-action:hover{color:var(--warn)}
   .addbtn{font:inherit;font-size:12px;color:var(--accent);border:1px dashed var(--line);border-radius:7px;padding:5px 9px;background:#fff;cursor:pointer}
   .addbtn:hover{border-color:var(--accent)}
   .vidrow{display:flex;gap:8px;align-items:center;margin-bottom:5px}
@@ -76,9 +97,7 @@
   /* field-level repair highlight (blocking link → scroll + expand + flash the exact control) */
   @keyframes flashring{0%{box-shadow:0 0 0 3px rgba(47,111,174,.5)}100%{box-shadow:0 0 0 3px rgba(47,111,174,0)}}
   .flash{animation:flashring 1.7s ease-out 1;border-radius:8px}
-  /* epoch row actions, manual-override + no-video states */
-  .epoch-actions{flex-wrap:wrap;gap:8px}
-  .addbtn.danger{color:var(--bad);border-color:#e7b9b9}.addbtn.danger:hover{border-color:var(--bad);background:#fdf6f6}
+  /* manual-override + no-video states */
   .gen.manual-chip{background:#fff;border-color:var(--accent);color:var(--ink);outline:none}
   .gentag.manual{color:var(--warn);background:var(--warnbg);border-color:#ecd9ab}
   .novid{color:var(--muted);font-style:italic;font-size:12.5px}
@@ -235,26 +254,52 @@
           <thead><tr><th></th><th>#</th><th>Task</th><th>Camera(s)</th><th>Statescript</th><th>Video(s)</th><th class="optohdr">Opto (mW)</th><th class="optohdr">Pulse (ms)</th><th>Status</th></tr></thead>
           <tbody>
             <tr><td class="exp"><button type="button" class="car" aria-expanded="false" aria-controls="e1" aria-label="Toggle epoch 1 details" onclick="t('e1',this)">▸</button></td><td class="n">1</td><td class="tcell" onclick="t('e1')"><span class="tag">Sleep · s1</span></td><td><span class="cam">sleep_camera</span></td><td class="file">…_01_s1.stateScriptLog</td><td class="file">…_01_s1.1.h264</td><td><input class="opto-in" value="0"></td><td><input class="opto-in" value="2"></td><td class="st">Complete</td></tr>
-            <tr class="detail" id="e1" style="display:none"><td colspan="9"><div class="editor">
-              <label>Epoch 1</label><div class="field epoch-actions">
-                <button class="addbtn">＋ Insert epoch after</button>
-                <button class="addbtn">⎘ Duplicate epoch</button>
-                <button class="addbtn">↑ Move up</button>
-                <button class="addbtn">↓ Move down</button>
-                <button class="addbtn danger" onclick="delEpoch(1)">🗑 Delete epoch</button>
-              </div>
-              <label>Task</label><div class="field"><select><option>Sleep</option><option>W-track</option><option>Rest box</option></select><button class="addbtn">＋ new task type</button><span class="derived-note">tag derives: s1</span></div>
-              <label>Cameras</label><div class="field"><span class="cam">sleep_camera ✕</span><button class="addbtn">＋ add camera</button></div>
-              <label>Statescript</label><div class="field"><span class="gen" data-gen="…/20260514_Laurent_01_s1.stateScriptLog">…/20260514_Laurent_01_s1.stateScriptLog</span><span class="gentag">generated</span><button class="override" data-orig="Override path" onclick="overrideFile(this)">Override path</button><span class="derived-note" id="ss-scope-e1" style="display:none">manual — affects this epoch only</span></div>
-              <label>Video(s)</label><div class="field"><div style="width:100%" id="vid-e1">
-                <div class="vidrow" id="vidrow-e1">
-                  <span class="vidcam">sleep_camera</span>
-                  <span class="vid-present"><span class="gen" data-gen="20260514_Laurent_01_s1.1.h264">20260514_Laurent_01_s1.1.h264</span><span class="gentag">generated</span><button class="override" data-orig="Rename" onclick="overrideFile(this)">Rename</button><button class="linkbtn" onclick="noVideo('e1',false)">no video</button></span>
-                  <span class="vid-absent" style="display:none"><span class="novid">No video recorded — fine for this epoch (export stays valid)</span><button class="addbtn" onclick="noVideo('e1',true)">＋ Add video</button></span>
+            <tr class="detail" id="e1" style="display:none"><td colspan="9"><div class="editor-v2">
+              <div class="ed-head">
+                <span class="ed-title">Epoch 1 details</span>
+                <div style="position:relative">
+                  <button class="rowmenu" aria-label="Epoch 1 actions" aria-haspopup="true" onclick="epMenu(event)">⋯</button>
+                  <div class="menu" id="ep-pop" style="display:none;top:calc(100% + 4px);right:0">
+                    <button class="mi" onclick="closeMenus()">＋ Insert epoch after</button>
+                    <button class="mi" onclick="closeMenus()">⎘ Duplicate epoch</button>
+                    <button class="mi" onclick="closeMenus()">↑ Move up</button>
+                    <button class="mi" onclick="closeMenus()">↓ Move down</button>
+                    <div class="sep"></div>
+                    <button class="mi danger" onclick="delEpoch(1)">🗑 Delete epoch</button>
+                  </div>
                 </div>
-                <button class="addbtn">＋ video</button></div></div>
-              <label>Opto</label><div class="field"><input class="opto-in" value="0"> mW &nbsp; pulse <input class="opto-in" value="2"> ms <span class="derived-note">protocol (laser DIO, FSGui file) set on the Day tab</span></div>
-              <label>Environment</label><div class="field"><input value="sleep-box" style="width:180px"></div>
+              </div>
+
+              <div class="ed-group">
+                <h6 class="ed-gh">What happened</h6>
+                <div class="ed-grid">
+                  <label>Task</label><div class="field"><select><option>Sleep</option><option>W-track</option><option>Rest box</option></select><span class="derived-note">tag derives: s1</span><button class="addbtn">＋ new task type</button></div>
+                  <label>Environment</label><div class="field"><input value="sleep-box" style="width:180px"></div>
+                  <label>Cameras</label><div class="field"><span class="cam">sleep_camera ✕</span><button class="addbtn">＋ add camera</button></div>
+                </div>
+              </div>
+
+              <div class="ed-group gen-panel" id="genpanel-e1">
+                <h6 class="ed-gh">Generated files</h6>
+                <div class="ed-grid">
+                  <label>Statescript</label><div class="field"><span class="gentag">generated</span><span class="gen" data-gen="…/20260514_Laurent_01_s1.stateScriptLog">…/20260514_Laurent_01_s1.stateScriptLog</span><button class="override" data-orig="Override path" onclick="overrideFile(this)">Override path</button><span class="derived-note" style="display:none">manual — this epoch only</span></div>
+                  <label>Video</label><div class="field" id="vid-e1">
+                    <div class="vidrow" id="vidrow-e1">
+                      <span class="vid-present"><span class="gentag">generated</span><span class="gen" data-gen="20260514_Laurent_01_s1.1.h264">20260514_Laurent_01_s1.1.h264</span><span class="vidcam">· sleep_camera</span><button class="override" data-orig="Rename" onclick="overrideFile(this)">Rename</button><button class="exception-action" onclick="noVideo('e1',false)">No video</button></span>
+                      <span class="vid-absent" style="display:none"><span class="novid">No video recorded — fine for this epoch (export stays valid)</span><button class="addbtn" onclick="noVideo('e1',true)">＋ Add video</button></span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="ed-group">
+                <h6 class="ed-gh">Optogenetics</h6>
+                <div class="ed-grid">
+                  <label>Power</label><div class="field"><input class="opto-in" value="0"> mW</div>
+                  <label>Pulse</label><div class="field"><input class="opto-in" value="2"> ms</div>
+                  <label>Protocol</label><div class="field"><span class="derived-note">Laser DIO + FSGui file are set on the Day tab</span></div>
+                </div>
+              </div>
             </div></td></tr>
 
             <tr><td class="exp"><button type="button" class="car" aria-expanded="false" aria-controls="e2" aria-label="Toggle epoch 2 details" onclick="t('e2',this)">▸</button></td><td class="n">2</td><td class="tcell" onclick="t('e2')"><span class="tag">Sleep · s2</span></td><td><span class="cam">sleep_camera</span></td><td class="file">…_02_s2.stateScriptLog</td><td class="file">…_02_s2.1.h264</td><td><input class="opto-in" value="4"></td><td><input class="opto-in" value="2"></td><td class="st">Complete</td></tr>
@@ -406,6 +451,7 @@
     var t=document.getElementById('toast');t.style.display='flex';clearTimeout(window._tt);window._tt=setTimeout(hideToast,6000);}
   function hideToast(){document.getElementById('toast').style.display='none';}
   function tplMenu(e){e.stopPropagation();var m=document.getElementById('tpl-pop');m.style.display=m.style.display==='none'?'block':'none';}
+  function epMenu(e){e.stopPropagation();var m=document.getElementById('ep-pop');m.style.display=m.style.display==='none'?'block':'none';}
   function closeMenus(){document.querySelectorAll('.menu').forEach(function(m){m.style.display='none';});}
   document.addEventListener('click',closeMenus);
   (function(){

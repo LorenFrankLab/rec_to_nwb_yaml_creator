@@ -161,6 +161,14 @@ A review asked for the post-click result states. Priority set (1–5) mocked + v
    (export stays valid)"** with `＋ Add video`; readiness treats intentional no-video as **valid**, distinct
    from a *missing* expected video (a blocking issue).
 
+**Expanded-epoch visual chunking** — the drill-in was a flat strip of same-weight controls. It's now three
+labeled groups — **What happened** (task / environment / cameras), **Generated files** (a lightly tinted
+sub-panel: statescript + video as grey-monospace `generated`/`manual` values with `Override`/`Rename`), and
+**Optogenetics** (power / pulse / protocol-context). Editable controls are white-with-borders; generated
+values are quiet and grey; the **exception** action (`No video`) is styled distinctly from the **routine**
+one (`Rename`); rare row actions (insert / duplicate / move / delete) are tucked into a `⋯` menu so they
+don't crowd the fields. A repair link still lands on + flashes the exact field (issue-led open).
+
 **Secondary set (6–10) — not yet mocked:** per-day row overflow menu (duplicate / delete / export / open);
 one animal-static **edit flow** (save / cancel / re-export consequence); **new-configuration** details
 (effective date, copy-from-current, bad-channel reset confirm); **import success / existing-animal** branch;
