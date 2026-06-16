@@ -457,6 +457,19 @@ describe('createDayRecord', () => {
       expect(day.technical.times_period_multiplier).toBe(1.5);
       expect(day.technical.raw_data_to_volts).toBe(0.195);
     });
+
+    // The data folder is stable across a block of days (unlike date-derived filenames), so a new
+    // same-block day inherits the source folder. It is off-export, so carrying it can't move a baseline.
+    it('carries dataFolder from the source (a same-block day inherits the folder)', () => {
+      const withFolder = { ...carryFrom, dataFolder: '/stelmo/remy/' };
+      const day = createDayRecord(animal, 'remy', 'd', '2023-06-23', session, NOW, withFolder);
+      expect(day.dataFolder).toBe('/stelmo/remy/');
+    });
+
+    it('adds NO dataFolder when the source has none (back-compat: the key stays absent)', () => {
+      const day = createDayRecord(animal, 'remy', 'd', '2023-06-23', session, NOW, carryFrom);
+      expect('dataFolder' in day).toBe(false);
+    });
   });
 
   describe('bad-channel carry-forward (config-version-guarded)', () => {
@@ -589,5 +602,19 @@ describe('applyDayUpdates', () => {
   it('persists cameras_used (the explicit per-day cameras-used checklist)', () => {
     const updated = applyDayUpdates({ id: 'd1' }, { cameras_used: [1] }, NOW);
     expect(updated.cameras_used).toEqual([1]);
+  });
+
+  it('persists dataFolder (the day-level data folder; off-export)', () => {
+    const updated = applyDayUpdates({ id: 'd1' }, { dataFolder: '/stelmo/remy/20230622/' }, NOW);
+    expect(updated.dataFolder).toBe('/stelmo/remy/20230622/');
+  });
+
+  it('clears dataFolder to an empty string when the user empties the field', () => {
+    const updated = applyDayUpdates(
+      { id: 'd1', dataFolder: '/stelmo/remy/20230622/' },
+      { dataFolder: '' },
+      NOW
+    );
+    expect(updated.dataFolder).toBe('');
   });
 });

@@ -99,6 +99,8 @@ export interface DayUpdates {
   keywords?: string[];
   data_acq_device_name?: string;
   cameras_used?: Array<number | string>;
+  /** Day-level data folder (off-export; replaced on `!== undefined`). */
+  dataFolder?: string;
 }
 
 /**
@@ -518,6 +520,10 @@ export function createDayRecord(
     // Only present when guarded bad-channel carry produced a non-empty map (see above); a blank
     // day omits the key entirely so it stays byte-identical to today's output.
     ...(deviceOverrides ? { deviceOverrides } : {}),
+    // Data folder carries forward unconditionally (it is stable across a block of days — unlike the
+    // date-derived filenames, which never carry). Off-export, so this can't move a baseline. The key
+    // stays ABSENT when the source has none, keeping a no-carry/blank day's persisted shape unchanged.
+    ...(carryFrom?.dataFolder !== undefined ? { dataFolder: carryFrom.dataFolder } : {}),
     // `state.badChannelRemovalAcks` (off-export acknowledgments of deliberate bad-channel
     // un-marks) is intentionally ABSENT on a fresh day: the monotonicity helpers and the
     // acknowledge repair command treat an absent container as "no acks" and create it on demand
@@ -628,6 +634,12 @@ export function applyDayUpdates(day: Day, updates: DayUpdates, now: string): Day
   // stays byte-identical when no checklist additions are made.
   if (updates.cameras_used !== undefined) {
     updated.cameras_used = updates.cameras_used;
+  }
+  // Day-level data folder (off-export). `!== undefined` so emptying the field to '' persists (the
+  // user explicitly cleared it); absent for all existing data, so the persisted shape is additive
+  // and `mergeDayMetadata` never reads it — the exported YAML is byte-identical.
+  if (updates.dataFolder !== undefined) {
+    updated.dataFolder = updates.dataFolder;
   }
 
   updated.lastModified = now;

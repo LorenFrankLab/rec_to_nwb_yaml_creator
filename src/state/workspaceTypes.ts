@@ -391,6 +391,13 @@ export interface Day {
   cameras_used?: Array<number | string>;
   /** Day-owned name referencing the animal's recording-system catalog entry. */
   data_acq_device_name?: string;
+  /**
+   * Day-level directory on disk where this day's recording files live (e.g.
+   * `/stelmo/remy/20230622/`). Set once on the Day tab and carried forward to same-block days;
+   * per-epoch filenames derive inside it (the derivation lands in a later phase). OFF-EXPORT —
+   * `mergeDayMetadata` never reads it, so it does not appear in the YAML and cannot move a baseline.
+   */
+  dataFolder?: string;
   /** Technical recording parameters. */
   technical: TechnicalParameters;
   /** Device overrides (if different from animal default). */
