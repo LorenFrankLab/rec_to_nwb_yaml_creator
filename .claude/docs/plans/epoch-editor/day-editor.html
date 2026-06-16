@@ -76,6 +76,22 @@
   /* field-level repair highlight (blocking link → scroll + expand + flash the exact control) */
   @keyframes flashring{0%{box-shadow:0 0 0 3px rgba(47,111,174,.5)}100%{box-shadow:0 0 0 3px rgba(47,111,174,0)}}
   .flash{animation:flashring 1.7s ease-out 1;border-radius:8px}
+  /* epoch row actions, manual-override + no-video states */
+  .epoch-actions{flex-wrap:wrap;gap:8px}
+  .addbtn.danger{color:var(--bad);border-color:#e7b9b9}.addbtn.danger:hover{border-color:var(--bad);background:#fdf6f6}
+  .gen.manual-chip{background:#fff;border-color:var(--accent);color:var(--ink);outline:none}
+  .gentag.manual{color:var(--warn);background:var(--warnbg);border-color:#ecd9ab}
+  .novid{color:var(--muted);font-style:italic;font-size:12.5px}
+  /* template dropdown / popup menus */
+  .menu{position:absolute;z-index:50;background:#fff;border:1px solid var(--line);border-radius:9px;box-shadow:0 10px 28px rgba(0,0,0,.14);padding:5px;min-width:240px}
+  .menu .mi{display:block;width:100%;text-align:left;padding:7px 10px;border-radius:6px;font:inherit;font-size:13px;background:none;border:0;cursor:pointer;color:var(--ink)}
+  .menu .mi:hover{background:#eaf1f9;color:var(--accent-d)}
+  .menu .mi .sub{display:block;font-size:11.5px;color:var(--faint)}
+  .menu .sep{height:1px;background:var(--line2);margin:4px 0}
+  /* toast (undo for reversible epoch delete) */
+  .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#23282d;color:#fff;border-radius:10px;padding:11px 16px;display:flex;align-items:center;gap:16px;font-size:13.5px;box-shadow:0 8px 24px rgba(0,0,0,.22);z-index:1000}
+  .toast .undo{background:none;border:0;color:#7db4e6;font:inherit;font-weight:600;cursor:pointer}.toast .undo:hover{color:#a8cef0}
+  .toast .x{background:none;border:0;color:#9aa2ab;font:inherit;cursor:pointer;font-size:15px;line-height:1}
   /* day */
   .row{display:flex;gap:14px;margin-bottom:14px;align-items:center}.lbl{width:170px;color:var(--muted);font-size:13px}
   input.w{width:90px}.unit{color:var(--muted);margin-left:6px}
@@ -203,7 +219,16 @@
     <section class="pane" id="p-ep">
       <div class="card">
         <div class="bar">
-          <button class="btn primary">＋ from template ▾</button>
+          <div style="position:relative">
+            <button class="btn primary" onclick="tplMenu(event)">＋ from template ▾</button>
+            <div class="menu" id="tpl-pop" style="display:none;top:calc(100% + 6px);left:0">
+              <button class="mi" onclick="closeMenus()">Sleep day<span class="sub">6 × sleep epochs — s1…s6</span></button>
+              <button class="mi" onclick="closeMenus()">W-track day<span class="sub">sleep/run alternation — s1, r1, s2, r2…</span></button>
+              <button class="mi" onclick="closeMenus()">Copy structure from 2026-05-13<span class="sub">same epochs; files re-derived for today</span></button>
+              <div class="sep"></div>
+              <button class="mi" onclick="closeMenus()">Blank<span class="sub">add epochs manually</span></button>
+            </div>
+          </div>
           <span class="spacer"></span><span class="carry">↩ same structure as 2026-05-13</span>
         </div>
         <table>
@@ -211,11 +236,22 @@
           <tbody>
             <tr><td class="exp"><button type="button" class="car" aria-expanded="false" aria-controls="e1" aria-label="Toggle epoch 1 details" onclick="t('e1',this)">▸</button></td><td class="n">1</td><td class="tcell" onclick="t('e1')"><span class="tag">Sleep · s1</span></td><td><span class="cam">sleep_camera</span></td><td class="file">…_01_s1.stateScriptLog</td><td class="file">…_01_s1.1.h264</td><td><input class="opto-in" value="0"></td><td><input class="opto-in" value="2"></td><td class="st">Complete</td></tr>
             <tr class="detail" id="e1" style="display:none"><td colspan="9"><div class="editor">
+              <label>Epoch 1</label><div class="field epoch-actions">
+                <button class="addbtn">＋ Insert epoch after</button>
+                <button class="addbtn">⎘ Duplicate epoch</button>
+                <button class="addbtn">↑ Move up</button>
+                <button class="addbtn">↓ Move down</button>
+                <button class="addbtn danger" onclick="delEpoch(1)">🗑 Delete epoch</button>
+              </div>
               <label>Task</label><div class="field"><select><option>Sleep</option><option>W-track</option><option>Rest box</option></select><button class="addbtn">＋ new task type</button><span class="derived-note">tag derives: s1</span></div>
               <label>Cameras</label><div class="field"><span class="cam">sleep_camera ✕</span><button class="addbtn">＋ add camera</button></div>
-              <label>Statescript</label><div class="field"><span class="gen">…/20260514_Laurent_01_s1.stateScriptLog</span><span class="gentag">generated</span><button class="override">Override path</button></div>
+              <label>Statescript</label><div class="field"><span class="gen" data-gen="…/20260514_Laurent_01_s1.stateScriptLog">…/20260514_Laurent_01_s1.stateScriptLog</span><span class="gentag">generated</span><button class="override" data-orig="Override path" onclick="overrideFile(this)">Override path</button><span class="derived-note" id="ss-scope-e1" style="display:none">manual — affects this epoch only</span></div>
               <label>Video(s)</label><div class="field"><div style="width:100%" id="vid-e1">
-                <div class="vidrow"><span class="vidcam">sleep_camera</span><span class="gen">20260514_Laurent_01_s1.1.h264</span><span class="gentag">generated</span><button class="override">Rename</button><button class="linkbtn">no video</button></div>
+                <div class="vidrow" id="vidrow-e1">
+                  <span class="vidcam">sleep_camera</span>
+                  <span class="vid-present"><span class="gen" data-gen="20260514_Laurent_01_s1.1.h264">20260514_Laurent_01_s1.1.h264</span><span class="gentag">generated</span><button class="override" data-orig="Rename" onclick="overrideFile(this)">Rename</button><button class="linkbtn" onclick="noVideo('e1',false)">no video</button></span>
+                  <span class="vid-absent" style="display:none"><span class="novid">No video recorded — fine for this epoch (export stays valid)</span><button class="addbtn" onclick="noVideo('e1',true)">＋ Add video</button></span>
+                </div>
                 <button class="addbtn">＋ video</button></div></div>
               <label>Opto</label><div class="field"><input class="opto-in" value="0"> mW &nbsp; pulse <input class="opto-in" value="2"> ms <span class="derived-note">protocol (laser DIO, FSGui file) set on the Day tab</span></div>
               <label>Environment</label><div class="field"><input value="sleep-box" style="width:180px"></div>
@@ -352,6 +388,26 @@
     document.getElementById('dio-edit').style.display=e?'block':'none';
     document.getElementById('dio-edit-btn').style.display=e?'none':'inline-flex';
     document.getElementById('dio-done-btn').style.display=e?'inline-flex':'none';}
+  // generated → manual override (per file, this epoch only) and back
+  function overrideFile(btn){
+    var box=btn.parentNode, chip=box.querySelector('.gen'), tag=box.querySelector('.gentag');
+    var toManual=btn.textContent!=='Revert to generated';
+    if(toManual){chip.contentEditable='true';chip.classList.add('manual-chip');tag.textContent='manual';tag.classList.add('manual');btn.textContent='Revert to generated';chip.focus();}
+    else{chip.contentEditable='false';chip.classList.remove('manual-chip');if(chip.dataset.gen)chip.textContent=chip.dataset.gen;tag.textContent='generated';tag.classList.remove('manual');btn.textContent=btn.dataset.orig;}
+    var note=box.querySelector('.derived-note');if(note)note.style.display=toManual?'':'none';}
+  // intentional "no video" exception ⇄ restore (export readiness treats no-video as valid, not missing)
+  function noVideo(id,restore){var row=document.getElementById('vidrow-'+id);
+    row.querySelector('.vid-present').style.display=restore?'':'none';
+    row.querySelector('.vid-absent').style.display=restore?'none':'';}
+  // reversible epoch delete (real app removes + renumbers; Undo restores)
+  function delEpoch(n){showToast('Epoch '+n+' deleted',true);}
+  function showToast(msg,undoable){document.getElementById('toastmsg').textContent=msg;
+    document.getElementById('toast-undo').style.display=undoable?'inline':'none';
+    var t=document.getElementById('toast');t.style.display='flex';clearTimeout(window._tt);window._tt=setTimeout(hideToast,6000);}
+  function hideToast(){document.getElementById('toast').style.display='none';}
+  function tplMenu(e){e.stopPropagation();var m=document.getElementById('tpl-pop');m.style.display=m.style.display==='none'?'block':'none';}
+  function closeMenus(){document.querySelectorAll('.menu').forEach(function(m){m.style.display='none';});}
+  document.addEventListener('click',closeMenus);
   (function(){
     // 9 named events (carried) — also rendered into the collapsed "Show all 64 ECU channels" grid
     var din={3:'Sleep_Camera',5:'LeftWell_Poke',6:'CenterWell_Poke',12:'RightWell_Poke',14:'Handle_Well',15:'Maze_Camera'};
@@ -380,5 +436,11 @@
       if(pop.style.display==='block'&&!pop.contains(t)&&t!==active)close();});
   })();
 </script>
+
+<div class="toast" id="toast" style="display:none">
+  <span id="toastmsg">Done</span>
+  <button class="undo" id="toast-undo" onclick="hideToast()">Undo</button>
+  <button class="x" onclick="hideToast()">✕</button>
+</div>
 </body>
 </html>

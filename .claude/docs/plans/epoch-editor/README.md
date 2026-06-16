@@ -141,6 +141,31 @@ A third pass called the design "very close"; tightened the interaction semantics
   `<button>` or otherwise keyboard-activable (the caret button is the primary control);
 - the **sidebar / recent-animal list** uses click-`div`s in the mock — implementation uses `<a>`/`<button>`.
 
+## Action states — "what happens after I click" (2026-06-16)
+
+A review asked for the post-click result states. Priority set (1–5) mocked + verified:
+
+1. **Export / copy / batch results** ([export-preview.html](./export-preview.html)) — `Download` → toast
+   "✓ Downloaded `…_metadata.yml`"; `Copy` → "✓ YAML copied"; the batch link shows a **result panel**
+   (exported N · skipped M, each skipped day linked to its blocking issue).
+2. **Blocked export** (export-preview) — a real blocked state (toggle to preview): **Download disabled**, the
+   issue list with **per-field repair links** (epoch / `#cfg-probe2`), mirroring the day-editor readiness bar.
+3. **Epoch sequence authoring** (day-editor) — `from template ▾` opens a **menu** (Sleep day / W-track day /
+   Copy structure from {date} / Blank); the open epoch has an **actions toolbar** (Insert after · Duplicate ·
+   Move up · Move down · **Delete → undo toast**). *Reorder is illustrative in the mock; drag + per-row
+   overflow menu are the implementation surface.*
+4. **Generated → manual override** (day-editor drill-in) — `Override path` / `Rename` flips the green
+   **generated** chip to an editable **manual** chip (amber tag) + `Revert to generated`, scoped
+   "affects this epoch only".
+5. **No video exception** (day-editor) — `no video` → row reads **"No video recorded — fine for this epoch
+   (export stays valid)"** with `＋ Add video`; readiness treats intentional no-video as **valid**, distinct
+   from a *missing* expected video (a blocking issue).
+
+**Secondary set (6–10) — not yet mocked:** per-day row overflow menu (duplicate / delete / export / open);
+one animal-static **edit flow** (save / cancel / re-export consequence); **new-configuration** details
+(effective date, copy-from-current, bad-channel reset confirm); **import success / existing-animal** branch;
+**recovery** destructive-action confirms. Tracked for a follow-up pass.
+
 ## Must reuse the existing correctness substrate
 
 The redesign is a new **input surface** over the same validation rules / `mergeDayMetadata` /
