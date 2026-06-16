@@ -96,9 +96,16 @@ test.describe('Shared day-lifecycle vocabulary', () => {
   test('a persisted-validated day reads "Validated" (not "Ready to export") on both surfaces', async ({
     page,
   }) => {
-    // Persist the validation outcome onto the seeded day (what "Validate All" writes).
+    // Persist the validation outcome onto the seeded day (what "Validate All" writes). Spread the
+    // existing state so the off-export videoless declaration (sleep epochs) is preserved — otherwise
+    // the Phase-4 video rule would re-flag the day and it would read "Needs fixing", not "Validated".
     const blob = buildConfiguredWorkspaceBlob();
-    blob.workspace.days[DAY_ID].state = { draft: false, validated: true, exported: false };
+    blob.workspace.days[DAY_ID].state = {
+      ...blob.workspace.days[DAY_ID].state,
+      draft: false,
+      validated: true,
+      exported: false,
+    };
 
     // Validation Summary.
     await seedAndOpen(page, blob, '/#/validation');

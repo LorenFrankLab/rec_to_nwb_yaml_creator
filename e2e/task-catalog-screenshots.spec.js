@@ -111,7 +111,7 @@ test.describe('Task-type catalog screenshots', () => {
     });
     await seedAndOpen(page, blob, `/#/day/${DAY_ID}`);
     await page.getByRole('button', { name: 'Epochs', exact: true }).click();
-    await expect(page.getByRole('heading', { level: 2, name: 'Tasks & Epochs' })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 2, name: 'Epochs' })).toBeVisible();
     await page.screenshot({ path: `${DIR}/conflict-desktop.png`, fullPage: true });
   });
 });

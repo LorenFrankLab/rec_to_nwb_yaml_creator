@@ -225,63 +225,36 @@ test.describe('Optogenetics export gating and the two-layer opto model', () => {
     await expect(page.getByRole('button', { name: 'Download YAML' })).toBeDisabled();
   });
 
-  test('FsGUI day protocol: camera + epoch are controlled choices applied to a SELECTED epoch subset', async ({
+  test('per-epoch optogenetics: power/pulse are controlled numeric inputs applied to a SELECTED epoch subset', async ({
     page,
   }) => {
-    // With opto ENABLED on the animal, the Day Editor's Tasks & Epochs step renders the day-level
-    // FsGUI protocol editor. Seed a complete implant so the FsGUI section is rendered (it only shows
-    // for an opto-enabled animal), with no protocols yet, then drive the controlled references.
+    // The two-layer opto model: the animal is implanted; the DAY records which epochs were stimulated
+    // and at what power/pulse. In the epoch grid that is per-epoch numeric inputs (Opto mW / Pulse ms),
+    // shown ONLY for an implanted animal — opto is epoch-scoped, never forced day-wide. (The protocol's
+    // camera + DIO output are set once on the Day tab, not free-typed per epoch.)
     const blob = buildConfiguredWorkspaceBlob();
     blob.workspace.animals[ANIMAL_ID].optogenetics = structuredClone(COMPLETE_OPTOGENETICS);
     blob.workspace.days[DAY_ID].fs_gui_yamls = [];
     await seedAndOpen(page, blob, `/#/day/${DAY_ID}`);
 
     await page.getByRole('button', { name: 'Epochs', exact: true }).click();
-    await expect(page.getByRole('heading', { level: 2, name: 'Tasks & Epochs' })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 2, name: 'Epochs' })).toBeVisible();
 
-    // The optional FsGUI section is collapsed by default (progressive disclosure) — expand it.
-    await page.locator('summary', { hasText: 'Optogenetics protocols' }).click();
+    // The opto columns render ONLY for an implanted animal (the two-layer model's day layer).
+    await expect(page.getByRole('columnheader', { name: /Opto \(mW\)/ })).toBeVisible();
+    await expect(page.getByRole('columnheader', { name: /Pulse \(ms\)/ })).toBeVisible();
 
-    // The day-level opto protocol editor is present (the two-layer model's "what was actually run").
-    const fsGui = page.getByRole('region', { name: 'Optogenetics run this day (FsGUI protocols)' });
-    await expect(fsGui).toBeVisible();
-    // No protocol yet → the explicit "no stimulation this day is valid" empty state (epoch-scoped,
-    // optional — opto is NOT forced day-wide just because the animal is implanted).
-    await expect(
-      fsGui.getByText('No optogenetic stimulation recorded for this day.'),
-    ).toBeVisible();
-
-    // Add a protocol and assert its references are CONTROLLED choices, not free-typed ids.
-    await fsGui.getByRole('button', { name: 'Add FsGUI protocol' }).click();
-
-    // Camera is a <select> (combobox) of the animal's KNOWN cameras (0 overhead, 1 side) — a stale id
-    // cannot be typed. The select's option domain is exactly the catalog cameras plus the empty prompt.
-    const cameraSelect = fsGui.getByRole('combobox', { name: 'Camera' });
-    await expect(cameraSelect).toBeVisible();
-    await expect(cameraSelect.getByRole('option', { name: /overhead_camera \(id 0\)/ })).toHaveCount(1);
-    await expect(cameraSelect.getByRole('option', { name: /side_camera \(id 1\)/ })).toHaveCount(1);
-    await expect(cameraSelect.getByRole('option', { name: /\b999\b/ })).toHaveCount(0);
-    await cameraSelect.selectOption('0');
-
-    // Epochs are CONTROLLED checkboxes, one per the day's known task epochs (1–5). Opto applies to a
-    // SELECTED SUBSET: check only epoch 2 and leave the others unchecked (not forced day-wide).
-    const epochs = fsGui.getByRole('group', { name: 'Epochs' });
-    await expect(epochs).toBeVisible();
-    const epoch2 = epochs.getByRole('checkbox', { name: 'Epoch 2' });
-    const epoch4 = epochs.getByRole('checkbox', { name: 'Epoch 4' });
-    await expect(epoch2).toBeVisible();
-    await expect(epoch4).toBeVisible();
-    // There is no free-text epoch entry: the epochs surface is checkboxes only (a bounded domain).
-    await expect(epochs.getByRole('textbox')).toHaveCount(0);
-    await epoch2.check();
-    await expect(epoch2).toBeChecked();
-    // A subset: epoch 4 stays UNchecked — opto is epoch-scoped, not applied to the whole day.
-    await expect(epoch4).not.toBeChecked();
-
-    // DIO output is a controlled select of the DAY's behavioral events (the merge exports only those).
-    const dioSelect = fsGui.getByRole('combobox', { name: 'DIO output (behavioral event)' });
-    await expect(dioSelect).toBeVisible();
-    await expect(dioSelect.getByRole('option', { name: 'reward_left', exact: true })).toHaveCount(1);
+    // Per-epoch power is a CONTROLLED numeric input (spinbutton), one per epoch row — not a free-text
+    // protocol field. Set power on epoch 2 only; epoch 4 stays empty (a subset, not day-wide).
+    const power2 = page.getByRole('spinbutton', { name: /Epoch 2 opto power/i });
+    const power4 = page.getByRole('spinbutton', { name: /Epoch 4 opto power/i });
+    await expect(power2).toBeVisible();
+    await expect(power4).toBeVisible();
+    await power2.fill('40');
+    await power2.blur();
+    await expect(power2).toHaveValue('40');
+    // Opto is epoch-scoped, not applied to the whole day: epoch 4's power stays empty.
+    await expect(power4).toHaveValue('');
   });
 
   test('complete opto session exports BOTH converter and schema key spellings, fields non-empty', async ({

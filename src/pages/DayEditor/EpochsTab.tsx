@@ -357,16 +357,16 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
         <table className={styles.table}>
           <thead>
             <tr>
-              <th className={styles.caretCell}><span className="sr-only">Expand</span></th>
-              <th className={styles.numCell}>#</th>
-              <th>Task</th>
-              <th>Camera(s)</th>
-              <th>Statescript</th>
-              <th>Video(s)</th>
-              {hasOpto && <th>Opto (mW)</th>}
-              {hasOpto && <th>Pulse (ms)</th>}
-              <th>Status</th>
-              <th className={styles.menuCell}><span className="sr-only">Actions</span></th>
+              <th scope="col" className={styles.caretCell}><span className="sr-only">Expand</span></th>
+              <th scope="col" className={styles.numCell}>#</th>
+              <th scope="col">Task</th>
+              <th scope="col">Camera(s)</th>
+              <th scope="col">Statescript</th>
+              <th scope="col">Video(s)</th>
+              {hasOpto && <th scope="col">Opto (mW)</th>}
+              {hasOpto && <th scope="col">Pulse (ms)</th>}
+              <th scope="col">Status</th>
+              <th scope="col" className={styles.menuCell}><span className="sr-only">Actions</span></th>
             </tr>
           </thead>
           <tbody>

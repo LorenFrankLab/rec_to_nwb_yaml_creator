@@ -209,42 +209,23 @@ test.describe('Mistake-prevention UX on high-risk edit surfaces', () => {
     ).toBeVisible();
 
     await page.getByRole('button', { name: 'Epochs', exact: true }).click();
-    await expect(page.getByRole('heading', { level: 2, name: 'Tasks & Epochs' })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 2, name: 'Epochs' })).toBeVisible();
 
-    // --- Associated video files: camera + epoch are <select> controls (combobox role). ---
-    // The seeded day has video rows, so this optional section renders expanded (open-when-populated).
-    const videos = page.getByRole('region', { name: 'Associated video files' });
-    await expect(videos).toBeVisible();
-    // The seeded day has video rows; the FIRST row's camera select is a controlled combobox.
-    const cameraSelect = videos.getByRole('combobox', { name: 'Camera' }).first();
-    await expect(cameraSelect).toBeVisible();
-    // Its options are the KNOWN cameras (0 – overhead_camera, 1 – side_camera) plus the empty prompt,
-    // and nothing else — there is no free-text id entry, so a stale id can never be persisted.
-    await expect(cameraSelect.getByRole('option', { name: /0 – overhead_camera/ })).toHaveCount(1);
-    await expect(cameraSelect.getByRole('option', { name: /1 – side_camera/ })).toHaveCount(1);
-    // No option carries an id outside the catalog (e.g. a stale 999) — the control's domain is the
-    // known cameras, so the normal path cannot produce a dangling camera reference.
-    await expect(
-      cameraSelect.getByRole('option', { name: /\b999\b/ }),
-    ).toHaveCount(0);
+    // In the epoch grid, epochs ARE the rows (never free-typed) and a video inherits its task's
+    // camera (defined once on the animal catalog) — so the normal path cannot persist a stale camera
+    // or epoch id. The seeded day records video on epochs 2 and 4 (W-track); expand epoch 2.
+    await page.getByRole('button', { name: /Toggle epoch 2 details/i }).click();
 
-    // The epoch reference is likewise a controlled select of the day's known task epochs (2 and 4 on
-    // the first video row's task), never a free-typed number — so a stale epoch cannot be saved.
-    const epochSelect = videos.getByRole('combobox', { name: 'Task epoch' }).first();
-    await expect(epochSelect).toBeVisible();
-    await expect(epochSelect.getByRole('option', { name: '999', exact: true })).toHaveCount(0);
-    // It offers at least one real epoch option beyond the empty prompt (a controlled domain).
-    expect(await epochSelect.getByRole('option').count()).toBeGreaterThan(1);
+    // The task picker is a CONTROLLED combobox of the animal's task types — no free-text task name,
+    // and no free-typed epoch number anywhere on the row.
+    await expect(page.getByRole('combobox', { name: /Epoch 2 task/i })).toBeVisible();
+    await expect(page.getByRole('textbox', { name: /^task name$/i })).toHaveCount(0);
 
-    // --- Add Task: the day PICKS a known task type from a controlled combobox, never free-typing a
-    //     name or a camera id. Cameras live on the task type (defined once on the animal catalog),
-    //     so the day cannot invent a stale camera reference here. ---
-    await page.getByRole('button', { name: '+ Add Task' }).click();
-    const taskDialog = page.getByRole('dialog', { name: 'Add task to this day' });
-    await expect(taskDialog).toBeVisible();
-    // A controlled select of the animal's task types — and NO free-text task-name field.
-    await expect(taskDialog.getByRole('combobox', { name: 'Task type' })).toBeVisible();
-    await expect(taskDialog.getByRole('textbox', { name: /task name/i })).toHaveCount(0);
+    // The epoch's video is bound to a KNOWN camera shown BY NAME (a derived value), never a free-text
+    // camera id — and there is no Camera / Task-epoch combobox to type a stale id on the video itself.
+    await expect(page.getByText('side_camera', { exact: false }).first()).toBeVisible();
+    await expect(page.getByRole('combobox', { name: 'Camera' })).toHaveCount(0);
+    await expect(page.getByRole('combobox', { name: 'Task epoch' })).toHaveCount(0);
   });
 
   test('task-name divergence is structurally prevented: the day picks a type, and a duplicate name is blocked at the catalog', async ({
@@ -253,19 +234,18 @@ test.describe('Mistake-prevention UX on high-risk edit surfaces', () => {
     // In the catalog model a day SELECTS a task type (one name → one definition), so it cannot reuse a
     // name with a different description the way the old inline form allowed. Defining a NEW type that
     // reuses an existing name is blocked at its SOURCE — the animal catalog — the structural guarantee
-    // behind the Spyglass task-name identity. (The seeded day has task_name "w_alternation".)
+    // behind the Spyglass task-name identity. (The seeded day uses task_name "w_alternation".)
     await seedAndOpen(page, buildConfiguredWorkspaceBlob(), `/#/day/${DAY_ID}`);
     await page.getByRole('button', { name: 'Epochs', exact: true }).click();
-    await expect(page.getByRole('heading', { level: 2, name: 'Tasks & Epochs' })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 2, name: 'Epochs' })).toBeVisible();
 
-    await page.getByRole('button', { name: '+ Add Task' }).click();
-    const picker = page.getByRole('dialog', { name: 'Add task to this day' });
-    await expect(picker).toBeVisible();
-    // No free-text task-name entry in the day — the divergence the old inline form permitted is gone.
-    await expect(picker.getByRole('textbox', { name: /task name/i })).toHaveCount(0);
+    // Expand an epoch to reach its task picker — a controlled combobox, no free-text task name.
+    await page.getByRole('button', { name: /Toggle epoch 2 details/i }).click();
+    await expect(page.getByRole('combobox', { name: /Epoch 2 task/i })).toBeVisible();
+    await expect(page.getByRole('textbox', { name: /^task name$/i })).toHaveCount(0);
 
     // Defining a new type that reuses an existing name is blocked at the catalog.
-    await picker.getByRole('button', { name: /define a new task type/i }).click();
+    await page.getByRole('button', { name: '+ new task type' }).click();
     const typeDialog = page.getByRole('dialog', { name: 'Add Task Type' });
     await expect(typeDialog).toBeVisible();
     await typeDialog.getByRole('textbox', { name: /task name/i }).fill('w_alternation');
