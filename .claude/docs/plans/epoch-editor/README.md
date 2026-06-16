@@ -129,12 +129,17 @@ A third pass called the design "very close"; tightened the interaction semantics
 - **Cross-page repair is field-level too** — the Setup blocking link is now `…#cfg-probe2`; arriving on the
   animal page opens Setup, scrolls to, and flashes Probe 2 (same scroll→reveal→flash as the in-page epoch
   path). Real-app spec: also move focus to the field.
-- **`Complete` no longer spans scopes** — the opto meter reads `Opto configured · 4 of 4` (see vocabulary).
+- **`Complete` no longer spans scopes** — the opto meter reads `Opto configured · 4 of 4` everywhere it
+  appears (animal Setup **and** the create-animal wizard), not `Complete · 4 of 4` (see vocabulary).
 - **DIO editor `Done` → `← Back to summary`** — it's summary navigation, not a save (the day autosaves).
 
-**Still implementation-only:** real **focus management** (`.focus()` on the target field, focus-trap in
-modals) beyond the mock's scroll+flash, and **axe-verified** keyboard operation across the epoch / channel /
-DIO grids.
+**Still implementation-only** (the mock shows the affordance; the real app must make it semantic):
+
+- real **focus management** — `.focus()` the target field on a repair jump (beyond scroll+flash), focus-trap
+  in modals — and **axe-verified keyboard operation** across the epoch / channel / DIO grids;
+- the epoch **task cell** is a mouse-only secondary expand target in the mock — implementation makes it a
+  `<button>` or otherwise keyboard-activable (the caret button is the primary control);
+- the **sidebar / recent-animal list** uses click-`div`s in the mock — implementation uses `<a>`/`<button>`.
 
 ## Must reuse the existing correctness substrate
 
