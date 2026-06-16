@@ -146,3 +146,6 @@ docs/_build/
 
 # Brainstorm research notes (local-only, gitignored)
 docs/brainstorm/
+
+# Superpowers visual-companion mockups (local-only, gitignored)
+.superpowers/
