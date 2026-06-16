@@ -121,6 +121,12 @@
   .ec-item{color:#2a7d4f}.ec-item.warn{color:var(--warn)}
   .optocard{border-color:var(--opto-b) !important;margin-top:14px}
   .optocard h4{margin:0 0 12px;color:var(--opto);font-size:13px}
+  /* animal scope-boundary summary (read-only context on the day view) */
+  .scope{display:flex;align-items:center;gap:10px;margin-top:14px;padding:9px 14px;background:#fafbfc;border:1px solid var(--line);border-radius:var(--radius);font-size:13px}
+  .scope .who{font-weight:600;color:var(--ink)}
+  .scope .facts{color:var(--muted);flex:1;min-width:0}
+  .scope a{color:var(--muted);text-decoration:none;font-size:12.5px;white-space:nowrap}
+  .scope a:hover{color:var(--accent)}
 </style>
 </head>
 <body>
@@ -136,6 +142,12 @@
     <div class="sub">
       <span class="chip">Configuration v1</span><span class="chip opto">◑ Optogenetics</span>
       <span class="chip carry">↩ carried from 2026-05-13</span><span class="pill draft"><span class="d"></span>Draft</span>
+    </div>
+
+    <div class="scope">
+      <span class="who">Laurent</span>
+      <span class="facts">PV-Cre · M · Rattus norvegicus · 3 probes (L CA1, R CA1, L mPFC) · config v1 · team: Denisse, Scott</span>
+      <a href="animal-page.html">Edit animal setup ›</a>
     </div>
 
     <div class="exportcheck">
