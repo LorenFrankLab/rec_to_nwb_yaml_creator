@@ -29,7 +29,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   explicitly marked "no video recorded" (the video 3-state: present / missing / absent). An undeclared
   videoless epoch is a blocking readiness issue (`epoch_video_undeclared`) and the row reads "Needs
   video". The "no video" declaration is stored off-export (`day.state.videolessEpochs`), so it never
-  reaches the YAML and cannot move a baseline.
+  reaches the YAML and cannot move a baseline. **Known consequence:** because the declaration lives in
+  `day.state` (not the YAML), a previously-valid day with legitimately video-less epochs that is
+  *re-imported from YAML* (or arrives via a state-losing transfer) will flag those epochs until they
+  are re-affirmed as "no video" in the grid — the exported YAML is unchanged; only the readiness gate
+  is stricter.
 - **Shared redesign primitives (internal — no user-facing behavior yet).** A small, tested kit of
   CSS-Module + design-token components that the day/animal editor redesign builds on: `StatusPill`
   (a renderer over the existing `dayLifecycle` vocabulary — it coins no new status words) and its

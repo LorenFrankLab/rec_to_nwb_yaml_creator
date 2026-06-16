@@ -16,6 +16,9 @@ import {
   swapEpochs,
   insertEpochAfter,
   epochsOrphanedBy,
+  swapEpochRemap,
+  insertAfterRemap,
+  remapEpochRefs,
 } from '../epochOperations';
 
 const inst = (taskTypeId: string, task_epochs: Array<number | string>) => ({ taskTypeId, task_epochs });
@@ -87,6 +90,51 @@ describe('insertEpochAfter', () => {
     const next = insertEpochAfter([inst('a', [1, 3]), inst('b', [2])], 1);
     // a: 1 stays, 3→4, +2 = [1,4,2]; b: 2→3 = [3]
     expect(next).toEqual([inst('a', [1, 4, 2]), inst('b', [3])]);
+  });
+});
+
+describe('renumber remaps keep bound refs attached to their task content', () => {
+  const day = {
+    associated_video_files: [
+      { name: 'v3', camera_id: 0, task_epochs: 3 },
+      { name: 'vEmpty', camera_id: 0, task_epochs: '' },
+    ],
+    associated_files: [{ name: 'f4', description: '', path: 'p', task_epochs: 4 }],
+    fs_gui_yamls: [{ name: 'g', epochs: [3, 4] }],
+  };
+
+  it('swapEpochRemap swaps the two epoch numbers; remapEpochRefs follows the task content', () => {
+    const remap = swapEpochRemap(2, 3);
+    expect([...remap.entries()].sort()).toEqual([[2, 3], [3, 2]]);
+    const next = remapEpochRefs(day, remap);
+    // The video that was epoch 3 follows its task to epoch 2; the empty ref is untouched.
+    expect(next.associated_video_files).toEqual([
+      { name: 'v3', camera_id: 0, task_epochs: 2 },
+      { name: 'vEmpty', camera_id: 0, task_epochs: '' },
+    ]);
+    // Epoch 4 is unaffected by a 2↔3 swap.
+    expect(next.associated_files[0].task_epochs).toBe(4);
+    expect(next.fs_gui_yamls[0].epochs).toEqual([2, 4]);
+  });
+
+  it('insertAfterRemap shifts every epoch greater than the (owned) reference up by one', () => {
+    // instances own epochs 1,2,3 and 4 → inserting after the owned epoch 2 shifts 3→4 and 4→5.
+    const remap = insertAfterRemap([inst('a', [1, 2, 3]), inst('b', [4])], 2);
+    expect([...remap.entries()].sort((x, y) => x[0] - y[0])).toEqual([[3, 4], [4, 5]]);
+    const next = remapEpochRefs(day, remap);
+    expect(next.associated_video_files[0].task_epochs).toBe(4); // was 3
+    expect(next.associated_files[0].task_epochs).toBe(5); // was 4
+    expect(next.fs_gui_yamls[0].epochs).toEqual([4, 5]);
+  });
+
+  it('the same remap applied to instances + refs leaves NO orphan (refs follow, never stranded)', () => {
+    const before = [inst('a', [2, 3]), inst('b', [4])];
+    const remap = insertAfterRemap(before, 2);
+    const nextInstances = insertEpochAfter(before, 2);
+    const nextRefs = remapEpochRefs(day, remap);
+    const orphans = epochsOrphanedBy({ ...day, ...nextRefs }, nextInstances);
+    expect(orphans.videos).toHaveLength(0);
+    expect(orphans.files).toHaveLength(0);
   });
 });
 

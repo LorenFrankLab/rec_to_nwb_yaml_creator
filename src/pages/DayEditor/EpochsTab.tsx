@@ -16,6 +16,9 @@ import {
   setEpochTask,
   swapEpochs,
   insertEpochAfter,
+  swapEpochRemap,
+  insertAfterRemap,
+  remapEpochRefs,
   epochsOrphanedBy,
   nextEpochNumber,
 } from '../../domain/epochOperations';
@@ -70,7 +73,7 @@ function cameraName(cameras: Camera[], id: number | string): string {
  * `TasksEpochsStep` bridge.
  */
 export default function EpochsTab(props: DayEditorBundle & { focusRequest?: FocusRequest | null }) {
-  const { animal, day, onFieldUpdate, actions = undefined, animalKey = undefined } =
+  const { animal, day, animalDays = [], onFieldUpdate, actions = undefined, animalKey = undefined } =
     useDayEditorContext(props);
   const ownerKey = animalKey ?? (animal as { id?: string })?.id;
   const focusRequest = props.focusRequest ?? null;
@@ -82,6 +85,7 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
   const [expanded, setExpanded] = useState<Set<number>>(new Set());
   const [pendingOrphan, setPendingOrphan] = useState<PendingOrphan | null>(null);
   const [quickAddEpoch, setQuickAddEpoch] = useState<number | null>(null);
+  const [quickAddError, setQuickAddError] = useState<string | null>(null);
   const [menuEpoch, setMenuEpoch] = useState<number | null>(null);
   const [templateOpen, setTemplateOpen] = useState(false);
   // Epochs whose statescript/video name is being manually overridden (UI mode; GeneratedValue's
@@ -176,10 +180,35 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
   const reassignTask = (epoch: number, taskTypeId: string) =>
     commit(setEpochTask(view.taskInstances, epoch, taskTypeId));
   const onDuplicate = (epoch: number) => commit(duplicateEpoch(view.taskInstances, epoch));
-  const onInsertAfter = (epoch: number) => commit(insertEpochAfter(view.taskInstances, epoch));
+  // A renumber (insert / move) shifts epoch numbers, so the day's bound file/video/fs_gui refs are
+  // remapped in LOCKSTEP — each follows its task content to the new epoch number instead of being
+  // silently re-pointed at a different task. Because the refs follow, the edit creates no orphan
+  // (no confirm needed); only the arrays that actually change are written.
+  const renumberCommit = (nextInstances: TaskInstance[], remap: Map<number, number>) => {
+    if (remap.size > 0) {
+      const refs = remapEpochRefs(day, remap);
+      const videos = getDayAssociatedVideos(day);
+      const files = getDayAssociatedFiles(day);
+      const fsgui = getDayFsGuiYamls(day);
+      if (JSON.stringify(refs.associated_video_files) !== JSON.stringify(videos)) {
+        onFieldUpdate('associated_video_files', refs.associated_video_files);
+      }
+      if (JSON.stringify(refs.associated_files) !== JSON.stringify(files)) {
+        onFieldUpdate('associated_files', refs.associated_files);
+      }
+      if (JSON.stringify(refs.fs_gui_yamls) !== JSON.stringify(fsgui)) {
+        onFieldUpdate('fs_gui_yamls', refs.fs_gui_yamls);
+      }
+    }
+    applyCommit(nextInstances, view.taskTypes, false);
+  };
+  const onInsertAfter = (epoch: number) =>
+    renumberCommit(insertEpochAfter(view.taskInstances, epoch), insertAfterRemap(view.taskInstances, epoch));
   const onMove = (epoch: number, dir: 'up' | 'down') => {
     const other = dir === 'up' ? epoch - 1 : epoch + 1;
-    if (grid.rows.some((r) => r.epoch === other)) commit(swapEpochs(view.taskInstances, epoch, other));
+    if (grid.rows.some((r) => r.epoch === other)) {
+      renumberCommit(swapEpochs(view.taskInstances, epoch, other), swapEpochRemap(epoch, other));
+    }
   };
   const onDelete = (epoch: number) => {
     const snapshot = view.taskInstances;
@@ -189,12 +218,20 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
 
   // ── "+ new task type" quick-add (define-and-assign to the epoch being edited) ──
   const saveNewType = (definition: TaskTypeDefinitionInput) => {
+    // The catalog enforces one name → one definition (the Spyglass task-name identity): reusing an
+    // existing name is blocked at its source. Keep the modal open with the clash message.
     const clashes = view.taskTypes.some((t) => t?.task_name === definition.task_name);
-    if (clashes) return; // the modal stays open; a real clash message is a later refinement
+    if (clashes) {
+      setQuickAddError(
+        `A task type named "${definition.task_name}" already exists. Pick it instead, or use a different name.`
+      );
+      return;
+    }
     const newId = nextTaskTypeId(view.taskTypes);
     const nextTypes = addTaskType(view.taskTypes, definition);
     const epoch = quickAddEpoch;
     setQuickAddEpoch(null);
+    setQuickAddError(null);
     if (epoch == null) commit(addEpochToTask(view.taskInstances, newId), nextTypes);
     else commit(setEpochTask(view.taskInstances, epoch, newId), nextTypes);
   };
@@ -297,7 +334,7 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
               <button type="button" role="menuitem" className={styles.menuItem} onClick={() => applyTemplate('wtrack')}>
                 W-track day<span className={styles.menuSub}>sleep / run alternation</span>
               </button>
-              {priorDayInstances(props) && (
+              {priorDayInstances() && (
                 <button type="button" role="menuitem" className={styles.menuItem} onClick={() => applyTemplate('copy')}>
                   Copy structure from prior day<span className={styles.menuSub}>same epochs; files re-derive</span>
                 </button>
@@ -356,7 +393,10 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
                     setMenuEpoch((cur) => (cur === row.epoch ? null : row.epoch));
                   }}
                   onReassignTask={(taskTypeId) => reassignTask(row.epoch, taskTypeId)}
-                  onNewTaskType={() => setQuickAddEpoch(row.epoch)}
+                  onNewTaskType={() => {
+                    setQuickAddError(null);
+                    setQuickAddEpoch(row.epoch);
+                  }}
                   onOpto={(field, value) => setOpto(row, field, value)}
                   onInsertAfter={() => onInsertAfter(row.epoch)}
                   onDuplicate={() => onDuplicate(row.epoch)}
@@ -398,8 +438,12 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
           isOpen
           mode="add"
           animal={animal}
+          nameError={quickAddError}
           onSave={saveNewType}
-          onCancel={() => setQuickAddEpoch(null)}
+          onCancel={() => {
+            setQuickAddEpoch(null);
+            setQuickAddError(null);
+          }}
         />
       )}
 
@@ -425,8 +469,8 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
   );
 
   /** Read the prior same-config day's instances for "Copy structure" (null when none). */
-  function priorDayInstances(bundle: DayEditorBundle): TaskInstance[] | null {
-    const days = bundle.animalDays ?? [];
+  function priorDayInstances(): TaskInstance[] | null {
+    const days = animalDays ?? [];
     const idx = days.findIndex((d) => (d as { id?: string }).id === (day as { id?: string }).id);
     for (let i = idx - 1; i >= 0; i--) {
       const candidate = days[i] as { configurationVersion?: number; taskInstances?: TaskInstance[]; tasks?: unknown };
@@ -442,7 +486,7 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
   function applyTemplate(kind: 'sleep' | 'wtrack' | 'copy' | 'blank') {
     setTemplateOpen(false);
     if (kind === 'copy') {
-      const prior = priorDayInstances(props);
+      const prior = priorDayInstances();
       if (prior) commit(structuredClone(prior));
       return;
     }

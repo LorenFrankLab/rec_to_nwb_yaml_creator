@@ -171,6 +171,27 @@ describe('EpochsTab — confirm-before-orphan (never auto-scrub)', () => {
   });
 });
 
+describe('EpochsTab — renumber moves bound refs in lockstep (no silent misassociation)', () => {
+  it('Move up swaps the epoch numbers AND remaps the bound video to follow its task (no confirm)', async () => {
+    const user = userEvent.setup();
+    const bundle = makeBundle();
+    render(<EpochsTab {...bundle} />);
+    // Epoch 2 (Run) owns the video. Move it up → swap 1↔2.
+    await user.click(screen.getByRole('button', { name: /Epoch 2 actions/i }));
+    await user.click(screen.getByRole('menuitem', { name: /Move up/i }));
+    // No orphan confirm — the ref follows.
+    expect(screen.queryByText(/Repair affected files\?/i)).not.toBeInTheDocument();
+    // The Run instance moved to epoch 1; its video's task_epochs followed to 1.
+    expect(lastPatch(bundle.onFieldUpdate, 'taskInstances')).toEqual([
+      { taskTypeId: 'tasktype-0', task_epochs: [2, 3] },
+      { taskTypeId: 'tasktype-1', task_epochs: [1] },
+    ]);
+    expect(lastPatch(bundle.onFieldUpdate, 'associated_video_files')).toEqual([
+      { name: 'run_video', camera_id: 1, task_epochs: 1 },
+    ]);
+  });
+});
+
 describe('EpochsTab — video 3-state', () => {
   it('a missing epoch can be declared video-less (off-export videolessEpochs patch)', async () => {
     const user = userEvent.setup();

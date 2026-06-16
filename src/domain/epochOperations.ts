@@ -16,7 +16,7 @@ import {
   getDayAssociatedVideos,
   getDayAssociatedFiles,
 } from '../state/workspaceSelectors';
-import type { TaskInstance, AssociatedFile, AssociatedVideoFile } from '../state/workspaceTypes';
+import type { TaskInstance, AssociatedFile, AssociatedVideoFile, FsGuiYaml } from '../state/workspaceTypes';
 
 /** Integer-normalized epochs of an instance's `task_epochs` (tolerant; non-integers dropped). */
 function epochsOf(instance: TaskInstance): number[] {
@@ -173,6 +173,85 @@ export function insertEpochAfter(instances: unknown, epoch: number): TaskInstanc
     )
   );
   return shifted.map((i, k) => (k === owner ? withEpochs(i, [...epochsOf(i), target + 1]) : i));
+}
+
+/**
+ * The epoch remap a {@link swapEpochs} produces (`{a→b, b→a}`). Applied to BOTH the instances and the
+ * day's bound refs (via {@link remapEpochRefs}) so a video/file/fs_gui ref follows its task content to
+ * the new epoch number instead of being silently re-pointed at a different task.
+ *
+ * @param a - One epoch number.
+ * @param b - The other epoch number.
+ * @returns The old→new epoch map.
+ */
+export function swapEpochRemap(a: number, b: number): Map<number, number> {
+  return new Map([
+    [Number(a), Number(b)],
+    [Number(b), Number(a)],
+  ]);
+}
+
+/**
+ * The epoch remap an {@link insertEpochAfter} produces: every existing epoch greater than the
+ * reference shifts up by one (the freed `epoch + 1` slot is the inserted one). Applied to instances
+ * AND bound refs so nothing is silently misassociated.
+ *
+ * @param instances - The day's task instances.
+ * @param epoch - The reference epoch to insert after.
+ * @returns The old→new epoch map for the shifted epochs.
+ */
+export function insertAfterRemap(instances: unknown, epoch: number): Map<number, number> {
+  const list = asInstances(instances);
+  const target = Number(epoch);
+  const remap = new Map<number, number>();
+  // Consistent with insertEpochAfter: a no-op (empty remap) when the reference epoch has no owner.
+  if (ownerIndexOf(list, target) < 0) return remap;
+  for (const instance of list) {
+    for (const e of epochsOf(instance)) {
+      if (e > target) remap.set(e, e + 1);
+    }
+  }
+  return remap;
+}
+
+/** The day's epoch-bearing associated arrays, after applying an epoch remap. */
+export interface RemappedRefs {
+  /** Videos with their scalar `task_epochs` remapped. */
+  associated_video_files: AssociatedVideoFile[];
+  /** Files with their scalar `task_epochs` remapped. */
+  associated_files: AssociatedFile[];
+  /** FsGUI rows with their `epochs` array remapped. */
+  fs_gui_yamls: FsGuiYaml[];
+}
+
+/**
+ * Apply an epoch remap to the day's bound references so each video / file / fs_gui row follows its
+ * task content when a renumber (insert / move) shifts epoch numbers. A scalar `task_epochs` whose
+ * `Number()` value is in the remap is rewritten; an empty/non-numeric value is preserved verbatim.
+ * This is what keeps a renumber from silently re-pointing a recording at a different task (it follows
+ * the task), AND it leaves no orphan (the refs move in lockstep with the instances).
+ *
+ * @param day - The recording day (reads the three associated arrays).
+ * @param remap - The old→new epoch map ({@link swapEpochRemap} / {@link insertAfterRemap}).
+ * @returns The three remapped arrays (fresh objects; unchanged entries kept by value).
+ */
+export function remapEpochRefs(day: unknown, remap: Map<number, number>): RemappedRefs {
+  const mapScalar = (value: number | string | undefined): number | string | undefined => {
+    if (value === undefined || value === null || value === '') return value;
+    const n = Number(value);
+    return remap.has(n) ? (remap.get(n) as number) : value;
+  };
+  return {
+    associated_video_files: getDayAssociatedVideos(day).map((v) => ({ ...v, task_epochs: mapScalar(v.task_epochs) })),
+    associated_files: getDayAssociatedFiles(day).map((f) => ({ ...f, task_epochs: mapScalar(f.task_epochs) })),
+    fs_gui_yamls: (Array.isArray((day as { fs_gui_yamls?: unknown }).fs_gui_yamls)
+      ? ((day as { fs_gui_yamls: FsGuiYaml[] }).fs_gui_yamls)
+      : []
+    ).map((g) => ({
+      ...g,
+      epochs: (Array.isArray(g.epochs) ? g.epochs : []).map((e: number) => (remap.has(Number(e)) ? (remap.get(Number(e)) as number) : e)),
+    })),
+  };
 }
 
 /** Associated refs that a candidate instance set would leave dangling (the confirm-before-orphan set). */
