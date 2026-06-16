@@ -29,6 +29,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   continues to be surfaced globally (by the app shell). Create / import / delete / edit-profile keep
   their existing behavior. No change to exported YAML.
 
+- **Animal page: the recording-days list is now a multi-select table, and the animal-static setup
+  surfaces name their re-export blast radius.** The Days tab renders a table with a checkbox column +
+  select-all, a contextual bulk bar ("N selected · Export selected · Delete"), real date + chevron
+  links, the status via the shared `StatusPill`, and a per-row ⋯ menu (Open / Duplicate / Export this
+  day / Delete). **Per-day delete is now undo-able** (it deletes immediately and offers Undo, which
+  re-creates the day) rather than a hard confirm dialog — the catastrophic *animal* delete keeps its
+  type-to-confirm. **"Export selected"** reuses the same per-day export/parity path the Validation
+  Summary uses (no second exporter), showing an inline "Exported N · Skipped M" result with each
+  skipped day linked to its issue. The animal-static sections that force affected days to re-export —
+  Identity, Cameras, Optogenetics — carry a `BlastRadiusChip` ("Affects all N days"); the Optogenetics
+  tab adds an "Opto configured · N of N" completeness meter; and committing one of those edits surfaces
+  the consequence "N already-exported days now need re-export". The Electrode Groups configuration card
+  gains a **"New configuration…" (re-implant)** action — an effective-date + copy-from-current modal
+  that forks a new configuration version (days from that date forward move to it; earlier days keep
+  theirs) through the existing reconfiguration action. No change to exported YAML.
+
 - **Migrated the build tool from Create React App (`react-scripts`) to Vite — behavior-preserving;
   the app remains a client-side SPA on GitHub Pages.** CRA was deprecated (Feb 2025). The repo was
   already half on Vite (Vitest), so this consolidated the two toolchains into one `vite.config.ts`
