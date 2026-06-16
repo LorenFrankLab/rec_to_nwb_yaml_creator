@@ -408,6 +408,18 @@ export default function DayEditorFrame() {
                 // RepairDispatch carries the repairCommand the executor reads.)
                 onRepair={(dispatch) => handleRepair(dispatch as unknown as RepairableIssue)}
                 onNavigate={(stepId, fieldPath) => {
+                  // An 'animal' target deep-links the owning animal-setup tab (geometry/cameras/etc.
+                  // are animal-owned), mirroring the former stepper; a day-step target switches to
+                  // the tab that folds it and focuses the field.
+                  if (stepId === 'animal') {
+                    if (ownerKey != null) {
+                      const base = `#/animal/${encodeURIComponent(ownerKey)}`;
+                      window.location.hash = fieldPath
+                        ? `${base}/${animalSetupTabForFieldPath(fieldPath).tab}?field=${encodeURIComponent(fieldPath)}`
+                        : `${base}/days`;
+                    }
+                    return;
+                  }
                   const tab = TAB_FOR_STEP[stepId];
                   if (tab) goToTab(tab, fieldPath);
                 }}

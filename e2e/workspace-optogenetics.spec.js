@@ -138,7 +138,7 @@ test.describe('Optogenetics export gating and the two-layer opto model', () => {
       page.getByRole('heading', { level: 1, name: `Day Editor: ${ANIMAL_ID} - 2023-06-22` }),
     ).toBeVisible();
 
-    await page.getByRole('button', { name: /^Export — / }).click();
+    await page.getByRole('button', { name: 'Export', exact: true }).click();
     await expect(page.getByRole('heading', { level: 2, name: 'Export YAML' })).toBeVisible();
 
     // The export is NOT blocked by opto: the preflight summary renders (the blocked-alert path
@@ -204,11 +204,12 @@ test.describe('Optogenetics export gating and the two-layer opto model', () => {
 
     // --- Export is BLOCKED for the day: the partial_configuration rule fires on the merged day. ---
     await seedAndOpen(page, blob, `/#/day/${DAY_ID}`);
-    await page.getByRole('button', { name: /^Export — / }).click();
+    await page.getByRole('button', { name: 'Export', exact: true }).click();
     await expect(page.getByRole('heading', { level: 2, name: 'Export YAML' })).toBeVisible();
 
-    // The blocking alert is shown (not the preflight) and names the opto all-or-nothing failure.
-    const blocked = page.getByRole('alert');
+    // The Export step's blocking alert is shown (not the preflight) and names the opto all-or-nothing
+    // failure. Scoped by its text so it is not confused with the header readiness bar's alert.
+    const blocked = page.getByRole('alert').filter({ hasText: /Resolve \d+ validation error/ });
     await expect(blocked).toBeVisible();
     await expect(blocked).toContainText(/Resolve \d+ validation error/);
     await expect(
@@ -235,7 +236,7 @@ test.describe('Optogenetics export gating and the two-layer opto model', () => {
     blob.workspace.days[DAY_ID].fs_gui_yamls = [];
     await seedAndOpen(page, blob, `/#/day/${DAY_ID}`);
 
-    await page.getByRole('button', { name: /^Tasks & Epochs — / }).click();
+    await page.getByRole('button', { name: 'Epochs', exact: true }).click();
     await expect(page.getByRole('heading', { level: 2, name: 'Tasks & Epochs' })).toBeVisible();
 
     // The optional FsGUI section is collapsed by default (progressive disclosure) — expand it.
@@ -293,7 +294,7 @@ test.describe('Optogenetics export gating and the two-layer opto model', () => {
       page.getByRole('heading', { level: 1, name: `Day Editor: ${ANIMAL_ID} - 2023-06-22` }),
     ).toBeVisible();
 
-    await page.getByRole('button', { name: /^Export — / }).click();
+    await page.getByRole('button', { name: 'Export', exact: true }).click();
     await expect(page.getByRole('heading', { level: 2, name: 'Export YAML' })).toBeVisible();
     // A complete opto session is NOT blocked — the preflight renders and reports stimulation.
     const preflight = page.getByRole('region', { name: 'Export preflight summary' });

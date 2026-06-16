@@ -42,7 +42,7 @@ test.describe('Browser export of a configured recording day', () => {
     ).toBeVisible();
 
     // Navigate to the Export section (a freely-reachable tab; its DOWNLOAD action self-gates).
-    await page.getByRole('button', { name: /^Export — / }).click();
+    await page.getByRole('button', { name: 'Export', exact: true }).click();
     await expect(page.getByRole('heading', { level: 2, name: 'Export YAML' })).toBeVisible();
 
     // The resolved deterministic filename is shown before download.
@@ -125,7 +125,7 @@ test.describe('Browser export of a configured recording day', () => {
       camera_name: 'UNUSED_camera',
     });
     await seedAndOpen(page, blob, `/#/day/${DAY_ID}`);
-    await page.getByRole('button', { name: /^Export — / }).click();
+    await page.getByRole('button', { name: 'Export', exact: true }).click();
     await expect(page.getByRole('heading', { level: 2, name: 'Export YAML' })).toBeVisible();
 
     const { text } = await captureDownload(page, async () => {

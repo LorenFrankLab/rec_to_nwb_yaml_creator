@@ -65,20 +65,20 @@ test.describe('Workspace export workflows', () => {
     ).toBeVisible();
 
     // The Day Editor has no electrode-group / channel-map / camera setup STEP — those are
-    // animal-level shared setup, not re-entered per day. Assert the day's section nav exposes
-    // only the day-scoped steps (Overview / Devices & Failed Channels / Tasks & Epochs /
-    // Validation / Export) and NOT an electrode-group or camera configuration step.
+    // animal-level shared setup, not re-entered per day. Assert the day's tab bar exposes only the
+    // day-scoped tabs (Day / Epochs / Failed channels / DIO) and NOT an electrode-group or camera
+    // configuration step. (Export is a header action, not a tab.)
     const dayNav = page.getByRole('navigation', { name: 'Day editor sections' });
-    await expect(dayNav.getByRole('button', { name: /^Overview — / })).toBeVisible();
-    await expect(dayNav.getByRole('button', { name: /^Devices & Failed Channels — / })).toBeVisible();
-    await expect(dayNav.getByRole('button', { name: /^Tasks & Epochs — / })).toBeVisible();
-    await expect(dayNav.getByRole('button', { name: /^Export — / })).toBeVisible();
+    await expect(dayNav.getByRole('button', { name: 'Day', exact: true })).toBeVisible();
+    await expect(dayNav.getByRole('button', { name: 'Failed channels', exact: true })).toBeVisible();
+    await expect(dayNav.getByRole('button', { name: 'Epochs', exact: true })).toBeVisible();
+    await expect(dayNav.getByRole('button', { name: 'DIO', exact: true })).toBeVisible();
     // No camera / electrode-group setup form is part of the day flow.
     await expect(dayNav.getByRole('button', { name: /Electrode Groups/i })).toHaveCount(0);
     await expect(dayNav.getByRole('button', { name: /Cameras/i })).toHaveCount(0);
 
-    // Day → Export → download, in one move.
-    await dayNav.getByRole('button', { name: /^Export — / }).click();
+    // Day → Export → download, in one move (Export is the header action).
+    await page.getByRole('button', { name: 'Export', exact: true }).click();
     await expect(page.getByRole('heading', { level: 2, name: 'Export YAML' })).toBeVisible();
 
     const { filename, text } = await captureDownload(page, async () => {

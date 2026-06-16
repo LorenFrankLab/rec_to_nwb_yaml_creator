@@ -269,7 +269,7 @@ test.describe('Responsive + a11y smoke — Export reachable at both viewports', 
       ).toBeVisible();
 
       // Reach the Export section (a freely-navigable Day Editor tab).
-      await page.getByRole('button', { name: /^Export — / }).click();
+      await page.getByRole('button', { name: 'Export', exact: true }).click();
       await expect(page.getByRole('heading', { level: 2, name: 'Export YAML' })).toBeVisible();
 
       // --- The preflight summary (the confidence check before download) is visible + in-viewport. ---

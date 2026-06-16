@@ -59,7 +59,7 @@ async function readPersisted(page) {
  * @returns {Promise<{ text: string, doc: object }>} The downloaded text and the parsed object.
  */
 async function captureExportedYaml(page) {
-  await page.getByRole('button', { name: /^Export — / }).click();
+  await page.getByRole('button', { name: 'Export', exact: true }).click();
   await expect(page.getByRole('heading', { level: 2, name: 'Export YAML' })).toBeVisible();
   const { text } = await captureDownload(page, async (p) => {
     await p.getByRole('button', { name: 'Download YAML' }).click();
@@ -146,7 +146,7 @@ test.describe('Three-way agreement: UI ⇄ localStorage ⇄ exported YAML', () =
 
     // PLANE 3 (export) — and the preflight's "Data acquisition" summary line on the Export step.
     await seedAndOpen(page, buildConfiguredWorkspaceBlob(), `/#/day/${DAY_ID}`);
-    await page.getByRole('button', { name: /^Export — / }).click();
+    await page.getByRole('button', { name: 'Export', exact: true }).click();
     await expect(page.getByRole('heading', { level: 2, name: 'Export YAML' })).toBeVisible();
     const preflight = page.getByRole('region', { name: 'Export preflight summary' });
     await expect(preflight.getByText('1 device (SpikeGadgets)', { exact: true })).toBeVisible();
@@ -181,7 +181,7 @@ test.describe('Three-way agreement: UI ⇄ localStorage ⇄ exported YAML', () =
 
     // PLANE 1/3 (UI preflight + export) — open the day and read the preflight, then export.
     await seedAndOpen(page, buildConfiguredWorkspaceBlob(), `/#/day/${DAY_ID}`);
-    await page.getByRole('button', { name: /^Export — / }).click();
+    await page.getByRole('button', { name: 'Export', exact: true }).click();
     await expect(page.getByRole('heading', { level: 2, name: 'Export YAML' })).toBeVisible();
     const preflight = page.getByRole('region', { name: 'Export preflight summary' });
     // PLANE 1 (UI): the preflight states the same group + failed-channel counts the store holds.
@@ -250,7 +250,7 @@ test.describe('Three-way agreement: UI ⇄ localStorage ⇄ exported YAML', () =
 
     // PLANE 1 (UI) + PLANE 3 (export).
     await seedAndOpen(page, buildConfiguredWorkspaceBlob(), `/#/day/${DAY_ID}`);
-    await page.getByRole('button', { name: /^Export — / }).click();
+    await page.getByRole('button', { name: 'Export', exact: true }).click();
     await expect(page.getByRole('heading', { level: 2, name: 'Export YAML' })).toBeVisible();
     const preflight = page.getByRole('region', { name: 'Export preflight summary' });
     // PLANE 1 (UI preflight): the same task + video counts the store holds.
@@ -275,7 +275,7 @@ test.describe('Three-way agreement: UI ⇄ localStorage ⇄ exported YAML', () =
     expect(animal.optogenetics).toBeUndefined();
 
     await seedAndOpen(page, buildConfiguredWorkspaceBlob(), `/#/day/${DAY_ID}`);
-    await page.getByRole('button', { name: /^Export — / }).click();
+    await page.getByRole('button', { name: 'Export', exact: true }).click();
     await expect(page.getByRole('heading', { level: 2, name: 'Export YAML' })).toBeVisible();
 
     // PLANE 1 (UI) — the preflight reads the honest "No optogenetics" state (not an error, not On).

@@ -70,7 +70,7 @@ async function openInvalidDayExportStep(page) {
   ).toBeVisible();
 
   // Reach the Export section (a freely-reachable tab; its DOWNLOAD action self-gates).
-  await page.getByRole('button', { name: /^Export — / }).click();
+  await page.getByRole('button', { name: 'Export', exact: true }).click();
   await expect(page.getByRole('heading', { level: 2, name: 'Export YAML' })).toBeVisible();
 }
 
@@ -84,16 +84,18 @@ test.describe('Fail-closed export gate + repair navigation', () => {
   }) => {
     await openInvalidDayExportStep(page);
 
-    // The Export nav item already advertises the block (status glyph in its accessible name).
-    await expect(page.getByRole('button', { name: 'Export — Has errors' })).toBeVisible();
+    // The header readiness bar advertises the block (the issue-driven surface that replaced the old
+    // Export-nav status glyph).
+    await expect(page.getByRole('alert').filter({ hasText: /block(s)? export/i })).toBeVisible();
 
     // The Download control is GATED — assert the disabled state, not merely a missing button.
     const download = page.getByRole('button', { name: 'Download YAML' });
     await expect(download).toBeVisible();
     await expect(download).toBeDisabled();
 
-    // A visible blocking region explains WHY and offers a repair action.
-    const blocked = page.getByRole('alert');
+    // The Export step's own blocking region explains WHY and offers a repair action. (Scoped by its
+    // text so it is not confused with the header readiness bar's alert.)
+    const blocked = page.getByRole('alert').filter({ hasText: /Resolve \d+ validation error/ });
     await expect(blocked).toBeVisible();
     await expect(blocked.getByText(/Resolve 1 validation error before exporting/)).toBeVisible();
     // The repair action deep-links to the EDITABLE owner of the fix (cameras are animal-owned).
@@ -117,7 +119,7 @@ test.describe('Fail-closed export gate + repair navigation', () => {
     await expect(noDownload).rejects.toThrow();
   });
 
-  test('keyboard navigation (Alt+→) into the Export step cannot bypass the gate', async ({
+  test('the Alt+ keyboard cycle stays within the four tabs; reaching Export via the header keeps the gate', async ({
     page,
   }) => {
     await seedAndOpen(page, buildInvalidCameraBlob(), `/#/day/${DAY_ID}`);
@@ -125,21 +127,22 @@ test.describe('Fail-closed export gate + repair navigation', () => {
       page.getByRole('heading', { level: 1, name: `Day Editor: ${ANIMAL_ID} - 2023-06-22` }),
     ).toBeVisible();
 
-    // Start on Overview (the default section) and advance with the global Alt+ArrowRight shortcut
-    // toward Export. Press-until-visible (bounded) encodes the INTENT ("advance to the Export
-    // section") without hard-coding the step distance, so the test survives section-order drift.
+    // The redesigned frame's Alt+←/→ cycles ONLY the four content tabs (Day / Epochs / Failed
+    // channels / DIO). Export is no longer in the keyboard cycle (it is a header action), so the
+    // keyboard cannot reach — let alone bypass — the export gate.
     await expect(page.getByRole('heading', { level: 2, name: 'Session Metadata' })).toBeVisible();
     const exportHeading = page.getByRole('heading', { level: 2, name: 'Export YAML' });
-    const MAX_NAV_STEPS = 8; // generous bound > any plausible section count; fails clearly if unmet
-    for (let i = 0; i < MAX_NAV_STEPS && !(await exportHeading.isVisible()); i += 1) {
+    const MAX_NAV_STEPS = 8; // generous bound: even over-cycling never lands on Export
+    for (let i = 0; i < MAX_NAV_STEPS; i += 1) {
       await page.keyboard.press('Alt+ArrowRight');
     }
     await expect(
       exportHeading,
-      'Alt+ArrowRight should reach the Export section within the step bound',
-    ).toBeVisible();
+      'Alt+ArrowRight must not reach the Export panel (it is a header action, not a tab)',
+    ).toBeHidden();
 
-    // Reaching Export by keyboard still shows the BLOCKED state: Download disabled + repair action.
+    // Reaching Export via the header action still shows the BLOCKED state: Download disabled + repair.
+    await page.getByRole('button', { name: 'Export', exact: true }).click();
     const download = page.getByRole('button', { name: 'Download YAML' });
     await expect(download).toBeDisabled();
     await expect(
@@ -184,9 +187,10 @@ test.describe('Fail-closed export gate + repair navigation', () => {
   }) => {
     await openInvalidDayExportStep(page);
 
-    // Click the repair action in the blocking UI.
+    // Click the repair action in the Export step's blocking UI (scoped past the header readiness bar).
     await page
       .getByRole('alert')
+      .filter({ hasText: /Resolve \d+ validation error/ })
       .getByRole('button', { name: 'Fix in Animal Setup → Cameras' })
       .click();
 

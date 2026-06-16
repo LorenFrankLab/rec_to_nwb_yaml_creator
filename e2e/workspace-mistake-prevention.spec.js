@@ -208,7 +208,7 @@ test.describe('Mistake-prevention UX on high-risk edit surfaces', () => {
       page.getByRole('heading', { level: 1, name: `Day Editor: ${ANIMAL_ID} - 2023-06-22` }),
     ).toBeVisible();
 
-    await page.getByRole('button', { name: /^Tasks & Epochs — / }).click();
+    await page.getByRole('button', { name: 'Epochs', exact: true }).click();
     await expect(page.getByRole('heading', { level: 2, name: 'Tasks & Epochs' })).toBeVisible();
 
     // --- Associated video files: camera + epoch are <select> controls (combobox role). ---
@@ -255,7 +255,7 @@ test.describe('Mistake-prevention UX on high-risk edit surfaces', () => {
     // reuses an existing name is blocked at its SOURCE — the animal catalog — the structural guarantee
     // behind the Spyglass task-name identity. (The seeded day has task_name "w_alternation".)
     await seedAndOpen(page, buildConfiguredWorkspaceBlob(), `/#/day/${DAY_ID}`);
-    await page.getByRole('button', { name: /^Tasks & Epochs — / }).click();
+    await page.getByRole('button', { name: 'Epochs', exact: true }).click();
     await expect(page.getByRole('heading', { level: 2, name: 'Tasks & Epochs' })).toBeVisible();
 
     await page.getByRole('button', { name: '+ Add Task' }).click();
@@ -291,8 +291,11 @@ test.describe('Mistake-prevention UX on high-risk edit surfaces', () => {
 
     await seedAndOpen(page, blob, `/#/day/${DAY_ID}`);
     // Behavioral events have their own day-editor tab (separate from Tasks & Epochs).
-    await page.getByRole('button', { name: /^Behavioral Events/ }).click();
+    await page.getByRole('button', { name: 'DIO', exact: true }).click();
     await expect(page.getByRole('heading', { level: 2, name: 'Behavioral Events' })).toBeVisible();
+
+    // The tab opens on the read-only carry-forward summary; reveal the editable ECU wiring table.
+    await page.getByRole('button', { name: /edit · rewired the rig/i }).click();
 
     // Day events overlay onto their channels in the direction-grouped hardware grid: the name is
     // the VALUE of the channel's field (Din1 under Inputs, Dout7 under Outputs). `exact` so
@@ -322,7 +325,7 @@ test.describe('Mistake-prevention UX on high-risk edit surfaces', () => {
 
     // The Overview section hosts the Technical parameters block as a collapsible <details>; expand
     // it via the same robust open pattern, asserting a revealed value, then check the rest.
-    await page.getByRole('button', { name: /^Overview — / }).click();
+    await page.getByRole('button', { name: 'Day', exact: true }).click();
     await openDetails(
       page.getByText('Technical parameters', { exact: true }),
       page.getByText('Raw data to volts', { exact: true }),
