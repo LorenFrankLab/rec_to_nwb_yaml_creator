@@ -43,7 +43,7 @@ make the UI shaped like the *experiment*, not the *file*.
 The data model is relational and person-independent *now*, even though the UI is single-user:
 
 ```
-Colony (the lab's animals)
+Animals (every animal in the lab)
   └── Animal  ── identity (Fixed) + team[] (people) + experiment/keywords
         └── Configuration version  ── the implant/wiring (Per-config; new version on re-implant)
               └── Day (session)  ── date, experimenters[] (default = team), tasks/epochs,
@@ -80,7 +80,7 @@ weight difference is the design.** (Aligns with `whole-user-process` and the two
 
 ## 4. How the model becomes UI
 
-- **Navigation IS the mental model.** Colony → Animal (home base) → its Days. The user *navigates their
+- **Navigation IS the mental model.** Animals → Animal (home base) → its Days. The user *navigates their
   experiment*, never "opens a file." The animal's name/id anchors every screen.
 - **The scope boundary is a physical thing on screen.** On the day view, animal-static facts render as a
   compact **read-only summary card** (*"Laurent · PV-Cre · M · Rattus norvegicus · 3 probes (L/R CA1,
@@ -92,7 +92,7 @@ weight difference is the design.** (Aligns with `whole-user-process` and the two
   the efficiency win, and surfaces accidental carry-forward (a newly-dead channel left unmarked).
 - **Configuration version as a visible noun:** *"Wiring v2 — since re-implant 2026-03-14."* Days show
   which config they used. Matches the user's real event ("different setup now").
-- **The colony dashboard** answers "where am I in a 200-day study?" — animals, days-per-animal, per-day
+- **The Animals dashboard** answers "where am I in a 200-day study?" — animals, days-per-animal, per-day
   status (complete / needs attention / converted). **Future (answer 2):** a data-directory binding fills
   the status column with real checks (paths exist, epoch/channel counts match the `.rec`).
 
@@ -137,7 +137,7 @@ geometry on the day view, and the YAML itself — the YAML is an **export artifa
   (recognition-over-recall for tasks; "set up the rig once").
 - **Genuinely new from the mental-model lens (not yet planned):** the **animal-as-home IA** + the
   **two distinct journeys** (setup wizard vs day-log), the **visible scope-boundary summary card**, the
-  **animal team**, **configuration version as a first-class visible noun**, and the **colony dashboard**
+  **animal team**, **configuration version as a first-class visible noun**, and the **Animals dashboard**
   (with a future data-dir status source).
 
 ## 8. Proposed next step
@@ -145,10 +145,10 @@ geometry on the day view, and the YAML itself — the YAML is an **export artifa
 A single new plan — *mental-model-driven workspace IA* — that uses this note as its north star and
 sequences: (a) animal-as-home navigation + the two journeys, (b) the visible scope-boundary day view,
 (c) absorb `scope-tiers-ia`'s remaining threads (dataset tier, task catalog), (d) controlled-vocabulary
-pickers + export gates (§5), (e) colony dashboard (data-dir validation later). It is a large
+pickers + export gates (§5), (e) Animals dashboard (data-dir validation later). It is a large
 architectural change (the scope-tiers note flags the dataset tier as such) — phase it, baseline-gate
 each step, and keep the exported YAML shape unchanged.
 
 **Open items to settle before/within the plan:** how coarse "sequential experiments per animal" needs
-to be (phase grouping vs animal-level for now); exact wizard step order; whether the colony dashboard
+to be (phase grouping vs animal-level for now); exact wizard step order; whether the Animals dashboard
 ships before or after the data-dir binding that gives it real status.

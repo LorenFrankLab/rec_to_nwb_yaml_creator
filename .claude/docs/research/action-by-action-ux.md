@@ -56,7 +56,7 @@ captures it. `*` = schema-required.
 ## Actions — the move → why
 
 ### Orientation
-- **Find & open an animal** → searchable colony list showing *disambiguating* facts (id, genotype, #
+- **Find & open an animal** → searchable animals list showing *disambiguating* facts (id, genotype, #
   days, last recorded). *Recognition over recall; animal id anchors every screen.*
 
 ### Animal setup (rare, deliberate)
