@@ -80,6 +80,9 @@ export default function DayList({
   const hasSelectable = rows.some((row) => row.recovery === 'ok');
 
   return (
+    // Narrow-viewport strategy (shared with the Animals-home table): the table scrolls horizontally
+    // inside this wrapper rather than overflowing the page on small / split-screen widths.
+    <div className={styles.tableScroll}>
     <table className={styles.dayTable}>
       <thead>
         <tr>
@@ -94,7 +97,9 @@ export default function DayList({
           </th>
           <th scope="col">Date</th>
           <th scope="col">Status</th>
-          <th scope="col">
+          {/* Width carried on the header cell: `table-layout: fixed` reads column widths from the
+              first row, so the narrow actions column must be sized here (Date/Status split the rest). */}
+          <th className={styles.actionsCell} scope="col">
             <span className="visually-hidden">Actions</span>
           </th>
         </tr>
@@ -108,7 +113,7 @@ export default function DayList({
           // offers a review path instead of ordinary day actions.
           if (row.recovery === 'dangling_reference') {
             return (
-              <tr key={dayId} className={styles.dayRowMissing}>
+              <tr key={dayId} data-testid={`day-row-${dayId}`} className={styles.dayRowMissing}>
                 <td className={styles.cbxCell} />
                 <td className={styles.dateCell}>
                   <span className={styles.dayDate}>{dayId}</span>
@@ -133,7 +138,7 @@ export default function DayList({
             const owner = row.recoveryDetail?.ownerDescription;
             const unlinkCommand = row.recoveryDetail?.repair?.command;
             return (
-              <tr key={dayId} className={styles.dayRowMissing}>
+              <tr key={dayId} data-testid={`day-row-${dayId}`} className={styles.dayRowMissing}>
                 <td className={styles.cbxCell} />
                 <td className={styles.dateCell}>
                   <span className={styles.dayDate}>{dateText}</span>
@@ -163,7 +168,7 @@ export default function DayList({
           const isOk = row.recovery === 'ok';
           const duplicateCommand = rowCommand(row, 'duplicateDay');
           return (
-            <tr key={dayId} className={isOrphan ? styles.dayRowOrphan : undefined}>
+            <tr key={dayId} data-testid={`day-row-${dayId}`} className={isOrphan ? styles.dayRowOrphan : undefined}>
               <td className={styles.cbxCell}>
                 {isOk && (
                   <input
@@ -190,7 +195,9 @@ export default function DayList({
                 )}
               </td>
               <td className={styles.statusCell}>
-                <StatusPill variant={row.chipVariant as PillVariant} label={row.statusLabel} />
+                {/* `wrap`: a long "Needs fixing — <reason>" label must wrap inside the fixed-layout
+                    status column rather than force the column (and the page) wider than the viewport. */}
+                <StatusPill variant={row.chipVariant as PillVariant} label={row.statusLabel} wrap />
               </td>
               <td className={styles.actionsCell}>
                 {isOk && (
@@ -218,5 +225,6 @@ export default function DayList({
         })}
       </tbody>
     </table>
+    </div>
   );
 }

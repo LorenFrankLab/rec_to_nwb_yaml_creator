@@ -18,6 +18,12 @@ interface StatusPillProps {
   variant: DayLifecycleVariant;
   /** Optional short label override (e.g. `"Ready"` for `READY`). Defaults to the canonical label. */
   label?: string;
+  /**
+   * Allow a long label to wrap to multiple lines (default: single-line). Set in dense, width-bounded
+   * contexts — e.g. a fixed-layout table cell where a "Needs fixing — <reason>" sentence would
+   * otherwise force its column wider than the viewport.
+   */
+  wrap?: boolean;
 }
 
 /**
@@ -30,8 +36,10 @@ interface StatusPillProps {
  * ({@link EpochStatusPill}) so the two scopes can never share an instance — keeping the "no word
  * across scopes" rule structural.
  */
-const StatusPill = ({ variant, label }: StatusPillProps) => {
-  const classes = [styles.pill, VARIANT_CLASS[variant] ?? styles.draft].filter(Boolean).join(' ');
+const StatusPill = ({ variant, label, wrap = false }: StatusPillProps) => {
+  const classes = [styles.pill, VARIANT_CLASS[variant] ?? styles.draft, wrap ? styles.wrap : '']
+    .filter(Boolean)
+    .join(' ');
   return (
     <span className={classes}>
       <span className={styles.dot} aria-hidden="true" />

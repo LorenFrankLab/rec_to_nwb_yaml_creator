@@ -72,14 +72,11 @@ test.describe('workspace harness', () => {
     // Its recording day renders on the days tab.
     await page.goto('/#/animal/remy/days');
     await expect(page.getByRole('heading', { level: 1, name: 'remy' })).toBeVisible();
-    // The day link's href is on the <a> itself (the date text is a descendant that supplies
-    // the accessible name), so match the element that is BOTH the named link AND carries the
-    // href — `.filter({ has })` would (wrongly) require the href on a descendant.
+    // The row's date link (exact name) — distinct from the trailing "Open 2023-06-22" chevron link,
+    // which shares the same `#/day/…` href. Match the date link by its exact accessible name.
     await expect(
-      page
-        .getByRole('link', { name: /2023-06-22/ })
-        .and(page.locator('[href="#/day/remy-2023-06-22"]')),
-    ).toBeVisible();
+      page.getByRole('link', { name: '2023-06-22', exact: true }),
+    ).toHaveAttribute('href', '#/day/remy-2023-06-22');
   });
 
   test('captureDownload returns the exported YAML text of a seeded valid day', async ({ page }) => {

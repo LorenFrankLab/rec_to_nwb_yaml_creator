@@ -215,42 +215,45 @@ test.describe('Animal lifecycle — destructive delete confirms', () => {
   });
 });
 
-test.describe('Day lifecycle — plain delete confirm + cleanup coherence', () => {
+test.describe('Day lifecycle — undo-able delete + cleanup coherence', () => {
   test.beforeEach(async ({ page }) => {
     await resetWorkspace(page);
   });
 
-  test('OK day → Delete day…: a PLAIN Cancel/Delete confirm (no typed gate); Cancel preserves the day', async ({
+  test('OK day → ⋯ → Delete day…: deletes immediately (no typed gate) and Undo restores it', async ({
     page,
   }) => {
+    // Phase 2 (epoch-editor): per-day delete is the FREQUENT, reversible action — it deletes
+    // immediately from the row's ⋯ menu and offers Undo (no hard confirm dialog; the catastrophic
+    // ANIMAL delete keeps its type-to-confirm).
     await seedWorkspace(page, buildConfiguredWorkspaceBlob());
     await page.goto(`/#/animal/${ANIMAL_ID}/days`);
     await page.reload();
     await expect(page.getByRole('heading', { level: 2, name: `Recording Days for ${ANIMAL_ID}` })).toBeVisible();
 
-    await page.getByRole('button', { name: /^Delete recording day/ }).click();
-    const dialog = page.getByRole('alertdialog', { name: 'Delete recording day?' });
-    await expect(dialog).toBeVisible();
-    // PLAIN confirm — no type-to-confirm gate (an OK day is low-blast-radius vs. a whole animal).
-    await expect(dialog.getByRole('textbox')).toHaveCount(0);
-    await expect(dialog.getByRole('button', { name: 'Cancel' })).toBeVisible();
-    await expect(dialog.getByRole('button', { name: 'Delete day' })).toBeVisible();
+    const dayLink = page.getByRole('link', { name: '2023-06-22', exact: true });
+    await expect(dayLink).toBeVisible();
 
-    // Cancel preserves the day.
-    await dialog.getByRole('button', { name: 'Cancel' }).click();
-    await expect(dialog).toBeHidden();
-    await expect(page.getByRole('link', { name: /^06222023|2023-06-22/ }).first()).toBeVisible();
-    await expect(page.getByRole('button', { name: /^Delete recording day/ })).toBeVisible();
+    await page.getByRole('button', { name: /Actions for 2023-06-22/i }).click();
+    await page.getByRole('menuitem', { name: /Delete day/i }).click();
+
+    // No hard confirm dialog — the day is gone and an Undo toast appears.
+    await expect(page.getByRole('alertdialog')).toHaveCount(0);
+    await expect(dayLink).toHaveCount(0);
+    const toast = page.getByText(/Deleted 1 recording day/i);
+    await expect(toast).toBeVisible();
+
+    // Undo restores the day.
+    await page.getByRole('button', { name: /^Undo$/i }).click();
+    await expect(page.getByRole('link', { name: '2023-06-22', exact: true })).toBeVisible();
   });
 
-  test('a validated/exported day adds the downloaded-artifacts caveat; Confirm removes ONLY that day (a sibling day survives)', async ({
+  test('deleting one day via its ⋯ menu removes ONLY that day; a sibling day survives', async ({
     page,
   }) => {
-    // Seed TWO days so "only that day" is actually provable: the original seeded day
-    // (2023-06-22, marked validated+exported so the artifacts caveat appears) plus a SIBLING day on
-    // a different date (2023-06-23) registered in both `animal.days` and `workspace.days`. Distinct
-    // dates give each row a distinct day-link href + a distinct "Delete recording day <date>…"
-    // accessible name, so we target one without ambiguity.
+    // Seed TWO days so "only that day" is provable: the original seeded day (2023-06-22) plus a
+    // SIBLING day on a different date (2023-06-23). Distinct dates give each row a distinct ⋯ menu
+    // ("Actions for <date>") so we target one without ambiguity.
     const blob = buildConfiguredWorkspaceBlob();
     blob.workspace.days[DAY_ID].state = { draft: false, validated: true, exported: true };
 
@@ -268,21 +271,17 @@ test.describe('Day lifecycle — plain delete confirm + cleanup coherence', () =
     await page.goto(`/#/animal/${ANIMAL_ID}/days`);
     await page.reload();
 
-    // Both day rows are present before the delete (target by the day-link href — the row's stable id).
-    const targetLink = page.locator(`a[href="#/day/${DAY_ID}"]`);
-    const siblingLink = page.locator(`a[href="#/day/${SIBLING_ID}"]`);
+    // Both day rows are present before the delete (the date link is the row's stable identity).
+    const targetLink = page.getByRole('link', { name: '2023-06-22', exact: true });
+    const siblingLink = page.getByRole('link', { name: '2023-06-23', exact: true });
     await expect(targetLink).toBeVisible();
     await expect(siblingLink).toBeVisible();
 
-    // Delete the 2023-06-22 day specifically (its own accessible-named delete button).
-    await page.getByRole('button', { name: 'Delete recording day 2023-06-22…' }).click();
-    const dialog = page.getByRole('alertdialog', { name: 'Delete recording day?' });
-    await expect(dialog).toBeVisible();
-    await expect(dialog.getByText(/does not delete any YAML you already downloaded/)).toBeVisible();
+    // Delete the 2023-06-22 day specifically via its own ⋯ menu.
+    await page.getByRole('button', { name: /Actions for 2023-06-22/i }).click();
+    await page.getByRole('menuitem', { name: /Delete day/i }).click();
 
-    // Confirm removes ONLY that day: (a) the deleted day's row is GONE, (b) the sibling SURVIVES.
-    await dialog.getByRole('button', { name: 'Delete day' }).click();
-    await expect(dialog).toBeHidden();
+    // Removes ONLY that day: (a) the deleted day's row is GONE, (b) the sibling SURVIVES.
     await expect(targetLink).toHaveCount(0);
     await expect(siblingLink).toBeVisible();
     // The empty-state is NOT shown (a day still exists) — proves we didn't wipe the list.

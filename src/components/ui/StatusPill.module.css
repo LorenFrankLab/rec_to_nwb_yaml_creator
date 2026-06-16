@@ -16,6 +16,15 @@
   white-space: nowrap;
 }
 
+/* Wrapping variant: a long status sentence (e.g. "Needs fixing — <reason>" in a fixed-width table
+   cell) must wrap to multiple lines instead of forcing its column wider than the viewport. The dot
+   stays on the first line via `align-items: center` flex behavior. */
+.wrap {
+  white-space: normal;
+  align-items: flex-start;
+  text-align: left;
+}
+
 .dot {
   flex: 0 0 auto;
   width: 7px;

@@ -54,41 +54,32 @@ for (const viewport of [NARROW, DESKTOP]) {
       expect(addBox.x + addBox.width).toBeLessThanOrEqual(viewport.width + 1);
     });
 
-    test('a day row keeps the destructive Delete action from overlapping the row link', async ({
+    test('a day row keeps its actions (⋯ menu + chevron) from overlapping the date link', async ({
       page,
     }) => {
+      // Phase 2 (epoch-editor): the destructive Delete + Duplicate moved OFF the row into the per-row
+      // ⋯ overflow menu; the row now exposes the date link, a trailing chevron link, and the ⋯ menu
+      // trigger. None may overlap the date link, and all stay within the viewport.
       await page.setViewportSize(viewport);
       await seedAndOpen(page, buildConfiguredWorkspaceBlob(), `/#/animal/${ANIMAL_ID}/days`);
 
-      const dayLink = page.getByRole('link', { name: /Open .*2023-06-22|2023-06-22/ }).first();
+      const dayLink = page.getByRole('link', { name: '2023-06-22', exact: true });
       await expect(dayLink).toBeVisible();
-      const del = page.getByRole('button', { name: /Delete recording day/i }).first();
-      await expect(del).toBeVisible();
-      const dup = page.getByRole('button', { name: /Duplicate recording day/i }).first();
-      await expect(dup).toBeVisible();
+      const menu = page.getByRole('button', { name: /Actions for 2023-06-22/i });
+      await expect(menu).toBeVisible();
+      const chevron = page.getByRole('link', { name: /Open 2023-06-22/i });
+      await expect(chevron).toBeVisible();
 
       const linkBox = await dayLink.boundingBox();
-      const delBox = await del.boundingBox();
-      const dupBox = await dup.boundingBox();
-      // The two row actions are a matched, non-overlapping pair, both within the viewport.
-      expect(overlaps(dupBox, delBox)).toBe(false);
-      expect(dupBox.x).toBeGreaterThanOrEqual(0);
-      expect(dupBox.x + dupBox.width).toBeLessThanOrEqual(viewport.width + 1);
-      // Destructive action must not sit on top of the primary navigation card.
-      expect(overlaps(linkBox, delBox)).toBe(false);
-      // And it must be within the viewport.
-      expect(delBox.x + delBox.width).toBeLessThanOrEqual(viewport.width + 1);
-
-      if (viewport.width <= 640) {
-        // Narrow: the row stacks into a card — the destructive action sits BELOW the navigation
-        // card, not squeezed beside it.
-        expect(delBox.y).toBeGreaterThanOrEqual(linkBox.y + linkBox.height - 4);
-      } else {
-        // Desktop: the action sits BESIDE the card (vertically overlapping it), to the right.
-        expect(delBox.y).toBeLessThan(linkBox.y + linkBox.height);
-        expect(delBox.y + delBox.height).toBeGreaterThan(linkBox.y);
-        expect(delBox.x).toBeGreaterThanOrEqual(linkBox.x + linkBox.width - 1);
-      }
+      const menuBox = await menu.boundingBox();
+      const chevBox = await chevron.boundingBox();
+      // The actions sit to the RIGHT of the date link and never overlap it.
+      expect(overlaps(linkBox, menuBox)).toBe(false);
+      expect(overlaps(linkBox, chevBox)).toBe(false);
+      // Both actions stay within the viewport (no control pushed off-screen).
+      expect(menuBox.x + menuBox.width).toBeLessThanOrEqual(viewport.width + 1);
+      expect(chevBox.x + chevBox.width).toBeLessThanOrEqual(viewport.width + 1);
+      expect(menuBox.x).toBeGreaterThanOrEqual(0);
     });
   });
 }

@@ -137,6 +137,11 @@
    (the multi-select + bulk bar make a tabular layout the right shape). */
 .dayTable {
   width: 100%;
+  /* Fixed layout pins the table to its container width so a long status sentence / session
+     description can't force a column (and the page) wider than the viewport — the status pill wraps
+     and the description truncates within their cells instead. (auto layout grew the table to its
+     widest unwrappable cell, overflowing the page at phone widths.) */
+  table-layout: fixed;
   border-collapse: collapse;
 }
 
@@ -157,9 +162,9 @@
   vertical-align: top;
 }
 
-/* The selection checkbox column — narrow, centered. */
+/* The selection checkbox column — narrow, centered (a real width under fixed layout). */
 .cbxCell {
-  width: 1px;
+  width: 2.5rem;
   white-space: nowrap;
   text-align: center;
 }
@@ -200,16 +205,21 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 26rem;
+  /* Truncate to the (fixed-layout) date cell's width rather than a fixed 26rem, so a long
+     description never widens the column past the viewport. */
+  max-width: 100%;
 }
 
+/* Status column: let a long "Needs fixing — <reason>" pill WRAP (the pill carries `wrap`) instead of
+   forcing a single unshrinkable line that overflows the page at narrow widths. */
 .statusCell {
-  white-space: nowrap;
+  white-space: normal;
 }
 
-/* The actions column holds the ⋯ overflow menu and a trailing chevron link, right-aligned. */
+/* The actions column holds the ⋯ overflow menu and a trailing chevron link, right-aligned (a real
+   width under fixed layout). */
 .actionsCell {
-  width: 1px;
+  width: 5rem;
   white-space: nowrap;
   text-align: right;
 }

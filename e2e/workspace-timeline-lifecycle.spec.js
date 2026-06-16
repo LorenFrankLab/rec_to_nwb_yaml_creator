@@ -111,9 +111,9 @@ test.describe('Shared day-lifecycle vocabulary', () => {
     await page.goto(`/#/animal/${ANIMAL_ID}/days`);
     await page.reload();
     await expect(page.getByRole('heading', { level: 1, name: ANIMAL_ID })).toBeVisible();
-    const dayItem = page
-      .getByRole('listitem')
-      .filter({ has: page.getByRole('link', { name: /2023-06-22/ }) });
+    // The Animal Days list is a table; scope to the day's row (same `day-row-<id>` testid the
+    // Validation Summary uses) so the legend's reference copy of the word isn't matched.
+    const dayItem = page.getByTestId(`day-row-${DAY_ID}`);
     await expect(dayItem.getByText('Validated')).toBeVisible();
     await expect(dayItem.getByText('Ready to export')).toHaveCount(0);
   });
