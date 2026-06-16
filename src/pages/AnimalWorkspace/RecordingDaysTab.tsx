@@ -12,11 +12,16 @@
  * `AnimalSetupCard`, `ExistingDataReview`, `DayList`, `DuplicateDayModal`; this module owns the
  * pane's state + the create/duplicate/delete/copy/repair handlers and composes the pieces.
  *
+ * Phase 2 (epoch-editor) reshapes the day list into a multi-select table: a checkbox column + a
+ * contextual bulk bar ("Export selected" · "Delete"), a per-row ⋯ menu (Open / Duplicate / Export /
+ * Delete), and undo-able delete — per-day delete is the FREQUENT reversible action (delete + UndoToast),
+ * while the CATASTROPHIC animal delete keeps its hard type-to-confirm (AnimalView header).
+ *
  * Landmark-neutral: it renders only the pane content + its confirm dialogs (NOT a `<main>`),
  * so each host owns its single `#main-content`.
  */
 
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useStoreContext } from '../../state/StoreContext';
 import {
   getAnimalCameras,
@@ -24,7 +29,6 @@ import {
   getAnimalElectrodeGroups,
   getAnimalNtrodeMaps,
   getDataAcqDevices,
-  getDaySession,
   getMostRecentDayId,
 } from '../../state/workspaceSelectors';
 import {
@@ -32,32 +36,26 @@ import {
   normalizeNtrodeMapWithDefaults,
 } from '../../utils/deviceNormalization';
 import type { NtrodeMap } from '../../state/workspaceTypes';
+import { isFeatureEnabled } from '../../featureFlags';
 import CopyFromAnimalDialog from '../AnimalEditor/CopyFromAnimalDialog';
 import type { CopyPayload } from '../AnimalEditor/CopyFromAnimalDialog';
-import { dayHasArtifacts } from '../../domain/dayRecovery';
-import { DOWNSTREAM_NOT_DELETED_NOTE } from '../../domain/animalDeleteCascade';
 import { buildAnimalWorkspaceViewModel } from '../../viewModels/animalWorkspaceViewModel';
 import type { RecoveryNoticeViewModel, WorkflowCommand } from '../../viewModels/types';
 import { commandHandlers, applyRepair } from '../../viewModels/commands';
 import type { CommandActions } from '../../viewModels/commands';
 import { CalendarDayCreator } from '../../components/CalendarDayCreator/CalendarDayCreator';
 import DayLifecycleLegend from '../../components/DayLifecycleLegend/DayLifecycleLegend';
-import { ConfirmDialog } from '../../components/Modal';
+import { useUndoToast } from '../../components/ui/UndoToast';
+import Button from '../../components/ui/Button';
 import AnimalSetupCard from './AnimalSetupCard';
 import ExistingDataReview from './ExistingDataReview';
 import DayList from './DayList';
 import DuplicateDayModal from './DuplicateDayModal';
+import { exportSelectedDays } from './exportSelectedDays';
+import type { BulkExportResult } from './exportSelectedDays';
+import { restoreDay } from './restoreDay';
+import type { CapturedDay } from './restoreDay';
 import styles from './AnimalWorkspace.module.css';
-
-/** A pending per-day delete descriptor (named even after the store row changes). */
-interface PendingDeleteDay {
-  /** The VM's `deleteDay` command — dispatched on confirm (carries the target + caveat). */
-  command: WorkflowCommand;
-  dayId: string;
-  date?: string;
-  sessionId?: string;
-  hasArtifacts: boolean;
-}
 
 interface RecordingDaysTabProps {
   /** The animal whose recording days to manage. */
@@ -76,10 +74,6 @@ export function RecordingDaysTab({ animalId }: RecordingDaysTabProps) {
   // verbatim from AnimalWorkspace (lowest-risk extraction; the 34 workspace tests pin it).
   const selectedAnimalId = animalId;
   const [showCalendar, setShowCalendar] = useState(false);
-  // Pending per-day delete confirm (null when closed): a small descriptor of the row (so the
-  // confirm can name it even after the store row changes). Animal delete moved to the AnimalView
-  // header ⋮ in Phase 4 (the shared type-to-confirm AnimalDeleteDialog), so it no longer lives here.
-  const [pendingDeleteDay, setPendingDeleteDay] = useState<PendingDeleteDay | null>(null);
   // Pending per-day DUPLICATE (null when closed): the source row descriptor (dayId/date). The
   // single-date picker writes its chosen date into `duplicateDate`; `duplicateError` surfaces a
   // collision or a store throw inside the dialog (mirroring how create errors are surfaced).
@@ -94,6 +88,14 @@ export function RecordingDaysTab({ animalId }: RecordingDaysTabProps) {
   // cameras, recording system) a lab uses is the same across animals, so a new/under-configured
   // animal can seed its catalogs from another animal here.
   const [copyDialogOpen, setCopyDialogOpen] = useState(false);
+  // The OK day rows currently selected for a bulk action (the checkbox column + contextual bulk bar).
+  const [selectedDayIds, setSelectedDayIds] = useState<Set<string>>(new Set());
+  // The most recent bulk/single "Export selected" result ("Exported N · Skipped M"), or null. Skipped
+  // days are linked to their issue (the day editor) — the inline batch-result pattern (Phase 5 adds
+  // the full preview screen).
+  const [exportResult, setExportResult] = useState<BulkExportResult | null>(null);
+  // Undo toast host (Phase 0): per-day delete is reversible — delete immediately + offer Undo.
+  const undo = useUndoToast();
 
   const { animals = {}, days = {} } = model.workspace;
 
@@ -114,42 +116,80 @@ export function RecordingDaysTab({ animalId }: RecordingDaysTabProps) {
   );
 
   // The raw records stay for the WRITE paths (carry-forward create source, copy-from-animal, repair
-  // execution, the delete-confirm descriptor); the display all comes from the view-model above.
+  // execution, the delete-capture for undo); the display all comes from the view-model above.
   const selectedAnimal = selectedAnimalId ? animals[selectedAnimalId] : null;
   // The animal's latest-dated existing day — the carry-forward source for createDay. null when there
   // is none (so the toggle is hidden and creation falls back to a blank day).
   const mostRecentDayId = getMostRecentDayId(selectedAnimal, days);
 
-  /**
-   * Commit the pending recording-day deletion through the store's `deleteDay`.
-   */
-  function confirmDeleteDay() {
-    const target = pendingDeleteDay;
-    setPendingDeleteDay(null);
-    if (!target) return;
-    // Dispatch the VM's own deleteDay command (its target already names the owning animal — the
-    // selected animal's OK row — so the store can clean the index even for a record with no
-    // `animalId`). The command layer forwards it as `deleteDay(dayId, ownerAnimalId)`.
-    run[target.command.id]?.(target.command);
-  }
+  // The selectable OK rows (only OK days export/delete in bulk; recovered/wrong-owner/dangling rows
+  // carry their own repair affordance instead). Drives select-all + the checkbox column.
+  const okDayIds = useMemo(
+    () => (vm.selectedAnimal?.dayRows ?? []).filter((row) => row.recovery === 'ok').map((row) => row.dayId),
+    [vm]
+  );
+  const allSelected = okDayIds.length > 0 && okDayIds.every((id) => selectedDayIds.has(id));
+
+  /** Select/clear every OK row. */
+  const toggleAll = useCallback(
+    (checked: boolean) => setSelectedDayIds(checked ? new Set(okDayIds) : new Set()),
+    [okDayIds]
+  );
+
+  /** Toggle one OK row's selection. */
+  const toggleDay = useCallback((dayId: string, checked: boolean) => {
+    setSelectedDayIds((prev) => {
+      const next = new Set(prev);
+      if (checked) next.add(dayId);
+      else next.delete(dayId);
+      return next;
+    });
+  }, []);
+
+  /** Navigate to a day editor (the ⋯ menu's "Open"; the date/chevron are real links besides). */
+  const openDay = useCallback((dayId: string) => {
+    window.location.hash = `#/day/${dayId}`;
+  }, []);
 
   /**
-   * Open the delete confirm for a day's `deleteDay` command, assembling the display descriptor (date /
-   * session id / downloaded-artifacts caveat) from the live record. The command (with its target) is
-   * stashed for dispatch on confirm — the day list bubbles up the row's own descriptor.
+   * Export the given days through the SHARED export path (`exportSelectedDays` → `exportDayFile`):
+   * valid days download byte-identically, invalid/not-exportable days are skipped with a linked
+   * reason. Surfaces the inline "Exported N · Skipped M" result and clears the selection.
    */
-  function openDeleteDay(command: WorkflowCommand) {
-    const dayId = command.target?.dayId;
-    if (!dayId) return;
-    const rec = days[dayId];
-    setPendingDeleteDay({
-      command,
-      dayId,
-      date: rec?.date,
-      sessionId: getDaySession(rec).session_id as string | undefined,
-      hasArtifacts: dayHasArtifacts(rec),
-    });
-  }
+  const handleExportDays = useCallback(
+    (ids: string[]) => {
+      const strict = isFeatureEnabled('shadowExportStrict');
+      const result = exportSelectedDays(model.workspace, selectedAnimalId, ids, {
+        actions: actions as unknown as Parameters<typeof exportSelectedDays>[3]['actions'],
+        strict,
+      });
+      setSelectedDayIds(new Set());
+      setExportResult(result);
+    },
+    [model.workspace, selectedAnimalId, actions]
+  );
+
+  /**
+   * Delete the given days (row or bulk) and offer Undo. Captures each record BEFORE deleting so the
+   * Undo can faithfully re-create it (`createDay` + `updateDay`). No hard confirm — delete is the
+   * frequent reversible action (the catastrophic animal delete keeps its confirm in the header).
+   */
+  const handleDeleteDays = useCallback(
+    (ids: string[]) => {
+      const records = ids
+        .map((id) => days[id])
+        .filter((rec): rec is CapturedDay => Boolean(rec))
+        .map((rec) => structuredClone(rec));
+      if (records.length === 0) return;
+      ids.forEach((id) => actions.deleteDay(id, selectedAnimalId));
+      setSelectedDayIds(new Set());
+      const n = records.length;
+      undo.show(`Deleted ${n} recording ${n === 1 ? 'day' : 'days'}`, () => {
+        records.forEach((rec) => restoreDay(rec, actions as unknown as Parameters<typeof restoreDay>[1]));
+      });
+    },
+    [days, actions, selectedAnimalId, undo]
+  );
 
   /**
    * Open the single-date duplicate picker for a source row's `duplicateDay` command (resets any prior
@@ -402,6 +442,44 @@ export function RecordingDaysTab({ animalId }: RecordingDaysTabProps) {
           </div>
         )}
 
+        {/* Contextual bulk bar — appears only on selection. "Export selected" reuses the shared
+            export path; "Delete" is undo-able (the toast below). */}
+        {selectedDayIds.size > 0 && (
+          <div className={styles.bulkBar} role="region" aria-label="Selected days actions">
+            <span className={styles.bulkCount}>{selectedDayIds.size} selected</span>
+            <Button variant="primary" size="small" onClick={() => handleExportDays([...selectedDayIds])}>
+              ⬇ Export selected
+            </Button>
+            {/* dangerSubtle: a low-commitment, repeated destructive action (delete is undo-able). */}
+            <Button variant="dangerSubtle" size="small" onClick={() => handleDeleteDays([...selectedDayIds])}>
+              Delete
+            </Button>
+          </div>
+        )}
+
+        {/* Inline "Exported N · Skipped M" result — skipped days link to where their issue is fixed. */}
+        {exportResult && (
+          <div className={styles.exportResult} role="status">
+            <p>
+              Exported {exportResult.exported.length}{' '}
+              {exportResult.exported.length === 1 ? 'file' : 'files'}
+              {exportResult.skipped.length > 0 ? ` · Skipped ${exportResult.skipped.length}` : ''}.
+            </p>
+            {exportResult.skipped.length > 0 && (
+              <ul className={styles.exportSkipped}>
+                {exportResult.skipped.map((skip) => (
+                  <li key={skip.dayId}>
+                    {skip.href ? <a href={skip.href}>{skip.date}</a> : skip.date} — {skip.reason}
+                  </li>
+                ))}
+              </ul>
+            )}
+            <button type="button" className={styles.btnSecondaryText} onClick={() => setExportResult(null)}>
+              Dismiss
+            </button>
+          </div>
+        )}
+
         {/* One shared legend for the day-row status words, reused from the Validation Summary so
             the lifecycle vocabulary is defined once. Shown only when there are day rows to triage;
             collapsed by default so it never crowds the list. */}
@@ -411,34 +489,17 @@ export function RecordingDaysTab({ animalId }: RecordingDaysTabProps) {
           rows={dayRows}
           daysCorrupt={daysCorrupt}
           animalId={selectedAnimalId}
+          selectedDayIds={selectedDayIds}
+          allSelected={allSelected}
+          onToggleAll={toggleAll}
+          onToggleDay={toggleDay}
           onRepairCommand={(command) => run[command.id]?.(command)}
+          onOpenDay={openDay}
           onDuplicateDay={openDuplicateDay}
-          onDeleteDay={openDeleteDay}
+          onExportDay={(dayId) => handleExportDays([dayId])}
+          onDeleteDay={(dayId) => handleDeleteDays([dayId])}
         />
       </div>
-
-      <ConfirmDialog
-        isOpen={pendingDeleteDay != null}
-        title="Delete recording day?"
-        message={
-          pendingDeleteDay != null ? (
-            <>
-              Delete recording day <strong>{pendingDeleteDay.date || pendingDeleteDay.dayId}</strong>
-              {pendingDeleteDay.sessionId ? ` (${pendingDeleteDay.sessionId})` : ''}? This removes the
-              day and its session metadata, tasks, and failed-channel marks from this workspace and
-              from export lists.
-              {pendingDeleteDay.hasArtifacts && DOWNSTREAM_NOT_DELETED_NOTE} This cannot be undone.
-            </>
-          ) : (
-            ''
-          )
-        }
-        confirmLabel="Delete day"
-        cancelLabel="Cancel"
-        destructive
-        onConfirm={confirmDeleteDay}
-        onCancel={() => setPendingDeleteDay(null)}
-      />
 
       <DuplicateDayModal
         isOpen={pendingDuplicateDay != null}
@@ -460,6 +521,9 @@ export function RecordingDaysTab({ animalId }: RecordingDaysTabProps) {
         onCopy={handleCopyConfirm}
         onCancel={() => setCopyDialogOpen(false)}
       />
+
+      {/* The undo-able-delete toast (mounted once; null until a delete fires). */}
+      {undo.node}
     </>
   );
 }

@@ -119,7 +119,8 @@ describe('AnimalWorkspace existing-data review state', () => {
     // phrase appears both in the review note and on the day row). The row's identity is its
     // date now — session_id moved off the row (Task 2.6).
     expect(screen.getAllByText(/not in day list/i).length).toBeGreaterThan(0);
-    expect(screen.getByRole('link', { name: /2024-02-02/i })).toBeInTheDocument();
+    // The date link (distinct from the row's trailing "Open …" chevron link, which shares the date).
+    expect(screen.getByRole('link', { name: /^2024-02-02$/ })).toBeInTheDocument();
     expect(screen.queryByText(/no recording days yet/i)).not.toBeInTheDocument();
     // The review state appears and points to THIS animal's own Validation & Export tab to re-link
     // (not the cross-animal batch screen) — "go review this" stays within the animal you're in.

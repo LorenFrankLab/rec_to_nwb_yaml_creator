@@ -3,9 +3,11 @@
  * be able to discover SAFE animal/day deletion — the store already exposes guarded `deleteAnimal`
  * / `deleteDay`, but nothing surfaced them. As of Phase 4, animal delete lives in the AnimalView
  * header's ⋮ overflow menu (not a day-tab danger zone) and routes through the type-to-confirm
- * AnimalDeleteDialog; per-day delete keeps its plain in-row confirm. Confirmations still name the
- * animal/day, the cascade count, and the consequence — including that deleting local workspace
- * metadata does NOT delete an already-downloaded YAML / NWB / DANDI / Spyglass.
+ * AnimalDeleteDialog. As of Phase 2 (epoch-editor), per-day delete is undo-able (the per-row ⋯ menu
+ * deletes immediately + offers Undo) rather than a hard confirm — undo for the frequent reversible
+ * action, confirm for the catastrophic one. The animal-delete confirm still names the animal, the
+ * cascade count, and the consequence — that deleting local metadata does NOT delete an
+ * already-downloaded YAML / NWB / DANDI / Spyglass.
  */
 import { describe, it, expect, afterEach } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
@@ -149,46 +151,40 @@ describe('AnimalWorkspace lifecycle cleanup — Delete animal', () => {
 });
 
 describe('AnimalWorkspace lifecycle cleanup — Delete recording day', () => {
-  it('exposes a Delete recording day action on an ordinary day row and deletes on confirm', async () => {
+  // Phase 2 (epoch-editor): per-day delete is the FREQUENT, reversible action — it deletes immediately
+  // via the per-row ⋯ menu and offers Undo (Phase-0 UndoToast), rather than the old hard confirm dialog
+  // with a cascade preview. The catastrophic animal delete keeps its type-to-confirm (the describe
+  // above). The downloaded-artifacts caveat now lives on the animal-delete dialog (covered above).
+  it('deletes a day from the per-row ⋯ menu and offers Undo (no hard confirm dialog)', async () => {
     const user = userEvent.setup();
     renderView('remy', { remy }, remyDays);
 
-    // The delete action is a real button, separate from the navigation link (not nested in it).
-    const deleteDayBtn = screen.getByRole('button', { name: /delete recording day 2023-06-23/i });
-    expect(deleteDayBtn).toBeInTheDocument();
-    expect(deleteDayBtn.closest('a')).toBeNull();
+    await user.click(screen.getByRole('button', { name: /actions for 2023-06-23/i }));
+    await user.click(screen.getByRole('menuitem', { name: /delete day/i }));
 
-    await user.click(deleteDayBtn);
-    const dialog = screen.getByRole('alertdialog');
-    expect(within(dialog).getByText(/2023-06-23/)).toBeInTheDocument();
-    await user.click(within(dialog).getByRole('button', { name: /^delete day$/i }));
+    // No alertdialog — the reversible delete fires immediately and shows an Undo toast (the toast's
+    // Undo button is the unambiguous handle; the AnimalView SaveIndicator is also a role=status).
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+    expect(screen.getByText(/deleted 1 recording day/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /undo/i })).toBeInTheDocument();
 
     // The deleted day is gone; the sibling day remains.
-    expect(screen.queryByText('2023-06-23')).not.toBeInTheDocument();
-    expect(screen.getByText('2023-06-22')).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /^2023-06-23$/ })).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /^2023-06-22$/ })).toBeInTheDocument();
   });
 
-  it('previews the cascade — session metadata, tasks, and failed-channel marks', async () => {
+  it('Undo re-creates the deleted day', async () => {
     const user = userEvent.setup();
     renderView('remy', { remy }, remyDays);
 
-    await user.click(screen.getByRole('button', { name: /delete recording day 2023-06-23/i }));
-    const dialog = screen.getByRole('alertdialog');
-    // The confirm names WHAT is lost, not just the date — so the destructive scope is legible.
-    expect(within(dialog).getByText(/session metadata/i)).toBeInTheDocument();
-    expect(within(dialog).getByText(/tasks/i)).toBeInTheDocument();
-    expect(within(dialog).getByText(/failed-channel marks/i)).toBeInTheDocument();
-    expect(within(dialog).getByText(/cannot be undone/i)).toBeInTheDocument();
-  });
+    await user.click(screen.getByRole('button', { name: /actions for 2023-06-23/i }));
+    await user.click(screen.getByRole('menuitem', { name: /delete day/i }));
+    expect(screen.queryByRole('link', { name: /^2023-06-23$/ })).not.toBeInTheDocument();
 
-  it('warns downloaded files are not deleted when the day was exported', async () => {
-    const user = userEvent.setup();
-    renderView('remy', { remy }, remyDays);
+    await user.click(screen.getByRole('button', { name: /undo/i }));
 
-    await user.click(screen.getByRole('button', { name: /delete recording day 2023-06-22/i }));
-    const dialog = screen.getByRole('alertdialog');
-    expect(within(dialog).getByText(/already downloaded|does not delete/i)).toBeInTheDocument();
-    expect(within(dialog).getByText(/NWB|DANDI|Spyglass/i)).toBeInTheDocument();
+    // The day is back in the list.
+    expect(screen.getByRole('link', { name: /^2023-06-23$/ })).toBeInTheDocument();
   });
 });
 

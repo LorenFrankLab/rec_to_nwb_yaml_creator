@@ -13,8 +13,6 @@
  *   - `.status-chip` (+ variants) — also defined by ValidationSummary.css; a test asserts its absence.
  *   - `.empty-state` — a shared name defined (scoped) by several setup-table stylesheets too.
  *   - `.visually-hidden` — global a11y utility (also defined in index.css).
- *   - `.day-row-status` (+ ::before + variants) — applied with a DYNAMIC `-${variant}` suffix and
- *     queried by the day-row test; kept global so the runtime-built class name resolves.
  */
 
 .workspaceContent {
@@ -133,55 +131,53 @@
 }
 
 /* Day List */
-.dayList {
-  list-style: none;
-  padding: 0;
-  margin: 0;
+
+/* Phase 2 (epoch-editor) day TABLE: a checkbox column, the date (+ muted session description), the
+   status pill, and the per-row actions (⋯ menu + a chevron link). Replaces the prior `<ul>` card list
+   (the multi-select + bulk bar make a tabular layout the right shape). */
+.dayTable {
+  width: 100%;
+  border-collapse: collapse;
 }
 
-.dayItem {
-  display: flex;
-  align-items: stretch;
-  gap: 0.5rem;
-  margin-bottom: 0.75rem;
+.dayTable th {
+  text-align: left;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  color: var(--color-grey-600);
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--color-grey-200);
 }
 
-/* The navigation card grows; the lifecycle action sits beside it (not inside the link). */
-.dayLink {
-  flex: 1;
+.dayTable td {
+  padding: 0.6rem 0.75rem;
+  border-bottom: 1px solid var(--color-grey-100);
+  vertical-align: top;
+}
 
-  /* A flex item defaults to `min-width: auto`, so it won't shrink below its content's
-     min-content width. Without this, the row-status's long "Needs fixing — <reason>" text
-     (white-space wrapping relaxed below) keeps the card wide and pushes the Duplicate/Delete
-     actions off the panel at common laptop widths (horizontal scroll). `min-width: 0` lets the
-     card shrink so the row stays inside the panel. */
+/* The selection checkbox column — narrow, centered. */
+.cbxCell {
+  width: 1px;
+  white-space: nowrap;
+  text-align: center;
+}
+
+/* The date column stacks the date link over an optional muted session description. */
+.dateCell {
   min-width: 0;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 1rem;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  background-color: var(--color-white);
+}
+
+.dayDateLink {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--color-primary);
   text-decoration: none;
-  color: inherit;
-  transition: background-color 0.2s, border-color 0.2s;
 }
 
-.dayLink:hover {
-  background-color: var(--color-grey-100);
-  border-color: #999;
-}
-
-.dayInfo {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-
-  /* Allow the info column to shrink so the session-desc ellipsis works and the column doesn't
-     force the card wide (pairs with `.dayLink { min-width: 0 }`). */
-  min-width: 0;
+.dayDateLink:hover {
+  text-decoration: underline;
 }
 
 .dayDate {
@@ -197,6 +193,7 @@
 /* Decision 12: the muted session description under the date (recognition aid), truncated to one
    line — the full text stays available via the element's `title`. */
 .daySessionDesc {
+  display: block;
   font-size: 0.8125rem;
   color: var(--color-ink-muted);
   font-style: italic;
@@ -206,65 +203,27 @@
   max-width: 26rem;
 }
 
-.dayStatus {
-  display: flex;
-  gap: 0.5rem;
-
-  /* The status sits at the card's right; cap it so a long "Needs fixing — <reason>" wraps within
-     the card instead of forcing the whole row wider than the panel. */
-  min-width: 0;
-  flex-shrink: 1;
+.statusCell {
+  white-space: nowrap;
 }
 
-/* Decision 12: ONE plain-language day status (replaces the Draft/Validated/Exported chip
-   cluster). A leading dot keys the variant by colour without relying on colour alone (the words
-   carry the meaning). GLOBAL because the row applies it with a dynamic `-${variant}` suffix and a
-   test queries `.day-row-status`. */
-:global(.day-row-status) {
-  display: inline-flex;
-  align-items: baseline;
-  gap: 0.4rem;
-  font-size: 0.8125rem;
-  font-weight: 600;
-
-  /* Allow the long "Needs fixing — <reason>" label to WRAP rather than stay a single unshrinkable
-     nowrap line that forces the row wider than the panel (overflow / horizontal scroll at common
-     widths). The leading dot stays on the first line via `align-items: baseline`. */
-  min-width: 0;
+/* The actions column holds the ⋯ overflow menu and a trailing chevron link, right-aligned. */
+.actionsCell {
+  width: 1px;
+  white-space: nowrap;
+  text-align: right;
 }
 
-:global(.day-row-status)::before {
-  content: '';
-  width: 0.5rem;
-  height: 0.5rem;
-  border-radius: 50%;
-  flex: none;
-  background-color: currentcolor;
+.chevLink {
+  margin-left: 0.25rem;
+  padding: 0 0.4rem;
+  color: var(--color-grey-600);
+  text-decoration: none;
+  font-size: 1.1rem;
 }
 
-:global(.day-row-status-draft) {
-  color: var(--color-grey-700);
-  font-weight: 500;
-}
-
-/* `ready` (live export-ready, not yet saved) — blue, matching the shared DAY_LIFECYCLE legend
-   swatch; distinct from the green `validated` (saved) state. */
-:global(.day-row-status-ready) {
+.chevLink:hover {
   color: var(--color-primary);
-}
-
-/* `validated` (persisted) reads green; the live "Ready to export" phrase is the blue `ready`
-   variant above, so the saved state is visually distinct from live readiness. */
-:global(.day-row-status-validated) {
-  color: var(--color-success);
-}
-
-:global(.day-row-status-exported) {
-  color: var(--color-primary-hover);
-}
-
-:global(.day-row-status-needs_fixing) {
-  color: var(--color-error);
 }
 
 /* GLOBAL status chip (also defined by ValidationSummary.css; a test asserts its absence here). */
@@ -296,16 +255,13 @@
   color: var(--color-error);
 }
 
-/* Dangling day reference (no resolvable record) — surfaced, not dropped. */
-.dayLinkMissing {
-  cursor: default;
-  border-color: #ffcdd2;
+/* Dangling-reference / wrong-owner rows — surfaced (not dropped) with an error tint. */
+.dayRowMissing td {
   background-color: var(--color-error-light);
 }
 
 /* Orphaned day record (not in the animal's index) — surfaced so it isn't lost. */
-.dayItemOrphan .dayLink {
-  border-color: #ffe0b2;
+.dayRowOrphan td {
   background-color: var(--color-warning-light);
 }
 
@@ -316,38 +272,51 @@
   color: var(--color-warning);
 }
 
-/* Lifecycle cleanup (Task 8): secondary/destructive delete actions. Deliberately understated
-   (text button, no fill) so they never compete with the primary navigate/setup/export actions,
-   but clearly destructive (danger red, alertdialog confirm). */
-.dayItemActions {
+/* The inline error chip for a dangling-reference / wrong-owner row's status cell (the lifecycle
+   StatusPill is for valid/ok rows only). */
+.errorChip {
+  display: inline-block;
+  padding: 0.25rem 0.5rem;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  background-color: var(--color-error-light);
+  color: var(--color-error);
+}
+
+/* Contextual bulk action bar — appears above the table only when rows are selected. */
+.bulkBar {
   display: flex;
   align-items: center;
+  gap: 0.75rem;
+  padding: 0.6rem 0.75rem;
+  margin-bottom: 0.75rem;
+  background-color: var(--color-grey-100);
+  border: 1px solid var(--color-grey-200);
+  border-radius: var(--radius-md);
 }
 
-.btnDangerText {
-  background: none;
-  border: 1px solid transparent;
-  color: var(--color-error);
-  cursor: pointer;
-  font-size: 0.8125rem;
-  padding: 0.25rem 0.5rem;
-  border-radius: 4px;
-  white-space: nowrap;
+.bulkCount {
+  font-weight: 600;
+  margin-right: auto;
 }
 
-.btnDangerText:hover {
-  background-color: var(--color-error-light);
-  text-decoration: underline;
+/* Inline "Exported N · Skipped M" batch result (skipped days link to their issue). */
+.exportResult {
+  padding: 0.75rem;
+  margin-bottom: 0.75rem;
+  background-color: var(--color-grey-100);
+  border: 1px solid var(--color-grey-200);
+  border-radius: var(--radius-md);
 }
 
-.btnDangerText:focus-visible {
-  outline: 2px solid #c62828;
-  outline-offset: 2px;
+.exportSkipped {
+  margin: 0.5rem 0;
+  padding-left: 1.25rem;
+  font-size: 0.875rem;
 }
 
-/* The non-destructive "Duplicate day…" row action — same compact text-button shape as the danger
-   variant but neutral, so the two row actions read as a matched pair (the class was previously
-   undefined, leaving the button unstyled). */
+/* The non-destructive compact text button (the export-result Dismiss; previously the row actions). */
 .btnSecondaryText {
   background: none;
   border: 1px solid transparent;
@@ -417,27 +386,15 @@
     justify-self: start;
   }
 
-  /* Day row → stacked card: the navigation card on top, the row actions below it. */
-  .dayItem {
-    flex-direction: column;
-    align-items: stretch;
+  /* Compact the table padding at phone width so the date / status / actions columns still fit. */
+  .dayTable th,
+  .dayTable td {
+    padding: 0.5rem 0.4rem;
   }
 
-  /* Card content stacks the date/description over the status (instead of squeezing them side by
-     side at a phone width). */
-  .dayLink {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.5rem;
-  }
-
-  /* Separate the destructive action from the primary: actions sit below the card on their own
-     row, with Duplicate at the left and Delete pushed to the right, divided from the card. */
-  .dayItemActions {
-    justify-content: space-between;
-    gap: 0.5rem;
-    border-top: 1px solid var(--color-grey-200);
-    padding-top: 0.5rem;
+  /* The bulk bar wraps its actions under the count at phone width. */
+  .bulkBar {
+    flex-wrap: wrap;
   }
 }
 

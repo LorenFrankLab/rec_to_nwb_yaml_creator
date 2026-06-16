@@ -6,7 +6,7 @@
  *   - `repair` — delegates to the single serializable repair executor (`applyRepairCommand`).
  *   - `page`   — a page-orchestrated effect, NOT a store write, so it has no resolver handler:
  *                navigation (`navigateDaySection`), encode/download/batch export+validate
- *                (`exportDay` / `exportValidOnly` / `validateAllDays`), or device-override cleanup
+ *                (`exportDay` / `exportValidOnly` / `exportSelectedDays` / `validateAllDays`), or device-override cleanup
  *                (`removeDeviceOverride`) whose fieldPath→executor mapping lives in the page.
  *
  * The catalog is the ratchet's source of truth: a newly emitted command id with no entry here fails
@@ -52,6 +52,7 @@ export const WORKFLOW_COMMAND_CATALOG = Object.freeze({
   navigateDaySection: 'page',
   exportDay: 'page',
   exportValidOnly: 'page',
+  exportSelectedDays: 'page',
   validateAllDays: 'page',
   removeDeviceOverride: 'page',
 } as const) satisfies Readonly<Record<string, CommandCategory>>;

@@ -19,8 +19,7 @@ import type { RepairableIssue } from '../../domain/repairRouting';
 import { getDayWorkflowStatus } from '../../domain/workflowStatus';
 import { describeDayOptoState } from '../../domain/optoStatus';
 import { classifyWorkspaceDays, isExportableDayStatus } from '../../domain/dayRecovery';
-import { formatDeterministicFilename, downloadYamlFile } from '../../io/yaml';
-import { checkShadowExport } from '../../domain/shadowExport';
+import { exportDayFile } from '../../domain/exportDay';
 import { isFeatureEnabled } from '../../featureFlags';
 import {
   deriveChip,
@@ -326,50 +325,27 @@ export function useValidationSummaryActions({ rows, workspace, actions }: Valida
         return;
       }
 
-      try {
-        const { ok, yaml, diff } = checkShadowExport(animal as unknown as Animal, day as unknown as Day);
-
-        // Parity mismatch in strict mode: skip and report, never download.
-        if (!ok && strict) {
-          skipped.push({ ...identity, detail: diff as string });
-          // eslint-disable-next-line no-console
-          console.error(
-            `[validation-summary] export parity check failed for "${day.id}" — skipped (strict mode).`
-          );
-          return;
-        }
-
-        // ok, or the debug override (strict off): mirror ExportStep — inject the
-        // filename-only EXPERIMENT_DATE key the merge does not carry, then download.
-        const fileName = formatDeterministicFilename({
-          ...mergeDayMetadata(animal as unknown as Animal, day as unknown as Day),
-          EXPERIMENT_DATE_in_format_mmddYYYY: day.experimentDate as string,
-        });
-        downloadYamlFile(fileName, yaml);
-        exported += 1;
-
-        // Persist the export into the day's lifecycle state (display-only — `state` is never part
-        // of the exported YAML, so byte-identity holds) so each downloaded day reads "Exported"
-        // afterwards, mirroring the single-day Export step. Guarded so one failed write does not
-        // truncate the batch.
-        try {
-          const prevState = isRecord(day.state) ? day.state : {};
-          actions.updateDay(day.id as string, { state: { ...prevState, exported: true } });
-        } catch (persistErr) {
-          // eslint-disable-next-line no-console
-          console.error(`[validation-summary] could not mark day "${day.id}" exported:`, persistErr);
-        }
-
-        if (!ok) {
-          // strict === false: downloaded DESPITE a parity mismatch. Surface it loudly,
-          // mirroring ExportStep's override warning, so the override is never silent.
-          overridden.push({ ...identity, detail: diff as string });
-        }
-      } catch (err) {
-        // A throw (e.g. encoder failure) must not silently truncate the batch.
-        failed.push({ ...identity, detail: (err as Error).message });
-        // eslint-disable-next-line no-console
-        console.error(`[validation-summary] export failed for "${day.id}":`, err);
+      // The actual download + parity gate + mark-exported is the SHARED single-day export core, so
+      // this batch and the animal page's "Export selected" can never fork on export bytes/parity.
+      const outcome = exportDayFile(animal as unknown as Animal, day as unknown as Day, { actions, strict });
+      switch (outcome.kind) {
+        case 'exported':
+          exported += 1;
+          break;
+        case 'overridden':
+          // strict === false: downloaded DESPITE a parity mismatch. Surface it loudly so the
+          // override is never silent.
+          exported += 1;
+          overridden.push({ ...identity, detail: outcome.diff });
+          break;
+        case 'skipped':
+          // Parity mismatch in strict mode: not downloaded.
+          skipped.push({ ...identity, detail: outcome.diff });
+          break;
+        case 'failed':
+          // A throw (e.g. encoder failure) must not silently truncate the batch.
+          failed.push({ ...identity, detail: outcome.message });
+          break;
       }
     });
 

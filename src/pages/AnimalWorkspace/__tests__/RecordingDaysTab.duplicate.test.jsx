@@ -1,7 +1,7 @@
 /**
  * Duplicate-day row action on the Recording Days tab.
  *
- * A "Duplicate day…" control on each OK row opens a single-date picker; choosing a
+ * Each OK row's ⋯ menu offers "Duplicate day…", which opens a single-date picker; choosing a
  * non-colliding date clones that day to the new date via the store's duplicateDay action.
  * Assertions read the LIVE store (via a probe) so we observe the state the action wrote,
  * not a render-time snapshot, and stay clock-robust by setting the date input explicitly.
@@ -67,7 +67,9 @@ describe('RecordingDaysTab — duplicate day row action', () => {
     renderPane('remy', { remy: animal }, { 'remy-2023-06-22': sourceDay });
 
     // Open the single-date duplicate picker for the OK row.
-    fireEvent.click(screen.getByRole('button', { name: /duplicate recording day/i }));
+    // Open the per-row ⋯ menu, then choose "Duplicate day…".
+    fireEvent.click(screen.getByRole('button', { name: /actions for 2023-06-22/i }));
+    fireEvent.click(screen.getByRole('menuitem', { name: /duplicate day/i }));
 
     // A date input appears; set a fixed, non-colliding date (clock-robust).
     const dateInput = screen.getByLabelText(/new date/i);
@@ -89,7 +91,9 @@ describe('RecordingDaysTab — duplicate day row action', () => {
   it('choosing a colliding date surfaces the collision error, keeps the dialog open, and creates nothing', () => {
     renderPane('remy', { remy: animal }, { 'remy-2023-06-22': sourceDay });
 
-    fireEvent.click(screen.getByRole('button', { name: /duplicate recording day/i }));
+    // Open the per-row ⋯ menu, then choose "Duplicate day…".
+    fireEvent.click(screen.getByRole('button', { name: /actions for 2023-06-22/i }));
+    fireEvent.click(screen.getByRole('menuitem', { name: /duplicate day/i }));
 
     // The source day already occupies 2023-06-22 — choose it to force a collision.
     const dateInput = screen.getByLabelText(/new date/i);
@@ -111,7 +115,9 @@ describe('RecordingDaysTab — duplicate day row action', () => {
   it('confirming with no date selected surfaces the empty-date guard and creates nothing', () => {
     renderPane('remy', { remy: animal }, { 'remy-2023-06-22': sourceDay });
 
-    fireEvent.click(screen.getByRole('button', { name: /duplicate recording day/i }));
+    // Open the per-row ⋯ menu, then choose "Duplicate day…".
+    fireEvent.click(screen.getByRole('button', { name: /actions for 2023-06-22/i }));
+    fireEvent.click(screen.getByRole('menuitem', { name: /duplicate day/i }));
 
     // Confirm without choosing a date (the input starts empty).
     act(() => {

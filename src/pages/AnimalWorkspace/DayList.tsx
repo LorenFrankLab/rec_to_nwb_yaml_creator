@@ -1,4 +1,7 @@
+import type { ComponentProps } from 'react';
 import type { DayRowViewModel, WorkflowCommand } from '../../viewModels/types';
+import StatusPill from '../../components/ui/StatusPill';
+import OverflowMenu from '../../components/OverflowMenu';
 import styles from './AnimalWorkspace.module.css';
 
 interface DayListProps {
@@ -8,31 +11,53 @@ interface DayListProps {
   daysCorrupt: boolean;
   /** The owning animal (for the dangling-row export link). */
   animalId: string;
+  /** Which OK rows are currently selected (for the checkbox column + bulk bar). */
+  selectedDayIds: Set<string>;
+  /** Whether the select-all box is checked (every selectable OK row is selected). */
+  allSelected: boolean;
+  /** Toggle every selectable OK row on/off. */
+  onToggleAll: (checked: boolean) => void;
+  /** Toggle one OK row's selection. */
+  onToggleDay: (dayId: string, checked: boolean) => void;
   /** Dispatch a row's recovery repair (the VM's `recoveryDetail.repair.command`, e.g. unlink). */
   onRepairCommand: (command: WorkflowCommand) => void;
+  /** Navigate to a day (the ⋯ menu's "Open" — the date/chevron are real links besides). */
+  onOpenDay: (dayId: string) => void;
   /** Open the duplicate picker for a row's `duplicateDay` command (the parent confirms, then runs it). */
   onDuplicateDay: (command: WorkflowCommand) => void;
-  /** Open the delete confirm for a row's `deleteDay` command (the parent confirms, then runs it). */
-  onDeleteDay: (command: WorkflowCommand) => void;
+  /** Export exactly this day (the shared single-day export path). */
+  onExportDay: (dayId: string) => void;
+  /** Delete this day (undo-able — the parent shows the UndoToast; no hard confirm). */
+  onDeleteDay: (dayId: string) => void;
 }
 
 /** The command carried by the row action with the given id (delete / duplicate). */
 const rowCommand = (row: DayRowViewModel, id: string): WorkflowCommand | undefined =>
   row.actions.find((action) => action.command?.id === id)?.command;
 
+/** StatusPill's variant union, derived without exporting it (chipVariant is a DAY_LIFECYCLE value here). */
+type PillVariant = ComponentProps<typeof StatusPill>['variant'];
+
 /**
- * The per-animal recording-day list: the empty state, and one row per classified day (ok /
- * dangling_reference / recovered_unlinked / wrong_owner) with its plain-language lifecycle status
- * and the per-row actions. Renders straight from the view-model's `dayRows` — the row status, label
- * (already humanized), recovery classification, owner description, and the orphan "Re-link to export"
- * override are all decided in `buildAnimalWorkspaceViewModel`, never re-derived here.
+ * The per-animal recording-day table: the empty state, and one row per classified day (ok /
+ * dangling_reference / recovered_unlinked / wrong_owner). OK rows carry a selection checkbox + a ⋯
+ * overflow menu (Open / Duplicate day / Export this day / Delete day); the date and a trailing chevron
+ * are real links (the accessible-row contract — no clickable `<tr>`). Renders straight from the
+ * view-model's `dayRows` — the status, label, recovery classification, owner description, and the
+ * orphan "Re-link to export" override are all decided in `buildAnimalWorkspaceViewModel`.
  */
 export default function DayList({
   rows,
   daysCorrupt,
   animalId,
+  selectedDayIds,
+  allSelected,
+  onToggleAll,
+  onToggleDay,
   onRepairCommand,
+  onOpenDay,
   onDuplicateDay,
+  onExportDay,
   onDeleteDay,
 }: DayListProps) {
   if (rows.length === 0) {
@@ -50,54 +75,76 @@ export default function DayList({
       </div>
     );
   }
-  return (
-    /* Day List. `role="list"` is NOT redundant here: `.day-list` sets `list-style: none`,
-       which makes Safari + VoiceOver drop the implicit list role — the explicit role restores
-       it. The jsx-a11y rule can't see the CSS, so it's suppressed deliberately. */
-    // eslint-disable-next-line jsx-a11y/no-redundant-roles
-    <ul className={styles.dayList} role="list">
-      {rows.map((row) => {
-        const dayId = row.dayId;
-        const dateText = row.date || dayId;
 
-        // A dangling reference (no record) is surfaced, not dropped — otherwise a
-        // recovered day disappears. Consistent with the cross-day Validation summary.
-        if (row.recovery === 'dangling_reference') {
-          return (
-            <li key={dayId} className={styles.dayItem}>
-              <div className={`${styles.dayLink} ${styles.dayLinkMissing}`} role="alert">
-                <div className={styles.dayInfo}>
+  // Whether ANY row is a selectable OK row — the select-all box is meaningless (and disabled) otherwise.
+  const hasSelectable = rows.some((row) => row.recovery === 'ok');
+
+  return (
+    <table className={styles.dayTable}>
+      <thead>
+        <tr>
+          <th className={styles.cbxCell} scope="col">
+            <input
+              type="checkbox"
+              aria-label="Select all recording days"
+              checked={allSelected}
+              disabled={!hasSelectable}
+              onChange={(e) => onToggleAll(e.target.checked)}
+            />
+          </th>
+          <th scope="col">Date</th>
+          <th scope="col">Status</th>
+          <th scope="col">
+            <span className="visually-hidden">Actions</span>
+          </th>
+        </tr>
+      </thead>
+      <tbody>
+        {rows.map((row) => {
+          const dayId = row.dayId;
+          const dateText = row.date || dayId;
+
+          // A dangling reference (no record) is surfaced, not dropped. No checkbox, no menu — it
+          // offers a review path instead of ordinary day actions.
+          if (row.recovery === 'dangling_reference') {
+            return (
+              <tr key={dayId} className={styles.dayRowMissing}>
+                <td className={styles.cbxCell} />
+                <td className={styles.dateCell}>
                   <span className={styles.dayDate}>{dayId}</span>
                   <span className={styles.daySessionId}>
                     Saved record missing or corrupt —{' '}
-                    <a href={`#/animal/${animalId}/export`}>
-                      review in this animal&apos;s Validation &amp; Export
-                    </a>
-                    .
+                    <a href={`#/animal/${animalId}/export`}>review in this animal&apos;s Validation &amp; Export</a>.
                   </span>
-                </div>
-                <div className={styles.dayStatus}>
-                  <span className="status-chip error">{row.statusLabel}</span>
-                </div>
-              </div>
-            </li>
-          );
-        }
+                </td>
+                <td className={styles.statusCell}>
+                  <span className={styles.errorChip} role="alert">
+                    {row.statusLabel}
+                  </span>
+                </td>
+                <td className={styles.actionsCell} />
+              </tr>
+            );
+          }
 
-        // Wrong owner: indexed here but the record belongs to another animal. Don't
-        // render it as an ordinary recording day (that implies it's this animal's and
-        // exportable). Surface a warning + an in-place unlink repair.
-        if (row.recovery === 'wrong_owner') {
-          const owner = row.recoveryDetail?.ownerDescription;
-          const unlinkCommand = row.recoveryDetail?.repair?.command;
-          return (
-            <li key={dayId} className={styles.dayItem}>
-              <div className={`${styles.dayLink} ${styles.dayLinkMissing}`} role="alert">
-                <div className={styles.dayInfo}>
+          // Wrong owner: indexed here but the record belongs to another animal. Surface a warning + an
+          // in-place unlink repair instead of ordinary day actions.
+          if (row.recovery === 'wrong_owner') {
+            const owner = row.recoveryDetail?.ownerDescription;
+            const unlinkCommand = row.recoveryDetail?.repair?.command;
+            return (
+              <tr key={dayId} className={styles.dayRowMissing}>
+                <td className={styles.cbxCell} />
+                <td className={styles.dateCell}>
                   <span className={styles.dayDate}>{dateText}</span>
                   <span className={styles.daySessionId}>{row.statusLabel}</span>
-                </div>
-                <div className={styles.dayStatus}>
+                </td>
+                <td className={styles.statusCell}>
+                  <span className={styles.errorChip} role="alert">
+                    Wrong owner
+                  </span>
+                </td>
+                <td className={styles.actionsCell}>
                   <button
                     type="button"
                     className="btn-secondary"
@@ -106,26 +153,32 @@ export default function DayList({
                   >
                     Remove from this animal
                   </button>
-                </div>
-              </div>
-            </li>
-          );
-        }
+                </td>
+              </tr>
+            );
+          }
 
-        // Ordinary (OK) or recovered-unlinked row: ONE plain-language status (already humanized + the
-        // orphan "Re-link to export" override applied by the builder), read-only over the same export
-        // gate the day editor uses.
-        const isOrphan = row.recovery === 'recovered_unlinked';
-        return (
-          <li key={dayId} className={`${styles.dayItem} ${isOrphan ? styles.dayItemOrphan : ''}`}>
-            <a href={row.href} className={styles.dayLink}>
-              <div className={styles.dayInfo}>
-                <span className={styles.dayDate}>
-                  {row.date}
-                  {isOrphan && (
-                    <span className={styles.dayOrphanNote}> ⚠ not in day list</span>
-                  )}
-                </span>
+          // Ordinary (OK) or recovered-unlinked row.
+          const isOrphan = row.recovery === 'recovered_unlinked';
+          const isOk = row.recovery === 'ok';
+          const duplicateCommand = rowCommand(row, 'duplicateDay');
+          return (
+            <tr key={dayId} className={isOrphan ? styles.dayRowOrphan : undefined}>
+              <td className={styles.cbxCell}>
+                {isOk && (
+                  <input
+                    type="checkbox"
+                    aria-label={`Select ${dateText}`}
+                    checked={selectedDayIds.has(dayId)}
+                    onChange={(e) => onToggleDay(dayId, e.target.checked)}
+                  />
+                )}
+              </td>
+              <td className={styles.dateCell}>
+                <a href={row.href} className={styles.dayDateLink}>
+                  {row.date || dayId}
+                </a>
+                {isOrphan && <span className={styles.dayOrphanNote}> ⚠ not in day list</span>}
                 {row.sessionDescription && (
                   <span
                     className={styles.daySessionDesc}
@@ -135,52 +188,35 @@ export default function DayList({
                     {row.sessionDescription}
                   </span>
                 )}
-              </div>
-              <div className={styles.dayStatus}>
-                {/* `day-row-status` (+ dynamic `-${chipVariant}` suffix) is kept GLOBAL in the module
-                    so the runtime-built class name resolves; a day-row test also queries it. */}
-                <span className={`day-row-status day-row-status-${row.chipVariant}`}>
-                  {row.statusLabel}
-                </span>
-              </div>
-            </a>
-            {/* Lifecycle cleanup (Task 8): a secondary/destructive delete, OUTSIDE
-                the navigation link (not nested in the <a>) so it can't be hit while
-                opening the day. Only on ordinary (OK) rows — recovered/wrong-owner
-                rows have their own repair paths above. */}
-            {row.recovery === 'ok' && (
-              <div className={styles.dayItemActions}>
-                {(() => {
-                  // Bubble the row's OWN duplicate/delete command descriptors up; the parent confirms,
-                  // then dispatches them through the command layer (no reconstruction here).
-                  const duplicateCommand = rowCommand(row, 'duplicateDay');
-                  const deleteCommand = rowCommand(row, 'deleteDay');
-                  return (
-                    <>
-                      <button
-                        type="button"
-                        className={styles.btnSecondaryText}
-                        onClick={() => duplicateCommand && onDuplicateDay(duplicateCommand)}
-                        aria-label={`Duplicate recording day ${dateText}…`}
-                      >
-                        Duplicate day…
-                      </button>
-                      <button
-                        type="button"
-                        className={styles.btnDangerText}
-                        onClick={() => deleteCommand && onDeleteDay(deleteCommand)}
-                        aria-label={`Delete recording day ${dateText}…`}
-                      >
-                        Delete day…
-                      </button>
-                    </>
-                  );
-                })()}
-              </div>
-            )}
-          </li>
-        );
-      })}
-    </ul>
+              </td>
+              <td className={styles.statusCell}>
+                <StatusPill variant={row.chipVariant as PillVariant} label={row.statusLabel} />
+              </td>
+              <td className={styles.actionsCell}>
+                {isOk && (
+                  <OverflowMenu
+                    label={`Actions for ${dateText}`}
+                    items={[
+                      { key: 'open', label: 'Open', onSelect: () => onOpenDay(dayId) },
+                      {
+                        key: 'duplicate',
+                        label: 'Duplicate day…',
+                        onSelect: () => duplicateCommand && onDuplicateDay(duplicateCommand),
+                        disabled: !duplicateCommand,
+                      },
+                      { key: 'export', label: 'Export this day', onSelect: () => onExportDay(dayId) },
+                      { key: 'delete', label: 'Delete day…', onSelect: () => onDeleteDay(dayId) },
+                    ]}
+                  />
+                )}
+                <a href={row.href} className={styles.chevLink} aria-label={`Open ${dateText}`}>
+                  ›
+                </a>
+              </td>
+            </tr>
+          );
+        })}
+      </tbody>
+    </table>
   );
 }
