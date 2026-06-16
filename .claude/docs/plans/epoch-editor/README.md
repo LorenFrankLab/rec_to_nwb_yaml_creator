@@ -64,6 +64,36 @@ responsive (desktop-first fits the audience).
 they're click-only here); **async progress** for batch export / large import; **post-download success
 confirmation** ("wrote `…_metadata.yml`").
 
+## External UX review — applied (2026-06-16)
+
+A reviewer validated the IA + scope model as the core win and raised six priorities. Outcomes:
+
+**Applied to the mockups:**
+
+- **Issue-driven export readiness** (day-editor). The bar is now a **quiet one-line "✓ Ready to export"**
+  when clean and a **loud red "N issues block export"** bar — with plain-language items that **link to the
+  offending field** (epoch / Setup) — only when something blocks. (Mockup has a demo toggle to preview both;
+  the real app drives it off validation.)
+- **Blast-radius at the edit point** (animal-page Setup). An **"affects all N days"** chip sits next to the
+  Edit control on the animal-static sections whose edits force re-export — **Identity, Cameras,
+  Optogenetics** — in addition to the page banner. *Excluded by design:* Team (past days keep their recorded
+  experimenters) and the additive "＋ Add task type".
+
+**Status vocabulary — one set of words per scope (never reuse a word across scopes):**
+
+| Scope | States | Where |
+|---|---|---|
+| **Epoch completeness** | `Complete` / `Incomplete` | epoch-grid row Status |
+| **Day lifecycle** | `Draft` → `Exported`, plus `Needs review` (blocking issues) | day header pill · animal Days table |
+| **Export readiness** | `Ready to export` / `N issues block export` | day-editor readiness line (a *check*, not a stored status) |
+| **Export history** | `Exported` (optional `· stale` if inputs changed since) | export-preview / days table |
+
+**Extended acceptance criteria (implementation, not mockups):** the epoch-grid **row-expand must be a
+large, keyboard-operable hit target** (the `▸` caret is too small) and **derived filenames must be visually
+distinct from editable fields**; **status labels carry their scope** (epoch vs day vs export) so readiness
+isn't inferred from the wrong one. **Verified now:** no horizontal overflow at a **1280×800 (13″)** viewport
+(content caps at 1040 px).
+
 ## Must reuse the existing correctness substrate
 
 The redesign is a new **input surface** over the same validation rules / `mergeDayMetadata` /

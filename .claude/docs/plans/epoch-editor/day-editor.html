@@ -128,6 +128,19 @@
   .scope .facts{color:var(--muted);flex:1;min-width:0}
   .scope a{color:var(--muted);text-decoration:none;font-size:12.5px;white-space:nowrap}
   .scope a:hover{color:var(--accent)}
+  /* export readiness — issue-driven: quiet when clean, loud only when blocking */
+  .ready{display:flex;align-items:center;gap:10px;margin-top:14px;font-size:13px}
+  .ready .ok{display:inline-flex;align-items:center;gap:6px;font-weight:600;color:var(--ok)}
+  .ready .detail{color:var(--faint);font-size:12.5px}
+  .ready .demo,.blocking .demo{font-size:12px;color:var(--muted);background:none;border:0;cursor:pointer;text-decoration:underline;font-weight:400}
+  .ready .demo{margin-left:auto}.ready .demo:hover,.blocking .demo:hover{color:var(--accent)}
+  .blocking{margin-top:14px;padding:11px 14px;background:var(--badbg);border:1px solid #e7b9b9;border-radius:var(--radius);font-size:13px}
+  .blocking .bt{font-weight:600;color:#a23030;display:flex;align-items:center;gap:8px}
+  .blocking .bt .demo{margin-left:auto}
+  .blocking ul{margin:8px 0 0;padding:0;list-style:none;display:flex;flex-direction:column;gap:5px}
+  .blocking li{display:flex;align-items:center;gap:8px;color:#7a3434}
+  .blocking li a{color:var(--accent);text-decoration:none;font-size:12.5px;margin-left:auto;white-space:nowrap}
+  .blocking li a:hover{text-decoration:underline}
 </style>
 </head>
 <body>
@@ -151,13 +164,20 @@
       <a href="animal-page.html">Edit animal setup ›</a>
     </div>
 
-    <div class="exportcheck">
-      <span class="ec-title">Before export</span>
-      <span class="ec-item">✓ 6 epochs complete</span>
-      <span class="ec-item">✓ DIO · 9 events</span>
-      <span class="ec-item">✓ Opto protocol set (Laser)</span>
-      <span class="ec-item">✓ Channels OK</span>
-      <span style="color:var(--faint);font-size:12px;margin-left:auto">issues, if any, link to the field</span>
+    <!-- readiness is issue-driven: this quiet line when clean, the loud bar only when something blocks -->
+    <div class="ready" id="ready">
+      <span class="ok">✓ Ready to export</span>
+      <span class="detail">6 epochs · DIO · opto · channels — all clear</span>
+      <button class="demo" onclick="toggleReady()">Preview a blocking state</button>
+    </div>
+    <div class="blocking" id="blocking" style="display:none">
+      <div class="bt">⚠ 2 issues block export
+        <button class="demo" onclick="toggleReady()">Show ready state</button>
+      </div>
+      <ul>
+        <li>Epoch 4 has no video file <a href="#" onclick="show('ep',document.querySelectorAll('.tab')[1]);return false">Go to Epoch 4 →</a></li>
+        <li>Probe 2 location is empty <a href="animal-page.html">Go to Setup →</a></li>
+      </ul>
     </div>
 
     <div class="tabs">
@@ -295,6 +315,10 @@
   function show(id,el){['day','ep','ch','dio'].forEach(k=>document.getElementById('p-'+k).classList.toggle('hide',k!==id));
     document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));el.classList.add('active');}
   function t(id){var r=document.getElementById(id);if(r)r.style.display=r.style.display==='none'?'table-row':'none';}
+  // demo toggle: swap the quiet "ready" line for the loud "blocking" bar (real app drives this off validation)
+  function toggleReady(){var r=document.getElementById('ready'),b=document.getElementById('blocking');
+    var blocking=b.style.display!=='none';
+    r.style.display=blocking?'flex':'none';b.style.display=blocking?'none':'block';}
   (function(){var bad={47:1,103:1},host=document.getElementById('probe0'),html='';
     for(var s=0;s<4;s++){html+='<div class="shank"><h5>shank '+(s+1)+'</h5><div class="chgrid">';
       for(var i=0;i<32;i++){var id=s*32+i;html+='<div class="ch'+(bad[id]?' bad carried':'')+'">'+id+'</div>';}
