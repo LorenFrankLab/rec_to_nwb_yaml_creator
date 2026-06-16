@@ -17,6 +17,7 @@ import {
   getProbeElectrodeGroups,
   getProbeNtrodeMaps,
 } from '../../state/workspaceSelectors';
+import { nextConfigurationVersion } from '../../state/workspaceTransitions';
 import { classifyAnimalDays, DAY_STATUS } from '../../domain/dayRecovery';
 import type { Animal, Day } from '../../state/workspaceTypes';
 import styles from './NewConfigurationModal.module.css';
@@ -63,12 +64,9 @@ export default function NewConfigurationModal({
   const [description, setDescription] = useState('');
   const [error, setError] = useState('');
 
-  // The version this commit will create (history length + 1), for the action label.
-  const nextVersion = useMemo(() => {
-    const history = getConfigHistory(animal);
-    const latest = history[history.length - 1];
-    return (latest && typeof latest.version === 'number' ? latest.version : history.length) + 1;
-  }, [animal]);
+  // The version this commit will create — the SAME deriver the action uses (max(version) + 1), so the
+  // displayed label can't disagree with the committed version on a non-monotonic/corrupt history.
+  const nextVersion = useMemo(() => nextConfigurationVersion(getConfigHistory(animal)), [animal]);
 
   // The current latest devices to clone when "copy from current" is on — mirrors the Day-Editor
   // reconfiguration: prefer the latest snapshot's geometry, fall back to the editable mirror when

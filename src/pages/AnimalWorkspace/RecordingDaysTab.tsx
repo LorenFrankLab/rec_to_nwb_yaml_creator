@@ -185,7 +185,18 @@ export function RecordingDaysTab({ animalId }: RecordingDaysTabProps) {
       setSelectedDayIds(new Set());
       const n = records.length;
       undo.show(`Deleted ${n} recording ${n === 1 ? 'day' : 'days'}`, () => {
-        records.forEach((rec) => restoreDay(rec, actions as unknown as Parameters<typeof restoreDay>[1]));
+        // restoreDay is TOTAL (never throws), so one un-restorable record (e.g. its date was re-used
+        // during the undo window) can't abort the rest. Count failures and surface them — deferred
+        // past the toast host's own dismiss(), which runs right after this Undo handler.
+        const failed = records.filter(
+          (rec) => !restoreDay(rec, actions as unknown as Parameters<typeof restoreDay>[1])
+        ).length;
+        if (failed > 0) {
+          const noun = failed === 1 ? 'day' : 'days';
+          queueMicrotask(() =>
+            undo.show(`Couldn't restore ${failed} ${noun} — a recording day already exists on that date`)
+          );
+        }
       });
     },
     [days, actions, selectedAnimalId, undo]

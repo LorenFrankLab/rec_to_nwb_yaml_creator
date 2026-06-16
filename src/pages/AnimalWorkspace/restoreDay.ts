@@ -46,29 +46,39 @@ export function restoreDay(record: CapturedDay, actions: RestoreDayActions): boo
   const session = (isRecord(record.session) ? record.session : {}) as unknown as SessionMetadata;
   // createDay rebuilds the shell pinned to the LATEST config + animal-default technical; updateDay then
   // overwrites with the captured day-owned content (including the captured configuration version pin).
-  actions.createDay(animalId, date, session, {});
+  // createDay THROWS on a date collision (a new day created on this date during the undo window) or a
+  // missing animal — catch so the restore is TOTAL: a throw here must not strand the toast or, in a
+  // bulk undo, abort restoring the remaining records. A failure leaves nothing created (createDay
+  // throws before any state change), so the day simply isn't restored and the caller is told.
+  try {
+    actions.createDay(animalId, date, session, {});
 
-  const dayId = generateDayId(animalId, date);
-  // Replay only the day-owned fields applyDayUpdates recognizes; absent fields are left as the
-  // freshly-created defaults. session is restored too (createDay seeds a date-derived default).
-  const updates: Record<string, unknown> = { session };
-  for (const key of [
-    'tasks',
-    'taskInstances',
-    'behavioral_events',
-    'associated_files',
-    'associated_video_files',
-    'fs_gui_yamls',
-    'technical',
-    'deviceOverrides',
-    'state',
-    'configurationVersion',
-    'keywords',
-    'data_acq_device_name',
-    'cameras_used',
-  ] as const) {
-    if (record[key] !== undefined) updates[key] = record[key];
+    const dayId = generateDayId(animalId, date);
+    // Replay only the day-owned fields applyDayUpdates recognizes; absent fields are left as the
+    // freshly-created defaults. session is restored too (createDay seeds a date-derived default).
+    const updates: Record<string, unknown> = { session };
+    for (const key of [
+      'tasks',
+      'taskInstances',
+      'behavioral_events',
+      'associated_files',
+      'associated_video_files',
+      'fs_gui_yamls',
+      'technical',
+      'deviceOverrides',
+      'state',
+      'configurationVersion',
+      'keywords',
+      'data_acq_device_name',
+      'cameras_used',
+    ] as const) {
+      if (record[key] !== undefined) updates[key] = record[key];
+    }
+    actions.updateDay(dayId, updates);
+    return true;
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error(`[restore-day] could not restore "${animalId}-${date}":`, err);
+    return false;
   }
-  actions.updateDay(dayId, updates);
-  return true;
 }
