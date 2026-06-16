@@ -25,6 +25,9 @@ import { ownershipForIssue } from '../../domain/workflowOwnership';
 import { repairTargetForIssue } from '../../domain/repairRouting';
 import { workflowCategoryForIssue, WORKFLOW_CATEGORY_LABELS } from '../../domain/workflowCategories';
 import { priorBadChannels } from '../../domain/badChannelMonotonicity';
+import { getDayRowStatus } from '../../domain/workflowStatus';
+import { getAnimalDays } from '../../state/workspaceSelectors';
+import { optoFieldsPresence } from '../../domain/optoCompleteness';
 import type { Animal, Day } from '../../state/workspaceTypes';
 
 type Idable = { id: string } & Record<string, unknown>;
@@ -717,5 +720,110 @@ describe('buildDayEditorViewModel — bad channels', () => {
     expect(mark).toBeDefined();
     expect(mark?.marked).toBe(true);
     expect(mark?.priorBad).toBe(true);
+  });
+});
+
+// ──────────────────────────────────────────────────────────────────────────────────────────
+// Phase 3 — day chips + the 4-tab frame model.
+//
+// The redesigned day editor's header shows day chips (configuration version, an opto badge, a
+// "carried from <date>" hint, and the lifecycle StatusPill) and a 4-tab bar (Day / Epochs /
+// Failed channels / DIO) that replaces the 6-section nav. The view-model exposes both as data so
+// the frame is a thin renderer; the chip/tab truths are recomputed here from the same domain
+// functions the rest of the app reads (`getDayRowStatus`, `optoFieldsPresence`).
+// ──────────────────────────────────────────────────────────────────────────────────────────
+
+describe('buildDayEditorViewModel — day chips', () => {
+  it('exposes the day configuration version and a non-opto badge for a non-opto animal', () => {
+    const { animal, day } = loadRealistic();
+    const vm = buildDayEditorViewModel(wrap(animal, day), day.id);
+    expect(vm.chips.configVersion).toBe(day.configurationVersion);
+    expect(vm.chips.isOpto).toBe(false);
+  });
+
+  it('flags isOpto when the animal has optogenetics hardware (parity with optoFieldsPresence)', () => {
+    const { animal, day } = loadRealistic();
+    animal.optogenetics = {
+      opto_excitation_source: [{ name: 'laser', wavelength: 450, power: 10 }],
+      optical_fiber: [],
+      virus_injection: [],
+      optogenetic_stimulation_software: 'FsGui',
+    };
+    const vm = buildDayEditorViewModel(wrap(animal, day), day.id);
+    expect(vm.chips.isOpto).toBe(optoFieldsPresence(animal.optogenetics as never).count > 0);
+    expect(vm.chips.isOpto).toBe(true);
+  });
+
+  it('resolves the lifecycle chip through getDayRowStatus (live-vs-persisted, never a local check)', () => {
+    const { animal, day } = loadRealistic();
+    const ws = wrap(animal, day);
+    const vm = buildDayEditorViewModel(ws, day.id);
+    const merged = mergeDayMetadata(animal as unknown as Animal, day as unknown as Day);
+    const expected = getDayRowStatus(
+      animal,
+      day as unknown as Day,
+      merged,
+      getAnimalDays(ws, animal.id) as unknown as Day[]
+    );
+    expect(vm.chips.lifecycle).toBe(expected.variant);
+  });
+
+  it('shows no "carried from" chip for the first (only) day of an animal', () => {
+    const { animal, day } = loadRealistic();
+    const vm = buildDayEditorViewModel(wrap(animal, day), day.id);
+    expect(vm.chips.carriedFrom).toBeUndefined();
+  });
+
+  it('shows "carried from <prior date>" for a later day in the same block', () => {
+    const { animal, day } = loadRealistic();
+    const earlier = clone(day);
+    earlier.id = 'remy-2023-06-21';
+    earlier.date = '2023-06-21';
+    const later = clone(day);
+    later.id = 'remy-2023-06-22';
+    later.date = '2023-06-22';
+    animal.days = [earlier.id, later.id];
+    const ws: Workspace = {
+      animals: { [animal.id]: animal },
+      days: { [earlier.id]: earlier, [later.id]: later },
+    };
+    const vm = buildDayEditorViewModel(ws, later.id);
+    expect(vm.chips.carriedFrom).toBe('2023-06-21');
+  });
+});
+
+describe('buildDayEditorViewModel — 4-tab frame model', () => {
+  it('exposes exactly the four tabs Day / Epochs / Failed channels / DIO in order', () => {
+    const { animal, day } = loadRealistic();
+    const vm = buildDayEditorViewModel(wrap(animal, day), day.id);
+    expect(vm.tabs.map((t) => t.key)).toEqual(['day', 'epochs', 'channels', 'dio']);
+    expect(vm.tabs.map((t) => t.label)).toEqual([
+      'Day',
+      'Epochs',
+      'Failed channels',
+      'DIO',
+    ]);
+  });
+
+  it('marks the requested tab active (default is the Day tab)', () => {
+    const { animal, day } = loadRealistic();
+    const ws = wrap(animal, day);
+    expect(buildDayEditorViewModel(ws, day.id).tabs.find((t) => t.active)?.key).toBe('day');
+    expect(
+      buildDayEditorViewModel(ws, day.id, 'channels').tabs.find((t) => t.active)?.key
+    ).toBe('channels');
+  });
+
+  it('rolls each tab status up from its underlying step (channels←devices)', () => {
+    const { animal, day } = loadRealistic();
+    const ws = wrap(animal, day);
+    const animalDays = getAnimalDays(ws, animal.id) as unknown as Day[];
+    const stepStatus = expectedStepStatus(animal, day, animalDays as unknown as Idable[]);
+    const vm = buildDayEditorViewModel(ws, day.id);
+    const byKey = Object.fromEntries(vm.tabs.map((t) => [t.key, t.status]));
+    expect(byKey.day).toBe(stepStatus.overview);
+    expect(byKey.epochs).toBe(stepStatus.epochs);
+    expect(byKey.channels).toBe(stepStatus.devices);
+    expect(byKey.dio).toBe(stepStatus.behavioral);
   });
 });

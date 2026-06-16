@@ -56,7 +56,9 @@ import {
   workflowCategoryForIssue,
   WORKFLOW_CATEGORY_LABELS,
 } from '../domain/workflowCategories';
-import { lifecycleForValidDay, DAY_LIFECYCLE_LABEL } from '../domain/dayLifecycle';
+import { lifecycleForValidDay, DAY_LIFECYCLE, DAY_LIFECYCLE_LABEL } from '../domain/dayLifecycle';
+import { getDayRowStatus } from '../domain/workflowStatus';
+import { optoFieldsPresence } from '../domain/optoCompleteness';
 import { describeOwner } from '../domain/dayRecovery';
 import { humanizeValidationMessage } from '../domain/humanizeValidationMessage';
 import {
@@ -84,12 +86,56 @@ import type {
   WorkflowSeverity,
 } from './types';
 
+/** The four day-editor frame tab keys, in display order. */
+export type DayTabKey = 'day' | 'epochs' | 'channels' | 'dio';
+
+/**
+ * One tab of the redesigned day-editor frame. Its `status` rolls up from the underlying step the
+ * tab folds (Day←overview, Epochs←epochs, Failed channels←devices, DIO←behavioral), so the tab
+ * agrees with the validation truth without re-deriving it.
+ */
+export interface DayTabViewModel {
+  /** Tab key (the frame's local nav state). */
+  key: DayTabKey;
+  /** Tab label (e.g. 'Failed channels'). */
+  label: string;
+  /** Rolled-up status of the step this tab folds. */
+  status: StepStatus;
+  /** Accessible status label (e.g. 'Complete'). */
+  statusLabel: string;
+  /** Whether this is the active tab. */
+  active: boolean;
+}
+
+/**
+ * The day chips shown in the frame header: the configuration version, an opto badge, a
+ * "carried from <date>" hint (the prior same-block day this day's content was seeded from), and the
+ * day's lifecycle (resolved through `getDayRowStatus`, the SAME live-vs-persisted gate the day-row
+ * uses — never a local check).
+ */
+export interface DayChipsViewModel {
+  /** Configuration version the day is pinned to, or null when unknown. */
+  configVersion: number | null;
+  /** Whether the owning animal has optogenetics hardware (opto badge). */
+  isOpto: boolean;
+  /** The prior day's date this day carried its content forward from; absent for the first day. */
+  carriedFrom?: string;
+  /** Lifecycle variant (a {@link DAY_LIFECYCLE} value) from `getDayRowStatus`. */
+  lifecycle: string;
+  /** The lifecycle's canonical short label (`DAY_LIFECYCLE_LABEL[variant]`). */
+  lifecycleLabel: string;
+}
+
 /** The full DayEditor page view-model. */
 export interface DayEditorViewModel {
   /** Whether the editor could resolve a day to edit at all (ok / no-day-id / day-/animal-not-found). */
   shell: DayEditorShellViewModel;
   /** Workspace › Animal › Day trail (the last item is current). */
   breadcrumb: BreadcrumbViewModel;
+  /** The header day chips (config / opto / carried-from / lifecycle). */
+  chips: DayChipsViewModel;
+  /** The 4-tab frame model (Day / Epochs / Failed channels / DIO). */
+  tabs: DayTabViewModel[];
   /** The section stepper, in display order, each with its domain step status + the active flag. */
   steps: StepViewModel[];
   /** The single severity the page banner renders (mapped from the step statuses / export gate). */
@@ -137,6 +183,48 @@ const STEP_STATUS_LABEL: Record<StepStatus, string> = {
   error: 'Has errors',
   pending: 'Not started',
 };
+
+/**
+ * The 4-tab frame model: each tab folds one underlying step (Day←overview, Epochs←epochs, Failed
+ * channels←devices, DIO←behavioral). The frame renders these tabs; the validation/repair/export-gate
+ * machinery still runs on the underlying step keys, so this is a presentation join — not a re-model.
+ */
+const TAB_ORDER: ReadonlyArray<{ key: DayTabKey; label: string; step: string }> = [
+  { key: 'day', label: 'Day', step: 'overview' },
+  { key: 'epochs', label: 'Epochs', step: 'epochs' },
+  { key: 'channels', label: 'Failed channels', step: 'devices' },
+  { key: 'dio', label: 'DIO', step: 'behavioral' },
+];
+
+/** The valid tab keys (the frame's nav allow-list), derived from the tab order. */
+const TAB_KEYS: ReadonlySet<string> = new Set(TAB_ORDER.map((t) => t.key));
+
+/** Underlying step key → the tab that folds it (for resolving an active step to its tab). */
+const TAB_FOR_STEP: Record<string, DayTabKey> = Object.fromEntries(
+  TAB_ORDER.map((t): [string, DayTabKey] => [t.step, t.key])
+);
+
+/**
+ * Resolve the active TAB from the `active` argument, which may be a tab key (the frame's nav state)
+ * OR an underlying step key (a repair routing to e.g. 'devices'). A `validation`/`export` step — which
+ * no tab folds (the readiness bar / animal-level export own those) — falls back to the Day tab.
+ */
+function resolveActiveTab(active: string): DayTabKey {
+  if (TAB_KEYS.has(active)) return active as DayTabKey;
+  return TAB_FOR_STEP[active] ?? 'day';
+}
+
+/**
+ * Build the 4-tab frame model, each tab's status rolled up from the step it folds (so the tab can
+ * never disagree with the validation truth).
+ */
+function buildTabs(stepStatus: Record<string, StepStatus>, activeStep: string): DayTabViewModel[] {
+  const activeTab = resolveActiveTab(activeStep);
+  return TAB_ORDER.map(({ key, label, step }) => {
+    const status = stepStatus[step] ?? 'incomplete';
+    return { key, label, status, statusLabel: STEP_STATUS_LABEL[status], active: key === activeTab };
+  });
+}
 
 /**
  * The fail-closed step-status map the editor uses when the day/merge is unavailable (corrupt
@@ -218,6 +306,53 @@ function overallSeverity(
   if (isExportEnabled(stepStatus)) return 'ready';
   return 'todo';
 }
+
+/**
+ * Build the header day chips. `configVersion` is the day's pin; `isOpto` reuses `optoFieldsPresence`
+ * (the SAME opto-completeness source the animal view uses); `carriedFrom` is the date-sorted prior
+ * day in the same animal (the day this one's content seeded forward from); the lifecycle is resolved
+ * by `getDayRowStatus` (the SAME live-vs-persisted gate the day-row reads — never a local check), so
+ * a merge failure surfaces as the gate's own `needs_fixing`.
+ */
+function buildChips(
+  day: Record<string, unknown>,
+  animal: Animal,
+  merged: Record<string, unknown>,
+  animalDays: Day[],
+  mergeFailed: boolean
+): DayChipsViewModel {
+  const configVersion =
+    typeof (day as { configurationVersion?: unknown }).configurationVersion === 'number'
+      ? ((day as { configurationVersion: number }).configurationVersion)
+      : null;
+  const isOpto =
+    optoFieldsPresence(
+      (isRecord(animal) ? animal.optogenetics : undefined) as Parameters<typeof optoFieldsPresence>[0]
+    ).count > 0;
+  // The prior same-block day (content seeds forward from it). `animalDays` is date-sorted, so the
+  // record immediately before this one is the carry source; the first day of an animal has none.
+  const idx = animalDays.findIndex((d) => d.id === (day as { id?: unknown }).id);
+  const priorDate = idx > 0 ? animalDays[idx - 1]?.date : undefined;
+  const status = getDayRowStatus(animal, day as never, mergeFailed ? null : (merged as never), animalDays);
+  const lifecycle = status.variant;
+  const chips: DayChipsViewModel = {
+    configVersion,
+    isOpto,
+    lifecycle,
+    lifecycleLabel:
+      DAY_LIFECYCLE_LABEL[lifecycle as keyof typeof DAY_LIFECYCLE_LABEL] ?? status.label,
+  };
+  if (typeof priorDate === 'string' && priorDate !== '') chips.carriedFrom = priorDate;
+  return chips;
+}
+
+/** The fail-closed default chips used by the no-day shell states (no day to resolve a lifecycle for). */
+const DEFAULT_CHIPS: DayChipsViewModel = {
+  configVersion: null,
+  isOpto: false,
+  lifecycle: DAY_LIFECYCLE.DRAFT,
+  lifecycleLabel: DAY_LIFECYCLE_LABEL.draft,
+};
 
 // ──────────────────────────────────────────────────────────────────────────────────────────
 // Overview field sources (day / inherited / default / derived).
@@ -942,6 +1077,8 @@ function emptyShellViewModel(
   return {
     shell,
     breadcrumb: buildBreadcrumb(ownerKey, dayDate),
+    chips: DEFAULT_CHIPS,
+    tabs: buildTabs(FAIL_CLOSED_STEP_STATUS, DEFAULT_STEP),
     steps,
     overall: 'error',
     overview: { fields: [] },
@@ -1108,6 +1245,8 @@ export function buildDayEditorViewModel(
   return {
     shell,
     breadcrumb: buildBreadcrumb(ownerKey, day.date),
+    chips: buildChips(day, animal as Animal, merged, animalDays as Day[], mergeFailed),
+    tabs: buildTabs(stepStatus, activeStep),
     steps,
     overall,
     overview: { fields: overviewFields },
