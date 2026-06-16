@@ -49,7 +49,7 @@ already exists; this adds the affordances and restyles the shell. Design: [anima
 | `RecordingDaysTab.test.tsx` | checkbox column + select-all; bulk bar appears on selection; date/chevron are real links; no row-level `onclick`; status column uses `StatusPill`/`dayLifecycle` |
 | `bulkExport.test.ts` | `exportSelectedDays` command resolves to the batch export; invalid days skipped with a linked reason; valid days exported byte-identical |
 | `deleteUndo.test.tsx` | delete shows `UndoToast`; Undo restores the day record; delete-animal still routes to the hard confirm dialog |
-| `dayRowMenu.test.tsx` | per-day `⋯` menu offers Open / Duplicate / Export / Delete; each routes to the existing action/command (`duplicateDay`, single-day export, `deleteDay`); Delete uses the undo toast |
+| `dayRowMenu.test.tsx` | per-day `⋯` menu offers Open / Duplicate / Export this day / Delete; Open navigates; Duplicate uses `duplicateDay`; Export this day uses the single-day export path; Delete uses the same undo toast as the bulk bar |
 | `setupCards.test.tsx` | `BlastRadiusChip` on Identity/Cameras/Optogenetics only; opto meter reads `optoFieldsPresence`; edit affordances are buttons |
 | `editConsequence.test.tsx` | saving an Identity/Cameras/Optogenetics edit surfaces "N already-exported days now need re-export" (post-edit, not just the pre-edit chip) |
 | `newConfiguration.test.tsx` | "New configuration…" modal has effective date + copy-from-current + bad-channel-reset confirm; commits via `createConfigurationSnapshotAndApplyForward`; days from the effective date forward stamp the new version, earlier days keep theirs |
