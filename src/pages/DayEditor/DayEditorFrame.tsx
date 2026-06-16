@@ -293,6 +293,18 @@ export default function DayEditorFrame() {
     // A `none`/validation/export issue has no in-tab field to focus; the message is shown in the bar.
   }, [handleRepair, ownerKey, goToTab]);
 
+  // Whether an issue has an actionable in-app fix — mirrors `handleFix`'s action branches exactly, so
+  // the readiness bar only renders a "Fix" button for issues a click can actually route (an
+  // executable repair, an animal-surface deep-link, or a day-surface issue a tab folds). A
+  // `none`-surface or catch-all-`validation` issue shows its message without a dead button.
+  const canFixIssue = useCallback((issue: RepairableIssue) => {
+    if (issue?.repairCommand) return true;
+    const target = repairTargetForIssue(issue);
+    if (target.surface === 'animal') return true;
+    if (target.surface === 'day') return TAB_FOR_STEP[target.step ?? ''] != null;
+    return false;
+  }, []);
+
   // Early returns AFTER all hooks. The not-found message comes from the view-model's shell state.
   if (!dayId || !day || !animal) {
     return <ErrorState message={vm.shell.message ?? ''} />;
@@ -350,7 +362,7 @@ export default function DayEditorFrame() {
           <AnimalScopeCard summary={scopeSummary} editHref={`#/animal/${ownerKey}/days`} />
         )}
 
-        <ReadinessBar issues={readinessIssues} onFix={handleFix} />
+        <ReadinessBar issues={readinessIssues} onFix={handleFix} canFix={canFixIssue} />
       </div>
 
       <div className="day-editor-body">

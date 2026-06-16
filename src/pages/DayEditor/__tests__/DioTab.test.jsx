@@ -86,6 +86,26 @@ describe('DioTab', () => {
     expect(screen.getAllByText(/used by more than one channel/i).length).toBeGreaterThan(0);
   });
 
+  it('shows a named event whose channel is not a standard Din/Dout line in an "Other" group', () => {
+    // The header counts every named event; an "Other" group surfaces non-Din/Dout channels so the
+    // count can never disagree with the displayed rows.
+    render(
+      <DioTab
+        day={{
+          behavioral_events: [
+            { description: 'Din1', name: 'Poke1' },
+            { description: 'AnalogIn1', name: 'ImportedLine' },
+          ],
+        }}
+        onFieldUpdate={vi.fn()}
+      />
+    );
+    expect(screen.getByText('2 events')).toBeInTheDocument();
+    const other = screen.getByRole('heading', { level: 3, name: 'Other' });
+    expect(other).toBeInTheDocument();
+    expect(screen.getByText('ImportedLine')).toBeInTheDocument();
+  });
+
   it('tolerates a corrupt (non-array) behavioral_events without crashing', () => {
     expect(() =>
       render(<DioTab day={{ behavioral_events: {} }} onFieldUpdate={vi.fn()} />)

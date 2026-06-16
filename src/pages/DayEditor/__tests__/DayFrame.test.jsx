@@ -167,6 +167,22 @@ describe('DayEditorFrame', () => {
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 
+  it('shows a non-actionable blocking issue (slash session_id) with its message but no dead Fix button', () => {
+    // A slash in the derived session_id is DANDI-invalid but read-only (no in-app field to fix), so
+    // the readiness bar must surface the message WITHOUT a dead "Fix" button (repairSurface 'none').
+    renderFrame({
+      workspace: {
+        animals: { remy: mockAnimal },
+        days: {
+          'remy-2023-06-22': { ...mockDay, session: { ...mockDay.session, session_id: 'remy/20230622' } },
+        },
+        settings: {},
+      },
+    });
+    const slashMsg = screen.getByText(/Session ID "remy\/20230622" must not contain/i);
+    expect(within(slashMsg.closest('li')).queryByRole('button')).not.toBeInTheDocument();
+  });
+
   // ── 4-tab bar ──
   it('renders exactly the four tabs Day / Epochs / Failed channels / DIO', () => {
     renderFrame();

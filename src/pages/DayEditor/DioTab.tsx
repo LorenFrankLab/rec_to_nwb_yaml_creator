@@ -159,31 +159,59 @@ function DioSummary({ named, carriedFrom, hasCollision, onEdit }: DioSummaryProp
           channels this day&apos;s rig uses.
         </p>
       ) : (
-        <div className={styles.columns}>
-          {SUMMARY_GROUPS.map((group) => {
-            const rows = named
-              .filter((e) => parseChannel(e.description).dir === group.type)
-              .sort((a, b) => parseChannel(a.description).index - parseChannel(b.description).index);
-            return (
-              <div className={styles.group} key={group.type}>
-                <h3 className={styles.groupHeading}>{group.heading}</h3>
-                {rows.length === 0 ? (
-                  <p className="field-help-text">None.</p>
-                ) : (
-                  <ul className={styles.list}>
-                    {rows.map((event, i) => (
-                      <li className={styles.row} key={`${event.description}-${i}`}>
-                        <span className={styles.channel}>{event.description}</span>
-                        <span className={styles.name}>{event.name}</span>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-            );
-          })}
-        </div>
+        <>
+          <div className={styles.columns}>
+            {SUMMARY_GROUPS.map((group) => {
+              const rows = named
+                .filter((e) => parseChannel(e.description).dir === group.type)
+                .sort((a, b) => parseChannel(a.description).index - parseChannel(b.description).index);
+              return (
+                <div className={styles.group} key={group.type}>
+                  <h3 className={styles.groupHeading}>{group.heading}</h3>
+                  {rows.length === 0 ? (
+                    <p className="field-help-text">None.</p>
+                  ) : (
+                    <ul className={styles.list}>
+                      {rows.map((event, i) => (
+                        <li className={styles.row} key={`${event.description}-${i}`}>
+                          <span className={styles.channel}>{event.description}</span>
+                          <span className={styles.name}>{event.name}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+          {/* Named events whose channel isn't a standard Din/Dout line (e.g. an imported analog/prose
+              line) — surfaced in an "Other" group so the "{count} events" header can never disagree
+              with what's displayed (no event is silently hidden). */}
+          <DioOtherGroup events={named.filter((e) => parseChannel(e.description).dir === 'Other')} />
+        </>
       )}
+    </div>
+  );
+}
+
+/**
+ * The summary's "Other" group: named events whose channel isn't a standard Din/Dout line. Renders
+ * nothing when empty, so it only appears when there is something the two columns would otherwise
+ * hide — keeping the header count and the displayed rows in agreement.
+ */
+function DioOtherGroup({ events }: { events: BehavioralEvent[] }) {
+  if (events.length === 0) return null;
+  return (
+    <div className={styles.group}>
+      <h3 className={styles.groupHeading}>Other</h3>
+      <ul className={styles.list}>
+        {events.map((event, i) => (
+          <li className={styles.row} key={`${event.description || 'no-channel'}-${i}`}>
+            <span className={styles.channel}>{event.description || '(no channel)'}</span>
+            <span className={styles.name}>{event.name}</span>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

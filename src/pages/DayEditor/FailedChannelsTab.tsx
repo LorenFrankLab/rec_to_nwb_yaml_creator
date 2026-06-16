@@ -21,13 +21,14 @@ import type { Day } from '../../state/workspaceTypes';
 import './DayEditor.scss';
 
 /**
- * DevicesStep - Devices configuration step (Step 2 of Day Editor)
+ * FailedChannelsTab — the day editor's **Failed channels** tab (folded from the former DevicesStep).
  *
- * Displays inherited electrode group configuration from animal level and allows
- * editing of day-specific bad channels. This is the only device configuration
- * that changes day-to-day as hardware channels fail over time.
+ * Displays inherited electrode group configuration from animal level and allows editing of
+ * day-specific bad channels — the only device configuration that changes day-to-day as hardware
+ * channels fail over time. Also hosts the per-day recording-system picker and cameras-used checklist
+ * (day-session setup that travels with this tab).
  *
- * Phase 9c-3 split the step's view sections into focused siblings with no behavior change —
+ * The view sections are focused siblings with no behavior change —
  * `CamerasUsedSection` (the 8C cameras-used checklist), `OverrideCleanupSection` (the
  * device-override repair controls), `ConfigVersionPanel` (the config-version indicator +
  * reconfiguration wizard), and `ElectrodeGroupsAccordion` (the per-group failed-channel editors).

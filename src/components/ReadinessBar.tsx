@@ -6,6 +6,14 @@ export interface ReadinessBarProps {
   issues: RepairableIssue[];
   /** Route a blocking issue to the field that fixes it. */
   onFix: (issue: RepairableIssue) => void;
+  /**
+   * Whether an issue has an actionable in-app fix (so the "Fix" button is worth rendering). The page
+   * passes a predicate mirroring its `onFix` routing — an issue with no editable target (e.g. a
+   * read-only derived `session_id` slash, or a catch-all issue no tab owns) shows its message WITHOUT
+   * a dead button, matching the old `RepairActionButton`'s null-on-no-target behavior. Omitted →
+   * every blocking issue gets a button (back-compat).
+   */
+  canFix?: (issue: RepairableIssue) => boolean;
 }
 
 /** A blocking issue is an error; warnings never block export. */
@@ -17,7 +25,7 @@ const isBlocking = (issue: RepairableIssue) => issue.severity === 'error';
  * something blocks. It is a pure renderer: it has NO validation logic and reads only the issue list
  * it is handed (the page computes it from the authoritative `validateDay`). Warnings alone stay quiet.
  */
-const ReadinessBar = ({ issues, onFix }: ReadinessBarProps) => {
+const ReadinessBar = ({ issues, onFix, canFix }: ReadinessBarProps) => {
   const blocking = issues.filter(isBlocking);
 
   if (blocking.length === 0) {
@@ -46,9 +54,13 @@ const ReadinessBar = ({ issues, onFix }: ReadinessBarProps) => {
         {blocking.map((issue, index) => (
           <li key={issue.code ?? issue.path ?? issue.message ?? index} className={styles.issue}>
             <span className={styles.message}>{issue.message}</span>
-            <button type="button" className={styles.fix} onClick={() => onFix(issue)}>
-              {issue.actionLabel ?? 'Fix'}
-            </button>
+            {/* Render the Fix button only when the issue has an actionable in-app target — an issue
+                with no fixable destination shows its message alone (no dead button). */}
+            {(canFix ? canFix(issue) : true) && (
+              <button type="button" className={styles.fix} onClick={() => onFix(issue)}>
+                {issue.actionLabel ?? 'Fix'}
+              </button>
+            )}
           </li>
         ))}
       </ul>

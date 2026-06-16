@@ -47,4 +47,21 @@ describe('ReadinessBar (issue-driven export readiness)', () => {
     await user.click(screen.getByRole('button', { name: 'Fix' }));
     expect(onFix).toHaveBeenCalledWith(issue);
   });
+
+  it('omits the Fix button (but keeps the message) for an issue the page reports as non-actionable', () => {
+    const fixable = { severity: 'error', code: 'fixable', message: 'This one can be fixed' };
+    const deadEnd = { severity: 'error', code: 'read_only', message: 'Read-only dead end — no in-app fix' };
+    render(
+      <ReadinessBar
+        issues={[fixable, deadEnd]}
+        onFix={() => {}}
+        canFix={(issue) => issue.code !== 'read_only'}
+      />,
+    );
+    // Both messages render…
+    expect(screen.getByText('This one can be fixed')).toBeInTheDocument();
+    expect(screen.getByText('Read-only dead end — no in-app fix')).toBeInTheDocument();
+    // …but only the actionable one gets a button (no dead control on the dead-end issue).
+    expect(screen.getAllByRole('button')).toHaveLength(1);
+  });
 });
