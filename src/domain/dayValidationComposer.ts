@@ -28,6 +28,7 @@ import {
 } from './dayOverrideValidation';
 import { repairTargetForIssue, REPAIR_SURFACES } from './repairRouting';
 import type { RepairableIssue } from './repairRouting';
+import { epochVideoUndeclared } from './epochVideoValidation';
 import type { ValidationModel } from '../validation/issueTypes';
 
 /**
@@ -90,6 +91,11 @@ export function validateDay(
     // catalog data (the catalog dedups by name), so the two do not double-report.
     ...animalTaskCatalogIssues(animal),
     ...dayTaskCatalogIssues(animal, day),
+    // Phase 4: the video-declaration readiness rule (the ONE authorized new rule). It reads the
+    // RAW day's task epochs + associated videos + the OFF-EXPORT `videolessEpochs` set — never the
+    // merged YAML — so it adds a day-readiness blocker without touching export (a flagged epoch's
+    // row reads `Needs video`). Deliberately NOT in `validate(mergedDay)`, which is export-shaped.
+    ...epochVideoUndeclared(day),
   ].map(normalizeIssue);
 }
 

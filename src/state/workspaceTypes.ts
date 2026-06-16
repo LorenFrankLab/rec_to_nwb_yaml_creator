@@ -549,14 +549,25 @@ export interface AssociatedVideoFile {
   task_epochs?: number | string;
 }
 
-/** FsGUI YAML configuration. */
+/**
+ * FsGUI YAML (per-day optogenetics protocol) configuration. Matches the schema's `fs_gui_yamls` items
+ * (and `FsGuiSection`'s editor shape): a protocol applies to a set of task `epochs` and carries the
+ * stimulation parameters. (The earlier `path`/`task_epochs` fields were never emitted or read — the
+ * schema field is the `epochs` array.)
+ */
 export interface FsGuiYaml {
   /** Protocol name. */
   name: string;
-  /** File path. */
-  path: string;
-  /** Associated task epoch. */
-  task_epochs: number | string;
+  /** Task epochs this protocol applies to. */
+  epochs?: number[];
+  /** Stimulation power (mW). */
+  power_in_mW?: number | string;
+  /** Pulse length (ms). */
+  pulseLength?: number | string;
+  /** DIO output channel the protocol triggers. */
+  dio_output_name?: string;
+  /** Camera id (speed / spatial-filter protocols). */
+  camera_id?: number | string;
 }
 
 /**

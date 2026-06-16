@@ -47,6 +47,18 @@ export function makeSummaryWorkspace() {
   // Animal "remy": valid day + incomplete day.
   const { animal: remy, day: validDay } = buildRealisticWorkspace();
 
+  // Bind a video to EVERY task epoch so the valid day reads export-ready regardless of how a test
+  // rewrites `day.state` (where the off-export "no video" declaration lives) — e.g. the corrupt-`state`
+  // tolerance case. The realistic builder leaves the sleep epochs (1,3,5) video-less by declaration;
+  // here readiness must not depend on state shape, so they get real videos instead. Off-export shape is
+  // unchanged elsewhere (this only adds day.associated_video_files entries, never touches a baseline).
+  validDay.associated_video_files = [
+    ...validDay.associated_video_files,
+    { name: 'sleep_video_epoch1', camera_id: 0, task_epochs: 1 },
+    { name: 'sleep_video_epoch3', camera_id: 0, task_epochs: 3 },
+    { name: 'sleep_video_epoch5', camera_id: 0, task_epochs: 5 },
+  ];
+
   const incompleteDay = {
     ...structuredClone(validDay),
     id: 'remy-2023-06-23',

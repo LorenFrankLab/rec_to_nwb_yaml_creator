@@ -169,7 +169,11 @@ export function buildRealisticWorkspace() {
       default_header_file_path: '',
       units: undefined,
     },
-    state: { draft: true, validated: false, exported: false },
+    // The two sleep blocks (epochs 1,3,5) are home-cage rest with no recorded video — declared
+    // video-less so the day is COMPLETE under the Phase-4 video-declaration rule (the W-track epochs
+    // 2,4 carry the overhead/side videos). This off-export `day.state` set never reaches the YAML
+    // (the merge reads no `day.state`), so byte-identity / export-parity baselines are unchanged.
+    state: { draft: true, validated: false, exported: false, videolessEpochs: [1, 3, 5] },
     created: TS,
     lastModified: TS,
     configurationVersion: 1,

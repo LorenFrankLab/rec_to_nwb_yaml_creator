@@ -11,8 +11,23 @@ import { describe, it, expect } from 'vitest';
 import { buildEpochGrid } from '../epochGridViewModel';
 import { migrateTasksToCatalogV2ToV3 } from '../../state/taskCatalogMigration';
 
+/** A loose day shape the fixtures mutate freely (nested array edits) without strict-TS friction. */
+type LooseRow = Record<string, unknown>;
+interface LooseDay {
+  id: string;
+  animalId?: string;
+  date?: string;
+  experimentDate?: string;
+  dataFolder?: string;
+  tasks: LooseRow[];
+  associated_files: LooseRow[];
+  associated_video_files: LooseRow[];
+  fs_gui_yamls: LooseRow[];
+  state: LooseRow;
+}
+
 /** The golden-shaped tasks/files/videos/fs_gui as a legacy INLINE workspace day + opto animal. */
-function goldenInlineWorkspace() {
+function goldenInlineWorkspace(): { animal: { id: string } & Record<string, unknown>; day: LooseDay } {
   const animal = {
     id: 'sample',
     subject: { subject_id: '54321' },
@@ -185,7 +200,7 @@ describe('buildEpochGrid — catalog and inline days agree', () => {
     const ws = migrateTasksToCatalogV2ToV3({
       animals: { [animal.id]: { ...animal, days: [day.id] } },
       days: { [day.id]: { ...day } },
-    });
+    }) as { animals: Record<string, unknown>; days: Record<string, unknown> };
     const catalogGrid = buildEpochGrid(ws.animals[animal.id], ws.days[day.id]);
 
     expect(catalogGrid.rows.map((r) => r.epoch)).toEqual(inlineGrid.rows.map((r) => r.epoch));

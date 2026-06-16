@@ -127,7 +127,7 @@ describe('ValidationStep', () => {
 
   it('reads a persisted-validated day as "Validated" (saved), distinct from live "Ready to export"', () => {
     const vm = realisticVm((animal, day) => {
-      day.state = { draft: false, validated: true, exported: false };
+      day.state = { ...day.state, draft: false, validated: true, exported: false };
     });
     render(<ValidationStep issues={vm.issues} exportGate={vm.export} />);
     const status = screen.getByRole('status');
@@ -138,7 +138,7 @@ describe('ValidationStep', () => {
 
   it('reads an exported day as "Exported" while all checks still pass', () => {
     const vm = realisticVm((animal, day) => {
-      day.state = { draft: false, validated: true, exported: true };
+      day.state = { ...day.state, draft: false, validated: true, exported: true };
     });
     render(<ValidationStep issues={vm.issues} exportGate={vm.export} />);
     const status = screen.getByRole('status');

@@ -95,7 +95,7 @@ describe('RecordingDaysTab — day row contract (decision 12)', () => {
 
   it('renders ONE plain-language status via the StatusPill, not the old chip cluster (Task 2.5a)', () => {
     const { container } = renderRealistic((day) => {
-      day.state = { draft: true, validated: false, exported: false };
+      day.state = { ...day.state, draft: true, validated: false, exported: false };
     });
     // The realistic day passes the export gate but is unsaved → the live-readiness word
     // "Ready to export" (scoped to the row; the shared legend lists the same word as reference).
@@ -108,7 +108,7 @@ describe('RecordingDaysTab — day row contract (decision 12)', () => {
     // Scope to the row: the shared legend also lists every status word, so a global text query
     // would match the legend too.
     renderRealistic((day) => {
-      day.state = { draft: false, validated: true, exported: false };
+      day.state = { ...day.state, draft: false, validated: true, exported: false };
     });
     const row = rowFor();
     expect(within(row).getByText('Validated')).toBeInTheDocument();
@@ -121,7 +121,7 @@ describe('RecordingDaysTab — day row contract (decision 12)', () => {
     // A day with no errors but a missing required Overview field is incomplete (not export-ready),
     // so the row reads the draft state — proving the draft branch wires through to the rendered row.
     renderRealistic((day) => {
-      day.state = { draft: true, validated: false, exported: false };
+      day.state = { ...day.state, draft: true, validated: false, exported: false };
       day.session = { ...day.session, session_id: undefined };
     });
     expect(within(rowFor()).getByText('Draft — incomplete')).toBeInTheDocument();
@@ -135,7 +135,7 @@ describe('RecordingDaysTab — day row contract (decision 12)', () => {
     // linkage blocker instead.
     renderRealistic((day, animal) => {
       animal.days = []; // unlink: record exists in the days map but not in the index
-      day.state = { draft: true, validated: false, exported: false };
+      day.state = { ...day.state, draft: true, validated: false, exported: false };
     });
     // "not in day list" appears in the review note and on the date.
     expect(screen.getAllByText(/not in day list/i).length).toBeGreaterThan(0);

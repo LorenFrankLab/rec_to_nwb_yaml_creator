@@ -87,7 +87,7 @@ describe('ExportStep', () => {
 
   it('names the persisted lifecycle status (Validated) on an exportable, saved day', () => {
     const { animal, day } = buildRealisticWorkspace();
-    day.state = { draft: false, validated: true, exported: false };
+    day.state = { ...day.state, draft: false, validated: true, exported: false };
     renderExport(animal, day);
     // The Export step uses the SAME shared vocabulary as Animal Days / Day Validation, so a saved
     // day reads "Validated" here too (never a contradictory phrase).

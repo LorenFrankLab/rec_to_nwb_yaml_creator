@@ -85,8 +85,8 @@ describe('buildValidationSummaryViewModel — parity (all animals)', () => {
 
   it('refines a saved validation as Validated and a download as Exported (status stays ready)', () => {
     const { animal, day } = loadRealistic();
-    const validated = { ...day, state: { draft: false, validated: true, exported: false } };
-    const exported = { ...day, state: { draft: false, validated: true, exported: true } };
+    const validated = { ...day, state: { ...(day.state as Record<string, unknown>), draft: false, validated: true, exported: false } };
+    const exported = { ...day, state: { ...(day.state as Record<string, unknown>), draft: false, validated: true, exported: true } };
 
     const vVm = buildValidationSummaryViewModel(wrap(animal, validated)).days[0];
     expect(vVm.status).toBe('ready');

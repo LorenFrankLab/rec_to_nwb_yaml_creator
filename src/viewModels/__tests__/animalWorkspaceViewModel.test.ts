@@ -103,7 +103,7 @@ describe('buildAnimalWorkspaceViewModel — animal row metadata (Animals home)',
 
   it('rolls a fully-exported day set up to "All exported"', () => {
     const { animal, day } = loadRealistic();
-    const exported = { ...day, state: { draft: false, validated: true, exported: true } };
+    const exported = { ...day, state: { ...(day.state as Record<string, unknown>), draft: false, validated: true, exported: true } };
     const card = buildAnimalWorkspaceViewModel(wrap(animal, exported)).animals[0];
     expect(card.statusRollup).toEqual({ variant: 'exported', label: 'All exported' });
   });
@@ -123,7 +123,7 @@ describe('buildAnimalWorkspaceViewModel — animal row metadata (Animals home)',
       ...day,
       id: `${animal.id}-2023-06-23`,
       date: '2023-06-23',
-      state: { draft: false, validated: true, exported: true },
+      state: { ...(day.state as Record<string, unknown>), draft: false, validated: true, exported: true },
     };
     const animal2: Idable = { ...animal, days: [day.id, day2.id] };
     const ws: Workspace = {
@@ -184,7 +184,7 @@ describe('buildAnimalWorkspaceViewModel — day rows parity', () => {
 
   it('refines a downloaded day as Exported (status stays ready)', () => {
     const { animal, day } = loadRealistic();
-    const exported = { ...day, state: { draft: false, validated: true, exported: true } };
+    const exported = { ...day, state: { ...(day.state as Record<string, unknown>), draft: false, validated: true, exported: true } };
     const vm = buildAnimalWorkspaceViewModel(wrap(animal, exported), animal.id);
     const row = vm.selectedAnimal!.dayRows[0];
     expect(row.status).toBe('ready');

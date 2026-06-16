@@ -344,8 +344,10 @@ export default function DayTab(props: DayTabProps) {
               {dayFsGui.map((fsgui, i) => (
                 <li key={`${fsgui?.name ?? 'fsgui'}-${i}`}>
                   <span className="day-opto-protocol-name">{fsgui?.name || '(unnamed protocol)'}</span>
-                  {fsgui?.task_epochs !== undefined && fsgui?.task_epochs !== '' && (
-                    <span className="day-opto-protocol-epoch"> · epoch {String(fsgui.task_epochs)}</span>
+                  {Array.isArray(fsgui?.epochs) && fsgui.epochs.length > 0 && (
+                    <span className="day-opto-protocol-epoch">
+                      {' '}· epoch{fsgui.epochs.length > 1 ? 's' : ''} {fsgui.epochs.join(', ')}
+                    </span>
                   )}
                 </li>
               ))}

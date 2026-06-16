@@ -262,12 +262,29 @@ describe('getDayWorkflowStatus', () => {
   });
 });
 
+/**
+ * A realistic workspace made video-complete (every task epoch carries a bound video), so the day
+ * reads export-ready WITHOUT relying on the off-export `videolessEpochs` declaration. The lifecycle
+ * tests below replace/delete `day.state` (which is where the declaration lives), so they use this
+ * variant to keep the Phase-4 video-declaration rule satisfied independent of state shape.
+ */
+function videoCompleteRealistic() {
+  const { animal, day } = buildRealisticWorkspace();
+  day.associated_video_files = [
+    ...day.associated_video_files,
+    { name: 'sleep_video_epoch1', camera_id: 0, task_epochs: 1 },
+    { name: 'sleep_video_epoch3', camera_id: 0, task_epochs: 3 },
+    { name: 'sleep_video_epoch5', camera_id: 0, task_epochs: 5 },
+  ];
+  return { animal, day };
+}
+
 describe('getDayRowStatus', () => {
   it('maps a live-ready, unsaved day to "Ready to export" (so the row agrees with the other surfaces)', () => {
     // The realistic fixture day passes the export gate but is not persisted-validated (state.draft).
     // It must read the live-readiness word, NOT "Draft", so Animal Days agrees with Day Validation /
     // Day Export / the Validation Summary (no "Ready to export" vs "Draft" contradiction).
-    const { animal, day } = buildRealisticWorkspace();
+    const { animal, day } = videoCompleteRealistic();
     day.state = { draft: true, validated: false, exported: false };
     const merged = mergeDayMetadata(animal, day);
     expect(getDayRowStatus(animal, day, merged)).toEqual({
@@ -277,7 +294,7 @@ describe('getDayRowStatus', () => {
   });
 
   it('maps an incomplete (no errors, not export-ready) day to "Draft — incomplete"', () => {
-    const { animal, day } = buildRealisticWorkspace();
+    const { animal, day } = videoCompleteRealistic();
     day.state = { draft: true, validated: false, exported: false };
     // Drop a required Overview field → the Overview step is incomplete with NO error-severity issue,
     // so the day is neither blocked nor export-ready → it reads as a draft.
@@ -289,7 +306,7 @@ describe('getDayRowStatus', () => {
   });
 
   it('maps a persisted-validated (not yet exported) day to "Validated" (the saved state, distinct from live "Ready to export")', () => {
-    const { animal, day } = buildRealisticWorkspace();
+    const { animal, day } = videoCompleteRealistic();
     day.state = { draft: false, validated: true, exported: false };
     const merged = mergeDayMetadata(animal, day);
     expect(getDayRowStatus(animal, day, merged)).toEqual({
@@ -299,7 +316,7 @@ describe('getDayRowStatus', () => {
   });
 
   it('maps an exported day to "Exported"', () => {
-    const { animal, day } = buildRealisticWorkspace();
+    const { animal, day } = videoCompleteRealistic();
     day.state = { draft: false, validated: true, exported: true };
     const merged = mergeDayMetadata(animal, day);
     expect(getDayRowStatus(animal, day, merged)).toEqual({
@@ -343,14 +360,14 @@ describe('getDayRowStatus', () => {
   });
 
   it('treats a passing day with no state flags as ready (live readiness, unsaved)', () => {
-    const { animal, day } = buildRealisticWorkspace();
+    const { animal, day } = videoCompleteRealistic();
     delete day.state;
     const merged = mergeDayMetadata(animal, day);
     expect(getDayRowStatus(animal, day, merged).variant).toBe('ready');
   });
 
   it('tolerates a malformed (non-object) state, ignoring it (a passing day still reads ready)', () => {
-    const { animal, day } = buildRealisticWorkspace();
+    const { animal, day } = videoCompleteRealistic();
     day.state = 'corrupt';
     const merged = mergeDayMetadata(animal, day);
     expect(getDayRowStatus(animal, day, merged).variant).toBe('ready');

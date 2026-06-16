@@ -507,7 +507,7 @@ describe('buildDayEditorViewModel — issues / repair / export', () => {
   it('a saved-validated exportable day reads the validated lifecycle + readiness sentence', () => {
     const { animal, day } = loadRealistic();
     const validated = clone(day);
-    validated.state = { validated: true };
+    validated.state = { ...(validated.state as Record<string, unknown>), validated: true };
     const vm = buildDayEditorViewModel(wrap(animal, validated), validated.id);
     expect(vm.export.open).toBe(true);
     expect(vm.export.lifecycle).toBe('validated');
@@ -518,7 +518,7 @@ describe('buildDayEditorViewModel — issues / repair / export', () => {
   it('a downloaded-exported day reads the exported lifecycle + readiness sentence', () => {
     const { animal, day } = loadRealistic();
     const exported = clone(day);
-    exported.state = { exported: true };
+    exported.state = { ...(exported.state as Record<string, unknown>), exported: true };
     const vm = buildDayEditorViewModel(wrap(animal, exported), exported.id);
     expect(vm.export.lifecycle).toBe('exported');
     expect(vm.export.lifecycleStatusLabel).toBe('Exported');
