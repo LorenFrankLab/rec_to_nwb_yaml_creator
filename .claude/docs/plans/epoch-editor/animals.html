@@ -38,6 +38,7 @@
   th{font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--faint);font-weight:600}
   tbody tr{cursor:pointer}tbody tr:hover{background:#fafbfc}tbody tr:last-child td{border-bottom:0}
   td.name{font-weight:600}
+  td.name a{color:inherit;text-decoration:none}td.name a:hover{text-decoration:underline;color:var(--accent)}
   td.name .opto{font-size:11px;font-weight:600;color:var(--opto);background:var(--optobg);border:1px solid var(--opto-b);border-radius:999px;padding:1px 7px;margin-left:7px}
   td.num{font-variant-numeric:tabular-nums;color:#3c444d}
   .muted{color:var(--muted)}
@@ -46,6 +47,7 @@
   .pill.ok{background:var(--okbg);color:var(--ok)}.pill.ok .d{background:var(--ok)}
   .pill.warn{background:var(--warnbg);color:var(--warn)}.pill.warn .d{background:var(--warn)}
   .pill.draft{background:var(--draftbg);color:var(--draft)}.pill.draft .d{background:var(--draft)}
+  .pill.ready{background:#eef4fb;color:#2f5e8c}.pill.ready .d{background:var(--accent)}
   .chev{color:var(--faint);text-align:right}
   .loadbanner{display:flex;align-items:center;gap:8px;background:var(--warnbg);border:1px solid #f0d79a;border-radius:var(--radius);padding:10px 14px;margin-bottom:16px;font-size:13px;color:#7a4f06}
   .loadbanner b{color:#5e3d04}
@@ -98,27 +100,27 @@
         <thead><tr><th>Animal</th><th>Genotype</th><th>Species</th><th>Days</th><th>Last recording</th><th>Status</th><th></th></tr></thead>
         <tbody>
           <tr onclick="location.href='animal-page.html'">
-            <td class="name">Laurent <span class="opto">opto</span></td>
+            <td class="name"><a href="animal-page.html">Laurent</a> <span class="opto">opto</span></td>
             <td>PV-Cre</td><td class="muted">Rattus norvegicus</td><td class="num">10</td><td class="muted">2026-05-14</td>
-            <td><span class="pill draft"><span class="d"></span>1 draft</span></td><td class="chev">›</td>
+            <td><span class="pill ready" title="1 day valid but not yet exported"><span class="d"></span>1 ready</span></td><td class="chev">›</td>
           </tr>
           <tr>
-            <td class="name">jasper</td>
+            <td class="name"><a href="animal-page.html">jasper</a></td>
             <td>Wild Type</td><td class="muted">Rattus norvegicus</td><td class="num">14</td><td class="muted">2026-05-08</td>
             <td><span class="pill warn"><span class="d"></span>1 needs review</span></td><td class="chev">›</td>
           </tr>
           <tr>
-            <td class="name">Emmett <span class="opto">opto</span></td>
+            <td class="name"><a href="animal-page.html">Emmett</a> <span class="opto">opto</span></td>
             <td>PV-Cre</td><td class="muted">Rattus norvegicus</td><td class="num">16</td><td class="muted">2026-02-04</td>
             <td><span class="pill ok"><span class="d"></span>All exported</span></td><td class="chev">›</td>
           </tr>
           <tr>
-            <td class="name">SC68</td>
+            <td class="name"><a href="animal-page.html">SC68</a></td>
             <td>Wild Type</td><td class="muted">Rattus norvegicus</td><td class="num">13</td><td class="muted">2024-04-29</td>
             <td><span class="pill ok"><span class="d"></span>All exported</span></td><td class="chev">›</td>
           </tr>
           <tr>
-            <td class="name">Seth <span class="opto">opto</span></td>
+            <td class="name"><a href="animal-page.html">Seth</a> <span class="opto">opto</span></td>
             <td>PV-Cre</td><td class="muted">Rattus norvegicus</td><td class="num">8</td><td class="muted">2026-01-23</td>
             <td><span class="pill ok"><span class="d"></span>All exported</span></td><td class="chev">›</td>
           </tr>

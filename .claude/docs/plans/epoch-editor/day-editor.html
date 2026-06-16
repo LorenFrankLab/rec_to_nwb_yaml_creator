@@ -26,6 +26,7 @@
   .chip.opto{background:var(--optobg);border-color:var(--opto-b);color:var(--opto)}
   .pill{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;border-radius:999px;padding:3px 10px}
   .pill .d{width:7px;height:7px;border-radius:50%}.pill.draft{background:#eef1f4;color:#5b6470}.pill.draft .d{background:#5b6470}
+  .pill.ready{background:#eef4fb;color:#2f5e8c}.pill.ready .d{background:#2f6fae}
   .btn{font:inherit;border:1px solid var(--line);background:#fff;border-radius:8px;padding:8px 13px;cursor:pointer;color:var(--ink);font-size:13px}
   .btn:hover{border-color:var(--accent);color:var(--accent)}
   .btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}.btn.primary:hover{background:var(--accent-d)}
@@ -41,7 +42,10 @@
   table{width:100%;border-collapse:collapse}
   th,td{text-align:left;padding:10px 14px;border-bottom:1px solid var(--line2);vertical-align:top;font-size:13.5px}
   th{font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--faint);font-weight:600}
-  td.exp{width:20px;color:var(--faint);cursor:pointer;padding-top:11px;user-select:none}.td.exp:hover{color:var(--accent)}
+  td.exp{width:36px;color:var(--faint);cursor:pointer;padding:7px 0 0 8px;user-select:none}
+  td.exp .car{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:6px;font-size:13px}
+  tr:hover td.exp .car,td.exp:hover .car{background:#eef1f4;color:var(--accent)}
+  td.tcell{cursor:pointer}
   td.n{font-variant-numeric:tabular-nums;color:var(--faint);width:26px;padding-top:11px}
   .tag{display:inline-block;padding:2px 9px;border-radius:6px;font-size:12px;font-weight:600;border:1px solid;background:var(--sleep);border-color:var(--sleep-b);color:var(--sleep-ink)}
   .cam{font-size:12px;border:1px solid var(--line);background:#fff;border-radius:6px;padding:2px 8px;color:#3c444d}
@@ -64,6 +68,13 @@
   .vidcam{font-size:12px;color:var(--muted);width:74px}
   .linkbtn{font:inherit;font-size:12px;color:var(--muted);background:none;border:0;cursor:pointer;text-decoration:underline}
   .derived-note{font-size:11.5px;color:var(--faint)}
+  /* generated (derived) value treatment — read-only by default, explicit Override */
+  .gen{font-family:ui-monospace,Menlo,monospace;font-size:12px;color:#3c444d;background:#f4f6f8;border:1px solid var(--line2);border-radius:6px;padding:4px 9px}
+  .gentag{font-size:11px;color:var(--ok);background:#eef6f0;border:1px solid #cfe8d8;border-radius:999px;padding:1px 7px}
+  .override{font:inherit;font-size:12px;color:var(--accent);background:none;border:0;cursor:pointer;text-decoration:underline;padding:0}.override:hover{color:var(--accent-d)}
+  /* field-level repair highlight (blocking link → scroll + expand + flash the exact control) */
+  @keyframes flashring{0%{box-shadow:0 0 0 3px rgba(47,111,174,.5)}100%{box-shadow:0 0 0 3px rgba(47,111,174,0)}}
+  .flash{animation:flashring 1.7s ease-out 1;border-radius:8px}
   /* day */
   .row{display:flex;gap:14px;margin-bottom:14px;align-items:center}.lbl{width:170px;color:var(--muted);font-size:13px}
   input.w{width:90px}.unit{color:var(--muted);margin-left:6px}
@@ -155,7 +166,7 @@
     </div>
     <div class="sub">
       <span class="chip">Configuration v1</span><span class="chip opto">◑ Optogenetics</span>
-      <span class="chip carry">↩ carried from 2026-05-13</span><span class="pill draft"><span class="d"></span>Draft</span>
+      <span class="chip carry">↩ carried from 2026-05-13</span><span class="pill ready" title="Valid — passes all checks, not yet exported"><span class="d"></span>Ready</span>
     </div>
 
     <div class="scope">
@@ -175,8 +186,8 @@
         <button class="demo" onclick="toggleReady()">Show ready state</button>
       </div>
       <ul>
-        <li>Epoch 4 has no video file <a href="#" onclick="show('ep',document.querySelectorAll('.tab')[1]);return false">Go to Epoch 4 →</a></li>
-        <li>Probe 2 location is empty <a href="animal-page.html">Go to Setup →</a></li>
+        <li>Epoch 1 has no video file <a href="#" onclick="gotoEpoch('e1','vid-e1');return false">Fix in Epoch 1 →</a></li>
+        <li>Probe 2 location is empty <a href="animal-page.html">Fix in Setup →</a></li>
       </ul>
     </div>
 
@@ -197,23 +208,23 @@
         <table>
           <thead><tr><th></th><th>#</th><th>Task</th><th>Camera(s)</th><th>Statescript</th><th>Video(s)</th><th class="optohdr">Opto (mW)</th><th class="optohdr">Pulse (ms)</th><th>Status</th></tr></thead>
           <tbody>
-            <tr><td class="exp" onclick="t('e1')">▸</td><td class="n">1</td><td><span class="tag">Sleep · s1</span></td><td><span class="cam">sleep_camera</span></td><td class="file">…_01_s1.stateScriptLog</td><td class="file">…_01_s1.1.h264</td><td><input class="opto-in" value="0"></td><td><input class="opto-in" value="2"></td><td class="st">Complete</td></tr>
+            <tr><td class="exp" onclick="t('e1')"><span class="car">▸</span></td><td class="n">1</td><td class="tcell" onclick="t('e1')"><span class="tag">Sleep · s1</span></td><td><span class="cam">sleep_camera</span></td><td class="file">…_01_s1.stateScriptLog</td><td class="file">…_01_s1.1.h264</td><td><input class="opto-in" value="0"></td><td><input class="opto-in" value="2"></td><td class="st">Complete</td></tr>
             <tr class="detail" id="e1" style="display:none"><td colspan="9"><div class="editor">
               <label>Task</label><div class="field"><select><option>Sleep</option><option>W-track</option><option>Rest box</option></select><button class="addbtn">＋ new task type</button><span class="derived-note">tag derives: s1</span></div>
               <label>Cameras</label><div class="field"><span class="cam">sleep_camera ✕</span><button class="addbtn">＋ add camera</button></div>
-              <label>Statescript</label><div class="field"><input class="path" value="/stelmo/denisse/Laurent/20260514/20260514_Laurent_01_s1.stateScriptLog"><span class="derived-note">derived ✎</span></div>
-              <label>Video(s)</label><div class="field"><div style="width:100%">
-                <div class="vidrow"><span class="vidcam">sleep_camera</span><input class="fname" value="20260514_Laurent_01_s1.1.h264"><button class="linkbtn">no video</button></div>
+              <label>Statescript</label><div class="field"><span class="gen">…/20260514_Laurent_01_s1.stateScriptLog</span><span class="gentag">generated</span><button class="override">Override path</button></div>
+              <label>Video(s)</label><div class="field"><div style="width:100%" id="vid-e1">
+                <div class="vidrow"><span class="vidcam">sleep_camera</span><span class="gen">20260514_Laurent_01_s1.1.h264</span><span class="gentag">generated</span><button class="override">Rename</button><button class="linkbtn">no video</button></div>
                 <button class="addbtn">＋ video</button></div></div>
               <label>Opto</label><div class="field"><input class="opto-in" value="0"> mW &nbsp; pulse <input class="opto-in" value="2"> ms <span class="derived-note">protocol (laser DIO, FSGui file) set on the Day tab</span></div>
               <label>Environment</label><div class="field"><input value="sleep-box" style="width:180px"></div>
             </div></td></tr>
 
-            <tr><td class="exp" onclick="t('e2')">▸</td><td class="n">2</td><td><span class="tag">Sleep · s2</span></td><td><span class="cam">sleep_camera</span></td><td class="file">…_02_s2.stateScriptLog</td><td class="file">…_02_s2.1.h264</td><td><input class="opto-in" value="4"></td><td><input class="opto-in" value="2"></td><td class="st">Complete</td></tr>
-            <tr><td class="exp" onclick="t('e3')">▸</td><td class="n">3</td><td><span class="tag">Sleep · s3</span></td><td><span class="cam">sleep_camera</span></td><td class="file">…_03_s3.stateScriptLog</td><td class="file">…_03_s3.1.h264</td><td><input class="opto-in" value="7"></td><td><input class="opto-in" value="2"></td><td class="st">Complete</td></tr>
-            <tr><td class="exp" onclick="t('e4')">▸</td><td class="n">4</td><td><span class="tag">Sleep · s4</span></td><td><span class="cam">sleep_camera</span></td><td class="file">…_04_s4.stateScriptLog</td><td class="file">…_04_s4.1.h264</td><td><input class="opto-in" value="12"></td><td><input class="opto-in" value="2"></td><td class="st">Complete</td></tr>
-            <tr><td class="exp" onclick="t('e5')">▸</td><td class="n">5</td><td><span class="tag">Sleep · s5</span></td><td><span class="cam">sleep_camera</span></td><td class="file">…_05_s5.stateScriptLog</td><td class="file">…_05_s5.1.h264</td><td><input class="opto-in" value="15"></td><td><input class="opto-in" value="2"></td><td class="st">Complete</td></tr>
-            <tr><td class="exp" onclick="t('e6')">▸</td><td class="n">6</td><td><span class="tag">Sleep · s6</span></td><td><span class="cam">sleep_camera</span></td><td class="file">…_06_s6.stateScriptLog</td><td class="file">…_06_s6.1.h264</td><td><input class="opto-in" value="20"></td><td><input class="opto-in" value="0"></td><td class="st">Complete</td></tr>
+            <tr><td class="exp" onclick="t('e2')"><span class="car">▸</span></td><td class="n">2</td><td class="tcell" onclick="t('e2')"><span class="tag">Sleep · s2</span></td><td><span class="cam">sleep_camera</span></td><td class="file">…_02_s2.stateScriptLog</td><td class="file">…_02_s2.1.h264</td><td><input class="opto-in" value="4"></td><td><input class="opto-in" value="2"></td><td class="st">Complete</td></tr>
+            <tr><td class="exp" onclick="t('e3')"><span class="car">▸</span></td><td class="n">3</td><td class="tcell" onclick="t('e3')"><span class="tag">Sleep · s3</span></td><td><span class="cam">sleep_camera</span></td><td class="file">…_03_s3.stateScriptLog</td><td class="file">…_03_s3.1.h264</td><td><input class="opto-in" value="7"></td><td><input class="opto-in" value="2"></td><td class="st">Complete</td></tr>
+            <tr><td class="exp" onclick="t('e4')"><span class="car">▸</span></td><td class="n">4</td><td class="tcell" onclick="t('e4')"><span class="tag">Sleep · s4</span></td><td><span class="cam">sleep_camera</span></td><td class="file">…_04_s4.stateScriptLog</td><td class="file">…_04_s4.1.h264</td><td><input class="opto-in" value="12"></td><td><input class="opto-in" value="2"></td><td class="st">Complete</td></tr>
+            <tr><td class="exp" onclick="t('e5')"><span class="car">▸</span></td><td class="n">5</td><td class="tcell" onclick="t('e5')"><span class="tag">Sleep · s5</span></td><td><span class="cam">sleep_camera</span></td><td class="file">…_05_s5.stateScriptLog</td><td class="file">…_05_s5.1.h264</td><td><input class="opto-in" value="15"></td><td><input class="opto-in" value="2"></td><td class="st">Complete</td></tr>
+            <tr><td class="exp" onclick="t('e6')"><span class="car">▸</span></td><td class="n">6</td><td class="tcell" onclick="t('e6')"><span class="tag">Sleep · s6</span></td><td><span class="cam">sleep_camera</span></td><td class="file">…_06_s6.stateScriptLog</td><td class="file">…_06_s6.1.h264</td><td><input class="opto-in" value="20"></td><td><input class="opto-in" value="0"></td><td class="st">Complete</td></tr>
           </tbody>
         </table>
         <div class="foot"><button class="btn">＋ Add epoch</button><span class="small" style="padding:7px 0 0">Adding an epoch asks for its task; cameras, files, and tags then derive.</span></div>
@@ -319,6 +330,13 @@
   function toggleReady(){var r=document.getElementById('ready'),b=document.getElementById('blocking');
     var blocking=b.style.display!=='none';
     r.style.display=blocking?'flex':'none';b.style.display=blocking?'none':'block';}
+  // a blocking link is field-level: switch to Epochs, expand the row, scroll to + flash the exact control
+  function gotoEpoch(rowId,fieldId){
+    show('ep',document.querySelectorAll('.tab')[1]);
+    var row=document.getElementById(rowId);if(row)row.style.display='table-row';
+    var field=document.getElementById(fieldId)||row;
+    if(field){field.scrollIntoView({behavior:'smooth',block:'center'});
+      field.classList.remove('flash');void field.offsetWidth;field.classList.add('flash');}}
   (function(){var bad={47:1,103:1},host=document.getElementById('probe0'),html='';
     for(var s=0;s<4;s++){html+='<div class="shank"><h5>shank '+(s+1)+'</h5><div class="chgrid">';
       for(var i=0;i<32;i++){var id=s*32+i;html+='<div class="ch'+(bad[id]?' bad carried':'')+'">'+id+'</div>';}

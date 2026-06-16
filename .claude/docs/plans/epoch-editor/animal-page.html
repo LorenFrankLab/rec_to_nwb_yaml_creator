@@ -49,6 +49,8 @@
   .pill .d{width:7px;height:7px;border-radius:50%}
   .pill.ok{background:var(--okbg);color:var(--ok)}.pill.ok .d{background:var(--ok)}
   .pill.draft{background:var(--draftbg);color:var(--draft)}.pill.draft .d{background:var(--draft)}
+  .pill.ready{background:#eef4fb;color:#2f5e8c}.pill.ready .d{background:var(--accent)}
+  td.date a{color:inherit;text-decoration:none}td.date a:hover{text-decoration:underline;color:var(--accent)}
   .chev{color:var(--faint);text-align:right}
   /* multi-select + bulk export, undo toast (≤~60 days/animal: no search/sort/pagination needed) */
   th.cbx,td.cbx{width:30px;padding-right:0}
@@ -62,7 +64,8 @@
   /* setup */
   .scard{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:15px 17px;margin-bottom:14px}
   .scard h3{margin:0 0 12px;font-size:14px;display:flex;justify-content:space-between;align-items:center}
-  .scard h3 .edit{font-size:12px;color:var(--accent);font-weight:500;cursor:pointer}
+  .scard h3 .edit{font-size:12px;color:var(--accent);font-weight:500;cursor:pointer;border:1px solid var(--line);border-radius:6px;padding:3px 9px;white-space:nowrap}
+  .scard h3 .edit:hover{border-color:var(--accent);background:#f4f8fc}
   .scard h3 .ha{display:inline-flex;align-items:center;gap:10px}
   .blast{font-size:11px;color:var(--warn);background:var(--warnbg);border:1px solid #ecd9ab;border-radius:999px;padding:1px 8px;font-weight:500;cursor:default}
   .kv{display:flex;justify-content:space-between;padding:5px 0;font-size:13px;border-bottom:1px solid var(--line2)}
@@ -190,14 +193,15 @@
         <table>
           <thead><tr><th class="cbx"><input type="checkbox" onclick="selAll(this)"></th><th>Date</th><th>Weight</th><th>Epochs</th><th>Status</th><th></th></tr></thead>
           <tbody>
-            <tr onclick="location.href='day-editor.html'"><td class="cbx" onclick="event.stopPropagation()"><input type="checkbox" class="rowcb" onclick="selChg()"></td><td class="date">2026-05-07</td><td class="num">460 g</td><td class="num">6</td><td><span class="pill ok"><span class="d"></span>Exported</span></td><td class="chev">›</td></tr>
-            <tr onclick="location.href='day-editor.html'"><td class="cbx" onclick="event.stopPropagation()"><input type="checkbox" class="rowcb" onclick="selChg()"></td><td class="date">2026-05-13</td><td class="num">462 g</td><td class="num">6</td><td><span class="pill ok"><span class="d"></span>Exported</span></td><td class="chev">›</td></tr>
-            <tr onclick="location.href='day-editor.html'"><td class="cbx" onclick="event.stopPropagation()"><input type="checkbox" class="rowcb" onclick="selChg()"></td><td class="date">2026-05-14</td><td class="num">463 g</td><td class="num">6</td><td><span class="pill draft"><span class="d"></span>Draft</span></td><td class="chev">›</td></tr>
+            <tr onclick="location.href='day-editor.html'"><td class="cbx" onclick="event.stopPropagation()"><input type="checkbox" class="rowcb" onclick="selChg()"></td><td class="date"><a href="day-editor.html">2026-05-07</a></td><td class="num">460 g</td><td class="num">6</td><td><span class="pill ok"><span class="d"></span>Exported</span></td><td class="chev">›</td></tr>
+            <tr onclick="location.href='day-editor.html'"><td class="cbx" onclick="event.stopPropagation()"><input type="checkbox" class="rowcb" onclick="selChg()"></td><td class="date"><a href="day-editor.html">2026-05-13</a></td><td class="num">462 g</td><td class="num">6</td><td><span class="pill ok"><span class="d"></span>Exported</span></td><td class="chev">›</td></tr>
+            <tr onclick="location.href='day-editor.html'"><td class="cbx" onclick="event.stopPropagation()"><input type="checkbox" class="rowcb" onclick="selChg()"></td><td class="date"><a href="day-editor.html">2026-05-14</a></td><td class="num">463 g</td><td class="num">6</td><td><span class="pill ready" title="Valid — passes all checks, not yet exported"><span class="d"></span>Ready</span></td><td class="chev">›</td></tr>
           </tbody>
         </table>
         <div class="daylegend">
           <span class="lg"><span class="dt" style="background:var(--ok)"></span>Exported</span>
-          <span class="lg"><span class="dt" style="background:var(--draft)"></span>Draft — not yet exported</span>
+          <span class="lg"><span class="dt" style="background:var(--accent)"></span>Ready — valid, not yet exported</span>
+          <span class="lg"><span class="dt" style="background:var(--draft)"></span>Draft — incomplete</span>
           <span class="lg"><span class="dt" style="background:var(--warn)"></span>Needs review — has issues</span>
         </div>
       </div>

@@ -84,15 +84,36 @@ A reviewer validated the IA + scope model as the core win and raised six priorit
 | Scope | States | Where |
 |---|---|---|
 | **Epoch completeness** | `Complete` / `Incomplete` | epoch-grid row Status |
-| **Day lifecycle** | `Draft` → `Exported`, plus `Needs review` (blocking issues) | day header pill · animal Days table |
+| **Day lifecycle** | `Draft` (incomplete) → `Ready` (valid, not exported) → `Exported`; `Needs review` (blocking issues) | day header pill · animal Days table |
 | **Export readiness** | `Ready to export` / `N issues block export` | day-editor readiness line (a *check*, not a stored status) |
 | **Export history** | `Exported` (optional `· stale` if inputs changed since) | export-preview / days table |
 
-**Extended acceptance criteria (implementation, not mockups):** the epoch-grid **row-expand must be a
-large, keyboard-operable hit target** (the `▸` caret is too small) and **derived filenames must be visually
-distinct from editable fields**; **status labels carry their scope** (epoch vs day vs export) so readiness
-isn't inferred from the wrong one. **Verified now:** no horizontal overflow at a **1280×800 (13″)** viewport
-(content caps at 1040 px).
+`Draft` now means **only** genuinely incomplete (reserved per review). A valid-but-unexported day is
+`Ready` — the same concept the readiness line surfaces (`Ready to export`), shown as a persistent day
+state so it never collides with `Draft` (the original "Draft + Ready to export" contradiction).
+
+## Second UX review — applied (2026-06-16)
+
+A second pass called the design "close"; resolved its remaining interaction-language issues in the mocks:
+
+- **`Draft` vs `Ready to export` no longer collide** — the valid-but-unexported day is now `Ready`
+  (blue pill), and `Draft` is reserved for incomplete days. Aligned across day header, animal Days table
+  (+ legend), and the Animals home rollup ("1 ready"). See the status vocabulary above.
+- **Blocking links are field-level** — "Fix in Epoch 1 →" switches to Epochs, **expands the row, scrolls
+  to, and flashes the exact control** (`gotoEpoch()`); the cross-page Setup link is the spec for the same
+  behavior across pages.
+- **Larger epoch-expand target** — the tiny `▸` became a 24 px caret button **and** the task cell is now a
+  click target for expansion (bigger hit area).
+- **Derived vs editable files disambiguated** — statescript/video render as a read-only **generated** value
+  (grey chip + "generated" tag) with an explicit **Override / Rename** action, not an editable-looking input.
+- **Accessible row navigation** — animal/day rows now contain a **real `<a>` link** on the name/date
+  (not row `onclick` alone), important alongside the day-row checkboxes.
+- **Setup `Edit` reads as a control** — bordered button-style affordance next to the blast-radius chip.
+
+**Still implementation-only acceptance criteria:** full **keyboard operation + focus management** for the
+epoch / channel / DIO grids (the mock shows mouse affordances; axe-verify); **cross-page field-level focus**
+(the Setup blocking link should land on the exact field, like the in-page epoch case). **Verified now:** no
+horizontal overflow at **1280×800 (13″)** (content caps at 1040 px).
 
 ## Must reuse the existing correctness substrate
 
