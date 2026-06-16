@@ -3,7 +3,7 @@
 [← back to PLAN.md](PLAN.md) · [overview](overview.md) · [shared-contracts](shared-contracts.md)
 
 Reshape the day's Export step into the **export-preview** screen: the readiness gate (issue-driven,
-blocking issues field-linked, Download disabled while blocked), the derived filename, a read-only YAML
+blocking issues field-linked, **Download/Copy disabled** while blocked — both produce the YAML), the derived filename, a read-only YAML
 preview, Download/Copy with success toasts, and the **batch** "export all days" result (exported N · skipped
 M, each skipped day linked to its issue). Retires the old `ExportStep`/`ValidationStep`. Design:
 [export-preview.html](export-preview.html).
@@ -53,6 +53,6 @@ the blocked gate + disabled Download; a multi-day animal with one invalid day (b
 ## Review
 
 Dispatch `code-reviewer`. Confirm: preview body is the real `encodeYaml(mergeDayMetadata)` (not an
-approximation); gate reads `validateDay`; Download disabled strictly from the gate; batch reuses the shared
+approximation); gate reads `validateDay`; **both Download and Copy** disabled strictly from the gate (no Copy bypass); batch reuses the shared
 exporter (no second path); `ExportStep`/`ValidationStep` removed; `npx vitest run baselines` byte-identical;
 lint/typecheck/e2e green.

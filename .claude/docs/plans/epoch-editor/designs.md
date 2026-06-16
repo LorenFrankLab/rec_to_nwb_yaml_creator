@@ -50,10 +50,17 @@ buildEpochGrid(animal, day):
   that task's epochs in date/epoch order. Tag derivation feeds the *filename* derivation (below) and the
   displayed tag; it is display/derivation only — never stored as a separate field.
 - Uniqueness badge reuses `duplicateTaskEpochs(tasks)` (`src/validation/taskEpochs.ts:19`).
-- **Collapsed display = state, not names.** The grid's Statescript/Video cells render a STATE label
-  (`Generated` / `Manual` / `Missing` / `No video` / `N video`) derived from `isDerivedStatescript`/
-  `isDerivedVideo` + the video 3-state — the actual filenames live only in the drill-in, so the grid stays
-  scannable and never asks the user to parse paths in prime space.
+- **Collapsed display = state, not names** — and each file column shows its *most informative* axis:
+  - **Statescript → naming state** (`Generated` / `Manual`, from `isDerivedStatescript`). A statescript is
+    expected for **every** epoch, so presence is uninteresting; what matters is whether the name follows the
+    convention or was overridden. An Override/Revert flips this cell live.
+  - **Video → presence state** (`N video` / `No video` / `Missing`, from the video 3-state). A video is
+    **optional**, so the high-value grid question is "is there one (and is it intended)?" — not whether its
+    name is auto vs manual. A manual video *rename* therefore does **not** change the collapsed label
+    (`1 video` stays `1 video`); the generated/manual naming detail is a drill-in concern only. This
+    asymmetry is intentional, not a missed wire.
+  The actual filenames live only in the drill-in, so the grid stays scannable and never asks the user to
+  parse paths in prime space.
 
 **Write-back (edit):** every edit maps to an `updateDay(dayId, { … })` patch over the *same arrays*.
 

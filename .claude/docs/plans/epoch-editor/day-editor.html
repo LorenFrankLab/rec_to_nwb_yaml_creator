@@ -298,6 +298,9 @@
                   <label>Data folder</label><div class="field"><span class="gen">/stelmo/denisse/Laurent/20260514/</span><span class="derived-note">your path · set on the Day tab · carried forward</span></div>
                   <label>Statescript</label><div class="field"><span class="gentag">name generated</span><span class="gen" data-gen="20260514_Laurent_01_s1.stateScriptLog">20260514_Laurent_01_s1.stateScriptLog</span><button class="override" data-orig="Override name" data-cell="scell-e1" onclick="overrideFile(this)">Override name</button><span class="derived-note" style="display:none">manual — this epoch only</span></div>
                   <label>Video</label><div class="field" id="vid-e1">
+                    <!-- video Rename has no data-cell on purpose: the collapsed Video column is PRESENCE
+                         (1 video / No video / Missing), not naming — a manual rename is a drill-in detail.
+                         Statescript's column shows Generated/Manual because it is always present. -->
                     <div class="vidrow" id="vidrow-e1">
                       <span class="vid-present"><span class="gentag">name generated</span><span class="gen" data-gen="20260514_Laurent_01_s1.1.h264">20260514_Laurent_01_s1.1.h264</span><span class="vidcam">· sleep_camera</span><button class="override" data-orig="Rename" onclick="overrideFile(this)">Rename</button><button class="exception-action" onclick="vidState('e1','absent')">No video</button></span>
                       <span class="vid-missing" style="display:none"><span class="vid-problem">⚠ No video file linked</span><span class="derived-note">expected for this epoch — add the file, or mark it as no-video</span><button class="addbtn" onclick="vidState('e1','present')">＋ Add video</button><button class="exception-action" onclick="vidState('e1','absent')">Mark “no video”</button></span>
