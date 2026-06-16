@@ -24,10 +24,10 @@ M, each skipped day linked to its issue). Retires the old `ExportStep`/`Validati
 ## Tasks
 
 - New export-preview surface (route reuse: the day's Export action / `#/day/:id` export, or a small `?export=1` panel — match the existing entry). Header: "Export — {date}" + breadcrumb.
-- Readiness gate: compute `issues = validateDay(day, mergeDayMetadata(animal, day), animal, animalDays)`. Quiet "✓ Ready to export" when no errors; loud "N issues block export" with each blocking issue field-linked (`repairRouting`) when present. **Download disabled while blocking** (`disabledReason` from the gate).
+- Readiness gate: compute `issues = validateDay(day, mergeDayMetadata(animal, day), animal, animalDays)`. Quiet "✓ Ready to export" when no errors; loud "N issues block export" with each blocking issue field-linked (`repairRouting`) when present. **BOTH Download AND Copy disabled while blocking** — both produce the YAML, so Copy is not an escape hatch around the gate (`disabledReason` from the gate on each).
 - Filename: `formatDeterministicFilename` over the merged model (verify the model carries `EXPERIMENT_DATE_in_format_mmddYYYY` + `subject.subject_id`, or build the filename from `day.experimentDate` + subject id the way `ExportStep` does today — read its call site).
 - YAML preview: render `encodeYaml(mergeDayMetadata(animal, day))` read-only (the real bytes). Download → `downloadYamlFile(filename, yaml)` + success toast "✓ Downloaded {filename}". Copy → clipboard + "✓ YAML copied".
-- Batch: "Export all {N} days" → reuse `useValidationSummaryActions` "Export Valid Only" path; render the result panel "Exported N · Skipped M", each skipped day linked to its blocking issue (`getDayRowStatus` for the per-day reason). Same parity/skip semantics as today — one exporter.
+- Batch: "Export all {N} days" → reuse `useValidationSummaryActions` "Export Valid Only" path; render the result panel "Exported N · Skipped M", each skipped day linked to its blocking issue **via the field-level repair route (`repairRouting`) — the same "Fix in …" target as the single-day gate, not a bare day link**. Same parity/skip semantics as today — one exporter.
 - Retire `ExportStep.tsx` + `ValidationStep.tsx` (the readiness bar on the Day frame, Phase 3, replaced the inline Validation step's role; this screen replaces Export). Name the removals.
 - CHANGELOG: export-preview screen + batch result + success feedback.
 
@@ -40,9 +40,9 @@ M, each skipped day linked to its issue). Retires the old `ExportStep`/`Validati
 
 | Test | Asserts |
 | --- | --- |
-| `ExportPreview.test.tsx` | clean day → quiet "Ready to export" + enabled Download; blocking day → loud field-linked issues + **disabled Download**; Copy/Download fire success toasts |
+| `ExportPreview.test.tsx` | clean day → quiet "Ready to export" + enabled Download/Copy; blocking day → loud field-linked issues + **both Download AND Copy disabled** (no Copy bypass); Copy/Download fire success toasts when clean |
 | `ExportPreview.preview.test.tsx` | preview body === `encodeYaml(mergeDayMetadata(animal, day))` (the real bytes); filename === the existing `ExportStep` filename for the golden day |
-| `batchResult.test.tsx` | batch reuses `useValidationSummaryActions`; result shows exported/skipped counts; skipped days link to their issue |
+| `batchResult.test.tsx` | batch reuses `useValidationSummaryActions`; result shows exported/skipped counts; each skipped day links to its issue via `repairRouting` (field-level, same target as the single-day gate) |
 | `baselines` | downloaded YAML byte-identical to the golden fixture; batch export of a valid day === single export |
 
 ## Fixtures

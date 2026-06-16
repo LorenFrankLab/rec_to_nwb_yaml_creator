@@ -126,7 +126,7 @@
 
     <div class="actions">
       <button class="btn primary" id="dl-btn" onclick="showToast('download')">⤓ Download 20260514_Laurent_metadata.yml</button>
-      <button class="btn" onclick="showToast('copy')">Copy</button>
+      <button class="btn" id="copy-btn" onclick="showToast('copy')" title="Both Download and Copy produce the file — both are gated when export is blocked">Copy</button>
       <span class="spacer"></span>
       <button class="btn" onclick="location.href='day-editor.html'">← Back to day</button>
     </div>
@@ -137,7 +137,7 @@
       <div class="bh">✓ Exported 2 of 3 days to Downloads · 1 skipped</div>
       <div class="br"><span class="fn">20260507_Laurent_metadata.yml</span></div>
       <div class="br"><span class="fn">20260513_Laurent_metadata.yml</span></div>
-      <div class="br skip">⤫ 2026-05-14 skipped — Epoch 1 has no video file <a href="day-editor.html">Fix &amp; export →</a></div>
+      <div class="br skip">⤫ 2026-05-14 skipped — Epoch 1 has no video file <a href="day-editor.html#fix-e1-video">Fix &amp; export →</a></div>
     </div>
   </div>
 
@@ -156,11 +156,14 @@
   }
   function toggleBlocked(){
     var r=document.getElementById('ready'), b=document.getElementById('blocked'),
-        dl=document.getElementById('dl-btn'), note=document.getElementById('gatenote');
+        dl=document.getElementById('dl-btn'), copy=document.getElementById('copy-btn'),
+        note=document.getElementById('gatenote');
     var showingBlocked = b.style.display==='block';
     b.style.display = showingBlocked ? 'none' : 'block';
     r.style.display = showingBlocked ? 'flex' : 'none';
-    dl.disabled = !showingBlocked;                 // Download disabled while blocked
+    // BOTH Download and Copy produce the YAML, so BOTH are gated while blocking — Copy is not an escape hatch
+    dl.disabled = !showingBlocked;
+    copy.disabled = !showingBlocked;
     note.style.display = showingBlocked ? 'block' : 'none';
   }
   function showBatch(){ document.getElementById('batchresult').style.display='block'; }

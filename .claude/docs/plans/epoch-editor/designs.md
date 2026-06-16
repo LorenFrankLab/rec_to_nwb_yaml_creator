@@ -50,6 +50,10 @@ buildEpochGrid(animal, day):
   that task's epochs in date/epoch order. Tag derivation feeds the *filename* derivation (below) and the
   displayed tag; it is display/derivation only — never stored as a separate field.
 - Uniqueness badge reuses `duplicateTaskEpochs(tasks)` (`src/validation/taskEpochs.ts:19`).
+- **Collapsed display = state, not names.** The grid's Statescript/Video cells render a STATE label
+  (`Generated` / `Manual` / `Missing` / `No video` / `N video`) derived from `isDerivedStatescript`/
+  `isDerivedVideo` + the video 3-state — the actual filenames live only in the drill-in, so the grid stays
+  scannable and never asks the user to parse paths in prime space.
 
 **Write-back (edit):** every edit maps to an `updateDay(dayId, { … })` patch over the *same arrays*.
 

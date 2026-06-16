@@ -61,7 +61,7 @@ modules; page-area modules are in progress — follow that, no new globals).
 | --- | --- |
 | A presentation edit silently changes merged YAML | Baseline gate every phase; the one merge-adjacent phase (4, data-folder derivation) and the import round-trip (7) assert byte-identity explicitly in their slice. |
 | Epoch grid re-derives validation/merge locally → drift | §2/§5 contracts: the grid reads `validateDay`/`mergeDayMetadata`; builders are pure and tested against them. |
-| Data-folder derivation diverges from existing stored paths | Phase 4 verifies derivation reproduces a real golden `associated_files[].path`; non-matching files stay `manual`/verbatim. |
+| Data-folder derivation diverges from existing stored paths | Phase 4 verifies `deriveVideoName` reproduces the golden `associated_video_files[].name` (the convention-following target); the golden `associated_files` are placeholders → classified `manual`/verbatim; statescript derivation verified against a synthetic fixture. |
 | Reorder/delete in the epoch grid orphans file/video refs | Confirm-before-orphaning (orphan-visibility contract); never auto-scrub; `validateDay` surfaces any orphan. |
 | Replacing the 5-section editor strands old step components | Each of Phases 3/4/5 names the step file it retires; Phase 8 verifies no orphaned step/route remains. |
 

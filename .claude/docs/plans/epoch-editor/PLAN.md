@@ -30,6 +30,6 @@ For agent invocation, **load only the slice you need**:
   - [phase-3-day-frame-tabs.md](phase-3-day-frame-tabs.md) — Day-editor frame + Day / Failed-channels / DIO tabs (3 of 4); issue-driven readiness bar.
   - [phase-4-epoch-grid.md](phase-4-epoch-grid.md) — the Epochs tab: epoch-grid spine (a join-view over the **already-live** task catalog + the day's arrays) + drill-in (3 groups), filename derivation, generated-files/data-folder, video 3-state, epoch actions, field-level repair.
   - [phase-5-export-preview.md](phase-5-export-preview.md) — Export preview + batch: readiness gate, derived filename, YAML preview, download/copy success, batch result.
-  - [phase-6-create-animal-wizard.md](phase-6-create-animal-wizard.md) — guided new-animal wizard (+ data-folder field & carry-forward; + copy-from-animal source).
+  - [phase-6-create-animal-wizard.md](phase-6-create-animal-wizard.md) — guided new-animal wizard (Identity → Electrodes → Cameras → Opto → Tasks → Recording system → Team). (The day-level data-folder field belongs to Phase 3, not the wizard.)
   - [phase-7-import-copy.md](phase-7-import-copy.md) — Import & repair (teaching validation) + copy-from-animal flow.
   - [phase-8-recovery-empty-polish.md](phase-8-recovery-empty-polish.md) — Recovery review, remaining empty states, keyboard shortcuts, a11y (axe) + e2e, retire-old-editor sweep.
