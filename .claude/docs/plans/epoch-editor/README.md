@@ -5,13 +5,15 @@ Companion to [../../research/action-by-action-ux.md](../../research/action-by-ac
 [mental-model-and-ui.md](../../research/mental-model-and-ui.md), and
 [existing-app-invariants.md](../../research/existing-app-invariants.md).
 
-Two canonical mockups — one **opto** animal (Laurent), covering the full experience. Open in a browser;
-day rows in the animal page link to the day editor.
+A navigable mockup set — **Animals home → animal page → day editor**, plus the new-animal wizard.
+Open [animals.html](./animals.html) and click through (rows and breadcrumbs are wired). The detailed
+screens use one **opto** animal (Laurent) to cover the full experience.
 
 | File | What it shows |
 | --- | --- |
+| [animals.html](./animals.html) | **Animals home** (top-level landing): every animal with genotype, day count, last recording, status (drafts / needs-review / all-exported), opto badge; search + filters; "+ New animal". Row → animal page. |
 | [laurent-animal.html](./laurent-animal.html) | Animal page: **Days** table + full **Setup** tab (setup-progress + blast-radius bar; identity, configuration/probes, cameras, **tasks** task-type catalog, **optogenetics** w/ completeness meter, team, recording system — DIO is **day-owned**, not here). Lifecycle ops: **create-animal** modal (scratch / import / copy-from, guided-step order), **new configuration** (re-implant) modal, **delete animal** modal. |
-| [create-animal.html](./create-animal.html) | Guided **new-animal wizard** (reached from the animal page's "Start from scratch"): Identity → **Electrodes/probes** → Cameras → Optogenetics → Tasks → Team & rig. Embeds the current-UI lessons: binomial species / single-letter sex / genotype-≠-strain / subject_id collision; **device_type picker** (known probes, human summaries) + controlled **location** vocab + coords + **replicate-N** + auto channel-maps + **behavior-only skip**; camera calibration warning; opto **4-field all-or-nothing** + completeness + power guard + required references; task-type catalog. |
+| [create-animal.html](./create-animal.html) | Guided **new-animal wizard** (reached from the animal page's "Start from scratch"): Identity → **Electrodes/probes** → Cameras → Optogenetics → Tasks → Recording system → Team. Embeds the current-UI lessons: binomial species / single-letter sex / genotype-as-picker / subject_id collision; **device_type picker** (known probes, human summaries) + single **targeted_location** (brain-region autocomplete, modern-style) + AP/ML/DV coords + **replicate-N** + auto channel-maps + **behavior-only skip**; camera calibration warning; opto **4-field all-or-nothing** + completeness + power guard + required references; task-type catalog. |
 | [laurent-day.html](./laurent-day.html) | Day editor: an **export-readiness** bar + tabs — **Epochs** (grid + per-epoch drill-in for task/cameras/statescript/videos; per-epoch **opto power + pulse** columns), **Failed channels** (probe-wide grid, multi-shank marks consolidate to the first ntrode row), **DIO** (carry-forward summary by default → on-demand editor), **Day** (`session_id` auto-derived, weight, description, experimenters, **opto-protocol** card: laser DIO / FSGui file / camera). Covers every day-level field in the scope model. |
 
 ## Design bets these embody (decided)

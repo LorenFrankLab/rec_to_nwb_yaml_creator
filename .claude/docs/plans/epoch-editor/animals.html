@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Animals</title>
+<style>
+  :root{
+    --bg:#f4f6f8; --panel:#fff; --ink:#161a1d; --muted:#69727b; --faint:#9aa2ab;
+    --line:#e4e7eb; --line2:#eef1f4; --accent:#2f6fae; --accent-d:#255b91;
+    --ok:#1f8a4c; --okbg:#eaf6ee; --warn:#b8770a; --warnbg:#fbf3e3; --draft:#5b6470; --draftbg:#eef1f4;
+    --opto:#7a3ea8; --optobg:#f3edfa; --opto-b:#dccaef; --radius:10px;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font:14px/1.5 -apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--ink)}
+  .app{display:grid;grid-template-columns:226px 1fr;min-height:100vh}
+  .side{background:#fff;border-right:1px solid var(--line);padding:14px 12px;display:flex;flex-direction:column;gap:4px}
+  .brand{font-weight:700;font-size:14px;padding:6px 8px 12px;display:flex;align-items:center;gap:8px;cursor:pointer}
+  .brand .mark{width:22px;height:22px;border-radius:6px;background:linear-gradient(135deg,var(--accent),#5b9bd6)}
+  .side h6{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--faint);margin:8px 8px 4px}
+  .navitem{padding:7px 9px;border-radius:8px;cursor:pointer;font-size:13.5px;color:var(--ink)}
+  .navitem:hover{background:var(--line2)}.navitem.active{background:#eaf1f9;color:var(--accent-d);font-weight:600}
+  .animal{display:flex;justify-content:space-between;align-items:center;padding:7px 9px;border-radius:8px;cursor:pointer;font-size:13.5px}
+  .animal:hover{background:var(--line2)}.animal .n{font-size:12px;color:var(--faint)}
+  .side .new{margin-top:6px;font-size:13px;color:var(--accent);padding:7px 9px;border:1px dashed var(--line);border-radius:8px;cursor:pointer;text-align:center}
+  .main{padding:24px 32px;max-width:1040px}
+  .head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:4px}
+  h1{font-size:24px;margin:0;letter-spacing:-.01em}
+  .summary{color:var(--muted);font-size:13.5px;margin:4px 0 18px}
+  .btn{font:inherit;border:1px solid var(--line);background:#fff;border-radius:8px;padding:8px 13px;cursor:pointer;color:var(--ink);font-size:13px}
+  .btn:hover{border-color:var(--accent);color:var(--accent)}
+  .btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}.btn.primary:hover{background:var(--accent-d)}
+  .toolbar{display:flex;gap:10px;align-items:center;margin-bottom:14px}
+  .search{flex:1;max-width:320px;font:inherit;border:1px solid var(--line);border-radius:8px;padding:8px 11px}
+  .tablecard{background:#fff;border:1px solid var(--line);border-radius:var(--radius);overflow:hidden}
+  table{width:100%;border-collapse:collapse}
+  th,td{text-align:left;padding:12px 16px;border-bottom:1px solid var(--line2);font-size:13.5px}
+  th{font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--faint);font-weight:600}
+  tbody tr{cursor:pointer}tbody tr:hover{background:#fafbfc}tbody tr:last-child td{border-bottom:0}
+  td.name{font-weight:600}
+  td.name .opto{font-size:11px;font-weight:600;color:var(--opto);background:var(--optobg);border:1px solid var(--opto-b);border-radius:999px;padding:1px 7px;margin-left:7px}
+  td.num{font-variant-numeric:tabular-nums;color:#3c444d}
+  .muted{color:var(--muted)}
+  .pill{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;border-radius:999px;padding:3px 10px}
+  .pill .d{width:7px;height:7px;border-radius:50%}
+  .pill.ok{background:var(--okbg);color:var(--ok)}.pill.ok .d{background:var(--ok)}
+  .pill.warn{background:var(--warnbg);color:var(--warn)}.pill.warn .d{background:var(--warn)}
+  .pill.draft{background:var(--draftbg);color:var(--draft)}.pill.draft .d{background:var(--draft)}
+  .chev{color:var(--faint);text-align:right}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="side">
+    <div class="brand"><span class="mark"></span> NWB Metadata</div>
+    <div class="navitem active">Animals</div>
+    <h6>Recent</h6>
+    <div class="animal" onclick="location.href='laurent-animal.html'">Laurent <span class="n">10</span></div>
+    <div class="animal">jasper <span class="n">14</span></div>
+    <div class="animal">Emmett <span class="n">16</span></div>
+    <div class="animal">SC68 <span class="n">13</span></div>
+    <div class="animal">Seth <span class="n">8</span></div>
+    <div class="new" onclick="location.href='create-animal.html'">＋ New animal</div>
+  </aside>
+
+  <main class="main">
+    <div class="head">
+      <div>
+        <h1>Animals</h1>
+        <div class="summary">5 animals · 61 recording days · <b>2 need attention</b></div>
+      </div>
+      <button class="btn primary" onclick="location.href='create-animal.html'">＋ New animal</button>
+    </div>
+
+    <div class="toolbar">
+      <input class="search" placeholder="Search animals…">
+      <button class="btn">Genotype ▾</button>
+      <button class="btn">Status ▾</button>
+    </div>
+
+    <div class="tablecard">
+      <table>
+        <thead><tr><th>Animal</th><th>Genotype</th><th>Species</th><th>Days</th><th>Last recording</th><th>Status</th><th></th></tr></thead>
+        <tbody>
+          <tr onclick="location.href='laurent-animal.html'">
+            <td class="name">Laurent <span class="opto">opto</span></td>
+            <td>PV-Cre</td><td class="muted">Rattus norvegicus</td><td class="num">10</td><td class="muted">2026-05-14</td>
+            <td><span class="pill draft"><span class="d"></span>1 draft</span></td><td class="chev">›</td>
+          </tr>
+          <tr>
+            <td class="name">jasper</td>
+            <td>Wild Type</td><td class="muted">Rattus norvegicus</td><td class="num">14</td><td class="muted">2026-05-08</td>
+            <td><span class="pill warn"><span class="d"></span>1 needs review</span></td><td class="chev">›</td>
+          </tr>
+          <tr>
+            <td class="name">Emmett <span class="opto">opto</span></td>
+            <td>PV-Cre</td><td class="muted">Rattus norvegicus</td><td class="num">16</td><td class="muted">2026-02-04</td>
+            <td><span class="pill ok"><span class="d"></span>All exported</span></td><td class="chev">›</td>
+          </tr>
+          <tr>
+            <td class="name">SC68</td>
+            <td>Wild Type</td><td class="muted">Rattus norvegicus</td><td class="num">13</td><td class="muted">2024-04-29</td>
+            <td><span class="pill ok"><span class="d"></span>All exported</span></td><td class="chev">›</td>
+          </tr>
+          <tr>
+            <td class="name">Seth <span class="opto">opto</span></td>
+            <td>PV-Cre</td><td class="muted">Rattus norvegicus</td><td class="num">8</td><td class="muted">2026-01-23</td>
+            <td><span class="pill ok"><span class="d"></span>All exported</span></td><td class="chev">›</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+</div>
+</body>
+</html>
