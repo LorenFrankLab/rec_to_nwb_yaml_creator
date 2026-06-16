@@ -75,6 +75,8 @@ export interface EpochGridRow {
   epoch: number;
   /** Index of the owning task in the resolved task list / `taskInstances` (null = orphan, unreachable). */
   taskInstanceIndex: number | null;
+  /** The owning task instance's `taskTypeId` (the value the drill-in's task picker binds to). */
+  taskTypeId: string;
   /** The owning task's name. */
   taskName: string;
   /** The owning task's environment. */
@@ -165,6 +167,7 @@ export function buildEpochGrid(animal: unknown, day: unknown): EpochGrid {
   const view = resolveDayCatalogView(animal, day);
   // The resolved task at index i corresponds to taskInstances[i] (the write-back target).
   const tasks: Task[] = resolveTaskInstances(view.taskTypes, view.taskInstances);
+  const instanceTypeIds = view.taskInstances.map((i) => i?.taskTypeId ?? '');
 
   const videos = getDayAssociatedVideos(day);
   const files = getDayAssociatedFiles(day);
@@ -229,6 +232,7 @@ export function buildEpochGrid(animal: unknown, day: unknown): EpochGrid {
     return {
       epoch,
       taskInstanceIndex: taskIndex >= 0 ? taskIndex : null,
+      taskTypeId: taskIndex >= 0 ? instanceTypeIds[taskIndex] ?? '' : '',
       taskName,
       taskEnvironment,
       tag,

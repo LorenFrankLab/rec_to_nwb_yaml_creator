@@ -1,0 +1,752 @@
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { ConfirmDialog } from '../../components/Modal';
+import { useUndoToast } from '../../components/ui/UndoToast';
+import { EpochStatusPill } from '../../components/ui/StatusPill';
+import GeneratedValue from '../../components/ui/GeneratedValue';
+import TaskTypeModal from '../AnimalEditor/TaskTypeModal';
+import { useStepperShortcut } from '../../hooks/stepperShortcuts';
+import { useDayEditorContext } from './DayEditorContext';
+import type { DayEditorBundle } from './DayEditorContext';
+import { buildEpochGrid } from '../../viewModels/epochGridViewModel';
+import type { EpochGridRow } from '../../viewModels/epochGridViewModel';
+import {
+  addEpochToTask,
+  removeEpoch,
+  duplicateEpoch,
+  setEpochTask,
+  swapEpochs,
+  insertEpochAfter,
+  epochsOrphanedBy,
+  nextEpochNumber,
+} from '../../domain/epochOperations';
+import type { OrphanedReferences } from '../../domain/epochOperations';
+import {
+  deriveStatescriptName,
+  deriveStatescriptPath,
+  deriveVideoName,
+} from '../../domain/fileNaming';
+import {
+  getAnimalCameras,
+  getDayAssociatedVideos,
+  getDayAssociatedFiles,
+  getDayFsGuiYamls,
+  getDayVideolessEpochs,
+} from '../../state/workspaceSelectors';
+import { resolveDayCatalogView } from '../../state/dayTaskCatalog';
+import { addTaskType, nextTaskTypeId } from '../../state/taskCatalogActions';
+import type { TaskTypeDefinitionInput } from '../../state/taskCatalogActions';
+import type { TaskInstance, TaskType, Camera } from '../../state/workspaceTypes';
+import styles from './EpochsTab.module.css';
+
+/** A repair-routed focus request from the frame (`{ fieldPath, token }`). */
+interface FocusRequest {
+  fieldPath: string;
+  token: number;
+}
+
+/** A pending instance-array edit awaiting orphan-repair confirmation. */
+interface PendingOrphan extends OrphanedReferences {
+  nextInstances: TaskInstance[];
+}
+
+/** Parse an `epoch-<n>-video` repair focus path → the epoch number (or null). */
+function epochFromFocusPath(fieldPath: string | undefined): number | null {
+  const match = /^epoch-(\d+)-/.exec(fieldPath ?? '');
+  return match ? Number(match[1]) : null;
+}
+
+/** Resolve a camera id to its display name (falls back to "camera <id>"). */
+function cameraName(cameras: Camera[], id: number | string): string {
+  const cam = cameras.find((c) => c?.id === id || String(c?.id) === String(id));
+  return cam?.camera_name || `camera ${id}`;
+}
+
+/**
+ * EpochsTab — the epoch grid (Phase 4), the day editor's spine. A pure-view-model-driven table with
+ * one row per epoch (caret + Task + Camera(s) + Statescript-naming + Video-presence + Opto + Status)
+ * and a per-epoch drill-in (What happened / Generated files / Optogenetics). Every edit maps to an
+ * {@link updateDay} patch over the day's EXISTING arrays via the pure {@link buildEpochGrid} join +
+ * {@link module:domain/epochOperations} transforms — storage/export are unchanged. Replaces the
+ * `TasksEpochsStep` bridge.
+ */
+export default function EpochsTab(props: DayEditorBundle & { focusRequest?: FocusRequest | null }) {
+  const { animal, day, onFieldUpdate, actions = undefined, animalKey = undefined } =
+    useDayEditorContext(props);
+  const ownerKey = animalKey ?? (animal as { id?: string })?.id;
+  const focusRequest = props.focusRequest ?? null;
+
+  const grid = buildEpochGrid(animal, day);
+  const view = resolveDayCatalogView(animal, day);
+  const cameras = getAnimalCameras(animal);
+
+  const [expanded, setExpanded] = useState<Set<number>>(new Set());
+  const [pendingOrphan, setPendingOrphan] = useState<PendingOrphan | null>(null);
+  const [quickAddEpoch, setQuickAddEpoch] = useState<number | null>(null);
+  const [menuEpoch, setMenuEpoch] = useState<number | null>(null);
+  const [templateOpen, setTemplateOpen] = useState(false);
+  // Epochs whose statescript/video name is being manually overridden (UI mode; GeneratedValue's
+  // `derived` flag is consumer-driven). A name only becomes stored-manual once the user types.
+  const [manualStatescript, setManualStatescript] = useState<Set<number>>(new Set());
+  const [manualVideo, setManualVideo] = useState<Set<string>>(new Set());
+  const { show: showToast, node: toastNode } = useUndoToast();
+
+  // Alt+N (the stepper "add" intent) opens the template menu — the grid's primary add affordance.
+  useStepperShortcut(useCallback((action) => { if (action === 'add') setTemplateOpen(true); }, []));
+
+  // Repair landing: expand the targeted epoch (the frame's focus effect then focuses the control).
+  useEffect(() => {
+    const epoch = epochFromFocusPath(focusRequest?.fieldPath);
+    if (epoch != null) setExpanded((prev) => new Set(prev).add(epoch));
+  }, [focusRequest]);
+
+  // Close any open popup menu on an outside click.
+  useEffect(() => {
+    if (menuEpoch == null && !templateOpen) return undefined;
+    const close = () => {
+      setMenuEpoch(null);
+      setTemplateOpen(false);
+    };
+    document.addEventListener('click', close);
+    return () => document.removeEventListener('click', close);
+  }, [menuEpoch, templateOpen]);
+
+  const toggle = useCallback((epoch: number) => {
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(epoch)) next.delete(epoch);
+      else next.add(epoch);
+      return next;
+    });
+  }, []);
+
+  /**
+   * Persist a next instance array (and an optionally-extended catalog), retiring inline `day.tasks`
+   * the first time a derived/legacy day is edited into the catalog. Mirrors the former
+   * TasksEpochsStep write path.
+   */
+  const applyCommit = useCallback(
+    (nextInstances: TaskInstance[], nextTaskTypes: TaskType[], repair: boolean) => {
+      if (nextTaskTypes !== view.taskTypes && actions?.updateAnimal && ownerKey) {
+        (actions.updateAnimal as (id: string, patch: Record<string, unknown>) => void)(ownerKey, {
+          taskTypes: nextTaskTypes,
+        });
+      }
+      onFieldUpdate('taskInstances', nextInstances);
+      if (view.derived && Array.isArray((day as { tasks?: unknown[] }).tasks) && (day as { tasks: unknown[] }).tasks.length > 0) {
+        onFieldUpdate('tasks', []);
+      }
+      if (repair) {
+        const valid = new Set<number>();
+        nextInstances.forEach((i) =>
+          (Array.isArray(i.task_epochs) ? i.task_epochs : []).forEach((e) => valid.add(Number(e)))
+        );
+        const clear = <T extends { task_epochs?: number | string }>(entries: T[]) =>
+          entries.map((entry) =>
+            entry.task_epochs !== '' && entry.task_epochs != null && !valid.has(Number(entry.task_epochs))
+              ? { ...entry, task_epochs: '' }
+              : entry
+          );
+        onFieldUpdate('associated_video_files', clear(getDayAssociatedVideos(day)));
+        onFieldUpdate('associated_files', clear(getDayAssociatedFiles(day)));
+      }
+    },
+    [view.taskTypes, view.derived, actions, ownerKey, onFieldUpdate, day]
+  );
+
+  /**
+   * Commit a next instance set, prompting for orphan repair first when the edit would strand a bound
+   * video/file ref. Confirm-before-orphan; never auto-scrubs.
+   */
+  const commit = useCallback(
+    (nextInstances: TaskInstance[], nextTaskTypes: TaskType[] = view.taskTypes) => {
+      const { videos, files } = epochsOrphanedBy(day, nextInstances);
+      if (videos.length === 0 && files.length === 0) {
+        applyCommit(nextInstances, nextTaskTypes, false);
+        return;
+      }
+      // The pending edit may also extend the catalog (a quick-add type); stash it for the confirm.
+      pendingTypesRef.current = nextTaskTypes;
+      setPendingOrphan({ nextInstances, videos, files });
+    },
+    [view.taskTypes, day, applyCommit]
+  );
+  const pendingTypesRef = useRef<TaskType[]>(view.taskTypes);
+
+  // ── Task / epoch write-backs (instance-array transforms) ──
+  const reassignTask = (epoch: number, taskTypeId: string) =>
+    commit(setEpochTask(view.taskInstances, epoch, taskTypeId));
+  const onDuplicate = (epoch: number) => commit(duplicateEpoch(view.taskInstances, epoch));
+  const onInsertAfter = (epoch: number) => commit(insertEpochAfter(view.taskInstances, epoch));
+  const onMove = (epoch: number, dir: 'up' | 'down') => {
+    const other = dir === 'up' ? epoch - 1 : epoch + 1;
+    if (grid.rows.some((r) => r.epoch === other)) commit(swapEpochs(view.taskInstances, epoch, other));
+  };
+  const onDelete = (epoch: number) => {
+    const snapshot = view.taskInstances;
+    commit(removeEpoch(view.taskInstances, epoch));
+    showToast(`Epoch ${epoch} deleted`, () => applyCommit(snapshot, view.taskTypes, false));
+  };
+
+  // ── "+ new task type" quick-add (define-and-assign to the epoch being edited) ──
+  const saveNewType = (definition: TaskTypeDefinitionInput) => {
+    const clashes = view.taskTypes.some((t) => t?.task_name === definition.task_name);
+    if (clashes) return; // the modal stays open; a real clash message is a later refinement
+    const newId = nextTaskTypeId(view.taskTypes);
+    const nextTypes = addTaskType(view.taskTypes, definition);
+    const epoch = quickAddEpoch;
+    setQuickAddEpoch(null);
+    if (epoch == null) commit(addEpochToTask(view.taskInstances, newId), nextTypes);
+    else commit(setEpochTask(view.taskInstances, epoch, newId), nextTypes);
+  };
+
+  // ── Opto (fs_gui) per-epoch power / pulse ──
+  const setOpto = (row: EpochGridRow, field: 'power_in_mW' | 'pulseLength', value: string) => {
+    const fsgui = getDayFsGuiYamls(day);
+    const parsed = value === '' ? '' : Number(value);
+    if (row.opto) {
+      const next = fsgui.map((g, i) => (i === row.opto!.index ? { ...g, [field]: parsed } : g));
+      onFieldUpdate('fs_gui_yamls', next);
+    } else if (value !== '') {
+      onFieldUpdate('fs_gui_yamls', [...fsgui, { name: '', epochs: [row.epoch], [field]: parsed }]);
+    }
+  };
+
+  // ── Statescript naming (Override / Revert) ──
+  const statescriptDerivedName = (row: EpochGridRow) =>
+    deriveStatescriptName({ date: grid.date, subjectId: grid.subjectId, epoch: row.epoch, tag: row.tag });
+  const setStatescriptManual = (epoch: number, on: boolean) =>
+    setManualStatescript((prev) => {
+      const next = new Set(prev);
+      if (on) next.add(epoch);
+      else next.delete(epoch);
+      return next;
+    });
+  const writeStatescriptPath = (row: EpochGridRow, path: string) => {
+    const files = getDayAssociatedFiles(day);
+    if (!row.statescript) return;
+    onFieldUpdate('associated_files', files.map((f, i) => (i === row.statescript!.index ? { ...f, path } : f)));
+  };
+  const addStatescript = (row: EpochGridRow) => {
+    const name = statescriptDerivedName(row);
+    const path = deriveStatescriptPath(grid.dataFolder, name);
+    onFieldUpdate('associated_files', [
+      ...getDayAssociatedFiles(day),
+      { name, description: '', path, task_epochs: row.epoch },
+    ]);
+  };
+
+  // ── Video 3-state ──
+  const setVideoless = (epoch: number, on: boolean) => {
+    const current = getDayVideolessEpochs(day);
+    const next = on ? [...new Set([...current, epoch])] : current.filter((e) => e !== epoch);
+    const state = (day as { state?: unknown }).state;
+    const base = state !== null && typeof state === 'object' && !Array.isArray(state) ? (state as Record<string, unknown>) : {};
+    onFieldUpdate('state', { ...base, videolessEpochs: next });
+  };
+  const addVideo = (row: EpochGridRow) => {
+    const videos = getDayAssociatedVideos(day);
+    const index = videos.filter((v) => Number(v.task_epochs) === row.epoch).length + 1;
+    const name = deriveVideoName({ date: grid.date, subjectId: grid.subjectId, epoch: row.epoch, tag: row.tag, index });
+    const camId = (row.cameras[0] as number) ?? (cameras[0]?.id as number) ?? 0;
+    onFieldUpdate('associated_video_files', [...videos, { name, camera_id: camId, task_epochs: row.epoch }]);
+    setVideoless(row.epoch, false);
+  };
+  const removeVideo = (videoIndex: number) =>
+    onFieldUpdate('associated_video_files', getDayAssociatedVideos(day).filter((_, i) => i !== videoIndex));
+  const writeVideoName = (videoIndex: number, name: string) =>
+    onFieldUpdate('associated_video_files', getDayAssociatedVideos(day).map((v, i) => (i === videoIndex ? { ...v, name } : v)));
+
+  const confirmOrphanRepair = () => {
+    if (!pendingOrphan) return;
+    applyCommit(pendingOrphan.nextInstances, pendingTypesRef.current, true);
+    setPendingOrphan(null);
+  };
+
+  const hasOpto = grid.isOpto;
+  const colCount = hasOpto ? 9 : 7;
+
+  return (
+    <div className={`day-editor-section ${styles.root}`}>
+      <h2>Epochs</h2>
+      <p className={styles.intro}>
+        Each row is one <strong>epoch</strong> — a numbered recording block belonging to a task. Open a
+        row to set its task, generated files, and (for opto animals) its stimulation. File names derive
+        from <code>{'{date}_{animal}_{epoch}_{tag}'}</code>; you set the data folder on the Day tab.
+      </p>
+
+      <div className={styles.toolbar}>
+        <div className={styles.toolbarSpacer} />
+        <div style={{ position: 'relative' }}>
+          <button
+            type="button"
+            className="button-primary"
+            aria-haspopup="menu"
+            aria-expanded={templateOpen}
+            onClick={(e) => {
+              e.stopPropagation();
+              setTemplateOpen((o) => !o);
+            }}
+          >
+            + from template ▾
+          </button>
+          {templateOpen && (
+            <div className={styles.menu} role="menu" onClick={(e) => e.stopPropagation()}>
+              <button type="button" role="menuitem" className={styles.menuItem} onClick={() => applyTemplate('sleep')}>
+                Sleep day<span className={styles.menuSub}>4 sleep epochs</span>
+              </button>
+              <button type="button" role="menuitem" className={styles.menuItem} onClick={() => applyTemplate('wtrack')}>
+                W-track day<span className={styles.menuSub}>sleep / run alternation</span>
+              </button>
+              {priorDayInstances(props) && (
+                <button type="button" role="menuitem" className={styles.menuItem} onClick={() => applyTemplate('copy')}>
+                  Copy structure from prior day<span className={styles.menuSub}>same epochs; files re-derive</span>
+                </button>
+              )}
+              <div className={styles.menuSep} />
+              <button type="button" role="menuitem" className={styles.menuItem} onClick={() => applyTemplate('blank')}>
+                Blank<span className={styles.menuSub}>add one epoch to start</span>
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {grid.rows.length === 0 ? (
+        <p className={styles.emptyState}>
+          No epochs yet. Use <strong>+ from template</strong> to start, or add a task type on the
+          animal&apos;s Task Types tab.
+        </p>
+      ) : (
+        <table className={styles.table}>
+          <thead>
+            <tr>
+              <th className={styles.caretCell}><span className="sr-only">Expand</span></th>
+              <th className={styles.numCell}>#</th>
+              <th>Task</th>
+              <th>Camera(s)</th>
+              <th>Statescript</th>
+              <th>Video(s)</th>
+              {hasOpto && <th>Opto (mW)</th>}
+              {hasOpto && <th>Pulse (ms)</th>}
+              <th>Status</th>
+              <th className={styles.menuCell}><span className="sr-only">Actions</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            {grid.rows.map((row) => {
+              const isOpen = expanded.has(row.epoch);
+              const drillInId = `epoch-${row.epoch}-details`;
+              return (
+                <EpochRowBlock
+                  key={row.epoch}
+                  row={row}
+                  isOpen={isOpen}
+                  drillInId={drillInId}
+                  hasOpto={hasOpto}
+                  colCount={colCount}
+                  cameras={cameras}
+                  taskTypes={view.taskTypes}
+                  grid={grid}
+                  menuOpen={menuEpoch === row.epoch}
+                  manualStatescript={manualStatescript.has(row.epoch)}
+                  manualVideoKeys={manualVideo}
+                  onToggle={() => toggle(row.epoch)}
+                  onOpenMenu={(e) => {
+                    e.stopPropagation();
+                    setMenuEpoch((cur) => (cur === row.epoch ? null : row.epoch));
+                  }}
+                  onReassignTask={(taskTypeId) => reassignTask(row.epoch, taskTypeId)}
+                  onNewTaskType={() => setQuickAddEpoch(row.epoch)}
+                  onOpto={(field, value) => setOpto(row, field, value)}
+                  onInsertAfter={() => onInsertAfter(row.epoch)}
+                  onDuplicate={() => onDuplicate(row.epoch)}
+                  onMoveUp={() => onMove(row.epoch, 'up')}
+                  onMoveDown={() => onMove(row.epoch, 'down')}
+                  onDelete={() => onDelete(row.epoch)}
+                  statescriptDerivedName={statescriptDerivedName(row)}
+                  onStatescriptOverride={() => setStatescriptManual(row.epoch, true)}
+                  onStatescriptRevert={() => {
+                    setStatescriptManual(row.epoch, false);
+                    writeStatescriptPath(row, deriveStatescriptPath(grid.dataFolder, statescriptDerivedName(row)));
+                  }}
+                  onStatescriptChange={(path) => writeStatescriptPath(row, path)}
+                  onAddStatescript={() => addStatescript(row)}
+                  onAddVideo={() => addVideo(row)}
+                  onMarkNoVideo={() => setVideoless(row.epoch, true)}
+                  onUndoNoVideo={() => setVideoless(row.epoch, false)}
+                  onRemoveVideo={removeVideo}
+                  onVideoOverride={(key) => setManualVideo((p) => new Set(p).add(key))}
+                  onVideoRevert={(key, videoIndex) => {
+                    setManualVideo((p) => {
+                      const n = new Set(p);
+                      n.delete(key);
+                      return n;
+                    });
+                    const vi = row.videos.findIndex((v) => v.index === videoIndex);
+                    writeVideoName(videoIndex, deriveVideoName({ date: grid.date, subjectId: grid.subjectId, epoch: row.epoch, tag: row.tag, index: vi + 1 }));
+                  }}
+                  onVideoNameChange={writeVideoName}
+                />
+              );
+            })}
+          </tbody>
+        </table>
+      )}
+
+      {quickAddEpoch !== null && (
+        <TaskTypeModal
+          isOpen
+          mode="add"
+          animal={animal}
+          onSave={saveNewType}
+          onCancel={() => setQuickAddEpoch(null)}
+        />
+      )}
+
+      <ConfirmDialog
+        isOpen={pendingOrphan != null}
+        title="Repair affected files?"
+        message={
+          pendingOrphan
+            ? `This change removes an epoch still referenced by: ${[...pendingOrphan.videos, ...pendingOrphan.files]
+                .map((e) => e.name || '(unnamed)')
+                .join(', ')}. Confirm to save and clear the orphaned epoch reference(s); cancel to discard this change.`
+            : ''
+        }
+        confirmLabel="Clear references"
+        cancelLabel="Cancel"
+        destructive
+        onConfirm={confirmOrphanRepair}
+        onCancel={() => setPendingOrphan(null)}
+      />
+
+      {toastNode}
+    </div>
+  );
+
+  /** Read the prior same-config day's instances for "Copy structure" (null when none). */
+  function priorDayInstances(bundle: DayEditorBundle): TaskInstance[] | null {
+    const days = bundle.animalDays ?? [];
+    const idx = days.findIndex((d) => (d as { id?: string }).id === (day as { id?: string }).id);
+    for (let i = idx - 1; i >= 0; i--) {
+      const candidate = days[i] as { configurationVersion?: number; taskInstances?: TaskInstance[]; tasks?: unknown };
+      if (candidate.configurationVersion === (day as { configurationVersion?: number }).configurationVersion) {
+        const v = resolveDayCatalogView(animal, candidate);
+        return v.taskInstances.length > 0 ? v.taskInstances : null;
+      }
+    }
+    return null;
+  }
+
+  /** Apply a starter template, writing the corresponding instances (+ minted task types). */
+  function applyTemplate(kind: 'sleep' | 'wtrack' | 'copy' | 'blank') {
+    setTemplateOpen(false);
+    if (kind === 'copy') {
+      const prior = priorDayInstances(props);
+      if (prior) commit(structuredClone(prior));
+      return;
+    }
+    if (kind === 'blank') {
+      const firstType = view.taskTypes[0];
+      if (firstType) commit(addEpochToTask(view.taskInstances, firstType.id));
+      else setQuickAddEpoch(nextEpochNumber(view.taskInstances)); // define a type first
+      return;
+    }
+    // sleep / wtrack: find-or-create the needed task types, then lay down the epoch sequence.
+    let types = view.taskTypes;
+    const ensure = (name: string): string => {
+      const existing = types.find((t) => t?.task_name?.toLowerCase() === name.toLowerCase());
+      if (existing) return existing.id;
+      const id = nextTaskTypeId(types);
+      types = addTaskType(types, { task_name: name, task_description: name });
+      return id;
+    };
+    const instances: TaskInstance[] = [];
+    const push = (typeId: string, epoch: number) => {
+      const found = instances.find((i) => i.taskTypeId === typeId);
+      if (found) found.task_epochs.push(epoch);
+      else instances.push({ taskTypeId: typeId, task_epochs: [epoch] });
+    };
+    if (kind === 'sleep') {
+      const sleep = ensure('Sleep');
+      [1, 2, 3, 4].forEach((e) => push(sleep, e));
+    } else {
+      const sleep = ensure('Sleep');
+      const run = ensure('W-track');
+      push(sleep, 1);
+      push(run, 2);
+      push(sleep, 3);
+      push(run, 4);
+    }
+    commit(instances, types);
+  }
+}
+
+/** Props for one epoch row + its drill-in. */
+interface EpochRowProps {
+  row: EpochGridRow;
+  isOpen: boolean;
+  drillInId: string;
+  hasOpto: boolean;
+  colCount: number;
+  cameras: Camera[];
+  taskTypes: TaskType[];
+  grid: ReturnType<typeof buildEpochGrid>;
+  menuOpen: boolean;
+  manualStatescript: boolean;
+  manualVideoKeys: Set<string>;
+  onToggle: () => void;
+  onOpenMenu: (e: React.MouseEvent) => void;
+  onReassignTask: (taskTypeId: string) => void;
+  onNewTaskType: () => void;
+  onOpto: (field: 'power_in_mW' | 'pulseLength', value: string) => void;
+  onInsertAfter: () => void;
+  onDuplicate: () => void;
+  onMoveUp: () => void;
+  onMoveDown: () => void;
+  onDelete: () => void;
+  statescriptDerivedName: string;
+  onStatescriptOverride: () => void;
+  onStatescriptRevert: () => void;
+  onStatescriptChange: (path: string) => void;
+  onAddStatescript: () => void;
+  onAddVideo: () => void;
+  onMarkNoVideo: () => void;
+  onUndoNoVideo: () => void;
+  onRemoveVideo: (videoIndex: number) => void;
+  onVideoOverride: (key: string) => void;
+  onVideoRevert: (key: string, videoIndex: number) => void;
+  onVideoNameChange: (videoIndex: number, name: string) => void;
+}
+
+/** Collapsed statescript-cell label. */
+const STATESCRIPT_LABEL: Record<EpochGridRow['statescriptNaming'], string> = {
+  generated: 'Generated',
+  manual: 'Manual',
+  none: '—',
+};
+
+/** One epoch row (collapsed cells = STATE, not names) + its 3-group drill-in. */
+function EpochRowBlock(p: EpochRowProps) {
+  const { row, isOpen, drillInId, hasOpto, colCount, cameras, taskTypes, grid } = p;
+  const videoLabel =
+    row.videoPresence === 'absent' ? 'No video' : row.videoPresence === 'missing' ? 'Missing' : `${row.videos.length} video`;
+  const videoClass =
+    row.videoPresence === 'absent' ? styles.vidNone : row.videoPresence === 'missing' ? styles.vidMissing : styles.vidPresent;
+  const ownerTypeId = row.taskTypeId ?? '';
+
+  return (
+    <>
+      <tr>
+        <td className={styles.caretCell}>
+          <button
+            type="button"
+            className={styles.caret}
+            aria-expanded={isOpen}
+            aria-controls={drillInId}
+            aria-label={`Toggle epoch ${row.epoch} details`}
+            onClick={p.onToggle}
+          >
+            {isOpen ? '▾' : '▸'}
+          </button>
+        </td>
+        <td className={styles.numCell}>{row.epoch}</td>
+        <td className={styles.taskCell} onClick={p.onToggle}>
+          {row.taskName || <em>(no task)</em>} <span className={styles.tag}>· {row.tag}</span>
+          {row.duplicate && <span className={styles.duplicateBadge} title="This epoch is claimed by more than one task">duplicate</span>}
+        </td>
+        <td>
+          {row.cameras.length === 0
+            ? <span className={styles.vidNone}>—</span>
+            : row.cameras.map((id) => <span key={String(id)} className={styles.cam}>{cameraName(cameras, id)}</span>)}
+        </td>
+        <td>
+          <span className={`${styles.fstate} ${row.statescriptNaming === 'manual' ? styles.fstateManual : row.statescriptNaming === 'generated' ? styles.fstateGenerated : styles.fstateNone}`}>
+            {STATESCRIPT_LABEL[row.statescriptNaming]}
+          </span>
+        </td>
+        <td><span className={videoClass}>{videoLabel}</span></td>
+        {hasOpto && (
+          <td>
+            <input
+              className={styles.optoInput}
+              type="number"
+              aria-label={`Epoch ${row.epoch} opto power (mW)`}
+              defaultValue={row.opto?.entry.power_in_mW ?? ''}
+              onBlur={(e) => p.onOpto('power_in_mW', e.target.value)}
+            />
+          </td>
+        )}
+        {hasOpto && (
+          <td>
+            <input
+              className={styles.optoInput}
+              type="number"
+              aria-label={`Epoch ${row.epoch} opto pulse (ms)`}
+              defaultValue={row.opto?.entry.pulseLength ?? ''}
+              onBlur={(e) => p.onOpto('pulseLength', e.target.value)}
+            />
+          </td>
+        )}
+        <td><EpochStatusPill status={row.status} /></td>
+        <td className={styles.menuCell} style={{ position: 'relative' }}>
+          <button type="button" className={styles.menuButton} aria-haspopup="menu" aria-expanded={p.menuOpen} aria-label={`Epoch ${row.epoch} actions`} onClick={p.onOpenMenu}>
+            ⋯
+          </button>
+          {p.menuOpen && (
+            <div className={styles.menu} role="menu" style={{ right: 0 }} onClick={(e) => e.stopPropagation()}>
+              <button type="button" role="menuitem" className={styles.menuItem} onClick={p.onInsertAfter}>Insert epoch after</button>
+              <button type="button" role="menuitem" className={styles.menuItem} onClick={p.onDuplicate}>Duplicate epoch</button>
+              <button type="button" role="menuitem" className={styles.menuItem} onClick={p.onMoveUp}>Move up</button>
+              <button type="button" role="menuitem" className={styles.menuItem} onClick={p.onMoveDown}>Move down</button>
+              <div className={styles.menuSep} />
+              <button type="button" role="menuitem" className={`${styles.menuItem} ${styles.danger}`} onClick={p.onDelete}>Delete epoch</button>
+            </div>
+          )}
+        </td>
+      </tr>
+      {isOpen && (
+        <tr className={styles.drillIn}>
+          <td colSpan={colCount + 1}>
+            <div className={styles.drillInInner} id={drillInId}>
+              {/* What happened */}
+              <div className={styles.group}>
+                <h3 className={styles.groupHeading}>What happened</h3>
+                <div className={styles.fieldRow}>
+                  <span className={styles.fieldLabel}>Task</span>
+                  <span>
+                    <select
+                      aria-label={`Epoch ${row.epoch} task`}
+                      value={ownerTypeId}
+                      onChange={(e) => p.onReassignTask(e.target.value)}
+                    >
+                      {taskTypes.length === 0 && <option value="">(no task types)</option>}
+                      {taskTypes.map((t) => (
+                        <option key={t.id} value={t.id}>{t.task_name || t.id}</option>
+                      ))}
+                    </select>
+                    <span className={styles.derivedNote}> tag derives: {row.tag}</span>
+                    <button type="button" className="button-small" onClick={p.onNewTaskType}>+ new task type</button>
+                  </span>
+                </div>
+                <div className={styles.fieldRow}>
+                  <span className={styles.fieldLabel}>Environment</span>
+                  <span className={styles.derivedNote}>{row.taskEnvironment || '—'} (set on the task type)</span>
+                </div>
+                <div className={styles.fieldRow}>
+                  <span className={styles.fieldLabel}>Cameras</span>
+                  <span>
+                    {row.cameras.length === 0
+                      ? <span className={styles.derivedNote}>none</span>
+                      : row.cameras.map((id) => <span key={String(id)} className={styles.cam}>{cameraName(cameras, id)}</span>)}
+                    <span className={styles.derivedNote}> (set on the task type)</span>
+                  </span>
+                </div>
+              </div>
+
+              {/* Generated files */}
+              <div className={`${styles.group} ${styles.genPanel}`}>
+                <h3 className={styles.groupHeading}>Generated files</h3>
+                <p className={styles.genNote}>
+                  File <strong>names</strong> derive from <code>{'{date}_{animal}_{epoch}_{tag}'}</code>. You set <strong>where the files live</strong> — the day&apos;s data folder, on the Day tab. Override a name only for exceptions.
+                </p>
+                <div className={styles.fieldRow}>
+                  <span className={styles.fieldLabel}>Data folder</span>
+                  <span className={styles.mono}>{grid.dataFolder || <span className={styles.derivedNote}>not set — add it on the Day tab</span>}</span>
+                </div>
+                <div className={styles.fieldRow}>
+                  <span className={styles.fieldLabel}>Statescript</span>
+                  <span>
+                    {row.statescript ? (
+                      <GeneratedValue
+                        value={p.manualStatescript || row.statescriptNaming === 'manual' ? row.statescript.entry.path ?? '' : p.statescriptDerivedName}
+                        derived={row.statescriptNaming === 'generated' && !p.manualStatescript}
+                        overrideLabel="Override name"
+                        ariaLabel={`Epoch ${row.epoch} statescript path`}
+                        onOverride={p.onStatescriptOverride}
+                        onRevert={p.onStatescriptRevert}
+                        onChange={p.onStatescriptChange}
+                      />
+                    ) : (
+                      <>
+                        <span className={styles.derivedNote}>No statescript file linked. Generated name: </span>
+                        <code className={styles.mono}>{p.statescriptDerivedName}</code>
+                        <button type="button" className="button-small" onClick={p.onAddStatescript}>+ Add statescript</button>
+                      </>
+                    )}
+                  </span>
+                </div>
+                <div className={styles.fieldRow} data-field-path={`epoch-${row.epoch}-video`} tabIndex={-1}>
+                  <span className={styles.fieldLabel}>Video</span>
+                  <span>
+                    {row.videoPresence === 'present' && (
+                      <>
+                        {row.videos.map((v, vi) => {
+                          const key = `e${row.epoch}-v${v.index}`;
+                          return (
+                            <span key={v.index} style={{ display: 'block', marginBottom: 4 }}>
+                              <GeneratedValue
+                                value={v.entry.name ?? ''}
+                                derived={!p.manualVideoKeys.has(key)}
+                                overrideLabel="Rename"
+                                ariaLabel={`Epoch ${row.epoch} video ${vi + 1} name`}
+                                onOverride={() => p.onVideoOverride(key)}
+                                onRevert={() => p.onVideoRevert(key, v.index)}
+                                onChange={(name) => p.onVideoNameChange(v.index, name)}
+                              />
+                              <span className={styles.derivedNote}> · {cameraName(cameras, v.entry.camera_id)}</span>
+                              <button type="button" className="button-small" onClick={() => p.onRemoveVideo(v.index)} aria-label={`Remove video ${vi + 1}`}>Remove</button>
+                            </span>
+                          );
+                        })}
+                        <button type="button" className="button-small" onClick={p.onAddVideo}>+ Add another video</button>
+                      </>
+                    )}
+                    {row.videoPresence === 'missing' && (
+                      <>
+                        <span className={styles.vidMissing}>No video file linked</span>
+                        <span className={styles.derivedNote}> — add the file, or mark it as no-video. </span>
+                        <button type="button" className="button-small" onClick={p.onAddVideo}>+ Add video</button>
+                        <button type="button" className="button-small" onClick={p.onMarkNoVideo}>Mark “no video”</button>
+                      </>
+                    )}
+                    {row.videoPresence === 'absent' && (
+                      <>
+                        <span className={styles.vidNone}>No video recorded — fine for this epoch (export stays valid). </span>
+                        <button type="button" className="button-small" onClick={p.onAddVideo}>+ Add video</button>
+                        <button type="button" className="button-small" onClick={p.onUndoNoVideo}>Undo “no video”</button>
+                      </>
+                    )}
+                  </span>
+                </div>
+              </div>
+
+              {/* Optogenetics */}
+              {hasOpto && (
+                <div className={styles.group}>
+                  <h3 className={styles.groupHeading}>Optogenetics</h3>
+                  <div className={styles.fieldRow}>
+                    <span className={styles.fieldLabel}>Power</span>
+                    <span>
+                      <input className={styles.optoInput} type="number" aria-label={`Epoch ${row.epoch} power`} defaultValue={row.opto?.entry.power_in_mW ?? ''} onBlur={(e) => p.onOpto('power_in_mW', e.target.value)} /> mW
+                    </span>
+                  </div>
+                  <div className={styles.fieldRow}>
+                    <span className={styles.fieldLabel}>Pulse</span>
+                    <span>
+                      <input className={styles.optoInput} type="number" aria-label={`Epoch ${row.epoch} pulse`} defaultValue={row.opto?.entry.pulseLength ?? ''} onBlur={(e) => p.onOpto('pulseLength', e.target.value)} /> ms
+                    </span>
+                  </div>
+                  <div className={styles.fieldRow}>
+                    <span className={styles.fieldLabel}>Protocol</span>
+                    <span className={styles.derivedNote}>The laser DIO + FsGUI file are set on the Day tab.</span>
+                  </div>
+                </div>
+              )}
+            </div>
+          </td>
+        </tr>
+      )}
+    </>
+  );
+}

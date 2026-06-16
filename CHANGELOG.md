@@ -9,6 +9,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Epoch grid — the day editor's spine.** The Epochs tab is now a per-epoch grid: one row per epoch
+  joining the day's tasks + statescript/video files + opto schedule (columns #, Task, Camera(s),
+  Statescript, Video(s), Opto mW, Pulse ms, Status), with a per-epoch drill-in (What happened /
+  Generated files / Optogenetics), an epoch ⋯ menu (insert / duplicate / move / delete-with-undo), and
+  a "+ from template" starter menu (Sleep day / W-track day / Copy structure from a prior day / Blank).
+  It is a pure join-view (`buildEpochGrid`) + pure write-back transforms (`epochOperations`) over the
+  day's existing arrays — storage and **exported YAML are unchanged** (the golden baselines stay
+  byte-identical). A reorder or delete that would strand a bound file/video reference confirms first
+  (never silently scrubbing). Replaces the transitional Tasks &amp; Epochs step; the leaf sub-editors it
+  superseded (`AssociatedVideosEditor`, `AssociatedFilesEditor`, `TaskInstancesTable`, `FsGuiSection`,
+  `TaskInstanceModal`) are now unused and slated for removal in a follow-up.
+- **Per-epoch filename derivation + a day data folder.** Statescript / video filenames derive from the
+  `{YYYYMMDD}_{subject}_{epoch:02d}_{tag}` convention inside the day's data folder (`day.dataFolder`,
+  set on the Day tab); the drill-in shows each file as `generated` (derived) or `manual` (overridden),
+  with Override / Revert. Derivation is additive — it reproduces the values the export already stored,
+  and existing/imported files keep their explicit paths (`manual`).
+- **Video declaration (the one new validation rule).** Each task epoch must either bind a video or be
+  explicitly marked "no video recorded" (the video 3-state: present / missing / absent). An undeclared
+  videoless epoch is a blocking readiness issue (`epoch_video_undeclared`) and the row reads "Needs
+  video". The "no video" declaration is stored off-export (`day.state.videolessEpochs`), so it never
+  reaches the YAML and cannot move a baseline.
 - **Shared redesign primitives (internal — no user-facing behavior yet).** A small, tested kit of
   CSS-Module + design-token components that the day/animal editor redesign builds on: `StatusPill`
   (a renderer over the existing `dayLifecycle` vocabulary — it coins no new status words) and its

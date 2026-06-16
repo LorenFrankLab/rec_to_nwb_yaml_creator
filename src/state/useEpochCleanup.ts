@@ -27,7 +27,7 @@ export interface UseEpochCleanupParams {
  * workspace instead **preserves** stale references so they stay visible, lets
  * validation own them (`orphaned_file` / `orphaned_video` → export blocked), and
  * clears them only through the explicit, user-confirmed destructive-edit flow in
- * the Day Editor (TasksEpochsStep). `workspace` / `updateDay` are still accepted
+ * the Day Editor (EpochsTab). `workspace` / `updateDay` are still accepted
  * for call-site compatibility but no longer drive an automatic scrub.
  *
  * @param params - The legacy form slice + the workspace slice.

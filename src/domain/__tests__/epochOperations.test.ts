@@ -18,7 +18,7 @@ import {
   epochsOrphanedBy,
 } from '../epochOperations';
 
-const inst = (taskTypeId, task_epochs) => ({ taskTypeId, task_epochs });
+const inst = (taskTypeId: string, task_epochs: Array<number | string>) => ({ taskTypeId, task_epochs });
 
 describe('nextEpochNumber', () => {
   it('is max(epoch) + 1, or 1 when empty', () => {

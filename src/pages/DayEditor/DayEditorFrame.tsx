@@ -28,7 +28,7 @@ import type { DayEditorBundle } from './DayEditorContext';
 import SaveIndicator from './SaveIndicator';
 import DayTab from './DayTab';
 import FailedChannelsTab from './FailedChannelsTab';
-import TasksEpochsStep from './TasksEpochsStep';
+import EpochsTab from './EpochsTab';
 import DioTab from './DioTab';
 import ExportStep from './ExportStep';
 import type { CopyableDioSource } from './BehavioralEventsDisplay';
@@ -402,7 +402,7 @@ export default function DayEditorFrame() {
                 overviewFields={vm.overview.fields}
               />
             )}
-            {mode === 'epochs' && <TasksEpochsStep {...dayEditorContextValue} />}
+            {mode === 'epochs' && <EpochsTab {...dayEditorContextValue} focusRequest={focusRequest} />}
             {mode === 'channels' && (
               <FailedChannelsTab {...dayEditorContextValue} badChannelMarks={vm.badChannels.marks} />
             )}

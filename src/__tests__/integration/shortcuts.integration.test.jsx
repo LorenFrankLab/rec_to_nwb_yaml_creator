@@ -61,25 +61,25 @@ describe('global shortcuts + help (integration)', () => {
 
     // Advance to the Epochs tab.
     fireEvent.keyDown(document.body, { key: 'ArrowRight', altKey: true });
-    expect(await screen.findByRole('heading', { name: /tasks & epochs/i })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: /^Epochs$/i })).toBeInTheDocument();
 
     // Retreat back to the Day tab.
     fireEvent.keyDown(document.body, { key: 'ArrowLeft', altKey: true });
     expect(await screen.findByRole('heading', { name: /session metadata/i })).toBeInTheDocument();
   });
 
-  it('Alt+N opens the add-task modal on the Epochs tab', async () => {
+  it('Alt+N opens the epoch template menu on the Epochs tab', async () => {
     const user = userEvent.setup();
     await renderRoute(`#/day/${DAY_ID}`);
     await screen.findByRole('heading', { name: /day editor/i });
 
     // Go to the Epochs tab.
     await user.click(screen.getByRole('button', { name: /^Epochs$/i }));
-    await screen.findByRole('heading', { name: /tasks & epochs/i });
+    await screen.findByRole('heading', { name: /^Epochs$/i });
 
-    // Alt+N opens the add-task dialog (the step's add target).
+    // Alt+N opens the grid's add affordance — the "+ from template" menu.
     fireEvent.keyDown(document.body, { key: 'n', altKey: true });
-    expect(await screen.findByRole('dialog', { name: /add task/i })).toBeInTheDocument();
+    expect(await screen.findByRole('menuitem', { name: /Sleep day/i })).toBeInTheDocument();
   });
 
   it('Alt+N is a no-op on a step with no add target (Overview)', async () => {
