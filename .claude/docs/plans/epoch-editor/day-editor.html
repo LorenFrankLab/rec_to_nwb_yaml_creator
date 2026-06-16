@@ -78,6 +78,11 @@
   .gen-panel .ed-gh{margin-top:0}
   .gen-panel .vidcam{width:auto}
   .gen-panel .vidrow{margin-bottom:0}
+  .ed-gh-note{font-size:11.5px;color:var(--faint);font-weight:400;text-transform:none;letter-spacing:0;margin:-4px 0 9px}
+  .vid-problem{color:var(--bad);font-weight:600;font-size:12.5px;display:inline-flex;align-items:center;gap:6px}
+  .vid-present,.vid-missing,.vid-absent{align-items:center;gap:8px;flex-wrap:wrap}
+  .vidrow .vid-present,.vidrow .vid-missing,.vidrow .vid-absent{display:inline-flex}
+  .st.warn{color:var(--warn)}
   .rowmenu{border:1px solid var(--line);background:#fff;border-radius:7px;width:30px;height:28px;cursor:pointer;color:var(--muted);font-size:16px;line-height:1}
   .rowmenu:hover{border-color:var(--accent);color:var(--accent)}
   .menu .mi.danger{color:var(--bad)}.menu .mi.danger:hover{background:#fdf6f6}
@@ -253,19 +258,19 @@
         <table>
           <thead><tr><th></th><th>#</th><th>Task</th><th>Camera(s)</th><th>Statescript</th><th>Video(s)</th><th class="optohdr">Opto (mW)</th><th class="optohdr">Pulse (ms)</th><th>Status</th></tr></thead>
           <tbody>
-            <tr><td class="exp"><button type="button" class="car" aria-expanded="false" aria-controls="e1" aria-label="Toggle epoch 1 details" onclick="t('e1',this)">▸</button></td><td class="n">1</td><td class="tcell" onclick="t('e1')"><span class="tag">Sleep · s1</span></td><td><span class="cam">sleep_camera</span></td><td class="file">…_01_s1.stateScriptLog</td><td class="file">…_01_s1.1.h264</td><td><input class="opto-in" value="0"></td><td><input class="opto-in" value="2"></td><td class="st">Complete</td></tr>
+            <tr><td class="exp"><button type="button" class="car" aria-expanded="false" aria-controls="e1" aria-label="Toggle epoch 1 details" onclick="t('e1',this)">▸</button></td><td class="n">1</td><td class="tcell" onclick="t('e1')"><span class="tag">Sleep · s1</span></td><td><span class="cam">sleep_camera</span></td><td class="file">…_01_s1.stateScriptLog</td><td class="file">…_01_s1.1.h264</td><td><input class="opto-in" value="0"></td><td><input class="opto-in" value="2"></td><td class="st" id="st-e1">Complete</td></tr>
             <tr class="detail" id="e1" style="display:none"><td colspan="9"><div class="editor-v2">
               <div class="ed-head">
                 <span class="ed-title">Epoch 1 details</span>
                 <div style="position:relative">
                   <button class="rowmenu" aria-label="Epoch 1 actions" aria-haspopup="true" onclick="epMenu(event)">⋯</button>
                   <div class="menu" id="ep-pop" style="display:none;top:calc(100% + 4px);right:0">
-                    <button class="mi" onclick="closeMenus()">＋ Insert epoch after</button>
-                    <button class="mi" onclick="closeMenus()">⎘ Duplicate epoch</button>
-                    <button class="mi" onclick="closeMenus()">↑ Move up</button>
-                    <button class="mi" onclick="closeMenus()">↓ Move down</button>
+                    <button class="mi" onclick="closeMenus()">Insert epoch after</button>
+                    <button class="mi" onclick="closeMenus()">Duplicate epoch</button>
+                    <button class="mi" onclick="closeMenus()">Move up</button>
+                    <button class="mi" onclick="closeMenus()">Move down</button>
                     <div class="sep"></div>
-                    <button class="mi danger" onclick="delEpoch(1)">🗑 Delete epoch</button>
+                    <button class="mi danger" onclick="delEpoch(1)">Delete epoch</button>
                   </div>
                 </div>
               </div>
@@ -281,12 +286,15 @@
 
               <div class="ed-group gen-panel" id="genpanel-e1">
                 <h6 class="ed-gh">Generated files</h6>
+                <div class="ed-gh-note">The <b>file names</b> derive from <code>{date}_{animal}_{epoch}_{tag}</code>. You still tell the app <b>where the files live</b> — the day's <b>data folder</b>, set once on the Day tab and carried forward. Override a name only for exceptions.</div>
                 <div class="ed-grid">
-                  <label>Statescript</label><div class="field"><span class="gentag">generated</span><span class="gen" data-gen="…/20260514_Laurent_01_s1.stateScriptLog">…/20260514_Laurent_01_s1.stateScriptLog</span><button class="override" data-orig="Override path" onclick="overrideFile(this)">Override path</button><span class="derived-note" style="display:none">manual — this epoch only</span></div>
+                  <label>Data folder</label><div class="field"><span class="gen">/stelmo/denisse/Laurent/20260514/</span><span class="derived-note">your path · set on the Day tab · carried forward</span></div>
+                  <label>Statescript</label><div class="field"><span class="gentag">name generated</span><span class="gen" data-gen="20260514_Laurent_01_s1.stateScriptLog">20260514_Laurent_01_s1.stateScriptLog</span><button class="override" data-orig="Override name" onclick="overrideFile(this)">Override name</button><span class="derived-note" style="display:none">manual — this epoch only</span></div>
                   <label>Video</label><div class="field" id="vid-e1">
                     <div class="vidrow" id="vidrow-e1">
-                      <span class="vid-present"><span class="gentag">generated</span><span class="gen" data-gen="20260514_Laurent_01_s1.1.h264">20260514_Laurent_01_s1.1.h264</span><span class="vidcam">· sleep_camera</span><button class="override" data-orig="Rename" onclick="overrideFile(this)">Rename</button><button class="exception-action" onclick="noVideo('e1',false)">No video</button></span>
-                      <span class="vid-absent" style="display:none"><span class="novid">No video recorded — fine for this epoch (export stays valid)</span><button class="addbtn" onclick="noVideo('e1',true)">＋ Add video</button></span>
+                      <span class="vid-present"><span class="gentag">name generated</span><span class="gen" data-gen="20260514_Laurent_01_s1.1.h264">20260514_Laurent_01_s1.1.h264</span><span class="vidcam">· sleep_camera</span><button class="override" data-orig="Rename" onclick="overrideFile(this)">Rename</button><button class="exception-action" onclick="vidState('e1','absent')">No video</button></span>
+                      <span class="vid-missing" style="display:none"><span class="vid-problem">⚠ No video file linked</span><span class="derived-note">expected for this epoch — add the file, or mark it as no-video</span><button class="addbtn" onclick="vidState('e1','present')">＋ Add video</button><button class="exception-action" onclick="vidState('e1','absent')">Mark “no video”</button></span>
+                      <span class="vid-absent" style="display:none"><span class="novid">No video recorded — fine for this epoch (export stays valid)</span><button class="addbtn" onclick="vidState('e1','present')">＋ Add video</button></span>
                     </div>
                   </div>
                 </div>
@@ -317,6 +325,7 @@
     <section class="pane hide" id="p-day">
       <div class="card" style="padding:18px 16px 4px">
         <div class="row"><span class="lbl">Session ID</span><span style="color:var(--muted)">Laurent_20260514 <span style="font-size:12px;color:var(--faint)">— auto from subject + date</span></span></div>
+        <div class="row"><span class="lbl">Data folder</span><span><input style="width:54%;font-family:ui-monospace,Menlo,monospace;font-size:12.5px" value="/stelmo/denisse/Laurent/20260514/"><span class="unit" style="font-size:12px;color:var(--faint)">— where this day's files live (you provide it); epoch file names derive inside it · carried forward</span></span></div>
         <div class="row"><span class="lbl">Weight</span><span><input class="w" value="463"><span class="unit">g</span></span></div>
         <div class="row"><span class="lbl">Session description</span><input style="width:60%" value="sleep / opto laser power series"></div>
         <div class="row"><span class="lbl">Experimenters</span><span><span class="cam">Morales-Rodriguez ✕</span> <span class="cam">Gao ✕</span> <span class="cam" style="cursor:pointer">＋</span></span></div>
@@ -415,7 +424,9 @@
   // demo toggle: swap the quiet "ready" line for the loud "blocking" bar (real app drives this off validation)
   function toggleReady(){var r=document.getElementById('ready'),b=document.getElementById('blocking');
     var blocking=b.style.display!=='none';
-    r.style.display=blocking?'flex':'none';b.style.display=blocking?'none':'block';}
+    r.style.display=blocking?'flex':'none';b.style.display=blocking?'none':'block';
+    // keep the stress demo coherent: the blocking issue ("Epoch 1 has no video") IS the epoch's state
+    vidState('e1', blocking ? 'present' : 'missing');}
   // a blocking link is field-level: switch to Epochs, expand the row, scroll to + flash the exact control
   function gotoEpoch(rowId,fieldId){
     show('ep',document.querySelectorAll('.tab')[1]);
@@ -440,10 +451,13 @@
     if(toManual){chip.contentEditable='true';chip.classList.add('manual-chip');tag.textContent='manual';tag.classList.add('manual');btn.textContent='Revert to generated';chip.focus();}
     else{chip.contentEditable='false';chip.classList.remove('manual-chip');if(chip.dataset.gen)chip.textContent=chip.dataset.gen;tag.textContent='generated';tag.classList.remove('manual');btn.textContent=btn.dataset.orig;}
     var note=box.querySelector('.derived-note');if(note)note.style.display=toManual?'':'none';}
-  // intentional "no video" exception ⇄ restore (export readiness treats no-video as valid, not missing)
-  function noVideo(id,restore){var row=document.getElementById('vidrow-'+id);
-    row.querySelector('.vid-present').style.display=restore?'':'none';
-    row.querySelector('.vid-absent').style.display=restore?'none':'';}
+  // video has THREE states: present (generated name) · missing (problem, blocks export) · absent (intentional, valid)
+  function vidState(id,state){var row=document.getElementById('vidrow-'+id);
+    row.querySelector('.vid-present').style.display=state==='present'?'':'none';
+    row.querySelector('.vid-missing').style.display=state==='missing'?'':'none';
+    row.querySelector('.vid-absent').style.display=state==='absent'?'':'none';
+    var st=document.getElementById('st-'+id);
+    if(st){st.textContent=state==='missing'?'Needs video':'Complete';st.classList.toggle('warn',state==='missing');}}
   // reversible epoch delete (real app removes + renumbers; Undo restores)
   function delEpoch(n){showToast('Epoch '+n+' deleted',true);}
   function showToast(msg,undoable){document.getElementById('toastmsg').textContent=msg;
@@ -454,6 +468,12 @@
   function epMenu(e){e.stopPropagation();var m=document.getElementById('ep-pop');m.style.display=m.style.display==='none'?'block':'none';}
   function closeMenus(){document.querySelectorAll('.menu').forEach(function(m){m.style.display='none';});}
   document.addEventListener('click',closeMenus);
+  // cross-page repair: arriving at #fix-e1-video enters the blocking demo and lands on the real problem
+  (function(){if(location.hash!=='#fix-e1-video')return;
+    document.getElementById('ready').style.display='none';
+    document.getElementById('blocking').style.display='block';
+    vidState('e1','missing');
+    setTimeout(function(){gotoEpoch('e1','vid-e1');},80);})();
   (function(){
     // 9 named events (carried) — also rendered into the collapsed "Show all 64 ECU channels" grid
     var din={3:'Sleep_Camera',5:'LeftWell_Poke',6:'CenterWell_Poke',12:'RightWell_Poke',14:'Handle_Well',15:'Maze_Camera'};

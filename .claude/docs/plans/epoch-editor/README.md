@@ -157,17 +157,27 @@ A review asked for the post-click result states. Priority set (1–5) mocked + v
 4. **Generated → manual override** (day-editor drill-in) — `Override path` / `Rename` flips the green
    **generated** chip to an editable **manual** chip (amber tag) + `Revert to generated`, scoped
    "affects this epoch only".
-5. **No video exception** (day-editor) — `no video` → row reads **"No video recorded — fine for this epoch
-   (export stays valid)"** with `＋ Add video`; readiness treats intentional no-video as **valid**, distinct
-   from a *missing* expected video (a blocking issue).
+5. **Video has three states** (day-editor) — `present` (generated name) · **`missing`** (⚠ *"No video file
+   linked"* — a **problem** that blocks export, row status → **`Needs video`**) · `absent` (intentional
+   *"No video recorded — fine for this epoch"*). The exception (`absent`) is **valid**; the *missing* state
+   is a blocking issue — they're different, and the row status distinguishes them.
+
+**Files are NOT fully generated — names derive, the folder is the user's.** The **file names** derive from
+`{date}_{animal}_{epoch}_{tag}`; the **data folder** (where the files live on disk) is **user-provided** —
+a day-level field on the **Day tab** (`set once · carried forward`), surfaced read-only in the Generated
+files panel. So "Generated files" = derived *names* resolved inside *your* folder (this is also what
+justifies its own boxed zone — it's the file-location group, not an arbitrary box). Until a future
+data-directory binding exists, the user supplies the path.
 
 **Expanded-epoch visual chunking** — the drill-in was a flat strip of same-weight controls. It's now three
 labeled groups — **What happened** (task / environment / cameras), **Generated files** (a lightly tinted
-sub-panel: statescript + video as grey-monospace `generated`/`manual` values with `Override`/`Rename`), and
+sub-panel with the data folder + `name generated`/`manual` filenames + `Override`/`Rename`), and
 **Optogenetics** (power / pulse / protocol-context). Editable controls are white-with-borders; generated
-values are quiet and grey; the **exception** action (`No video`) is styled distinctly from the **routine**
-one (`Rename`); rare row actions (insert / duplicate / move / delete) are tucked into a `⋯` menu so they
-don't crowd the fields. A repair link still lands on + flashes the exact field (issue-led open).
+names are quiet and grey; the **exception** action (`No video`) is styled distinctly from the **routine**
+one (`Rename`); rare row actions are in a `⋯` menu (plain text — **no emoji**; implementation uses the
+app's icon set). A repair link lands on + flashes the exact field, and — for the "no video" issue — puts
+Epoch 1 into the actual **missing** state so the **stress demo is coherent** (in-page readiness toggle and
+the cross-page `day-editor.html#fix-e1-video` link both do this).
 
 **Secondary set (6–10) — not yet mocked:** per-day row overflow menu (duplicate / delete / export / open);
 one animal-static **edit flow** (save / cancel / re-export consequence); **new-configuration** details
