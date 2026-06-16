@@ -17,8 +17,9 @@ import { useStoreContext } from '../../state/StoreContext';
 import type { Animal } from '../../state/workspaceTypes';
 import { getAnimalDayIds } from '../../state/workspaceSelectors';
 import { getAnimalOptoCompleteness, OPTO_COMPLETENESS } from '../../domain/sectionStatus';
+import { optoFieldsPresence } from '../../domain/optoCompleteness';
 import { buildAnimalViewModel } from '../../viewModels/animalViewModel';
-import type { AnimalConfigCardViewModel } from '../../viewModels/animalViewModel';
+import type { AnimalConfigCardViewModel, AnimalBlastRadiusViewModel } from '../../viewModels/animalViewModel';
 import { useReconfigContext } from '../../hooks/useReconfigContext';
 import { ConfirmDialog } from '../../components/Modal';
 import OverflowMenu from '../../components/OverflowMenu';
@@ -34,6 +35,8 @@ import CamerasContainer from '../AnimalEditor/wiring/CamerasContainer';
 import TaskTypesContainer from '../AnimalEditor/wiring/TaskTypesContainer';
 import OptogeneticsContainer from '../AnimalEditor/wiring/OptogeneticsContainer';
 import { useAnimalFieldUpdate } from '../AnimalEditor/wiring/useAnimalFieldUpdate';
+import BlastRadiusChip from '../../components/ui/BlastRadiusChip';
+import { useUndoToast } from '../../components/ui/UndoToast';
 import ConfigVersionContext from './ConfigVersionContext';
 import AnimalScopeChips from './AnimalScopeChips';
 import ConfigurationCard from './ConfigurationCard';
@@ -123,14 +126,21 @@ interface RenderPanelContext {
   onFieldUpdate: (field: string, value: unknown) => void;
   /** The current-configuration card data, rendered above the Electrode Groups editor. */
   configCard: AnimalConfigCardViewModel;
+  /** The blast radius (chip day count) for the re-export-forcing setup tabs (cameras / opto). */
+  blastRadius: AnimalBlastRadiusViewModel;
+  /** Called after an optogenetics write commits, so the host can surface the re-export consequence. */
+  onOptoAfterUpdate: () => void;
 }
+
+/** The four export-gated optogenetics fields, for the "Opto configured · N of N" meter. */
+const OPTO_TOTAL_FIELDS = 4;
 
 /**
  * Render the active tab's panel content. The `days` tab hosts the shared RecordingDaysTab; the
  * setup tabs host their extracted containers (Phase 3-2/3-3); only `export` still shows the
  * Phase-1 placeholder until its sub-phase (3-5) lands.
  */
-function renderPanel({ tab, animalId, animal, onPendingEditsChange, onFieldUpdate, configCard }: RenderPanelContext) {
+function renderPanel({ tab, animalId, animal, onPendingEditsChange, onFieldUpdate, configCard, blastRadius, onOptoAfterUpdate }: RenderPanelContext) {
   switch (tab) {
     case 'days':
       return <RecordingDaysTab animalId={animalId} />;
@@ -150,11 +160,15 @@ function renderPanel({ tab, animalId, animal, onPendingEditsChange, onFieldUpdat
       return <RecordingSystemContainer animal={animal} onFieldUpdate={onFieldUpdate} />;
     case 'cameras':
       return (
-        <CamerasContainer
-          animal={animal}
-          onFieldUpdate={onFieldUpdate}
-          onPendingEditsChange={onPendingEditsChange}
-        />
+        <>
+          {/* Cameras are animal-static — an edit forces affected days to re-export. */}
+          <BlastRadiusChip dayCount={blastRadius.totalDays} />
+          <CamerasContainer
+            animal={animal}
+            onFieldUpdate={onFieldUpdate}
+            onPendingEditsChange={onPendingEditsChange}
+          />
+        </>
       );
     case 'task-types':
       return (
@@ -164,22 +178,33 @@ function renderPanel({ tab, animalId, animal, onPendingEditsChange, onFieldUpdat
           onPendingEditsChange={onPendingEditsChange}
         />
       );
-    case 'optogenetics':
+    case 'optogenetics': {
+      // Optogenetics is animal-static — an edit forces affected days to re-export. When configured,
+      // a completeness meter ("Opto configured · N of N") replaces the never-used chip.
+      const optoPresent = optoFieldsPresence(
+        (animal as { optogenetics?: unknown }).optogenetics as Parameters<typeof optoFieldsPresence>[0]
+      );
       return (
         <>
-          {getAnimalOptoCompleteness(animal) === OPTO_COMPLETENESS.NONE && (
+          <BlastRadiusChip dayCount={blastRadius.totalDays} />
+          {getAnimalOptoCompleteness(animal) === OPTO_COMPLETENESS.NONE ? (
             // A NEVER-configured opto tab is a VALID state, not an error — a neutral chip says so, so
             // the empty section doesn't read as missing setup (charter tab→content map). Keyed to the
             // NONE state specifically (not the setup-status TODO, which also covers PARTIAL): a
             // partially-configured animal IS using opto, so "Not used" would be wrong there — the
-            // section-nav shows "incomplete" for that case instead.
+            // meter below shows its partial completeness instead.
             <p className={styles.statusChip} data-testid="opto-status-chip">
               Not used — no stimulation
             </p>
+          ) : (
+            <p className={styles.optoMeter} data-testid="opto-meter">
+              Opto configured · {optoPresent.count} of {OPTO_TOTAL_FIELDS}
+            </p>
           )}
-          <OptogeneticsContainer animalId={animalId} />
+          <OptogeneticsContainer animalId={animalId} onAfterUpdate={onOptoAfterUpdate} />
         </>
       );
+    }
     default:
       return (
         <div className={styles.placeholder}>
@@ -237,6 +262,27 @@ export function AnimalView({ animalId, tab }: AnimalViewProps) {
     () => buildAnimalViewModel(model.workspace, animalId, tab),
     [model.workspace, animalId, tab]
   );
+
+  // Post-edit consequence toast (Phase 2): committing an animal-static edit (Identity / Cameras /
+  // Optogenetics) makes already-exported days stale, so surface "N already-exported days now need
+  // re-export". Reuses the Phase-0 toast host with NO Undo (it's a notice, not a reversible action).
+  const consequenceToast = useUndoToast();
+  const { exportedDays } = vm.blastRadius;
+  const noteEditConsequence = () => {
+    if (exportedDays <= 0) return;
+    const noun = exportedDays === 1 ? 'day' : 'days';
+    const verb = exportedDays === 1 ? 'needs' : 'need';
+    consequenceToast.show(`Saved · ${exportedDays} already-exported ${noun} now ${verb} re-export`);
+  };
+
+  // The setup containers' field-update path. A write to an animal-static, re-export-forcing section
+  // (cameras here; opto routes through its own onAfterUpdate; identity through the profile save) also
+  // surfaces the consequence. Recording-system writes (`data_acq_device`) are NOT re-export-forcing,
+  // so they fall through without a consequence.
+  const handleStaticFieldUpdate = (field: string, value: unknown) => {
+    handleFieldUpdate(field, value);
+    if (field === 'cameras') noteEditConsequence();
+  };
 
   const panelRef = useRef<HTMLElement>(null);
   const isFirstRender = useRef(true);
@@ -499,8 +545,10 @@ export function AnimalView({ animalId, tab }: AnimalViewProps) {
               animalId,
               animal,
               onPendingEditsChange: setPendingEdits,
-              onFieldUpdate: handleFieldUpdate,
+              onFieldUpdate: handleStaticFieldUpdate,
               configCard: vm.configCard,
+              blastRadius: vm.blastRadius,
+              onOptoAfterUpdate: noteEditConsequence,
             })}
           </div>
         </section>
@@ -521,7 +569,12 @@ export function AnimalView({ animalId, tab }: AnimalViewProps) {
         isOpen={profileOpen}
         animal={animal}
         dayCount={getAnimalDayIds(animal).length}
-        onSave={(subject) => handleFieldUpdate('subject', subject)}
+        onSave={(subject) => {
+          // Identity is animal-static — the change applies to every day, so surface the re-export
+          // consequence for already-exported days.
+          handleFieldUpdate('subject', subject);
+          noteEditConsequence();
+        }}
         onClose={() => setProfileOpen(false)}
       />
 
@@ -540,6 +593,9 @@ export function AnimalView({ animalId, tab }: AnimalViewProps) {
         }}
         onCancel={() => setAnimalDeleteOpen(false)}
       />
+
+      {/* The post-edit re-export consequence notice (mounted once; null until an animal-static save). */}
+      {consequenceToast.node}
     </main>
   );
 }

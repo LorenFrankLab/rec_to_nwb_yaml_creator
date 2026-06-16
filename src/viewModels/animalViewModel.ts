@@ -30,7 +30,7 @@ import {
   getConfigHistory,
   getExperimenterNames,
 } from '../state/workspaceSelectors';
-import { getPresentDayCount } from '../domain/dayRecovery';
+import { getPresentDayCount, classifyAnimalDays, DAY_STATUS } from '../domain/dayRecovery';
 import { optoFieldsPresence } from '../domain/optoCompleteness';
 import {
   getAnimalSectionStatus,
@@ -124,6 +124,18 @@ export interface AnimalConfigCardViewModel {
   newConfigurationLabel: string;
 }
 
+/**
+ * The blast radius of an animal-static edit (Identity / Cameras / Optogenetics): how many recording
+ * days share the animal-static metadata, and how many of those were already exported (so they now
+ * need re-export). Drives the {@link BlastRadiusChip} day count + the post-edit re-export consequence.
+ */
+export interface AnimalBlastRadiusViewModel {
+  /** Total present recording days (OK + recovered) sharing this animal's static metadata. */
+  totalDays: number;
+  /** How many present days were already exported (`day.state.exported`) and now need re-export. */
+  exportedDays: number;
+}
+
 /** The full AnimalView page view-model. */
 export interface AnimalViewModel {
   /** The animal header (id + species/sex facts). */
@@ -132,6 +144,8 @@ export interface AnimalViewModel {
   summary: AnimalSummaryViewModel;
   /** The current-configuration card (setup surface). */
   configCard: AnimalConfigCardViewModel;
+  /** The blast radius of an animal-static edit (chip day count + re-export consequence). */
+  blastRadius: AnimalBlastRadiusViewModel;
   /** The grouped section-nav, in display order. */
   groups: AnimalSectionGroupViewModel[];
   /** The resolved active tab (an unknown/bare tab falls back to the default, as the route does). */
@@ -294,6 +308,25 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 /**
+ * The blast radius of an animal-static edit: total present days + how many were already exported.
+ * Counts only OK (in-place) days as exported — a recovered/wrong-owner record isn't part of the
+ * animal's exportable day set.
+ */
+function buildBlastRadius(
+  animalId: string,
+  animal: unknown,
+  daysMap: Record<string, Day>
+): AnimalBlastRadiusViewModel {
+  const totalDays = getPresentDayCount(animalId, animal, daysMap);
+  const exportedDays = classifyAnimalDays(animalId, animal, daysMap).filter((d) => {
+    if (d.status !== DAY_STATUS.OK) return false;
+    const state = isRecord(d.record) ? d.record.state : undefined;
+    return isRecord(state) && state.exported === true;
+  }).length;
+  return { totalDays, exportedDays };
+}
+
+/**
  * The per-tab count token the section-nav shows in its trailing slot. Day-work counts read the same
  * sources the rest of the view uses (`getPresentDayCount`, the valid export rows), so the nav can
  * never disagree with the Days tab / the Export tab; the setup counts come from `getAnimalSetupCounts`
@@ -399,11 +432,14 @@ export function buildAnimalViewModel(
   };
   if (TAB_SCOPE[activeTab]) activePanel.scope = TAB_SCOPE[activeTab];
 
+  const daysMapAll: Record<string, Day> = isRecord(ws.days) ? (ws.days as Record<string, Day>) : {};
+
   if (!isRecord(animal)) {
     return {
       header: { id: animalId },
       summary: buildAnimalSummary(animalId, undefined),
       configCard: buildConfigCard(animalId, undefined, {}),
+      blastRadius: buildBlastRadius(animalId, undefined, daysMapAll),
       groups: [],
       activeTab,
       activePanel,
@@ -418,7 +454,7 @@ export function buildAnimalViewModel(
   if (subject.species) header.speciesLabel = subject.species;
   if (subject.sex) header.sexLabel = subject.sex;
 
-  const daysMap: Record<string, Day> = isRecord(ws.days) ? (ws.days as Record<string, Day>) : {};
+  const daysMap = daysMapAll;
   const blockingSections = getAnimalBlockingSections(animalRecord, daysMap);
   const countLabels = buildCountLabels(animalId, animalRecord, {
     animals: animalsMap,
@@ -436,6 +472,7 @@ export function buildAnimalViewModel(
     header,
     summary: buildAnimalSummary(animalId, animal),
     configCard: buildConfigCard(animalId, animal, daysMap),
+    blastRadius: buildBlastRadius(animalId, animal, daysMap),
     groups,
     activeTab,
     activePanel,

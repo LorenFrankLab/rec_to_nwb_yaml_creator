@@ -153,6 +153,30 @@ describe('buildAnimalViewModel — animal-static summary + configuration card', 
     expect(vm.configCard.version).toBeNull();
     expect(vm.configCard.probes).toEqual([]);
   });
+
+  it('reports the blast radius: total present days + already-exported days', () => {
+    const { animal, day } = loadRealistic();
+    const exportedDay = clone(day);
+    exportedDay.state = { exported: true };
+    const draftDay = clone(day);
+    draftDay.id = 'remy-2023-06-25';
+    draftDay.date = '2023-06-25';
+    draftDay.state = { draft: true };
+    animal.days = [exportedDay.id, draftDay.id];
+    const ws = {
+      animals: { [animal.id]: animal },
+      days: { [exportedDay.id]: exportedDay, [draftDay.id]: draftDay },
+    };
+
+    const vm = buildAnimalViewModel(ws, animal.id, 'cameras');
+    // Both days are "shared by" any animal-static edit; only the exported one needs re-export.
+    expect(vm.blastRadius).toEqual({ totalDays: 2, exportedDays: 1 });
+  });
+
+  it('reports a zero blast radius for an absent animal', () => {
+    const vm = buildAnimalViewModel({ animals: {}, days: {} }, 'ghost', 'days');
+    expect(vm.blastRadius).toEqual({ totalDays: 0, exportedDays: 0 });
+  });
 });
 
 describe('buildAnimalViewModel — status rings', () => {

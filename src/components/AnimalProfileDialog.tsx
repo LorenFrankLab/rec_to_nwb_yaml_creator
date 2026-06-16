@@ -3,6 +3,7 @@ import { getAnimalSubject } from '../state/workspaceSelectors';
 import { isValidSpecies } from '../validation/dandiSubject';
 import Modal from './Modal/Modal';
 import { ConfirmDialog } from './Modal';
+import BlastRadiusChip from './ui/BlastRadiusChip';
 import './AnimalProfileDialog.css';
 
 /** The editable constant subject facts held by this dialog's form. */
@@ -141,6 +142,7 @@ export default function AnimalProfileDialog({
         }
       >
         <p className="animal-profile-blast-radius" role="note">
+          <BlastRadiusChip dayCount={dayCount} />
           Shared subject facts. Editing them updates {blastRadius}. Nothing here belongs to a single
           recording day.
         </p>
