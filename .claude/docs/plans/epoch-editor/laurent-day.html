@@ -1,0 +1,323 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Laurent · 2026-05-14 — day</title>
+<style>
+  :root{
+    --bg:#f4f6f8; --panel:#fff; --ink:#161a1d; --muted:#69727b; --faint:#9aa2ab;
+    --line:#e4e7eb; --line2:#eef1f4; --accent:#2f6fae; --accent-d:#255b91;
+    --ok:#1f8a4c; --okbg:#eaf6ee; --warn:#b8770a; --warnbg:#fbf3e3; --bad:#c23b3b; --badbg:#fbecec;
+    --opto:#7a3ea8; --optobg:#f3edfa; --opto-b:#dccaef;
+    --radius:10px; --sleep:#eef3fb; --sleep-b:#cadcef; --sleep-ink:#27548a;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font:14px/1.5 -apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--ink)}
+  .top{background:#fff;border-bottom:1px solid var(--line);padding:10px 30px;display:flex;align-items:center;gap:10px}
+  .mark{width:22px;height:22px;border-radius:6px;background:linear-gradient(135deg,var(--accent),#5b9bd6)}
+  .crumb{font-size:13px;color:var(--muted)}.crumb a{color:var(--muted);text-decoration:none}.crumb b{color:var(--ink)}
+  .wrap{max-width:1040px;margin:22px auto;padding:0 24px}
+  .head{display:flex;align-items:center;justify-content:space-between;gap:16px}
+  h1{font-size:23px;margin:0;letter-spacing:-.01em}
+  .sub{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px}
+  .chip{font-size:12.5px;background:#fff;border:1px solid var(--line);border-radius:999px;padding:3px 10px;color:#3c444d}
+  .chip.carry{background:#eef4fb;border-color:#cfe0f2;color:#2f5e8c}
+  .chip.opto{background:var(--optobg);border-color:var(--opto-b);color:var(--opto)}
+  .pill{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;border-radius:999px;padding:3px 10px}
+  .pill .d{width:7px;height:7px;border-radius:50%}.pill.draft{background:#eef1f4;color:#5b6470}.pill.draft .d{background:#5b6470}
+  .btn{font:inherit;border:1px solid var(--line);background:#fff;border-radius:8px;padding:8px 13px;cursor:pointer;color:var(--ink);font-size:13px}
+  .btn:hover{border-color:var(--accent);color:var(--accent)}
+  .btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}.btn.primary:hover{background:var(--accent-d)}
+  .btn.sm{padding:4px 10px;font-size:12.5px}
+  .tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin:18px 0 0}
+  .tab{padding:9px 14px;font-size:13.5px;color:var(--muted);border-bottom:2px solid transparent;cursor:pointer}
+  .tab.active{color:var(--ink);font-weight:600;border-bottom-color:var(--accent)}
+  .pane{padding-top:18px}.pane.hide{display:none}
+  .card{background:#fff;border:1px solid var(--line);border-radius:var(--radius);overflow:hidden}
+  .bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:11px 14px;border-bottom:1px solid var(--line2)}
+  .bar .spacer{flex:1}.bar .carry{font-size:12px;color:var(--muted)}
+  table{width:100%;border-collapse:collapse}
+  th,td{text-align:left;padding:10px 14px;border-bottom:1px solid var(--line2);vertical-align:top;font-size:13.5px}
+  th{font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--faint);font-weight:600}
+  td.exp{width:20px;color:var(--faint);cursor:pointer;padding-top:11px;user-select:none}.td.exp:hover{color:var(--accent)}
+  td.n{font-variant-numeric:tabular-nums;color:var(--faint);width:26px;padding-top:11px}
+  .tag{display:inline-block;padding:2px 9px;border-radius:6px;font-size:12px;font-weight:600;border:1px solid;background:var(--sleep);border-color:var(--sleep-b);color:var(--sleep-ink)}
+  .cam{font-size:12px;border:1px solid var(--line);background:#fff;border-radius:6px;padding:2px 8px;color:#3c444d}
+  .file{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;color:#7a828b}
+  .opto-in{width:54px;font:inherit;border:1px solid var(--opto-b);background:var(--optobg);border-radius:6px;padding:3px 6px;text-align:right;color:var(--opto);font-weight:600}
+  .st{font-size:12px;font-weight:600;color:var(--ok)}
+  .optohdr{color:var(--opto)}
+  .foot{padding:11px 14px;border-top:1px solid var(--line2);display:flex;gap:8px}
+  /* drill-in editor */
+  tr.detail td{background:#fbfcfd;padding:0}
+  .editor{padding:14px 18px 16px 46px;display:grid;grid-template-columns:120px 1fr;gap:11px 16px;align-items:center}
+  .editor label{color:var(--muted);font-size:12.5px}
+  .editor .field{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .editor select,.editor input{font:inherit;border:1px solid var(--line);border-radius:7px;padding:6px 8px}
+  .editor input.path{width:100%;max-width:560px;font-family:ui-monospace,Menlo,monospace;font-size:12px;color:#3c444d}
+  .editor input.fname{width:260px;font-family:ui-monospace,Menlo,monospace;font-size:12px}
+  .addbtn{font:inherit;font-size:12px;color:var(--accent);border:1px dashed var(--line);border-radius:7px;padding:5px 9px;background:#fff;cursor:pointer}
+  .addbtn:hover{border-color:var(--accent)}
+  .vidrow{display:flex;gap:8px;align-items:center;margin-bottom:5px}
+  .vidcam{font-size:12px;color:var(--muted);width:74px}
+  .linkbtn{font:inherit;font-size:12px;color:var(--muted);background:none;border:0;cursor:pointer;text-decoration:underline}
+  .derived-note{font-size:11.5px;color:var(--faint)}
+  /* day */
+  .row{display:flex;gap:14px;margin-bottom:14px;align-items:center}.lbl{width:170px;color:var(--muted);font-size:13px}
+  input.w{width:90px}.unit{color:var(--muted);margin-left:6px}
+  /* channels */
+  .probehead{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;border-bottom:1px solid var(--line2);font-weight:600;font-size:13.5px}.probehead .meta{font-weight:400;color:var(--muted);font-size:12px}
+  .shanks{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;padding:14px}
+  .shank h5{margin:0 0 6px;font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--faint)}
+  .chgrid{display:grid;grid-template-columns:repeat(8,1fr);gap:3px}
+  .ch{aspect-ratio:1;border:1px solid var(--line);border-radius:4px;background:#fff;font-size:9.5px;color:#aab0b7;display:flex;align-items:center;justify-content:center;cursor:pointer}
+  .ch.bad{background:var(--badbg);border-color:var(--bad);color:var(--bad);font-weight:700}.ch.carried{box-shadow:inset 0 0 0 2px #eebcbc}
+  .collapsed{padding:11px 14px;border-bottom:1px solid var(--line2);display:flex;justify-content:space-between;color:var(--muted);font-size:13px}.collapsed:last-child{border-bottom:0}
+  .small{font-size:12px;color:var(--muted);padding:0 0 12px}
+  /* DIO — carry-forward summary (default) + on-demand editor */
+  .dio-top{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+  .dio-top h3{margin:0;font-size:15px;flex:1}
+  .dio-status{display:inline-flex;align-items:center;gap:8px;font-size:13.5px;margin-bottom:14px}
+  .dio-status .dot{width:8px;height:8px;border-radius:50%;background:var(--ok)}
+  .dio-status .meta{color:var(--muted)}
+  .dio-2col{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  .dgrp{background:#fff;border:1px solid var(--line);border-radius:var(--radius);overflow:hidden}
+  .dgrp h4{margin:0;padding:9px 14px;font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--faint);border-bottom:1px solid var(--line2);font-weight:600}
+  .dev{display:flex;align-items:center;gap:12px;padding:7px 14px;border-bottom:1px solid var(--line2);font-size:13.5px}.dev:last-child{border-bottom:0}
+  .dch{font-family:ui-monospace,Menlo,monospace;color:var(--faint);width:60px;font-size:12.5px}
+  .dnm{font-weight:500}
+  .der{display:flex;align-items:center;gap:8px;padding:6px 14px;border-bottom:1px solid var(--line2)}
+  .der input{flex:1;font:inherit;font-size:13px;border:1px solid var(--line);border-radius:7px;padding:5px 8px}
+  .der .rm{border:0;background:none;color:var(--faint);cursor:pointer;font-size:15px}.der .rm:hover{color:var(--bad)}
+  .dio-boot{background:#f7faff;border:1px solid #d7e6f4;border-radius:var(--radius);padding:10px 14px;margin-bottom:14px;font-size:13px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .dio-boot .lab{color:#2f5e8c}
+  .daddrow{padding:9px 14px}
+  .dio-showall{margin-top:14px}
+  .dio-showall > summary{cursor:pointer;font-size:13px;color:var(--muted);padding:8px 0}.dio-showall > summary:hover{color:var(--accent)}
+  .dio-sugg{font-size:12px;color:var(--muted);padding:2px 14px 10px}
+  .dio-sugg b{color:#3c444d;font-weight:600}
+  .dio-sugg .s{display:inline-block;background:#eef4fb;border:1px solid #d7e6f4;color:#2f5e8c;border-radius:6px;padding:1px 7px;margin-right:4px}
+  /* full ECU grid (collapsed inside "Show all") */
+  .dio-cols{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  .dio-table{width:100%;border-collapse:collapse;background:#fff;border:1px solid var(--line);border-radius:var(--radius);overflow:hidden}
+  .dio-table th{font-size:11px;letter-spacing:.04em;text-transform:uppercase;color:var(--faint);text-align:left;padding:8px 12px;border-bottom:1px solid var(--line2);font-weight:600}
+  .dio-table td{padding:4px 12px;border-bottom:1px solid var(--line2);font-size:13px}
+  .dio-table tr:last-child td{border-bottom:0}
+  .dio-table td.chan{font-family:ui-monospace,Menlo,monospace;color:var(--faint);width:84px}
+  .dio-row-named{background:#f4f9f4}.dio-row-named td.chan{color:#3c444d}
+  .dio-name{width:100%;font:inherit;font-size:13px;border:1px solid transparent;background:transparent;border-radius:6px;padding:4px 7px}
+  .dio-name:hover,.dio-name:focus{border-color:var(--line);background:#fff;outline:none}
+  .dio-name.named{border-color:var(--line);background:#fff;font-weight:500}
+  .dio-name::placeholder{color:#c2c9d0}
+  .dio-pop{position:absolute;z-index:50;background:#fff;border:1px solid var(--line);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.14);padding:5px}
+  .dio-pop .pop-h{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--faint);padding:5px 8px}
+  .dio-pop .pop-item{padding:6px 9px;border-radius:6px;cursor:pointer;font-size:13px}
+  .dio-pop .pop-item:hover{background:#eaf1f9;color:var(--accent-d)}
+  .dio-pop .pop-note{font-size:11.5px;color:var(--faint);padding:6px 8px 3px;border-top:1px solid var(--line2);margin-top:3px}
+  /* export readiness + opto card */
+  .exportcheck{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-top:14px;padding:9px 14px;background:var(--okbg);border:1px solid #bfe3cd;border-radius:var(--radius);font-size:13px}
+  .exportcheck .ec-title{font-weight:600;color:#1a6e3f}
+  .ec-item{color:#2a7d4f}.ec-item.warn{color:var(--warn)}
+  .optocard{border-color:var(--opto-b) !important;margin-top:14px}
+  .optocard h4{margin:0 0 12px;color:var(--opto);font-size:13px}
+</style>
+</head>
+<body>
+  <div class="top"><span class="mark"></span>
+    <div class="crumb"><a href="#">Colony</a> › <a href="laurent-animal.html">Laurent</a> › <b>2026-05-14</b></div>
+  </div>
+
+  <div class="wrap">
+    <div class="head">
+      <h1>2026-05-14</h1>
+      <div style="display:flex;gap:8px"><button class="btn">Preview YAML</button><button class="btn primary">Export</button></div>
+    </div>
+    <div class="sub">
+      <span class="chip">Configuration v1</span><span class="chip opto">◑ Optogenetics</span>
+      <span class="chip carry">↩ carried from 2026-05-13</span><span class="pill draft"><span class="d"></span>Draft</span>
+    </div>
+
+    <div class="exportcheck">
+      <span class="ec-title">Before export</span>
+      <span class="ec-item">✓ 6 epochs complete</span>
+      <span class="ec-item">✓ DIO · 9 events</span>
+      <span class="ec-item">✓ Opto protocol set (Laser)</span>
+      <span class="ec-item">✓ Channels OK</span>
+      <span style="color:var(--faint);font-size:12px;margin-left:auto">issues, if any, link to the field</span>
+    </div>
+
+    <div class="tabs">
+      <div class="tab" onclick="show('day',this)">Day</div>
+      <div class="tab active" onclick="show('ep',this)">Epochs</div>
+      <div class="tab" onclick="show('ch',this)">Failed channels</div>
+      <div class="tab" onclick="show('dio',this)">DIO</div>
+    </div>
+
+    <!-- EPOCHS -->
+    <section class="pane" id="p-ep">
+      <div class="card">
+        <div class="bar">
+          <button class="btn primary">＋ from template ▾</button>
+          <span class="spacer"></span><span class="carry">↩ same structure as 2026-05-13</span>
+        </div>
+        <table>
+          <thead><tr><th></th><th>#</th><th>Task</th><th>Camera(s)</th><th>Statescript</th><th>Video(s)</th><th class="optohdr">Opto (mW)</th><th class="optohdr">Pulse (ms)</th><th>Status</th></tr></thead>
+          <tbody>
+            <tr><td class="exp" onclick="t('e1')">▸</td><td class="n">1</td><td><span class="tag">Sleep · s1</span></td><td><span class="cam">sleep_camera</span></td><td class="file">…_01_s1.stateScriptLog</td><td class="file">…_01_s1.1.h264</td><td><input class="opto-in" value="0"></td><td><input class="opto-in" value="2"></td><td class="st">Complete</td></tr>
+            <tr class="detail" id="e1" style="display:none"><td colspan="9"><div class="editor">
+              <label>Task</label><div class="field"><select><option>Sleep</option><option>W-track</option><option>Rest box</option></select><button class="addbtn">＋ new task type</button><span class="derived-note">tag derives: s1</span></div>
+              <label>Cameras</label><div class="field"><span class="cam">sleep_camera ✕</span><button class="addbtn">＋ add camera</button></div>
+              <label>Statescript</label><div class="field"><input class="path" value="/stelmo/denisse/Laurent/20260514/20260514_Laurent_01_s1.stateScriptLog"><span class="derived-note">derived ✎</span></div>
+              <label>Video(s)</label><div class="field"><div style="width:100%">
+                <div class="vidrow"><span class="vidcam">sleep_camera</span><input class="fname" value="20260514_Laurent_01_s1.1.h264"><button class="linkbtn">no video</button></div>
+                <button class="addbtn">＋ video</button></div></div>
+              <label>Opto</label><div class="field"><input class="opto-in" value="0"> mW &nbsp; pulse <input class="opto-in" value="2"> ms <span class="derived-note">protocol (laser DIO, FSGui file) set on the Day tab</span></div>
+              <label>Environment</label><div class="field"><input value="sleep-box" style="width:180px"></div>
+            </div></td></tr>
+
+            <tr><td class="exp" onclick="t('e2')">▸</td><td class="n">2</td><td><span class="tag">Sleep · s2</span></td><td><span class="cam">sleep_camera</span></td><td class="file">…_02_s2.stateScriptLog</td><td class="file">…_02_s2.1.h264</td><td><input class="opto-in" value="4"></td><td><input class="opto-in" value="2"></td><td class="st">Complete</td></tr>
+            <tr><td class="exp" onclick="t('e3')">▸</td><td class="n">3</td><td><span class="tag">Sleep · s3</span></td><td><span class="cam">sleep_camera</span></td><td class="file">…_03_s3.stateScriptLog</td><td class="file">…_03_s3.1.h264</td><td><input class="opto-in" value="7"></td><td><input class="opto-in" value="2"></td><td class="st">Complete</td></tr>
+            <tr><td class="exp" onclick="t('e4')">▸</td><td class="n">4</td><td><span class="tag">Sleep · s4</span></td><td><span class="cam">sleep_camera</span></td><td class="file">…_04_s4.stateScriptLog</td><td class="file">…_04_s4.1.h264</td><td><input class="opto-in" value="12"></td><td><input class="opto-in" value="2"></td><td class="st">Complete</td></tr>
+            <tr><td class="exp" onclick="t('e5')">▸</td><td class="n">5</td><td><span class="tag">Sleep · s5</span></td><td><span class="cam">sleep_camera</span></td><td class="file">…_05_s5.stateScriptLog</td><td class="file">…_05_s5.1.h264</td><td><input class="opto-in" value="15"></td><td><input class="opto-in" value="2"></td><td class="st">Complete</td></tr>
+            <tr><td class="exp" onclick="t('e6')">▸</td><td class="n">6</td><td><span class="tag">Sleep · s6</span></td><td><span class="cam">sleep_camera</span></td><td class="file">…_06_s6.stateScriptLog</td><td class="file">…_06_s6.1.h264</td><td><input class="opto-in" value="20"></td><td><input class="opto-in" value="0"></td><td class="st">Complete</td></tr>
+          </tbody>
+        </table>
+        <div class="foot"><button class="btn">＋ Add epoch</button><span class="small" style="padding:7px 0 0">Adding an epoch asks for its task; cameras, files, and tags then derive.</span></div>
+      </div>
+    </section>
+
+    <!-- DAY -->
+    <section class="pane hide" id="p-day">
+      <div class="card" style="padding:18px 16px 4px">
+        <div class="row"><span class="lbl">Session ID</span><span style="color:var(--muted)">Laurent_20260514 <span style="font-size:12px;color:var(--faint)">— auto from subject + date</span></span></div>
+        <div class="row"><span class="lbl">Weight</span><span><input class="w" value="463"><span class="unit">g</span></span></div>
+        <div class="row"><span class="lbl">Session description</span><input style="width:60%" value="sleep / opto laser power series"></div>
+        <div class="row"><span class="lbl">Experimenters</span><span><span class="cam">Morales-Rodriguez ✕</span> <span class="cam">Gao ✕</span> <span class="cam" style="cursor:pointer">＋</span></span></div>
+      </div>
+
+      <!-- Day-level opto protocol (opto animals only); per-epoch power & pulse live in the Epochs grid -->
+      <div class="card optocard" style="padding:14px 16px 6px">
+        <h4>Optogenetics — this day's protocol</h4>
+        <div class="row"><span class="lbl">Laser output (DIO)</span><select><option>Laser (Dout4)</option><option>— none —</option></select></div>
+        <div class="row"><span class="lbl">FSGui protocol file</span><input style="width:60%" value="fsgui_laurent_0514_ontime.yaml"></div>
+        <div class="row"><span class="lbl">Camera</span><select><option>sleep_camera</option></select></div>
+        <div class="row"><span class="lbl"></span><span style="font-size:12px;color:var(--faint)">Per-epoch power (mW) and pulse length (ms) are set in the Epochs tab.</span></div>
+      </div>
+    </section>
+
+    <!-- FAILED CHANNELS -->
+    <section class="pane hide" id="p-ch">
+      <div class="small">Mark electrodes that failed for the day. Carried from 2026-05-13; previously-failed are ringed.</div>
+      <div class="card" style="margin-bottom:14px">
+        <div class="probehead">Probe 0 · L CA1 <span class="meta">128c · 4 shanks · 2 failed</span></div>
+        <div class="shanks" id="probe0"></div>
+      </div>
+      <div class="card"><div class="collapsed">Probe 1 · L mPFC <span>0 failed ›</span></div><div class="collapsed">Probe 2 · R CA1 <span>1 failed ›</span></div></div>
+    </section>
+
+    <!-- DIO -->
+    <section class="pane hide" id="p-dio">
+      <div class="dio-top">
+        <h3>Behavioral events</h3>
+        <button class="btn" id="dio-edit-btn" onclick="dioMode('edit')">Edit · rewired the rig</button>
+        <button class="btn sm" id="dio-done-btn" onclick="dioMode('sum')" style="display:none">Done</button>
+      </div>
+
+      <!-- SUMMARY (default — most days) -->
+      <div id="dio-sum">
+        <div class="dio-status"><span class="dot"></span><b>9 events</b><span class="meta"> · carried from 2026-05-13 · unchanged</span></div>
+        <div class="dio-2col">
+          <div class="dgrp"><h4>Inputs (Din)</h4>
+            <div class="dev"><span class="dch">Din3</span><span class="dnm">Sleep_Camera</span></div>
+            <div class="dev"><span class="dch">Din5</span><span class="dnm">LeftWell_Poke</span></div>
+            <div class="dev"><span class="dch">Din6</span><span class="dnm">CenterWell_Poke</span></div>
+            <div class="dev"><span class="dch">Din12</span><span class="dnm">RightWell_Poke</span></div>
+            <div class="dev"><span class="dch">Din14</span><span class="dnm">Handle_Well</span></div>
+            <div class="dev"><span class="dch">Din15</span><span class="dnm">Maze_Camera</span></div>
+          </div>
+          <div class="dgrp"><h4>Outputs (Dout)</h4>
+            <div class="dev"><span class="dch">Dout4</span><span class="dnm">Laser</span></div>
+            <div class="dev"><span class="dch">Dout7</span><span class="dnm">CenterMilk_Pump</span></div>
+            <div class="dev"><span class="dch">Dout13</span><span class="dnm">HandleMilk_Pump</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- EDIT (only when rewired) -->
+      <div id="dio-edit" style="display:none">
+        <div class="dio-boot"><span class="lab">Start from:</span>
+          <button class="btn sm">Copy from another animal ▾</button>
+          <span style="color:var(--faint);font-size:12px">— or just name the channels below</span></div>
+        <div class="dio-2col">
+          <div class="dgrp"><h4>Inputs (Din)</h4>
+            <div class="der"><span class="dch">Din3</span><input data-dir="Din" value="Sleep_Camera"><button class="rm">✕</button></div>
+            <div class="der"><span class="dch">Din5</span><input data-dir="Din" value="LeftWell_Poke"><button class="rm">✕</button></div>
+            <div class="der"><span class="dch">Din6</span><input data-dir="Din" value="CenterWell_Poke"><button class="rm">✕</button></div>
+            <div class="der"><span class="dch">Din12</span><input data-dir="Din" value="RightWell_Poke"><button class="rm">✕</button></div>
+            <div class="der"><span class="dch">Din14</span><input data-dir="Din" value="Handle_Well"><button class="rm">✕</button></div>
+            <div class="der"><span class="dch">Din15</span><input data-dir="Din" value="Maze_Camera"><button class="rm">✕</button></div>
+            <div class="dio-sugg"><b>Common names:</b> <span class="s">Poke</span> <span style="color:var(--faint)">— or type your own</span></div>
+            <div class="daddrow"><button class="addbtn">＋ add input channel ▾</button></div>
+          </div>
+          <div class="dgrp"><h4>Outputs (Dout)</h4>
+            <div class="der"><span class="dch">Dout4</span><input data-dir="Dout" value="Laser"><button class="rm">✕</button></div>
+            <div class="der"><span class="dch">Dout7</span><input data-dir="Dout" value="CenterMilk_Pump"><button class="rm">✕</button></div>
+            <div class="der"><span class="dch">Dout13</span><input data-dir="Dout" value="HandleMilk_Pump"><button class="rm">✕</button></div>
+            <div class="dio-sugg"><b>Common names:</b> <span class="s">Light</span><span class="s">Pump</span><span class="s">Laser</span> <span style="color:var(--faint)">— or type your own</span></div>
+            <div class="daddrow"><button class="addbtn">＋ add output channel ▾</button></div>
+          </div>
+        </div>
+        <details class="dio-showall">
+          <summary>Show all 64 ECU channels (55 unused)</summary>
+          <div class="dio-cols" style="margin-top:8px">
+            <div id="dio-din"></div><div id="dio-dout"></div>
+          </div>
+        </details>
+      </div>
+    </section>
+  </div>
+
+<script>
+  function show(id,el){['day','ep','ch','dio'].forEach(k=>document.getElementById('p-'+k).classList.toggle('hide',k!==id));
+    document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));el.classList.add('active');}
+  function t(id){var r=document.getElementById(id);if(r)r.style.display=r.style.display==='none'?'table-row':'none';}
+  (function(){var bad={47:1,103:1},host=document.getElementById('probe0'),html='';
+    for(var s=0;s<4;s++){html+='<div class="shank"><h5>shank '+(s+1)+'</h5><div class="chgrid">';
+      for(var i=0;i<32;i++){var id=s*32+i;html+='<div class="ch'+(bad[id]?' bad carried':'')+'">'+id+'</div>';}
+      html+='</div></div>';}host.innerHTML=html;})();
+  function dioMode(m){var e=m==='edit';
+    document.getElementById('dio-sum').style.display=e?'none':'block';
+    document.getElementById('dio-edit').style.display=e?'block':'none';
+    document.getElementById('dio-edit-btn').style.display=e?'none':'inline-flex';
+    document.getElementById('dio-done-btn').style.display=e?'inline-flex':'none';}
+  (function(){
+    // 9 named events (carried) — also rendered into the collapsed "Show all 64 ECU channels" grid
+    var din={3:'Sleep_Camera',5:'LeftWell_Poke',6:'CenterWell_Poke',12:'RightWell_Poke',14:'Handle_Well',15:'Maze_Camera'};
+    var dout={4:'Laser',7:'CenterMilk_Pump',13:'HandleMilk_Pump'};
+    var SUGG={Din:['Poke'],Dout:['Light','Pump','Laser']};
+    function build(type,names){var rows='';
+      for(var i=1;i<=32;i++){var ch=type+i,nm=names[i]||'';
+        rows+='<tr class="'+(nm?'dio-row-named':'dio-row-unused')+'"><td class="chan">'+ch+'</td>'+
+          '<td><input class="dio-name'+(nm?' named':'')+'" data-dir="'+type+'" value="'+nm+'" placeholder="(unused)" autocomplete="off"></td></tr>';}
+      return '<table class="dio-table"><thead><tr><th>DIO channel</th><th>Event name</th></tr></thead><tbody>'+rows+'</tbody></table>';}
+    document.getElementById('dio-din').innerHTML=build('Din',din);
+    document.getElementById('dio-dout').innerHTML=build('Dout',dout);
+    // direction-aware suggestion popover — fires on any DIO name field (edit rows + full grid)
+    var pop=document.createElement('div');pop.className='dio-pop';pop.style.display='none';document.body.appendChild(pop);var active=null;
+    function nextNum(label,input){var dir=input.getAttribute('data-dir'),n=1,re=new RegExp('^'+label+'(\\d+)$');
+      document.querySelectorAll('#p-dio input[data-dir="'+dir+'"]').forEach(function(x){if(x!==input){var m=(x.value||'').match(re);if(m){var k=+m[1];if(k>=n)n=k+1;}}});return n;}
+    function open(input){active=input;var dir=input.getAttribute('data-dir'),items=SUGG[dir]||[];
+      pop.innerHTML='<div class="pop-h">Suggestions · '+(dir==='Din'?'inputs (Din)':'outputs (Dout)')+'</div>'+
+        items.map(function(s){return '<div class="pop-item" data-l="'+s+'">'+s+'</div>';}).join('')+
+        '<div class="pop-note">…or type a custom name</div>';
+      var r=input.getBoundingClientRect();pop.style.left=(r.left+scrollX)+'px';pop.style.top=(r.bottom+scrollY+3)+'px';pop.style.minWidth=Math.max(150,r.width)+'px';pop.style.display='block';}
+    function close(){pop.style.display='none';active=null;}
+    document.addEventListener('focusin',function(e){var t=e.target;if(t.tagName==='INPUT'&&t.getAttribute('data-dir'))open(t);});
+    document.addEventListener('mousedown',function(e){var t=e.target;
+      if(t.classList&&t.classList.contains('pop-item')){e.preventDefault();if(active){var l=t.getAttribute('data-l');active.value=l+nextNum(l,active);active.classList.add('named');var tr=active.closest('tr');if(tr)tr.className='dio-row-named';}close();return;}
+      if(pop.style.display==='block'&&!pop.contains(t)&&t!==active)close();});
+  })();
+</script>
+</body>
+</html>
