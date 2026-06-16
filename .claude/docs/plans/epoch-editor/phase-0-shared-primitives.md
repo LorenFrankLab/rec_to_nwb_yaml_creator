@@ -20,7 +20,7 @@ import these. Ships as a component-library PR with unit + a11y tests.
 
 ## Tasks
 
-- `src/components/ui/StatusPill.tsx` (+ `.module.css`): props `{ variant: keyof DAY_LIFECYCLE, label?: string }`. Renders the dot + `DAY_LIFECYCLE_LABEL[variant]` (or a short override, e.g. "Ready" for `READY`), token colors per variant (green=exported, blue=ready, grey=draft, amber=needs_fixing). **Imports `dayLifecycle`; never hardcodes the words.** Also export an `EpochStatusPill` (its own scope: `Complete`/`Incomplete`) so the scopes can't share a component instance — keeps the "no word across scopes" rule structural.
+- `src/components/ui/StatusPill.tsx` (+ `.module.css`): props `{ variant: keyof DAY_LIFECYCLE, label?: string }`. Renders the dot + `DAY_LIFECYCLE_LABEL[variant]` (or a short override, e.g. "Ready" for `READY`), token colors per variant (green=exported, blue=ready, grey=draft, amber=needs_fixing). **Imports `dayLifecycle`; never hardcodes the words.** Also export an `EpochStatusPill` whose scope is the full epoch-row vocabulary — `Complete` / `Incomplete` / `Needs video` ([shared-contracts §3](shared-contracts.md#3-status-vocabulary)) — as its own component so the scopes can't share an instance (keeps the "no word across scopes" rule structural). It must accept all three states, not just two.
 - `src/components/ui/UndoToast.tsx` (+ module): props `{ message, onUndo?, onDismiss, autoHideMs? }`. Bottom-center toast; `role="status"`/`aria-live="polite"`; Undo button only when `onUndo` given (reversible action), else dismiss-only. A host hook `useUndoToast()` returns `{ show(msg, onUndo?), node }` so pages mount one toast.
 - `src/components/ui/BlastRadiusChip.tsx` (+ module): props `{ dayCount: number, title?: string }`. The "affects all N days" amber chip with the tooltip "Shared by all N days — already-exported days will need re-export."
 - `src/components/AnimalScopeCard.tsx` (+ module): props `{ summary: AnimalSummaryVM, editHref }`. The read-only animal-static line (identity · probes · config · team) + quiet "Edit animal setup" link. Takes a pre-built summary VM (built in Phase 2's animal view-model), renders only.
@@ -38,7 +38,7 @@ import these. Ships as a component-library PR with unit + a11y tests.
 
 | Test | Asserts |
 | --- | --- |
-| `StatusPill.test.tsx` | each `DAY_LIFECYCLE` variant renders its `DAY_LIFECYCLE_LABEL` (or the documented short label); colors come from tokens; `EpochStatusPill` renders `Complete`/`Incomplete` and never a lifecycle word |
+| `StatusPill.test.tsx` | each `DAY_LIFECYCLE` variant renders its `DAY_LIFECYCLE_LABEL` (or the documented short label); colors come from tokens; `EpochStatusPill` renders all three epoch states (`Complete` / `Incomplete` / `Needs video`) and never a lifecycle word |
 | `UndoToast.test.tsx` | Undo button present iff `onUndo` given; `role=status`/`aria-live=polite`; Undo fires `onUndo`; auto-hide after `autoHideMs` |
 | `GeneratedValue.test.tsx` | `derived=true` shows `generated` + Override; after Override shows editable + `manual` + Revert; Revert restores derived value (prop-driven) |
 | `ReadinessBar.test.tsx` | empty errors → quiet "Ready to export"; with errors → loud bar lists each, "Fix in …" calls `onFix(issue)`; warnings alone do not make it loud |

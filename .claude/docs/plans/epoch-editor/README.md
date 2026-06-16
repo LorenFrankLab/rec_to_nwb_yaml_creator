@@ -179,10 +179,13 @@ app's icon set). A repair link lands on + flashes the exact field, and — for t
 Epoch 1 into the actual **missing** state so the **stress demo is coherent** (in-page readiness toggle and
 the cross-page `day-editor.html#fix-e1-video` link both do this).
 
-**Secondary set (6–10) — not yet mocked:** per-day row overflow menu (duplicate / delete / export / open);
-one animal-static **edit flow** (save / cancel / re-export consequence); **new-configuration** details
-(effective date, copy-from-current, bad-channel reset confirm); **import success / existing-animal** branch;
-**recovery** destructive-action confirms. Tracked for a follow-up pass.
+**Secondary states — specified in the plan (concrete tasks + validation slices), even without throwaway
+HTML mocks:** animal-static **edit consequence** ("N exported days now need re-export") + the
+**new-configuration** detail flow (effective date / copy-from-current / bad-channel reset confirm) →
+[Phase 2](phase-2-animal-page.md); **import success / existing-animal** branch + copy-from-animal →
+[Phase 7](phase-7-import-copy.md); **recovery** destructive-action confirms/undo →
+[Phase 8](phase-8-recovery-empty-polish.md). The only one still merely *tracked* is the per-day **row
+overflow menu** (duplicate / delete / export / open) — small, a sibling of the Days-table bulk bar.
 
 ## Must reuse the existing correctness substrate
 

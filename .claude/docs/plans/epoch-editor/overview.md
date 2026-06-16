@@ -21,7 +21,7 @@ What each phase touches vs. leaves alone (verified against source):
 - `src/pages/DayEditor/DayEditorStepper.tsx` + steps (`Overview/Devices/TasksEpochs/BehavioralEvents/Validation/Export`) — the 5-section editor: **replaced** by the new 4-tab frame (Day / Epochs / Failed channels / DIO). Old steps retired across Phases 3–5 (see each phase's "old code path" note).
 - `src/pages/ValidationSummary/index.tsx` + `useValidationSummaryActions.ts` — batch export: **reused** behind the new export-preview + batch result (Phase 5).
 - `src/state/workspaceUtils.ts:357` (`mergeDayMetadata`), `src/domain/dayValidationComposer.ts:51` (`validateDay`), `src/io/yaml.ts` — **untouched** (export/gate); consumed, never modified.
-- `src/state/workspaceTransitions.ts:435` (`createDayRecord`) — **extended once** to carry `dataFolder` (Phase 6).
+- `src/state/workspaceTransitions.ts:435` (`createDayRecord`) — **extended once** to carry `dataFolder` (Phase 3, with the day-level field).
 - `src/state/{taskCatalog.ts,taskCatalogActions.ts,workspaceUtils.ts}` — task-catalog is **already live** (the day editor writes `day.taskInstances`, `mergeDayMetadata` prefers them, `createDayRecord` carries them, blob is v3 with v1/v2/v3 fixtures): **reused** by the epoch grid; no activation phase.
 - `src/domain/dayLifecycle.ts`, `src/domain/workflowStatus.ts`, `DayLifecycleLegend` — status vocabulary: **reused** (Phase 0 wraps, never redefines).
 - `src/viewModels/*` + `commands/*` — view-model/command layer: **extended** with new builders (epoch grid, export-preview) and command ids (multi-select export, epoch ops); pattern unchanged.
