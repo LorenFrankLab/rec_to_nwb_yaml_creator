@@ -40,7 +40,7 @@ never silently drop) and the **copy-from-animal** flow (reuse a same-rig animal'
 
 | Test | Asserts |
 | --- | --- |
-| `ImportRepair.test.tsx` | each non-conforming field gets the correct suggested fix from the shared predicate; required-missing blocks import; benign normalizations listed + applied; nothing silently dropped; new-animal vs existing-day routing |
+| `ImportRepair.test.tsx` | each non-conforming field gets the correct suggested fix from the shared predicate; required-missing blocks import; benign normalizations listed + applied; nothing silently dropped; new-animal vs existing-day routing; **the success state renders and links to the created animal / added day** |
 | `importRoundTrip.test.ts` | a clean golden YAML imported then exported is **byte-identical** (`decodeYaml`→model→`mergeDayMetadata`→`encodeYaml`) |
 | `CopyFromAnimal.test.tsx` | source picker (`getCopyableDioSources` etc.); copies probes/cameras/tasks/opto, **not** identity/days/DIO; routes to the wizard |
 | `baselines` | unchanged; import round-trip byte-identical |

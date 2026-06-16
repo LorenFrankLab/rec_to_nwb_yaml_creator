@@ -184,8 +184,8 @@ HTML mocks:** animal-static **edit consequence** ("N exported days now need re-e
 **new-configuration** detail flow (effective date / copy-from-current / bad-channel reset confirm) →
 [Phase 2](phase-2-animal-page.md); **import success / existing-animal** branch + copy-from-animal →
 [Phase 7](phase-7-import-copy.md); **recovery** destructive-action confirms/undo →
-[Phase 8](phase-8-recovery-empty-polish.md). The only one still merely *tracked* is the per-day **row
-overflow menu** (duplicate / delete / export / open) — small, a sibling of the Days-table bulk bar.
+[Phase 8](phase-8-recovery-empty-polish.md); the per-day **row overflow menu** (open / duplicate / export /
+delete) → [Phase 2](phase-2-animal-page.md). All secondary states now have a concrete phase task + slice.
 
 ## Must reuse the existing correctness substrate
 

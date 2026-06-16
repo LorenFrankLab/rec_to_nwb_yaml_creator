@@ -18,7 +18,7 @@ M, each skipped day linked to its issue). Retires the old `ExportStep`/`Validati
 
 **Contracts referenced:**
 
-- [Issue-driven readiness](designs.md#issue-driven-readiness) — gate reads `validateDay`; Download `disabledReason` = non-empty error list.
+- [Issue-driven readiness](designs.md#issue-driven-readiness) — gate reads `validateDay`; **Download/Copy** `disabledReason` = non-empty error list (both gated, no Copy bypass).
 - [Byte-identity gate](shared-contracts.md#1-byte-identity-gate) — the preview body IS `encodeYaml(mergeDayMetadata(...))`; never a hand-built approximation. Phase 0 `UndoToast`/toast host, `ReadinessBar`.
 
 ## Tasks
@@ -48,7 +48,7 @@ M, each skipped day linked to its issue). Retires the old `ExportStep`/`Validati
 ## Fixtures
 
 The golden day (preview byte-identity + filename); a blocking day (missing video / empty probe location) for
-the blocked gate + disabled Download; a multi-day animal with one invalid day (batch exported-N/skipped-M).
+the blocked gate + disabled Download/Copy; a multi-day animal with one invalid day (batch exported-N/skipped-M).
 
 ## Review
 
