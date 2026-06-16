@@ -52,6 +52,10 @@
   .pill.ready{background:#eef4fb;color:#2f5e8c}.pill.ready .d{background:var(--accent)}
   td.date a{color:inherit;text-decoration:none}td.date a:hover{text-decoration:underline;color:var(--accent)}
   .chev{color:var(--faint);text-align:right}
+  .chev a{color:inherit;text-decoration:none;display:inline-block;padding:0 4px}.chev a:hover{color:var(--accent)}
+  /* cross-page field-level repair target (flashed on arrival via #hash) */
+  @keyframes flashring{0%{box-shadow:0 0 0 3px rgba(47,111,174,.5)}100%{box-shadow:0 0 0 3px rgba(47,111,174,0)}}
+  .flash{animation:flashring 1.7s ease-out 1;border-radius:8px}
   /* multi-select + bulk export, undo toast (≤~60 days/animal: no search/sort/pagination needed) */
   th.cbx,td.cbx{width:30px;padding-right:0}
   .btn.sm{padding:5px 10px;font-size:12.5px}
@@ -193,9 +197,9 @@
         <table>
           <thead><tr><th class="cbx"><input type="checkbox" onclick="selAll(this)"></th><th>Date</th><th>Weight</th><th>Epochs</th><th>Status</th><th></th></tr></thead>
           <tbody>
-            <tr onclick="location.href='day-editor.html'"><td class="cbx" onclick="event.stopPropagation()"><input type="checkbox" class="rowcb" onclick="selChg()"></td><td class="date"><a href="day-editor.html">2026-05-07</a></td><td class="num">460 g</td><td class="num">6</td><td><span class="pill ok"><span class="d"></span>Exported</span></td><td class="chev">›</td></tr>
-            <tr onclick="location.href='day-editor.html'"><td class="cbx" onclick="event.stopPropagation()"><input type="checkbox" class="rowcb" onclick="selChg()"></td><td class="date"><a href="day-editor.html">2026-05-13</a></td><td class="num">462 g</td><td class="num">6</td><td><span class="pill ok"><span class="d"></span>Exported</span></td><td class="chev">›</td></tr>
-            <tr onclick="location.href='day-editor.html'"><td class="cbx" onclick="event.stopPropagation()"><input type="checkbox" class="rowcb" onclick="selChg()"></td><td class="date"><a href="day-editor.html">2026-05-14</a></td><td class="num">463 g</td><td class="num">6</td><td><span class="pill ready" title="Valid — passes all checks, not yet exported"><span class="d"></span>Ready</span></td><td class="chev">›</td></tr>
+            <tr><td class="cbx"><input type="checkbox" class="rowcb" onclick="selChg()" aria-label="Select 2026-05-07"></td><td class="date"><a href="day-editor.html">2026-05-07</a></td><td class="num">460 g</td><td class="num">6</td><td><span class="pill ok"><span class="d"></span>Exported</span></td><td class="chev"><a href="day-editor.html" aria-label="Open 2026-05-07">›</a></td></tr>
+            <tr><td class="cbx"><input type="checkbox" class="rowcb" onclick="selChg()" aria-label="Select 2026-05-13"></td><td class="date"><a href="day-editor.html">2026-05-13</a></td><td class="num">462 g</td><td class="num">6</td><td><span class="pill ok"><span class="d"></span>Exported</span></td><td class="chev"><a href="day-editor.html" aria-label="Open 2026-05-13">›</a></td></tr>
+            <tr><td class="cbx"><input type="checkbox" class="rowcb" onclick="selChg()" aria-label="Select 2026-05-14"></td><td class="date"><a href="day-editor.html">2026-05-14</a></td><td class="num">463 g</td><td class="num">6</td><td><span class="pill ready" title="Valid — passes all checks, not yet exported"><span class="d"></span>Ready</span></td><td class="chev"><a href="day-editor.html" aria-label="Open 2026-05-14">›</a></td></tr>
           </tbody>
         </table>
         <div class="daylegend">
@@ -229,7 +233,7 @@
         <h3>Configuration <span style="font-weight:400;color:var(--muted)">· v1 (current) · since 2026-04-20 · 10 days</span> <span class="edit" onclick="modal('config')">New configuration…</span></h3>
         <div class="probe"><span class="dot-loc"></span> Probe 0 · L CA1 <span class="meta">128c-4s8mm6cm-15um-26um-sl · (-2, -4, -2.6) mm</span></div>
         <div class="probe"><span class="dot-loc mpfc"></span> Probe 1 · L mPFC <span class="meta">128c-4s8mm6cm-20um-40um-sl · (-1, 3.2, -3.1) mm</span></div>
-        <div class="probe"><span class="dot-loc"></span> Probe 2 · R CA1 <span class="meta">128c-4s8mm6cm-15um-26um-sl · (2, -4, -2.6) mm</span></div>
+        <div class="probe" id="cfg-probe2"><span class="dot-loc"></span> Probe 2 · R CA1 <span class="meta">128c-4s8mm6cm-15um-26um-sl · (2, -4, -2.6) mm</span></div>
         <div class="note">Channel maps are generated automatically from each probe's device type. A re-implant starts a new
           version (v2); days stay stamped with the version they were recorded under.</div>
       </div>
@@ -248,7 +252,7 @@
       <!-- OPTO -->
       <div class="scard opto">
         <h3>Optogenetics <span class="ha"><span class="blast" title="Shared by all 10 days — already-exported days will need re-export">affects all 10 days</span><span class="edit">Edit</span></span></h3>
-        <div class="meter"><span class="dots"><i></i><i></i><i></i><i></i></span><span class="lab">Complete · 4 of 4</span>
+        <div class="meter"><span class="dots"><i></i><i></i><i></i><i></i></span><span class="lab">Opto configured · 4 of 4</span>
           <span style="color:var(--muted)">excitation source · optical fiber · virus injection · software</span></div>
 
         <div class="sub2"><div class="t">Excitation source</div>
@@ -389,6 +393,14 @@
       var c=document.getElementById('cal-create');c.textContent='Create '+days.length+' day'+(days.length===1?'':'s');c.disabled=days.length===0;}
     grid.addEventListener('click',function(e){var el=e.target.closest('.cal-day');if(!el||el.classList.contains('empty')||el.classList.contains('exists'))return;
       var d=el.getAttribute('data-d');sel[d]=!sel[d];el.classList.toggle('sel',!!sel[d]);upd();});
+  })();
+  // arrive from a cross-page repair link (e.g. #cfg-probe2): open Setup, scroll to + flash the field
+  (function(){
+    if(!location.hash)return;
+    var el=document.querySelector(location.hash);if(!el)return;
+    var setupTab=Array.prototype.find.call(document.querySelectorAll('.tab'),function(t){return t.textContent.trim()==='Setup';});
+    if(setupTab)show('setup',setupTab);
+    setTimeout(function(){el.scrollIntoView({behavior:'smooth',block:'center'});el.classList.remove('flash');void el.offsetWidth;el.classList.add('flash');},80);
   })();
 </script>
 

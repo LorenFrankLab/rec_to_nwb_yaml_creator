@@ -84,9 +84,13 @@ A reviewer validated the IA + scope model as the core win and raised six priorit
 | Scope | States | Where |
 |---|---|---|
 | **Epoch completeness** | `Complete` / `Incomplete` | epoch-grid row Status |
+| **Setup completeness** | `Opto configured · N of N`; `✓ Identity / ✓ Cameras …` | animal Setup (opto meter, progress checks) |
 | **Day lifecycle** | `Draft` (incomplete) → `Ready` (valid, not exported) → `Exported`; `Needs review` (blocking issues) | day header pill · animal Days table |
 | **Export readiness** | `Ready to export` / `N issues block export` | day-editor readiness line (a *check*, not a stored status) |
 | **Export history** | `Exported` (optional `· stale` if inputs changed since) | export-preview / days table |
+
+`Complete` is **epoch-only**; setup-section completeness uses `configured` / `N of N` (the opto meter is
+`Opto configured · 4 of 4`, not `Complete · 4 of 4`) so the word never spans scopes.
 
 `Draft` now means **only** genuinely incomplete (reserved per review). A valid-but-unexported day is
 `Ready` — the same concept the readiness line surfaces (`Ready to export`), shown as a persistent day
@@ -110,10 +114,27 @@ A second pass called the design "close"; resolved its remaining interaction-lang
   (not row `onclick` alone), important alongside the day-row checkboxes.
 - **Setup `Edit` reads as a control** — bordered button-style affordance next to the blast-radius chip.
 
-**Still implementation-only acceptance criteria:** full **keyboard operation + focus management** for the
-epoch / channel / DIO grids (the mock shows mouse affordances; axe-verify); **cross-page field-level focus**
-(the Setup blocking link should land on the exact field, like the in-page epoch case). **Verified now:** no
-horizontal overflow at **1280×800 (13″)** (content caps at 1040 px).
+**Verified:** no horizontal overflow at **1280×800 (13″)** (content caps at 1040 px).
+
+## Third UX review — applied (2026-06-16)
+
+A third pass called the design "very close"; tightened the interaction semantics:
+
+- **Epoch caret is a real `<button aria-expanded aria-controls>`** (not a `<td onclick>`), keyboard-focusable
+  with a `:focus-visible` ring and a rotate-on-expand; the task cell stays a secondary mouse target. The
+  `<td onclick>` pattern is **not** the implementation spec.
+- **Rows use explicit links, not row `onclick`** — the day table's row-level navigation handler is gone
+  (it wrapped links *and* checkboxes); navigation is the date `<a>` + a chevron `<a>`, checkboxes are
+  independent. The Animals table likewise drops its stray row handler (name link only).
+- **Cross-page repair is field-level too** — the Setup blocking link is now `…#cfg-probe2`; arriving on the
+  animal page opens Setup, scrolls to, and flashes Probe 2 (same scroll→reveal→flash as the in-page epoch
+  path). Real-app spec: also move focus to the field.
+- **`Complete` no longer spans scopes** — the opto meter reads `Opto configured · 4 of 4` (see vocabulary).
+- **DIO editor `Done` → `← Back to summary`** — it's summary navigation, not a save (the day autosaves).
+
+**Still implementation-only:** real **focus management** (`.focus()` on the target field, focus-trap in
+modals) beyond the mock's scroll+flash, and **axe-verified** keyboard operation across the epoch / channel /
+DIO grids.
 
 ## Must reuse the existing correctness substrate
 
