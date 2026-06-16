@@ -12,7 +12,7 @@
  * route-change focus fires only on `view` change, not `:tab` (Task 1.1b).
  */
 
-import { useEffect, useRef, useState, useMemo, type MouseEvent as ReactMouseEvent } from 'react';
+import { useEffect, useRef, useState, useMemo, type MouseEvent as ReactMouseEvent, type ComponentProps } from 'react';
 import { useStoreContext } from '../../state/StoreContext';
 import type { Animal } from '../../state/workspaceTypes';
 import { getAnimalDayIds } from '../../state/workspaceSelectors';
@@ -40,6 +40,7 @@ import { useUndoToast } from '../../components/ui/UndoToast';
 import ConfigVersionContext from './ConfigVersionContext';
 import AnimalScopeChips from './AnimalScopeChips';
 import ConfigurationCard from './ConfigurationCard';
+import NewConfigurationModal from './NewConfigurationModal';
 import { ValidationSummary } from '../ValidationSummary';
 import '../../components/ErrorState.css';
 import styles from './AnimalView.module.css';
@@ -130,6 +131,8 @@ interface RenderPanelContext {
   blastRadius: AnimalBlastRadiusViewModel;
   /** Called after an optogenetics write commits, so the host can surface the re-export consequence. */
   onOptoAfterUpdate: () => void;
+  /** Open the new-configuration (re-implant) modal — wired to the ConfigurationCard's action. */
+  onNewConfiguration: () => void;
 }
 
 /** The four export-gated optogenetics fields, for the "Opto configured · N of N" meter. */
@@ -140,14 +143,14 @@ const OPTO_TOTAL_FIELDS = 4;
  * setup tabs host their extracted containers (Phase 3-2/3-3); only `export` still shows the
  * Phase-1 placeholder until its sub-phase (3-5) lands.
  */
-function renderPanel({ tab, animalId, animal, onPendingEditsChange, onFieldUpdate, configCard, blastRadius, onOptoAfterUpdate }: RenderPanelContext) {
+function renderPanel({ tab, animalId, animal, onPendingEditsChange, onFieldUpdate, configCard, blastRadius, onOptoAfterUpdate, onNewConfiguration }: RenderPanelContext) {
   switch (tab) {
     case 'days':
       return <RecordingDaysTab animalId={animalId} />;
     case 'electrode-groups':
       return (
         <>
-          <ConfigurationCard card={configCard} />
+          <ConfigurationCard card={configCard} onNewConfiguration={onNewConfiguration} />
           <ConfigVersionContext animal={animal} />
           <ElectrodeGroupsContainer animalId={animalId} onPendingEditsChange={onPendingEditsChange} />
         </>
@@ -243,6 +246,8 @@ export function AnimalView({ animalId, tab }: AnimalViewProps) {
   // Whether the header ⋮'s "Edit profile…" dialog is open. The animal-wide subject facts editor
   // moved off the header band into this on-demand dialog (it cluttered every tab).
   const [profileOpen, setProfileOpen] = useState(false);
+  // Whether the ConfigurationCard's "New configuration…" (re-implant) modal is open.
+  const [newConfigOpen, setNewConfigOpen] = useState(false);
 
   // Shared store-bound field-update + repair callbacks for the `{ animal, onFieldUpdate }` setup
   // containers (recording-system / cameras / dio), the corruption banner, and the profile save — the
@@ -549,6 +554,7 @@ export function AnimalView({ animalId, tab }: AnimalViewProps) {
               configCard: vm.configCard,
               blastRadius: vm.blastRadius,
               onOptoAfterUpdate: noteEditConsequence,
+              onNewConfiguration: () => setNewConfigOpen(true),
             })}
           </div>
         </section>
@@ -592,6 +598,15 @@ export function AnimalView({ animalId, tab }: AnimalViewProps) {
           window.location.hash = '#/workspace';
         }}
         onCancel={() => setAnimalDeleteOpen(false)}
+      />
+
+      <NewConfigurationModal
+        isOpen={newConfigOpen}
+        onClose={() => setNewConfigOpen(false)}
+        animal={animal as Animal}
+        animalKey={animalId}
+        days={model.workspace.days}
+        actions={actions as unknown as ComponentProps<typeof NewConfigurationModal>['actions']}
       />
 
       {/* The post-edit re-export consequence notice (mounted once; null until an animal-static save). */}

@@ -1,0 +1,45 @@
+/* Layout for the new-configuration (re-implant) modal's form fields. */
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  margin-top: 0.5rem;
+}
+
+/* A stacked label (caption over control) for the date + description inputs. */
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.875rem;
+}
+
+.field input[type='date'],
+.field input[type='text'] {
+  padding: 0.45rem 0.55rem;
+  border: 1px solid var(--color-grey-300, #ccc);
+  border-radius: var(--radius-sm, 4px);
+  font: inherit;
+}
+
+/* The copy-from-current checkbox sits inline with its caption. */
+.checkboxField {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+}
+
+/* The consequence bullets (day range + bad-channel reset). */
+.consequences {
+  margin: 0;
+  padding-left: 1.25rem;
+  font-size: 0.85rem;
+  color: var(--color-grey-700, #555);
+}
+
+.error {
+  margin: 0;
+  color: var(--color-error, #c62828);
+  font-size: 0.85rem;
+}
