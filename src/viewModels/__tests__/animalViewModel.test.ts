@@ -73,6 +73,63 @@ describe('buildAnimalViewModel — groups / order', () => {
   });
 });
 
+describe('buildAnimalViewModel — animal-static summary + configuration card', () => {
+  it('builds the scope summary from the current configuration (identity, probes, version, team)', () => {
+    const { animal, day } = loadRealistic();
+    const vm = buildAnimalViewModel(wrap(animal, day), animal.id, 'days');
+    // The realistic animal's editable devices mirror is empty; the probes come from the snapshot.
+    expect(vm.summary).toMatchObject({
+      id: animal.id,
+      genotype: 'Wild Type',
+      sex: 'M',
+      species: 'Rattus norvegicus',
+      dateOfBirth: '2023-01-10T00:00:00',
+      isOpto: false,
+      probeCount: 8,
+      probeSummary: 'CA1, CA3, PFC',
+      configVersion: 1,
+      team: 'Guidera, Jennifer, Comrie, Alison',
+    });
+  });
+
+  it('builds the configuration card (version, since-date, day count, per-probe rows)', () => {
+    const { animal, day } = loadRealistic();
+    const vm = buildAnimalViewModel(wrap(animal, day), animal.id, 'electrode-groups');
+    expect(vm.configCard.version).toBe(1);
+    expect(vm.configCard.sinceDate).toBe('2023-06-22');
+    expect(vm.configCard.dayCount).toBe(1);
+    expect(vm.configCard.probes).toHaveLength(8);
+    expect(vm.configCard.probes[0]).toMatchObject({
+      label: 'Probe 0 · CA1',
+      deviceType: 'tetrode_12.5',
+      coords: '(3, 2.5, 2) mm',
+    });
+    expect(vm.configCard.newConfigurationLabel).toBe('New configuration…');
+  });
+
+  it('flags an opto animal in the summary', () => {
+    const { animal, day } = loadRealistic();
+    const opto = clone(animal);
+    opto.optogenetics = {
+      optical_fiber: [{ id: 0 }],
+      opto_excitation_source: [],
+      virus_injection: [],
+      optogenetic_stimulation_software: 'FSGui',
+    };
+    const vm = buildAnimalViewModel(wrap(opto, day), opto.id, 'days');
+    expect(vm.summary.isOpto).toBe(true);
+  });
+
+  it('returns an empty summary + config card for an absent animal (no crash)', () => {
+    const vm = buildAnimalViewModel({ animals: {}, days: {} }, 'ghost', 'days');
+    expect(vm.summary.id).toBe('ghost');
+    expect(vm.summary.probeCount).toBe(0);
+    expect(vm.summary.configVersion).toBeNull();
+    expect(vm.configCard.version).toBeNull();
+    expect(vm.configCard.probes).toEqual([]);
+  });
+});
+
 describe('buildAnimalViewModel — status rings', () => {
   /** Recompute the page ring (blocking outranks todo) independently from the domain functions. */
   function expectedStatus(

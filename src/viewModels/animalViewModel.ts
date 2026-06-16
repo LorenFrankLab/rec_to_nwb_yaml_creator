@@ -23,8 +23,15 @@
  * consumer, so it is deliberately not extracted here.
  */
 
-import { getAnimalSubject } from '../state/workspaceSelectors';
+import {
+  getAnimalSubject,
+  getAnimalElectrodeGroups,
+  getProbeElectrodeGroups,
+  getConfigHistory,
+  getExperimenterNames,
+} from '../state/workspaceSelectors';
 import { getPresentDayCount } from '../domain/dayRecovery';
+import { optoFieldsPresence } from '../domain/optoCompleteness';
 import {
   getAnimalSectionStatus,
   getAnimalBlockingSections,
@@ -33,7 +40,7 @@ import {
   OPTO_COMPLETENESS,
   SECTION_STATUS,
 } from '../domain/sectionStatus';
-import type { Animal, Day } from '../state/workspaceTypes';
+import type { Animal, Day, ElectrodeGroup } from '../state/workspaceTypes';
 import { buildAnimalRows } from './validationSummaryRows';
 import type { SectionViewModel } from './types';
 
@@ -65,10 +72,66 @@ export interface AnimalActivePanelViewModel {
   scope?: string;
 }
 
+/**
+ * The animal-static summary the header scope chips + the day-editor scope card read: the identity
+ * facts, the probe summary, the current configuration version, and the team. Derived from domain
+ * truth (subject, the current configuration's electrode groups, experimenters); never recomputed.
+ */
+export interface AnimalSummaryViewModel {
+  /** The animal's store key. */
+  id: string;
+  /** Genotype (e.g. 'PV-Cre'); omitted when unset. */
+  genotype?: string;
+  /** Biological sex (e.g. 'M'); omitted when unset. */
+  sex?: string;
+  /** Species (e.g. 'Rattus norvegicus'); omitted when unset. */
+  species?: string;
+  /** Date of birth; omitted when unset. */
+  dateOfBirth?: string;
+  /** Whether the animal has any optogenetics hardware configured. */
+  isOpto: boolean;
+  /** Total electrode-group ("probe") count of the current configuration. */
+  probeCount: number;
+  /** Concise probe summary — the unique locations joined (e.g. 'CA1, CA3, PFC'); '' when none. */
+  probeSummary: string;
+  /** Current configuration version, or null when the animal has no configuration history. */
+  configVersion: number | null;
+  /** Team line — the experimenter names joined; '' when none. */
+  team: string;
+}
+
+/** One probe row in the configuration card: its label, device type, and coordinates. */
+export interface ConfigProbeViewModel {
+  /** e.g. 'Probe 0 · CA1'. */
+  label: string;
+  /** Probe device type (e.g. 'tetrode_12.5'). */
+  deviceType: string;
+  /** Stereotaxic coordinates (e.g. '(3, 2.5, 2) mm'); '' when unavailable. */
+  coords: string;
+}
+
+/** The configuration card shown on the setup surface: the current version, its probes, and the re-implant action. */
+export interface AnimalConfigCardViewModel {
+  /** Current configuration version, or null when there is no configuration history. */
+  version: number | null;
+  /** Date the current configuration became active; omitted when unknown. */
+  sinceDate?: string;
+  /** Present-day count (OK + recovered). */
+  dayCount: number;
+  /** One row per probe in the current configuration. */
+  probes: ConfigProbeViewModel[];
+  /** The "New configuration…" (re-implant) action label the page wires to its modal. */
+  newConfigurationLabel: string;
+}
+
 /** The full AnimalView page view-model. */
 export interface AnimalViewModel {
   /** The animal header (id + species/sex facts). */
   header: AnimalHeaderViewModel;
+  /** The animal-static scope summary (header chips + scope card). */
+  summary: AnimalSummaryViewModel;
+  /** The current-configuration card (setup surface). */
+  configCard: AnimalConfigCardViewModel;
   /** The grouped section-nav, in display order. */
   groups: AnimalSectionGroupViewModel[];
   /** The resolved active tab (an unknown/bare tab falls back to the default, as the route does). */
@@ -130,9 +193,83 @@ const TAB_SCOPE: Record<string, string> = {
   'task-types': 'Define once — each recording day picks and orders its epochs.',
 };
 
+/** The label for the re-implant ("New configuration") action; the page wires it to its modal. */
+const NEW_CONFIGURATION_LABEL = 'New configuration…';
+
 /** Resolve an unknown/bare tab to the default, exactly as the route does. */
 function resolveTab(tab: string | undefined): string {
   return tab != null && SECTION_TAB_KEYS.has(tab) ? tab : DEFAULT_TAB;
+}
+
+/**
+ * The electrode groups of the animal's CURRENT configuration — the export source of truth. Reads the
+ * latest configuration snapshot's groups, falling back to the editable `animal.devices` mirror when no
+ * snapshot has geometry (so it also covers the mirror-divergence case where the editable copy is
+ * empty). Returns [] for a behavior-only animal with no probes.
+ */
+function currentElectrodeGroups(animal: unknown): ElectrodeGroup[] {
+  const history = getConfigHistory(animal);
+  const latest = history.length > 0 ? history[history.length - 1] : null;
+  const snapshotGroups = getProbeElectrodeGroups(latest?.devices);
+  return snapshotGroups.length > 0 ? snapshotGroups : getAnimalElectrodeGroups(animal);
+}
+
+/** Format a probe's stereotaxic coordinates, preferring the per-axis fields; '' when unavailable. */
+function formatProbeCoords(group: ElectrodeGroup): string {
+  const { targeted_x: x, targeted_y: y, targeted_z: z, targeted_location: loc } = group;
+  if (x != null && y != null && z != null) return `(${x}, ${y}, ${z}) mm`;
+  if (Array.isArray(loc) && loc.length === 3) return `(${loc[0]}, ${loc[1]}, ${loc[2]}) mm`;
+  return '';
+}
+
+/** Build the animal-static summary (header chips + scope card). */
+function buildAnimalSummary(animalId: string, animal: unknown): AnimalSummaryViewModel {
+  const subject = getAnimalSubject(animal);
+  const groups = currentElectrodeGroups(animal);
+  const history = getConfigHistory(animal);
+  const latest = history.length > 0 ? history[history.length - 1] : null;
+  const uniqueLocations = Array.from(
+    new Set(groups.map((g) => (typeof g.location === 'string' ? g.location.trim() : '')).filter(Boolean))
+  );
+  const summary: AnimalSummaryViewModel = {
+    id: animalId,
+    isOpto:
+      optoFieldsPresence(
+        (isRecord(animal) ? animal.optogenetics : undefined) as Parameters<typeof optoFieldsPresence>[0]
+      ).count > 0,
+    probeCount: groups.length,
+    probeSummary: uniqueLocations.join(', '),
+    configVersion: latest != null && latest.version != null ? latest.version : null,
+    team: getExperimenterNames(animal).join(', '),
+  };
+  if (subject.genotype) summary.genotype = subject.genotype;
+  if (subject.sex) summary.sex = subject.sex;
+  if (subject.species) summary.species = subject.species;
+  if (subject.date_of_birth) summary.dateOfBirth = subject.date_of_birth;
+  return summary;
+}
+
+/** Build the current-configuration card (version, since-date, day count, per-probe list). */
+function buildConfigCard(
+  animalId: string,
+  animal: unknown,
+  daysMap: Record<string, Day>
+): AnimalConfigCardViewModel {
+  const history = getConfigHistory(animal);
+  const latest = history.length > 0 ? history[history.length - 1] : null;
+  const probes: ConfigProbeViewModel[] = currentElectrodeGroups(animal).map((g) => ({
+    label: `Probe ${g.id} · ${g.location || '—'}`,
+    deviceType: g.device_type || '',
+    coords: formatProbeCoords(g),
+  }));
+  const card: AnimalConfigCardViewModel = {
+    version: latest != null && latest.version != null ? latest.version : null,
+    dayCount: getPresentDayCount(animalId, animal, daysMap),
+    probes,
+    newConfigurationLabel: NEW_CONFIGURATION_LABEL,
+  };
+  if (latest?.date) card.sinceDate = latest.date;
+  return card;
 }
 
 /** Whether a value is a non-null, non-array object. */
@@ -247,7 +384,14 @@ export function buildAnimalViewModel(
   if (TAB_SCOPE[activeTab]) activePanel.scope = TAB_SCOPE[activeTab];
 
   if (!isRecord(animal)) {
-    return { header: { id: animalId }, groups: [], activeTab, activePanel };
+    return {
+      header: { id: animalId },
+      summary: buildAnimalSummary(animalId, undefined),
+      configCard: buildConfigCard(animalId, undefined, {}),
+      groups: [],
+      activeTab,
+      activePanel,
+    };
   }
   // The domain selectors below are shape-safe over any record (they guard their own inputs); narrow
   // the validated record to Animal once so the call sites read cleanly.
@@ -272,5 +416,12 @@ export function buildAnimalViewModel(
     ),
   }));
 
-  return { header, groups, activeTab, activePanel };
+  return {
+    header,
+    summary: buildAnimalSummary(animalId, animal),
+    configCard: buildConfigCard(animalId, animal, daysMap),
+    groups,
+    activeTab,
+    activePanel,
+  };
 }
