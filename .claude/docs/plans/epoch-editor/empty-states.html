@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Empty / first-run states</title>
+<style>
+  :root{
+    --bg:#f4f6f8; --panel:#fff; --ink:#161a1d; --muted:#69727b; --faint:#9aa2ab;
+    --line:#e4e7eb; --line2:#eef1f4; --accent:#2f6fae; --accent-d:#255b91;
+    --ok:#1f8a4c; --radius:10px;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font:14px/1.5 -apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--ink)}
+  .top{background:#fff;border-bottom:1px solid var(--line);padding:10px 30px;display:flex;align-items:center;gap:10px}
+  .mark{width:22px;height:22px;border-radius:6px;background:linear-gradient(135deg,var(--accent),#5b9bd6)}
+  .crumb{font-size:13px;color:var(--muted)}.crumb b{color:var(--ink)}
+  .wrap{max-width:1040px;margin:22px auto;padding:0 24px}
+  .note{font-size:12.5px;color:var(--faint);margin:0 0 20px;padding:8px 12px;background:#fff;border:1px dashed var(--line);border-radius:8px}
+  h1{font-size:23px;margin:0 0 4px;letter-spacing:-.01em}
+  .sub{color:var(--muted);margin:0 0 18px}
+  .stage-label{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--faint);font-weight:600;margin:34px 0 10px}
+  .btn{font:inherit;border:1px solid var(--line);background:#fff;border-radius:8px;padding:9px 15px;cursor:pointer;color:var(--ink);font-size:13.5px}
+  .btn:hover{border-color:var(--accent);color:var(--accent)}
+  .btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}.btn.primary:hover{background:var(--accent-d)}
+  /* empty-state card */
+  .empty{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:56px 30px;text-align:center}
+  .empty .ico{width:46px;height:46px;border-radius:12px;background:#eef3fb;border:1px solid #d7e6f4;margin:0 auto 16px;display:flex;align-items:center;justify-content:center;color:var(--accent);font-size:22px}
+  .empty h2{font-size:18px;margin:0 0 6px}
+  .empty p{color:var(--muted);margin:0 auto 20px;max-width:430px}
+  .empty .actions{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+  /* mini animal-page header for the zero-days state */
+  .pagehead{margin-bottom:16px}
+  .chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+  .chip{font-size:12.5px;background:#fff;border:1px solid var(--line);border-radius:999px;padding:3px 10px;color:#3c444d}
+  .tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin:14px 0 0}
+  .tab{padding:9px 14px;font-size:13.5px;color:var(--muted);border-bottom:2px solid transparent}
+  .tab.active{color:var(--ink);font-weight:600;border-bottom-color:var(--accent)}
+</style>
+</head>
+<body>
+  <div class="top"><span class="mark"></span><div class="crumb"><b>Empty / first-run states</b></div></div>
+
+  <div class="wrap">
+    <p class="note">Throwaway mockup — the two first-run states the populated screens don't show. A new user
+      lands on the first; a freshly-created animal lands on the second.</p>
+
+    <!-- 1 · Animals home, zero animals -->
+    <div class="stage-label">1 · Animals home — no animals yet</div>
+    <h1>Animals</h1>
+    <p class="sub">Your lab's animals and their recording days.</p>
+    <div class="empty">
+      <div class="ico">＋</div>
+      <h2>No animals yet</h2>
+      <p>Start by setting up an animal — its identity and implant, entered once — then log a recording day.
+        Already have metadata YAMLs? Import one to bring an animal in and standardize it.</p>
+      <div class="actions">
+        <button class="btn primary" onclick="location.href='create-animal.html'">＋ New animal</button>
+        <button class="btn" onclick="location.href='import-repair.html'">Import a YAML…</button>
+      </div>
+    </div>
+
+    <!-- 2 · Animal page, zero days -->
+    <div class="stage-label">2 · Animal page — setup done, no recording days yet</div>
+    <div class="pagehead">
+      <h1 style="font-size:21px">Wilbur</h1>
+      <div class="chips">
+        <span class="chip">Long-Evans</span><span class="chip">Wild Type</span><span class="chip">Male</span>
+        <span class="chip">Rattus norvegicus</span><span class="chip">b. 2026-04-02</span>
+      </div>
+    </div>
+    <div class="tabs"><span class="tab active">Days</span><span class="tab">Setup</span></div>
+    <div class="empty" style="margin-top:18px">
+      <div class="ico">📅</div>
+      <h2>No recording days yet</h2>
+      <p>Setup is complete. Add the first recording day to log what the animal did and where the files are —
+        the next day will pre-fill from it, so you only edit what changed.</p>
+      <div class="actions">
+        <button class="btn primary" onclick="location.href='animal-page.html'">＋ Add recording day(s)</button>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

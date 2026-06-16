@@ -50,6 +50,15 @@
   .pill.ok{background:var(--okbg);color:var(--ok)}.pill.ok .d{background:var(--ok)}
   .pill.draft{background:var(--draftbg);color:var(--draft)}.pill.draft .d{background:var(--draft)}
   .chev{color:var(--faint);text-align:right}
+  /* multi-select + bulk export, undo toast (≤~60 days/animal: no search/sort/pagination needed) */
+  th.cbx,td.cbx{width:30px;padding-right:0}
+  .btn.sm{padding:5px 10px;font-size:12.5px}
+  .btn.danger:hover{border-color:#c23b3b;color:#c23b3b}
+  .selbar{display:flex;align-items:center;gap:12px}.selbar .sc{font-weight:600;font-size:13px}
+  .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#23282d;color:#fff;border-radius:10px;padding:11px 16px;display:flex;align-items:center;gap:16px;font-size:13.5px;box-shadow:0 8px 24px rgba(0,0,0,.22);z-index:1000}
+  .toast .undo{background:none;border:0;color:#7db4e6;font:inherit;font-weight:600;cursor:pointer}
+  .toast .undo:hover{color:#a8cef0}
+  .toast .x{background:none;border:0;color:#9aa2ab;font:inherit;cursor:pointer;font-size:15px;line-height:1}
   /* setup */
   .scard{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:15px 17px;margin-bottom:14px}
   .scard h3{margin:0 0 12px;font-size:14px;display:flex;justify-content:space-between;align-items:center}
@@ -167,13 +176,21 @@
     <!-- DAYS -->
     <section class="pane" id="p-days">
       <div class="tablecard">
-        <div class="tcbar"><span class="t">Recording days</span><button class="btn primary" onclick="modal('calendar')">＋ Add recording day(s)</button></div>
+        <div class="tcbar">
+          <span class="t" id="tctitle">Recording days</span>
+          <div class="selbar" id="selbar" style="display:none">
+            <span class="sc" id="selcount">0 selected</span>
+            <button class="btn sm primary" onclick="showToast('export')">⬇ Export selected</button>
+            <button class="btn sm danger" onclick="showToast('delete')">Delete</button>
+          </div>
+          <button class="btn primary" onclick="modal('calendar')">＋ Add recording day(s)</button>
+        </div>
         <table>
-          <thead><tr><th>Date</th><th>Weight</th><th>Epochs</th><th>Status</th><th></th></tr></thead>
+          <thead><tr><th class="cbx"><input type="checkbox" onclick="selAll(this)"></th><th>Date</th><th>Weight</th><th>Epochs</th><th>Status</th><th></th></tr></thead>
           <tbody>
-            <tr onclick="location.href='day-editor.html'"><td class="date">2026-05-07</td><td class="num">460 g</td><td class="num">6</td><td><span class="pill ok"><span class="d"></span>Exported</span></td><td class="chev">›</td></tr>
-            <tr onclick="location.href='day-editor.html'"><td class="date">2026-05-13</td><td class="num">462 g</td><td class="num">6</td><td><span class="pill ok"><span class="d"></span>Exported</span></td><td class="chev">›</td></tr>
-            <tr onclick="location.href='day-editor.html'"><td class="date">2026-05-14</td><td class="num">463 g</td><td class="num">6</td><td><span class="pill draft"><span class="d"></span>Draft</span></td><td class="chev">›</td></tr>
+            <tr onclick="location.href='day-editor.html'"><td class="cbx" onclick="event.stopPropagation()"><input type="checkbox" class="rowcb" onclick="selChg()"></td><td class="date">2026-05-07</td><td class="num">460 g</td><td class="num">6</td><td><span class="pill ok"><span class="d"></span>Exported</span></td><td class="chev">›</td></tr>
+            <tr onclick="location.href='day-editor.html'"><td class="cbx" onclick="event.stopPropagation()"><input type="checkbox" class="rowcb" onclick="selChg()"></td><td class="date">2026-05-13</td><td class="num">462 g</td><td class="num">6</td><td><span class="pill ok"><span class="d"></span>Exported</span></td><td class="chev">›</td></tr>
+            <tr onclick="location.href='day-editor.html'"><td class="cbx" onclick="event.stopPropagation()"><input type="checkbox" class="rowcb" onclick="selChg()"></td><td class="date">2026-05-14</td><td class="num">463 g</td><td class="num">6</td><td><span class="pill draft"><span class="d"></span>Draft</span></td><td class="chev">›</td></tr>
           </tbody>
         </table>
         <div class="daylegend">
@@ -334,6 +351,21 @@
   function modal(name){document.getElementById('scrim').classList.add('show');
     ['new','config','delete','calendar','profile'].forEach(function(k){document.getElementById('dlg-'+k).classList.toggle('hide',k!==name);});}
   function closeModal(){document.getElementById('scrim').classList.remove('show');}
+  // days multi-select + bulk action bar
+  function selChg(){var n=document.querySelectorAll('.rowcb:checked').length;
+    document.getElementById('selbar').style.display=n?'flex':'none';
+    document.getElementById('tctitle').style.display=n?'none':'inline';
+    document.getElementById('selcount').textContent=n+' selected';}
+  function selAll(cb){document.querySelectorAll('.rowcb').forEach(function(c){c.checked=cb.checked;});selChg();}
+  // undo toast (reversible bulk actions; delete-animal keeps a hard confirm instead)
+  var _toastT;
+  function showToast(kind){var n=document.querySelectorAll('.rowcb:checked').length||1;
+    var msg=kind==='delete'?(n+' day'+(n>1?'s':'')+' deleted'):(n+' file'+(n>1?'s':'')+' exported to Downloads');
+    document.getElementById('toastmsg').textContent=msg;
+    document.getElementById('toast-undo').style.display=kind==='delete'?'inline':'none';
+    var t=document.getElementById('toast');t.style.display='flex';
+    clearTimeout(_toastT);_toastT=setTimeout(hideToast,6000);}
+  function hideToast(){document.getElementById('toast').style.display='none';}
   function toggleSwitch(e){e.stopPropagation();var m=document.getElementById('amenu');if(m)m.hidden=!m.hidden;}
   document.addEventListener('click',function(){var m=document.getElementById('amenu');if(m)m.hidden=true;});
   // calendar day creator
@@ -353,5 +385,11 @@
       var d=el.getAttribute('data-d');sel[d]=!sel[d];el.classList.toggle('sel',!!sel[d]);upd();});
   })();
 </script>
+
+<div class="toast" id="toast" style="display:none">
+  <span id="toastmsg">Done</span>
+  <button class="undo" id="toast-undo" onclick="hideToast()">Undo</button>
+  <button class="x" onclick="hideToast()">✕</button>
+</div>
 </body>
 </html>

@@ -18,7 +18,8 @@ screens use one **opto** animal (Laurent) to cover the full experience.
 | [import-repair.html](./import-repair.html) | **Import & repair** (from the create modal's "Import a YAML"): parse a legacy file, decide **new animal vs existing-day**, and **flag every non-conforming field with a suggested fix** (`Rat`→`Rattus norvegicus`, `Male`→`M`, `"541g"`→`541 g`, NULL `None`/`NotInBrain` locations, experimenter shape) + **required-but-missing** (e.g. `date_of_birth`) blocking import. Benign format normalizations (`task_epoch`→`task_epochs`) auto-applied + listed; nothing silently dropped. |
 | [create-animal.html](./create-animal.html) | Guided **new-animal wizard** (reached from the animal page's "Start from scratch"): Identity → **Electrodes/probes** → Cameras → Optogenetics → Tasks → Recording system → Team. Embeds the current-UI lessons: binomial species / single-letter sex / genotype-as-picker / subject_id collision; **device_type picker** (known probes, human summaries) + single **targeted_location** (brain-region autocomplete, modern-style) + AP/ML/DV coords + **replicate-N** + auto channel-maps + **behavior-only skip**; camera calibration warning; opto **4-field all-or-nothing** + completeness + power guard + required references; task-type catalog. |
 | [export-preview.html](./export-preview.html) | **Export / preview** (from a day's Preview/Export button): the readiness **gate** (located issues block export, or "ready"), the derived **filename** (`20260514_Laurent_metadata.yml`), a read-only **YAML preview**, Download/Copy, and a **batch** "export all days" option. |
-| [day-editor.html](./day-editor.html) | Day editor: an **export-readiness** bar + tabs — **Epochs** (grid + per-epoch drill-in for task/cameras/statescript/videos; per-epoch **opto power + pulse** columns), **Failed channels** (probe-wide grid, multi-shank marks consolidate to the first ntrode row), **DIO** (carry-forward summary by default → on-demand editor), **Day** (`session_id` auto-derived, weight, description, experimenters, **opto-protocol** card: laser DIO / FSGui file / camera). Covers every day-level field in the scope model. |
+| [day-editor.html](./day-editor.html) | Day editor: a **"✓ Saved"** autosave indicator + an **export-readiness** bar + a read-only **animal scope-boundary card** (identity · probes · config · team, with an "Edit animal setup" link) + tabs — **Epochs** (grid + per-epoch drill-in for task/cameras/statescript/videos; per-epoch **opto power + pulse** columns), **Failed channels** (probe-wide grid, multi-shank marks consolidate to the first ntrode row), **DIO** (carry-forward summary by default → on-demand editor), **Day** (`session_id` auto-derived, weight, description, experimenters, **opto-protocol** card: laser DIO / FSGui file / camera). Covers every day-level field in the scope model. |
+| [empty-states.html](./empty-states.html) | **First-run / empty states** the populated screens don't show: Animals home with **no animals** (＋ New animal / Import a YAML CTAs) and an animal whose setup is done but has **no recording days** (＋ Add recording day(s) CTA). What a brand-new user / freshly-created animal actually lands on. |
 
 ## Design bets these embody (decided)
 
@@ -34,6 +35,34 @@ screens use one **opto** animal (Laurent) to cover the full experience.
   opto animals **only**.
 - **Scope:** show each concern only at its scope, and only when present (a non-opto animal shows no opto;
   failed channels & DIO are day-level siblings, not epoch columns).
+
+## Resolved UX-completeness gaps (2026-06-16)
+
+A pass against the [UX rubric](../../research/ux-principles.md) + general web-app conventions, **scoped by
+the fact that an animal lives only ~1–2 months (≤~60 recording days)** — so list-at-scale concerns don't
+apply. Resolutions:
+
+- **Empty / first-run states — ADDED** ([empty-states.html](./empty-states.html)). The populated screens
+  never showed what a new user or a freshly-created animal lands on; now both have an onboarding state with
+  the right primary CTAs. (Real at any scale.)
+- **Undo — ADDED.** Frequent, reversible day actions (multi-select **Delete** / discard) use an **undo
+  toast**, not a confirm dialog. **Delete-animal keeps a hard confirm** (rare, catastrophic). The
+  "undo-for-reversible / confirm-for-catastrophic" split. (Mockup: animal-page Days table.)
+- **Days-table bulk ops — ADDED multi-select + "Export selected"** (animal-page). **Dropped**
+  search / filter / sort / pagination / virtualization — unneeded at ≤~60 rows. Batch-export-a-block stays
+  first-class (matches the export journey); the 200-day scale machinery does not.
+- **Save-state visibility — ADDED** a **"✓ Saved" autosave** indicator (day-editor header). This is also
+  why **no navigate-away "unsaved changes" guard** is needed — autosave makes it moot. (The shipping app
+  already has a `SaveIndicator`; this just shows where it lives.)
+
+**Deferred (called out on purpose):** multi-user / accounts (data model is already person-independent;
+single-user UI is intentional); lab-wide settings/preferences (boilerplate stays pre-filled); mobile /
+responsive (desktop-first fits the audience).
+
+**Folded into the implementation plan as per-phase acceptance criteria (not mockups):** the 128-cell
+**channel grid** and **DIO grid** must be **keyboard-operable + screen-reader labelled** (axe-verified;
+they're click-only here); **async progress** for batch export / large import; **post-download success
+confirmation** ("wrote `…_metadata.yml`").
 
 ## Must reuse the existing correctness substrate
 
