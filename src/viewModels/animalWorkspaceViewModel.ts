@@ -2,9 +2,10 @@
  * @fileoverview AnimalWorkspace view-model builder.
  *
  * `buildAnimalWorkspaceViewModel(workspace, selectedAnimalId?)` turns the workspace into the data the
- * animal-picker page renders: the animal cards (id + present-day count + link), and — when an animal
- * is selected — that animal's recording-day rows, its first-run setup checklist, the existing-data
- * review state (corrupt index / recovered / wrong-owner notices), and the carry-forward affordance.
+ * Animals-home page renders: one row per animal (id, present-day count, link, genotype, species, last
+ * recording, opto flag, and a rolled-up day status), and — when an animal is selected — that animal's
+ * recording-day rows, its first-run setup checklist, the existing-data review state (corrupt index /
+ * recovered / wrong-owner notices), and the carry-forward affordance.
  *
  * It composes domain truth rather than re-deriving it: `classifyAnimalDays` + `getDayRowStatus` for
  * the per-day status, the shared {@link buildDayRowViewModel} for the row shape, `getAnimalSectionStatus`

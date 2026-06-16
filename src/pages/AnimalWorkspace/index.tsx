@@ -1,11 +1,11 @@
 /**
  * Animals home — the top-level animal picker (was the bare card list).
  *
- * Renders the disambiguating table the redesign calls for: one row per animal with genotype,
- * species, day count, last recording, an opto tag, and a rolled-up day status — each name a real
- * `<a>` to `#/animal/:id/days` (the tabbed {@link AnimalView} owns that animal's days + setup). A
- * client-side search + genotype/status filters narrow the small corpus; a load/recovery banner
- * surfaces the persistence notice; the zero-animals state is an onboarding card. Create / import /
+ * Renders a disambiguating table: one row per animal with genotype, species, day count, last
+ * recording, an opto tag, and a rolled-up day status — each name a real `<a>` to `#/animal/:id/days`
+ * (the tabbed {@link AnimalView} owns that animal's days + setup). A client-side search +
+ * genotype/status filters narrow the small corpus; the zero-animals state is an onboarding card.
+ * (The load/recovery notice is surfaced globally by the app shell, not here.) Create / import /
  * delete / edit-profile keep their existing handlers and dialogs.
  *
  * @see src/state/workspaceTypes.js for the workspace data model (typedefs)
@@ -243,7 +243,8 @@ export function AnimalWorkspace() {
             </div>
           </div>
 
-          <table className={styles.animalsTable}>
+          <div className={styles.tableScroll}>
+            <table className={styles.animalsTable}>
             <caption className="visually-hidden">Animals</caption>
             <thead>
               <tr>
@@ -303,7 +304,8 @@ export function AnimalWorkspace() {
                 </tr>
               ))}
             </tbody>
-          </table>
+            </table>
+          </div>
 
           {filteredAnimals.length === 0 && (
             <p className={styles.noMatches} role="status">

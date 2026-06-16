@@ -745,8 +745,17 @@
   outline-offset: 1px;
 }
 
+/* Narrow-viewport strategy: the 7-column table scrolls horizontally inside this wrapper rather than
+   clamping columns or overflowing the page on small / split-screen widths. */
+.tableScroll {
+  overflow-x: auto;
+}
+
 .animalsTable {
   width: 100%;
+
+  /* Keep columns legible — scroll (via .tableScroll) instead of crushing when the viewport is narrow. */
+  min-width: 40rem;
   border-collapse: collapse;
   font-size: var(--font-size-sm);
 }

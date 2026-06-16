@@ -80,6 +80,30 @@ describe('useUndoToast (single host toast)', () => {
     expect(screen.queryByRole('status')).not.toBeInTheDocument();
   });
 
+  it('shows a dismiss-only toast (no Undo) for a non-reversible message', async () => {
+    const user = userEvent.setup();
+    /**
+     * Harness that raises a non-reversible toast (no onUndo).
+     * @returns {JSX.Element} A trigger button plus the hosted toast node.
+     */
+    function Host() {
+      const { show, node } = useUndoToast();
+      return (
+        <>
+          <button type="button" onClick={() => show('Saved')}>
+            trigger
+          </button>
+          {node}
+        </>
+      );
+    }
+    render(<Host />);
+    await user.click(screen.getByRole('button', { name: 'trigger' }));
+    expect(screen.getByRole('status')).toHaveTextContent('Saved');
+    expect(screen.queryByRole('button', { name: /undo/i })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /dismiss/i })).toBeInTheDocument();
+  });
+
   it('gives each successive toast its own full auto-hide window', () => {
     vi.useFakeTimers();
     try {

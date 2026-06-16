@@ -95,6 +95,17 @@ describe('Animals home — table', () => {
     expect(screen.getByRole('link', { name: animalId })).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'laurent' })).not.toBeInTheDocument();
   });
+
+  it('shows a no-match status (not a blank table) when the search matches nothing', async () => {
+    const user = userEvent.setup();
+    const { animalId, workspace } = buildHomeWorkspace();
+    renderHome(workspace);
+
+    await user.type(screen.getByRole('searchbox', { name: /search animals/i }), 'zzzznomatch');
+    expect(screen.getByText(/no animals match/i)).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: animalId })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'laurent' })).not.toBeInTheDocument();
+  });
 });
 
 describe('Animals home — empty state', () => {

@@ -10,7 +10,9 @@ export interface BlastRadiusChipProps {
 /**
  * BlastRadiusChip — the "affects all N days" amber chip shown next to an animal-static edit control
  * whose change forces affected days to re-export. The full warning rides on the title (hover
- * tooltip). Animal-static edits this annotates: Identity, Cameras, Optogenetics (per the design).
+ * tooltip). It annotates the animal-static edits whose change invalidates exported days — Identity,
+ * Cameras, Optogenetics — but not Team (past days keep their recorded experimenters) or additive
+ * task-type adds.
  */
 const BlastRadiusChip = ({ dayCount, title }: BlastRadiusChipProps) => {
   const noun = dayCount === 1 ? 'day' : 'days';

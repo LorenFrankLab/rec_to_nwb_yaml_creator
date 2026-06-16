@@ -203,9 +203,9 @@ function resolveTab(tab: string | undefined): string {
 
 /**
  * The electrode groups of the animal's CURRENT configuration — the export source of truth. Reads the
- * latest configuration snapshot's groups, falling back to the editable `animal.devices` mirror when no
- * snapshot has geometry (so it also covers the mirror-divergence case where the editable copy is
- * empty). Returns [] for a behavior-only animal with no probes.
+ * latest configuration snapshot's groups, falling back to the editable `animal.devices` mirror when
+ * the snapshot has no geometry (covering the mirror-divergence case where the snapshot is empty but
+ * the editable copy still holds the groups). Returns [] for a behavior-only animal with no probes.
  */
 function currentElectrodeGroups(animal: unknown): ElectrodeGroup[] {
   const history = getConfigHistory(animal);
@@ -214,11 +214,27 @@ function currentElectrodeGroups(animal: unknown): ElectrodeGroup[] {
   return snapshotGroups.length > 0 ? snapshotGroups : getAnimalElectrodeGroups(animal);
 }
 
-/** Format a probe's stereotaxic coordinates, preferring the per-axis fields; '' when unavailable. */
+/** Parse a coordinate value to a finite number, or null (treats '' / missing / non-numeric as absent). */
+function finiteCoord(value: unknown): number | null {
+  if (value == null || value === '') return null;
+  const n = Number(value);
+  return Number.isFinite(n) ? n : null;
+}
+
+/**
+ * Format a probe's stereotaxic coordinates, preferring the per-axis fields. Returns '' unless ALL
+ * three axes are present and numeric — a partial or empty-string set yields '' (never a malformed
+ * `(3, , ) mm`), since the per-axis fields default to empty strings.
+ */
 function formatProbeCoords(group: ElectrodeGroup): string {
-  const { targeted_x: x, targeted_y: y, targeted_z: z, targeted_location: loc } = group;
+  const x = finiteCoord(group.targeted_x);
+  const y = finiteCoord(group.targeted_y);
+  const z = finiteCoord(group.targeted_z);
   if (x != null && y != null && z != null) return `(${x}, ${y}, ${z}) mm`;
-  if (Array.isArray(loc) && loc.length === 3) return `(${loc[0]}, ${loc[1]}, ${loc[2]}) mm`;
+  const loc = group.targeted_location;
+  if (Array.isArray(loc) && loc.length === 3 && loc.every((v) => finiteCoord(v) != null)) {
+    return `(${loc[0]}, ${loc[1]}, ${loc[2]}) mm`;
+  }
   return '';
 }
 

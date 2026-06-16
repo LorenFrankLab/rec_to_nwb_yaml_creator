@@ -54,4 +54,37 @@ describe('GeneratedValue (derived vs manual file value)', () => {
     await user.click(screen.getByRole('button', { name: /revert/i }));
     expect(onRevert).toHaveBeenCalledTimes(1);
   });
+
+  it('reports manual edits via onChange and keeps the typed value when the value prop changes', async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    const { rerender } = render(
+      <GeneratedValue
+        value="seed.h264"
+        derived={false}
+        onOverride={() => {}}
+        onRevert={() => {}}
+        overrideLabel="Rename"
+        onChange={onChange}
+      />,
+    );
+    const input = screen.getByRole('textbox');
+    await user.clear(input);
+    await user.type(input, 'typed.h264');
+    expect(onChange).toHaveBeenCalled();
+    expect(onChange.mock.calls.at(-1)[0]).toBe('typed.h264');
+
+    // The manual field is uncontrolled — a later `value` prop must NOT overwrite the user's text.
+    rerender(
+      <GeneratedValue
+        value="newseed.h264"
+        derived={false}
+        onOverride={() => {}}
+        onRevert={() => {}}
+        overrideLabel="Rename"
+        onChange={onChange}
+      />,
+    );
+    expect(screen.getByRole('textbox')).toHaveValue('typed.h264');
+  });
 });

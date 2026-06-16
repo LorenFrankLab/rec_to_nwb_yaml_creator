@@ -112,6 +112,18 @@
   font-size: 0.95rem;
 }
 
+/* Let the message grow so the actions (Review / Dismiss) group together at the trailing edge. */
+.loadNotice > span {
+  flex: 1 1 auto;
+}
+
+.loadNoticeReview {
+  flex: 0 0 auto;
+  font-weight: 600;
+  color: var(--color-primary);
+  white-space: nowrap;
+}
+
 .loadNoticeDismiss {
   flex: 0 0 auto;
   min-height: 44px;

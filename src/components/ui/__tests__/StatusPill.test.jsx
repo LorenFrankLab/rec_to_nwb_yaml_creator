@@ -47,6 +47,17 @@ describe('EpochStatusPill (epoch-row scope — its own vocabulary)', () => {
     expect(screen.getByText('Needs video')).toBeInTheDocument();
   });
 
+  it('maps each epoch state to a distinct token-driven class', () => {
+    const classFor = (status) => {
+      const { container, unmount } = render(<EpochStatusPill status={status} />);
+      const cls = container.firstChild.className;
+      unmount();
+      return cls;
+    };
+    const classes = [classFor('complete'), classFor('incomplete'), classFor('needs_video')];
+    expect(new Set(classes).size).toBe(3);
+  });
+
   it('never renders a day-lifecycle word (scopes do not share vocabulary)', () => {
     for (const status of ['complete', 'incomplete', 'needs_video']) {
       const { unmount } = render(<EpochStatusPill status={status} />);

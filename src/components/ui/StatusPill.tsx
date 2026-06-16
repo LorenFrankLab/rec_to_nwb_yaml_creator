@@ -23,10 +23,12 @@ interface StatusPillProps {
 /**
  * StatusPill — the single visual wrapper over the shared {@link DAY_LIFECYCLE} vocabulary.
  *
- * It NEVER coins new status words: the label always comes from {@link DAY_LIFECYCLE_LABEL}
- * (or a caller-supplied short override of that same state). Colors are design tokens, one class
- * per variant. The epoch-row scope has its own component ({@link EpochStatusPill}) so the two
- * scopes can never share an instance — keeping the "no word across scopes" rule structural.
+ * The shared vocabulary + colors come from {@link DAY_LIFECYCLE}: the label defaults to
+ * {@link DAY_LIFECYCLE_LABEL}`[variant]`, and a caller may pass a short `label` override of that
+ * state (the Animals-home rollup passes an aggregate count phrase like "2 need review"). Colors are
+ * design tokens, one class per variant. The epoch-row scope has its own component
+ * ({@link EpochStatusPill}) so the two scopes can never share an instance — keeping the "no word
+ * across scopes" rule structural.
  */
 const StatusPill = ({ variant, label }: StatusPillProps) => {
   const classes = [styles.pill, VARIANT_CLASS[variant] ?? styles.draft].filter(Boolean).join(' ');

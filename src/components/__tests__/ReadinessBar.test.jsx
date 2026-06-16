@@ -38,4 +38,13 @@ describe('ReadinessBar (issue-driven export readiness)', () => {
     render(<ReadinessBar issues={[{ severity: 'error', message: 'x' }]} onFix={() => {}} />);
     expect(screen.getByText(/1 issue blocks export/i)).toBeInTheDocument();
   });
+
+  it('defaults the fix action label to "Fix" when an issue carries none', async () => {
+    const user = userEvent.setup();
+    const onFix = vi.fn();
+    const issue = { severity: 'error', message: 'Something blocks export' };
+    render(<ReadinessBar issues={[issue]} onFix={onFix} />);
+    await user.click(screen.getByRole('button', { name: 'Fix' }));
+    expect(onFix).toHaveBeenCalledWith(issue);
+  });
 });

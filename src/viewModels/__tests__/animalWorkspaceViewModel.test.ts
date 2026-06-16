@@ -117,6 +117,23 @@ describe('buildAnimalWorkspaceViewModel — animal row metadata (Animals home)',
     expect(card.statusRollup).toEqual({ variant: 'needs_fixing', label: '1 needs review' });
   });
 
+  it('rolls a mixed ready + exported set up to "1 ready" (pending export outranks all-exported)', () => {
+    const { animal, day } = loadRealistic();
+    const day2: Idable = {
+      ...day,
+      id: `${animal.id}-2023-06-23`,
+      date: '2023-06-23',
+      state: { draft: false, validated: true, exported: true },
+    };
+    const animal2: Idable = { ...animal, days: [day.id, day2.id] };
+    const ws: Workspace = {
+      animals: { [animal2.id]: animal2 },
+      days: { [day.id]: day, [day2.id]: day2 },
+    };
+    const card = buildAnimalWorkspaceViewModel(ws).animals[0];
+    expect(card.statusRollup).toEqual({ variant: 'ready', label: '1 ready' });
+  });
+
   it('reads "No recording days" for an animal with no days', () => {
     const ws: Workspace = {
       animals: { fresh: { id: 'fresh', days: [], subject: { subject_id: 'fresh' } } },

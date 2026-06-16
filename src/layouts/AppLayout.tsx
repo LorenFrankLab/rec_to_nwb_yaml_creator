@@ -361,11 +361,15 @@ export function AppLayout() {
 
       <ShortcutsHelp isOpen={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
 
-      {/* Notice when previously-saved workspace data could not be restored, so a
-          discarded (corrupt / incompatible-version) workspace is never silent. */}
+      {/* Notice when previously-saved workspace data was recovered or could not be restored, so a
+          recovered/discarded workspace is never silent. The "Review animals" link routes to the
+          Animals home, where each animal's rolled-up status surfaces any that now need review. */}
       {persistence.loadNotice && (
         <div className={styles.loadNotice} role="alert">
           <span>{persistence.loadNotice}</span>
+          <a className={styles.loadNoticeReview} href="#/workspace">
+            Review animals
+          </a>
           <button
             type="button"
             className={styles.loadNoticeDismiss}

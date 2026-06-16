@@ -107,6 +107,31 @@ describe('buildAnimalViewModel — animal-static summary + configuration card', 
     expect(vm.configCard.newConfigurationLabel).toBe('New configuration…');
   });
 
+  it('omits coordinates for probes with empty/partial coordinate fields (no "(, , ) mm")', () => {
+    const { animal, day } = loadRealistic();
+    const noCoords = clone(animal);
+    // A configuration whose probe has empty-string per-axis coords (the field default).
+    noCoords.configurationHistory = [
+      {
+        version: 1,
+        date: '2023-06-22',
+        description: 'Initial',
+        devices: {
+          electrode_groups: [
+            { id: 0, location: 'CA1', device_type: 'tetrode_12.5', targeted_x: '', targeted_y: '', targeted_z: '' },
+            { id: 1, location: 'CA3', device_type: 'tetrode_12.5', targeted_x: '3', targeted_y: '', targeted_z: '2' },
+          ],
+          ntrode_electrode_group_channel_map: [],
+        },
+        appliedToDays: [],
+      },
+    ];
+    noCoords.devices = { electrode_groups: [], ntrode_electrode_group_channel_map: [] };
+    const vm = buildAnimalViewModel(wrap(noCoords, day), noCoords.id, 'electrode-groups');
+    expect(vm.configCard.probes[0].coords).toBe('');
+    expect(vm.configCard.probes[1].coords).toBe(''); // partial coords also omitted
+  });
+
   it('flags an opto animal in the summary', () => {
     const { animal, day } = loadRealistic();
     const opto = clone(animal);
