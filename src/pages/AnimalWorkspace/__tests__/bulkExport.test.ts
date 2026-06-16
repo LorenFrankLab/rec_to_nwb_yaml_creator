@@ -61,6 +61,29 @@ describe('exportSelectedDays — bulk Export selected', () => {
     );
   });
 
+  it('skips a VALID day with outstanding warnings, routing it to Validation & Export (no unacknowledged export)', () => {
+    const { workspace, ids } = makeSummaryWorkspace();
+    // Give the valid day a non-blocking warning (a task-definition reconciliation to review) — the
+    // same kind the Export-Valid-Only preflight makes the user acknowledge before download.
+    const day = (workspace as FixtureWorkspace).days[ids.validDayId];
+    // Only `task_name` is read by the reconciliation warning rule; cast past the fuller stored type.
+    day.state = {
+      ...(day.state || {}),
+      taskDefinitionReconciliations: [{ task_name: 'W-track' }],
+    } as unknown as typeof day.state;
+    const actions = { updateDay: vi.fn() };
+
+    const result = exportSelectedDays(workspace, 'remy', [ids.validDayId], { actions, strict: true });
+
+    expect(result.exported).toEqual([]);
+    expect(result.skipped).toHaveLength(1);
+    expect(result.skipped[0].dayId).toBe(ids.validDayId);
+    // Routed to the gated surface (not the day editor), where the warning can be acknowledged.
+    expect(result.skipped[0].href).toBe('#/animal/remy/export');
+    expect(result.skipped[0].reason).toMatch(/warning/i);
+    expect(downloadYamlFile).not.toHaveBeenCalled();
+  });
+
   it('skips a day with blocking errors (no download) and reports it', () => {
     const { workspace, ids } = makeSummaryWorkspace();
     const actions = { updateDay: vi.fn() };

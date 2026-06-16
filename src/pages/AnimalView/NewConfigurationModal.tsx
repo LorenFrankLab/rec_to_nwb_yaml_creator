@@ -8,7 +8,7 @@
  * uses (no parallel snapshot logic). Days from the effective date forward stamp the new version;
  * earlier days keep theirs (the ConfigVersionContext timeline renders the result).
  */
-import { useId, useMemo, useState } from 'react';
+import { useEffect, useId, useMemo, useState } from 'react';
 import Modal from '../../components/Modal/Modal';
 import {
   getAnimalElectrodeGroups,
@@ -63,6 +63,18 @@ export default function NewConfigurationModal({
   const [copyFromCurrent, setCopyFromCurrent] = useState(true);
   const [description, setDescription] = useState('');
   const [error, setError] = useState('');
+
+  // Reset the form whenever the dialog (re)opens. The host keeps this component mounted while closed
+  // (it renders null), so without this a canceled effective date / description / toggle would
+  // silently prefill the next re-implant attempt.
+  useEffect(() => {
+    if (isOpen) {
+      setEffectiveDate('');
+      setCopyFromCurrent(true);
+      setDescription('');
+      setError('');
+    }
+  }, [isOpen]);
 
   // The version this commit will create — the SAME deriver the action uses (max(version) + 1), so the
   // displayed label can't disagree with the committed version on a non-monotonic/corrupt history.

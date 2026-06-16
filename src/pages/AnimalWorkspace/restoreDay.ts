@@ -53,6 +53,12 @@ export function restoreDay(record: CapturedDay, actions: RestoreDayActions): boo
   try {
     actions.createDay(animalId, date, session, {});
 
+    // Re-derive the day id the SAME way `createDay` (and the YAML import path) mint it — both assign
+    // `generateDayId(animalId, date)`, so a day's id is ALWAYS `animalId-date` (no non-canonical /
+    // foreign ids exist in this store). The recreated id therefore matches the deleted one exactly;
+    // `updateDay` targets the day `createDay` just made. (Using the captured `record.id` instead
+    // would be WRONG: createDay always mints the canonical id, so a divergent captured id would make
+    // `updateDay` miss.)
     const dayId = generateDayId(animalId, date);
     // Replay only the day-owned fields applyDayUpdates recognizes; absent fields are left as the
     // freshly-created defaults. session is restored too (createDay seeds a date-derived default).

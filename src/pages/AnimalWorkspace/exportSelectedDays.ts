@@ -4,16 +4,20 @@
  * `exportSelectedDays(workspace, animalKey, dayIds, { actions, strict })` exports a user-selected
  * subset of one animal's recording days. It REUSES the shared deciders rather than reimplementing
  * export truth: the same recovery/exportability classification (`classifyWorkspaceDays` +
- * `isExportableDayStatus`), the same per-day validity (`computeStepStatus` → `deriveChip`) over the
- * same cross-day context (`buildAnimalDaysByKey`), and the same byte-producing download core
- * (`exportDayFile`) the Validation Summary's "Export Valid Only" path uses. Valid days download
- * byte-identically; not-exportable / invalid / unstable days are skipped with a linked reason for the
- * inline "Exported N · Skipped M" result.
+ * `isExportableDayStatus`), the same per-day validity (`computeStepStatus` → `deriveChip`) and the
+ * same non-blocking-warning predicate (`validateDay`) over the same cross-day context
+ * (`buildAnimalDaysByKey`), and the same byte-producing download core (`exportDayFile`) the
+ * Validation Summary's "Export Valid Only" path uses. Valid days with no outstanding warnings
+ * download byte-identically; not-exportable / invalid / unstable days — AND valid days with
+ * unacknowledged warnings — are skipped with a linked reason for the inline "Exported N · Skipped M"
+ * result. (The warning gate matches the Validation & Export surface, which requires acknowledgement
+ * before export; the Days-tab quick export has no acknowledgement step, so it routes warning-bearing
+ * days there rather than shipping them unacknowledged.)
  */
 
 import { mergeDayMetadata } from '../../state/workspaceUtils';
 import type { Animal, Day } from '../../state/workspaceTypes';
-import { computeStepStatus } from '../../domain/validation';
+import { computeStepStatus, validateDay } from '../../domain/validation';
 import { classifyWorkspaceDays, isExportableDayStatus } from '../../domain/dayRecovery';
 import { exportDayFile } from '../../domain/exportDay';
 import type { ExportDayActions } from '../../domain/exportDay';
@@ -93,12 +97,17 @@ export function exportSelectedDays(
       continue;
     }
 
-    // Validity: the SAME live chip the rest of the view uses. A merge throw means the day is
-    // unreadable (corrupt config), reported honestly rather than crashing the batch.
+    // Validity: the SAME live chip + warning set the Validation & Export path uses. A merge throw
+    // means the day is unreadable (corrupt config), reported honestly rather than crashing the batch.
     let chip: string;
+    let warningCount = 0;
     try {
       const merged = mergeDayMetadata(animal as unknown as Animal, day as unknown as Day);
       chip = deriveChip(computeStepStatus(day, merged, animal, animalDays));
+      // Outstanding non-blocking warnings (same predicate the Export-Valid-Only preflight uses).
+      warningCount = validateDay(day, merged, animal, animalDays).filter(
+        (issue: { severity?: string }) => issue.severity === 'warning'
+      ).length;
     } catch (err) {
       skipped.push({ dayId, date, reason: `Could not be read: ${(err as Error).message}`, href });
       continue;
@@ -109,6 +118,19 @@ export function exportSelectedDays(
     }
     if (chip !== 'valid') {
       skipped.push({ dayId, date, reason: 'Incomplete — finish the required fields.', href });
+      continue;
+    }
+    // A valid day with outstanding warnings must be ACKNOWLEDGED before export — the Validation &
+    // Export surface gates this, but the Days-tab quick export has no acknowledgement step. Don't
+    // ship it unacknowledged here; route it to that surface (consistent with the export gate, not a
+    // looser second path).
+    if (warningCount > 0) {
+      skipped.push({
+        dayId,
+        date,
+        reason: 'Has warnings to review — acknowledge and export in Validation & Export.',
+        href: `#/animal/${animalKey}/export`,
+      });
       continue;
     }
 

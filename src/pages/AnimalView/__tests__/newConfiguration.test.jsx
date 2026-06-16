@@ -111,4 +111,20 @@ describe('AnimalView — new-configuration (re-implant) modal', () => {
     expect(ws.days['remy-2026-05-10'].configurationVersion).toBe(2);
     expect(ws.days['remy-2026-05-20'].configurationVersion).toBe(2);
   });
+
+  it('resets the form on reopen — a canceled effective date does not prefill the next attempt', async () => {
+    const user = userEvent.setup();
+    renderView();
+
+    // Open, type a date, then cancel without committing.
+    await user.click(screen.getByRole('button', { name: /new configuration/i }));
+    let dialog = screen.getByRole('alertdialog');
+    await user.type(within(dialog).getByLabelText(/effective (start )?date/i), '2026-05-10');
+    await user.click(within(dialog).getByRole('button', { name: /^cancel$/i }));
+
+    // Reopen — the effective date must be cleared, not the canceled value.
+    await user.click(screen.getByRole('button', { name: /new configuration/i }));
+    dialog = screen.getByRole('alertdialog');
+    expect(within(dialog).getByLabelText(/effective (start )?date/i)).toHaveValue('');
+  });
 });
