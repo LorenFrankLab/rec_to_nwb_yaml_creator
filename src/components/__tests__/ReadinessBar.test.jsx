@@ -48,6 +48,29 @@ describe('ReadinessBar (issue-driven export readiness)', () => {
     expect(onFix).toHaveBeenCalledWith(issue);
   });
 
+  it('renders multiple issues sharing a code without a React duplicate-key warning', () => {
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    render(
+      <ReadinessBar
+        issues={[
+          { severity: 'error', code: 'required', path: 'session_description', message: 'A is required' },
+          { severity: 'error', code: 'required', path: 'experiment_description', message: 'B is required' },
+          { severity: 'error', code: 'required', path: 'subject.species', message: 'C is required' },
+        ]}
+        onFix={() => {}}
+      />,
+    );
+    // All three rows render…
+    expect(screen.getByText('A is required')).toBeInTheDocument();
+    expect(screen.getByText('C is required')).toBeInTheDocument();
+    // …and no "Encountered two children with the same key" warning was emitted.
+    const keyWarnings = errorSpy.mock.calls.filter((args) =>
+      String(args[0]).includes('same key'),
+    );
+    expect(keyWarnings).toEqual([]);
+    errorSpy.mockRestore();
+  });
+
   it('omits the Fix button (but keeps the message) for an issue the page reports as non-actionable', () => {
     const fixable = { severity: 'error', code: 'fixable', message: 'This one can be fixed' };
     const deadEnd = { severity: 'error', code: 'read_only', message: 'Read-only dead end — no in-app fix' };

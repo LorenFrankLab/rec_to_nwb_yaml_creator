@@ -216,8 +216,10 @@ export default function DayEditorFrame() {
     }
   }, []);
 
-  // Alt+←/→ cycles the four tabs (Export is not in the cycle — it is a header affordance).
-  const cycleTab = useCallback((direction: 'next' | 'prev') => {
+  // Alt+←/→ steps through the four tabs and CLAMPS at the ends (it does not wrap) — matching the
+  // former stepper's section pager. Export is not in the sequence (it is a header affordance), so the
+  // keyboard can never reach it.
+  const stepTab = useCallback((direction: 'next' | 'prev') => {
     setMode((cur) => {
       const idx = TAB_ORDER.indexOf(cur as DayTabKey);
       const base = idx < 0 ? 0 : idx;
@@ -227,8 +229,8 @@ export default function DayEditorFrame() {
   }, []);
   useStepperShortcut(
     useCallback((action: 'next' | 'prev' | 'add') => {
-      if (action === 'next' || action === 'prev') cycleTab(action);
-    }, [cycleTab])
+      if (action === 'next' || action === 'prev') stepTab(action);
+    }, [stepTab])
   );
 
   // ── Writers + repairs (mirrors the former stepper) ──

@@ -209,7 +209,7 @@ describe('DayEditorFrame', () => {
     expect(screen.getByRole('heading', { level: 2, name: /behavioral events/i })).toBeInTheDocument();
   });
 
-  it('cycles tabs with the Alt+→ / Alt+← keyboard shortcuts', () => {
+  it('steps tabs with the Alt+→ / Alt+← keyboard shortcuts', () => {
     renderFrame();
     act(() => emitStepperShortcut('next')); // day → epochs
     expect(screen.getByRole('button', { name: 'Epochs' })).toHaveAttribute('aria-current', 'page');
@@ -217,6 +217,20 @@ describe('DayEditorFrame', () => {
     expect(screen.getByRole('button', { name: 'Failed channels' })).toHaveAttribute('aria-current', 'page');
     act(() => emitStepperShortcut('prev')); // → epochs
     expect(screen.getByRole('button', { name: 'Epochs' })).toHaveAttribute('aria-current', 'page');
+  });
+
+  it('CLAMPS the Alt+ tab stepping at both ends (does not wrap)', () => {
+    renderFrame();
+    // At the first tab (Day), Alt+← stays on Day (no wrap to DIO).
+    expect(screen.getByRole('button', { name: 'Day' })).toHaveAttribute('aria-current', 'page');
+    act(() => emitStepperShortcut('prev'));
+    expect(screen.getByRole('button', { name: 'Day' })).toHaveAttribute('aria-current', 'page');
+
+    // Step to the last tab (DIO), then Alt+→ stays on DIO (no wrap to Day).
+    for (let i = 0; i < 5; i += 1) act(() => emitStepperShortcut('next'));
+    expect(screen.getByRole('button', { name: 'DIO' })).toHaveAttribute('aria-current', 'page');
+    act(() => emitStepperShortcut('next'));
+    expect(screen.getByRole('button', { name: 'DIO' })).toHaveAttribute('aria-current', 'page');
   });
 
   it('moves focus to the panel (#main-content) on a tab change', async () => {

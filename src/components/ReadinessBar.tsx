@@ -52,7 +52,13 @@ const ReadinessBar = ({ issues, onFix, canFix }: ReadinessBarProps) => {
       </p>
       <ul className={styles.issues}>
         {blocking.map((issue, index) => (
-          <li key={issue.code ?? issue.path ?? issue.message ?? index} className={styles.issue}>
+          // Several issues can share a `code` (e.g. multiple `required`/`pattern` errors), so the key
+          // folds in the path + a positional tiebreaker — `code` alone collides (React duplicate-key
+          // warning, and the wrong row could keep stale identity after a fix).
+          <li
+            key={`${issue.code ?? ''}:${issue.path ?? issue.instancePath ?? ''}:${index}`}
+            className={styles.issue}
+          >
             <span className={styles.message}>{issue.message}</span>
             {/* Render the Fix button only when the issue has an actionable in-app target — an issue
                 with no fixable destination shows its message alone (no dead button). */}

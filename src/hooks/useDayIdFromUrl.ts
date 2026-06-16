@@ -1,7 +1,25 @@
 import { useState, useEffect } from 'react';
 
 /**
+ * Parse the day id from a hash like `#/day/remy-2023-06-22`, or null when the hash is not a day route.
+ *
+ * @param hash - The location hash (e.g. `window.location.hash`).
+ * @returns The decoded day id, or null.
+ */
+function parseDayIdFromHash(hash: string): string | null {
+  const match = hash.match(/#\/day\/(.+)/);
+  return match ? decodeURIComponent(match[1]) : null;
+}
+
+/**
  * Parses day ID from URL hash: #/day/remy-2023-06-22
+ *
+ * The state is initialized SYNCHRONOUSLY from the current hash (a lazy initializer), not null-then-
+ * effect. A null first render would make the Day Editor briefly render its "no day id" error state on
+ * a direct `#/day/A` → `#/day/B` remount — and that error state has no `#main-content`, so
+ * AppLayout's one-shot route-change focus (which targets `#main-content` on the next animation frame)
+ * would find nothing and silently no-op, stranding keyboard/SR focus and the route announcement on the
+ * prior day. Resolving the id on the first render keeps `#main-content` present when that focus fires.
  *
  * @returns Day ID or null if not found
  *
@@ -14,26 +32,21 @@ import { useState, useEffect } from 'react';
  * const dayId = useDayIdFromUrl(); // null
  */
 export function useDayIdFromUrl(): string | null {
-  const [dayId, setDayId] = useState<string | null>(null);
+  const [dayId, setDayId] = useState<string | null>(() =>
+    typeof window === 'undefined' ? null : parseDayIdFromHash(window.location.hash)
+  );
 
   useEffect(() => {
-    /**
-     * Parse dayId from current URL hash
-     */
-    const parseDayId = () => {
-      const hash = window.location.hash;
-      const match = hash.match(/#\/day\/(.+)/);
-      setDayId(match ? decodeURIComponent(match[1]) : null);
-    };
+    const syncDayId = () => setDayId(parseDayIdFromHash(window.location.hash));
 
-    // Parse on mount
-    parseDayId();
+    // Re-sync on mount in case the hash changed between the lazy initializer and the effect attach.
+    syncDayId();
 
     // Listen for hash changes
-    window.addEventListener('hashchange', parseDayId);
+    window.addEventListener('hashchange', syncDayId);
 
     // Cleanup listener on unmount
-    return () => window.removeEventListener('hashchange', parseDayId);
+    return () => window.removeEventListener('hashchange', syncDayId);
   }, []);
 
   return dayId;
