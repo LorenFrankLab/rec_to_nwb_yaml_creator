@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>New animal — guided setup</title>
+<style>
+  :root{
+    --bg:#f4f6f8; --panel:#fff; --ink:#161a1d; --muted:#69727b; --faint:#9aa2ab;
+    --line:#e4e7eb; --line2:#eef1f4; --accent:#2f6fae; --accent-d:#255b91;
+    --ok:#1f8a4c; --okbg:#eaf6ee; --warn:#b8770a; --warnbg:#fbf3e3; --bad:#c23b3b; --badbg:#fbecec;
+    --opto:#7a3ea8; --optobg:#f3edfa; --opto-b:#dccaef; --radius:10px;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font:14px/1.5 -apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--ink)}
+  .top{background:#fff;border-bottom:1px solid var(--line);padding:10px 30px;display:flex;align-items:center;gap:10px}
+  .mark{width:22px;height:22px;border-radius:6px;background:linear-gradient(135deg,var(--accent),#5b9bd6)}
+  .crumb{font-size:13px;color:var(--muted)}.crumb a{color:var(--muted);text-decoration:none}.crumb b{color:var(--ink)}
+  .wrap{max-width:840px;margin:22px auto;padding:0 24px}
+  h1{font-size:23px;margin:0 0 4px;letter-spacing:-.01em}
+  .lede{color:var(--muted);font-size:13.5px;margin:0 0 18px;max-width:640px}
+  /* stepper */
+  .stepper{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:20px}
+  .step{display:flex;align-items:center;gap:7px;border:1px solid var(--line);background:#fff;border-radius:999px;padding:6px 12px;font-size:13px;color:var(--muted);cursor:pointer}
+  .step .num{width:18px;height:18px;border-radius:50%;background:var(--line2);color:var(--muted);font-size:11px;display:flex;align-items:center;justify-content:center;font-weight:600}
+  .step.active{border-color:var(--accent);color:var(--accent-d);font-weight:600}.step.active .num{background:var(--accent);color:#fff}
+  .step.done .num{background:var(--ok);color:#fff}
+  .opt{color:var(--faint);font-size:11px}
+  /* card + fields */
+  .card{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:18px 20px;margin-bottom:14px}
+  .card h2{font-size:16px;margin:0 0 4px}
+  .card .desc{color:var(--muted);font-size:13px;margin:0 0 16px}
+  .wstep{display:none}.wstep.show{display:block}
+  .field{margin-bottom:14px}
+  .field>label{display:block;font-size:12.5px;color:var(--muted);margin-bottom:4px}
+  .field input,.field select{font:inherit;border:1px solid var(--line);border-radius:8px;padding:7px 9px;width:100%;max-width:420px}
+  .field .hint{font-size:11.5px;color:var(--faint);margin-top:3px}
+  .field .hint.warn{color:var(--warn)}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:14px;max-width:420px}
+  .coords{display:flex;gap:8px}.coords input{width:80px}
+  .small{font-size:12px;color:var(--muted)}
+  .btn{font:inherit;border:1px solid var(--line);background:#fff;border-radius:8px;padding:8px 14px;cursor:pointer;color:var(--ink);font-size:13px}
+  .btn:hover{border-color:var(--accent);color:var(--accent)}
+  .btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}.btn.primary:hover{background:var(--accent-d)}
+  .addbtn{font:inherit;font-size:13px;color:var(--accent);border:1px dashed var(--line);border-radius:8px;padding:8px 12px;background:#fff;cursor:pointer}.addbtn:hover{border-color:var(--accent)}
+  /* probe group */
+  .grp{border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px;margin-bottom:12px;background:#fcfdfe}
+  .grp .gh{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+  .grp .gh b{font-size:13.5px}
+  .grp .rm{border:0;background:none;color:var(--faint);cursor:pointer}.grp .rm:hover{color:var(--bad)}
+  .autonote{font-size:12px;color:var(--muted);background:var(--line2);border-radius:8px;padding:8px 11px;margin-top:6px}
+  .skip{font-size:13px;color:var(--muted);margin-top:6px}.skip a{color:var(--accent);cursor:pointer}
+  /* opto */
+  .toggle{display:flex;align-items:center;gap:8px;margin-bottom:14px;font-size:13.5px}
+  .sub2{background:#faf8fd;border:1px solid var(--opto-b);border-radius:8px;padding:12px 14px;margin-bottom:10px}
+  .sub2 .t{font-weight:600;font-size:13px;margin-bottom:8px;color:var(--opto)}
+  .meter{display:flex;align-items:center;gap:10px;background:var(--optobg);border:1px solid var(--opto-b);border-radius:8px;padding:9px 12px;margin-bottom:12px;font-size:13px}
+  .dots{display:flex;gap:4px}.dots i{width:10px;height:10px;border-radius:50%;background:var(--opto);display:inline-block}
+  .req{color:var(--bad);font-size:11px}
+  /* task/camera rows */
+  .lrow{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line2);font-size:13px}.lrow:last-child{border-bottom:0}
+  .chips span{display:inline-block;background:var(--line2);border-radius:6px;padding:2px 8px;margin:0 3px 0 0;font-size:12.5px}
+  /* footer */
+  .foot{display:flex;justify-content:space-between;align-items:center;margin-top:18px}
+  .foot .right{display:flex;gap:8px}
+</style>
+</head>
+<body>
+  <div class="top"><span class="mark"></span><div class="crumb"><a href="#">Animals</a> › <b>New animal</b></div></div>
+
+  <div class="wrap">
+    <h1>New animal — guided setup</h1>
+    <p class="lede">Enter once what stays the same for this animal across every recording day. Recording
+      days reuse all of this; you'll only revisit it on a re-implant. Required for export are marked.</p>
+
+    <div class="stepper">
+      <div class="step active" data-s="1" onclick="go(1)"><span class="num">1</span> Identity</div>
+      <div class="step" data-s="2" onclick="go(2)"><span class="num">2</span> Electrodes</div>
+      <div class="step" data-s="3" onclick="go(3)"><span class="num">3</span> Cameras</div>
+      <div class="step" data-s="4" onclick="go(4)"><span class="num">4</span> Optogenetics <span class="opt">optional</span></div>
+      <div class="step" data-s="5" onclick="go(5)"><span class="num">5</span> Tasks</div>
+      <div class="step" data-s="6" onclick="go(6)"><span class="num">6</span> Recording system</div>
+      <div class="step" data-s="7" onclick="go(7)"><span class="num">7</span> Team</div>
+    </div>
+
+    <!-- 1 · IDENTITY -->
+    <section class="wstep show" id="step-1">
+      <div class="card">
+        <h2>Identity</h2>
+        <p class="desc">Who this animal is. Fixed for the animal's life — set carefully; it can't drift day to day.</p>
+        <div class="field"><label>Subject ID *</label><input value="" placeholder="e.g. Laurent">
+          <div class="hint">Must be unique. Case matters — <b>RS10 ≠ rs10</b>; we'll warn on a near-duplicate. No slashes (DANDI).</div></div>
+        <div class="two">
+          <div class="field"><label>Species *</label><select><option>Rattus norvegicus</option><option>Mus musculus</option><option>NCBI Taxon URI…</option></select>
+            <div class="hint">Latin binomial — DANDI rejects free text like "Rat".</div></div>
+          <div class="field"><label>Sex *</label><select><option>M</option><option>F</option><option>U</option><option>O</option></select>
+            <div class="hint">Single letter (NWB/DANDI), not "Male".</div></div>
+        </div>
+        <div class="two">
+          <div class="field"><label>Genotype *</label><select><option>Wild Type</option><option>PV-Cre</option><option>scn2a</option><option>＋ add genotype…</option></select></div>
+          <div class="field"><label>Strain / description *</label><input value="Long-Evans"></div>
+        </div>
+        <div class="field"><label>Date of birth *</label><input type="date" value="2025-12-03" style="max-width:200px"></div>
+        <div class="field"><label>Experiment description</label><input value="PV-Cre opto + probe implant"></div>
+        <div class="field"><label>Keywords</label><div class="chips"><span>opto</span><span>hippocampus</span><span>mPFC</span><span style="cursor:pointer;color:var(--accent)">＋</span></div></div>
+      </div>
+    </section>
+
+    <!-- 2 · ELECTRODES -->
+    <section class="wstep" id="step-2">
+      <div class="card">
+        <h2>Electrodes / probes</h2>
+        <p class="desc">The implant: one group per probe (or tetrode). Channel maps and geometry come from
+          the device type automatically — you don't hand-build them.</p>
+
+        <div class="grp">
+          <div class="gh"><b>Probe group 0</b><button class="rm">✕ remove</button></div>
+          <div class="two">
+            <div class="field"><label>Device type *</label>
+              <select>
+                <option>128c-4s8mm6cm-15um-26um-sl — 128-ch · 4-shank · 8 mm · 15/26 µm</option>
+                <option>128c-4s8mm6cm-20um-40um-sl — 128-ch · 4-shank · 8 mm · 20/40 µm</option>
+                <option>tetrode_12.5 — tetrode · 4 ch</option>
+                <option>64c-3s6mm6cm-20um-40um-sl — 64-ch · 3-shank</option>
+                <option>A1x32-6mm-50-177-H32_21mm — 32-ch · single shank</option>
+              </select>
+              <div class="hint">One of the known probes only — geometry/channel count come from it (an unknown type fails conversion).</div></div>
+            <div class="field"><label>Targeted location *</label>
+              <input list="regions" value="CA1"><datalist id="regions"><option>CA1</option><option>CA3</option><option>mPFC</option><option>OFC</option><option>Corpus callosum</option><option>Cortex</option><option>Retrosplenial cortex</option></datalist>
+              <div class="hint">Planned implant target — the region you know at recording time. Pick the canonical spelling; consistent casing creates one Spyglass brain region (CA1, not ca1/Ca1).</div></div>
+          </div>
+          <div class="two">
+            <div class="field"><label>Coordinates — AP / ML / DV *</label><div class="coords"><input value="-2"><input value="-4"><input value="-2.6"></div></div>
+            <div class="field"><label>Units</label><select style="max-width:120px"><option>mm</option><option>μm</option></select></div>
+          </div>
+          <div class="field" style="max-width:260px"><label>How many identical groups?</label><input type="number" value="1" min="1">
+            <div class="hint">Add N identical at once (e.g. 4 tetrodes in CA1), then tweak individuals.</div></div>
+          <div class="autonote">↪ Channel map auto-generates from the device type (4 shanks × 32 ch). You can review it, but you don't enter it.</div>
+        </div>
+
+        <button class="addbtn">＋ Add probe group</button>
+        <div class="skip">No electrophysiology? <a>This is a behavior-only animal — skip electrodes.</a></div>
+      </div>
+    </section>
+
+    <!-- 3 · CAMERAS -->
+    <section class="wstep" id="step-3">
+      <div class="card">
+        <h2>Cameras</h2>
+        <p class="desc">The cameras on this rig. Each day's epochs pick which cameras they used from this list.</p>
+        <div class="grp">
+          <div class="gh"><b>Camera</b><button class="rm">✕</button></div>
+          <div class="two">
+            <div class="field"><label>Name *</label><input value="sleep_camera"></div>
+            <div class="field"><label>Meters per pixel *</label><input value="0.001194">
+              <div class="hint warn">Calibration — verify this; a placeholder value silently mis-scales position.</div></div>
+          </div>
+          <div class="two">
+            <div class="field"><label>Manufacturer</label><input value="Manta"></div>
+            <div class="field"><label>Model · lens</label><input value="G-158C · TheiaSL183M"></div>
+          </div>
+        </div>
+        <button class="addbtn">＋ Add camera</button>
+      </div>
+    </section>
+
+    <!-- 4 · OPTOGENETICS -->
+    <section class="wstep" id="step-4">
+      <div class="card">
+        <h2>Optogenetics <span class="opt">optional</span></h2>
+        <p class="desc">Only if this animal is stimulated. It's <b>all-or-nothing</b>: include every section or
+          none — a partial setup silently drops all opto downstream.</p>
+        <label class="toggle"><input type="checkbox" checked> This animal uses optogenetics</label>
+
+        <div class="meter"><span class="dots"><i></i><i></i><i></i><i></i></span><span style="font-weight:600;color:var(--opto)">Complete · 4 of 4</span>
+          <span style="color:var(--muted)">excitation source · optical fiber · virus injection · software</span></div>
+
+        <div class="sub2"><div class="t">Excitation source <span class="small">(exactly one)</span></div>
+          <div class="two"><div class="field"><label>Name / model</label><input value="MarketTech LuxX+ Red"></div>
+            <div class="field"><label>Wavelength (nm)</label><input value="638"></div></div>
+          <div class="field" style="max-width:260px"><label>Power</label><input value="20"> <span class="small">mW</span>
+            <div class="hint warn">Range-checked — 200 W would flag (likely meant mW).</div></div>
+        </div>
+        <div class="sub2"><div class="t">Optical fiber(s)</div>
+          <div class="field"><label>Hardware · location · coords</label><input value="optogenix_lambda_fiber · L mPFC · (3.2,-1,-2.95)"></div>
+          <div class="field" style="max-width:320px"><label>Reference <span class="req">required</span></label><input value="Bregma at cortical surface"></div></div>
+        <div class="sub2"><div class="t">Virus injection(s)</div>
+          <div class="two"><div class="field"><label>Virus name</label><input value="AAV-1-EF1a-DIO-ChRmine-mScarlet"></div>
+            <div class="field"><label>Volume (µL) · titer</label><input value="0.45 · 2.3e13 vg/mL"></div></div>
+          <div class="field" style="max-width:320px"><label>Reference <span class="req">required</span></label><input value="Bregma at cortical surface"></div></div>
+        <div class="sub2"><div class="t">Stimulation software</div>
+          <div class="field" style="max-width:260px"><label></label><input value="fsgui"></div></div>
+      </div>
+    </section>
+
+    <!-- 5 · TASKS -->
+    <section class="wstep" id="step-5">
+      <div class="card">
+        <h2>Tasks</h2>
+        <p class="desc">Define task types once. Each recording day's epochs pick from these and set their order.</p>
+        <div class="grp">
+          <div class="gh"><b>Task type</b><button class="rm">✕</button></div>
+          <div class="two">
+            <div class="field"><label>Name *</label><input value="Sleep">
+              <div class="hint">Unique name; reused days must share the same description (Spyglass keys on it).</div></div>
+            <div class="field"><label>Environment</label><input value="sleep-box"></div>
+          </div>
+          <div class="field"><label>Description</label><input value="Animal rests in the sleep box"></div>
+          <div class="field"><label>Camera(s)</label><div class="chips"><span>sleep_camera ✕</span><span style="cursor:pointer;color:var(--accent)">＋</span></div></div>
+        </div>
+        <button class="addbtn">＋ Add task type</button>
+      </div>
+    </section>
+
+    <!-- 6 · RECORDING SYSTEM -->
+    <section class="wstep" id="step-6">
+      <div class="card">
+        <h2>Recording system</h2>
+        <p class="desc">The acquisition hardware. Usually the same across the lab — change only if this animal used a different rig.</p>
+        <div class="two">
+          <div class="field"><label>Acquisition device</label><select><option>SpikeGadgets</option></select></div>
+          <div class="field"><label>Amplifier</label><input value="Intan"></div>
+        </div>
+        <details><summary class="small" style="cursor:pointer">Advanced / rarely changed (pre-filled defaults)</summary>
+          <div class="two" style="margin-top:10px">
+            <div class="field"><label>raw_data_to_volts</label><input value="1.95e-7"></div>
+            <div class="field"><label>times_period_multiplier</label><input value="1.5"></div>
+          </div>
+        </details>
+      </div>
+    </section>
+
+    <!-- 7 · TEAM -->
+    <section class="wstep" id="step-7">
+      <div class="card">
+        <h2>Team</h2>
+        <p class="desc">Who works on this animal. This seeds each recording day's "who ran it" (editable per day).</p>
+        <div class="field"><label>Team</label><div class="chips"><span>Morales-Rodriguez, Denisse ✕</span><span>Gao, Scott ✕</span><span style="cursor:pointer;color:var(--accent)">＋ add person</span></div></div>
+      </div>
+    </section>
+
+    <div class="foot">
+      <button class="btn" id="back" onclick="go(cur-1)">← Back</button>
+      <div class="right">
+        <button class="btn">Save draft</button>
+        <button class="btn primary" id="next" onclick="next()">Next →</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+  var cur=1, last=7;
+  function go(n){
+    if(n<1||n>last)return;
+    cur=n;
+    for(var i=1;i<=last;i++){
+      document.getElementById('step-'+i).classList.toggle('show',i===n);
+    }
+    document.querySelectorAll('.step').forEach(function(s){
+      var k=+s.getAttribute('data-s');
+      s.classList.toggle('active',k===n);
+      s.classList.toggle('done',k<n);
+    });
+    document.getElementById('back').disabled = (n===1);
+    document.getElementById('next').textContent = (n===last)?'✓ Create animal':'Next →';
+    window.scrollTo(0,0);
+  }
+  function next(){ if(cur===last){ alert('(mock) Animal created — opens the animal page.'); } else { go(cur+1); } }
+  go(1);
+</script>
+</body>
+</html>
