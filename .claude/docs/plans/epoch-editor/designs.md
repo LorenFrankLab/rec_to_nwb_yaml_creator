@@ -84,9 +84,11 @@ restructured editor; the grouping is purely presentational (the data still lives
 
 ```ts
 // Convention: {experimentDate}_{subjectId}_{epoch:02d}_{tag}{ext}
-//   experimentDate = day.experimentDate (mmddYYYY) — note the EXISTING filename convention uses YYYYMMDD
-//   in the day folder; verify against formatDeterministicFilename + a golden associated_files path before
-//   committing the exact token order (the mockup shows 20260514_Laurent_01_s1 = YYYYMMDD_subject_epoch_tag).
+//   The in-folder file names use YYYYMMDD (NOT the mmddYYYY of the DOWNLOAD filename via
+//   formatDeterministicFilename). Pin the token order against the golden associated_video_files[].name
+//   (20230622_sample_01_a1.1.h264 = YYYYMMDD_subject_epoch_tag.1.h264 — the convention-following target);
+//   the golden associated_files are placeholders (no statescript target), so verify statescript derivation
+//   against a synthetic convention-following fixture and leave the placeholders `manual`.
 export function deriveStatescriptName(p: { date: string; subjectId: string; epoch: number; tag: string }): string;
 export function deriveVideoName(p: { date: string; subjectId: string; epoch: number; tag: string; index?: number }): string;
 export function deriveStatescriptPath(dataFolder: string, name: string): string; // join(dataFolder, name)

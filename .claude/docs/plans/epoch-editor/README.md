@@ -148,7 +148,7 @@ A review asked for the post-click result states. Priority set (1–5) mocked + v
 1. **Export / copy / batch results** ([export-preview.html](./export-preview.html)) — `Download` → toast
    "✓ Downloaded `…_metadata.yml`"; `Copy` → "✓ YAML copied"; the batch link shows a **result panel**
    (exported N · skipped M, each skipped day linked to its blocking issue).
-2. **Blocked export** (export-preview) — a real blocked state (toggle to preview): **Download disabled**, the
+2. **Blocked export** (export-preview) — a real blocked state (toggle to preview): **Download *and* Copy disabled** (both produce the YAML — Copy is not a gate bypass), the
    issue list with **per-field repair links** (epoch / `#cfg-probe2`), mirroring the day-editor readiness bar.
 3. **Epoch sequence authoring** (day-editor) — `from template ▾` opens a **menu** (Sleep day / W-track day /
    Copy structure from {date} / Blank); the open epoch has an **actions toolbar** (Insert after · Duplicate ·

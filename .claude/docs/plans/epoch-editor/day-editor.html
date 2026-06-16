@@ -265,7 +265,7 @@
         <table>
           <thead><tr><th></th><th>#</th><th>Task</th><th>Camera(s)</th><th>Statescript</th><th>Video(s)</th><th class="optohdr">Opto (mW)</th><th class="optohdr">Pulse (ms)</th><th>Status</th></tr></thead>
           <tbody>
-            <tr><td class="exp"><button type="button" class="car" aria-expanded="false" aria-controls="e1" aria-label="Toggle epoch 1 details" onclick="t('e1',this)">▸</button></td><td class="n">1</td><td class="tcell" onclick="t('e1')"><span class="tag">Sleep · s1</span></td><td><span class="cam">sleep_camera</span></td><td><span class="fstate gen" title="Statescript name generated">Generated</span></td><td id="vcell-e1"><span class="fstate vid">1 video</span></td><td><input class="opto-in" value="0"></td><td><input class="opto-in" value="2"></td><td class="st" id="st-e1">Complete</td></tr>
+            <tr><td class="exp"><button type="button" class="car" aria-expanded="false" aria-controls="e1" aria-label="Toggle epoch 1 details" onclick="t('e1',this)">▸</button></td><td class="n">1</td><td class="tcell" onclick="t('e1')"><span class="tag">Sleep · s1</span></td><td><span class="cam">sleep_camera</span></td><td id="scell-e1"><span class="fstate gen" title="Statescript name generated">Generated</span></td><td id="vcell-e1"><span class="fstate vid">1 video</span></td><td><input class="opto-in" value="0"></td><td><input class="opto-in" value="2"></td><td class="st" id="st-e1">Complete</td></tr>
             <tr class="detail" id="e1" style="display:none"><td colspan="9"><div class="editor-v2">
               <div class="ed-head">
                 <span class="ed-title">Epoch 1 details</span>
@@ -296,7 +296,7 @@
                 <div class="ed-gh-note">The <b>file names</b> derive from <code>{date}_{animal}_{epoch}_{tag}</code>. You still tell the app <b>where the files live</b> — the day's <b>data folder</b>, set once on the Day tab and carried forward. Override a name only for exceptions.</div>
                 <div class="ed-grid">
                   <label>Data folder</label><div class="field"><span class="gen">/stelmo/denisse/Laurent/20260514/</span><span class="derived-note">your path · set on the Day tab · carried forward</span></div>
-                  <label>Statescript</label><div class="field"><span class="gentag">name generated</span><span class="gen" data-gen="20260514_Laurent_01_s1.stateScriptLog">20260514_Laurent_01_s1.stateScriptLog</span><button class="override" data-orig="Override name" onclick="overrideFile(this)">Override name</button><span class="derived-note" style="display:none">manual — this epoch only</span></div>
+                  <label>Statescript</label><div class="field"><span class="gentag">name generated</span><span class="gen" data-gen="20260514_Laurent_01_s1.stateScriptLog">20260514_Laurent_01_s1.stateScriptLog</span><button class="override" data-orig="Override name" data-cell="scell-e1" onclick="overrideFile(this)">Override name</button><span class="derived-note" style="display:none">manual — this epoch only</span></div>
                   <label>Video</label><div class="field" id="vid-e1">
                     <div class="vidrow" id="vidrow-e1">
                       <span class="vid-present"><span class="gentag">name generated</span><span class="gen" data-gen="20260514_Laurent_01_s1.1.h264">20260514_Laurent_01_s1.1.h264</span><span class="vidcam">· sleep_camera</span><button class="override" data-orig="Rename" onclick="overrideFile(this)">Rename</button><button class="exception-action" onclick="vidState('e1','absent')">No video</button></span>
@@ -457,7 +457,10 @@
     var toManual=btn.textContent!=='Revert to generated';
     if(toManual){chip.contentEditable='true';chip.classList.add('manual-chip');tag.textContent='manual';tag.classList.add('manual');btn.textContent='Revert to generated';chip.focus();}
     else{chip.contentEditable='false';chip.classList.remove('manual-chip');if(chip.dataset.gen)chip.textContent=chip.dataset.gen;tag.textContent='generated';tag.classList.remove('manual');btn.textContent=btn.dataset.orig;}
-    var note=box.querySelector('.derived-note');if(note)note.style.display=toManual?'':'none';}
+    var note=box.querySelector('.derived-note');if(note)note.style.display=toManual?'':'none';
+    // sync the collapsed-grid file-state cell so override/revert is reflected without expanding
+    if(btn.dataset.cell){var c=document.getElementById(btn.dataset.cell);
+      if(c)c.innerHTML='<span class="fstate '+(toManual?'manual':'gen')+'">'+(toManual?'Manual':'Generated')+'</span>';}}
   // video has THREE states: present (generated name) · missing (problem, blocks export) · absent (intentional, valid)
   function vidState(id,state){var row=document.getElementById('vidrow-'+id);
     row.querySelector('.vid-present').style.display=state==='present'?'':'none';
