@@ -50,6 +50,16 @@
   .loadbanner{display:flex;align-items:center;gap:8px;background:var(--warnbg);border:1px solid #f0d79a;border-radius:var(--radius);padding:10px 14px;margin-bottom:16px;font-size:13px;color:#7a4f06}
   .loadbanner b{color:#5e3d04}
   .loadbanner a{color:var(--accent);text-decoration:none;font-weight:600;margin-left:auto}.loadbanner a:hover{text-decoration:underline}
+  .side .help{margin-top:auto;font-size:12.5px;color:var(--muted);padding:7px 9px;cursor:pointer;border-radius:8px}
+  .side .help:hover{background:var(--line2);color:var(--accent)}
+  .scrim{position:fixed;inset:0;background:rgba(20,24,28,.45);display:none;align-items:center;justify-content:center;z-index:100}
+  .scrim.show{display:flex}
+  .dlg{background:#fff;border-radius:12px;max-width:420px;width:92%;padding:18px 20px;box-shadow:0 16px 48px rgba(0,0,0,.28)}
+  .dlg-h{font-size:17px;font-weight:600;margin-bottom:12px}
+  .sc-row{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--line2);font-size:13.5px}.sc-row:last-child{border-bottom:0}
+  .kbd{font-family:ui-monospace,Menlo,monospace;font-size:12px;background:var(--line2);border:1px solid var(--line);border-radius:6px;padding:2px 7px;color:#3c444d}
+  .dlg-actions{display:flex;justify-content:flex-end;margin-top:14px}
+  .dlg-actions button{font:inherit;border:1px solid var(--line);background:#fff;border-radius:8px;padding:8px 14px;cursor:pointer}
 </style>
 </head>
 <body>
@@ -64,6 +74,7 @@
     <div class="animal">SC68 <span class="n">13</span></div>
     <div class="animal">Seth <span class="n">8</span></div>
     <div class="new" onclick="location.href='create-animal.html'">＋ New animal</div>
+    <div class="help" onclick="shortcuts(true)">⌨ Keyboard shortcuts</div>
   </aside>
 
   <main class="main">
@@ -116,5 +127,22 @@
     </div>
   </main>
 </div>
+
+<div class="scrim" id="scrim" onclick="if(event.target===this)shortcuts(false)">
+  <div class="dlg">
+    <div class="dlg-h">Keyboard shortcuts</div>
+    <div class="sc-row"><span>Save</span><span class="kbd">⌘ / Ctrl + S</span></div>
+    <div class="sc-row"><span>New animal</span><span class="kbd">Alt + N</span></div>
+    <div class="sc-row"><span>Previous / next section</span><span class="kbd">Alt + ← / →</span></div>
+    <div class="sc-row"><span>Search animals</span><span class="kbd">/</span></div>
+    <div class="sc-row"><span>Close dialog</span><span class="kbd">Esc</span></div>
+    <div class="sc-row"><span>This help</span><span class="kbd">?</span></div>
+    <div class="dlg-actions"><button onclick="shortcuts(false)">Close</button></div>
+  </div>
+</div>
+<script>
+  function shortcuts(open){document.getElementById('scrim').classList.toggle('show',open);}
+  document.addEventListener('keydown',function(e){if(e.key==='?')shortcuts(true);if(e.key==='Escape')shortcuts(false);});
+</script>
 </body>
 </html>

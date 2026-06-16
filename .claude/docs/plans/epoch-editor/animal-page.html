@@ -108,6 +108,19 @@
   .cal-legend{font-size:11.5px;color:var(--faint);margin-bottom:12px;display:flex;align-items:center;gap:6px}
   .cal-key.exists{width:12px;height:12px;border-radius:3px;background:var(--okbg);border:1px solid #bfe3cd;display:inline-block}
   .cal-sum{font-size:13px;color:var(--muted);margin-bottom:14px}.cal-sum b{color:var(--ink)}
+  /* animal switcher + profile fields + day legend */
+  .aswitch{position:relative;display:inline-block}
+  .aswitch h1{cursor:pointer;display:inline-flex;align-items:center;gap:6px;margin:0 0 8px}
+  .aswitch .caret{font-size:14px;color:var(--muted)}
+  .amenu{position:absolute;top:100%;left:0;margin-top:2px;background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.16);padding:5px;min-width:190px;z-index:60}
+  .ami{padding:7px 10px;border-radius:7px;cursor:pointer;font-size:14px}
+  .ami:hover{background:var(--line2)}.ami.active{background:#eaf1f9;color:var(--accent-d);font-weight:600}
+  .ami.new{color:var(--accent);border-top:1px solid var(--line2);margin-top:4px}
+  .pf{margin-bottom:12px}.pf label{display:block;font-size:12.5px;color:var(--muted);margin-bottom:4px}
+  .pf input,.pf select{font:inherit;border:1px solid var(--line);border-radius:8px;padding:7px 9px;width:100%}
+  .pf2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .daylegend{display:flex;gap:14px;flex-wrap:wrap;padding:9px 16px;border-top:1px solid var(--line2);font-size:12px;color:var(--muted)}
+  .daylegend .lg{display:inline-flex;align-items:center;gap:5px}.daylegend .dt{width:8px;height:8px;border-radius:50%}
 </style>
 </head>
 <body>
@@ -126,7 +139,16 @@
     <div class="crumb"><a href="animals.html">Animals</a> › Laurent</div>
     <div class="head">
       <div>
-        <h1>Laurent</h1>
+        <div class="aswitch"><h1 onclick="toggleSwitch(event)">Laurent <span class="caret">▾</span></h1>
+          <div class="amenu" id="amenu" hidden>
+            <div class="ami active">Laurent</div>
+            <div class="ami">jasper</div>
+            <div class="ami">Emmett</div>
+            <div class="ami">SC68</div>
+            <div class="ami">Seth</div>
+            <div class="ami new" onclick="modal('new')">＋ New animal</div>
+          </div>
+        </div>
         <div class="chips">
           <span class="chip">Long-Evans</span><span class="chip"><b>PV-Cre</b></span>
           <span class="chip">Male</span><span class="chip">Rattus norvegicus</span>
@@ -154,6 +176,11 @@
             <tr onclick="location.href='day-editor.html'"><td class="date">2026-05-14</td><td class="num">463 g</td><td class="num">6</td><td><span class="pill draft"><span class="d"></span>Draft</span></td><td class="chev">›</td></tr>
           </tbody>
         </table>
+        <div class="daylegend">
+          <span class="lg"><span class="dt" style="background:var(--ok)"></span>Exported</span>
+          <span class="lg"><span class="dt" style="background:var(--draft)"></span>Draft — not yet exported</span>
+          <span class="lg"><span class="dt" style="background:var(--warn)"></span>Needs review — has issues</span>
+        </div>
       </div>
     </section>
 
@@ -165,7 +192,7 @@
         <span class="sb-note">Shared by all 10 days — edits here apply to every day; already-exported days will need re-export.</span>
       </div>
       <div class="scard">
-        <h3>Identity <span class="edit">Edit</span></h3>
+        <h3>Identity <span class="edit" onclick="modal('profile')">Edit</span></h3>
         <div class="kv"><span class="k">Subject ID</span><span>Laurent</span></div>
         <div class="kv"><span class="k">Species</span><span>Rattus norvegicus</span></div>
         <div class="kv"><span class="k">Sex</span><span>Male</span></div>
@@ -278,6 +305,23 @@
     <div class="cal-sum"><b id="cal-count">0</b> selected: <span id="cal-list">none</span><br>New days carry forward from <b>2026-05-14</b> (latest).</div>
     <div class="dlg-actions"><button onclick="closeModal()">Cancel</button><button class="go" id="cal-create" disabled onclick="closeModal()">Create 0 days</button></div>
   </div>
+
+  <div class="dlg hide" id="dlg-profile">
+    <div class="dlg-h">Edit animal profile</div>
+    <p>Subject facts — fixed for the animal's life. Editing here applies to every day.</p>
+    <div class="pf"><label>Subject ID</label><input value="Laurent"></div>
+    <div class="pf2">
+      <div class="pf"><label>Species</label><select><option>Rattus norvegicus</option><option>Mus musculus</option></select></div>
+      <div class="pf"><label>Sex</label><select><option>M</option><option>F</option><option>U</option></select></div>
+    </div>
+    <div class="pf2">
+      <div class="pf"><label>Genotype</label><select><option>PV-Cre</option><option>Wild Type</option><option>scn2a</option></select></div>
+      <div class="pf"><label>Strain</label><input value="Long-Evans"></div>
+    </div>
+    <div class="pf"><label>Date of birth</label><input type="date" value="2025-12-03"></div>
+    <div class="warn-box">Applies to all 10 days; already-exported days will need re-export.</div>
+    <div class="dlg-actions"><button onclick="closeModal()">Cancel</button><button class="go" onclick="closeModal()">Save</button></div>
+  </div>
 </div>
 
 <script>
@@ -288,8 +332,10 @@
     el.classList.add('active');
   }
   function modal(name){document.getElementById('scrim').classList.add('show');
-    ['new','config','delete','calendar'].forEach(function(k){document.getElementById('dlg-'+k).classList.toggle('hide',k!==name);});}
+    ['new','config','delete','calendar','profile'].forEach(function(k){document.getElementById('dlg-'+k).classList.toggle('hide',k!==name);});}
   function closeModal(){document.getElementById('scrim').classList.remove('show');}
+  function toggleSwitch(e){e.stopPropagation();var m=document.getElementById('amenu');if(m)m.hidden=!m.hidden;}
+  document.addEventListener('click',function(){var m=document.getElementById('amenu');if(m)m.hidden=true;});
   // calendar day creator
   (function(){
     var existing={7:1,13:1,14:1}, sel={};

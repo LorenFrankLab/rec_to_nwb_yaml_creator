@@ -45,7 +45,7 @@
     <div class="ok-card"><span>✓</span><div>Recovered automatically (no action needed): <b>3 of Laurent's days</b>
       were upgraded to the current format — no data lost.</div></div>
 
-    <div class="sec-h"><h3>Needs review</h3><span class="count">3</span></div>
+    <div class="sec-h"><h3>Needs review</h3><span class="count">4</span></div>
 
     <div class="flag">
       <div class="body"><div class="ttl">Recording day 2026-06-01 → unknown animal</div>
@@ -61,6 +61,12 @@
       <div class="body"><div class="ttl">SC68 · day 2024-04-29 — orphaned file</div>
         <div class="det">A statescript references <code>epoch 7</code>, but no task on that day claims epoch 7. Add a task, re-point, or discard the file.</div></div>
       <div class="act"><button class="btn">Add task</button><button class="btn">Re-point ▾</button><button class="btn danger">Discard file</button></div>
+    </div>
+
+    <div class="flag">
+      <div class="body"><div class="ttl">Laurent · day 2026-05-13 — unknown camera</div>
+        <div class="det">An associated video references camera <code>Run_side</code>, which isn't in this animal's camera list (removed or renamed). Re-point it, add the camera, or remove the video. <span style="color:var(--faint)">(Also offered inline when you open the day.)</span></div></div>
+      <div class="act"><button class="btn primary">Pick camera ▾</button><button class="btn">Add "Run_side"</button><button class="btn danger">Remove video</button></div>
     </div>
 
     <div class="note">The app never silently drops a value it can't map — it preserves the original and surfaces it
