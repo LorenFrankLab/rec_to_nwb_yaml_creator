@@ -47,6 +47,9 @@
   .pill.warn{background:var(--warnbg);color:var(--warn)}.pill.warn .d{background:var(--warn)}
   .pill.draft{background:var(--draftbg);color:var(--draft)}.pill.draft .d{background:var(--draft)}
   .chev{color:var(--faint);text-align:right}
+  .loadbanner{display:flex;align-items:center;gap:8px;background:var(--warnbg);border:1px solid #f0d79a;border-radius:var(--radius);padding:10px 14px;margin-bottom:16px;font-size:13px;color:#7a4f06}
+  .loadbanner b{color:#5e3d04}
+  .loadbanner a{color:var(--accent);text-decoration:none;font-weight:600;margin-left:auto}.loadbanner a:hover{text-decoration:underline}
 </style>
 </head>
 <body>
@@ -64,6 +67,7 @@
   </aside>
 
   <main class="main">
+    <div class="loadbanner">⚠ <b>3 records need review</b> after the last load (1 recovered automatically — no data lost). <a href="recovery-review.html">Review →</a></div>
     <div class="head">
       <div>
         <h1>Animals</h1>

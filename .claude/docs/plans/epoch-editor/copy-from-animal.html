@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>New animal — copy from another animal</title>
+<style>
+  :root{
+    --bg:#f4f6f8; --panel:#fff; --ink:#161a1d; --muted:#69727b; --faint:#9aa2ab;
+    --line:#e4e7eb; --line2:#eef1f4; --accent:#2f6fae; --accent-d:#255b91;
+    --ok:#1f8a4c; --opto:#7a3ea8; --optobg:#f3edfa; --opto-b:#dccaef; --radius:10px;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font:14px/1.5 -apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--ink)}
+  .top{background:#fff;border-bottom:1px solid var(--line);padding:10px 30px;display:flex;align-items:center;gap:10px}
+  .mark{width:22px;height:22px;border-radius:6px;background:linear-gradient(135deg,var(--accent),#5b9bd6)}
+  .crumb{font-size:13px;color:var(--muted)}.crumb a{color:var(--muted);text-decoration:none}.crumb b{color:var(--ink)}
+  .wrap{max-width:760px;margin:22px auto;padding:0 24px}
+  h1{font-size:22px;margin:0 0 4px;letter-spacing:-.01em}
+  .lede{color:var(--muted);font-size:13.5px;margin:0 0 18px;max-width:620px}
+  .card{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:15px 17px;margin-bottom:14px}
+  .card h3{margin:0 0 12px;font-size:14px}
+  .field{margin-bottom:12px}.field>label{display:block;font-size:12.5px;color:var(--muted);margin-bottom:4px}
+  .field select,.field input{font:inherit;border:1px solid var(--line);border-radius:8px;padding:8px 10px;width:100%;max-width:360px}
+  .opt-row{display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid var(--line2)}
+  .opt-row:last-child{border-bottom:0}
+  .opt-row input{margin-top:3px}
+  .opt-row .body{flex:1}.opt-row .ttl{font-weight:600;font-size:13.5px}
+  .opt-row .det{font-size:12.5px;color:var(--muted);margin-top:2px}
+  .opt-row .badge{font-size:11px;font-weight:600;color:var(--opto);background:var(--optobg);border:1px solid var(--opto-b);border-radius:999px;padding:1px 7px;margin-left:6px}
+  .excluded{font-size:12.5px;color:var(--muted);background:var(--line2);border-radius:8px;padding:10px 12px;margin-top:6px}
+  .excluded b{color:#3c444d}
+  .btn{font:inherit;border:1px solid var(--line);background:#fff;border-radius:8px;padding:8px 14px;cursor:pointer;color:var(--ink);font-size:13px}
+  .btn:hover{border-color:var(--accent);color:var(--accent)}
+  .btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}.btn.primary:hover{background:var(--accent-d)}
+  .actions{display:flex;gap:8px;align-items:center;margin-top:18px}.actions .spacer{flex:1}
+</style>
+</head>
+<body>
+  <div class="top"><span class="mark"></span><div class="crumb"><a href="animals.html">Animals</a> › New animal › <b>Copy from another animal</b></div></div>
+
+  <div class="wrap">
+    <h1>Copy setup from another animal</h1>
+    <p class="lede">Reuse a same-rig animal's hardware setup, then tweak. The new animal gets its own
+      identity — only the setup is copied.</p>
+
+    <div class="card">
+      <h3>Copy from</h3>
+      <div class="field"><label>Source animal</label>
+        <select><option>Emmett — PV-Cre · opto · 3 probes</option><option>Seth — PV-Cre · opto · 3 probes</option><option>SC68 — Wild Type · 8 probes</option></select></div>
+    </div>
+
+    <div class="card">
+      <h3>What to copy</h3>
+      <div class="opt-row"><input type="checkbox" checked><div class="body">
+        <div class="ttl">Configuration (probes)</div>
+        <div class="det">3 probes — L CA1 · L mPFC · R CA1 (device types, locations, coordinates). Channel maps re-derive.</div></div></div>
+      <div class="opt-row"><input type="checkbox" checked><div class="body">
+        <div class="ttl">Cameras</div>
+        <div class="det">sleep_camera (Manta G-158C, calibration). Re-verify calibration for the new rig.</div></div></div>
+      <div class="opt-row"><input type="checkbox" checked><div class="body">
+        <div class="ttl">Task types</div>
+        <div class="det">Sleep (sleep-box · sleep_camera)</div></div></div>
+      <div class="opt-row"><input type="checkbox" checked><div class="body">
+        <div class="ttl">Optogenetics <span class="badge">opto</span></div>
+        <div class="det">Excitation source, 2 optical fibers, 2 virus injections, software.</div></div></div>
+
+      <div class="excluded"><b>Not copied:</b> identity (species/sex/genotype/DOB — the new animal is its own
+        subject), recording days, and DIO/behavioral events (those are set per recording day).</div>
+    </div>
+
+    <div class="card">
+      <h3>New animal</h3>
+      <div class="field"><label>Subject ID *</label><input placeholder="e.g. Wilbur"></div>
+      <p style="font-size:12.5px;color:var(--muted);margin:0">You'll confirm identity and the copied setup in the next step.</p>
+    </div>
+
+    <div class="actions">
+      <button class="btn primary" onclick="location.href='create-animal.html'">Copy &amp; continue setup →</button>
+      <span class="spacer"></span>
+      <button class="btn" onclick="location.href='animals.html'">Cancel</button>
+    </div>
+  </div>
+</body>
+</html>
