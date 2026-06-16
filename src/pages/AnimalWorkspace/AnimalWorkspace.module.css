@@ -23,25 +23,6 @@
   margin-top: 1rem;
 }
 
-/* Animal List Sidebar */
-.animalList {
-  flex: 0 0 250px;
-  border-right: 1px solid #ddd;
-  padding-right: 1rem;
-}
-
-.animalListHeader {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1rem;
-}
-
-.animalList h2 {
-  font-size: 1.2rem;
-  margin: 0;
-}
-
 /* Now a <button> (opens the inline create panel) — keep the outlined look, add a pointer cursor. */
 .btnCreateAnimal {
   display: inline-flex;
@@ -63,58 +44,6 @@
 .btnCreateAnimal:hover {
   background-color: var(--color-primary);
   color: var(--color-white);
-}
-
-/* The card is a row: a flex-filling <a> link to #/animal/:id/days plus a trailing ⋮ menu
-   (Phase 4). The card chrome (border/background/hover) lives on the container so the whole row
-   reads as one card, while the link keeps the reset link styling. */
-.animalCard {
-  display: flex;
-  align-items: center;
-  gap: 0.25rem;
-  width: 100%;
-  margin-bottom: 0.5rem;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  background: var(--color-white);
-  transition: background-color 0.2s, border-color 0.2s;
-}
-
-.animalCard:hover {
-  background-color: var(--color-grey-100);
-  border-color: #999;
-}
-
-.animalCard:focus-within {
-  outline: 2px solid var(--color-primary);
-  outline-offset: 2px;
-}
-
-/* The navigation link fills the card and resets link styling so it reads as a card, not
-   underlined link text. */
-.animalCardLink {
-  flex: 1;
-  min-width: 0;
-  padding: 0.75rem;
-  text-align: left;
-  text-decoration: none;
-  color: inherit;
-  cursor: pointer;
-}
-
-/* Keep the ⋮ trigger out of the card padding so it doesn't crowd the day count. */
-.animalCardMenu {
-  margin-right: 0.5rem;
-}
-
-.animalName {
-  font-size: 1rem;
-  margin-bottom: 0.25rem;
-}
-
-.animalDayCount {
-  font-size: 0.875rem;
-  color: var(--color-grey-600);
 }
 
 /* Day Management Main Area */
@@ -751,4 +680,135 @@
   margin-bottom: 1.5rem;
   display: flex;
   justify-content: center;
+}
+
+/* ── Animals home (the picker table) ───────────────────────────────────────── */
+
+.animalsHome {
+  margin-top: var(--spacing-md);
+}
+
+/* Toolbar: search + filters on the left, create/import on the right. */
+.homeToolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-md);
+}
+
+.homeFilters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--spacing-sm);
+}
+
+.homeSearch {
+  min-width: 14rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--color-grey-300);
+  border-radius: var(--radius-sm);
+  font: inherit;
+  font-size: var(--font-size-sm);
+}
+
+.homeSearch:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 1px;
+}
+
+.homeFilterLabel {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: var(--font-size-sm);
+  color: var(--color-grey-700);
+}
+
+.homeFilterLabelText {
+  font-weight: 600;
+}
+
+.homeFilterSelect {
+  padding: 0.4rem 0.5rem;
+  border: 1px solid var(--color-grey-300);
+  border-radius: var(--radius-sm);
+  background-color: var(--color-white);
+  font: inherit;
+  font-size: var(--font-size-sm);
+}
+
+.homeFilterSelect:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 1px;
+}
+
+.animalsTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--font-size-sm);
+}
+
+.animalsTable th,
+.animalsTable td {
+  padding: 0.625rem 0.75rem;
+  text-align: left;
+  vertical-align: middle;
+  border-bottom: 1px solid var(--color-grey-200);
+}
+
+.animalsTable th {
+  font-weight: 600;
+  color: var(--color-grey-700);
+  border-bottom: 2px solid var(--color-grey-200);
+}
+
+.animalsTable tbody tr:hover {
+  background-color: var(--color-grey-100);
+}
+
+.animalsTable .numCol {
+  text-align: right;
+}
+
+.animalsTable .actionsCell {
+  width: 1%;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.nameCell {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.animalNameLink {
+  font-weight: 600;
+  color: var(--color-primary);
+  text-decoration: none;
+}
+
+.animalNameLink:hover {
+  text-decoration: underline;
+}
+
+.optoTag {
+  padding: 1px 6px;
+  border-radius: 999px;
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--color-primary);
+  background-color: var(--color-primary-light);
+}
+
+.muted {
+  color: var(--color-grey-600);
+}
+
+.noMatches {
+  margin-top: var(--spacing-md);
+  color: var(--color-grey-600);
 }

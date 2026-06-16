@@ -35,6 +35,7 @@ import {
 } from '../domain/dayRecovery';
 import type { DayClassificationRow } from '../domain/dayRecovery';
 import { getDayRowStatus } from '../domain/workflowStatus';
+import { optoFieldsPresence } from '../domain/optoCompleteness';
 import { DAY_LIFECYCLE } from '../domain/dayLifecycle';
 import { humanizeValidationMessage } from '../domain/humanizeValidationMessage';
 import {
@@ -54,14 +55,35 @@ import type {
   WorkflowCommandId,
 } from './types';
 
-/** One animal in the picker: its id, the present-day-record count, and its tabbed-view link. */
+/** A {@link DAY_LIFECYCLE} value (the rollup pill variant). */
+type DayLifecycleVariant = (typeof DAY_LIFECYCLE)[keyof typeof DAY_LIFECYCLE];
+
+/** The per-animal status rollup shown on the Animals home (its own summary over the day set). */
+export interface StatusRollupViewModel {
+  /** A {@link DAY_LIFECYCLE} variant driving the rollup pill's color. */
+  variant: DayLifecycleVariant;
+  /** Short label, e.g. "1 ready", "2 need review", "All exported", "No recording days". */
+  label: string;
+}
+
+/** One animal row on the home: identity, day metadata, and the rolled-up status over its days. */
 export interface AnimalCardViewModel {
-  /** The animal's store key (also its display name on the card). */
+  /** The animal's store key (also its display name on the row). */
   id: string;
   /** Day RECORDS present (OK + recovered), via `getPresentDayCount` — not just the index length. */
   dayCount: number;
   /** Link to this animal's recording-days tab. */
   href: string;
+  /** Subject genotype (e.g. "PV-Cre"), or '' when unknown. */
+  genotype: string;
+  /** Subject species (e.g. "Rattus norvegicus"), or '' when unknown. */
+  species: string;
+  /** Date of the most recent recording day, or null when the animal has none. */
+  lastRecording: string | null;
+  /** True when the animal has any optogenetics hardware configured. */
+  isOpto: boolean;
+  /** Rolled-up day status (reuses the export gate, never a recount). */
+  statusRollup: StatusRollupViewModel;
 }
 
 /**
@@ -284,6 +306,63 @@ function buildDayRow(
   return row;
 }
 
+/**
+ * Summarize an animal's recording days into one status rollup for the Animals home, reusing the SAME
+ * export gate the day editor reads (`getDayRowStatus`) rather than a separate recount. Days that
+ * themselves need attention (recovered / dangling / wrong-owner) fold into the "needs review" bucket.
+ * Priority is most-actionable first: needs review → draft → pending export (ready/validated) →
+ * all exported.
+ */
+function buildAnimalRowStatusRollup(
+  animalId: string,
+  animal: unknown,
+  daysMap: Record<string, unknown>
+): StatusRollupViewModel {
+  const classification = classifyAnimalDays(animalId, animal, daysMap);
+  const okDays = okAnimalDays(classification);
+  const anomalyCount = classification.filter(
+    (d) =>
+      d.status === DAY_STATUS.DANGLING_REFERENCE ||
+      d.status === DAY_STATUS.WRONG_OWNER ||
+      d.status === DAY_STATUS.RECOVERED_UNLINKED
+  ).length;
+
+  let draftCount = 0;
+  let needsFixingCount = 0;
+  let pendingExportCount = 0;
+  let exportedCount = 0;
+  for (const rec of okDays) {
+    let mergedDay: Record<string, unknown> | null = null;
+    try {
+      mergedDay = mergeDayMetadata(animal as Animal, rec as unknown as Day);
+    } catch {
+      mergedDay = null;
+    }
+    const { variant } = getDayRowStatus(animal, rec, mergedDay, okDays);
+    if (variant === DAY_LIFECYCLE.NEEDS_FIXING) needsFixingCount += 1;
+    else if (variant === DAY_LIFECYCLE.DRAFT) draftCount += 1;
+    else if (variant === DAY_LIFECYCLE.EXPORTED) exportedCount += 1;
+    else pendingExportCount += 1; // ready or validated — valid but not yet exported
+  }
+
+  const needsReview = needsFixingCount + anomalyCount;
+  const total = okDays.length + anomalyCount;
+
+  if (total === 0) return { variant: DAY_LIFECYCLE.DRAFT, label: 'No recording days' };
+  if (needsReview > 0) {
+    return {
+      variant: DAY_LIFECYCLE.NEEDS_FIXING,
+      label: `${needsReview} ${needsReview === 1 ? 'needs' : 'need'} review`,
+    };
+  }
+  if (draftCount > 0) return { variant: DAY_LIFECYCLE.DRAFT, label: `${draftCount} draft` };
+  if (pendingExportCount > 0) {
+    return { variant: DAY_LIFECYCLE.READY, label: `${pendingExportCount} ready` };
+  }
+  void exportedCount; // every present day is exported
+  return { variant: DAY_LIFECYCLE.EXPORTED, label: 'All exported' };
+}
+
 /** Build the first-run setup-card sections for an animal. */
 function buildSetupSections(
   animalId: string,
@@ -417,11 +496,28 @@ export function buildAnimalWorkspaceViewModel(
     isRecord(workspace) && isRecord(workspace.days) ? workspace.days : {};
   const animalIds = Object.keys(animalsMap);
 
-  const animals: AnimalCardViewModel[] = animalIds.map((id) => ({
-    id,
-    dayCount: getPresentDayCount(id, animalsMap[id], daysMap),
-    href: `#/animal/${id}/days`,
-  }));
+  const animals: AnimalCardViewModel[] = animalIds.map((id) => {
+    const animal = animalsMap[id];
+    const subject = getAnimalSubject(animal);
+    const mostRecentDayId = getMostRecentDayId(animal, daysMap);
+    const mostRecentDay =
+      mostRecentDayId != null && isRecord(daysMap[mostRecentDayId])
+        ? (daysMap[mostRecentDayId] as Record<string, unknown>)
+        : null;
+    const optoSource = isRecord(animal) ? animal.optogenetics : undefined;
+    return {
+      id,
+      dayCount: getPresentDayCount(id, animal, daysMap),
+      href: `#/animal/${id}/days`,
+      genotype: typeof subject.genotype === 'string' ? subject.genotype : '',
+      species: typeof subject.species === 'string' ? subject.species : '',
+      lastRecording:
+        mostRecentDay && typeof mostRecentDay.date === 'string' ? mostRecentDay.date : null,
+      isOpto:
+        optoFieldsPresence(optoSource as Parameters<typeof optoFieldsPresence>[0]).count > 0,
+      statusRollup: buildAnimalRowStatusRollup(id, animal, daysMap),
+    };
+  });
 
   const vm: AnimalWorkspaceViewModel = {
     animals,

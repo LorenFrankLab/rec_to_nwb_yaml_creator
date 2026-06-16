@@ -1,11 +1,12 @@
 /**
- * Animal Workspace View — the animal PICKER (Phase 1 — tabbed-workspace-ia).
+ * Animals home — the top-level animal picker (was the bare card list).
  *
- * After the tab-shell conversion the Workspace is a pure picker + empty state: each animal card
- * is a LINK to `#/animal/:id/days`, where the tabbed {@link AnimalView} owns that animal's days
- * and setup. The per-animal recording-days pane lives in {@link RecordingDaysTab} (hosted by
- * AnimalView). Selecting an animal navigates to the route rather than rendering inline, so the
- * pane has exactly one home.
+ * Renders the disambiguating table the redesign calls for: one row per animal with genotype,
+ * species, day count, last recording, an opto tag, and a rolled-up day status — each name a real
+ * `<a>` to `#/animal/:id/days` (the tabbed {@link AnimalView} owns that animal's days + setup). A
+ * client-side search + genotype/status filters narrow the small corpus; a load/recovery banner
+ * surfaces the persistence notice; the zero-animals state is an onboarding card. Create / import /
+ * delete / edit-profile keep their existing handlers and dialogs.
  *
  * @see src/state/workspaceTypes.js for the workspace data model (typedefs)
  */
@@ -18,6 +19,7 @@ import type { CommandActions } from '../../viewModels/commands';
 import { buildAnimalFromForm, getDefaultExperimenters } from '../../domain/animalCreation';
 import type { AnimalCreationFormData } from '../../domain/animalCreation';
 import { getAnimalDayIds } from '../../state/workspaceSelectors';
+import StatusPill from '../../components/ui/StatusPill';
 import OverflowMenu from '../../components/OverflowMenu';
 import AnimalDeleteDialog from '../../components/AnimalDeleteDialog';
 import AnimalProfileDialog from '../../components/AnimalProfileDialog';
@@ -25,18 +27,26 @@ import AnimalCreationForm from '../Home/AnimalCreationForm';
 import ImportYamlDialog from './ImportYamlDialog';
 import styles from './AnimalWorkspace.module.css';
 
+/** Status-filter options; the value (other than 'all') is a status-rollup variant. */
+const STATUS_FILTERS: ReadonlyArray<{ value: string; label: string }> = [
+  { value: 'all', label: 'All statuses' },
+  { value: 'needs_fixing', label: 'Needs review' },
+  { value: 'draft', label: 'Draft' },
+  { value: 'ready', label: 'Ready' },
+  { value: 'exported', label: 'Exported' },
+];
+
 /**
- * AnimalWorkspace Component
- *
- * The animal picker. Supports the post-create-day handshake `#/workspace?animal=<id>`, which now
- * navigates to that animal's days route (the animal experience lives at `#/animal/:id/:tab`).
+ * AnimalWorkspace — the Animals home. Supports the post-create-day handshake
+ * `#/workspace?animal=<id>`, which navigates to that animal's days route. The load/recovery notice
+ * is surfaced globally by AppLayout (not here), so a bad load is announced wherever the user lands.
  */
 export function AnimalWorkspace() {
   const { model, actions } = useStoreContext();
 
   // Default the required sections so a workspace that somehow reaches here without them
   // renders its empty state instead of crashing on Object.keys(undefined). The raw maps stay for
-  // the interaction handlers (create/delete/profile dialogs); the picker's display comes from the VM.
+  // the interaction handlers (create/delete/profile dialogs); the table's display comes from the VM.
   const { animals = {}, days = {} } = model.workspace;
 
   // createAnimal routes through the descriptor command layer (the VM's `primaryAction` command).
@@ -46,28 +56,49 @@ export function AnimalWorkspace() {
     [actions]
   );
 
-  // The picker view-model: the animal cards (id + present-day count + link) and the empty state.
+  // The home view-model: one row per animal (identity, day metadata, status rollup) and the empty state.
   const vm = useMemo(() => buildAnimalWorkspaceViewModel(model.workspace), [model.workspace]);
   const hasAnimals = vm.animals.length > 0;
 
+  // Client-side narrowing of the small corpus (an animal lives ~1–2 months). No store changes.
+  const [search, setSearch] = useState('');
+  const [genotypeFilter, setGenotypeFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('all');
+
+  const genotypeOptions = useMemo(
+    () => Array.from(new Set(vm.animals.map((a) => a.genotype).filter(Boolean))).sort(),
+    [vm.animals]
+  );
+
+  const filteredAnimals = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    return vm.animals.filter((a) => {
+      const matchesSearch =
+        !query || a.id.toLowerCase().includes(query) || a.genotype.toLowerCase().includes(query);
+      const matchesGenotype = genotypeFilter === 'all' || a.genotype === genotypeFilter;
+      const matchesStatus = statusFilter === 'all' || a.statusRollup.variant === statusFilter;
+      return matchesSearch && matchesGenotype && matchesStatus;
+    });
+  }, [vm.animals, search, genotypeFilter, statusFilter]);
+
   // The animal id whose delete dialog is open (null when closed). Deleting is the highest-blast-
   // radius action, so it routes through the shared type-to-confirm AnimalDeleteDialog rather than a
-  // menu-adjacent button. A single dialog instance serves whichever card's ⋮ opened it.
+  // menu-adjacent button. A single dialog instance serves whichever row's ⋮ opened it.
   const [pendingDeleteAnimalId, setPendingDeleteAnimalId] = useState<string | null>(null);
   const pendingDeleteAnimal = pendingDeleteAnimalId ? animals[pendingDeleteAnimalId] : null;
-  // The animal whose "Edit profile…" dialog is open (from a card ⋮) — same dialog as the header /
+  // The animal whose "Edit profile…" dialog is open (from a row ⋮) — same dialog as the header /
   // switcher, so subject facts are editable from wherever an animal is listed.
   const [pendingProfileAnimalId, setPendingProfileAnimalId] = useState<string | null>(null);
   const pendingProfileAnimal = pendingProfileAnimalId ? animals[pendingProfileAnimalId] : null;
 
-  // Whether the inline create-animal panel is open (Task 4.2). Create lives IN the workspace — an
-  // inline panel on the picker, not a route to a separate `#/home` screen — so first-animal creation
-  // uses the same pattern as everything else (this unblocks Phase 5's Home/stepper removal).
+  // Whether the inline create-animal panel is open. Create lives IN the workspace — an inline panel
+  // on the home, not a route to a separate screen — so first-animal creation uses the same pattern
+  // as everything else.
   const [showCreate, setShowCreate] = useState(false);
 
-  // Whether the YAML-import dialog is open. Import lives in the workspace beside create — it brings
-  // existing {mmddYYYY}_{subject}_metadata.yml files in as animals + days through the reconcile
-  // core, and (unlike create) never writes until the user confirms its preview.
+  // Whether the YAML-import dialog is open. Import lives beside create — it brings existing
+  // {mmddYYYY}_{subject}_metadata.yml files in as animals + days through the reconcile core, and
+  // (unlike create) never writes until the user confirms its preview.
   const [showImport, setShowImport] = useState(false);
 
   /** Commit the pending animal deletion through the store's guarded deleteAnimal, then close. */
@@ -81,6 +112,8 @@ export function AnimalWorkspace() {
    * Create the animal from the inline panel's form submission (the SAME builder Home uses), then
    * land on the new animal's days route. createAnimal applies synchronously, so navigating
    * immediately is safe.
+   *
+   * @param formData - The create form submission.
    */
   const handleCreate = (formData: AnimalCreationFormData) => {
     const { animalId, subject, metadata } = buildAnimalFromForm(formData);
@@ -94,9 +127,9 @@ export function AnimalWorkspace() {
   };
 
   // Handshake: `#/workspace?animal=<id>` (e.g. after creating a day) jumps straight to that
-  // animal's days route. An unknown/absent `?animal` is ignored — the picker is shown. (Unlike
-  // the old inline pane, a SOLE animal is NOT auto-opened: the picker stays reachable so "+ New
-  // Animal" is always available; the user opens an animal by clicking its card.)
+  // animal's days route. An unknown/absent `?animal` is ignored — the home is shown. (A SOLE animal
+  // is NOT auto-opened: the home stays reachable so "+ New Animal" is always available; the user
+  // opens an animal by clicking its name.)
   useEffect(() => {
     const params = new URLSearchParams(window.location.hash.split('?')[1]);
     const animalParam = params.get('animal');
@@ -108,9 +141,9 @@ export function AnimalWorkspace() {
       window.dispatchEvent(new HashChangeEvent('hashchange'));
       return;
     }
-    // `#/workspace?create=1` handshake (Task 4.5): the top selector's "+ New animal…" routes here to
-    // open the inline create panel (Phase 4b), so create has ONE home. Strip the transient param so
-    // Back / a reload doesn't reopen the panel.
+    // `#/workspace?create=1` handshake: the top selector's "+ New animal…" routes here to open the
+    // inline create panel, so create has ONE home. Strip the transient param so Back / a reload
+    // doesn't reopen the panel.
     if (params.get('create') === '1') {
       setShowCreate(true);
       window.history.replaceState(null, '', '#/workspace');
@@ -125,8 +158,8 @@ export function AnimalWorkspace() {
       <h1 id="workspace-heading">Animal Workspace</h1>
 
       {showCreate ? (
-        /* Inline create-animal panel (Task 4.2): the existing AnimalCreationForm, hosted ON the
-           picker. On success we navigate to the new animal's days route; cancel just closes it. */
+        /* Inline create-animal panel: the existing AnimalCreationForm, hosted ON the home. On
+           success we navigate to the new animal's days route; cancel just closes it. */
         <section className={styles.createAnimalPanel} aria-label="Create animal">
           <AnimalCreationForm
             onSubmit={handleCreate}
@@ -136,30 +169,60 @@ export function AnimalWorkspace() {
           />
         </section>
       ) : !hasAnimals ? (
-        /* Empty State: No Animals */
+        /* Empty state: no animals — the onboarding card with the two primary CTAs. */
         <div className="empty-state" role="region" aria-label="Empty workspace">
-          <p className={styles.emptyMessage}>{vm.empty?.message}</p>
+          <p className={styles.emptyMessage}>{vm.empty?.message ?? 'No animals yet'}</p>
           <p>Create your first animal to start managing recording sessions.</p>
-          <button
-            type="button"
-            className={styles.createAnimalLink}
-            onClick={() => setShowCreate(true)}
-          >
+          <button type="button" className={styles.createAnimalLink} onClick={() => setShowCreate(true)}>
             Create Animal
           </button>
-          <button
-            type="button"
-            className={styles.importYamlLink}
-            onClick={() => setShowImport(true)}
-          >
+          <button type="button" className={styles.importYamlLink} onClick={() => setShowImport(true)}>
             Import YAML…
           </button>
         </div>
       ) : (
-        /* Animal picker: each card links to the animal's tabbed view. */
-        <nav className={styles.animalList} aria-label="Animal list">
-          <div className={styles.animalListHeader}>
-            <h2>Animals</h2>
+        /* Animals table: each name links to the animal's tabbed view. */
+        <section className={styles.animalsHome} aria-label="Animals">
+          <div className={styles.homeToolbar}>
+            <div className={styles.homeFilters}>
+              <input
+                type="search"
+                className={styles.homeSearch}
+                aria-label="Search animals"
+                placeholder="Search animals…"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+              <label className={styles.homeFilterLabel}>
+                <span className={styles.homeFilterLabelText}>Genotype</span>
+                <select
+                  className={styles.homeFilterSelect}
+                  value={genotypeFilter}
+                  onChange={(e) => setGenotypeFilter(e.target.value)}
+                >
+                  <option value="all">All genotypes</option>
+                  {genotypeOptions.map((g) => (
+                    <option key={g} value={g}>
+                      {g}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className={styles.homeFilterLabel}>
+                <span className={styles.homeFilterLabelText}>Status</span>
+                <select
+                  className={styles.homeFilterSelect}
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                >
+                  {STATUS_FILTERS.map((s) => (
+                    <option key={s.value} value={s.value}>
+                      {s.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
             <div className={styles.animalListActions}>
               <button
                 type="button"
@@ -179,43 +242,75 @@ export function AnimalWorkspace() {
               </button>
             </div>
           </div>
-          {vm.animals.map(({ id: animalId, dayCount, href }) => (
-            <div key={animalId} className={styles.animalCard}>
-              {/* The card link and the ⋮ menu are SIBLINGS: a menu button can't be nested in the
-                  navigation <a> (interactive-in-interactive), and keeping them apart means the
-                  destructive Delete can't be hit while opening the animal. */}
-              <a className={styles.animalCardLink} href={href}>
-                <div className={styles.animalName}>{animalId}</div>
-                <div className={styles.animalDayCount}>
-                  {dayCount} {dayCount === 1 ? 'day' : 'days'}
-                </div>
-              </a>
-              <OverflowMenu
-                label={`Actions for ${animalId}`}
-                buttonClassName={styles.animalCardMenu}
-                items={[
-                  {
-                    key: 'open',
-                    label: 'Open',
-                    onSelect: () => {
-                      window.location.hash = href;
-                    },
-                  },
-                  {
-                    key: 'edit-profile',
-                    label: 'Edit profile…',
-                    onSelect: () => setPendingProfileAnimalId(animalId),
-                  },
-                  {
-                    key: 'delete',
-                    label: 'Delete animal…',
-                    onSelect: () => setPendingDeleteAnimalId(animalId),
-                  },
-                ]}
-              />
-            </div>
-          ))}
-        </nav>
+
+          <table className={styles.animalsTable}>
+            <caption className="visually-hidden">Animals</caption>
+            <thead>
+              <tr>
+                <th scope="col">Animal</th>
+                <th scope="col">Genotype</th>
+                <th scope="col">Species</th>
+                <th scope="col" className={styles.numCol}>
+                  Days
+                </th>
+                <th scope="col">Last recording</th>
+                <th scope="col">Status</th>
+                <th scope="col">
+                  <span className="visually-hidden">Actions</span>
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredAnimals.map((a) => (
+                <tr key={a.id}>
+                  <td className={styles.nameCell}>
+                    <a className={styles.animalNameLink} href={a.href}>
+                      {a.id}
+                    </a>
+                    {a.isOpto && <span className={styles.optoTag}>opto</span>}
+                  </td>
+                  <td>{a.genotype || '—'}</td>
+                  <td className={styles.muted}>{a.species || '—'}</td>
+                  <td className={styles.numCol}>{a.dayCount}</td>
+                  <td className={styles.muted}>{a.lastRecording ?? '—'}</td>
+                  <td>
+                    <StatusPill variant={a.statusRollup.variant} label={a.statusRollup.label} />
+                  </td>
+                  <td className={styles.actionsCell}>
+                    <OverflowMenu
+                      label={`Actions for ${a.id}`}
+                      items={[
+                        {
+                          key: 'open',
+                          label: 'Open',
+                          onSelect: () => {
+                            window.location.hash = a.href;
+                          },
+                        },
+                        {
+                          key: 'edit-profile',
+                          label: 'Edit profile…',
+                          onSelect: () => setPendingProfileAnimalId(a.id),
+                        },
+                        {
+                          key: 'delete',
+                          label: 'Delete animal…',
+                          onSelect: () => setPendingDeleteAnimalId(a.id),
+                        },
+                      ]}
+                    />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          {filteredAnimals.length === 0 && (
+            <p className={styles.noMatches} role="status">
+              No animals match your search.
+            </p>
+          )}
+        </section>
       )}
 
       <AnimalDeleteDialog

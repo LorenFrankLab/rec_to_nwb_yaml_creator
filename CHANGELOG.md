@@ -21,6 +21,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Animals home: the animal picker is now a disambiguating table.** Each animal is a row with its
+  genotype, species, recording-day count, last recording date, an `opto` tag, and a rolled-up day
+  status (e.g. "1 ready" / "2 need review" / "All exported" — computed via the SAME export gate the
+  day editor reads, never a separate recount). Each name is a real link to the animal's days. A
+  client-side search + genotype/status filters narrow the (small) list. The load/recovery notice
+  continues to be surfaced globally (by the app shell). Create / import / delete / edit-profile keep
+  their existing behavior. No change to exported YAML.
+
 - **Migrated the build tool from Create React App (`react-scripts`) to Vite — behavior-preserving;
   the app remains a client-side SPA on GitHub Pages.** CRA was deprecated (Feb 2025). The repo was
   already half on Vite (Vitest), so this consolidated the two toolchains into one `vite.config.ts`

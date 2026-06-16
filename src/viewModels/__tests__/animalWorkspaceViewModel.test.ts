@@ -73,6 +73,61 @@ describe('buildAnimalWorkspaceViewModel — animal cards', () => {
   });
 });
 
+describe('buildAnimalWorkspaceViewModel — animal row metadata (Animals home)', () => {
+  it('carries genotype, species, last recording, day count, and non-opto for a realistic animal', () => {
+    const { animal, day } = loadRealistic();
+    const ws = wrap(animal, day);
+    const card = buildAnimalWorkspaceViewModel(ws).animals.find((a) => a.id === animal.id)!;
+    expect(card.genotype).toBe('Wild Type');
+    expect(card.species).toBe('Rattus norvegicus');
+    expect(card.lastRecording).toBe(day.date);
+    expect(card.dayCount).toBe(1);
+    expect(card.isOpto).toBe(false);
+  });
+
+  it('flags an animal with optogenetics hardware as opto', () => {
+    const { animal, day } = loadRealistic();
+    const optoAnimal = {
+      ...animal,
+      optogenetics: { optical_fiber: [{ id: 0 }], opto_excitation_source: [], virus_injection: [] },
+    };
+    const card = buildAnimalWorkspaceViewModel(wrap(optoAnimal, day)).animals[0];
+    expect(card.isOpto).toBe(true);
+  });
+
+  it('rolls a single valid-but-unexported day up to "1 ready"', () => {
+    const { animal, day } = loadRealistic();
+    const card = buildAnimalWorkspaceViewModel(wrap(animal, day)).animals[0];
+    expect(card.statusRollup).toEqual({ variant: 'ready', label: '1 ready' });
+  });
+
+  it('rolls a fully-exported day set up to "All exported"', () => {
+    const { animal, day } = loadRealistic();
+    const exported = { ...day, state: { draft: false, validated: true, exported: true } };
+    const card = buildAnimalWorkspaceViewModel(wrap(animal, exported)).animals[0];
+    expect(card.statusRollup).toEqual({ variant: 'exported', label: 'All exported' });
+  });
+
+  it('rolls a needs-attention day (wrong owner) up to "1 needs review"', () => {
+    const ws: Workspace = {
+      animals: { remy: { id: 'remy', days: ['d1'], subject: { subject_id: 'remy' } } },
+      days: { d1: { id: 'd1', animalId: 'bean', date: '2023-07-01' } },
+    };
+    const card = buildAnimalWorkspaceViewModel(ws).animals[0];
+    expect(card.statusRollup).toEqual({ variant: 'needs_fixing', label: '1 needs review' });
+  });
+
+  it('reads "No recording days" for an animal with no days', () => {
+    const ws: Workspace = {
+      animals: { fresh: { id: 'fresh', days: [], subject: { subject_id: 'fresh' } } },
+      days: {},
+    };
+    const card = buildAnimalWorkspaceViewModel(ws).animals[0];
+    expect(card.statusRollup.label).toBe('No recording days');
+    expect(card.lastRecording).toBeNull();
+  });
+});
+
 describe('buildAnimalWorkspaceViewModel — day rows parity', () => {
   it('a fully-valid day reads ready + carries duplicate/delete actions, and equals the shared row', () => {
     const { animal, day } = loadRealistic();
