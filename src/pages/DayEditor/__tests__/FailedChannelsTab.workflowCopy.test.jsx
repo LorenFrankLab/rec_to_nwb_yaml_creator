@@ -7,7 +7,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import DevicesStep from '../DevicesStep';
+import FailedChannelsTab from '../FailedChannelsTab';
 import { buildRealisticWorkspace } from '../../../__tests__/fixtures/workspaceBuilders';
 import { mergeDayMetadata } from '../../../state/workspaceUtils';
 
@@ -23,7 +23,7 @@ function renderDevices({ withReconfig = false } = {}) {
     ? { animalDays: [day], actions: { createConfigurationSnapshotAndApplyForward: vi.fn() } }
     : {};
   render(
-    <DevicesStep animal={animal} day={day} mergedDay={merged} onFieldUpdate={vi.fn()} {...extra} />
+    <FailedChannelsTab animal={animal} day={day} mergedDay={merged} onFieldUpdate={vi.fn()} {...extra} />
   );
 }
 
@@ -61,7 +61,7 @@ describe('Day Devices workflow copy', () => {
     delete day.configurationVersion; // unpinned → resolves to latest (v2) ambiguously
     const merged = mergeDayMetadata(animal, day);
     render(
-      <DevicesStep
+      <FailedChannelsTab
         animal={animal}
         day={day}
         mergedDay={merged}

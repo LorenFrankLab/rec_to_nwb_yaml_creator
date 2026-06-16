@@ -9,7 +9,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { StoreProvider, useStoreContext } from '../../../state/StoreContext';
-import DayEditorStepper from '../DayEditorStepper';
+import DayEditorFrame from '../DayEditorFrame';
 import { useDayIdFromUrl } from '../../../hooks/useDayIdFromUrl';
 import { mergeDayMetadata } from '../../../state/workspaceUtils';
 import { makeAnimalWithCamerasAndDay } from './taskFixtures';
@@ -62,7 +62,7 @@ function renderStepper() {
         },
       }}
     >
-      <DayEditorStepper />
+      <DayEditorFrame />
       <Inspector />
     </StoreProvider>
   );

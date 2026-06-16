@@ -61,7 +61,7 @@ export default function ExportStep(props: ExportStepProps) {
   // filter over the same merged day), but carrying the ownership/category/repair classification the
   // RepairActions list reads instead of re-deriving.
   const vmErrorIssues = issues.filter((issue) => issue.severity === 'error');
-  // The store OWNER KEY (resolved by DayEditorStepper); a stale/missing `animal.id` record field
+  // The store OWNER KEY (resolved by DayEditorFrame); a stale/missing `animal.id` record field
   // must not misroute a recovered animal's re-link/repair links. Falls back to `animal.id` for
   // isolated renders that don't pass it.
   const ownerKey = animalKey ?? animal?.id;

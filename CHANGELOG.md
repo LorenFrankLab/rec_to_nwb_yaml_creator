@@ -21,6 +21,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Day editor: a new frame with day chips, an issue-driven readiness bar, and a four-tab body.** The
+  day editor's six-section stepper chrome is replaced by `DayEditorFrame`: a header carrying the
+  Workspace › Animal › Day breadcrumb, the date title, day chips (configuration version · an opto
+  badge · "↩ carried from &lt;date&gt;" · the lifecycle `StatusPill`), the autosave indicator, the
+  read-only `AnimalScopeCard` (the animal-static scope boundary, summarized from the animal
+  view-model), and the issue-driven `ReadinessBar` — fed the authoritative `validateDay` output, so
+  it never re-checks readiness locally. The body is a four-tab bar — **Day / Epochs / Failed channels
+  / DIO** — with free navigation and `Alt+←/→`. The former `OverviewStep`, `DevicesStep`, and
+  `BehavioralEventsStep` are folded into the **Day**, **Failed channels**, and **DIO** tabs
+  respectively and removed; `TasksEpochsStep` is kept as the **Epochs** tab bridge (the epoch grid
+  lands in a later phase); `ValidationStep`/`ExportStep` are retained until the export-preview screen
+  arrives (the readiness bar replaces the inline Validation step, and a transitional header **Export**
+  action reveals the kept Export step). The **DIO** tab opens on a read-only carry-forward summary
+  (Din/Dout in two columns, "carried from &lt;date&gt; · unchanged") and reveals the full ECU channel
+  editor only on "Edit · rewired the rig"; collision gates reuse the existing
+  `duplicateBehavioralEvent*` helpers. **No change to exported YAML.**
+
+- **Day editor: a per-day data folder.** The **Day** tab adds an editable `Data folder` field (the
+  directory on disk where this day's recording files live). It is set once and carried forward to the
+  next same-block day (`createDayRecord`). The field is **off-export** — `mergeDayMetadata` never
+  reads `day.dataFolder`, so the YAML is byte-identical (no schema bump; the golden baselines are
+  unchanged). Per-epoch filename derivation inside the folder lands in a later phase.
+
 - **Animals home: the animal picker is now a disambiguating table.** Each animal is a row with its
   genotype, species, recording-day count, last recording date, an `opto` tag, and a rolled-up day
   status (e.g. "1 ready" / "2 need review" / "All exported" — computed via the SAME export gate the

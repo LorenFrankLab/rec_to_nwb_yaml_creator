@@ -1,10 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, act } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { StoreProvider } from '../../../state/StoreContext';
-import DayEditorStepper from '../DayEditorStepper';
+import DayEditorFrame from '../DayEditorFrame';
 import { useDayIdFromUrl } from '../../../hooks/useDayIdFromUrl';
-import { emitStepperShortcut } from '../../../hooks/stepperShortcuts';
 import { buildRealisticWorkspace } from '../../../__tests__/fixtures/workspaceBuilders';
 
 vi.mock('../../../hooks/useDayIdFromUrl', () => ({
@@ -57,7 +56,7 @@ describe('Day editor export gate (integration)', () => {
 
     render(
       <StoreProvider initialState={seed(animal, day)}>
-        <DayEditorStepper />
+        <DayEditorFrame />
       </StoreProvider>
     );
 
@@ -82,7 +81,7 @@ describe('Day editor export gate (integration)', () => {
 
     render(
       <StoreProvider initialState={seed(animal, incompleteDay)}>
-        <DayEditorStepper />
+        <DayEditorFrame />
       </StoreProvider>
     );
 
@@ -100,7 +99,7 @@ describe('Day editor export gate (integration)', () => {
 
     render(
       <StoreProvider initialState={seed(animal, day)}>
-        <DayEditorStepper />
+        <DayEditorFrame />
       </StoreProvider>
     );
 
@@ -114,60 +113,18 @@ describe('Day editor export gate (integration)', () => {
     expect(screen.getByRole('button', { name: /download yaml/i })).toBeDisabled();
   });
 
-  it('advances into Export via the keyboard stepper shortcut even on an export-blocked day (download stays blocked)', async () => {
-    const user = userEvent.setup();
-    const { animal, day } = buildExportErrorWorkspace();
-    useDayIdFromUrl.mockReturnValue(day.id);
-
-    render(
-      <StoreProvider initialState={seed(animal, day)}>
-        <DayEditorStepper />
-      </StoreProvider>
-    );
-
-    // Reach the Validation step first.
-    await user.click(screen.getByRole('button', { name: /^Validation/ }));
-    expect(screen.getByText('Validation Summary')).toBeInTheDocument();
-
-    // Alt+Right now crosses freely into Export (no keyboard fail-close); ExportStep self-gates.
-    act(() => emitStepperShortcut('next'));
-
-    expect(screen.getByText(/06222023_remy_metadata\.yml/)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /download yaml/i })).toBeDisabled();
-  });
-
-  it('advances from Validation into Export via the keyboard stepper shortcut on a valid day', async () => {
-    const user = userEvent.setup();
+  it('shows the always-visible readiness bar "Ready to export" for a clean day (no Validation step to navigate to)', () => {
     const { animal, day } = buildRealisticWorkspace();
     useDayIdFromUrl.mockReturnValue(day.id);
 
     render(
       <StoreProvider initialState={seed(animal, day)}>
-        <DayEditorStepper />
+        <DayEditorFrame />
       </StoreProvider>
     );
 
-    await user.click(screen.getByRole('button', { name: /^Validation/ }));
-    expect(screen.getByText('Validation Summary')).toBeInTheDocument();
-
-    act(() => emitStepperShortcut('next'));
-
-    expect(screen.getByText(/06222023_remy_metadata\.yml/)).toBeInTheDocument();
-  });
-
-  it('reaches the Validation step and shows the ready-to-export indicator for a clean day', async () => {
-    const user = userEvent.setup();
-    const { animal, day } = buildRealisticWorkspace();
-    useDayIdFromUrl.mockReturnValue(day.id);
-
-    render(
-      <StoreProvider initialState={seed(animal, day)}>
-        <DayEditorStepper />
-      </StoreProvider>
-    );
-
-    await user.click(screen.getByRole('button', { name: /^Validation/ }));
-
+    // The readiness bar replaces the old inline Validation step; it reads "Ready to export" on a
+    // clean day without any navigation.
     expect(screen.getByText(/ready to export/i)).toBeInTheDocument();
   });
 });

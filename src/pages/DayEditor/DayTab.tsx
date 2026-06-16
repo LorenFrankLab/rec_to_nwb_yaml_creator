@@ -1,5 +1,4 @@
 import { useState, useCallback } from 'react';
-import Breadcrumb from './Breadcrumb';
 import ReadOnlyField from './ReadOnlyField';
 import KeywordsEditor from './KeywordsEditor';
 import DayTechnicalSection from './DayTechnicalSection';
@@ -11,6 +10,7 @@ import { RAW_DAY_ARRAY_FIELDS } from '../../validation/rawShape';
 import {
   getDaySession,
   getDayKeywords,
+  getDayFsGuiYamls,
   getAnimalSubject,
   getAnimalExperimenters,
   getExperimenterNames,
@@ -18,46 +18,49 @@ import {
 } from '../../state/workspaceSelectors';
 import { useDayEditorContext } from './DayEditorContext';
 import type { DayEditorBundle } from './DayEditorContext';
-import type { BreadcrumbViewModel, FieldValueViewModel } from '../../viewModels/types';
+import type { FieldValueViewModel } from '../../viewModels/types';
 
-interface OverviewStepProps extends DayEditorBundle {
+interface DayTabProps extends DayEditorBundle {
   /** Writes a subject field through to the animal record (e.g. `('species', value)`). */
   onSubjectUpdate?: (field: string, value: string) => void;
   /** A repair request focusing a subject field — expands the inherited section during render. */
   focusRequest?: { fieldPath?: string; token?: number } | null;
   /** Executes an issue's `repairCommand` in place (resets a malformed session record). */
   onRepair?: (issue: unknown) => void;
-  /** The view-model breadcrumb trail; an isolated render without it falls back to assembling its own. */
-  breadcrumb?: BreadcrumbViewModel;
   /**
-   * The day-editor view-model's Overview field slice (`vm.overview.fields`). The DayEditorStepper
-   * passes it so the DISPLAYED inherited/default/derived values, help text, and the weight
-   * placeholder render from the view-model; an isolated render that omits it falls back to deriving
-   * the same values inline (so the rendered output is identical either way).
+   * The day-editor view-model's Overview field slice (`vm.overview.fields`). The frame passes it so
+   * the DISPLAYED inherited/default/derived values, help text, and the weight placeholder render
+   * from the view-model; an isolated render that omits it falls back to deriving the same values
+   * inline (so the rendered output is identical either way).
    */
   overviewFields?: FieldValueViewModel[];
 }
 
-// The day-owned collections this step owns (raw-shape reset surface).
+// The day-owned collections this tab owns (raw-shape reset surface).
 const OVERVIEW_STEP_COLLECTIONS = RAW_DAY_ARRAY_FIELDS.filter((f) => f.repairStep === 'overview');
 
 /**
- * Overview Step - Minimalist session metadata editor
+ * DayTab — the day editor's **Day** tab (folded from the former OverviewStep).
  *
- * Shows only day-specific editable fields with breadcrumb navigation.
- * Inherited animal metadata is available in a collapsible section.
+ * Day-specific session metadata: the derived session id, the editable data folder (the directory
+ * this day's files live in), weight, session/experiment descriptions, keywords, the per-day
+ * technical parameters, an opto-protocol summary for opto animals, and the collapsible
+ * inherited-from-animal metadata (subject identity + experimenters, repairable in place).
+ *
+ * The Workspace › Animal › Day breadcrumb now lives in the frame header (DayEditorFrame), not here,
+ * so a single breadcrumb is shared across all four tabs.
  *
  * UX Philosophy:
- * - Show what matters: animal ID + date for context
+ * - Show what matters: animal ID + date for context (in the frame header)
  * - Edit what's unique: session-specific metadata
  * - Hide what's inherited: subject/experimenters (available if needed)
  */
-export default function OverviewStep(props: OverviewStepProps) {
+export default function DayTab(props: DayTabProps) {
   // The shared day bundle comes from DayEditorContext in the Day Editor (an isolated render
   // passes the same fields as props). Section-specific props stay direct.
   const { animal, day, mergedDay, onFieldUpdate, animalKey = undefined } = useDayEditorContext(props);
   const { onSubjectUpdate = () => {}, focusRequest = null, onRepair } = props;
-  // The store OWNER KEY (resolved by DayEditorStepper). Animal-editor links and the derived
+  // The store OWNER KEY (resolved by DayEditorFrame). Animal-editor links and the derived
   // session_id help text use it so a stale/missing `animal.id` record field can't misroute a
   // recovered animal's repair; falls back to `animal.id` for isolated renders that don't pass it.
   const ownerKey = animalKey ?? animal?.id;
@@ -74,9 +77,12 @@ export default function OverviewStep(props: OverviewStepProps) {
   const experimenters = getAnimalExperimenters(animal);
   const experimenterNames = getExperimenterNames(animal);
   const keywords = getDayKeywords(day);
+  // This day's FSGui opto-protocol files (read-only summary in the opto card; editing is per-epoch
+  // in the Epochs tab). Shape-safe: returns [] for a missing/corrupt collection.
+  const dayFsGui = getDayFsGuiYamls(day);
   const dayDateKey = String(day.date ?? '').replace(/-/g, '');
 
-  // Phase 3-e: the Overview field view-model, keyed by field path. The DayEditorStepper passes
+  // Phase 3-e: the Overview field view-model, keyed by field path. The DayEditorFrame passes
   // `vm.overview.fields`; an isolated render omits it, so each `overviewField(path)?.x ?? inline`
   // below prefers the view-model when present and falls back to the identical inline derivation
   // otherwise. The view-model supplies DISPLAY only (read-only values, help text, the weight
@@ -155,20 +161,11 @@ export default function OverviewStep(props: OverviewStepProps) {
   // Count validation errors for ARIA announcement
   const errorCount = Object.values(fieldErrors).filter(Boolean).length;
 
-  // Breadcrumb items from the view-model (Workspace › Animal › Day). An isolated render that doesn't
-  // pass the view-model breadcrumb falls back to assembling the same trail from the bundle (the top
-  // crumb is the WORKSPACE — the new-model home — never the legacy form).
-  const breadcrumbItems = props.breadcrumb?.items ?? [
-    { label: 'Workspace', href: '#/workspace' },
-    { label: `Animal: ${ownerKey}`, href: `#/animal/${ownerKey}/days` },
-    { label: `Day: ${day.date}` },
-  ];
+  // The Workspace › Animal › Day breadcrumb is rendered ONCE by the frame header (DayEditorFrame),
+  // not per-tab, so a single breadcrumb is shared across all four tabs.
 
   return (
     <div className="overview-step">
-      {/* Breadcrumb Navigation */}
-      <Breadcrumb items={breadcrumbItems} />
-
       <MalformedCollectionNotice
         // A clean `Day` is a valid possibly-corrupt-record input to this tolerant reader (it
         // detects non-array collections); the interface lacks an index signature, hence the cast.
@@ -206,6 +203,30 @@ export default function OverviewStep(props: OverviewStepProps) {
               ?? `Auto-generated from animal ID and date: ${ownerKey}_${dayDateKey}`
             }
           />
+
+          {/* Data folder: the directory on disk where this day's recording files live. The user
+              provides it; per-epoch file names derive inside it (the derivation lands in a later
+              phase). Set once and carried forward to same-block days. OFF-EXPORT — the merge never
+              reads `day.dataFolder`, so it does not appear in the YAML. Uncontrolled input keyed by
+              the stored value so a route-level day remount re-seeds it. */}
+          <div className="form-field">
+            <label htmlFor="day-data-folder">Data folder</label>
+            <input
+              id="day-data-folder"
+              type="text"
+              name="dataFolder"
+              data-field-path="dataFolder"
+              key={`day-data-folder-${day.dataFolder ?? ''}`}
+              defaultValue={day.dataFolder ?? ''}
+              placeholder="e.g. /stelmo/denisse/Laurent/20260514/"
+              aria-describedby="day-data-folder-help"
+              onBlur={(e) => onFieldUpdate('dataFolder', e.target.value)}
+            />
+            <span id="day-data-folder-help" className="field-help-text">
+              Where this day&apos;s files live (you provide it); epoch file names derive inside it.
+              Set once · carried forward to the next day.
+            </span>
+          </div>
 
           <div className="form-field">
             <label htmlFor="session-description" className="required">
@@ -309,6 +330,35 @@ export default function OverviewStep(props: OverviewStepProps) {
           />
         </div>
       </section>
+
+      {/* Optogenetics — this day's protocol. Shown only for opto animals (the animal owns the opto
+          HARDWARE; this card frames the day's protocol). Read-only summary: the per-epoch laser
+          power (mW) / pulse length (ms) and the FSGui protocol assignment are authored per epoch in
+          the Epochs tab (and reach the export through `fs_gui_yamls`), so this card surfaces the
+          day's current FSGui protocol files and points there — it never re-edits the exported data. */}
+      {animal?.optogenetics != null && (
+        <section className="day-editor-section day-opto-protocol">
+          <h2>Optogenetics — this day&apos;s protocol</h2>
+          {dayFsGui.length > 0 ? (
+            <ul className="day-opto-protocol-files">
+              {dayFsGui.map((fsgui, i) => (
+                <li key={`${fsgui?.name ?? 'fsgui'}-${i}`}>
+                  <span className="day-opto-protocol-name">{fsgui?.name || '(unnamed protocol)'}</span>
+                  {fsgui?.task_epochs !== undefined && fsgui?.task_epochs !== '' && (
+                    <span className="day-opto-protocol-epoch"> · epoch {String(fsgui.task_epochs)}</span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="field-help-text">No optogenetics protocol is assigned to this day yet.</p>
+          )}
+          <p className="field-help-text">
+            Per-epoch laser power (mW), pulse length (ms), and the FSGui protocol file are set per
+            epoch in the <strong>Epochs</strong> tab.
+          </p>
+        </section>
+      )}
 
       {/* Per-day technical parameters (default header path + units) live on
           day.technical, where the export reads them. */}

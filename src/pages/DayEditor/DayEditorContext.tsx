@@ -21,7 +21,7 @@ export interface DayEditorBundle {
  * Shared Day-Editor context: the per-day bundle every section needs to render and edit a day —
  * `{ animal, day, mergedDay, animalDays, onFieldUpdate, actions, animalKey }`.
  *
- * `DayEditorStepper` resolves these once (owner key, merged metadata, the animal's days, the
+ * `DayEditorFrame` resolves these once (owner key, merged metadata, the animal's days, the
  * field-update writer, store actions) and provides them here, so the section components don't
  * receive the same seven props drilled through identically on every render. Section-specific
  * props (e.g. `onNavigate`, `onRepair`, `copyableDioSources`) are NOT
@@ -47,7 +47,7 @@ export function DayEditorProvider({ value, children }: DayEditorProviderProps) {
 
 /**
  * Read the shared Day-Editor bundle, falling back to the section's own props when no provider is
- * present. Inside `DayEditorStepper` the provider supplies all seven fields; isolated renders
+ * present. Inside `DayEditorFrame` the provider supplies all seven fields; isolated renders
  * (unit tests) pass them as props instead — so a section never has to know which wiring it got,
  * and the seven shared props never have to be drilled through the stepper's JSX.
  */

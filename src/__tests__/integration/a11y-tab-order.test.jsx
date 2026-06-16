@@ -18,7 +18,7 @@ afterEach(() => {
 describe('tab order through the DayEditor stepper', () => {
   it('step controls appear in DOM order matching the step sequence', async () => {
     window.location.hash = `#/day/${DAY_ID}`;
-    const { container } = render(
+    render(
       <StoreProvider initialState={{ workspace: makeConfiguredWorkspace() }}>
         <App />
       </StoreProvider>
@@ -29,18 +29,10 @@ describe('tab order through the DayEditor stepper', () => {
     });
     await screen.findByRole('heading', { name: /day editor/i });
 
-    const labels = [...container.querySelectorAll('.section-nav-item .section-nav-item-name')].map(
-      (el) => el.textContent.trim()
-    );
-    // Tabbed section-nav: 6 sections in sequence (richer display labels, DOM order preserved).
-    expect(labels).toEqual([
-      'Overview',
-      'Devices & Failed Channels',
-      'Tasks & Epochs',
-      'Behavioral Events',
-      'Validation',
-      'Export',
-    ]);
+    const tabBar = screen.getByRole('navigation', { name: /day editor sections/i });
+    const labels = [...tabBar.querySelectorAll('button')].map((el) => el.textContent.trim());
+    // The redesigned frame's 4-tab bar, in DOM order.
+    expect(labels).toEqual(['Day', 'Epochs', 'Failed channels', 'DIO']);
   });
 
   it('no interactive control uses a positive tabindex', async () => {

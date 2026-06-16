@@ -2,7 +2,7 @@ import { beforeEach, describe, it, expect, vi } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import ReconfigWizard from '../ReconfigWizard';
-import DevicesStep from '../DevicesStep';
+import FailedChannelsTab from '../FailedChannelsTab';
 import { makeReconfigWorkspace } from '../../../state/__tests__/fixtures/reconfigWorkspace';
 
 /**
@@ -291,7 +291,7 @@ describe('ReconfigWizard [integration]', () => {
   });
 });
 
-describe('DevicesStep configuration-version indicator', () => {
+describe('FailedChannelsTab configuration-version indicator', () => {
   it('shows the day’s configuration version and how many days share it', () => {
     const { workspace, animalId, dayIds } = makeReconfigWorkspace();
     const animal = workspace.animals[animalId];
@@ -304,7 +304,7 @@ describe('DevicesStep configuration-version indicator', () => {
     ];
 
     render(
-      <DevicesStep
+      <FailedChannelsTab
         animal={animal}
         day={day}
         mergedDay={{}}

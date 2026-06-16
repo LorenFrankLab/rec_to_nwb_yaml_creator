@@ -3,7 +3,7 @@
  */
 
 import { describe, it, expect, afterEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import { StoreProvider } from '../../state/StoreContext';
 import { App } from '../../App';
 import { overrideFlags, restoreFlags } from '../../featureFlags';
@@ -186,27 +186,27 @@ describe('ARIA Landmarks', () => {
       expect(screen.getByRole('link', { name: /validation & export/i })).toBeInTheDocument();
     });
 
-    it('DayEditor: one main + one #main-content + one banner/contentinfo; back-to-workspace link', async () => {
+    it('DayEditor: one main + one #main-content + one banner/contentinfo; breadcrumb back-nav', async () => {
       overrideFlags({ animalWorkspace: true, newDayEditor: true });
       const { container } = renderRoute('#/day/remy_20230622');
 
-      // useDayIdFromUrl resolves the day id in an effect, so wait for the real stepper.
-      const back = await screen.findByRole('link', { name: /back to workspace/i });
-      expect(back).toBeInTheDocument();
+      // useDayIdFromUrl resolves the day id in an effect, so wait for the real frame.
+      await screen.findByRole('heading', { level: 1, name: /day editor/i });
+      // The frame header's breadcrumb provides the back navigation (Workspace › Animal › Day) —
+      // the explicit "Back to Workspace" link was retired in favor of the breadcrumb.
+      const breadcrumb = screen.getByRole('navigation', { name: /breadcrumb/i });
+      expect(within(breadcrumb).getByRole('link', { name: /^workspace$/i })).toBeInTheDocument();
       expect(container.querySelectorAll('[role="main"]')).toHaveLength(1);
       expect(container.querySelectorAll('#main-content')).toHaveLength(1);
-      // The stepper header/footer are plain divs, so AppLayout owns the only banner
-      // and contentinfo landmarks (no duplicates).
+      // The frame header/body are plain divs, so AppLayout owns the only banner and contentinfo
+      // landmarks (no duplicates).
       expect(container.querySelectorAll('[role="banner"], header')).toHaveLength(1);
       expect(container.querySelectorAll('[role="contentinfo"], footer')).toHaveLength(1);
 
-      // Exactly one SECTION is marked current within the section-nav (tabbed section-nav
-      // mirrors AnimalView: aria-current="page"). Scoped to the section-nav so the
-      // breadcrumb's own aria-current="page" (its trailing page) isn't counted.
-      const sectionNav = container.querySelector('.section-nav');
-      expect(sectionNav).toBeTruthy();
-      const current = sectionNav.querySelectorAll('[aria-current="page"]');
-      expect(current).toHaveLength(1);
+      // Exactly one TAB is marked current within the 4-tab bar (aria-current="page"). Scoped to the
+      // tab bar so the breadcrumb's own trailing-page aria-current isn't counted.
+      const tabBar = screen.getByRole('navigation', { name: /day editor sections/i });
+      expect(tabBar.querySelectorAll('[aria-current="page"]')).toHaveLength(1);
     });
 
     it('keeps the default route (#/) on the legacy form even with flags enabled', () => {

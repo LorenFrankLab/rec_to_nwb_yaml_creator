@@ -158,12 +158,13 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 // ──────────────────────────────────────────────────────────────────────────────────────────
-// Shared structure: section/step order + labels (mirrors DayEditorStepper's SECTION_GROUPS +
-// stepOrder so the view-model and the stepper read one truth). Behavioral is its own step; the
-// Validation step carries the "N to fix" count.
+// Shared structure: the underlying step order + labels. The frame now renders the 4-tab model
+// (see TAB_ORDER) rather than these six steps directly, but the step statuses still drive the
+// export gate, repair routing, and the tab-status rollup — so this order is retained as the
+// validation/gate substrate. Behavioral is its own step; the Validation step carries "N to fix".
 // ──────────────────────────────────────────────────────────────────────────────────────────
 
-/** The section stepper order + labels, matching the day-editor stepper. */
+/** The underlying step order + labels (the validation/export-gate substrate the tabs roll up from). */
 const STEP_ORDER: ReadonlyArray<{ key: string; label: string }> = [
   { key: 'overview', label: 'Overview' },
   { key: 'devices', label: 'Devices & Failed Channels' },

@@ -1,6 +1,6 @@
 /**
  * Integration tests for the Tasks & Epochs step, rendered through the real store
- * provider and DayEditorStepper (the same harness as DayEditorStepper.test.jsx).
+ * provider and DayEditorFrame (the same harness as DayEditorFrame.test.jsx).
  * These exercise keyboard/focus behavior, animal→day inheritance, and persistence
  * through onFieldUpdate→updateDay end-to-end.
  */
@@ -8,7 +8,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { StoreProvider, useStoreContext } from '../../../state/StoreContext';
-import DayEditorStepper from '../DayEditorStepper';
+import DayEditorFrame from '../DayEditorFrame';
 import { useDayIdFromUrl } from '../../../hooks/useDayIdFromUrl';
 import { mergeDayMetadata } from '../../../state/workspaceUtils';
 import { makeAnimalWithCamerasAndDay } from './taskFixtures';
@@ -43,7 +43,7 @@ function TasksInspector() {
 }
 
 /**
- * Render the full DayEditorStepper through the real store for the fixture day.
+ * Render the full DayEditorFrame through the real store for the fixture day.
  * @param {object} [overrides] Fixture overrides ({ animal?, day? }).
  * @returns {{animal: object, day: object}} The fixture animal and day.
  */
@@ -58,7 +58,7 @@ function renderStepper(overrides = {}) {
   };
   render(
     <StoreProvider initialState={initialState}>
-      <DayEditorStepper />
+      <DayEditorFrame />
       <TasksInspector />
       <CatalogProbe />
     </StoreProvider>

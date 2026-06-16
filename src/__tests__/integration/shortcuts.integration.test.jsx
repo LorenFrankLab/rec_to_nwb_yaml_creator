@@ -55,26 +55,26 @@ describe('global shortcuts + help (integration)', () => {
     expect(screen.queryByRole('dialog', { name: /keyboard shortcuts/i })).not.toBeInTheDocument();
   });
 
-  it('Alt+ArrowRight / Alt+ArrowLeft move the DayEditor stepper', async () => {
+  it('Alt+ArrowRight / Alt+ArrowLeft move the DayEditor tabs', async () => {
     await renderRoute(`#/day/${DAY_ID}`);
-    await screen.findByRole('heading', { name: /session metadata/i }); // Overview is active
+    await screen.findByRole('heading', { name: /session metadata/i }); // the Day tab is active
 
-    // Advance to Devices.
+    // Advance to the Epochs tab.
     fireEvent.keyDown(document.body, { key: 'ArrowRight', altKey: true });
-    expect(await screen.findByRole('heading', { name: /setup & failed channels/i })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: /tasks & epochs/i })).toBeInTheDocument();
 
-    // Retreat back to Overview.
+    // Retreat back to the Day tab.
     fireEvent.keyDown(document.body, { key: 'ArrowLeft', altKey: true });
     expect(await screen.findByRole('heading', { name: /session metadata/i })).toBeInTheDocument();
   });
 
-  it('Alt+N opens the add-task modal on the Epochs step', async () => {
+  it('Alt+N opens the add-task modal on the Epochs tab', async () => {
     const user = userEvent.setup();
     await renderRoute(`#/day/${DAY_ID}`);
     await screen.findByRole('heading', { name: /day editor/i });
 
-    // Go to the Epochs section (richer section-nav label).
-    await user.click(screen.getByRole('button', { name: /^Tasks & Epochs/i }));
+    // Go to the Epochs tab.
+    await user.click(screen.getByRole('button', { name: /^Epochs$/i }));
     await screen.findByRole('heading', { name: /tasks & epochs/i });
 
     // Alt+N opens the add-task dialog (the step's add target).

@@ -1,0 +1,421 @@
+import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
+import type { ComponentProps } from 'react';
+import { useStoreContext } from '../../state/StoreContext';
+import { useStepperShortcut } from '../../hooks/stepperShortcuts';
+import { useDayIdFromUrl } from '../../hooks/useDayIdFromUrl';
+import { mergeDayMetadata } from '../../state/workspaceUtils';
+import {
+  getAnimalSubject,
+  getCopyableDioSources,
+  resolveDayOwner,
+} from '../../state/workspaceSelectors';
+import { applyRepairCommand } from '../../state/repairCommands';
+import type { RepairCommand, RepairCommandContext } from '../../state/repairCommands';
+import { animalSetupTabForFieldPath } from '../../domain/validation';
+import { repairTargetForIssue } from '../../domain/repairRouting';
+import type { RepairableIssue } from '../../domain/repairRouting';
+import { validateDay } from '../../domain/dayValidationComposer';
+import { buildDayEditorViewModel } from '../../viewModels/dayEditorViewModel';
+import type { DayTabKey } from '../../viewModels/dayEditorViewModel';
+import { buildAnimalViewModel } from '../../viewModels/animalViewModel';
+import Breadcrumb from './Breadcrumb';
+import StatusPill from '../../components/ui/StatusPill';
+import AnimalScopeCard from '../../components/AnimalScopeCard';
+import type { AnimalScopeSummary } from '../../components/AnimalScopeCard';
+import ReadinessBar from '../../components/ReadinessBar';
+import { DayEditorProvider } from './DayEditorContext';
+import type { DayEditorBundle } from './DayEditorContext';
+import SaveIndicator from './SaveIndicator';
+import DayTab from './DayTab';
+import FailedChannelsTab from './FailedChannelsTab';
+import TasksEpochsStep from './TasksEpochsStep';
+import DioTab from './DioTab';
+import ExportStep from './ExportStep';
+import type { CopyableDioSource } from './BehavioralEventsDisplay';
+import ErrorState from './ErrorState';
+import styles from './DayEditorFrame.module.css';
+
+/** A repair-routed focus request: the target field path + a monotonic token to retrigger the effect. */
+interface FocusRequest {
+  fieldPath: string;
+  token: number;
+}
+
+/** The frame's main-content modes: one of the four tabs, or the transitional Export panel. */
+type FrameMode = DayTabKey | 'export';
+
+/** The four tabs' fixed order (drives the Alt+←/→ cycle). */
+const TAB_ORDER: DayTabKey[] = ['day', 'epochs', 'channels', 'dio'];
+
+/**
+ * An underlying step key → the tab that folds it, for routing a repair (which targets the old step
+ * keys) to its tab. `validation`/`export` map to null — the readiness bar owns validation, and the
+ * transitional Export panel owns export — so a repair there does not switch tabs.
+ */
+const TAB_FOR_STEP: Record<string, DayTabKey | null> = {
+  overview: 'day',
+  devices: 'channels',
+  epochs: 'epochs',
+  behavioral: 'dio',
+  validation: null,
+  export: null,
+};
+
+/** Map the animal-static summary view-model to the AnimalScopeCard's render contract. */
+function toScopeSummary(summary: ReturnType<typeof buildAnimalViewModel>['summary']): AnimalScopeSummary {
+  const identity =
+    [summary.genotype, summary.sex, summary.species].filter(Boolean).join(' · ') || summary.id;
+  const probes =
+    summary.probeCount > 0
+      ? `${summary.probeCount} probe${summary.probeCount === 1 ? '' : 's'}` +
+        (summary.probeSummary ? ` · ${summary.probeSummary}` : '')
+      : 'No probes';
+  const config = summary.configVersion != null ? `v${summary.configVersion}` : '—';
+  return { identity, probes, config, team: summary.team || '—' };
+}
+
+/**
+ * DayEditorFrame — the day editor's chrome (replaces the former DayEditorStepper's 6-section nav).
+ *
+ * The header carries the Workspace › Animal › Day breadcrumb, the date title, the day chips
+ * (configuration version · opto · "carried from <date>" · the lifecycle StatusPill), the autosave
+ * indicator, the read-only {@link AnimalScopeCard} (the animal-static scope boundary), and the
+ * issue-driven {@link ReadinessBar} (fed the authoritative `validateDay` issues — never a local
+ * check). The body is a 4-tab bar — **Day / Epochs / Failed channels / DIO** — with free navigation
+ * and Alt+←/→; the tab panels read their data through {@link DayEditorProvider} (NOT props), so the
+ * provider must wrap them. A transitional header **Export** action reveals the kept {@link ExportStep}
+ * until the Phase-5 export-preview screen replaces it.
+ *
+ * Behavior reused from the former stepper: owner resolution, the merge, the field/subject writers,
+ * executable repairs, and the repair-focus + section-change focus effects.
+ *
+ * @example
+ * // URL: #/day/remy-2023-06-22
+ * <DayEditorFrame />
+ */
+export default function DayEditorFrame() {
+  const { model, actions, selectors, persistence } = useStoreContext();
+  const dayId = useDayIdFromUrl();
+  const [mode, setMode] = useState<FrameMode>('day');
+
+  const day = model.workspace?.days?.[dayId as string];
+  const { ownerKey, animal } = resolveDayOwner(model.workspace, dayId);
+
+  // Merge animal + day for validation (before early returns, per Rules of Hooks). The merge throws
+  // BY DESIGN on a malformed animal (missing/non-array configurationHistory); tolerate it so the
+  // frame renders fail-closed (the readiness bar surfaces the merge-error blocker) instead of crashing.
+  const mergedDay = useMemo(() => {
+    if (!animal || !day) return null;
+    try {
+      return mergeDayMetadata(animal, day);
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error(`[day-editor] could not merge day "${dayId}" with its animal config:`, err);
+      return null;
+    }
+  }, [animal, day, dayId]);
+
+  const animalDays = selectors.getAnimalDays(ownerKey as string);
+
+  const copyableDioSources = useMemo(
+    () => getCopyableDioSources(model.workspace, ownerKey as string),
+    [model.workspace, ownerKey]
+  );
+
+  // The day-editor view-model: chips, the 4-tab model, the breadcrumb, the Overview field slice, and
+  // the bad-channel marks — all from the SAME builder, so the frame is a thin renderer.
+  const vm = useMemo(
+    () => buildDayEditorViewModel(model.workspace, dayId, mode === 'export' ? 'day' : mode),
+    [model.workspace, dayId, mode]
+  );
+
+  // The animal-static scope summary (read-only scope card). Built from the animal view-model so the
+  // card can never disagree with the animal page.
+  const scopeSummary = useMemo(
+    () => (ownerKey != null ? toScopeSummary(buildAnimalViewModel(model.workspace, ownerKey, 'days').summary) : null),
+    [model.workspace, ownerKey]
+  );
+
+  // The issue-driven readiness bar's input: the AUTHORITATIVE `validateDay` (never a local re-check).
+  // Mirrors the view-model exactly — on a merge failure (null mergedDay) it validates the empty
+  // merged model, so the raw-shape animal blockers (e.g. a missing configuration history with its
+  // executable "Rebuild" repair) still surface and stay fixable. A validation contract violation is
+  // caught and surfaced as a single blocker rather than white-screening the editor.
+  const readinessIssues = useMemo<RepairableIssue[]>(() => {
+    if (!day || !animal) return [];
+    try {
+      return validateDay(
+        day as unknown as Record<string, unknown>,
+        mergedDay ?? {},
+        animal,
+        animalDays
+      ) as RepairableIssue[];
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error(`[day-editor] could not validate day "${dayId}":`, err);
+      return [
+        { severity: 'error', code: 'day_validation_failed', message: 'This day could not be validated.' } as RepairableIssue,
+      ];
+    }
+  }, [day, animal, mergedDay, animalDays, dayId]);
+
+  // ── Focus management (mirrors the former stepper) ──
+  const [focusRequest, setFocusRequest] = useState<FocusRequest | null>(null);
+  const focusTokenRef = useRef(0);
+  const isFirstModeRender = useRef(true);
+  const skipNextModeFocusRef = useRef(false);
+  useEffect(() => {
+    if (isFirstModeRender.current) {
+      isFirstModeRender.current = false;
+      return undefined;
+    }
+    if (skipNextModeFocusRef.current) {
+      skipNextModeFocusRef.current = false;
+      return undefined;
+    }
+    document.getElementById('main-content')?.focus();
+    return undefined;
+  }, [mode, focusRequest]);
+
+  useEffect(() => {
+    if (!focusRequest) return undefined;
+    let highlighted: HTMLElement | null = null;
+    let removeTimer: ReturnType<typeof setTimeout> | null = null;
+    const raf = requestAnimationFrame(() => {
+      const main = document.getElementById('main-content');
+      if (!main) return;
+      const target = Array.from(main.querySelectorAll<HTMLElement>('[data-field-path]')).find(
+        (el) => el.getAttribute('data-field-path') === focusRequest.fieldPath
+      );
+      if (target) {
+        target.focus();
+        target.classList.add('repair-target-highlight');
+        highlighted = target;
+        removeTimer = setTimeout(() => target.classList.remove('repair-target-highlight'), 2000);
+      } else {
+        main.focus();
+      }
+    });
+    return () => {
+      cancelAnimationFrame(raf);
+      if (removeTimer) clearTimeout(removeTimer);
+      if (highlighted) highlighted.classList.remove('repair-target-highlight');
+    };
+  }, [focusRequest]);
+
+  // Switch the active tab, optionally focusing a field after it renders (the repair-focus effect
+  // owns focusing the field, so the generic mode-change focus is skipped exactly once).
+  const goToTab = useCallback((tab: DayTabKey, fieldPath?: string) => {
+    setMode(tab);
+    if (fieldPath) {
+      skipNextModeFocusRef.current = true;
+      focusTokenRef.current += 1;
+      setFocusRequest({ fieldPath, token: focusTokenRef.current });
+    } else {
+      setFocusRequest(null);
+    }
+  }, []);
+
+  // Alt+←/→ cycles the four tabs (Export is not in the cycle — it is a header affordance).
+  const cycleTab = useCallback((direction: 'next' | 'prev') => {
+    setMode((cur) => {
+      const idx = TAB_ORDER.indexOf(cur as DayTabKey);
+      const base = idx < 0 ? 0 : idx;
+      if (direction === 'next') return TAB_ORDER[Math.min(base + 1, TAB_ORDER.length - 1)];
+      return TAB_ORDER[Math.max(base - 1, 0)];
+    });
+  }, []);
+  useStepperShortcut(
+    useCallback((action: 'next' | 'prev' | 'add') => {
+      if (action === 'next' || action === 'prev') cycleTab(action);
+    }, [cycleTab])
+  );
+
+  // ── Writers + repairs (mirrors the former stepper) ──
+  const handleFieldUpdate = useCallback((fieldPath: string, value: unknown) => {
+    if (!day || !dayId) return;
+    const pathSegments = fieldPath.split('.');
+    const updated = structuredClone(day) as Record<string, unknown>;
+    let target: Record<string, unknown> = updated;
+    for (let i = 0; i < pathSegments.length - 1; i++) {
+      const segment = pathSegments[i];
+      const child = target[segment];
+      if (child === null || typeof child !== 'object' || Array.isArray(child)) {
+        target[segment] = {};
+      }
+      target = target[segment] as Record<string, unknown>;
+    }
+    target[pathSegments[pathSegments.length - 1]] = value;
+    const topLevelKey = pathSegments[0];
+    actions.updateDay(dayId, { [topLevelKey]: updated[topLevelKey] });
+  }, [day, dayId, actions]);
+
+  const handleRepair = useCallback((issue: RepairableIssue) => {
+    if (!issue?.repairCommand) return;
+    const command = issue.repairCommand as RepairCommand;
+    applyRepairCommand(command, {
+      actions,
+      animalId: ownerKey,
+      dayId,
+      day,
+      animal,
+    } as unknown as RepairCommandContext);
+  }, [actions, animal, ownerKey, dayId, day]);
+
+  const handleSubjectUpdate = useCallback((field: string, value: string) => {
+    if (!animal) return;
+    actions.updateAnimal(ownerKey as string, { subject: { ...getAnimalSubject(animal), [field]: value } });
+  }, [animal, ownerKey, actions]);
+
+  // The readiness bar / Export-panel "Fix" routing: an executable repair runs in place; an
+  // animal-surface issue deep-links the owning setup tab; a day-surface issue switches to the tab
+  // that folds the owning step and focuses the field.
+  const handleFix = useCallback((issue: RepairableIssue) => {
+    if (issue?.repairCommand) {
+      handleRepair(issue);
+      return;
+    }
+    const target = repairTargetForIssue(issue);
+    const focusPath = issue.focusPath || issue.path || issue.instancePath;
+    if (target.surface === 'animal') {
+      if (ownerKey != null) {
+        const base = `#/animal/${encodeURIComponent(ownerKey)}`;
+        window.location.hash = focusPath
+          ? `${base}/${animalSetupTabForFieldPath(focusPath).tab}?field=${encodeURIComponent(focusPath)}`
+          : `${base}/days`;
+      }
+      return;
+    }
+    if (target.surface === 'day') {
+      const tab = TAB_FOR_STEP[target.step ?? ''];
+      if (tab) goToTab(tab, focusPath);
+    }
+    // A `none`/validation/export issue has no in-tab field to focus; the message is shown in the bar.
+  }, [handleRepair, ownerKey, goToTab]);
+
+  // Early returns AFTER all hooks. The not-found message comes from the view-model's shell state.
+  if (!dayId || !day || !animal) {
+    return <ErrorState message={vm.shell.message ?? ''} />;
+  }
+
+  const dayEditorContextValue: DayEditorBundle = {
+    animal,
+    day,
+    mergedDay: mergedDay as Record<string, unknown>,
+    animalDays,
+    onFieldUpdate: handleFieldUpdate,
+    actions: actions as unknown as Record<string, unknown>,
+    animalKey: ownerKey as string,
+  };
+
+  const chips = vm.chips;
+  const dioCopyableSources: CopyableDioSource[] = copyableDioSources;
+
+  return (
+    <div className="day-editor-stepper">
+      {/* Plain div, not <header>: a <header> here maps to the banner landmark, duplicating AppLayout's. */}
+      <div className={styles.frameHeader}>
+        <div className={styles.topRow}>
+          <Breadcrumb items={vm.breadcrumb.items} />
+          <div className={styles.headerActions}>
+            <SaveIndicator persistence={persistence} />
+            <button
+              type="button"
+              className="button-secondary"
+              onClick={() => setMode('export')}
+              aria-pressed={mode === 'export'}
+            >
+              Export
+            </button>
+          </div>
+        </div>
+
+        <h1 className={styles.title}>Day Editor: {ownerKey} - {day.date}</h1>
+
+        <div className={styles.chips}>
+          {chips.configVersion != null && (
+            <span className={styles.chip}>Configuration v{chips.configVersion}</span>
+          )}
+          {chips.isOpto && <span className={`${styles.chip} ${styles.chipOpto}`}>◑ Optogenetics</span>}
+          {chips.carriedFrom && (
+            <span className={`${styles.chip} ${styles.chipCarry}`}>↩ carried from {chips.carriedFrom}</span>
+          )}
+          <StatusPill
+            variant={chips.lifecycle as ComponentProps<typeof StatusPill>['variant']}
+            label={chips.lifecycle === 'ready' ? 'Ready' : undefined}
+          />
+        </div>
+
+        {scopeSummary && (
+          <AnimalScopeCard summary={scopeSummary} editHref={`#/animal/${ownerKey}/days`} />
+        )}
+
+        <ReadinessBar issues={readinessIssues} onFix={handleFix} />
+      </div>
+
+      <div className="day-editor-body">
+        {/* Tab bar: Day / Epochs / Failed channels / DIO. Free navigation; Alt+←/→ cycles. */}
+        <nav className={styles.tabBar} aria-label="Day editor sections">
+          {vm.tabs.map((tab) => (
+            <button
+              key={tab.key}
+              type="button"
+              className={`${styles.tab} ${mode === tab.key ? styles.tabActive : ''}`}
+              aria-current={mode === tab.key ? 'page' : undefined}
+              onClick={() => goToTab(tab.key)}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </nav>
+
+        <main
+          id="main-content"
+          className="day-editor-content"
+          role="main"
+          aria-label="Day editor"
+          tabIndex={-1}
+        >
+          <DayEditorProvider value={dayEditorContextValue}>
+            {mode === 'day' && (
+              <DayTab
+                {...dayEditorContextValue}
+                onSubjectUpdate={handleSubjectUpdate}
+                // DayTab's onRepair is typed `(issue: unknown)`; it forwards the RawCorruptionBanner's
+                // issue (which carries a repairCommand) — narrow it to the executor's input.
+                onRepair={(issue) => handleRepair(issue as RepairableIssue)}
+                focusRequest={focusRequest}
+                overviewFields={vm.overview.fields}
+              />
+            )}
+            {mode === 'epochs' && <TasksEpochsStep {...dayEditorContextValue} />}
+            {mode === 'channels' && (
+              <FailedChannelsTab {...dayEditorContextValue} badChannelMarks={vm.badChannels.marks} />
+            )}
+            {mode === 'dio' && (
+              <DioTab
+                {...dayEditorContextValue}
+                copyableDioSources={dioCopyableSources}
+                carriedFrom={chips.carriedFrom}
+              />
+            )}
+            {mode === 'export' && (
+              <ExportStep
+                {...dayEditorContextValue}
+                issues={vm.issues}
+                exportGate={vm.export}
+                // ExportStep's blocked list dispatches an executable repair; run it in place. (Its
+                // RepairDispatch carries the repairCommand the executor reads.)
+                onRepair={(dispatch) => handleRepair(dispatch as unknown as RepairableIssue)}
+                onNavigate={(stepId, fieldPath) => {
+                  const tab = TAB_FOR_STEP[stepId];
+                  if (tab) goToTab(tab, fieldPath);
+                }}
+              />
+            )}
+          </DayEditorProvider>
+        </main>
+      </div>
+    </div>
+  );
+}

@@ -37,32 +37,29 @@ afterEach(() => {
 });
 
 describe('status conveyed without relying on color', () => {
-  it('each DayEditor section button pairs its status glyph with an accessible status name', async () => {
-    const { container } = await renderRoute(`#/day/${DAY_ID}`);
+  it('the day readiness is conveyed by the readiness bar with text, not color alone', async () => {
+    await renderRoute(`#/day/${DAY_ID}`);
     await screen.findByRole('heading', { name: /day editor/i });
 
-    const sectionButtons = container.querySelectorAll('.section-nav-item');
-    expect(sectionButtons.length).toBeGreaterThan(0);
-
-    sectionButtons.forEach((button) => {
-      // The decorative status glyph is hidden from AT (shape, not color-only)...
-      const icon = button.querySelector('.section-nav-status-icon');
-      expect(icon).not.toBeNull();
+    // The redesigned frame conveys export readiness through the issue-driven readiness bar (a
+    // role=status/alert region with explicit text), not color-coded section-nav glyphs. Its decorative
+    // ✓/⚠ icon is aria-hidden, so the meaning lives in the text.
+    const readiness = screen.getByText(/ready to export|block(s)? export/i);
+    expect(readiness).toBeInTheDocument();
+    const region = readiness.closest('[role="status"], [role="alert"]');
+    expect(region).not.toBeNull();
+    region.querySelectorAll('[aria-hidden="true"]').forEach((icon) => {
       expect(icon).toHaveAttribute('aria-hidden', 'true');
-      // ...and the status is folded into the button's accessible name (aria-label),
-      // mirroring AnimalView's section-nav, so the meaning is never color-only.
-      const ariaLabel = button.getAttribute('aria-label') || '';
-      expect(/complete|incomplete|has errors|not started/i.test(ariaLabel)).toBe(true);
     });
   });
 
-  it('the Devices step health badges expose a non-color status label', async () => {
+  it('the Failed-channels tab health badges expose a non-color status label', async () => {
     const { container } = await renderRoute(`#/day/${DAY_ID}`);
     await screen.findByRole('heading', { name: /day editor/i });
 
-    // Navigate to Devices via the global Alt+ArrowRight shortcut.
+    // Navigate to the Failed channels tab.
     const { fireEvent } = await import('@testing-library/react');
-    fireEvent.keyDown(document.body, { key: 'ArrowRight', altKey: true });
+    fireEvent.click(screen.getByRole('button', { name: 'Failed channels' }));
     await screen.findByRole('heading', { name: /setup & failed channels/i });
 
     const badges = container.querySelectorAll('.status-badge');

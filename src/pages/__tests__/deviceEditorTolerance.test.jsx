@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render } from '@testing-library/react';
-import DevicesStep from '../DayEditor/DevicesStep';
+import FailedChannelsTab from '../DayEditor/FailedChannelsTab';
 
 /**
  * Boundary 4 — components NEVER throw on corrupt loaded state.
@@ -17,7 +17,7 @@ beforeEach(() => {
   vi.stubGlobal('alert', vi.fn());
 });
 
-describe('DevicesStep tolerates corrupt deviceOverrides', () => {
+describe('FailedChannelsTab tolerates corrupt deviceOverrides', () => {
   const ELECTRODE_GROUPS = [
     { id: 0, location: 'CA1', device_type: 'tetrode_12.5', description: 'd', targeted_location: 'CA1', targeted_x: 2.6, targeted_y: -3.8, targeted_z: 1.5, units: 'mm' },
   ];
@@ -40,7 +40,7 @@ describe('DevicesStep tolerates corrupt deviceOverrides', () => {
     const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     expect(() =>
       render(
-        <DevicesStep
+        <FailedChannelsTab
           animal={animal}
           day={{ ...baseDay, deviceOverrides }}
           mergedDay={{ ...animal }}

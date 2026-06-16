@@ -161,7 +161,7 @@ export function AppLayout() {
     // Fire on a VIEW change, AND on a same-view change to a different routed DAY. The day route
     // remounts a keyed editor (see renderView) but keeps view === 'day', so a plain view check would
     // miss #/day/A → #/day/B — leaving keyboard/SR focus + the SR announcement stranded on the prior
-    // day (DayEditorStepper skips focus on its first render, so nothing else compensates). The
+    // day (DayEditorFrame skips focus on its first render, so nothing else compensates). The
     // animal-view :tab / :animalId changes are focus-managed inside AnimalView, so they are
     // deliberately NOT handled here (doing so would fight AnimalView's panel-focus effect).
     const viewChanged = prev.view !== currentRoute.view;

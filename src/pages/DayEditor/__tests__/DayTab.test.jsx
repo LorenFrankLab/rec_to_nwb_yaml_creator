@@ -1,10 +1,9 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import OverviewStep from '../OverviewStep';
-import { parseHashRoute } from '../../../hooks/useHashRouter';
+import DayTab from '../DayTab';
 
-describe('OverviewStep', () => {
+describe('DayTab', () => {
   const mockAnimal = {
     id: 'remy',
     subject: {
@@ -45,7 +44,7 @@ describe('OverviewStep', () => {
     const corruptDay = { date: 42, session: 'nope' };
     expect(() =>
       render(
-        <OverviewStep animal={corruptAnimal} day={corruptDay} mergedDay={{}} onFieldUpdate={vi.fn()} onSubjectUpdate={vi.fn()} />
+        <DayTab animal={corruptAnimal} day={corruptDay} mergedDay={{}} onFieldUpdate={vi.fn()} onSubjectUpdate={vi.fn()} />
       )
     ).not.toThrow();
     // The Session Metadata heading still renders (step is usable, not blanked).
@@ -56,11 +55,11 @@ describe('OverviewStep', () => {
 
   it('tolerates a null mergedDay (the merge-failed fail-closed path) without warning', () => {
     // DayEditorStepper passes mergedDay=null when the merge throws (corrupt animal config).
-    // OverviewStep must render that fail-closed state without a required-prop warning.
+    // DayTab must render that fail-closed state without a required-prop warning.
     const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     expect(() =>
       render(
-        <OverviewStep animal={mockAnimal} day={mockDay} mergedDay={null} onFieldUpdate={vi.fn()} onSubjectUpdate={vi.fn()} />
+        <DayTab animal={mockAnimal} day={mockDay} mergedDay={null} onFieldUpdate={vi.fn()} onSubjectUpdate={vi.fn()} />
       )
     ).not.toThrow();
     expect(screen.getByRole('heading', { name: /session metadata/i })).toBeInTheDocument();
@@ -72,7 +71,7 @@ describe('OverviewStep', () => {
     const user = userEvent.setup();
     const onRepair = vi.fn();
     render(
-      <OverviewStep
+      <DayTab
         animal={mockAnimal}
         day={{ date: '2023-06-22', session: 'corrupt' }}
         mergedDay={{}}
@@ -91,7 +90,7 @@ describe('OverviewStep', () => {
   it('displays inherited fields as read-only when expanded', async () => {
     const user = userEvent.setup();
     render(
-      <OverviewStep
+      <DayTab
         animal={mockAnimal}
         day={mockDay}
         mergedDay={mockMergedDay}
@@ -118,7 +117,7 @@ describe('OverviewStep', () => {
 
   it('displays editable session fields', () => {
     render(
-      <OverviewStep
+      <DayTab
         animal={mockAnimal}
         day={mockDay}
         mergedDay={mockMergedDay}
@@ -135,7 +134,7 @@ describe('OverviewStep', () => {
     const onFieldUpdate = vi.fn();
 
     render(
-      <OverviewStep
+      <DayTab
         animal={mockAnimal}
         day={mockDay}
         mergedDay={mockMergedDay}
@@ -154,7 +153,7 @@ describe('OverviewStep', () => {
     const onFieldUpdate = vi.fn();
 
     render(
-      <OverviewStep
+      <DayTab
         animal={mockAnimal}
         day={mockDay}
         mergedDay={mockMergedDay}
@@ -175,7 +174,7 @@ describe('OverviewStep', () => {
 
   it('shows session ID as read-only with help text', () => {
     render(
-      <OverviewStep
+      <DayTab
         animal={mockAnimal}
         day={mockDay}
         mergedDay={mockMergedDay}
@@ -205,7 +204,7 @@ describe('OverviewStep', () => {
       { fieldPath: 'experimenters.institution', label: 'Institution', value: 'VM Inst', source: 'inherited', inheritedFrom: 'animal', readOnly: true },
     ];
     render(
-      <OverviewStep
+      <DayTab
         animal={mockAnimal}
         day={mockDay}
         mergedDay={mockMergedDay}
@@ -235,7 +234,7 @@ describe('OverviewStep', () => {
 
   it('marks required editable fields with asterisks', () => {
     render(
-      <OverviewStep
+      <DayTab
         animal={mockAnimal}
         day={mockDay}
         mergedDay={mockMergedDay}
@@ -252,7 +251,7 @@ describe('OverviewStep', () => {
   it('shows "Edit Animal" links when inherited metadata is expanded', async () => {
     const user = userEvent.setup();
     render(
-      <OverviewStep
+      <DayTab
         animal={mockAnimal}
         day={mockDay}
         mergedDay={mockMergedDay}
@@ -272,45 +271,14 @@ describe('OverviewStep', () => {
     });
   });
 
-  it('breadcrumb and Edit-Animal hrefs resolve to the Animal Editor route', async () => {
-    render(
-      <OverviewStep
-        animal={mockAnimal}
-        day={mockDay}
-        mergedDay={mockMergedDay}
-        onFieldUpdate={vi.fn()}
-      />
-    );
-
-    const animalCrumb = screen.getByRole('link', { name: /Animal: remy/i });
-    expect(animalCrumb).toHaveAttribute('href', '#/animal/remy/days');
-
-    // parseHashRoute on that href yields the tabbed animal-view (Phase 3a re-points the breadcrumb
-    // off the legacy /editor route), not isUnknownRoute legacy.
-    const route = parseHashRoute('#/animal/remy/days');
-    expect(route.view).toBe('animal-view');
-    expect(route.isUnknownRoute).toBeFalsy();
-  });
-
-  it('shows breadcrumb navigation', () => {
-    render(
-      <OverviewStep
-        animal={mockAnimal}
-        day={mockDay}
-        mergedDay={mockMergedDay}
-        onFieldUpdate={vi.fn()}
-      />
-    );
-
-    expect(screen.getByRole('navigation', { name: /breadcrumb/i })).toBeInTheDocument();
-    expect(screen.getByText(/Animal: remy/i)).toBeInTheDocument();
-    expect(screen.getByText(/Day: 2023-06-22/i)).toBeInTheDocument();
-  });
+  // The Workspace › Animal › Day breadcrumb moved to the frame header (DayEditorFrame); the Day tab
+  // no longer renders it (covered by DayFrame.test.jsx). The Edit-Animal links inside the inherited
+  // section are still asserted by 'shows "Edit Animal" links when inherited metadata is expanded'.
 
   it('groups fields in sections', async () => {
     const user = userEvent.setup();
     render(
-      <OverviewStep
+      <DayTab
         animal={mockAnimal}
         day={mockDay}
         mergedDay={mockMergedDay}
@@ -338,7 +306,7 @@ describe('OverviewStep', () => {
 
   it('uses correct ARIA attributes for required fields', () => {
     render(
-      <OverviewStep
+      <DayTab
         animal={mockAnimal}
         day={mockDay}
         mergedDay={mockMergedDay}
@@ -353,7 +321,7 @@ describe('OverviewStep', () => {
 
   it('marks experiment description as required (non-empty; written to the NWB file)', () => {
     render(
-      <OverviewStep
+      <DayTab
         animal={mockAnimal}
         day={mockDay}
         mergedDay={mockMergedDay}
@@ -368,7 +336,7 @@ describe('OverviewStep', () => {
   it('shows an inline error when experiment description is cleared (validated at the merged path)', async () => {
     const user = userEvent.setup();
     render(
-      <OverviewStep
+      <DayTab
         animal={mockAnimal}
         day={{ ...mockDay, session: { ...mockDay.session, experiment_description: 'Some experiment' } }}
         mergedDay={{ ...mockMergedDay, experiment_description: 'Some experiment' }}
@@ -387,7 +355,7 @@ describe('OverviewStep', () => {
 
   it('renders textarea for long text fields', () => {
     render(
-      <OverviewStep
+      <DayTab
         animal={mockAnimal}
         day={mockDay}
         mergedDay={mockMergedDay}
@@ -403,7 +371,7 @@ describe('OverviewStep', () => {
     const expand = async (onSubjectUpdate) => {
       const user = userEvent.setup();
       render(
-        <OverviewStep
+        <DayTab
           animal={mockAnimal}
           day={mockDay}
           mergedDay={mockMergedDay}
@@ -435,7 +403,7 @@ describe('OverviewStep', () => {
       const onFieldUpdate = vi.fn();
       const onSubjectUpdate = vi.fn();
       render(
-        <OverviewStep
+        <DayTab
           animal={mockAnimal}
           day={mockDay}
           mergedDay={mockMergedDay}
@@ -455,7 +423,7 @@ describe('OverviewStep', () => {
     it('shows the day-owned weight and labels it as the value exported for this day', () => {
       const dayWithWeight = { ...mockDay, session: { ...mockDay.session, weight: 500 } };
       render(
-        <OverviewStep
+        <DayTab
           animal={mockAnimal}
           day={dayWithWeight}
           mergedDay={mockMergedDay}
@@ -471,7 +439,7 @@ describe('OverviewStep', () => {
       const animalWithWeight = { ...mockAnimal, subject: { ...mockAnimal.subject, weight: 450 } };
       const dayNoWeight = { ...mockDay, session: { ...mockDay.session, weight: undefined } };
       render(
-        <OverviewStep
+        <DayTab
           animal={animalWithWeight}
           day={dayNoWeight}
           mergedDay={mockMergedDay}
@@ -522,7 +490,7 @@ describe('OverviewStep', () => {
       // section must open so the control is actually rendered (and focusable). (Weight is no
       // longer a subject field — it is a day fact in Session Metadata, Phase 8.7 Task 2.5.)
       render(
-        <OverviewStep
+        <DayTab
           animal={mockAnimal}
           day={mockDay}
           mergedDay={mockMergedDay}
@@ -539,7 +507,7 @@ describe('OverviewStep', () => {
 
     it('does not auto-expand for a non-subject focus target', () => {
       render(
-        <OverviewStep
+        <DayTab
           animal={mockAnimal}
           day={mockDay}
           mergedDay={mockMergedDay}

@@ -83,18 +83,17 @@ describe('axe-a11y (configured workspace, all routes)', () => {
     await expectNoViolations(container);
   });
 
-  describe('DayEditor steps', () => {
-    // Section-nav display labels (richer than the bare step ids).
-    const steps = ['Overview', 'Devices & Failed Channels', 'Tasks & Epochs', 'Behavioral Events', 'Validation', 'Export'];
+  describe('DayEditor tabs', () => {
+    // The redesigned frame's 4 tab labels plus the transitional Export panel (a header action).
+    const tabs = ['Day', 'Epochs', 'Failed channels', 'DIO', 'Export'];
 
-    it.each(steps)('step %s has no violations', async (stepLabel) => {
+    it.each(tabs)('tab %s has no violations', async (tabLabel) => {
       const user = userEvent.setup();
       const { container } = await renderRoute(`#/day/${DAY_ID}`);
       await screen.findByRole('heading', { name: /day editor/i });
 
-      // Navigate to the requested section via its section-nav button.
-      const stepButton = screen.getByRole('button', { name: new RegExp(`^${stepLabel}`, 'i') });
-      await user.click(stepButton);
+      // Navigate to the requested tab (or the Export panel) via its button.
+      await user.click(screen.getByRole('button', { name: new RegExp(`^${tabLabel}$`, 'i') }));
 
       await expectNoViolations(container);
     });

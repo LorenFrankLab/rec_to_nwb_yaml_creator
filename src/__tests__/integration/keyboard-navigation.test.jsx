@@ -3,7 +3,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, screen, waitFor, fireEvent, act } from '@testing-library/react';
+import { render, screen, waitFor, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { StoreProvider } from '../../state/StoreContext';
 import { App } from '../../App';
@@ -183,8 +183,8 @@ describe('Keyboard Navigation Accessibility', () => {
         await Promise.resolve();
       });
 
-      // Keyboard-advance the stepper from Overview to Devices (Alt+ArrowRight).
-      fireEvent.keyDown(document.body, { key: 'ArrowRight', altKey: true });
+      // Open the Failed channels tab (the electrode-group disclosures live there).
+      await user.click(screen.getByRole('button', { name: 'Failed channels' }));
       await screen.findByRole('heading', { name: /setup & failed channels/i });
 
       // Each electrode group is a native <details><summary> disclosure — nested,

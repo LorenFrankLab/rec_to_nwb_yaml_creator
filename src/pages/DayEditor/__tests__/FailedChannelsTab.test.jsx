@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import DevicesStep from '../DevicesStep';
+import FailedChannelsTab from '../FailedChannelsTab';
 
-describe('DevicesStep', () => {
+describe('FailedChannelsTab', () => {
   const ELECTRODE_GROUPS = [
     {
       id: 0,
@@ -36,7 +36,7 @@ describe('DevicesStep', () => {
 
   /**
    * Wrap a devices object into a single-version configuration history, the shape
-   * `resolveDayConfig` (which DevicesStep now reads) requires.
+   * `resolveDayConfig` (which FailedChannelsTab now reads) requires.
    *
    * @param {object} devices - `{ electrode_groups, ntrode_electrode_group_channel_map }`.
    * @returns {object[]} A one-entry configurationHistory.
@@ -94,7 +94,7 @@ describe('DevicesStep', () => {
       },
     };
     render(
-      <DevicesStep
+      <FailedChannelsTab
         animal={twoSystemAnimal}
         day={mockDay}
         mergedDay={mockMergedDay}
@@ -119,7 +119,7 @@ describe('DevicesStep', () => {
 
     it('renders the animal full camera catalog as a checklist', () => {
       render(
-        <DevicesStep
+        <FailedChannelsTab
           animal={animalWithCameras}
           day={mockDay}
           mergedDay={mockMergedDay}
@@ -134,7 +134,7 @@ describe('DevicesStep', () => {
     it('shows a task-referenced camera as checked and disabled', () => {
       const dayWithTaskCamera = { ...mockDay, tasks: [{ camera_id: [1] }] };
       render(
-        <DevicesStep
+        <FailedChannelsTab
           animal={animalWithCameras}
           day={dayWithTaskCamera}
           mergedDay={mockMergedDay}
@@ -153,7 +153,7 @@ describe('DevicesStep', () => {
       const catalogDay = { ...mockDay, taskInstances: [{ taskTypeId: 'tasktype-0', task_epochs: [1] }] };
       const catalogMerged = { ...mockMergedDay, tasks: [{ task_name: 'sleep', camera_id: [1] }] };
       render(
-        <DevicesStep
+        <FailedChannelsTab
           animal={animalWithCameras}
           day={catalogDay}
           mergedDay={catalogMerged}
@@ -168,7 +168,7 @@ describe('DevicesStep', () => {
     it('checking a non-referenced camera writes cameras_used with that id', async () => {
       const user = userEvent.setup();
       render(
-        <DevicesStep
+        <FailedChannelsTab
           animal={animalWithCameras}
           day={mockDay}
           mergedDay={mockMergedDay}
@@ -182,7 +182,7 @@ describe('DevicesStep', () => {
     it('shows a pre-existing explicit (non-referenced) camera as checked AND enabled, no task/video hint', () => {
       const dayWithExplicit = { ...mockDay, cameras_used: [2] };
       render(
-        <DevicesStep
+        <FailedChannelsTab
           animal={animalWithCameras}
           day={dayWithExplicit}
           mergedDay={mockMergedDay}
@@ -200,7 +200,7 @@ describe('DevicesStep', () => {
       const user = userEvent.setup();
       const dayWithExplicit = { ...mockDay, cameras_used: [2] };
       render(
-        <DevicesStep
+        <FailedChannelsTab
           animal={animalWithCameras}
           day={dayWithExplicit}
           mergedDay={mockMergedDay}
@@ -217,7 +217,7 @@ describe('DevicesStep', () => {
       // is free. Toggling B on must write only [2] — A's id is covered by the union, not stored.
       const dayWithTaskA = { ...mockDay, tasks: [{ camera_id: [0] }] };
       render(
-        <DevicesStep
+        <FailedChannelsTab
           animal={animalWithCameras}
           day={dayWithTaskA}
           mergedDay={mockMergedDay}
@@ -234,7 +234,7 @@ describe('DevicesStep', () => {
 
   it('renders section heading', () => {
     render(
-      <DevicesStep
+      <FailedChannelsTab
         animal={mockAnimal}
         day={mockDay}
         mergedDay={mockMergedDay}
@@ -248,7 +248,7 @@ describe('DevicesStep', () => {
   it('renders with integer IDs without PropType warnings', () => {
     const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     render(
-      <DevicesStep
+      <FailedChannelsTab
         animal={mockAnimal}
         day={mockDay}
         mergedDay={mockMergedDay}
@@ -264,7 +264,7 @@ describe('DevicesStep', () => {
 
   it('displays the configuration-version notice with a link to shared animal electrode setup', () => {
     render(
-      <DevicesStep
+      <FailedChannelsTab
         animal={mockAnimal}
         day={mockDay}
         mergedDay={mockMergedDay}
@@ -282,7 +282,7 @@ describe('DevicesStep', () => {
 
   it('renders all electrode groups as collapsed details elements', () => {
     render(
-      <DevicesStep
+      <FailedChannelsTab
         animal={mockAnimal}
         day={mockDay}
         mergedDay={mockMergedDay}
@@ -318,7 +318,7 @@ describe('DevicesStep', () => {
     };
 
     render(
-      <DevicesStep
+      <FailedChannelsTab
         animal={mockAnimal}
         day={dayWithNoFailures}
         mergedDay={mockMergedDay}
@@ -332,7 +332,7 @@ describe('DevicesStep', () => {
 
   it('shows status badge with failed channel count', () => {
     render(
-      <DevicesStep
+      <FailedChannelsTab
         animal={mockAnimal}
         day={mockDay}
         mergedDay={mockMergedDay}
@@ -347,7 +347,7 @@ describe('DevicesStep', () => {
     const user = userEvent.setup();
 
     render(
-      <DevicesStep
+      <FailedChannelsTab
         animal={mockAnimal}
         day={mockDay}
         mergedDay={mockMergedDay}
@@ -370,7 +370,7 @@ describe('DevicesStep', () => {
     const user = userEvent.setup();
 
     render(
-      <DevicesStep
+      <FailedChannelsTab
         animal={mockAnimal}
         day={mockDay}
         mergedDay={mockMergedDay}
@@ -394,7 +394,7 @@ describe('DevicesStep', () => {
     const user = userEvent.setup();
 
     render(
-      <DevicesStep
+      <FailedChannelsTab
         animal={mockAnimal}
         day={mockDay}
         mergedDay={mockMergedDay}
@@ -436,7 +436,7 @@ describe('DevicesStep', () => {
     };
 
     render(
-      <DevicesStep
+      <FailedChannelsTab
         animal={animalWithInheritedBadChannels}
         day={dayWithoutOverride}
         mergedDay={mockMergedDay}
@@ -465,7 +465,7 @@ describe('DevicesStep', () => {
       { ntrodeId: '1', channel: 3, marked: true, priorBad: false, requiresAck: false, acked: false },
     ];
     const { container } = render(
-      <DevicesStep
+      <FailedChannelsTab
         animal={mockAnimal}
         day={mockDay}
         mergedDay={mockMergedDay}
@@ -496,7 +496,7 @@ describe('DevicesStep', () => {
     };
 
     render(
-      <DevicesStep
+      <FailedChannelsTab
         animal={animalWithNoGroups}
         day={mockDay}
         mergedDay={mockMergedDay}
@@ -525,7 +525,7 @@ describe('DevicesStep', () => {
     };
 
     render(
-      <DevicesStep
+      <FailedChannelsTab
         animal={mockAnimal}
         day={dayWithAllFailed}
         mergedDay={mockMergedDay}
@@ -561,7 +561,7 @@ describe('DevicesStep', () => {
     };
 
     render(
-      <DevicesStep
+      <FailedChannelsTab
         animal={animalWithNtrode}
         day={dayWithInvalidOverride}
         mergedDay={mockMergedDay}
@@ -582,7 +582,7 @@ describe('DevicesStep', () => {
     };
 
     render(
-      <DevicesStep
+      <FailedChannelsTab
         animal={mockAnimal}
         day={dayWithoutOverrides}
         mergedDay={mockMergedDay}
@@ -598,7 +598,7 @@ describe('DevicesStep', () => {
     const user = userEvent.setup();
 
     render(
-      <DevicesStep
+      <FailedChannelsTab
         animal={mockAnimal}
         day={mockDay}
         mergedDay={mockMergedDay}
@@ -623,7 +623,7 @@ describe('DevicesStep', () => {
     const user = userEvent.setup();
 
     render(
-      <DevicesStep
+      <FailedChannelsTab
         animal={mockAnimal}
         day={mockDay}
         mergedDay={mockMergedDay}
@@ -652,7 +652,7 @@ describe('DevicesStep', () => {
     };
 
     render(
-      <DevicesStep
+      <FailedChannelsTab
         animal={animalWithMissingMaps}
         day={mockDay}
         mergedDay={mockMergedDay}
@@ -677,7 +677,7 @@ describe('DevicesStep', () => {
 
   it('uses aria-label on status badges for accessibility', () => {
     render(
-      <DevicesStep
+      <FailedChannelsTab
         animal={mockAnimal}
         day={mockDay}
         mergedDay={mockMergedDay}
@@ -715,7 +715,7 @@ describe('DevicesStep', () => {
 
     it('renders the pinned snapshot ntrode list on a historical day, not live animal.devices', () => {
       render(
-        <DevicesStep
+        <FailedChannelsTab
           animal={twoVersionAnimal}
           day={historicalDay}
           mergedDay={mockMergedDay}
@@ -731,7 +731,7 @@ describe('DevicesStep', () => {
 
     it('shows the pinned configuration version and marks it historical', () => {
       render(
-        <DevicesStep
+        <FailedChannelsTab
           animal={twoVersionAnimal}
           day={historicalDay}
           mergedDay={mockMergedDay}
@@ -747,7 +747,7 @@ describe('DevicesStep', () => {
     it('marks the latest configuration as latest', () => {
       const latestDay = { ...mockDay, configurationVersion: 2, deviceOverrides: { bad_channels: {} } };
       render(
-        <DevicesStep
+        <FailedChannelsTab
           animal={twoVersionAnimal}
           day={latestDay}
           mergedDay={mockMergedDay}

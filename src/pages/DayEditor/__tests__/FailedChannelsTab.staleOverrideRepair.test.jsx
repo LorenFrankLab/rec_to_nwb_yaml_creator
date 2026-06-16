@@ -1,20 +1,20 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import DevicesStep from '../DevicesStep';
+import FailedChannelsTab from '../FailedChannelsTab';
 
 /**
  * MEDIUM review finding 3 — stale bad-channel override is visible but not repairable.
  *
  * A `stale_bad_channel_override` issue (path `deviceOverrides.bad_channels`, e.g. key
- * `999` with no resolved ntrode) routes to the Devices step, but DevicesStep only
+ * `999` with no resolved ntrode) routes to the Devices step, but FailedChannelsTab only
  * renders controls for RESOLVED ntrodes — the stale key has no row, no anchor, no
- * clear action (a repair dead-end). DevicesStep must detect override keys that match
+ * clear action (a repair dead-end). FailedChannelsTab must detect override keys that match
  * NO resolved ntrode_id and render a visible, focusable repair control carrying
  * `data-field-path="deviceOverrides.bad_channels"` whose click removes only that key
  * via a single atomic `onFieldUpdate('deviceOverrides.bad_channels', nextObject)`.
  */
-describe('DevicesStep — stale bad-channel override repair (Finding 3)', () => {
+describe('FailedChannelsTab — stale bad-channel override repair (Finding 3)', () => {
   const ELECTRODE_GROUPS = [
     {
       id: 0,
@@ -60,7 +60,7 @@ describe('DevicesStep — stale bad-channel override repair (Finding 3)', () => 
     };
 
     render(
-      <DevicesStep
+      <FailedChannelsTab
         animal={mockAnimal}
         day={day}
         mergedDay={mockMergedDay}
@@ -83,7 +83,7 @@ describe('DevicesStep — stale bad-channel override repair (Finding 3)', () => 
     };
 
     render(
-      <DevicesStep
+      <FailedChannelsTab
         animal={mockAnimal}
         day={day}
         mergedDay={mockMergedDay}
@@ -105,7 +105,7 @@ describe('DevicesStep — stale bad-channel override repair (Finding 3)', () => 
     };
 
     render(
-      <DevicesStep
+      <FailedChannelsTab
         animal={mockAnimal}
         day={day}
         mergedDay={mockMergedDay}
@@ -129,7 +129,7 @@ describe('DevicesStep — stale bad-channel override repair (Finding 3)', () => 
     };
 
     render(
-      <DevicesStep
+      <FailedChannelsTab
         animal={mockAnimal}
         day={day}
         mergedDay={mockMergedDay}
@@ -145,10 +145,10 @@ describe('DevicesStep — stale bad-channel override repair (Finding 3)', () => 
 /**
  * Round-6 review findings — every malformed `deviceOverrides` shape that blocks export
  * (surfaced by `dayOverrideIssues`) must also be REPAIRABLE on the Devices step, not
- * just gated. The merge declines to apply these, so they have no editor row; DevicesStep
+ * just gated. The merge declines to apply these, so they have no editor row; FailedChannelsTab
  * renders a focusable removal control for each.
  */
-describe('DevicesStep — malformed override repair (round-6)', () => {
+describe('FailedChannelsTab — malformed override repair (round-6)', () => {
   const ELECTRODE_GROUPS = [
     {
       id: 0, location: 'CA1', device_type: 'tetrode_12.5', description: 'Dorsal CA1 tetrode',
@@ -172,7 +172,7 @@ describe('DevicesStep — malformed override repair (round-6)', () => {
   beforeEach(() => { onFieldUpdate = vi.fn(); });
 
   const renderWith = (deviceOverrides) =>
-    render(<DevicesStep animal={mockAnimal} day={{ ...baseDay, deviceOverrides }} mergedDay={mockMergedDay} onFieldUpdate={onFieldUpdate} />);
+    render(<FailedChannelsTab animal={mockAnimal} day={{ ...baseDay, deviceOverrides }} mergedDay={mockMergedDay} onFieldUpdate={onFieldUpdate} />);
 
   it('offers a per-key removal for a malformed (non-array) VALUE under a valid ntrode key', async () => {
     const user = userEvent.setup();
@@ -219,7 +219,7 @@ describe('DevicesStep — malformed override repair (round-6)', () => {
  *     contents err, the errors mis-route to the Animal Editor. Offer a day-surface revert.
  *   - Medium 1: the removal controls were skipped in the no-electrode-groups empty state.
  */
-describe('DevicesStep — round-7 override removal completeness', () => {
+describe('FailedChannelsTab — round-7 override removal completeness', () => {
   const ELECTRODE_GROUPS = [
     {
       id: 0, location: 'CA1', device_type: 'tetrode_12.5', description: 'Dorsal CA1 tetrode',
@@ -242,7 +242,7 @@ describe('DevicesStep — round-7 override removal completeness', () => {
   beforeEach(() => { onFieldUpdate = vi.fn(); });
 
   const renderWith = (animal, deviceOverrides) =>
-    render(<DevicesStep animal={animal} day={{ ...baseDay, deviceOverrides }} mergedDay={{ ...animal }} onFieldUpdate={onFieldUpdate} />);
+    render(<FailedChannelsTab animal={animal} day={{ ...baseDay, deviceOverrides }} mergedDay={{ ...animal }} onFieldUpdate={onFieldUpdate} />);
 
   it('High 1: offers a whole-deviceOverrides removal for a non-record top-level override', async () => {
     const user = userEvent.setup();
@@ -279,7 +279,7 @@ describe('DevicesStep — round-7 override removal completeness', () => {
     // closed with an Animal-Editor link, not throw (resolveDayConfig raises by design).
     const corruptAnimal = { id: 'test-animal', devices: {}, configurationHistory: 'corrupt' };
     expect(() =>
-      render(<DevicesStep animal={corruptAnimal} day={baseDay} mergedDay={{}} onFieldUpdate={onFieldUpdate} />)
+      render(<FailedChannelsTab animal={corruptAnimal} day={baseDay} mergedDay={{}} onFieldUpdate={onFieldUpdate} />)
     ).not.toThrow();
     expect(screen.getByText(/device configuration is missing or corrupt/i)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /configure devices in animal setup/i })).toBeInTheDocument();

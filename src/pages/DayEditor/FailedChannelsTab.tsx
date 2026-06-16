@@ -36,17 +36,17 @@ import './DayEditor.scss';
  * Reads its inputs from {@link DayEditorContext} inside the Day Editor; an isolated render may
  * pass the same fields as props (the context hook falls back to them).
  */
-interface DevicesStepProps extends DayEditorBundle {
+interface FailedChannelsTabProps extends DayEditorBundle {
   /**
    * The view-model's per-channel bad-channel mark state (`vm.badChannels.marks`), threaded by the
-   * DayEditorStepper. The bad-channel monotonicity un-mark gate (which prior-bad channels need an
+   * DayEditorFrame. The bad-channel monotonicity un-mark gate (which prior-bad channels need an
    * acknowledgement) is read from it; an isolated render that omits it falls back to recomputing the
    * same state from the monotonicity domain.
    */
   badChannelMarks?: BadChannelMarkViewModel[];
 }
 
-export default function DevicesStep(props: DevicesStepProps) {
+export default function FailedChannelsTab(props: FailedChannelsTabProps) {
   const {
     animal,
     day,
@@ -57,7 +57,7 @@ export default function DevicesStep(props: DevicesStepProps) {
     actions = undefined,
   } = useDayEditorContext(props);
   const { badChannelMarks } = props;
-  // The store OWNER KEY (resolved by DayEditorStepper). Used for animal-editor links and the
+  // The store OWNER KEY (resolved by DayEditorFrame). Used for animal-editor links and the
   // reconfiguration write so a stale/missing `animal.id` record field can't misroute them; falls
   // back to `animal.id` for isolated renders that don't pass it.
   const ownerKey = animalKey ?? animal?.id;
