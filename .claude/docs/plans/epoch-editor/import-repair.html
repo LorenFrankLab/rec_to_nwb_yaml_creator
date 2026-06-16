@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Import metadata YAML</title>
+<style>
+  :root{
+    --bg:#f4f6f8; --panel:#fff; --ink:#161a1d; --muted:#69727b; --faint:#9aa2ab;
+    --line:#e4e7eb; --line2:#eef1f4; --accent:#2f6fae; --accent-d:#255b91;
+    --ok:#1f8a4c; --okbg:#eaf6ee; --warn:#b8770a; --warnbg:#fbf3e3; --bad:#c23b3b; --badbg:#fbecec; --radius:10px;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font:14px/1.5 -apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--ink)}
+  .top{background:#fff;border-bottom:1px solid var(--line);padding:10px 30px;display:flex;align-items:center;gap:10px}
+  .mark{width:22px;height:22px;border-radius:6px;background:linear-gradient(135deg,var(--accent),#5b9bd6)}
+  .crumb{font-size:13px;color:var(--muted)}.crumb a{color:var(--muted);text-decoration:none}.crumb b{color:var(--ink)}
+  .wrap{max-width:840px;margin:22px auto;padding:0 24px}
+  h1{font-size:22px;margin:0 0 4px;letter-spacing:-.01em}
+  .lede{color:var(--muted);font-size:13.5px;margin:0 0 18px;max-width:620px}
+  .btn{font:inherit;border:1px solid var(--line);background:#fff;border-radius:8px;padding:8px 13px;cursor:pointer;color:var(--ink);font-size:13px}
+  .btn:hover{border-color:var(--accent);color:var(--accent)}
+  .btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}.btn.primary:hover{background:var(--accent-d)}
+  .btn.sm{padding:4px 9px;font-size:12px}
+  .btn[disabled]{opacity:.5;cursor:not-allowed}
+  .card{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:15px 17px;margin-bottom:14px}
+  .card h3{margin:0 0 10px;font-size:14px}
+  .filerow{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+  .filerow .fn{font-family:ui-monospace,Menlo,monospace;font-weight:600;font-size:13.5px}
+  .filerow .change{font-size:12px;color:var(--accent);cursor:pointer}
+  .parsed{font-size:13px;color:var(--muted);margin-bottom:12px}
+  .decide{background:#f7faff;border:1px solid #d7e6f4;border-radius:8px;padding:11px 13px;font-size:13px}
+  .decide label{display:block;margin-bottom:6px;cursor:pointer}.decide label:last-child{margin-bottom:0}
+  .decide .hi{font-weight:600;color:#2f5e8c}
+  .sec-h{display:flex;align-items:center;gap:8px;margin:18px 0 8px}
+  .sec-h h3{margin:0;font-size:14px}
+  .count{font-size:12px;font-weight:600;border-radius:999px;padding:2px 9px}
+  .count.warn{background:var(--warnbg);color:var(--warn)}.count.bad{background:var(--badbg);color:var(--bad)}
+  .flag{display:flex;align-items:flex-start;gap:12px;padding:11px 14px;border:1px solid var(--line);border-radius:var(--radius);margin-bottom:8px;background:#fff}
+  .flag .body{flex:1}
+  .flag .ttl{font-size:13.5px;font-weight:600}
+  .flag .det{font-size:12.5px;color:var(--muted);margin-top:2px}
+  .flag .det .was{font-family:ui-monospace,Menlo,monospace;color:var(--bad);text-decoration:line-through}
+  .flag .det .now{font-family:ui-monospace,Menlo,monospace;color:var(--ok);font-weight:600}
+  .flag .why{font-size:11.5px;color:var(--faint);margin-top:3px}
+  .flag .act{display:flex;gap:6px;flex-shrink:0}
+  .flag.req{border-color:#f0d79a;background:var(--warnbg)}
+  .flag.req .ttl{color:#7a4f06}
+  .auto{font-size:12.5px;color:var(--muted);background:var(--line2);border-radius:8px;padding:10px 12px;margin-top:6px}
+  .auto b{color:#3c444d}
+  .actions{display:flex;gap:8px;align-items:center;margin-top:18px}
+  .actions .spacer{flex:1}
+  .blocker{font-size:12.5px;color:var(--warn)}
+</style>
+</head>
+<body>
+  <div class="top"><span class="mark"></span><div class="crumb"><a href="animals.html">Animals</a> › <b>Import</b></div></div>
+
+  <div class="wrap">
+    <h1>Import metadata YAML</h1>
+    <p class="lede">We read the file, map its fields, and flag anything that won't validate — with a suggested fix.
+      Nothing is changed until you import; you accept or edit each one.</p>
+
+    <div class="card">
+      <div class="filerow"><span class="fn">20200212_chimi.yml</span><span class="change">Choose a different file</span></div>
+      <div class="parsed">Parsed: subject <b>chimi</b> · 33 electrode groups · 18 behavioral events · sleep + spatial-bandit tasks · 1 recording day (2020-02-12).</div>
+      <div class="decide">
+        <label><input type="radio" name="dest" checked> <span class="hi">New animal "chimi"</span> — no animal named "chimi" exists yet.</label>
+        <label><input type="radio" name="dest"> Add as a recording day of an existing animal… <span style="color:var(--faint)">(match by subject ID)</span></label>
+      </div>
+    </div>
+
+    <div class="sec-h"><h3>Needs attention</h3><span class="count warn">5</span></div>
+
+    <div class="flag">
+      <div class="body"><div class="ttl">subject.species</div>
+        <div class="det"><span class="was">Rat</span> → <span class="now">Rattus norvegicus</span></div>
+        <div class="why">DANDI rejects free text — must be a Latin binomial.</div></div>
+      <div class="act"><button class="btn sm primary">Accept</button><button class="btn sm">Edit</button></div>
+    </div>
+    <div class="flag">
+      <div class="body"><div class="ttl">subject.sex</div>
+        <div class="det"><span class="was">Male</span> → <span class="now">M</span></div>
+        <div class="why">NWB/DANDI expect a single letter.</div></div>
+      <div class="act"><button class="btn sm primary">Accept</button><button class="btn sm">Edit</button></div>
+    </div>
+    <div class="flag">
+      <div class="body"><div class="ttl">subject.weight</div>
+        <div class="det"><span class="was">"541g"</span> → <span class="now">541</span> <span class="now">g</span></div>
+        <div class="why">Weight must be a number; unit is separate.</div></div>
+      <div class="act"><button class="btn sm primary">Accept</button><button class="btn sm">Edit</button></div>
+    </div>
+    <div class="flag">
+      <div class="body"><div class="ttl">electrode_groups — location</div>
+        <div class="det"><span class="was">None</span> ×8 · <span class="was">NotInBrain</span> ×5</div>
+        <div class="why">Not brain regions — they'd create junk Spyglass entries. Mark these groups unused, or set a real location.</div></div>
+      <div class="act"><button class="btn sm">Review 13 →</button></div>
+    </div>
+    <div class="flag">
+      <div class="body"><div class="ttl">experimenter_name</div>
+        <div class="det"><span class="was">Alison Comrie</span> → <span class="now">Comrie, Alison</span> (list)</div>
+        <div class="why">Stored as a list, "Last, First". Confirm the name order.</div></div>
+      <div class="act"><button class="btn sm primary">Accept</button><button class="btn sm">Edit</button></div>
+    </div>
+
+    <div class="sec-h"><h3>Required, but missing</h3><span class="count bad">1</span></div>
+    <div class="flag req">
+      <div class="body"><div class="ttl">subject.date_of_birth</div>
+        <div class="det">Not in the file — required for the subject (DANDI age/DOB).</div></div>
+      <div class="act"><input type="date" class="btn sm" style="padding:5px 8px"></div>
+    </div>
+
+    <div class="auto">↪ <b>Auto-normalized on import</b> (format only, no data change): <code>task_epoch</code> →
+      <code>task_epochs</code> in video files; map keys quoted consistently; key order canonicalized. We
+      never silently drop a value we can't map — anything unmappable stays flagged above.</div>
+
+    <div class="actions">
+      <button class="btn primary" disabled title="Enter the missing date of birth first">Import as new animal</button>
+      <span class="blocker">⛔ 1 required field still missing</span>
+      <span class="spacer"></span>
+      <button class="btn" onclick="location.href='animals.html'">Cancel</button>
+    </div>
+  </div>
+</body>
+</html>
