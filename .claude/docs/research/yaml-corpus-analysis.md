@@ -161,8 +161,13 @@ absent.
 ## 6. Silent / structural quirks
 
 - **118 occurrences of `volume_in_uL` *and* `volume_in_ul` as sibling keys** in the same
-  `virus_injection` block, with *conflicting* values (`0.45` vs `450` — a µL/scale confusion). The
-  consumer reads one; the other is silently ignored. (No *exact* duplicate keys exist — good.)
+  `virus_injection` block. **Correction (verified in source):** the dual key is **not** a bug — it's a
+  *deliberate compatibility shim*. `trodes_to_nwb` reads `volume_in_uL` (capital L, KeyError-crashes if
+  absent); the bundled schema requires `volume_in_ul` (lowercase). The app emits **both, derived from
+  one value** ([workspaceUtils.ts:124-154](../../../src/state/workspaceUtils.ts#L124-L154)), so neither
+  key may be dropped. The *real* corpus issue is the small number of hand-built files whose two keys hold
+  **conflicting values** (`0.45` vs `450` — a unit/scale error); deriving both from one input prevents
+  exactly that. (No *exact* duplicate keys exist — good.)
 - **`associated_files[].task_epochs` typing:** scalar in 1212 rows, list in 463 — same field, two types.
 - **`task_epoch` (singular, 98) vs `task_epochs` (plural, 225)** in `associated_video_files` — a consumer
   keying on one name drops the other population's epoch links.
@@ -186,7 +191,8 @@ Details and rationale in the response that produced this doc; summary of the lev
 3. **Validate at the point of entry, gate at export** for the cost-of-error fields — `device_type`
    against the 12 known probes, no NULL `location` on active groups, `subject_id` case consistency with
    filename/animal, binomial species, single-letter sex. (gate-don't-warn; rubric 10)
-4. **Kill silent-loss structures** — one canonical `volume_in_uL` (no case-variant sibling), unified
+4. **Kill silent-loss structures** — derive the `volume_in_uL`/`volume_in_ul` pair from **one** input so
+   they can't conflict (keep emitting both — it's a required converter↔schema shim, not a bug), unified
    `task_epochs` naming + scalar/list typing on export, numeric range guards (`power_in_W: 200`).
 5. **Day editor = the small delta only** (weight, files, tasks/epochs, bad_channels) pre-filled from
    carry-forward — turns "copy a 1200-line YAML and hope" into a one-minute confirm. (working-memory
@@ -194,14 +200,46 @@ Details and rationale in the response that produced this doc; summary of the lev
    actually move.)
 6. **First-class "disabled/unused" electrode-group flag** instead of fake `None`/`NotInBrain` locations.
 
+## 8. DIO (behavioral_events) sets — there is no lab-wide standard
+
+The DIO event sets are **strongly experimenter-specific**: **21 distinct name-sets** across 325 files, and
+the apparent "standard" is just one person's convention.
+
+| set (representative) | files | whose | naming style |
+| --- | ---: | --- | --- |
+| `Poke1–6 / Light1–6 / Pump1–6 / Run_Camera_Ticks` (19) | 97 | Alison (chimi/senor/wilbur/peanut) | generic positional |
+| `Haight*_poke/pump_* + …camera ticks` (21; +13-name variant) | 74 + 37 | Sharon (sc4712) | semantic, apparatus-specific |
+| `RightWell_Poke / LeftMilk_Pump / Laser / Well_1–6 …` | 24 + 10 + 9 + 5 + 4 | Denisse | semantic, well-based |
+| `din1…dout32` (raw channel labels, 64) | 12 | mcoulter | **unnamed** |
+| `[]` (no behavioral events at all) | 13 | sc4712 | empty |
+
+- **Naming philosophy differs per person** (generic vs semantic vs unnamed), and **even within one
+  experimenter the set varies by task/rig**: sc4712 = **8** distinct sets, denisse = **9**.
+- **Name↔channel mapping is unstable** — you can't template "Poke1 = Din1": `RightWell_Poke` appears on
+  **4** different Din channels, `RightMilk_Pump` on **7**; `Din14` carries **9** different names, `Din13`
+  carries 8. (Also seen: `Poke3` → `Din3` *and* `Din18` — the senor split; `Laser` → `Dout4`/`Dout18`.)
+- Events-per-file clusters: 19 (101 files), 21 (86), 13 (37), 9 (26), 0 (**13 empty**), 64 (12 unnamed).
+
+**Design implications (decided):**
+
+- **No preset full template** — it would be wrong for ~2/3 of the corpus.
+- Offer a small set of canonical **stems** as autocomplete — **`Poke` (Din input); `Light` / `Pump` /
+  `Laser` (Dout outputs)** — with **auto-numbering** (`Poke`→`Poke1`,`Poke2`) and **free custom entry**
+  for everything else (well names, apparatus names, camera ticks).
+- The existing fixed `Poke`/`Light`/`Pump` suggestion list is Alison-legacy-derived; generalize to the
+  stems above **plus the experimenter's own prior names** (recognition over recall, personalized).
+- Primary reuse is **copy-from-another-animal / carry-forward** (an experimenter reuses their own set on
+  the same rig), not a lab template.
+
 ## Reproduce
 
 ```bash
 cd ~/Downloads/yaml_analysis && uv run analyze.py   # writes REPORT.md; prints condensed summary
+cd ~/Downloads/yaml_analysis && uv run dio.py        # DIO set diversity + name↔channel stability (§8)
 ```
 
-Analyzer covers: parse inventory + node-tree duplicate/case-variant-key detection; provenance
+`analyze.py` covers: parse inventory + node-tree duplicate/case-variant-key detection; provenance
 (experimenter/animal/date + filename date-format); top-level & subject field-presence matrices;
 per-animal day-over-day variance; brain-region/`device_type` distributions; DANDI/Spyglass compliance
-checks. Re-run after corpus changes; spot-check any new surprising count against the raw file before
-trusting it.
+checks. `dio.py` covers §8 (DIO name-sets, per-dataset diversity, name↔channel stability). Re-run after
+corpus changes; spot-check any new surprising count against the raw file before trusting it.

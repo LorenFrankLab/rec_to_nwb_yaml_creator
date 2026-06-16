@@ -118,8 +118,9 @@ captures it. `*` = schema-required.
   radius; user re-exports what they need. *Single-source-of-truth makes the fix safe and drift-proof.*
 - **Import & repair** → parse → new-animal-vs-existing-day → **flag every non-conforming field with a
   suggested fix** (`Rat→Rattus norvegicus`, `Male→M`, `"541g"→460 g`, space-keys, NULL locations,
-  `volume_in_uL`→`volume_in_ul`, unknown `device_type`, the 3 non-schema fields below) → accept/edit →
-  fill gaps. *Teaching validation, not silent dropping.*
+  conflicting `volume_in_uL`/`volume_in_ul` values, unknown `device_type`) → accept/edit → fill gaps.
+  *Teaching validation, not silent dropping.* **Do NOT auto-launder corruption** — the existing app
+  preserves malformed values verbatim so validation surfaces them ([deviceNormalization.ts](../../../src/utils/deviceNormalization.ts)); the redesign must keep that.
 - **Reassign / delete / undo / drafts** → reversibility everywhere; confirm destructive acts on exported
   data; drafts persist.
 
@@ -130,9 +131,17 @@ captures it. `*` = schema-required.
 correct day-tier unit is the epoch, and one **epoch-centric row** (task → camera → statescript → video →
 opto) consolidates four schema sections — the structural reason the epoch-centric editor is right.
 
-## Fields seen in the corpus but NOT in the schema (import/repair targets)
+## Fields that look "extra" but are load-bearing (do NOT drop on import)
 
-These appear in real files but are not schema properties — flag on import, map or drop with the user's
-ack: **`optogenetic_stimulation_software`** (canonical is `opto_software`), **`optical_fiber.excitation_source`**
-(empty `""` in corpus), **`volume_in_uL`** (canonical is `volume_in_ul` — the dual-key collision; `uL`
-is the extraneous one). Confirms exactly which side of each inconsistency is the bug.
+**Correction (verified against the app's business rules — these are exactly the lessons a redesign
+must not lose):**
+
+- **`optogenetic_stimulation_software`** is **required**, not extraneous — it's one of the four
+  all-or-nothing opto gate keys; missing it makes `trodes_to_nwb` silently drop *all* optogenetics
+  ([optoRules.ts:24-25](../../../src/validation/rules/optoRules.ts#L24-L25)). (There is a real bundled-schema
+  vs converter naming question here — resolve it, but never *drop* the field.)
+- **`volume_in_uL`** must **not** be dropped — it and `volume_in_ul` are emitted together as a deliberate
+  converter↔schema compatibility shim ([workspaceUtils.ts:124-154](../../../src/state/workspaceUtils.ts#L124-L154)).
+  Repair = reconcile *conflicting values*, not delete a key.
+- **`optical_fiber.excitation_source`** (empty `""` in corpus) — verify against the current schema/rules
+  before treating as droppable; don't assume.

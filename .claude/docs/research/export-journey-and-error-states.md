@@ -136,7 +136,8 @@ Very common given the corpus. User imports a hand-built or external YAML to stan
    whether its config matches;
 3. **flags every non-conforming field with a suggested fix** — `Rat`→*Rattus norvegicus*, `Male`→`M`,
    `"541g"`→`460` + unit, space-keys (`electrode groups`→`electrode_groups`), NULL locations,
-   genotype-holding-strain, `volume_in_uL`/`_ul` collision, unknown device_type;
+   genotype-holding-strain, *conflicting* `volume_in_uL`/`volume_in_ul` **values** (the dual key itself is
+   a required shim — reconcile, don't drop), unknown device_type;
 4. user reviews/accepts fixes and fills gaps (e.g., missing `date_of_birth`) → it becomes a normal,
    valid day/animal.
 
