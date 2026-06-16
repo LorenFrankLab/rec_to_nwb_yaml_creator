@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Export — Laurent · 2026-05-14</title>
+<style>
+  :root{
+    --bg:#f4f6f8; --panel:#fff; --ink:#161a1d; --muted:#69727b; --faint:#9aa2ab;
+    --line:#e4e7eb; --line2:#eef1f4; --accent:#2f6fae; --accent-d:#255b91;
+    --ok:#1f8a4c; --okbg:#eaf6ee; --warn:#b8770a; --warnbg:#fbf3e3; --bad:#c23b3b; --radius:10px;
+    --code-bg:#1c2330; --code-key:#9ecbff; --code-str:#c8e1a9; --code-mut:#7d8aa0;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font:14px/1.5 -apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--ink)}
+  .top{background:#fff;border-bottom:1px solid var(--line);padding:10px 30px;display:flex;align-items:center;gap:10px}
+  .mark{width:22px;height:22px;border-radius:6px;background:linear-gradient(135deg,var(--accent),#5b9bd6)}
+  .crumb{font-size:13px;color:var(--muted)}.crumb a{color:var(--muted);text-decoration:none}.crumb b{color:var(--ink)}
+  .wrap{max-width:860px;margin:22px auto;padding:0 24px}
+  h1{font-size:22px;margin:0 0 4px;letter-spacing:-.01em}
+  .lede{color:var(--muted);font-size:13.5px;margin:0 0 16px}
+  .btn{font:inherit;border:1px solid var(--line);background:#fff;border-radius:8px;padding:8px 13px;cursor:pointer;color:var(--ink);font-size:13px}
+  .btn:hover{border-color:var(--accent);color:var(--accent)}
+  .btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}.btn.primary:hover{background:var(--accent-d)}
+  /* readiness */
+  .ready{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:11px 14px;background:var(--okbg);border:1px solid #bfe3cd;border-radius:var(--radius);margin-bottom:8px}
+  .ready .lab{font-weight:600;color:#1a6e3f}
+  .ready .item{font-size:12.5px;color:#2a7d4f}
+  .gate-note{font-size:12px;color:var(--muted);margin:0 0 18px}
+  /* file + code */
+  .filecard{background:#fff;border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;margin-bottom:14px}
+  .filebar{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 14px;border-bottom:1px solid var(--line2)}
+  .fname{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;font-weight:600}
+  .fmeta{font-size:12px;color:var(--muted)}
+  .code{margin:0;background:var(--code-bg);color:#dde3ec;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12.5px;line-height:1.55;padding:14px 16px;overflow:auto;max-height:420px}
+  .code .k{color:var(--code-key)} .code .s{color:var(--code-str)} .code .c{color:var(--code-mut)} .code .d{color:#e3b341}
+  .more{color:var(--code-mut);font-style:italic}
+  .actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .actions .spacer{flex:1}
+  .batch{margin-top:16px;font-size:13px;color:var(--muted)}
+  .batch a{color:var(--accent);text-decoration:none;cursor:pointer}.batch a:hover{text-decoration:underline}
+</style>
+</head>
+<body>
+  <div class="top"><span class="mark"></span>
+    <div class="crumb"><a href="animals.html">Animals</a> › <a href="laurent-animal.html">Laurent</a> › <a href="laurent-day.html">2026-05-14</a> › <b>Export</b></div>
+  </div>
+
+  <div class="wrap">
+    <h1>Export — 2026-05-14</h1>
+    <p class="lede">Review the file this day will write, then download it next to your <code>.rec</code> files.</p>
+
+    <div class="ready">
+      <span class="lab">✓ Ready to export</span>
+      <span class="item">6 epochs complete</span><span class="item">· DIO 9 events</span>
+      <span class="item">· opto protocol set</span><span class="item">· channels OK</span>
+      <span class="item">· species &amp; sex valid for DANDI</span>
+    </div>
+    <p class="gate-note">If anything were unresolved, it would be listed here with a link to the exact field, and export
+      would stay blocked until fixed (e.g. <i>"Epoch 3 has no video"</i>, <i>"probe 2 location is empty"</i>).</p>
+
+    <div class="filecard">
+      <div class="filebar">
+        <span class="fname">20260514_Laurent_metadata.yml</span>
+        <span class="fmeta">one file · this recording day · ~270 lines</span>
+      </div>
+      <pre class="code"><span class="k">experimenter_name</span>:
+  - <span class="s">Morales-Rodriguez, Denisse</span>
+  - <span class="s">Gao, Scott</span>
+<span class="k">lab</span>: <span class="s">Loren Frank Lab</span>
+<span class="k">institution</span>: <span class="s">University of California, San Francisco</span>
+<span class="k">experiment_description</span>: <span class="s">PV-Cre opto + probe implant</span>
+<span class="k">session_description</span>: <span class="s">sleep / opto laser power series</span>
+<span class="k">session_id</span>: <span class="s">Laurent_20260514</span>
+<span class="k">keywords</span>:
+  - <span class="s">opto</span>
+  - <span class="s">hippocampus</span>
+  - <span class="s">mPFC</span>
+<span class="k">subject</span>:
+  <span class="k">description</span>: <span class="s">Long-Evans</span>
+  <span class="k">genotype</span>: <span class="s">PV-Cre</span>
+  <span class="k">sex</span>: <span class="s">M</span>
+  <span class="k">species</span>: <span class="s">Rattus norvegicus</span>
+  <span class="k">subject_id</span>: <span class="s">Laurent</span>
+  <span class="k">date_of_birth</span>: <span class="s">2025-12-03T00:00:00.000Z</span>
+  <span class="k">weight</span>: <span class="d">463</span>
+<span class="k">data_acq_device</span>:
+  - <span class="k">name</span>: <span class="s">SpikeGadgets</span>
+    <span class="k">system</span>: <span class="s">SpikeGadgets</span>
+    <span class="k">amplifier</span>: <span class="s">Intan</span>
+    <span class="k">adc_circuit</span>: <span class="s">Intan</span>
+<span class="c"># … cameras, tasks, associated_files, associated_video_files,</span>
+<span class="c"># … behavioral_events, electrode_groups, ntrode_electrode_group_channel_map,</span>
+<span class="c"># … opto_excitation_source, optical_fiber, virus_injection, fs_gui_yamls</span>
+<span class="more">— 247 more lines —</span></pre>
+    </div>
+
+    <div class="actions">
+      <button class="btn primary">⤓ Download 20260514_Laurent_metadata.yml</button>
+      <button class="btn">Copy</button>
+      <span class="spacer"></span>
+      <button class="btn" onclick="location.href='laurent-day.html'">← Back to day</button>
+    </div>
+
+    <div class="batch">Recording a block? <a>Export all 3 of Laurent's days →</a> (one file each, only the days that pass checks).</div>
+  </div>
+</body>
+</html>
