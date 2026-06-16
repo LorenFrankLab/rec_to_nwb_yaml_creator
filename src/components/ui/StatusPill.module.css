@@ -1,0 +1,98 @@
+/**
+ * StatusPill / EpochStatusPill styles (CSS Module — locally scoped). Colors are design tokens
+ * only (src/index.css :root); one class per state so a state's color is changed in one place and
+ * the two scopes (day-lifecycle vs epoch-row) keep distinct classes.
+ */
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  line-height: 1.4;
+  padding: 3px 10px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.dot {
+  flex: 0 0 auto;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+
+/* Day lifecycle scope. */
+.draft {
+  color: var(--color-grey-700);
+  background-color: var(--color-grey-100);
+}
+
+.draft .dot {
+  background-color: var(--color-grey-500);
+}
+
+.ready {
+  color: var(--color-primary);
+  background-color: var(--color-primary-light);
+}
+
+.ready .dot {
+  background-color: var(--color-primary);
+}
+
+.validated {
+  color: var(--color-success);
+  background-color: var(--color-success-light);
+}
+
+.validated .dot {
+  background-color: var(--color-success);
+}
+
+.exported {
+  color: var(--color-white);
+  background-color: var(--color-success);
+}
+
+.exported .dot {
+  background-color: var(--color-white);
+}
+
+.needsFixing {
+  color: var(--color-warning);
+  background-color: var(--color-warning-light);
+}
+
+.needsFixing .dot {
+  background-color: var(--color-warning);
+}
+
+/* Epoch-row scope — its own classes (never reuse a lifecycle class). */
+.complete {
+  color: var(--color-success);
+  background-color: var(--color-success-light);
+}
+
+.complete .dot {
+  background-color: var(--color-success);
+}
+
+.incomplete {
+  color: var(--color-grey-700);
+  background-color: var(--color-grey-100);
+}
+
+.incomplete .dot {
+  background-color: var(--color-grey-500);
+}
+
+.needsVideo {
+  color: var(--color-warning);
+  background-color: var(--color-warning-light);
+}
+
+.needsVideo .dot {
+  background-color: var(--color-warning);
+}

@@ -1,0 +1,79 @@
+/**
+ * UndoToast styles (CSS Module). Fixed bottom-center overlay; tokens only. Sits at the in-page
+ * overlay layer (below modals) per the shared z-index scale.
+ */
+
+.toast {
+  position: fixed;
+  bottom: var(--spacing-lg);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: var(--z-overlay);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  max-width: min(90vw, 480px);
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-radius: var(--radius-md);
+  color: var(--color-white);
+  background-color: var(--color-grey-900);
+  box-shadow: var(--shadow-modal);
+  font-size: var(--font-size-sm);
+}
+
+.message {
+  flex: 1 1 auto;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+}
+
+.undo {
+  min-height: 44px;
+  padding: 0.4rem 0.8rem;
+  border: none;
+  border-radius: var(--radius-sm);
+  background-color: transparent;
+  color: var(--color-primary-light);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.undo:hover {
+  background-color: var(--color-grey-700);
+}
+
+.undo:focus-visible {
+  outline: 2px solid var(--color-primary-light);
+  outline-offset: 2px;
+}
+
+.dismiss {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background-color: transparent;
+  color: var(--color-grey-200);
+  font: inherit;
+  font-size: var(--font-size-lg);
+  line-height: 1;
+  cursor: pointer;
+}
+
+.dismiss:hover {
+  color: var(--color-white);
+  background-color: var(--color-grey-700);
+}
+
+.dismiss:focus-visible {
+  outline: 2px solid var(--color-primary-light);
+  outline-offset: 2px;
+}

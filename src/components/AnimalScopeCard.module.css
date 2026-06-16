@@ -1,0 +1,43 @@
+/** AnimalScopeCard styles (CSS Module). Quiet read-only scope-boundary card; tokens only. */
+
+.card {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--spacing-md);
+  padding: var(--spacing-md);
+  border: 1px solid var(--color-grey-200);
+  border-radius: var(--radius-md);
+  background-color: var(--color-grey-100);
+}
+
+.lines {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 2px var(--spacing-md);
+  margin: 0;
+  min-width: 0;
+}
+
+.line {
+  display: contents;
+}
+
+.label {
+  font-size: var(--font-size-sm);
+  color: var(--color-grey-600);
+}
+
+.value {
+  margin: 0;
+  min-width: 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-grey-900);
+}
+
+.editLink {
+  flex: 0 0 auto;
+  font-size: var(--font-size-sm);
+  color: var(--color-primary);
+  white-space: nowrap;
+}

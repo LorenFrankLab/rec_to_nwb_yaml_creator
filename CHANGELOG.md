@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Shared redesign primitives (internal — no user-facing behavior yet).** A small, tested kit of
+  CSS-Module + design-token components that the day/animal editor redesign builds on: `StatusPill`
+  (a renderer over the existing `dayLifecycle` vocabulary — it coins no new status words) and its
+  sibling `EpochStatusPill` (the epoch-row scope: `Complete` / `Incomplete` / `Needs video`),
+  `UndoToast` + the `useUndoToast` host hook (reversible-action confirmation), `BlastRadiusChip`
+  ("affects all N days"), `GeneratedValue` (derived-vs-manual file value), `AnimalScopeCard` (the
+  read-only animal-static scope boundary), and `ReadinessBar` (issue-driven export readiness, a pure
+  renderer of issues it is handed). Shipped with unit + `jest-axe` accessibility tests; not yet wired
+  into any screen.
+
 ### Changed
 
 - **Migrated the build tool from Create React App (`react-scripts`) to Vite — behavior-preserving;

@@ -1,0 +1,74 @@
+/**
+ * GeneratedValue styles (CSS Module). Generated values read quiet + grey-monospace; manual
+ * overrides read as a real editable field. Tokens only.
+ */
+
+.root {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--spacing-sm);
+}
+
+.generated {
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: var(--font-size-sm);
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  color: var(--color-grey-700);
+  background-color: var(--color-grey-100);
+}
+
+.input {
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: var(--font-size-sm);
+  padding: 0.3rem 0.5rem;
+  border: 1px solid var(--color-grey-300);
+  border-radius: var(--radius-sm);
+  color: var(--color-grey-900);
+  background-color: var(--color-white);
+}
+
+.input:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 1px;
+}
+
+.tag {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 999px;
+}
+
+.tagGenerated {
+  color: var(--color-grey-700);
+  background-color: var(--color-grey-100);
+}
+
+.tagManual {
+  color: var(--color-warning);
+  background-color: var(--color-warning-light);
+}
+
+.action {
+  min-height: 44px;
+  padding: 0.3rem 0.6rem;
+  border: 1px solid var(--color-grey-300);
+  border-radius: var(--radius-sm);
+  color: var(--color-primary);
+  background-color: var(--color-white);
+  font: inherit;
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+}
+
+.action:hover {
+  border-color: var(--color-primary);
+  background-color: var(--color-primary-light);
+}
+
+.action:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
