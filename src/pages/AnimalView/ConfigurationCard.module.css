@@ -1,0 +1,63 @@
+/** ConfigurationCard styles (CSS Module). Current-configuration card + probe list; tokens only. */
+
+.card {
+  margin-bottom: var(--spacing-md);
+  padding: var(--spacing-md);
+  border: 1px solid var(--color-grey-200);
+  border-radius: var(--radius-md);
+  background-color: var(--color-white);
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-sm);
+}
+
+.title {
+  margin: 0;
+  font-size: var(--font-size-lg);
+}
+
+.meta {
+  color: var(--color-grey-600);
+  font-size: var(--font-size-sm);
+  font-weight: 400;
+}
+
+.probes {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.probe {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--spacing-md);
+  padding: var(--spacing-xs) 0;
+  border-bottom: 1px solid var(--color-grey-100);
+}
+
+.probe:last-child {
+  border-bottom: 0;
+}
+
+.probeLabel {
+  font-size: var(--font-size-sm);
+}
+
+.probeMeta {
+  color: var(--color-grey-600);
+  font-size: var(--font-size-sm);
+  text-align: right;
+}
+
+.noProbes {
+  margin: 0;
+  color: var(--color-grey-600);
+  font-size: var(--font-size-sm);
+}

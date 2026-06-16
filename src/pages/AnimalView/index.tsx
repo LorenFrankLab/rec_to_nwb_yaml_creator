@@ -18,6 +18,7 @@ import type { Animal } from '../../state/workspaceTypes';
 import { getAnimalDayIds } from '../../state/workspaceSelectors';
 import { getAnimalOptoCompleteness, OPTO_COMPLETENESS } from '../../domain/sectionStatus';
 import { buildAnimalViewModel } from '../../viewModels/animalViewModel';
+import type { AnimalConfigCardViewModel } from '../../viewModels/animalViewModel';
 import { useReconfigContext } from '../../hooks/useReconfigContext';
 import { ConfirmDialog } from '../../components/Modal';
 import OverflowMenu from '../../components/OverflowMenu';
@@ -34,6 +35,8 @@ import TaskTypesContainer from '../AnimalEditor/wiring/TaskTypesContainer';
 import OptogeneticsContainer from '../AnimalEditor/wiring/OptogeneticsContainer';
 import { useAnimalFieldUpdate } from '../AnimalEditor/wiring/useAnimalFieldUpdate';
 import ConfigVersionContext from './ConfigVersionContext';
+import AnimalScopeChips from './AnimalScopeChips';
+import ConfigurationCard from './ConfigurationCard';
 import { ValidationSummary } from '../ValidationSummary';
 import '../../components/ErrorState.css';
 import styles from './AnimalView.module.css';
@@ -118,6 +121,8 @@ interface RenderPanelContext {
   onPendingEditsChange: (pending: boolean) => void;
   /** Field-update callback the `{ animal, onFieldUpdate }` containers persist through. */
   onFieldUpdate: (field: string, value: unknown) => void;
+  /** The current-configuration card data, rendered above the Electrode Groups editor. */
+  configCard: AnimalConfigCardViewModel;
 }
 
 /**
@@ -125,13 +130,14 @@ interface RenderPanelContext {
  * setup tabs host their extracted containers (Phase 3-2/3-3); only `export` still shows the
  * Phase-1 placeholder until its sub-phase (3-5) lands.
  */
-function renderPanel({ tab, animalId, animal, onPendingEditsChange, onFieldUpdate }: RenderPanelContext) {
+function renderPanel({ tab, animalId, animal, onPendingEditsChange, onFieldUpdate, configCard }: RenderPanelContext) {
   switch (tab) {
     case 'days':
       return <RecordingDaysTab animalId={animalId} />;
     case 'electrode-groups':
       return (
         <>
+          <ConfigurationCard card={configCard} />
           <ConfigVersionContext animal={animal} />
           <ElectrodeGroupsContainer animalId={animalId} onPendingEditsChange={onPendingEditsChange} />
         </>
@@ -404,6 +410,10 @@ export function AnimalView({ animalId, tab }: AnimalViewProps) {
         </div>
       </header>
 
+      {/* The read-only animal-static scope (identity · probes · config · team · opto), shared by
+          every recording day. Surfaces the "what's fixed for this animal" context on every tab. */}
+      <AnimalScopeChips summary={vm.summary} />
+
       {/* Reconfiguration context belongs in the header band (NOT a tab — Phase 3-4): visible
           regardless of which setup tab is open. The animal-wide subject-facts EDITOR moved off the
           band into the header ⋮'s "Edit profile…" dialog (it cluttered every tab); the read-only
@@ -490,6 +500,7 @@ export function AnimalView({ animalId, tab }: AnimalViewProps) {
               animal,
               onPendingEditsChange: setPendingEdits,
               onFieldUpdate: handleFieldUpdate,
+              configCard: vm.configCard,
             })}
           </div>
         </section>
