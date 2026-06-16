@@ -365,6 +365,24 @@ export const getDayBadChannelOverrides = (day: unknown): Record<string, number[]
   asRecord<Record<string, number[]>>(asRecord(asRecord(day).deviceOverrides).bad_channels);
 
 /**
+ * The epoch numbers a day has declared video-less (the off-export `absent` set; the `videolessEpochs`
+ * half of the video 3-state). Number-normalized and de-duplicated; `[]` when absent/corrupt. Read
+ * from `day.state` (never the merged YAML) — exactly like `badChannelRemovalAcks`.
+ *
+ * @param day
+ * @returns The declared-videoless epoch numbers (always an array of integers).
+ */
+export const getDayVideolessEpochs = (day: unknown): number[] => {
+  const raw = asArray<unknown>(asRecord(asRecord(day).state).videolessEpochs);
+  const seen = new Set<number>();
+  for (const value of raw) {
+    const n = Number(value);
+    if (Number.isInteger(n)) seen.add(n);
+  }
+  return [...seen];
+};
+
+/**
  * @param day
  * @returns The day's recording-system catalog reference, or `undefined` when absent/non-string.
  */

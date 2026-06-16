@@ -631,6 +631,13 @@ export interface DayState {
    */
   badChannelRemovalAcks?: Record<string, number[]>;
   /**
+   * Epoch numbers the user explicitly declared video-less ("no video recorded — fine for this
+   * epoch"). The `absent` half of the video 3-state: an epoch with no bound video is a blocking
+   * `missing` UNLESS it is here. Lives ONLY in state (like {@link DayState.badChannelRemovalAcks}) —
+   * the export merge reads no `day.state`, so it cannot move a baseline.
+   */
+  videolessEpochs?: number[];
+  /**
    * Task-definition conflicts recorded when the v2→v3 task-catalog conversion normalized
    * a day's reused `task_name` to the canonical definition. Preserves the original values
    * for review (surfaced as `task_definition_reconciled`); never read by the export merge.

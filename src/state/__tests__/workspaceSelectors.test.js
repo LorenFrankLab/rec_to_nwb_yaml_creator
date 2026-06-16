@@ -27,6 +27,7 @@ import {
   getDayCamerasUsed,
   getDayBadChannelOverrides,
   getDayDataAcqDeviceName,
+  getDayVideolessEpochs,
 } from '../workspaceSelectors';
 
 /**
@@ -133,6 +134,22 @@ describe('workspaceSelectors — string-or-undefined day fields', () => {
     }
     expect(getDayDataAcqDeviceName(undefined)).toBeUndefined();
     expect(getDayDataAcqDeviceName(null)).toBeUndefined();
+  });
+});
+
+describe('getDayVideolessEpochs — the off-export absent-video set', () => {
+  it('reads day.state.videolessEpochs, Number-normalized and de-duplicated', () => {
+    expect(getDayVideolessEpochs({ state: { videolessEpochs: [3, '5', 3] } }).sort((a, b) => a - b)).toEqual([3, 5]);
+  });
+  it('returns [] for an absent/corrupt set (never throws)', () => {
+    for (const bad of [undefined, null, 42, 'x', { 0: 1 }]) {
+      expect(getDayVideolessEpochs({ state: { videolessEpochs: bad } })).toEqual([]);
+    }
+    expect(getDayVideolessEpochs({})).toEqual([]);
+    expect(getDayVideolessEpochs(null)).toEqual([]);
+  });
+  it('drops non-integer entries', () => {
+    expect(getDayVideolessEpochs({ state: { videolessEpochs: [1, 2.5, NaN, 'abc', 4] } }).sort((a, b) => a - b)).toEqual([1, 4]);
   });
 });
 
