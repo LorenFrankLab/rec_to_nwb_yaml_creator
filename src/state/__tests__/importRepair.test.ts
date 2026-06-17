@@ -141,6 +141,18 @@ describe('buildImportRepairPlan — structured required-missing fields are fix-i
       expect.arrayContaining(['experimenter_name', 'data_acq_device'])
     );
   });
+
+  it('routes a missing subject_id to a fix-in-file blocker, not a dead-end input', () => {
+    const model = loadNonconforming();
+    delete (model.subject as Record<string, unknown>).subject_id;
+    const plan = buildImportRepairPlan(model, 'nonconforming-remy.yml', { animals: {} });
+    // The identity id is NOT an editable row (filling it could never enable import — the decision
+    // is computed once and would stay blocked); it is a fix-in-file blocker, and the decision is
+    // blocked, so the two agree.
+    expect(plan.items.some((i) => i.path === 'subject.subject_id')).toBe(false);
+    expect(plan.blockers.some((b) => b.path === 'subject.subject_id')).toBe(true);
+    expect(plan.decision.kind).toBe('blocked');
+  });
 });
 
 describe('applyImportRepairs — accepting fixes yields a model that validates clean', () => {
@@ -206,5 +218,14 @@ describe('volume_in_uL / volume_in_ul shim — reconcile, never drop the shim ke
     // Both keys retained; reconciled to the capital-L value.
     expect(repaired.virus_injection[0].volume_in_uL).toBe(0.5);
     expect(repaired.virus_injection[0].volume_in_ul).toBe(0.5);
+  });
+
+  it('does NOT silently reconcile a conflict the user has not accepted', () => {
+    const model = { virus_injection: [{ name: 'v', volume_in_uL: 0.5, volume_in_ul: 0.6 }] };
+    // With no resolution, the conflicting values are left UNTOUCHED (the screen must require the
+    // user to accept the reconcile — the gate enforces that, importRepair does not auto-launder).
+    const repaired = applyImportRepairs(model, {}) as { virus_injection: Array<Record<string, unknown>> };
+    expect(repaired.virus_injection[0].volume_in_uL).toBe(0.5);
+    expect(repaired.virus_injection[0].volume_in_ul).toBe(0.6);
   });
 });

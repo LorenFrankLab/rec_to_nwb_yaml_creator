@@ -284,6 +284,16 @@ function buildValidationItems(model: ValidationModel): {
       continue;
     }
 
+    // subject.subject_id is the animal's IDENTITY — the store key, the hash route, and the input to
+    // the new-vs-existing decision (computed once from the file). It isn't meaningfully editable in
+    // this screen (the create wizard likewise locks it; a slashed id is already a fix-in-file
+    // blocker via the catch-all), so a missing/empty one is a fix-in-file blocker — not a text input
+    // that could never enable import (the decision would stay `blocked` no matter what was typed).
+    if (path === 'subject.subject_id' && (code === 'required' || code === 'pattern')) {
+      blockers.push({ path, code, why: message });
+      continue;
+    }
+
     // A structured root-required field (an array/object) that is entirely MISSING can't be repaired
     // with a single inline value — surface it as a fix-in-file blocker instead of a text input that
     // could never satisfy the schema (which would falsely enable import, then fail at commit).
