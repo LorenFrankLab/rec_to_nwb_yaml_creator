@@ -188,6 +188,44 @@ export interface WizardExperimenterDefaults {
   institution: string;
 }
 
+/** Team-step draft fields that are required before finishing the wizard. */
+export interface WizardTeamDraft {
+  /** Animal-level experiment description inherited by new days. */
+  experiment_description: string;
+  /** Lab name inherited by new animals and exported by every day. */
+  lab: string;
+  /** Institution name inherited by new animals and exported by every day. */
+  institution: string;
+}
+
+/** Team validation result: a validity flag and per-field messages. */
+export interface TeamValidation {
+  /** True when every required team/default field is present. */
+  valid: boolean;
+  /** Field name → message for the fields that failed. */
+  errors: Record<string, string>;
+}
+
+/**
+ * Validate the wizard's Team step fields that otherwise become first-day export errors.
+ *
+ * @param team - The team/default metadata draft.
+ * @returns The validity flag + per-field errors.
+ */
+export function validateWizardTeam(team: WizardTeamDraft): TeamValidation {
+  const errors: Record<string, string> = {};
+  if (!team.experiment_description?.trim()) {
+    errors.experiment_description = 'Experiment description is required before creating recording days';
+  }
+  if (!team.lab?.trim()) {
+    errors.lab = 'Lab is required';
+  }
+  if (!team.institution?.trim()) {
+    errors.institution = 'Institution is required';
+  }
+  return { valid: Object.keys(errors).length === 0, errors };
+}
+
 /**
  * Build the createAnimal payload from a (valid) identity draft, delegating to the shared
  * `buildAnimalFromForm` glue so the wizard builds an animal byte-identical to any other entry
@@ -216,6 +254,7 @@ export function buildWizardCommitPayload(
     experimenter_names: defaults.experimenter_names.filter((n) => n.trim()),
     lab: defaults.lab,
     institution: defaults.institution,
+    experiment_description: '',
   };
   return buildAnimalFromForm(formData);
 }
@@ -266,8 +305,11 @@ export function computeStepStatuses(
 
   const teamComplete =
     experimenterNames.some((n) => String(n).trim()) &&
-    String(experimenters.lab ?? '').trim() !== '' &&
-    String(experimenters.institution ?? '').trim() !== '';
+    validateWizardTeam({
+      experiment_description: String((animal as { experiment_description?: unknown })?.experiment_description ?? ''),
+      lab: String(experimenters.lab ?? ''),
+      institution: String(experimenters.institution ?? ''),
+    }).valid;
 
   return {
     identity: input.identityValid ? 'complete' : 'incomplete',

@@ -68,6 +68,7 @@ export interface AnimalUpdates {
   behavioral_events?: BehavioralEvent[];
   taskTypes?: TaskType[];
   optogenetics?: OptogeneticsConfig | null;
+  experiment_description?: string;
 }
 
 /** `{ date, description, devices }` for a new configuration snapshot; `devices` is normalized. */
@@ -134,7 +135,7 @@ export function sortDayIdsByDate(ids: string[], daysById: Record<string, Day>): 
  * @param updates - Partial updates; recognized keys: `subject`, `experimenters`,
  *   `devices` (also mirrored into the latest snapshot), `cameras`, `data_acq_device` (routed
  *   onto `devices.data_acq_device`), `technicalDefaults`, `behavioral_events`, `taskTypes`,
- *   `optogenetics`. Note: `optogenetics: null` CLEARS opto (uses `!== undefined`, not
+ *   `optogenetics`, `experiment_description`. Note: `optogenetics: null` CLEARS opto (uses `!== undefined`, not
  *   truthiness), as does `taskTypes: []`; all other keys are applied only when truthy.
  * @param now - Timestamp to stamp `lastModified`.
  * @returns The next animal record (deep-cloned; input not mutated).
@@ -147,6 +148,9 @@ export function applyAnimalUpdates(animal: Animal, updates: AnimalUpdates, now: 
   }
   if (updates.experimenters) {
     updated.experimenters = { ...updated.experimenters, ...updates.experimenters };
+  }
+  if (updates.experiment_description !== undefined) {
+    updated.experiment_description = updates.experiment_description;
   }
   if (updates.devices) {
     updated.devices = normalizeDevices({ ...getAnimalDevices(updated), ...updates.devices });

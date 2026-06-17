@@ -19,6 +19,7 @@ const baseForm = {
   experimenter_names: ['Alice Jones'],
   lab: 'Frank Lab',
   institution: 'UCSF',
+  experiment_description: 'Chronic tetrode recording',
 };
 
 describe('buildAnimalFromForm', () => {
@@ -59,6 +60,7 @@ describe('buildAnimalFromForm', () => {
       lab: 'Frank Lab',
       institution: 'UCSF',
     });
+    expect(metadata.experiment_description).toBe('Chronic tetrode recording');
     expect(metadata.devices).toEqual({
       // Seeded with the lab-standard recording system (every golden fixture uses it) so a new animal
       // starts with one — consistent with "every animal needs ≥1 recording system". Editable on the

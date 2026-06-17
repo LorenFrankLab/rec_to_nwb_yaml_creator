@@ -212,6 +212,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Epoch no-video declarations follow epoch edits.** "No video recorded" declarations now move with
   their epoch through insert/move/delete and are restored by Undo, so video-readiness no longer reports
   against stale epoch numbers after renumbering.
+- **First-run animal setup completeness.** The guided create-animal wizard now collects the
+  animal-wide experiment description and pre-fills lab/institution from defaults, so a first recording
+  day is not born with required-field errors on metadata the wizard never asked for.
 
 ### Removed
 

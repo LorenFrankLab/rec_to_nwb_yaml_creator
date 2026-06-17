@@ -53,6 +53,8 @@ export interface CreateAnimalMetadata {
   technicalDefaults?: TechnicalDefaults;
   /** Optogenetics setup (`null`/absent = none). */
   optogenetics?: OptogeneticsConfig | null;
+  /** Animal-level default experiment description for new days. */
+  experiment_description?: string;
 }
 
 /** Options for `createDay`. */
@@ -140,6 +142,7 @@ export function createWorkspaceActions({
           devices,
           cameras: metadata.cameras || [],
           experimenters,
+          experiment_description: metadata.experiment_description || '',
           technicalDefaults: metadata.technicalDefaults || {
             raw_data_to_volts: 0.195,
             times_period_multiplier: 1.5,

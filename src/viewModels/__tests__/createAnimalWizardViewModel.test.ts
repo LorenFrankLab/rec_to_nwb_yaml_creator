@@ -14,6 +14,7 @@ import {
   WIZARD_STEPS,
   WIZARD_STEP_KEYS,
   validateWizardIdentity,
+  validateWizardTeam,
   buildWizardCommitPayload,
   computeStepStatuses,
   buildCreateAnimalWizardViewModel,
@@ -159,6 +160,7 @@ describe('buildWizardCommitPayload — the createAnimal payload', () => {
       experimenter_names: [],
       lab: '',
       institution: '',
+      experiment_description: '',
     });
     expect(payload.animalId).toBe('laurent');
     expect(payload.subject).toEqual(expected.subject);
@@ -197,8 +199,9 @@ describe('computeStepStatuses — per-step completeness', () => {
     ).toBe('incomplete');
   });
 
-  it('team is complete only when an experimenter name + lab + institution are present', () => {
+  it('team is complete only when an experimenter name + experiment description + lab + institution are present', () => {
     const complete = makeAnimal({
+      experiment_description: 'Chronic tetrode recording during spatial navigation',
       experimenters: { experimenter_name: ['Doe, Jane'], lab: 'Frank', institution: 'UCSF' },
     });
     expect(
@@ -213,6 +216,26 @@ describe('computeStepStatuses — per-step completeness', () => {
     expect(
       computeStepStatuses(makeAnimal(), { identityValid: true, behaviorOnly: false })['recording-system']
     ).toBe('complete');
+  });
+});
+
+describe('validateWizardTeam — first-day required metadata', () => {
+  it('requires experiment description, lab, and institution before finishing', () => {
+    const result = validateWizardTeam({ experiment_description: '', lab: '', institution: '' });
+    expect(result.valid).toBe(false);
+    expect(result.errors.experiment_description).toMatch(/required/i);
+    expect(result.errors.lab).toMatch(/required/i);
+    expect(result.errors.institution).toMatch(/required/i);
+  });
+
+  it('accepts the Frank Lab defaults plus an experiment description', () => {
+    expect(
+      validateWizardTeam({
+        experiment_description: 'Chronic tetrode recording during spatial navigation',
+        lab: 'Loren Frank Lab',
+        institution: 'University of California, San Francisco',
+      }).valid
+    ).toBe(true);
   });
 });
 

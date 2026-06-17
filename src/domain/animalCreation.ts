@@ -35,6 +35,8 @@ export interface AnimalCreationFormData {
   lab: string;
   /** Institution name. */
   institution: string;
+  /** Animal-level experiment description inherited by new days when their day field is blank. */
+  experiment_description?: string;
 }
 
 /**
@@ -88,6 +90,7 @@ export function buildAnimalFromForm(formData: AnimalCreationFormData) {
       lab: formData.lab,
       institution: formData.institution,
     },
+    experiment_description: formData.experiment_description?.trim() || '',
     // Electrodes/cameras are configured later. The recording system is seeded with the lab-standard
     // rig (the value every golden fixture uses) so a new animal starts with ONE — consistent with the
     // schema's `data_acq_device` minItems:1 and the Recording System tab's "must keep at least one"

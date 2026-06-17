@@ -18,18 +18,19 @@
  * payload) live in {@link module:viewModels/createAnimalWizardViewModel}; this component is a thin
  * renderer + the store-write wiring.
  */
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useStoreContext } from '../../state/StoreContext';
 import { getDefaultExperimenters } from '../../domain/animalCreation';
 import {
   buildCreateAnimalWizardViewModel,
   buildWizardCommitPayload,
   validateWizardIdentity,
+  validateWizardTeam,
   WIZARD_STEP_KEYS,
 } from '../../viewModels/createAnimalWizardViewModel';
 import type { IdentityDraft, WizardStepKey } from '../../viewModels/createAnimalWizardViewModel';
 import { getAnimalExperimenters, getAnimalSubject, getExperimenterNames } from '../../state/workspaceSelectors';
-import type { Animal, ExperimenterInfo } from '../../state/workspaceTypes';
+import type { Animal, ExperimenterInfo, WorkspaceSettings } from '../../state/workspaceTypes';
 import Button from '../../components/ui/Button';
 import ElectrodeGroupsContainer from '../AnimalEditor/wiring/ElectrodeGroupsContainer';
 import CamerasContainer from '../AnimalEditor/wiring/CamerasContainer';
@@ -108,27 +109,74 @@ function seedIdentityFromAnimal(animal: unknown): IdentityDraft {
  * The Team (experimenters) step — a small local-state editor that commits to `updateAnimal` on blur.
  * Seeded from the animal's current experimenters (set from defaults at create-time).
  */
+interface TeamDraft {
+  names: string[];
+  lab: string;
+  institution: string;
+  experiment_description: string;
+}
+
+interface TeamCommit {
+  experimenters: ExperimenterInfo;
+  experiment_description: string;
+  settings: Partial<WorkspaceSettings>;
+}
+
+function buildTeamCommit(draft: TeamDraft): TeamCommit {
+  const experimenterNames = draft.names.filter((n) => n.trim());
+  const settings: Partial<WorkspaceSettings> = { defaultExperimenters: experimenterNames };
+  if (draft.lab.trim()) settings.defaultLab = draft.lab;
+  if (draft.institution.trim()) settings.defaultInstitution = draft.institution;
+  return {
+    experimenters: {
+      experimenter_name: experimenterNames,
+      lab: draft.lab,
+      institution: draft.institution,
+    },
+    experiment_description: draft.experiment_description,
+    settings,
+  };
+}
+
+function sameErrors(a: Record<string, string>, b: Record<string, string>): boolean {
+  const aKeys = Object.keys(a);
+  const bKeys = Object.keys(b);
+  return aKeys.length === bKeys.length && aKeys.every((key) => a[key] === b[key]);
+}
+
 function TeamStep({
   initialNames,
   initialLab,
   initialInstitution,
+  initialExperimentDescription,
+  errors,
+  onDraftChange,
   onCommit,
 }: {
   initialNames: string[];
   initialLab: string;
   initialInstitution: string;
-  onCommit: (next: ExperimenterInfo) => void;
+  initialExperimentDescription: string;
+  errors: Record<string, string>;
+  onDraftChange: (draft: TeamDraft) => void;
+  onCommit: (next: TeamCommit) => void;
 }) {
-  const [names, setNames] = useState<string[]>(initialNames.length ? initialNames : ['']);
-  const [lab, setLab] = useState<string>(initialLab);
-  const [institution, setInstitution] = useState<string>(initialInstitution);
+  const [draft, setDraft] = useState<TeamDraft>(() => ({
+    names: initialNames.length ? initialNames : [''],
+    lab: initialLab,
+    institution: initialInstitution,
+    experiment_description: initialExperimentDescription,
+  }));
 
-  const commit = () =>
-    onCommit({
-      experimenter_name: names.filter((n) => n.trim()),
-      lab,
-      institution,
-    });
+  useEffect(() => {
+    onDraftChange(draft);
+  }, [draft, onDraftChange]);
+
+  const updateDraft = (patch: Partial<TeamDraft>) => {
+    setDraft((prev) => ({ ...prev, ...patch }));
+  };
+
+  const commit = (next = draft) => onCommit(buildTeamCommit(next));
 
   return (
     <div className={styles.panel}>
@@ -139,9 +187,28 @@ function TeamStep({
       </p>
 
       <div className={styles.field}>
+        <label htmlFor="team-experiment-description">Experiment description</label>
+        <textarea
+          id="team-experiment-description"
+          value={draft.experiment_description}
+          aria-invalid={!!errors.experiment_description}
+          onChange={(e) => updateDraft({ experiment_description: e.target.value })}
+          onBlur={() => commit()}
+        />
+        <span className={styles.hint}>
+          Required for export. New recording days inherit this unless a day overrides it.
+        </span>
+        {errors.experiment_description && (
+          <span className={styles.error} role="alert">
+            {errors.experiment_description}
+          </span>
+        )}
+      </div>
+
+      <div className={styles.field}>
         <label id="team-names-label">Experimenter names</label>
         <div role="group" aria-labelledby="team-names-label">
-          {names.map((name, idx) => (
+          {draft.names.map((name, idx) => (
             <div className={styles.teamRow} key={idx}>
               <input
                 type="text"
@@ -150,9 +217,9 @@ function TeamStep({
                 aria-label={`Experimenter ${idx + 1}`}
                 placeholder="Last, First (e.g. Doe, Jane)"
                 onChange={(e) =>
-                  setNames((prev) => prev.map((n, i) => (i === idx ? e.target.value : n)))
+                  updateDraft({ names: draft.names.map((n, i) => (i === idx ? e.target.value : n)) })
                 }
-                onBlur={commit}
+                onBlur={() => commit()}
               />
               {idx > 0 && (
                 <Button
@@ -161,13 +228,9 @@ function TeamStep({
                   aria-label={`Remove experimenter ${idx + 1}`}
                   onClick={() => {
                     // Persist the removal immediately — it must not wait on a later field's blur.
-                    const nextNames = names.filter((_, i) => i !== idx);
-                    setNames(nextNames);
-                    onCommit({
-                      experimenter_name: nextNames.filter((n) => n.trim()),
-                      lab,
-                      institution,
-                    });
+                    const next = { ...draft, names: draft.names.filter((_, i) => i !== idx) };
+                    setDraft(next);
+                    onCommit(buildTeamCommit(next));
                   }}
                 >
                   Remove
@@ -178,7 +241,7 @@ function TeamStep({
           <Button
             variant="secondary"
             size="small"
-            onClick={() => setNames((prev) => [...prev, ''])}
+            onClick={() => updateDraft({ names: [...draft.names, ''] })}
           >
             + Add experimenter
           </Button>
@@ -191,20 +254,32 @@ function TeamStep({
           <input
             id="team-lab"
             type="text"
-            value={lab}
-            onChange={(e) => setLab(e.target.value)}
-            onBlur={commit}
+            value={draft.lab}
+            aria-invalid={!!errors.lab}
+            onChange={(e) => updateDraft({ lab: e.target.value })}
+            onBlur={() => commit()}
           />
+          {errors.lab && (
+            <span className={styles.error} role="alert">
+              {errors.lab}
+            </span>
+          )}
         </div>
         <div className={styles.field}>
           <label htmlFor="team-institution">Institution</label>
           <input
             id="team-institution"
             type="text"
-            value={institution}
-            onChange={(e) => setInstitution(e.target.value)}
-            onBlur={commit}
+            value={draft.institution}
+            aria-invalid={!!errors.institution}
+            onChange={(e) => updateDraft({ institution: e.target.value })}
+            onBlur={() => commit()}
           />
+          {errors.institution && (
+            <span className={styles.error} role="alert">
+              {errors.institution}
+            </span>
+          )}
         </div>
       </div>
     </div>
@@ -230,11 +305,80 @@ export default function CreateAnimalWizard() {
   const [createdAnimalId, setCreatedAnimalId] = useState<string | null>(adoptedAnimalId);
   const [behaviorOnly, setBehaviorOnly] = useState(false);
   const [draftSaved, setDraftSaved] = useState(false);
+  const [teamErrors, setTeamErrors] = useState<Record<string, string>>({});
   const draftSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const teamDraftRef = useRef<TeamDraft | null>(null);
 
   const animal = (createdAnimalId ? existingAnimals[createdAnimalId] : null) as Animal | null;
   const defaults = useMemo(() => getDefaultExperimenters(model.workspace), [model.workspace]);
   const { handleFieldUpdate } = useAnimalFieldUpdate(createdAnimalId ?? '');
+
+  const commitTeamDraft = useCallback(
+    (draft: TeamDraft) => {
+      if (!createdAnimalId) return;
+      const next = buildTeamCommit(draft);
+      handleFieldUpdate('experimenters', next.experimenters);
+      handleFieldUpdate('experiment_description', next.experiment_description);
+      actions.updateWorkspaceSettings(next.settings);
+    },
+    [actions, createdAnimalId, handleFieldUpdate]
+  );
+
+  const teamDraftFromAnimal = useCallback((): TeamDraft | null => {
+    if (!animal) return null;
+    const experimenters = getAnimalExperimenters(animal);
+    return {
+      names: getExperimenterNames(animal).length ? getExperimenterNames(animal) : defaults.experimenter_names,
+      lab: experimenters.lab || defaults.lab,
+      institution: experimenters.institution || defaults.institution,
+      experiment_description: String((animal as { experiment_description?: unknown }).experiment_description ?? ''),
+    };
+  }, [animal, defaults]);
+
+  const validateAndCommitTeam = () => {
+    const draft = teamDraftRef.current ?? teamDraftFromAnimal();
+    if (!draft) return false;
+    const validation = validateWizardTeam({
+      experiment_description: draft.experiment_description,
+      lab: draft.lab,
+      institution: draft.institution,
+    });
+    setTeamErrors(validation.errors);
+    if (!validation.valid) {
+      setCurrentStepKey('team');
+      return false;
+    }
+    commitTeamDraft(draft);
+    return true;
+  };
+
+  const handleTeamDraftChange = useCallback((draft: TeamDraft) => {
+    teamDraftRef.current = draft;
+    setTeamErrors((prev) => {
+      if (Object.keys(prev).length === 0) return prev;
+      const next = validateWizardTeam({
+        experiment_description: draft.experiment_description,
+        lab: draft.lab,
+        institution: draft.institution,
+      }).errors;
+      return sameErrors(prev, next) ? prev : next;
+    });
+  }, []);
+
+  const handleTeamCommit = useCallback(
+    (next: TeamCommit) => {
+      handleFieldUpdate('experimenters', next.experimenters);
+      handleFieldUpdate('experiment_description', next.experiment_description);
+      actions.updateWorkspaceSettings(next.settings);
+      const validation = validateWizardTeam({
+        experiment_description: next.experiment_description,
+        lab: next.experimenters.lab,
+        institution: next.experimenters.institution,
+      });
+      setTeamErrors((prev) => (sameErrors(prev, validation.errors) ? prev : validation.errors));
+    },
+    [actions, handleFieldUpdate]
+  );
 
   const vm = buildCreateAnimalWizardViewModel({
     currentStepKey,
@@ -351,7 +495,7 @@ export default function CreateAnimalWizard() {
   const handleNext = () => {
     if (vm.isLastStep) {
       const id = createdAnimalId ?? tryCommitIdentity();
-      if (id) goToAnimal(id);
+      if (id && validateAndCommitTeam()) goToAnimal(id);
       return;
     }
     // Leaving Identity forward goes through the commit gate, which blocks + surfaces errors on an
@@ -712,9 +856,14 @@ export default function CreateAnimalWizard() {
           {currentStepKey === 'team' && animal && (
             <TeamStep
               initialNames={getExperimenterNames(animal)}
-              initialLab={getAnimalExperimenters(animal).lab ?? ''}
-              initialInstitution={getAnimalExperimenters(animal).institution ?? ''}
-              onCommit={(next) => handleFieldUpdate('experimenters', next)}
+              initialLab={getAnimalExperimenters(animal).lab || defaults.lab}
+              initialInstitution={getAnimalExperimenters(animal).institution || defaults.institution}
+              initialExperimentDescription={String(
+                (animal as { experiment_description?: unknown }).experiment_description ?? ''
+              )}
+              errors={teamErrors}
+              onDraftChange={handleTeamDraftChange}
+              onCommit={handleTeamCommit}
             />
           )}
         </section>

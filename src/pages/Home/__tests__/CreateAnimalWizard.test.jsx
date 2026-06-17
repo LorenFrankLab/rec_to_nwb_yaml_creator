@@ -13,9 +13,11 @@
 import { describe, it, expect, afterEach } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { render, screen, within, fireEvent, waitFor } from '@testing-library/react';
+import { act, render, screen, within, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { StoreProvider, useStoreContext } from '../../../state/StoreContext';
+import { mergeDayMetadata } from '../../../state/workspaceUtils';
+import { validate } from '../../../validation';
 import CreateAnimalWizard from '../CreateAnimalWizard';
 
 const originalHash = window.location.hash;
@@ -40,25 +42,31 @@ afterEach(() => {
 
 /** A probe that exposes the live workspace so a test can assert the committed store state. */
 let captured;
+let capturedActions;
 
 /**
  * Render-only probe component that captures the live workspace into `captured`.
  * @returns {null} Renders nothing.
  */
 function StoreProbe() {
-  captured = useStoreContext().model.workspace;
+  const store = useStoreContext();
+  captured = store.model.workspace;
+  capturedActions = store.actions;
   return null;
 }
 
 /**
  * Render the wizard against a fresh, empty store.
- * @param {object} [animals] - Initial workspace.animals (default: empty).
+ * @param {object} [options] - Initial workspace overrides or a legacy animals map.
  * @returns {object} The render result.
  */
-function renderWizard(animals = {}) {
+function renderWizard(options = {}) {
   captured = null;
+  capturedActions = null;
+  const animals = options.animals ?? options;
+  const settings = options.settings ?? {};
   return render(
-    <StoreProvider initialState={{ workspace: { animals, days: {}, settings: {} } }}>
+    <StoreProvider initialState={{ workspace: { animals, days: {}, settings } }}>
       <CreateAnimalWizard />
       <StoreProbe />
     </StoreProvider>
@@ -187,8 +195,25 @@ describe('CreateAnimalWizard — step navigation + commit', () => {
     await fillIdentity(user);
     await user.click(screen.getByRole('button', { name: /Next/i }));
     await user.click(screen.getByRole('tab', { name: /Team/ }));
+    await user.type(
+      screen.getByRole('textbox', { name: /Experiment description/i }),
+      'Chronic tetrode recording during spatial navigation'
+    );
     await user.click(screen.getByRole('button', { name: /Create animal/i }));
     expect(window.location.hash).toBe('#/animal/laurent/days');
+  });
+
+  it('blocks Create animal on a blank experiment description and surfaces the wizard hint', async () => {
+    const user = userEvent.setup();
+    renderWizard();
+    await fillIdentity(user);
+    await user.click(screen.getByRole('button', { name: /Next/i }));
+    await user.click(screen.getByRole('tab', { name: /Team/ }));
+    await user.click(screen.getByRole('button', { name: /Create animal/i }));
+
+    expect(window.location.hash).not.toBe('#/animal/laurent/days');
+    expect(screen.getByRole('tab', { name: /Team/ })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByText(/Experiment description is required/i)).toBeInTheDocument();
   });
 
   it('Team step edits experimenters through updateAnimal', async () => {
@@ -204,6 +229,32 @@ describe('CreateAnimalWizard — step navigation + commit', () => {
     await user.tab();
 
     expect(captured.animals.laurent.experimenters.lab).toBe('Frank Lab');
+  });
+
+  it('a completed wizard animal seeds a first day without unasked required-field errors', async () => {
+    const user = userEvent.setup();
+    renderWizard();
+    await fillIdentity(user);
+    await user.click(screen.getByRole('button', { name: /Next/i }));
+    await user.click(screen.getByRole('tab', { name: /Team/ }));
+    await user.type(
+      screen.getByRole('textbox', { name: /Experiment description/i }),
+      'Chronic tetrode recording during spatial navigation'
+    );
+    await user.click(screen.getByRole('button', { name: /Create animal/i }));
+
+    act(() => {
+      capturedActions.createDay('laurent', '2026-01-02', {
+        session_id: 'laurent_20260102',
+        session_description: 'First recording day',
+      });
+    });
+    const day = captured.days['laurent-2026-01-02'];
+    const issues = validate(mergeDayMetadata(captured.animals.laurent, day));
+    const paths = issues.map((issue) => issue.path);
+    expect(paths).not.toContain('experiment_description');
+    expect(paths).not.toContain('lab');
+    expect(paths).not.toContain('institution');
   });
 });
 
@@ -306,6 +357,43 @@ describe('CreateAnimalWizard — Team step', () => {
 
     await user.click(screen.getByRole('button', { name: /Remove experimenter 2/i }));
     expect(captured.animals.laurent.experimenters.experimenter_name).toEqual(['Doe, Jane']);
+  });
+
+  it('shows default lab/institution, lets them be overridden, and seeds the next animal from the last-used values', async () => {
+    const user = userEvent.setup();
+    const first = renderWizard();
+    await createThenOpenTeam(user);
+
+    expect(screen.getByRole('textbox', { name: /^Lab/i })).toHaveValue('Loren Frank Lab');
+    expect(screen.getByRole('textbox', { name: /^Institution/i })).toHaveValue(
+      'University of California, San Francisco'
+    );
+
+    await user.type(
+      screen.getByRole('textbox', { name: /Experiment description/i }),
+      'Chronic tetrode recording'
+    );
+    const lab = screen.getByRole('textbox', { name: /^Lab/i });
+    await user.clear(lab);
+    await user.type(lab, 'Custom Lab');
+    const institution = screen.getByRole('textbox', { name: /^Institution/i });
+    await user.clear(institution);
+    await user.type(institution, 'Custom University');
+    await user.tab();
+
+    expect(captured.settings.defaultLab).toBe('Custom Lab');
+    expect(captured.settings.defaultInstitution).toBe('Custom University');
+    const inheritedSettings = structuredClone(captured.settings);
+    const inheritedAnimals = structuredClone(captured.animals);
+    first.unmount();
+
+    renderWizard({ animals: inheritedAnimals, settings: inheritedSettings });
+    await fillIdentity(user, { subjectId: 'remy' });
+    await user.click(screen.getByRole('button', { name: /Next/i }));
+    await user.click(screen.getByRole('tab', { name: /Team/ }));
+
+    expect(screen.getByRole('textbox', { name: /^Lab/i })).toHaveValue('Custom Lab');
+    expect(screen.getByRole('textbox', { name: /^Institution/i })).toHaveValue('Custom University');
   });
 });
 
