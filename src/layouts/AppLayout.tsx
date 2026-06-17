@@ -23,6 +23,8 @@ import AnimalProfileDialog from '../components/AnimalProfileDialog';
 import { getAnimalDayIds } from '../state/workspaceSelectors';
 import { Home } from '../pages/Home';
 import { AnimalWorkspace } from '../pages/AnimalWorkspace';
+import ImportRepair from '../pages/ImportRepair';
+import CopyFromAnimal from '../pages/CopyFromAnimal';
 import { DayEditor } from '../pages/DayEditor';
 import { ValidationSummary } from '../pages/ValidationSummary';
 import { AnimalView } from '../pages/AnimalView';
@@ -38,6 +40,8 @@ function getViewName(view: string): string {
     legacy: 'Metadata Form',
     home: 'Home - Animal Selection',
     workspace: 'Animal Workspace',
+    import: 'Import Metadata YAML',
+    'copy-from-animal': 'Copy from Another Animal',
     day: 'Day Editor',
     validation: 'Validation Summary',
     'animal-view': 'Animal',
@@ -206,6 +210,12 @@ export function AppLayout() {
 
       case 'workspace':
         return <AnimalWorkspace />;
+
+      case 'import':
+        return <ImportRepair />;
+
+      case 'copy-from-animal':
+        return <CopyFromAnimal />;
 
       case 'day':
         // Key by the routed day id so a DIRECT day→day hash change (e.g. browser back/forward

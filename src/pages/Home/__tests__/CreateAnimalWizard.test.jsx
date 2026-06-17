@@ -330,15 +330,12 @@ describe('CreateAnimalWizard — adopt handshake (#/home?animal=<id>)', () => {
 });
 
 describe('CreateAnimalWizard — alternate start options', () => {
-  it('offers import + copy start options that route to the existing entry points', () => {
+  it('offers import + copy start options that route to their full-page screens', () => {
     renderWizard();
-    expect(screen.getByRole('link', { name: /Import a YAML/i })).toHaveAttribute(
-      'href',
-      expect.stringContaining('/workspace')
-    );
+    expect(screen.getByRole('link', { name: /Import a YAML/i })).toHaveAttribute('href', '#/import');
     expect(screen.getByRole('link', { name: /Copy from another animal/i })).toHaveAttribute(
       'href',
-      expect.stringContaining('/workspace')
+      '#/copy-from-animal'
     );
   });
 });

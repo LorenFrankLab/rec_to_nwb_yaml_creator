@@ -352,8 +352,8 @@ describe('schemaValidation()', () => {
 
     it('preserves the raw AJV required-property message (humanization is a display concern)', () => {
       // The validation core must emit the raw "must have required property 'X'" shape so
-      // downstream consumers (e.g. ImportYamlDialog's remediationHint) can parse the field name.
-      // Humanizing for users happens only at the display layer (humanizeValidationMessage).
+      // downstream consumers can parse the field name. Humanizing for users happens only at the
+      // display layer (humanizeValidationMessage).
       const model = { ...createTestYaml(), data_acq_device: undefined };
       const issues = schemaValidation(model);
 

@@ -19,7 +19,6 @@ import StatusPill from '../../components/ui/StatusPill';
 import OverflowMenu from '../../components/OverflowMenu';
 import AnimalDeleteDialog from '../../components/AnimalDeleteDialog';
 import AnimalProfileDialog from '../../components/AnimalProfileDialog';
-import ImportYamlDialog from './ImportYamlDialog';
 import styles from './AnimalWorkspace.module.css';
 
 /** Status-filter options; the value (other than 'all') is a status-rollup variant. */
@@ -85,10 +84,12 @@ export function AnimalWorkspace() {
     window.location.hash = '#/home';
   };
 
-  // Whether the YAML-import dialog is open. Import lives beside create — it brings existing
-  // {mmddYYYY}_{subject}_metadata.yml files in as animals + days through the reconcile core, and
-  // (unlike create) never writes until the user confirms its preview.
-  const [showImport, setShowImport] = useState(false);
+  // Import is the full-page Import & Repair screen (epoch-editor Phase 7): it brings an existing
+  // {mmddYYYY}_{subject}_metadata.yml file in, flagging anything that won't validate with a
+  // suggested fix, and never writes until the user confirms.
+  const goToImport = () => {
+    window.location.hash = '#/import';
+  };
 
   /** Commit the pending animal deletion through the store's guarded deleteAnimal, then close. */
   const confirmDeleteAnimal = () => {
@@ -110,17 +111,9 @@ export function AnimalWorkspace() {
       // router (useHashRouter) explicitly.
       window.history.replaceState(null, '', `#/animal/${animalParam}/days`);
       window.dispatchEvent(new HashChangeEvent('hashchange'));
-      return;
-    }
-    // `#/workspace?import=1` handshake: the create wizard's "Import a YAML…" start option routes
-    // here to open the import dialog (the existing import entry point). Strip the transient param so
-    // Back / a reload doesn't reopen the dialog.
-    if (params.get('import') === '1') {
-      setShowImport(true);
-      window.history.replaceState(null, '', '#/workspace');
     }
     // Mount-only handshake: intentionally runs once. Re-running when `animals` changes would
-    // re-process the transient ?animal / ?import params and re-fire the redirect / open the dialog.
+    // re-process the transient ?animal param and re-fire the redirect.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Run only on mount
 
@@ -137,7 +130,7 @@ export function AnimalWorkspace() {
           <button type="button" className={styles.createAnimalLink} onClick={goToCreate}>
             Create Animal
           </button>
-          <button type="button" className={styles.importYamlLink} onClick={() => setShowImport(true)}>
+          <button type="button" className={styles.importYamlLink} onClick={goToImport}>
             Import YAML…
           </button>
         </div>
@@ -189,7 +182,7 @@ export function AnimalWorkspace() {
                 type="button"
                 className={styles.btnImportYaml}
                 aria-label="Import YAML files"
-                onClick={() => setShowImport(true)}
+                onClick={goToImport}
               >
                 Import YAML…
               </button>
@@ -284,8 +277,6 @@ export function AnimalWorkspace() {
         onConfirm={confirmDeleteAnimal}
         onCancel={() => setPendingDeleteAnimalId(null)}
       />
-
-      {showImport && <ImportYamlDialog onClose={() => setShowImport(false)} />}
 
       <AnimalProfileDialog
         isOpen={pendingProfileAnimalId != null}

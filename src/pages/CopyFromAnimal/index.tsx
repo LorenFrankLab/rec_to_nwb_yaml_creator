@@ -25,6 +25,7 @@ import {
   getDataAcqDevices,
 } from '../../state/workspaceSelectors';
 import type { Animal } from '../../state/workspaceTypes';
+import Button from '../../components/ui/Button';
 import styles from './CopyFromAnimal.module.css';
 
 /** The copyable setup sections, in display order. */
@@ -253,11 +254,11 @@ export default function CopyFromAnimal() {
             </div>
 
             <div className={styles.actions}>
-              <button type="button" className="btn-primary" disabled={!canCopy} onClick={handleCopy}>
+              <Button disabled={!canCopy} onClick={handleCopy}>
                 Copy &amp; continue setup →
-              </button>
+              </Button>
               <span className={styles.spacer} />
-              <a className="btn-secondary" href="#/workspace">Cancel</a>
+              <a className={styles.cancelLink} href="#/workspace">Cancel</a>
             </div>
           </>
         )}

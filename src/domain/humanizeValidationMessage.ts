@@ -2,9 +2,9 @@
  * humanizeValidationMessage — DISPLAY-ONLY presentation of validation messages.
  *
  * The validation core ({@link module:validation/schemaValidation}) intentionally emits the RAW
- * AJV message (e.g. `must have required property 'task_environment'`). That raw shape is parsed by
- * downstream consumers — notably ImportYamlDialog's `remediationHint`, which extracts the missing
- * field name — so it must NOT be humanized at the source. This helper rewrites the message into a
+ * AJV message (e.g. `must have required property 'task_environment'`). That raw shape may be parsed
+ * by downstream consumers (e.g. to extract a missing field name), so it must NOT be humanized at the
+ * source. This helper rewrites the message into a
  * user-facing sentence at the single point it is rendered to a person (the export-blocked issue
  * list, the day-row "Needs fixing" status). It is pure and conservative: anything it does not
  * recognize is returned unchanged.

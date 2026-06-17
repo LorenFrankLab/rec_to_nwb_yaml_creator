@@ -3,9 +3,9 @@
  *
  * From-scratch creation is the guided wizard at `#/home` — the picker's "+ New Animal" and the
  * empty-state "Create Animal" navigate there (the old inline AnimalCreationForm panel was retired).
- * The wizard's "Import a YAML…" start option routes back via `#/workspace?import=1`, which opens the
- * existing import dialog. Cancelling/aborting is the wizard's own concern (covered in
- * CreateAnimalWizard.test.jsx); here we pin the navigation + the import handshake.
+ * Import routes to the full-page Import & Repair screen at `#/import` (covered in
+ * AnimalWorkspace.import.test.jsx). Cancelling/aborting is the wizard's own concern (covered in
+ * CreateAnimalWizard.test.jsx); here we pin the create navigation.
  */
 import { describe, it, expect, afterEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
@@ -57,14 +57,5 @@ describe('AnimalWorkspace — create / import entry points', () => {
 
     await user.click(screen.getByRole('button', { name: /create.*animal/i }));
     expect(window.location.hash).toBe('#/home');
-  });
-
-  it('opens the import dialog on the #/workspace?import=1 handshake (from the wizard start option)', () => {
-    window.location.hash = '#/workspace?import=1';
-    renderPicker();
-    // The wizard's "Import a YAML…" routes here; the dialog opens without a click.
-    expect(screen.getByRole('dialog', { name: /import/i })).toBeInTheDocument();
-    // The transient ?import=1 is stripped so Back / reload doesn't reopen it.
-    expect(window.location.hash).toBe('#/workspace');
   });
 });

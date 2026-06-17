@@ -35,7 +35,7 @@ export const DEFAULT_ANIMAL_VIEW_TAB = 'days';
 /** Parsed route information. */
 export interface RouteInfo {
   /** Current view name. */
-  view: 'home' | 'workspace' | 'day' | 'validation' | 'animal-view' | 'legacy';
+  view: 'home' | 'workspace' | 'import' | 'copy-from-animal' | 'day' | 'validation' | 'animal-view' | 'legacy';
   /** Route parameters (e.g., `{id: '123'}` or `{animalId, tab}`). */
   params: Record<string, string>;
   /** True if route was not recognized. */
@@ -86,6 +86,15 @@ export function parseHashRoute(
 
   if (pathWithoutQuery === '/workspace') {
     return { view: 'workspace', params: {} };
+  }
+
+  // Import & Repair (epoch-editor Phase 7) and the copy-from-animal flow are full-page routes.
+  if (pathWithoutQuery === '/import') {
+    return { view: 'import', params: {} };
+  }
+
+  if (pathWithoutQuery === '/copy-from-animal') {
+    return { view: 'copy-from-animal', params: {} };
   }
 
   if (pathWithoutQuery === '/validation') {

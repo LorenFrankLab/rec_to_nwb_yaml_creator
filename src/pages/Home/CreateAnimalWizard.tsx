@@ -401,8 +401,8 @@ export default function CreateAnimalWizard() {
         </p>
         <p className={styles.startOptions}>
           Starting fresh below, or{' '}
-          <a href="#/workspace?import=1">Import a YAML…</a> ·{' '}
-          <a href="#/workspace">Copy from another animal…</a>
+          <a href="#/import">Import a YAML…</a> ·{' '}
+          <a href="#/copy-from-animal">Copy from another animal…</a>
         </p>
 
         {/* Stepper — a WAI-ARIA tablist over the seven steps; the active step's panel follows. */}

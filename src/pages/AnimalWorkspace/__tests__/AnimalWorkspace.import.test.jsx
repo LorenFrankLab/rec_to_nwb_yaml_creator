@@ -1,7 +1,8 @@
 /**
  * The workspace's "Import YAML…" entry point. It must be reachable both from the empty state
  * (beside "Create Animal") and from the populated picker header (beside "+ New Animal"), and
- * clicking it opens the ImportYamlDialog. The existing create flow stays unchanged.
+ * clicking it routes to the full-page Import & Repair screen (#/import). The existing create flow
+ * stays unchanged (routes to the wizard at #/home).
  */
 import { describe, it, expect, afterEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
@@ -37,28 +38,28 @@ function renderPicker(animals = { remy: existing }) {
 }
 
 describe('AnimalWorkspace — Import YAML entry point', () => {
-  it('shows an "Import YAML…" button in the populated picker header and opens the dialog', async () => {
+  it('shows an "Import YAML…" button in the populated picker header and routes to #/import', async () => {
     const user = userEvent.setup();
+    window.location.hash = '#/workspace';
     renderPicker();
 
     const trigger = screen.getByRole('button', { name: /import yaml/i });
     expect(trigger).toBeInTheDocument();
-    // The dialog is not shown until the trigger is used.
-    expect(screen.queryByRole('dialog', { name: /import yaml files/i })).not.toBeInTheDocument();
 
     await user.click(trigger);
-    expect(screen.getByRole('dialog', { name: /import yaml files/i })).toBeInTheDocument();
+    expect(window.location.hash).toBe('#/import');
   });
 
-  it('shows an "Import YAML…" button in the empty state and opens the dialog', async () => {
+  it('shows an "Import YAML…" button in the empty state and routes to #/import', async () => {
     const user = userEvent.setup();
+    window.location.hash = '#/workspace';
     renderPicker({});
 
     const trigger = screen.getByRole('button', { name: /import yaml/i });
     expect(trigger).toBeInTheDocument();
 
     await user.click(trigger);
-    expect(screen.getByRole('dialog', { name: /import yaml files/i })).toBeInTheDocument();
+    expect(window.location.hash).toBe('#/import');
   });
 
   it('the create flow is independent of import (the create button routes to the wizard at #/home)', async () => {

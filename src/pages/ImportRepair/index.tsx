@@ -24,6 +24,7 @@ import {
 import type { ImportRepairPlan, RepairItem } from '../../state/importRepair';
 import { planImport } from '../../state/yamlImportPlan';
 import { applyImportPlan } from '../../state/yamlImportApply';
+import Button from '../../components/ui/Button';
 import styles from './ImportRepair.module.css';
 
 /** The committed import outcome shown on the success screen. */
@@ -203,9 +204,9 @@ export default function ImportRepair() {
             </p>
           )}
           <div className={styles.actions}>
-            <button type="button" className="btn-secondary" onClick={reset}>
+            <Button variant="secondary" onClick={reset}>
               Import another file
-            </button>
+            </Button>
           </div>
         </section>
       </main>
@@ -304,21 +305,16 @@ export default function ImportRepair() {
         )}
 
         <div className={styles.actions}>
-          <button
-            type="button"
-            className="btn-primary"
-            disabled={!allResolved}
-            onClick={handleImport}
-          >
+          <Button disabled={!allResolved} onClick={handleImport}>
             {importLabel}
-          </button>
+          </Button>
           {!allResolved && (
             <span className={styles.blockerHint} role="status">
               Accept or fill every flagged field to import.
             </span>
           )}
           <span className={styles.spacer} />
-          <a className="btn-secondary" href="#/workspace">Cancel</a>
+          <a className={styles.cancelLink} href="#/workspace">Cancel</a>
         </div>
       </div>
     </main>
@@ -368,15 +364,15 @@ function RepairRow({ item, value, accepted, onAccept, onInput }: RepairRowProps)
       </div>
       <div className={styles.rowAction}>
         {item.kind === 'suggestion' && (
-          <button
-            type="button"
-            className={accepted ? styles.acceptedBtn : 'btn-primary'}
+          <Button
+            variant={accepted ? 'secondary' : 'primary'}
+            size="small"
             aria-label={`Accept ${item.label}`}
             aria-pressed={accepted}
             onClick={onAccept}
           >
             {accepted ? 'Accepted ✓' : 'Accept'}
-          </button>
+          </Button>
         )}
         {(item.kind === 'input' || accepted) && item.inputType === 'date' && (
           <input
