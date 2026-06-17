@@ -267,6 +267,10 @@ describe('ValidationSummary', () => {
   it('Validate All recomputes and persists status for every day', async () => {
     const user = userEvent.setup();
     const { workspace, ids } = makeSummaryWorkspace();
+    workspace.days[ids.validDayId].state = {
+      ...workspace.days[ids.validDayId].state,
+      deferredEpochs: [99],
+    };
     const updateDay = provideStore(workspace);
 
     render(<ValidationSummary />);
@@ -279,6 +283,7 @@ describe('ValidationSummary', () => {
     // state.validated is true ONLY for the genuinely-valid day.
     const callFor = (dayId) => updateDay.mock.calls.find((c) => c[0] === dayId)[1];
     expect(callFor(ids.validDayId).state.validated).toBe(true);
+    expect(callFor(ids.validDayId).state.deferredEpochs).toEqual([]);
     expect(callFor(ids.errorDayId).state.validated).toBe(false);
     expect(callFor(ids.incompleteDayId).state.validated).toBe(false);
 

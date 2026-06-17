@@ -191,6 +191,28 @@ describe('workspace persistence', () => {
     expect(loadWorkspace()).toEqual({ workspace: ws });
   });
 
+  it('clears session-fresh validation deferrals when loading an existing workspace', () => {
+    const ws = makeTestWorkspace();
+    const dayId = Object.keys(ws.days)[0];
+    ws.days[dayId].state = {
+      draft: true,
+      validationDeferred: true,
+      deferredEpochs: [3],
+      videolessEpochs: [1],
+    };
+    window.localStorage.setItem(
+      WORKSPACE_STORAGE_KEY,
+      JSON.stringify({ schemaVersion: WORKSPACE_SCHEMA_VERSION, workspace: ws }),
+    );
+
+    const result = loadWorkspace();
+
+    expect(result.workspace.days[dayId].state).toEqual({
+      draft: true,
+      videolessEpochs: [1],
+    });
+  });
+
   it('migrates v1 workspace device data instead of discarding user work', () => {
     const ws = makeTestWorkspace();
     ws.animals.remy.devices = {

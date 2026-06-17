@@ -169,6 +169,14 @@ describe('CreateAnimalWizard — step navigation + commit', () => {
     expect(screen.getByRole('button', { name: /behavior-only/i })).toBeInTheDocument();
   });
 
+  it('labels defaulted recording-system setup as pre-filled review, not complete', async () => {
+    const user = userEvent.setup();
+    renderWizard();
+    await fillIdentity(user);
+    await user.click(screen.getByRole('button', { name: /Next/i }));
+    expect(screen.getByRole('tab', { name: /Recording system: Pre-filled.*review/i })).toBeInTheDocument();
+  });
+
   it('reuses each setup container when its step is opened', async () => {
     const user = userEvent.setup();
     renderWizard();
@@ -177,6 +185,7 @@ describe('CreateAnimalWizard — step navigation + commit', () => {
 
     await user.click(screen.getByRole('tab', { name: /Cameras/ }));
     expect(screen.getByText(/No Cameras Configured/i)).toBeInTheDocument();
+    expect(screen.queryByText(/placeholder value silently/i)).not.toBeInTheDocument();
 
     await user.click(screen.getByRole('tab', { name: /Optogenetics/ }));
     expect(screen.getByText(/This animal has optogenetics/i)).toBeInTheDocument();

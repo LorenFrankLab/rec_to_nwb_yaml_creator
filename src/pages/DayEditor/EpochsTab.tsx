@@ -37,6 +37,7 @@ import {
   getAnimalCameras,
   getDayAssociatedVideos,
   getDayAssociatedFiles,
+  getDayDeferredEpochs,
   getDayFsGuiYamls,
   getDayVideolessEpochs,
 } from '../../state/workspaceSelectors';
@@ -84,6 +85,17 @@ function taskDefinitionSummary(definition: Record<string, unknown>): string {
     `environment: ${formatDefinitionValue(definition.task_environment)}`,
     `cameras: ${formatDefinitionValue(definition.camera_id)}`,
   ].join('; ');
+}
+
+function taskInstanceEpochs(instances: TaskInstance[]): Set<number> {
+  const epochs = new Set<number>();
+  instances.forEach((instance) => {
+    (Array.isArray(instance.task_epochs) ? instance.task_epochs : []).forEach((value) => {
+      const n = Number(value);
+      if (Number.isInteger(n)) epochs.add(n);
+    });
+  });
+  return epochs;
 }
 
 /**
@@ -137,14 +149,35 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
     return () => document.removeEventListener('click', close);
   }, [menuEpoch, templateOpen]);
 
+  const statePatch = useCallback((patch: Record<string, unknown>, sourceDay = day) => {
+    const state = (sourceDay as { state?: unknown }).state;
+    const base =
+      state !== null && typeof state === 'object' && !Array.isArray(state)
+        ? (state as Record<string, unknown>)
+        : {};
+    return { ...base, validationDeferred: false, ...patch };
+  }, [day]);
+
+  const statePatchWithVideoless = useCallback((videolessEpochs: number[], sourceDay = day) =>
+    statePatch({ videolessEpochs }, sourceDay), [day, statePatch]);
+
+  const clearDeferredEpoch = useCallback((epoch: number) => {
+    const current = getDayDeferredEpochs(day);
+    if (!current.includes(epoch)) return;
+    onFieldUpdate('state', statePatch({ deferredEpochs: current.filter((e) => e !== epoch) }));
+  }, [day, onFieldUpdate, statePatch]);
+
   const toggle = useCallback((epoch: number) => {
     setExpanded((prev) => {
       const next = new Set(prev);
       if (next.has(epoch)) next.delete(epoch);
-      else next.add(epoch);
+      else {
+        next.add(epoch);
+        clearDeferredEpoch(epoch);
+      }
       return next;
     });
-  }, []);
+  }, [clearDeferredEpoch]);
 
   /**
    * Persist a next instance array (and an optionally-extended catalog), retiring inline `day.tasks`
@@ -156,7 +189,8 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
       nextInstances: TaskInstance[],
       nextTaskTypes: TaskType[],
       repair: boolean,
-      allowTaskCatalogDivergence = false
+      allowTaskCatalogDivergence = false,
+      options: { trackAddedEpochs?: boolean } = {}
     ) => {
       if (unresolvedTaskCatalogDivergence && !allowTaskCatalogDivergence) return;
       if (nextTaskTypes !== view.taskTypes && actions?.updateAnimal && ownerKey) {
@@ -165,6 +199,12 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
         });
       }
       onFieldUpdate('taskInstances', nextInstances);
+      const currentEpochs = taskInstanceEpochs(view.taskInstances);
+      const addedEpochs = [...taskInstanceEpochs(nextInstances)].filter((epoch) => !currentEpochs.has(epoch));
+      if ((options.trackAddedEpochs ?? true) && addedEpochs.length > 0) {
+        const currentDeferred = getDayDeferredEpochs(day);
+        onFieldUpdate('state', statePatch({ deferredEpochs: [...new Set([...currentDeferred, ...addedEpochs])] }));
+      }
       if (view.derived && Array.isArray((day as { tasks?: unknown[] }).tasks) && (day as { tasks: unknown[] }).tasks.length > 0) {
         onFieldUpdate('tasks', []);
       }
@@ -183,7 +223,17 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
         onFieldUpdate('associated_files', clear(getDayAssociatedFiles(day)));
       }
     },
-    [unresolvedTaskCatalogDivergence, view.taskTypes, view.derived, actions, ownerKey, onFieldUpdate, day]
+    [
+      unresolvedTaskCatalogDivergence,
+      view.taskTypes,
+      view.taskInstances,
+      view.derived,
+      actions,
+      ownerKey,
+      onFieldUpdate,
+      day,
+      statePatch,
+    ]
   );
 
   const keepCatalogDefinition = useCallback(() => {
@@ -219,24 +269,19 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
   const pendingAfterRef = useRef<(() => void) | null>(null);
 
   // ── Task / epoch write-backs (instance-array transforms) ──
-  const reassignTask = (epoch: number, taskTypeId: string) =>
+  const reassignTask = (epoch: number, taskTypeId: string) => {
+    clearDeferredEpoch(epoch);
     commit(setEpochTask(view.taskInstances, epoch, taskTypeId));
-  const onDuplicate = (epoch: number) => commit(duplicateEpoch(view.taskInstances, epoch));
-  const statePatchWithVideoless = (videolessEpochs: number[], sourceDay = day) => {
-    const state = (sourceDay as { state?: unknown }).state;
-    const base =
-      state !== null && typeof state === 'object' && !Array.isArray(state)
-        ? (state as Record<string, unknown>)
-        : {};
-    return { ...base, videolessEpochs };
   };
+  const onDuplicate = (epoch: number) => commit(duplicateEpoch(view.taskInstances, epoch));
 
   // A renumber (insert / move) shifts epoch numbers, so the day's bound file/video/fs_gui refs are
   // remapped in LOCKSTEP — each follows its task content to the new epoch number instead of being
   // silently re-pointed at a different task. Because the refs follow, the edit creates no orphan
   // (no confirm needed); only the arrays that actually change are written.
-  const renumberCommit = (nextInstances: TaskInstance[], remap: Map<number, number>) => {
+  const renumberCommit = (nextInstances: TaskInstance[], remap: Map<number, number>, insertedEpoch?: number) => {
     if (unresolvedTaskCatalogDivergence) return;
+    const stateUpdates: Record<string, unknown> = {};
     if (remap.size > 0) {
       const refs = remapEpochRefs(day, remap);
       const videos = getDayAssociatedVideos(day);
@@ -253,14 +298,29 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
       }
       const videoless = getDayVideolessEpochs(day);
       const nextVideoless = remapVideolessEpochs(videoless, remap);
-      if (JSON.stringify(nextVideoless) !== JSON.stringify(videoless)) {
-        onFieldUpdate('state', statePatchWithVideoless(nextVideoless));
+      const deferred = getDayDeferredEpochs(day);
+      const nextDeferred = remapVideolessEpochs(deferred, remap);
+      if (
+        JSON.stringify(nextVideoless) !== JSON.stringify(videoless) ||
+        JSON.stringify(nextDeferred) !== JSON.stringify(deferred)
+      ) {
+        stateUpdates.videolessEpochs = nextVideoless;
+        stateUpdates.deferredEpochs = nextDeferred;
       }
     }
-    applyCommit(nextInstances, view.taskTypes, false);
+    if (insertedEpoch != null) {
+      const deferred = Array.isArray(stateUpdates.deferredEpochs)
+        ? stateUpdates.deferredEpochs as number[]
+        : getDayDeferredEpochs(day);
+      stateUpdates.deferredEpochs = [...new Set([...deferred, insertedEpoch])];
+    }
+    applyCommit(nextInstances, view.taskTypes, false, false, { trackAddedEpochs: false });
+    if (Object.keys(stateUpdates).length > 0) {
+      onFieldUpdate('state', statePatch(stateUpdates));
+    }
   };
   const onInsertAfter = (epoch: number) =>
-    renumberCommit(insertEpochAfter(view.taskInstances, epoch), insertAfterRemap(view.taskInstances, epoch));
+    renumberCommit(insertEpochAfter(view.taskInstances, epoch), insertAfterRemap(view.taskInstances, epoch), epoch + 1);
   const onMove = (epoch: number, dir: 'up' | 'down') => {
     const other = dir === 'up' ? epoch - 1 : epoch + 1;
     if (grid.rows.some((r) => r.epoch === other)) {
@@ -276,28 +336,35 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
     const snapVideos = getDayAssociatedVideos(day);
     const snapFiles = getDayAssociatedFiles(day);
     const snapVideoless = getDayVideolessEpochs(day);
+    const snapDeferred = getDayDeferredEpochs(day);
     const nextVideoless = removeVideolessEpoch(snapVideoless, epoch);
+    const nextDeferred = removeVideolessEpoch(snapDeferred, epoch);
     const videolessChanged = JSON.stringify(nextVideoless) !== JSON.stringify(snapVideoless);
-    const writeDeletedVideoless = () => {
-      if (videolessChanged) onFieldUpdate('state', statePatchWithVideoless(nextVideoless));
+    const deferredChanged = JSON.stringify(nextDeferred) !== JSON.stringify(snapDeferred);
+    const writeDeletedState = () => {
+      if (videolessChanged || deferredChanged) {
+        onFieldUpdate('state', statePatch({ videolessEpochs: nextVideoless, deferredEpochs: nextDeferred }));
+      }
     };
     const announce = () =>
       showToast(`Epoch ${epoch} deleted`, () => {
         onFieldUpdate('taskInstances', snapInstances);
         onFieldUpdate('associated_video_files', snapVideos);
         onFieldUpdate('associated_files', snapFiles);
-        if (videolessChanged) onFieldUpdate('state', statePatchWithVideoless(snapVideoless));
+        if (videolessChanged || deferredChanged) {
+          onFieldUpdate('state', statePatch({ videolessEpochs: snapVideoless, deferredEpochs: snapDeferred }));
+        }
       });
     if (videos.length === 0 && files.length === 0) {
       applyCommit(next, view.taskTypes, false);
-      writeDeletedVideoless();
+      writeDeletedState();
       announce();
       return;
     }
     // Orphan: confirm first. The toast (and its full-restore Undo) fires only AFTER the user confirms.
     pendingTypesRef.current = view.taskTypes;
     pendingAfterRef.current = () => {
-      writeDeletedVideoless();
+      writeDeletedState();
       announce();
     };
     setPendingOrphan({ nextInstances: next, videos, files });
@@ -327,6 +394,7 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
   // ── Opto (fs_gui) per-epoch power / pulse ──
   const setOpto = (row: EpochGridRow, field: 'power_in_mW' | 'pulseLength', value: string) => {
     if (unresolvedTaskCatalogDivergence) return;
+    clearDeferredEpoch(row.epoch);
     const fsgui = getDayFsGuiYamls(day);
     const parsed = value === '' ? '' : Number(value);
     if (row.opto) {
@@ -349,12 +417,14 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
     });
   const writeStatescriptPath = (row: EpochGridRow, path: string) => {
     if (unresolvedTaskCatalogDivergence) return;
+    clearDeferredEpoch(row.epoch);
     const files = getDayAssociatedFiles(day);
     if (!row.statescript) return;
     onFieldUpdate('associated_files', files.map((f, i) => (i === row.statescript!.index ? { ...f, path } : f)));
   };
   const addStatescript = (row: EpochGridRow) => {
     if (unresolvedTaskCatalogDivergence) return;
+    clearDeferredEpoch(row.epoch);
     const name = statescriptDerivedName(row);
     const path = deriveStatescriptPath(grid.dataFolder, name);
     onFieldUpdate('associated_files', [
@@ -366,12 +436,14 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
   // ── Video 3-state ──
   const setVideoless = (epoch: number, on: boolean) => {
     if (unresolvedTaskCatalogDivergence) return;
+    clearDeferredEpoch(epoch);
     const current = getDayVideolessEpochs(day);
     const next = on ? [...new Set([...current, epoch])] : current.filter((e) => e !== epoch);
     onFieldUpdate('state', statePatchWithVideoless(next));
   };
   const addVideo = (row: EpochGridRow) => {
     if (unresolvedTaskCatalogDivergence) return;
+    clearDeferredEpoch(row.epoch);
     const videos = getDayAssociatedVideos(day);
     const index = videos.filter((v) => Number(v.task_epochs) === row.epoch).length + 1;
     const name = deriveVideoName({ date: grid.date, subjectId: grid.subjectId, epoch: row.epoch, tag: row.tag, index });
@@ -385,6 +457,8 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
   };
   const writeVideoName = (videoIndex: number, name: string) => {
     if (unresolvedTaskCatalogDivergence) return;
+    const row = grid.rows.find((candidate) => candidate.videos.some((video) => video.index === videoIndex));
+    if (row) clearDeferredEpoch(row.epoch);
     onFieldUpdate('associated_video_files', getDayAssociatedVideos(day).map((v, i) => (i === videoIndex ? { ...v, name } : v)));
   };
 

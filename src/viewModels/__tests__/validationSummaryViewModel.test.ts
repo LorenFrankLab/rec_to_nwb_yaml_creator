@@ -13,7 +13,7 @@ import { variantToSeverity } from '../dayRowViewModel';
 import { buildRows, dayChipDisplay } from '../validationSummaryRows';
 import type { SummaryRow } from '../validationSummaryRows';
 import { describeOwner } from '../../domain/dayRecovery';
-import { buildRealisticWorkspace } from '../../__tests__/fixtures/workspaceBuilders';
+import { buildCatalogWorkspace, buildRealisticWorkspace } from '../../__tests__/fixtures/workspaceBuilders';
 
 type Workspace = { animals: Record<string, unknown>; days: Record<string, unknown> };
 type Idable = { id: string } & Record<string, unknown>;
@@ -97,6 +97,46 @@ describe('buildValidationSummaryViewModel — parity (all animals)', () => {
     expect(eVm.status).toBe('ready');
     expect(eVm.statusLabel).toBe('Exported');
     expect(eVm.lifecycle).toBe('exported');
+  });
+
+  it('shows an untouched app-created scaffold as incomplete, not an error', () => {
+    const { animal, day } = loadRealistic();
+    const deferred = {
+      ...day,
+      state: { draft: true, validated: false, exported: false, validationDeferred: true },
+      tasks: 'not-an-array',
+    };
+
+    const vm = buildValidationSummaryViewModel(wrap(animal, deferred));
+    const row = vm.days[0];
+
+    expect(vm.counts).toEqual({ valid: 0, error: 0, incomplete: 1 });
+    expect(row.statusLabel).toBe('Incomplete');
+    expect(row.chipVariant).toBe('incomplete');
+  });
+
+  it('shows a newly inserted deferred epoch as incomplete, not an error, until touched', () => {
+    const { animal, day } = buildCatalogWorkspace() as {
+      animal: Idable;
+      day: Idable & { taskInstances: Array<{ task_epochs: number[] }> };
+    };
+    day.associated_video_files = [
+      ...(day.associated_video_files as unknown[]),
+      { name: 'sleep_video_epoch1', camera_id: 0, task_epochs: 1 },
+      { name: 'sleep_video_epoch3', camera_id: 0, task_epochs: 3 },
+      { name: 'sleep_video_epoch5', camera_id: 0, task_epochs: 5 },
+    ];
+    day.taskInstances = day.taskInstances.map((instance, index) =>
+      index === 0 ? { ...instance, task_epochs: [...instance.task_epochs, 9] } : instance
+    );
+    day.state = { draft: true, validated: false, exported: false, deferredEpochs: [9] };
+
+    const vm = buildValidationSummaryViewModel(wrap(animal, day));
+    const row = vm.days[0];
+
+    expect(vm.counts).toEqual({ valid: 0, error: 0, incomplete: 1 });
+    expect(row.statusLabel).toBe('Incomplete');
+    expect(row.chipVariant).toBe('incomplete');
   });
 });
 

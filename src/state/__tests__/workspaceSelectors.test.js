@@ -27,6 +27,7 @@ import {
   getDayCamerasUsed,
   getDayBadChannelOverrides,
   getDayDataAcqDeviceName,
+  getDayDeferredEpochs,
   getDayVideolessEpochs,
 } from '../workspaceSelectors';
 
@@ -150,6 +151,22 @@ describe('getDayVideolessEpochs — the off-export absent-video set', () => {
   });
   it('drops non-integer entries', () => {
     expect(getDayVideolessEpochs({ state: { videolessEpochs: [1, 2.5, NaN, 'abc', 4] } }).sort((a, b) => a - b)).toEqual([1, 4]);
+  });
+});
+
+describe('getDayDeferredEpochs — the off-export fresh-epoch presentation set', () => {
+  it('reads day.state.deferredEpochs, Number-normalized and de-duplicated', () => {
+    expect(getDayDeferredEpochs({ state: { deferredEpochs: [1, '2', 2] } }).sort((a, b) => a - b)).toEqual([1, 2]);
+  });
+  it('returns [] for an absent/corrupt set (never throws)', () => {
+    for (const bad of [undefined, null, 42, 'x', { 0: 1 }]) {
+      expect(getDayDeferredEpochs({ state: { deferredEpochs: bad } })).toEqual([]);
+    }
+    expect(getDayDeferredEpochs({})).toEqual([]);
+    expect(getDayDeferredEpochs(null)).toEqual([]);
+  });
+  it('drops non-integer entries', () => {
+    expect(getDayDeferredEpochs({ state: { deferredEpochs: [1, 2.5, NaN, 'abc', 4] } }).sort((a, b) => a - b)).toEqual([1, 4]);
   });
 });
 

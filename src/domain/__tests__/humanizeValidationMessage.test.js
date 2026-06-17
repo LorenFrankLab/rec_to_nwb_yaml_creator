@@ -15,6 +15,9 @@ describe('humanizeValidationMessage()', () => {
         humanizeValidationMessage("must have required property 'data_acq_device'")
       ).toBe('A data acquisition device is required');
       expect(
+        humanizeValidationMessage("must have required property 'institution'")
+      ).toBe('Institution is required');
+      expect(
         humanizeValidationMessage("must have required property 'task_environment'")
       ).toBe('Task environment (room/apparatus) is required');
       expect(
@@ -41,6 +44,33 @@ describe('humanizeValidationMessage()', () => {
       expect(
         humanizeValidationMessage("must have required property 'whatever_key'")
       ).not.toContain('must have required property');
+    });
+  });
+
+  describe('minItems jargon', () => {
+    it('names the collection item when a path is available', () => {
+      expect(
+        humanizeValidationMessage('must NOT have fewer than 1 items', '/data_acq_device')
+      ).toBe('Add at least one data acquisition device');
+      expect(
+        humanizeValidationMessage('must NOT have fewer than 1 items', 'experimenter_name')
+      ).toBe('Add at least one experimenter name');
+    });
+
+    it('falls back safely when no path is available', () => {
+      expect(humanizeValidationMessage('must NOT have fewer than 1 items')).toBe(
+        'Add at least one item'
+      );
+    });
+
+    it('does not mutate the raw issue message', () => {
+      const issue = {
+        path: '/data_acq_device',
+        message: 'must NOT have fewer than 1 items',
+      };
+      const rendered = humanizeValidationMessage(issue.message, issue.path);
+      expect(rendered).toBe('Add at least one data acquisition device');
+      expect(issue.message).toBe('must NOT have fewer than 1 items');
     });
   });
 

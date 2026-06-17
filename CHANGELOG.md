@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Validation presentation polish.** Day-editor readiness findings are now grouped by section,
+  tiered by severity, and warnings collapse behind an acknowledgement disclosure while info nudges stay
+  inline. Freshly created days and freshly inserted epochs remain Draft/Incomplete until opened,
+  edited, validated, or exported, so app-created scaffolds no longer greet users with premature errors;
+  imported/loaded invalid data still surfaces immediately. Additional AJV messages are humanized at the
+  display layer, and pre-filled wizard steps render as "Pre-filled — review" instead of looking user-complete.
 - **Review recovered data screen.** When a saved workspace loads with records that don't fit the
   current shape, the recovery notice banner now routes to a dedicated **`#/recovery`** screen instead
   of the generic Animals home. It renders the **existing** day-recovery classification (it never

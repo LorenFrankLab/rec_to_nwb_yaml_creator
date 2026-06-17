@@ -543,7 +543,7 @@ export function toIssueViewModel(
 
   const vm: IssueViewModel = {
     severity: issue.severity === 'warning' ? 'warning' : 'error',
-    message: humanizeValidationMessage(issue.message),
+    message: humanizeValidationMessage(issue.message, path),
     ownership: ownership.pattern,
     // The ownership pattern's primary action + reach + category are the data IssueOwnershipHint and
     // the category-grouped list render, surfaced so the component re-derives nothing.
@@ -1039,7 +1039,7 @@ function buildBlockedRemovals(
       if (acks != null) payload.acks = acks;
       const vm: IssueViewModel = {
         severity: 'error',
-        message: humanizeValidationMessage(issue.message),
+        message: humanizeValidationMessage(issue.message, issue.path ?? issue.instancePath),
         ownership: ownership.pattern,
         reachesBeyondDay: ownership.reachesBeyondDay,
         repair: {

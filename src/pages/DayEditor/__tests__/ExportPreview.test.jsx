@@ -154,11 +154,14 @@ describe('ExportPreview — download & copy', () => {
     const user = userEvent.setup();
     const updateDay = vi.fn();
     const { animal, day } = buildRealisticWorkspace();
+    day.state = { ...day.state, deferredEpochs: [99] };
     renderPreview(animal, day, { actions: { updateDay } });
 
     await user.click(screen.getByRole('button', { name: /download/i }));
 
-    expect(updateDay).toHaveBeenCalledWith(day.id, { state: expect.objectContaining({ exported: true }) });
+    expect(updateDay).toHaveBeenCalledWith(day.id, {
+      state: expect.objectContaining({ exported: true, deferredEpochs: [] }),
+    });
   });
 
   it('copies the exported YAML to the clipboard and toasts success', async () => {

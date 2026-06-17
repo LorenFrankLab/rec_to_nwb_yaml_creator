@@ -22,6 +22,11 @@ import { computeStepStatus, validateDay, STEP_STATUS } from './validation';
 import { isExportEnabled } from './stepGate';
 import { DAY_LIFECYCLE, DAY_LIFECYCLE_LABEL, lifecycleForValidDay } from './dayLifecycle';
 import {
+  allBlockingIssuesDeferred,
+  isDayValidationDeferred,
+  presentValidationIssues,
+} from './validationPresentation';
+import {
   getAnimalElectrodeGroups,
   getAnimalCameras,
   getDataAcqDevices,
@@ -355,6 +360,7 @@ function firstBlockingReason(
   mergedDay: ValidationModel | null,
   animalDays: unknown[] = []
 ): string | null {
+  if (isDayValidationDeferred(day)) return null;
   if (!mergedDay) return 'recording day configuration could not be loaded';
   let issues;
   try {
@@ -365,8 +371,22 @@ function firstBlockingReason(
     console.debug(`[workflow-status] could not validate day "${day?.id}":`, err);
     return 'recording day could not be validated';
   }
-  const firstError = issues.find((i) => i?.severity === 'error');
+  const firstError = presentValidationIssues(issues, day).find((i) => i?.severity === 'error');
   return firstError ? firstError.message || 'see the validation summary' : null;
+}
+
+function rawBlockingIssuesAreDeferred(
+  animal: unknown,
+  day: ValidationModel,
+  mergedDay: ValidationModel | null,
+  animalDays: unknown[]
+): boolean {
+  if (!mergedDay) return isDayValidationDeferred(day);
+  try {
+    return allBlockingIssuesDeferred(validateDay(day, mergedDay, animal, animalDays), day);
+  } catch {
+    return false;
+  }
 }
 
 /**
@@ -416,6 +436,9 @@ export function getDayRowStatus(
   mergedDay: ValidationModel | null,
   animalDays: unknown[] = []
 ): DayRowStatus {
+  if (isDayValidationDeferred(day)) {
+    return { variant: DAY_LIFECYCLE.DRAFT, label: `${DAY_LIFECYCLE_LABEL.draft} — incomplete` };
+  }
   const reason = firstBlockingReason(animal, day, mergedDay, animalDays);
   if (reason) {
     return { variant: DAY_LIFECYCLE.NEEDS_FIXING, label: `${DAY_LIFECYCLE_LABEL.needs_fixing} — ${reason}` };
@@ -459,6 +482,9 @@ export function getDayRowStatus(
   // a blocker → "Needs fixing"; merely-incomplete prerequisites → "Draft — incomplete". A stale
   // validated/exported flag does NOT show here — the live gate wins.
   const hasStepError = Object.values(stepStatus).some((s) => s === STEP_STATUS.ERROR);
+  if (hasStepError && rawBlockingIssuesAreDeferred(animal, day, mergedDay, animalDays)) {
+    return { variant: DAY_LIFECYCLE.DRAFT, label: `${DAY_LIFECYCLE_LABEL.draft} — incomplete` };
+  }
   return hasStepError
     ? { variant: DAY_LIFECYCLE.NEEDS_FIXING, label: `${DAY_LIFECYCLE_LABEL.needs_fixing} — see the validation summary` }
     : { variant: DAY_LIFECYCLE.DRAFT, label: `${DAY_LIFECYCLE_LABEL.draft} — incomplete` };

@@ -21,9 +21,24 @@ const REQUIRED_PROP_LABELS: Record<string, string> = {
   task_environment: 'Task environment (room/apparatus) is required',
   camera_id: 'A camera selection is required',
   data_acq_device: 'A data acquisition device is required',
+  institution: 'Institution is required',
   meters_per_pixel: 'Camera meters-per-pixel calibration is required',
   targeted_location: 'A brain region/location is required',
   location: 'A brain region/location is required',
+};
+
+/** Friendly nouns for minItems messages. */
+const COLLECTION_ITEM_LABELS: Record<string, string> = {
+  data_acq_device: 'data acquisition device',
+  electrode_groups: 'electrode group',
+  ntrode_electrode_group_channel_map: 'ntrode channel map',
+  experimenter_name: 'experimenter name',
+  cameras: 'camera',
+  tasks: 'task',
+  task_epochs: 'epoch',
+  associated_video_files: 'video file',
+  associated_files: 'associated file',
+  fs_gui_yamls: 'FsGUI file',
 };
 
 /**
@@ -35,12 +50,20 @@ const REQUIRED_PROP_LABELS: Record<string, string> = {
  */
 function humanizeKey(key: string): string {
   // `String(x).split('.')` always yields at least one element, so `pop()` is never undefined.
-  const lastSegment = String(key).split('.').pop()!;
+  const normalized = String(key).replace(/^\//, '').replace(/\//g, '.').replace(/\[\d+\]/g, '');
+  const lastSegment = normalized.split('.').pop()!;
   const words = lastSegment.replace(/_/g, ' ').trim();
   if (!words) {
     return key;
   }
   return words.charAt(0).toUpperCase() + words.slice(1);
+}
+
+function collectionItemLabel(path: unknown): string {
+  if (!path || typeof path !== 'string') return 'item';
+  const normalized = path.replace(/^\//, '').replace(/\//g, '.').replace(/\[\d+\]/g, '');
+  const lastSegment = normalized.split('.').pop() || normalized;
+  return COLLECTION_ITEM_LABELS[lastSegment] || humanizeKey(lastSegment).toLowerCase();
 }
 
 // A leading raw field token we are willing to sentence-case: a snake_case or dotted-path
@@ -55,7 +78,7 @@ const LEADING_FIELD_TOKEN = /^([a-z][a-z0-9]*(?:[._][a-z0-9]+)+)(\s+.*)$/;
  * @param message - The raw validation message.
  * @returns The display message.
  */
-export function humanizeValidationMessage(message: unknown): string {
+export function humanizeValidationMessage(message: unknown, path?: unknown): string {
   if (!message || typeof message !== 'string') {
     return '';
   }
@@ -68,6 +91,10 @@ export function humanizeValidationMessage(message: unknown): string {
       return REQUIRED_PROP_LABELS[prop];
     }
     return `${humanizeKey(prop)} is required`;
+  }
+
+  if (message === 'must NOT have fewer than 1 items') {
+    return `Add at least one ${collectionItemLabel(path)}`;
   }
 
   // A leading raw snake_case/dotted field token in any other message (e.g.

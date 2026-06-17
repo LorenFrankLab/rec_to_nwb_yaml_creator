@@ -212,10 +212,10 @@ describe('computeStepStatuses — per-step completeness', () => {
     ).toBe('incomplete');
   });
 
-  it('recording-system is complete with ≥1 data_acq_device (seeded by default)', () => {
+  it('recording-system is prefilled with ≥1 default data_acq_device (review, not user-complete)', () => {
     expect(
       computeStepStatuses(makeAnimal(), { identityValid: true, behaviorOnly: false })['recording-system']
-    ).toBe('complete');
+    ).toBe('prefilled');
   });
 });
 

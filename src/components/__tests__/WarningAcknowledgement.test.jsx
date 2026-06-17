@@ -27,9 +27,24 @@ describe('WarningAcknowledgement', () => {
   it('lists each day → its warning messages (content-explicit, not a bare count)', () => {
     render(<WarningAcknowledgement items={items} acknowledged={false} onChange={() => {}} />);
     const group = screen.getByRole('group', { name: /outstanding warnings to review/i });
+    expect(within(group).getByText(/2 days have non-blocking warnings/i)).toBeInTheDocument();
     expect(within(group).getByText(/remy_20230622/)).toBeInTheDocument();
     expect(within(group).getByText(/inconsistent capitalization/i)).toBeInTheDocument();
     expect(within(group).getByText(/orphaned associated file/i)).toBeInTheDocument();
+  });
+
+  it('can name non-day warning groups for embedded surfaces', () => {
+    render(
+      <WarningAcknowledgement
+        items={items}
+        acknowledged={false}
+        onChange={() => {}}
+        itemSingular="section"
+        itemPlural="sections"
+      />
+    );
+    expect(screen.getByText(/2 sections have non-blocking warnings/i)).toBeInTheDocument();
+    expect(screen.queryByText(/2 days have non-blocking warnings/i)).not.toBeInTheDocument();
   });
 
   it('reports the checkbox state through onChange', async () => {

@@ -142,7 +142,12 @@ export function useValidationSummaryActions({ rows, workspace, actions }: Valida
       try {
         const currentState = isRecord(day.state) ? day.state : {};
         actions.updateDay(day.id as string, {
-          state: { ...currentState, validated: chip === 'valid' },
+          state: {
+            ...currentState,
+            validationDeferred: false,
+            deferredEpochs: [],
+            validated: chip === 'valid',
+          },
         });
       } catch (err) {
         validateErrors.push({

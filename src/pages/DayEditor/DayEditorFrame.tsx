@@ -15,6 +15,10 @@ import { animalSetupTabForFieldPath } from '../../domain/validation';
 import { repairTargetForIssue, stepIdForIssue } from '../../domain/repairRouting';
 import type { RepairableIssue } from '../../domain/repairRouting';
 import { validateDay } from '../../domain/dayValidationComposer';
+import {
+  isDayValidationDeferred,
+  presentValidationIssues,
+} from '../../domain/validationPresentation';
 import { buildDayEditorViewModel } from '../../viewModels/dayEditorViewModel';
 import type { DayTabKey } from '../../viewModels/dayEditorViewModel';
 import type { StepStatus } from '../../viewModels/types';
@@ -155,12 +159,13 @@ export default function DayEditorFrame() {
   const readinessIssues = useMemo<RepairableIssue[]>(() => {
     if (!day || !animal) return [];
     try {
-      return validateDay(
+      const issues = validateDay(
         day as unknown as Record<string, unknown>,
         mergedDay ?? {},
         animal,
         animalDays
       ) as RepairableIssue[];
+      return presentValidationIssues(issues, day) as RepairableIssue[];
     } catch (err) {
       // eslint-disable-next-line no-console
       console.error(`[day-editor] could not validate day "${dayId}":`, err);
@@ -169,6 +174,15 @@ export default function DayEditorFrame() {
       ];
     }
   }, [day, animal, mergedDay, animalDays, dayId]);
+
+  useEffect(() => {
+    if (!dayId || !day || !isDayValidationDeferred(day)) return;
+    const state =
+      day.state !== null && typeof day.state === 'object' && !Array.isArray(day.state)
+        ? (day.state as Record<string, unknown>)
+        : {};
+    actions.updateDay(dayId, { state: { ...state, validationDeferred: false } });
+  }, [actions, day, dayId]);
 
   // ── Focus management (mirrors the former stepper) ──
   const [focusRequest, setFocusRequest] = useState<FocusRequest | null>(null);

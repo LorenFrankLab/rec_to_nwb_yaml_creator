@@ -262,11 +262,12 @@ export function buildWizardCommitPayload(
 /**
  * Per-step completeness:
  * - `complete` — the step is satisfied.
+ * - `prefilled` — the step has defaults that must be reviewed before treating them as authored.
  * - `incomplete` — a required step is not yet satisfied (or optogenetics is partial → blocks export).
  * - `optional` — an optional step is not configured (a neutral, valid state — only optogenetics).
  * - `skipped` — electrodes deliberately skipped for a behavior-only animal.
  */
-export type StepStatus = 'complete' | 'incomplete' | 'optional' | 'skipped';
+export type StepStatus = 'complete' | 'prefilled' | 'incomplete' | 'optional' | 'skipped';
 
 /** Inputs for {@link computeStepStatuses} that aren't on the animal record. */
 export interface StepCompletenessInput {
@@ -318,7 +319,7 @@ export function computeStepStatuses(
     cameras: cameras.length > 0 ? 'complete' : 'incomplete',
     optogenetics: optoStatus,
     tasks: taskTypes.length > 0 ? 'complete' : 'incomplete',
-    'recording-system': dataAcq.length > 0 ? 'complete' : 'incomplete',
+    'recording-system': dataAcq.length > 0 ? 'prefilled' : 'incomplete',
     team: teamComplete ? 'complete' : 'incomplete',
   };
 }

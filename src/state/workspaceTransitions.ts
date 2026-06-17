@@ -537,6 +537,7 @@ export function createDayRecord(
       draft: true,
       validated: false,
       exported: false,
+      validationDeferred: carryFrom == null,
     },
     created: now,
     lastModified: now,
@@ -566,6 +567,7 @@ export function createDayRecord(
  */
 export function applyDayUpdates(day: Day, updates: DayUpdates, now: string): Day {
   const updated = structuredClone(day);
+  const clearsValidationDeferral = Object.keys(updates).some((key) => key !== 'state');
 
   if (updates.session) {
     const currentSession =
@@ -614,6 +616,9 @@ export function applyDayUpdates(day: Day, updates: DayUpdates, now: string): Day
         ? updated.state
         : {};
     updated.state = { ...currentState, ...updates.state } as DayState;
+  }
+  if (clearsValidationDeferral && updated.state) {
+    updated.state.validationDeferred = false;
   }
   // Probe-reconfiguration: point this day at a different snapshot version. Setting it here
   // does NOT eagerly reconcile snapshots' `appliedToDays`; `reconcileAppliedToDays` derives

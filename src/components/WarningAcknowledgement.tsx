@@ -9,12 +9,16 @@ interface WarningAcknowledgementItem {
 }
 
 interface WarningAcknowledgementProps {
-  /** One entry per day that carries outstanding warnings (days with none are omitted by the caller). */
+  /** One entry per item that carries outstanding warnings (items with none are omitted by the caller). */
   items: WarningAcknowledgementItem[];
   /** Whether the user has checked the acknowledgement. */
   acknowledged: boolean;
   /** Called with the new checkbox state. */
   onChange: (next: boolean) => void;
+  /** Singular noun for the grouped item, defaulting to the batch-export day copy. */
+  itemSingular?: string;
+  /** Plural noun for the grouped item, defaulting to the batch-export day copy. */
+  itemPlural?: string;
 }
 
 /**
@@ -32,16 +36,20 @@ export default function WarningAcknowledgement({
   items,
   acknowledged,
   onChange,
+  itemSingular = 'day',
+  itemPlural = 'days',
 }: WarningAcknowledgementProps) {
   if (!items || items.length === 0) return null;
 
-  const dayCount = items.length;
+  const itemCount = items.length;
+  const itemNoun = itemCount === 1 ? itemSingular : itemPlural;
+  const verb = itemCount === 1 ? 'has' : 'have';
 
   return (
     <section className={styles.banner} role="group" aria-label="Outstanding warnings to review">
       <p className={styles.lead}>
-        {dayCount} {dayCount === 1 ? 'day has' : 'days have'} non-blocking warnings. They won&apos;t
-        stop export, but review them first — a silent issue can multiply across days:
+        {itemCount} {itemNoun} {verb} non-blocking warnings. They won&apos;t stop export, but review
+        them first:
       </p>
       <ul className={styles.list}>
         {items.map((item) => (

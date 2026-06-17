@@ -12,8 +12,9 @@
 import { mergeDayMetadata } from '../state/workspaceUtils';
 import { getAnimalSubject } from '../state/workspaceSelectors';
 import type { Animal, Day } from '../state/workspaceTypes';
-import { computeStepStatus } from '../domain/validation';
+import { computeStepStatus, validateDay } from '../domain/validation';
 import { getDayWorkflowStatus } from '../domain/workflowStatus';
+import { allBlockingIssuesDeferred, isDayValidationDeferred } from '../domain/validationPresentation';
 import { DAY_LIFECYCLE_LABEL, lifecycleForValidDay } from '../domain/dayLifecycle';
 import { describeDayOptoState } from '../domain/optoStatus';
 import { classifyWorkspaceDays, DAY_STATUS, describeOwner } from '../domain/dayRecovery';
@@ -60,6 +61,25 @@ export function deriveChip(stepStatus: Record<string, string>): ChipType {
   if (statuses.every((s) => s === 'valid')) return 'valid';
   if (statuses.some((s) => s === 'error')) return 'error';
   return 'incomplete';
+}
+
+function deriveDisplayChip(
+  stepStatus: Record<string, string>,
+  day: Record<string, unknown>,
+  merged: Record<string, unknown>,
+  animal: Record<string, unknown>,
+  animalDays: Array<Record<string, unknown>>
+): ChipType {
+  const chip = deriveChip(stepStatus);
+  if (chip !== 'error') return chip;
+  if (isDayValidationDeferred(day)) return 'incomplete';
+  try {
+    return allBlockingIssuesDeferred(validateDay(day, merged, animal, animalDays), day)
+      ? 'incomplete'
+      : chip;
+  } catch {
+    return chip;
+  }
 }
 
 export const CHIP_LABEL: Record<ChipType, string> = { valid: 'Valid', error: 'Error', incomplete: 'Incomplete' };
@@ -231,7 +251,8 @@ export function buildRows(workspace: unknown): SummaryRow[] {
     const animalDays = animalDaysByKey[key] || [];
     try {
       const merged = mergeDayMetadata(animal as unknown as Animal, dayRecord as unknown as Day);
-      const chip = deriveChip(computeStepStatus(dayRecord, merged, animal, animalDays));
+      const stepStatus = computeStepStatus(dayRecord, merged, animal, animalDays);
+      const chip = deriveDisplayChip(stepStatus, dayRecord, merged, animal, animalDays);
       // Batch-row scan fields (Task 10): the configuration version pinned, the camera count, and
       // the day-protocol opto state — so days can be compared before opening each editor. Computed
       // here (where the merge already succeeded) so the table reads, never re-derives.

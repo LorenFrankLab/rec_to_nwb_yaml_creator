@@ -79,7 +79,9 @@ export function exportDayFile(animal: Animal, day: Day, { actions, strict }: Exp
     // exported YAML, so byte-identity holds). Guarded so a failed write does not lose the download.
     try {
       const prevState = isRecord(day.state) ? day.state : {};
-      actions.updateDay(day.id as string, { state: { ...prevState, exported: true } });
+      actions.updateDay(day.id as string, {
+        state: { ...prevState, validationDeferred: false, deferredEpochs: [], exported: true },
+      });
     } catch (persistErr) {
       // eslint-disable-next-line no-console
       console.error(`[export-day] could not mark day "${day.id}" exported:`, persistErr);

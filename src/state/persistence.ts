@@ -67,6 +67,31 @@ function ensureWorkspaceShape(workspace: Record<string, unknown>): {
   return { workspace: result, missingKeys, corruptKeys };
 }
 
+/**
+ * Drop transient validation-presentation deferrals from a hydrated workspace. These flags mean
+ * "freshly created in this app session"; once data is loaded from storage it must surface real
+ * validation again, while preserving every durable state field.
+ *
+ * @param workspace - A shape-checked workspace.
+ * @returns The workspace with load-stale deferral flags removed from day state.
+ */
+function clearLoadedValidationDeferrals(workspace: Record<string, unknown>): Record<string, unknown> {
+  if (!isPlainObject(workspace.days)) return workspace;
+  let changed = false;
+  const days = Object.fromEntries(
+    Object.entries(workspace.days).map(([dayId, day]) => {
+      if (!isPlainObject(day) || !isPlainObject(day.state)) return [dayId, day];
+      if (!('validationDeferred' in day.state) && !('deferredEpochs' in day.state)) return [dayId, day];
+      const nextState = { ...day.state };
+      delete nextState.validationDeferred;
+      delete nextState.deferredEpochs;
+      changed = true;
+      return [dayId, { ...day, state: nextState }];
+    })
+  );
+  return changed ? { ...workspace, days } : workspace;
+}
+
 /** localStorage key for the persisted workspace blob. */
 export const WORKSPACE_STORAGE_KEY = 'rec_to_nwb_workspace_v1';
 
@@ -146,9 +171,10 @@ export function loadWorkspace(): LoadWorkspaceResult {
   if (corruptKeys.length > 0) {
     return { workspace: null, discarded: LOAD_DISCARD_REASON.MALFORMED };
   }
+  const loadedWorkspace = clearLoadedValidationDeferrals(workspace);
   return missingKeys.length > 0
-    ? { workspace, recovered: { missingKeys } }
-    : { workspace };
+    ? { workspace: loadedWorkspace, recovered: { missingKeys } }
+    : { workspace: loadedWorkspace };
 }
 
 /**

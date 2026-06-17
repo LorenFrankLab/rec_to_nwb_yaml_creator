@@ -87,6 +87,15 @@ describe('buildEpochGrid — join shape', () => {
     expect(grid.rows.find((r) => r.epoch === 1)?.cameras).toEqual([0]);
     expect(grid.rows.find((r) => r.epoch === 2)?.cameras).toEqual([1]);
   });
+
+  it('shows a fresh deferred missing-video epoch as incomplete instead of needs-video', () => {
+    const { animal, day } = goldenInlineWorkspace();
+    day.state.deferredEpochs = [3];
+    const grid = buildEpochGrid(animal, day);
+    expect(grid.rows.find((r) => r.epoch === 3)?.videoPresence).toBe('missing');
+    expect(grid.rows.find((r) => r.epoch === 3)?.status).toBe('incomplete');
+    expect(grid.rows.find((r) => r.epoch === 5)?.status).toBe('needs_video');
+  });
 });
 
 describe('buildEpochGrid — file/video/opto join (no reshaping)', () => {

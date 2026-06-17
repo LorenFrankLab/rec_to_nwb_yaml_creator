@@ -15,6 +15,7 @@ describe('ReadinessBar (issue-driven export readiness)', () => {
       <ReadinessBar issues={[{ severity: 'warning', message: 'Weight looks low' }]} onFix={() => {}} />,
     );
     expect(screen.getByText(/ready to export/i)).toBeInTheDocument();
+    expect(screen.getByText(/1 warning to review/i)).toBeInTheDocument();
     expect(screen.queryByText(/block(s)? export/i)).not.toBeInTheDocument();
   });
 
@@ -86,5 +87,47 @@ describe('ReadinessBar (issue-driven export readiness)', () => {
     expect(screen.getByText('Read-only dead end — no in-app fix')).toBeInTheDocument();
     // …but only the actionable one gets a button (no dead control on the dead-end issue).
     expect(screen.getAllByRole('button')).toHaveLength(1);
+  });
+
+  it('groups blocking errors by owning section and keeps the visible groups bounded', () => {
+    const buckets = [
+      { code: 'partial_configuration', path: 'optogenetics.opto_excitation_source' },
+      { code: 'required', path: 'associated_video_files' },
+      { code: 'bad_channel_out_of_range', path: 'deviceOverrides.bad_channels' },
+      { code: 'required', path: 'behavioral_events' },
+      { code: 'required', path: 'experiment_description' },
+    ];
+    const issues = Array.from({ length: 20 }, (_, index) => ({
+      severity: 'error',
+      ...buckets[index % buckets.length],
+      message: `Issue ${index}`,
+    }));
+    render(<ReadinessBar issues={issues} onFix={() => {}} />);
+
+    expect(screen.getByText(/20 issues block export/i)).toBeInTheDocument();
+    expect(screen.getAllByTestId('readiness-error-group')).toHaveLength(3);
+    expect(screen.getByText(/\+2 more sections with fixes/i)).toBeInTheDocument();
+  });
+
+  it('collapses warnings behind an acknowledgement disclosure and omits info items', async () => {
+    const user = userEvent.setup();
+    render(
+      <ReadinessBar
+        issues={[
+          { severity: 'warning', path: 'electrode_groups[0].location', message: 'Location case differs' },
+          { severity: 'info', message: 'Inline-only nudge' },
+        ]}
+        onFix={() => {}}
+      />,
+    );
+
+    expect(screen.getByText(/1 warning to review/i)).toBeInTheDocument();
+    expect(screen.queryByText(/Inline-only nudge/i)).not.toBeInTheDocument();
+
+    await user.click(screen.getByText(/1 warning to review/i));
+    expect(screen.getByText(/1 section has non-blocking warnings/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/reviewed these warnings/i)).toBeInTheDocument();
+    await user.click(screen.getByLabelText(/reviewed these warnings/i));
+    expect(screen.getByText(/1 warning to review — reviewed/i)).toBeInTheDocument();
   });
 });

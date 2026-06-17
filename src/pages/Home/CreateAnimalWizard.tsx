@@ -29,7 +29,12 @@ import {
   WIZARD_STEP_KEYS,
 } from '../../viewModels/createAnimalWizardViewModel';
 import type { IdentityDraft, WizardStepKey } from '../../viewModels/createAnimalWizardViewModel';
-import { getAnimalExperimenters, getAnimalSubject, getExperimenterNames } from '../../state/workspaceSelectors';
+import {
+  getAnimalCameras,
+  getAnimalExperimenters,
+  getAnimalSubject,
+  getExperimenterNames,
+} from '../../state/workspaceSelectors';
 import type { Animal, ExperimenterInfo, WorkspaceSettings } from '../../state/workspaceTypes';
 import Button from '../../components/ui/Button';
 import ElectrodeGroupsContainer from '../AnimalEditor/wiring/ElectrodeGroupsContainer';
@@ -310,6 +315,7 @@ export default function CreateAnimalWizard() {
   const teamDraftRef = useRef<TeamDraft | null>(null);
 
   const animal = (createdAnimalId ? existingAnimals[createdAnimalId] : null) as Animal | null;
+  const hasCameras = animal ? getAnimalCameras(animal).length > 0 : false;
   const defaults = useMemo(() => getDefaultExperimenters(model.workspace), [model.workspace]);
   const { handleFieldUpdate } = useAnimalFieldUpdate(createdAnimalId ?? '');
 
@@ -578,7 +584,7 @@ export default function CreateAnimalWizard() {
           data-layout="single-row-scroll"
         >
           {vm.steps.map((step, index) => {
-            const done = step.status === 'complete' || step.status === 'skipped';
+            const done = step.status === 'complete' || step.status === 'skipped' || step.status === 'prefilled';
             return (
               <button
                 key={step.key}
@@ -593,6 +599,9 @@ export default function CreateAnimalWizard() {
                 }}
                 className={`${styles.step} ${step.isActive ? styles.stepActive : ''} ${
                   done && !step.isActive ? styles.stepDone : ''
+                } ${step.status === 'prefilled' ? styles.stepPrefilled : ''}`}
+                aria-label={`${step.label}${
+                  step.status === 'prefilled' ? ': Pre-filled — review' : ''
                 }`}
                 onClick={() => handleTabActivate(step.key)}
                 onKeyDown={handleTabKeyDown}
@@ -602,6 +611,9 @@ export default function CreateAnimalWizard() {
                 </span>
                 {step.label}
                 {step.optional && <span className={styles.stepOptional}> optional</span>}
+                {step.status === 'prefilled' && (
+                  <span className={styles.stepOptional}> Pre-filled — review</span>
+                )}
               </button>
             );
           })}
@@ -806,10 +818,12 @@ export default function CreateAnimalWizard() {
               <p className={styles.panelDesc}>
                 The cameras on this rig. Each day&apos;s epochs pick which cameras they used.
               </p>
-              <p className={styles.calibrationNote} role="note">
-                Verify each camera&apos;s meters-per-pixel calibration — a placeholder value silently
-                mis-scales position.
-              </p>
+              {hasCameras && (
+                <p className={styles.calibrationNote} role="note">
+                  Verify each camera&apos;s meters-per-pixel calibration — a placeholder value silently
+                  mis-scales position.
+                </p>
+              )}
               <CamerasContainer animal={animal} onFieldUpdate={handleFieldUpdate} />
             </div>
           )}

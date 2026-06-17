@@ -1,4 +1,8 @@
+import { useState } from 'react';
+import { humanizeValidationMessage } from '../domain/humanizeValidationMessage';
+import { repairTargetForIssue } from '../domain/repairRouting';
 import type { RepairableIssue } from '../domain/repairRouting';
+import WarningAcknowledgement from './WarningAcknowledgement';
 import styles from './ReadinessBar.module.css';
 
 export interface ReadinessBarProps {
@@ -18,6 +22,51 @@ export interface ReadinessBarProps {
 
 /** A blocking issue is an error; warnings never block export. */
 const isBlocking = (issue: RepairableIssue) => issue.severity === 'error';
+const isWarning = (issue: RepairableIssue) => issue.severity === 'warning';
+const MAX_VISIBLE_ERROR_GROUPS = 3;
+const MAX_VISIBLE_ERRORS_PER_GROUP = 3;
+
+interface IssueGroup {
+  key: string;
+  label: string;
+  issues: RepairableIssue[];
+}
+
+function sectionForIssue(issue: RepairableIssue): { key: string; label: string } {
+  const target = repairTargetForIssue(issue);
+  if (target.surface === 'animal') return { key: 'animal', label: 'Animal setup' };
+  switch (target.step) {
+    case 'epochs':
+      return { key: 'epochs', label: 'Epochs' };
+    case 'devices':
+      return { key: 'channels', label: 'Failed channels' };
+    case 'behavioral':
+      return { key: 'dio', label: 'DIO' };
+    case 'overview':
+    case 'validation':
+    default:
+      return { key: 'day', label: 'Day' };
+  }
+}
+
+function groupIssues(issues: RepairableIssue[]): IssueGroup[] {
+  const groups = new Map<string, IssueGroup>();
+  issues.forEach((issue) => {
+    const section = sectionForIssue(issue);
+    const group = groups.get(section.key) ?? { ...section, issues: [] };
+    group.issues.push(issue);
+    groups.set(section.key, group);
+  });
+  return [...groups.values()];
+}
+
+function issueKey(issue: RepairableIssue, index: number): string {
+  return `${issue.code ?? ''}:${issue.path ?? issue.instancePath ?? issue.focusPath ?? ''}:${index}`;
+}
+
+function displayMessage(issue: RepairableIssue): string {
+  return humanizeValidationMessage(issue.message, issue.path ?? issue.instancePath);
+}
 
 /**
  * ReadinessBar — the issue-driven export-readiness line. Quiet one-line "Ready to export" when no
@@ -26,21 +75,54 @@ const isBlocking = (issue: RepairableIssue) => issue.severity === 'error';
  * it is handed (the page computes it from the authoritative `validateDay`). Warnings alone stay quiet.
  */
 const ReadinessBar = ({ issues, onFix, canFix }: ReadinessBarProps) => {
+  const [warningsAcknowledged, setWarningsAcknowledged] = useState(false);
   const blocking = issues.filter(isBlocking);
+  const warnings = issues.filter(isWarning);
+  const warningGroups = groupIssues(warnings);
+  const warningItems = warningGroups.map((group) => ({
+    key: group.key,
+    label: group.label,
+    warnings: group.issues.map((issue) => ({ message: displayMessage(issue) })),
+  }));
+
+  const warningsDisclosure = warnings.length > 0 ? (
+    <details className={styles.warnings}>
+      <summary>
+        {warnings.length} warning{warnings.length === 1 ? '' : 's'} to review
+        {warningsAcknowledged ? ' — reviewed' : ''}
+      </summary>
+      <WarningAcknowledgement
+        items={warningItems}
+        acknowledged={warningsAcknowledged}
+        onChange={setWarningsAcknowledged}
+        itemSingular="section"
+        itemPlural="sections"
+      />
+    </details>
+  ) : null;
 
   if (blocking.length === 0) {
     return (
       <div className={`${styles.bar} ${styles.ready}`} role="status" aria-live="polite">
-        <span className={styles.icon} aria-hidden="true">
-          ✓
-        </span>
-        Ready to export
+        <div className={styles.readyLine}>
+          <span className={styles.icon} aria-hidden="true">
+            ✓
+          </span>
+          Ready to export
+        </div>
+        {warningsDisclosure}
       </div>
     );
   }
 
   const count = blocking.length;
   const heading = count === 1 ? '1 issue blocks export' : `${count} issues block export`;
+  const groups = groupIssues(blocking);
+  const visibleGroups = groups.slice(0, MAX_VISIBLE_ERROR_GROUPS);
+  const hiddenGroupCount = groups.length - visibleGroups.length;
+  const summary = visibleGroups
+    .map((group) => `${group.issues.length} in ${group.label}`)
+    .join(' · ');
 
   return (
     <div className={`${styles.bar} ${styles.blocked}`} role="alert">
@@ -50,26 +132,47 @@ const ReadinessBar = ({ issues, onFix, canFix }: ReadinessBarProps) => {
         </span>
         {heading}
       </p>
+      <p className={styles.summary}>{summary}</p>
       <ul className={styles.issues}>
-        {blocking.map((issue, index) => (
-          // Several issues can share a `code` (e.g. multiple `required`/`pattern` errors), so the key
-          // folds in the path + a positional tiebreaker — `code` alone collides (React duplicate-key
-          // warning, and the wrong row could keep stale identity after a fix).
-          <li
-            key={`${issue.code ?? ''}:${issue.path ?? issue.instancePath ?? ''}:${index}`}
-            className={styles.issue}
-          >
-            <span className={styles.message}>{issue.message}</span>
-            {/* Render the Fix button only when the issue has an actionable in-app target — an issue
-                with no fixable destination shows its message alone (no dead button). */}
-            {(canFix ? canFix(issue) : true) && (
-              <button type="button" className={styles.fix} onClick={() => onFix(issue)}>
-                {issue.actionLabel ?? 'Fix'}
-              </button>
-            )}
+        {visibleGroups.map((group) => (
+          <li key={group.key} className={styles.group} data-testid="readiness-error-group">
+            <div className={styles.groupHeader}>
+              <strong>{group.label}</strong>
+              <span>
+                {group.issues.length} thing{group.issues.length === 1 ? '' : 's'} to fix
+              </span>
+            </div>
+            <ul className={styles.groupIssues}>
+              {group.issues.slice(0, MAX_VISIBLE_ERRORS_PER_GROUP).map((issue, index) => (
+                // Several issues can share a `code` (e.g. multiple `required`/`pattern` errors), so the key
+                // folds in the path + a positional tiebreaker — `code` alone collides (React duplicate-key
+                // warning, and the wrong row could keep stale identity after a fix).
+                <li key={issueKey(issue, index)} className={styles.issue}>
+                  <span className={styles.message}>{displayMessage(issue)}</span>
+                  {/* Render the Fix button only when the issue has an actionable in-app target — an issue
+                      with no fixable destination shows its message alone (no dead control). */}
+                  {(canFix ? canFix(issue) : true) && (
+                    <button type="button" className={styles.fix} onClick={() => onFix(issue)}>
+                      {issue.actionLabel ?? 'Fix'}
+                    </button>
+                  )}
+                </li>
+              ))}
+              {group.issues.length > MAX_VISIBLE_ERRORS_PER_GROUP && (
+                <li className={styles.more}>
+                  +{group.issues.length - MAX_VISIBLE_ERRORS_PER_GROUP} more in {group.label}
+                </li>
+              )}
+            </ul>
           </li>
         ))}
       </ul>
+      {hiddenGroupCount > 0 && (
+        <p className={styles.moreGroups}>
+          +{hiddenGroupCount} more section{hiddenGroupCount === 1 ? '' : 's'} with fixes
+        </p>
+      )}
+      {warningsDisclosure}
     </div>
   );
 };

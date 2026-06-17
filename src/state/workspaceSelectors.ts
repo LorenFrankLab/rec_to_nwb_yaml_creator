@@ -383,6 +383,23 @@ export const getDayVideolessEpochs = (day: unknown): number[] => {
 };
 
 /**
+ * The epoch numbers whose missing-video error is temporarily displayed as "Incomplete" until the
+ * user opens/edits the fresh epoch. Off-export and number-normalized like `videolessEpochs`.
+ *
+ * @param day
+ * @returns Presentation-deferred epoch numbers (always an array of integers).
+ */
+export const getDayDeferredEpochs = (day: unknown): number[] => {
+  const raw = asArray<unknown>(asRecord(asRecord(day).state).deferredEpochs);
+  const seen = new Set<number>();
+  for (const value of raw) {
+    const n = Number(value);
+    if (Number.isInteger(n)) seen.add(n);
+  }
+  return [...seen];
+};
+
+/**
  * @param day
  * @returns The day's recording-system catalog reference, or `undefined` when absent/non-string.
  */

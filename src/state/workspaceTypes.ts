@@ -642,6 +642,17 @@ export interface DayState {
   /** Current validation errors. */
   validationErrors?: ValidationIssue[];
   /**
+   * Off-export presentation flag for a brand-new, app-created empty day. While true, list/banner
+   * surfaces show Draft instead of the export-gate errors the user has not had a chance to address.
+   * Cleared on first open/edit/explicit validation. Imported/loaded days do not get this flag.
+   */
+  validationDeferred?: boolean;
+  /**
+   * Off-export epoch numbers whose missing-video error is temporarily presented as incomplete until
+   * the epoch is first opened/edited. The raw export gate still sees the missing video.
+   */
+  deferredEpochs?: number[];
+  /**
    * Off-export acknowledgments of deliberate bad-channel un-marks, keyed by ntrode id
    * (string); lives ONLY in state, never read by the export merge.
    */

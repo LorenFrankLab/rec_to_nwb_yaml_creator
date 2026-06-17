@@ -120,6 +120,18 @@ describe('DayEditorFrame', () => {
     expect(screen.getByRole('heading', { level: 1, name: /Day Editor:/i })).toBeInTheDocument();
   });
 
+  it('clears first-run validation deferral on open so real blockers surface', async () => {
+    const { animal, day } = buildRealisticWorkspace();
+    day.tasks = 'not-an-array';
+    day.state = { draft: true, validated: false, exported: false, validationDeferred: true };
+    useDayIdFromUrl.mockReturnValue(day.id);
+    renderFrame({
+      workspace: { animals: { [animal.id]: animal }, days: { [day.id]: day }, settings: {} },
+    });
+
+    await waitFor(() => expect(screen.getByText(/issues? block export/i)).toBeInTheDocument());
+  });
+
   it('renders the level-1 heading with animal and date', () => {
     renderFrame();
     expect(screen.getByRole('heading', { level: 1, name: /Day Editor: remy - 2023-06-22/i })).toBeInTheDocument();

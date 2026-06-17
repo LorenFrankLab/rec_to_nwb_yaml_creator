@@ -13,7 +13,7 @@ import {
   getDayWorkflowStatus,
   getDayRowStatus,
 } from '../workflowStatus';
-import { buildRealisticWorkspace } from '../../__tests__/fixtures/workspaceBuilders';
+import { buildCatalogWorkspace, buildRealisticWorkspace } from '../../__tests__/fixtures/workspaceBuilders';
 import { mergeDayMetadata } from '../../state/workspaceUtils';
 import { computeStepStatus } from '../validation';
 // Namespace import so the step-only-blocker / throw tests can spy on computeStepStatus (the live
@@ -303,6 +303,44 @@ describe('getDayRowStatus', () => {
     const status = getDayRowStatus(animal, day, merged);
     expect(status.variant).toBe('draft');
     expect(status.label).toBe('Draft — incomplete');
+  });
+
+  it('keeps a fresh app-created scaffold in Draft until first open/edit', () => {
+    const { animal, day } = buildRealisticWorkspace();
+    day.state = { draft: true, validated: false, exported: false, validationDeferred: true };
+    day.tasks = 'not-an-array';
+    const merged = mergeDayMetadata(animal, day);
+    expect(getDayRowStatus(animal, day, merged)).toEqual({
+      variant: 'draft',
+      label: 'Draft — incomplete',
+    });
+  });
+
+  it('does not hide imported/loaded invalid days that lack the scaffold deferral flag', () => {
+    const { animal, day } = buildRealisticWorkspace();
+    day.state = { draft: true, validated: false, exported: false };
+    day.tasks = 'not-an-array';
+    const merged = mergeDayMetadata(animal, day);
+    expect(getDayRowStatus(animal, day, merged).variant).toBe('needs_fixing');
+  });
+
+  it('treats a fresh deferred epoch with no video as Draft, not a global row error', () => {
+    const { animal, day } = buildCatalogWorkspace();
+    day.associated_video_files = [
+      ...day.associated_video_files,
+      { name: 'sleep_video_epoch1', camera_id: 0, task_epochs: 1 },
+      { name: 'sleep_video_epoch3', camera_id: 0, task_epochs: 3 },
+      { name: 'sleep_video_epoch5', camera_id: 0, task_epochs: 5 },
+    ];
+    day.taskInstances = day.taskInstances.map((instance, index) =>
+      index === 0 ? { ...instance, task_epochs: [...instance.task_epochs, 9] } : instance
+    );
+    day.state = { draft: true, validated: false, exported: false, deferredEpochs: [9] };
+    const merged = mergeDayMetadata(animal, day);
+    expect(getDayRowStatus(animal, day, merged)).toEqual({
+      variant: 'draft',
+      label: 'Draft — incomplete',
+    });
   });
 
   it('maps a persisted-validated (not yet exported) day to "Validated" (the saved state, distinct from live "Ready to export")', () => {

@@ -25,6 +25,7 @@ import {
   getDayAssociatedVideos,
   getDayAssociatedFiles,
   getDayFsGuiYamls,
+  getDayDeferredEpochs,
   getDayVideolessEpochs,
 } from '../state/workspaceSelectors';
 import { resolveDayCatalogView } from '../state/dayTaskCatalog';
@@ -173,6 +174,7 @@ export function buildEpochGrid(animal: unknown, day: unknown): EpochGrid {
   const files = getDayAssociatedFiles(day);
   const fsgui = getDayFsGuiYamls(day);
   const absentSet = new Set(getDayVideolessEpochs(day));
+  const deferredSet = new Set(getDayDeferredEpochs(day));
   const dataFolder = (isRecord(day) && typeof day.dataFolder === 'string' ? day.dataFolder : '') || '';
   const subjectId = getAnimalSubject(animal).subject_id || '';
   const date = deriveDateToken(isRecord(day) ? day.date : undefined);
@@ -227,7 +229,13 @@ export function buildEpochGrid(animal: unknown, day: unknown): EpochGrid {
     // Row status: a missing video is the only blocking row state; a task with no name is an
     // incomplete row; otherwise complete (present or declared-absent video).
     const status: EpochRowStatus =
-      videoPresence === 'missing' ? 'needs_video' : taskName.trim() === '' ? 'incomplete' : 'complete';
+      videoPresence === 'missing'
+        ? deferredSet.has(epoch)
+          ? 'incomplete'
+          : 'needs_video'
+        : taskName.trim() === ''
+          ? 'incomplete'
+          : 'complete';
 
     return {
       epoch,

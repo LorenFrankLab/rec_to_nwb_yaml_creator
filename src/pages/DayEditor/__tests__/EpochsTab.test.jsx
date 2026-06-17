@@ -205,14 +205,24 @@ describe('EpochsTab — write-back patches', () => {
       { taskTypeId: 'tasktype-0', task_epochs: [3] },
       { taskTypeId: 'tasktype-1', task_epochs: [2] },
     ]);
-    expect(lastPatch(bundle.onFieldUpdate, 'state')).toEqual({ draft: true, videolessEpochs: [3] });
+    expect(lastPatch(bundle.onFieldUpdate, 'state')).toEqual({
+      draft: true,
+      validationDeferred: false,
+      videolessEpochs: [3],
+      deferredEpochs: [],
+    });
 
     await user.click(screen.getByRole('button', { name: /Undo/i }));
     expect(lastPatch(bundle.onFieldUpdate, 'taskInstances')).toEqual([
       { taskTypeId: 'tasktype-0', task_epochs: [1, 3] },
       { taskTypeId: 'tasktype-1', task_epochs: [2] },
     ]);
-    expect(lastPatch(bundle.onFieldUpdate, 'state')).toEqual({ draft: true, videolessEpochs: [1, 3] });
+    expect(lastPatch(bundle.onFieldUpdate, 'state')).toEqual({
+      draft: true,
+      validationDeferred: false,
+      videolessEpochs: [1, 3],
+      deferredEpochs: [],
+    });
   });
 });
 
@@ -324,13 +334,23 @@ describe('EpochsTab — confirm-before-orphan (never auto-scrub)', () => {
     expect(lastPatch(bundle.onFieldUpdate, 'associated_video_files')).toEqual([
       { name: 'run_video', camera_id: 1, task_epochs: '' },
     ]);
-    expect(lastPatch(bundle.onFieldUpdate, 'state')).toEqual({ draft: true, videolessEpochs: [3] });
+    expect(lastPatch(bundle.onFieldUpdate, 'state')).toEqual({
+      draft: true,
+      validationDeferred: false,
+      videolessEpochs: [3],
+      deferredEpochs: [],
+    });
 
     await user.click(screen.getByRole('button', { name: /Undo/i }));
     expect(lastPatch(bundle.onFieldUpdate, 'associated_video_files')).toEqual([
       { name: 'run_video', camera_id: 1, task_epochs: 2 },
     ]);
-    expect(lastPatch(bundle.onFieldUpdate, 'state')).toEqual({ draft: true, videolessEpochs: [2, 3] });
+    expect(lastPatch(bundle.onFieldUpdate, 'state')).toEqual({
+      draft: true,
+      validationDeferred: false,
+      videolessEpochs: [2, 3],
+      deferredEpochs: [],
+    });
   });
 });
 
@@ -368,7 +388,12 @@ describe('EpochsTab — renumber moves bound refs in lockstep (no silent misasso
     expect(lastPatch(bundle.onFieldUpdate, 'associated_video_files')).toEqual([
       { name: 'run_video', camera_id: 1, task_epochs: 3 },
     ]);
-    expect(lastPatch(bundle.onFieldUpdate, 'state')).toEqual({ draft: true, videolessEpochs: [1, 4, 9] });
+    expect(lastPatch(bundle.onFieldUpdate, 'state')).toEqual({
+      draft: true,
+      validationDeferred: false,
+      videolessEpochs: [1, 4, 9],
+      deferredEpochs: [2],
+    });
   });
 });
 
@@ -379,7 +404,10 @@ describe('EpochsTab — video 3-state', () => {
     render(<EpochsTab {...bundle} />);
     await user.click(screen.getByRole('button', { name: /Toggle epoch 1 details/i }));
     await user.click(screen.getByRole('button', { name: /Mark .no video./i }));
-    expect(lastPatch(bundle.onFieldUpdate, 'state')).toEqual({ videolessEpochs: [1] });
+    expect(lastPatch(bundle.onFieldUpdate, 'state')).toEqual({
+      validationDeferred: false,
+      videolessEpochs: [1],
+    });
   });
 
   it('a missing epoch can bind a derived video (associated_video_files patch)', async () => {

@@ -356,7 +356,12 @@ describe('createDayRecord', () => {
     expect(day.configurationVersion).toBe(2); // latest snapshot's version
     expect(day.technical.raw_data_to_volts).toBe(0.3);
     expect(day.technical.times_period_multiplier).toBe(2);
-    expect(day.state).toEqual({ draft: true, validated: false, exported: false });
+    expect(day.state).toEqual({
+      draft: true,
+      validated: false,
+      exported: false,
+      validationDeferred: true,
+    });
   });
 
   it('pins to the latest snapshot VERSION, not the count, for a non-contiguous history', () => {
@@ -365,6 +370,13 @@ describe('createDayRecord', () => {
     const animal = { configurationHistory: [{ version: 1 }, { version: 3 }] };
     const day = createDayRecord(animal, 'remy', 'd', '2023-06-22', {}, NOW);
     expect(day.configurationVersion).toBe(3);
+  });
+
+  it('does not defer validation when the day carries authored content forward', () => {
+    const animal = { configurationHistory: [{ version: 1 }] };
+    const carryFrom = { session: { session_id: 'old' }, tasks: [{ task_name: 'Sleep', task_epochs: [1] }] };
+    const day = createDayRecord(animal, 'remy', 'd', '2023-06-22', {}, NOW, carryFrom);
+    expect(day.state.validationDeferred).toBe(false);
   });
 
   it('falls back to standard technical values when no defaults are set', () => {
@@ -582,6 +594,15 @@ describe('applyDayUpdates', () => {
       NOW
     );
     expect(updated.state).toEqual({ draft: true, validated: true });
+  });
+
+  it('clears first-run validation deferral on day-owned edits', () => {
+    const updated = applyDayUpdates(
+      { id: 'd1', state: { draft: true, validationDeferred: true }, tasks: [] },
+      { tasks: [{ task_name: 'Sleep', task_epochs: [1] }] },
+      NOW
+    );
+    expect(updated.state.validationDeferred).toBe(false);
   });
 
   it('persists data_acq_device_name (per-day recording-system selection)', () => {
