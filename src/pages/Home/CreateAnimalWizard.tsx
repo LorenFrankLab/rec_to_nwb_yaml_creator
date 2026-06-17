@@ -116,7 +116,14 @@ function TeamStep({
                   size="small"
                   aria-label={`Remove experimenter ${idx + 1}`}
                   onClick={() => {
-                    setNames((prev) => prev.filter((_, i) => i !== idx));
+                    // Persist the removal immediately — it must not wait on a later field's blur.
+                    const nextNames = names.filter((_, i) => i !== idx);
+                    setNames(nextNames);
+                    onCommit({
+                      experimenter_name: nextNames.filter((n) => n.trim()),
+                      lab,
+                      institution,
+                    });
                   }}
                 >
                   Remove
@@ -217,8 +224,27 @@ export default function CreateAnimalWizard() {
     return payload.animalId;
   };
 
-  /** Update an identity field; clear its error. Push the change to the store once the animal exists. */
-  const handleIdentityChange = (field: keyof IdentityDraft, value: string) => {
+  /**
+   * Post-create, persist the subject from `draft` ONLY when the WHOLE identity draft validates — a
+   * single field's blur must never write a subject that another field has made invalid (e.g.
+   * species "other" + blank custom would otherwise persist an empty species). The created animal is
+   * excluded from the uniqueness check: its subject_id (the store key) is locked, so it would
+   * otherwise self-collide and block every legitimate post-create edit.
+   */
+  const commitIdentityIfCreated = (draft: IdentityDraft) => {
+    if (!createdAnimalId) return;
+    const others = { ...existingAnimals };
+    delete others[createdAnimalId];
+    if (validateWizardIdentity(draft, others).valid) {
+      handleFieldUpdate('subject', buildWizardCommitPayload(draft, defaults).subject);
+    }
+  };
+
+  /**
+   * Update an identity field; clear its error. `commitNow` (used by the selects, which have no
+   * blur-commit) persists the change immediately when the animal already exists.
+   */
+  const handleIdentityChange = (field: keyof IdentityDraft, value: string, commitNow = false) => {
     const next = { ...identity, [field]: value };
     setIdentity(next);
     if (identityErrors[field]) {
@@ -228,6 +254,7 @@ export default function CreateAnimalWizard() {
         return copy;
       });
     }
+    if (commitNow) commitIdentityIfCreated(next);
   };
 
   /** Validate one identity field on blur; persist the subject edit when the animal already exists. */
@@ -239,11 +266,7 @@ export default function CreateAnimalWizard() {
       else delete copy[field];
       return copy;
     });
-    // Post-create identity edits (species/sex/genotype/dob/weight/description) write through to the
-    // subject. subject_id is locked once created (it is the store key), so the key never changes.
-    if (createdAnimalId && !errors[field]) {
-      handleFieldUpdate('subject', buildWizardCommitPayload(identity, defaults).subject);
-    }
+    commitIdentityIfCreated(identity);
   };
 
   const goToAnimal = (id: string) => {
@@ -395,7 +418,7 @@ export default function CreateAnimalWizard() {
                   <select
                     id="wizard-species"
                     value={identity.species}
-                    onChange={(e) => handleIdentityChange('species', e.target.value)}
+                    onChange={(e) => handleIdentityChange('species', e.target.value, true)}
                     onBlur={() => handleIdentityBlur('species')}
                   >
                     {SPECIES_OPTIONS.map((o) => (
@@ -413,7 +436,7 @@ export default function CreateAnimalWizard() {
                   <select
                     id="wizard-sex"
                     value={identity.sex}
-                    onChange={(e) => handleIdentityChange('sex', e.target.value)}
+                    onChange={(e) => handleIdentityChange('sex', e.target.value, true)}
                   >
                     <option value="M">Male (M)</option>
                     <option value="F">Female (F)</option>

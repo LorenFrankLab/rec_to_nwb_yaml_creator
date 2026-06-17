@@ -178,6 +178,82 @@ describe('CreateAnimalWizard — step navigation + commit', () => {
   });
 });
 
+describe('CreateAnimalWizard — post-create identity edits (the fragile create-early invariants)', () => {
+  /**
+   * Create the animal then return to the Identity step for editing.
+   * @param {object} user - The userEvent session.
+   */
+  async function createThenEditIdentity(user) {
+    await fillIdentity(user);
+    await user.click(screen.getByRole('button', { name: /Next/i })); // creates → Electrodes
+    await user.click(screen.getByRole('tab', { name: /Identity/ }));
+  }
+
+  it('locks the subject_id (the store key) once the animal exists', async () => {
+    const user = userEvent.setup();
+    renderWizard();
+    await createThenEditIdentity(user);
+    expect(screen.getByRole('textbox', { name: /Subject ID/i })).toHaveAttribute('readonly');
+  });
+
+  it('persists a genotype edit through updateAnimal', async () => {
+    const user = userEvent.setup();
+    renderWizard();
+    await createThenEditIdentity(user);
+    const genotype = screen.getByRole('textbox', { name: /Genotype/i });
+    await user.clear(genotype);
+    await user.type(genotype, 'PV-Cre');
+    await user.tab();
+    expect(captured.animals.laurent.subject.genotype).toBe('PV-Cre');
+  });
+
+  it('persists a Sex change (the select must commit, not just update local state)', async () => {
+    const user = userEvent.setup();
+    renderWizard();
+    await createThenEditIdentity(user);
+    await user.selectOptions(screen.getByLabelText('Sex'), 'F');
+    expect(captured.animals.laurent.subject.sex).toBe('F');
+  });
+
+  it('does NOT persist an invalid species (other + blank custom) — the whole draft must validate', async () => {
+    const user = userEvent.setup();
+    renderWizard();
+    await createThenEditIdentity(user);
+    // Switch to a custom species but leave it blank → the draft is invalid; the prior valid
+    // species must be kept (never overwritten with an empty string).
+    await user.selectOptions(screen.getByLabelText('Species'), 'other');
+    await user.tab();
+    expect(captured.animals.laurent.subject.species).not.toBe('');
+    expect(captured.animals.laurent.subject.species).toBe('Rattus norvegicus');
+  });
+});
+
+describe('CreateAnimalWizard — Team step', () => {
+  /**
+   * Create the animal and open the Team step.
+   * @param {object} user - The userEvent session.
+   */
+  async function createThenOpenTeam(user) {
+    await fillIdentity(user);
+    await user.click(screen.getByRole('button', { name: /Next/i }));
+    await user.click(screen.getByRole('tab', { name: /Team/ }));
+  }
+
+  it('persists removing an experimenter immediately (not only when another field commits)', async () => {
+    const user = userEvent.setup();
+    renderWizard();
+    await createThenOpenTeam(user);
+
+    await user.type(screen.getByRole('textbox', { name: /Experimenter 1/ }), 'Doe, Jane');
+    await user.click(screen.getByRole('button', { name: /Add experimenter/i }));
+    await user.type(screen.getByRole('textbox', { name: /Experimenter 2/ }), 'Roe, Rick');
+    await user.tab(); // commit both
+
+    await user.click(screen.getByRole('button', { name: /Remove experimenter 2/i }));
+    expect(captured.animals.laurent.experimenters.experimenter_name).toEqual(['Doe, Jane']);
+  });
+});
+
 describe('CreateAnimalWizard — Save draft', () => {
   it('creates the animal and navigates to its days (a valid-but-partial draft persists)', async () => {
     const user = userEvent.setup();
