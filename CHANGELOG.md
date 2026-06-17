@@ -9,6 +9,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Review recovered data screen.** When a saved workspace loads with records that don't fit the
+  current shape, the recovery notice banner now routes to a dedicated **`#/recovery`** screen instead
+  of the generic Animals home. It renders the **existing** day-recovery classification (it never
+  recomputes it): the auto-recovered "no data lost" notice, plus each needs-review record — a day
+  index entry with no record (dangling), a real record its animal's index doesn't list
+  (recovered-unlinked), a record indexed under the wrong animal (wrong-owner), or a record whose
+  owning animal is gone (orphan) — each with its concrete repair (the same `removeDayReference` /
+  `relinkDayReference` / `unlinkDayReference` commands the Validation summary and day list use). The
+  one destructive repair (removing a dangling reference deletes the unreadable leftover) is gated by a
+  confirm; constructive moves run directly and announce via a toast. **Nothing is ever silently
+  dropped** — an orphan with no in-app repair still surfaces, with re-create/re-import guidance.
+- **First-run empty states.** The Animals home (no animals) and the per-animal recording-days pane (no
+  days) now use a shared onboarding card (icon + heading + guidance + CTA). The zero-days state gains
+  the **"Add recording day(s)"** call-to-action it previously lacked; the no-animals state keeps its
+  Create / Import actions on the shared component.
+- **Keyboard-shortcuts help — pinned.** The shortcuts help (the `⌨` trigger and `?`) is verified by a
+  committed test that the documented list stays consistent with what actually fires (no silent or dead
+  shortcut). _(No new shortcuts — the surface already existed.)_
+- **Day-editor redesign complete.** With the recovery, empty-state, accessibility, and end-to-end
+  coverage in place, the day-editor redesign is finished: the legacy `DayEditorStepper` and its six
+  step components (Overview / Devices / Tasks & Epochs / Behavioral events / Validation / Export) are
+  fully retired (a source-scanning guard now prevents their return), replaced by the tabbed
+  `DayEditorFrame` (Day / Epochs / Failed channels / DIO) and the export-preview surface. Every new
+  surface is `axe`-clean (jest-axe in jsdom + `@axe-core/playwright` in a real browser), and the
+  click-to-toggle grids (failed channels, DIO) and the epoch caret are keyboard-operable. Exported
+  YAML is unchanged throughout — the golden baselines stay byte-identical.
 - **Import & Repair screen — a teaching-validation import.** Importing a metadata YAML is now a
   full-page screen (`#/import`): it decodes the file, runs the **same** validator the export gate uses,
   and shows — per non-conforming field — a suggested fix drawn from the **same predicate** that flagged
