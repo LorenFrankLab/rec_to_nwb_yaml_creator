@@ -8,27 +8,28 @@ This repository uses GitHub Actions for continuous integration and deployment. T
 
 ## Pipeline Architecture
 
-The pipeline consists of 4 independent jobs that run in parallel (where possible):
+The pipeline consists of 6 independent jobs that run in parallel where possible. `e2e`,
+`integration`, and `build` wait for the fast `test` gate; `typecheck` and `coverage` run in parallel.
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │  Push to any branch / PR to main                            │
 └────────────────┬────────────────────────────────────────────┘
                  │
-        ┌────────┴────────┐
-        │                 │
-        ▼                 ▼
-┌───────────────┐  ┌─────────────────┐
-│  1. Test      │  │  3. Integration │
-│  (Unit/Int)   │  │  (Schema Sync)  │
-└───────┬───────┘  └─────────────────┘
-        │
-   ┌────┴────┐
-   │         │
-   ▼         ▼
-┌──────┐  ┌───────┐
-│ 2. E2E│  │4.Build│
-└──────┘  └───────┘
+        ┌────────┼────────┐
+        │        │        │
+        ▼        ▼        ▼
+┌────────────┐ ┌──────────┐ ┌──────────┐
+│ 1. Test    │ │2.Typecheck│ │3.Coverage│
+└─────┬──────┘ └──────────┘ └──────────┘
+      │
+ ┌────┼───────────┐
+ │    │           │
+ ▼    ▼           ▼
+┌──────┐ ┌─────────────────┐ ┌────────┐
+│4. E2E│ │5. Integration   │ │6.Build │
+│      │ │  (Schema Sync)  │ │        │
+└──────┘ └─────────────────┘ └────────┘
 ```
 
 ### Job 1: Test (Unit & Integration Tests)
@@ -40,26 +41,57 @@ The pipeline consists of 4 independent jobs that run in parallel (where possible
 1. Checkout repository
 2. Setup Node.js v26.0.0 (from `.nvmrc`)
 3. Install dependencies (`npm ci`)
-4. Run linter (`npm run lint:ci` — ESLint with `--max-warnings 0`)
-5. Run baseline tests (`npm run test:baseline`)
-6. Run unit tests (`npm test -- run unit`)
-7. Run integration tests (`npm run test:integration`)
-8. Run all tests with coverage (`npm run test:coverage -- run`)
-9. Upload coverage to Codecov
-10. Upload coverage artifacts (30-day retention)
+4. Check schema version (`node scripts/check-schema-version.mjs --expected-version 1.0.1`)
+5. Run linter (`npm run lint:ci` — ESLint with `--max-warnings 0`)
+6. Run CSS linter (`npm run lint:css`)
+7. Run all Vitest tests without coverage (`npm test -- run`)
 
 **Failure Conditions:**
 
 - Linter errors **or warnings** (`lint:ci` runs `--max-warnings 0` — this is the warnings-as-errors
   gate that CRA's `CI=true react-scripts build` used to provide before the Vite migration)
-- Baseline test failures
+- Schema version mismatch
+- CSS linter failure
+- Any Vitest failure
+
+### Job 2: Type Check
+
+**Runs on:** `ubuntu-latest`
+
+**Steps:**
+
+1. Checkout repository
+2. Setup Node.js v26.0.0
+3. Install dependencies
+4. Run TypeScript (`npm run typecheck`)
+
+**Failure Conditions:**
+
+- TypeScript errors
+
+### Job 3: Coverage
+
+**Runs on:** `ubuntu-latest`
+
+**Steps:**
+
+1. Checkout repository
+2. Setup Node.js v26.0.0
+3. Install dependencies
+4. Run all tests with coverage (`npm run test:coverage -- run`)
+5. Upload coverage to Codecov
+6. Upload coverage artifacts (30-day retention)
+
+**Failure Conditions:**
+
+- Coverage test failure
 - Coverage threshold not met (80% for lines, functions, branches, statements)
 
 **Artifacts:**
 
 - `coverage-report/` - HTML and LCOV coverage reports (30 days)
 
-### Job 2: E2E (End-to-End Tests)
+### Job 4: E2E (End-to-End Tests)
 
 **Runs on:** `ubuntu-latest`
 **Depends on:** `test` job must pass first
@@ -69,21 +101,21 @@ The pipeline consists of 4 independent jobs that run in parallel (where possible
 1. Checkout repository
 2. Setup Node.js v26.0.0
 3. Install dependencies
-4. Install Playwright browsers (Chromium, Firefox, WebKit)
+4. Install Playwright browser dependencies (Chromium only)
 5. Run E2E tests (`npm run test:e2e`)
 6. Upload Playwright HTML report (always, even on failure)
 7. Upload test results (always, even on failure)
 
 **Failure Conditions:**
 
-- Any E2E test failure across any browser
+- Any Chromium E2E test failure
 
 **Artifacts:**
 
 - `playwright-report/` - HTML test report with screenshots (30 days)
 - `playwright-test-results/` - Raw test results and traces (30 days)
 
-### Job 3: Integration (Schema Sync Check)
+### Job 5: Integration (Schema Sync Check)
 
 **Runs on:** `ubuntu-latest`
 **Depends on:** `test` job must pass first
@@ -94,8 +126,9 @@ The pipeline consists of 4 independent jobs that run in parallel (where possible
 
 1. Checkout this repository (`rec_to_nwb_yaml_creator`)
 2. Checkout `trodes_to_nwb` repository
-3. Compare SHA256 hashes of both schema files
-4. Exit with error if hashes don't match
+3. Fail immediately if the downstream schema file is missing at the expected path
+4. Compare SHA256 hashes of both schema files
+5. Exit with error if hashes don't match
 
 **Why This Matters:**
 
@@ -107,9 +140,9 @@ The pipeline consists of 4 independent jobs that run in parallel (where possible
 **Failure Conditions:**
 
 - Schema hash mismatch
-- Schema file not found in Python package
+- Schema file not found in the checked-out Python package at the expected path
 
-### Job 4: Build (Production Bundle)
+### Job 6: Build (Production Bundle)
 
 **Runs on:** `ubuntu-latest`
 **Depends on:** `test` job must pass first

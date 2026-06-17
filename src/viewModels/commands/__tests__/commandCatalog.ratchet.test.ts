@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { readdirSync, readFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { dirname, join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { WORKFLOW_COMMAND_CATALOG } from '../commandCatalog';
 import { commandHandlers, REPAIR_COMMAND_IDS } from '../commandHandlers';
@@ -16,11 +16,22 @@ import type { CommandActions } from '../commandHandlers';
 
 const VIEW_MODEL_DIR = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 
-/** Read every builder source file (the `src/viewModels/*.ts` modules, not the commands/ or tests). */
+/** List every builder source file (the `src/viewModels/**.ts` modules, not commands/ or tests). */
+const builderSourceFiles = (dir = VIEW_MODEL_DIR): string[] => {
+  return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+    const fullPath = join(dir, entry.name);
+    if (entry.isDirectory()) {
+      if (entry.name === 'commands' || entry.name === '__tests__') return [];
+      return builderSourceFiles(fullPath);
+    }
+    if (!entry.isFile() || !entry.name.endsWith('.ts')) return [];
+    return [fullPath];
+  });
+};
+
+/** Read every builder source file. */
 const builderSources = (): string => {
-  const files = readdirSync(VIEW_MODEL_DIR, { withFileTypes: true })
-    .filter((entry) => entry.isFile() && entry.name.endsWith('.ts'))
-    .map((entry) => readFileSync(join(VIEW_MODEL_DIR, entry.name), 'utf8'));
+  const files = builderSourceFiles().map((file) => readFileSync(file, 'utf8'));
   return files.join('\n');
 };
 
@@ -51,6 +62,15 @@ const spyActions = (): CommandActions => ({
 });
 
 describe('command catalog ratchet', () => {
+  it('scans the view-model builder tree non-vacuously', () => {
+    const files = builderSourceFiles().map((file) => relative(VIEW_MODEL_DIR, file)).sort();
+
+    expect(files.length).toBeGreaterThan(5);
+    expect(files).toContain('animalWorkspaceViewModel.ts');
+    expect(files).toContain('dayEditorViewModel.ts');
+    expect(files.some((file) => file.startsWith('commands/'))).toBe(false);
+  });
+
   it('classifies every command id a builder emits as a literal', () => {
     for (const id of emittedLiteralIds()) {
       expect(WORKFLOW_COMMAND_CATALOG, `emitted command id "${id}" is not in the catalog`).toHaveProperty(id);

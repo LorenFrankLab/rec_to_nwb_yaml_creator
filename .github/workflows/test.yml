@@ -184,9 +184,14 @@ jobs:
           PYTHON_SCHEMA="trodes_to_nwb/src/trodes_to_nwb/nwb_schema.json"
 
           if [ ! -f "$PYTHON_SCHEMA" ]; then
-            echo "⚠️ Warning: trodes_to_nwb schema file not found at expected location"
-            echo "Skipping schema sync check"
-            exit 0
+            echo "❌ trodes_to_nwb schema file not found at expected location:"
+            echo "   $PYTHON_SCHEMA"
+            echo ""
+            echo "The schema-sync gate cannot compare schemas. The checkout path or upstream"
+            echo "schema location may have changed; update this workflow before merging."
+            echo "Expected upstream file:"
+            echo "https://github.com/LorenFrankLab/trodes_to_nwb/blob/main/src/trodes_to_nwb/nwb_schema.json"
+            exit 1
           fi
 
           # The web app stamps a top-level `version` field on its schema for its own

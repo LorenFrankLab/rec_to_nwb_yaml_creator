@@ -272,6 +272,26 @@ describe('channel bounds', () => {
     expect(codes(rulesValidation(model))).toContain('channel_row_count_mismatch');
   });
 
+  it('errors when a partially configured day has zero channel-map rows for one group', () => {
+    const model = {
+      electrode_groups: [tetrodeGroup(0), tetrodeGroup(1)],
+      ntrode_electrode_group_channel_map: [
+        { ntrode_id: 1, electrode_group_id: 0, bad_channels: [], map: { 0: 0, 1: 1, 2: 2, 3: 3 } },
+      ],
+    };
+    const issues = rulesValidation(model).filter((issue) => issue.code === 'channel_row_count_mismatch');
+
+    expect(issues).toHaveLength(1);
+    expect(issues[0]).toMatchObject({
+      path: 'electrode_groups[1]',
+      field: 'map',
+      step: 'devices',
+      repairSurface: 'animal',
+      severity: 'error',
+    });
+    expect(issues[0].message).toContain('no channel-map rows');
+  });
+
   it('passes when row count equals the shank count', () => {
     const model = {
       electrode_groups: [tetrodeGroup(0)],

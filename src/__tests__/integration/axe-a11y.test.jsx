@@ -137,8 +137,12 @@ describe('axe-a11y (configured workspace, all routes)', () => {
       const { container } = await renderRoute(`#/day/${DAY_ID}`);
       await screen.findByRole('heading', { name: /day editor/i });
 
-      // Navigate to the requested tab (or the Export panel) via its button.
-      await user.click(screen.getByRole('button', { name: new RegExp(`^${tabLabel}$`, 'i') }));
+      // Navigate to the requested tab (or the Export panel) via its button. The tab accessible names
+      // include their readiness status (e.g. "Day: Complete"); Export is a header action.
+      const buttonName = tabLabel === 'Export'
+        ? /^Export$/i
+        : new RegExp(`^${tabLabel}(?::|$)`, 'i');
+      await user.click(screen.getByRole('button', { name: buttonName }));
 
       await expectNoViolations(container);
     });

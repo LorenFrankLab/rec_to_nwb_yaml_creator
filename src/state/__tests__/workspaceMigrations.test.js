@@ -11,6 +11,9 @@
  * lands on the same v3 catalog shape as a v2 blob.
  */
 import { describe, it, expect, afterEach } from 'vitest';
+import { readFileSync, readdirSync } from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import {
   migrateWorkspace,
   WORKSPACE_SCHEMA_VERSION,
@@ -22,6 +25,8 @@ import { validateDay } from '../../domain/validation';
 import v1Blob from './fixtures/persistence/v1-workspace.json';
 import v2Blob from './fixtures/persistence/v2-workspace.json';
 import v3Blob from './fixtures/persistence/v3-workspace.json';
+
+const fixtureDir = path.join(path.dirname(fileURLToPath(import.meta.url)), 'fixtures/persistence');
 
 describe('workspace migration registry', () => {
   it('couples the current version to the registry: current === max(source) + 1', () => {
@@ -93,6 +98,38 @@ describe('workspace migration registry', () => {
 describe('loadWorkspace upgrades old blobs losslessly (fixtures)', () => {
   afterEach(() => {
     window.localStorage.clear();
+  });
+
+  it('has a checked-in vN fixture for every migratable and current schema version', () => {
+    const requiredVersions = [...MIGRATABLE_SCHEMA_VERSIONS, WORKSPACE_SCHEMA_VERSION].sort((a, b) => a - b);
+    const fixtureVersions = new Set(
+      readdirSync(fixtureDir)
+        .map((name) => name.match(/^v(\d+)-workspace\.json$/)?.[1])
+        .filter(Boolean)
+        .map(Number)
+    );
+
+    requiredVersions.forEach((version) => {
+      expect(
+        fixtureVersions.has(version),
+        `missing persistence fixture src/state/__tests__/fixtures/persistence/v${version}-workspace.json`
+      ).toBe(true);
+    });
+  });
+
+  it('every required vN fixture hydrates through loadWorkspace without discard', () => {
+    const requiredVersions = [...MIGRATABLE_SCHEMA_VERSIONS, WORKSPACE_SCHEMA_VERSION].sort((a, b) => a - b);
+
+    requiredVersions.forEach((version) => {
+      const fixturePath = path.join(fixtureDir, `v${version}-workspace.json`);
+      const blob = JSON.parse(readFileSync(fixturePath, 'utf8'));
+      window.localStorage.setItem(WORKSPACE_STORAGE_KEY, JSON.stringify(blob));
+
+      const loaded = loadWorkspace();
+      expect(loaded, `v${version} fixture should load`).toBeTruthy();
+      expect(loaded?.discarded, `v${version} fixture must not be discarded`).toBeUndefined();
+      expect(loaded?.workspace, `v${version} fixture should hydrate a workspace`).toBeTruthy();
+    });
   });
 
   it('v1, v2, and v3 fixture blobs all hydrate to the SAME workspace (no discard)', () => {

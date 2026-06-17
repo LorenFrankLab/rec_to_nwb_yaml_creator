@@ -11,6 +11,9 @@
  * - Verify round-trip consistency (import -> export -> import)
  * - Protect against regressions during refactoring
  *
+ * Scope note: these fixtures exercise the YAML encoder on already-shaped metadata objects.
+ * Export/build-path parity is covered by the import/export parity and legacy parity suites.
+ *
  * If these tests fail:
  * 1. Verify the change is intentional
  * 2. If intentional, regenerate golden fixtures: node src/__tests__/fixtures/golden/generate-golden.js

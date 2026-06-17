@@ -1,5 +1,5 @@
 /**
- * Tab order through the DayEditor stepper must follow the logical step order, and
+ * Tab order through the DayEditor tab frame must follow the logical tab order, and
  * no control may use a positive tabindex (which would scramble the natural order).
  */
 import { describe, it, expect, afterEach } from 'vitest';
@@ -15,8 +15,8 @@ afterEach(() => {
   window.location.hash = '';
 });
 
-describe('tab order through the DayEditor stepper', () => {
-  it('step controls appear in DOM order matching the step sequence', async () => {
+describe('tab order through the DayEditor frame', () => {
+  it('tab controls appear in DOM order matching the tab sequence', async () => {
     window.location.hash = `#/day/${DAY_ID}`;
     render(
       <StoreProvider initialState={{ workspace: makeConfiguredWorkspace() }}>
@@ -30,7 +30,9 @@ describe('tab order through the DayEditor stepper', () => {
     await screen.findByRole('heading', { name: /day editor/i });
 
     const tabBar = screen.getByRole('navigation', { name: /day editor sections/i });
-    const labels = [...tabBar.querySelectorAll('button')].map((el) => el.textContent.trim());
+    const labels = [...tabBar.querySelectorAll('button')].map((el) =>
+      (el.getAttribute('aria-label') || el.textContent).replace(/:.+$/, '').trim()
+    );
     // The redesigned frame's 4-tab bar, in DOM order.
     expect(labels).toEqual(['Day', 'Epochs', 'Failed channels', 'DIO']);
   });

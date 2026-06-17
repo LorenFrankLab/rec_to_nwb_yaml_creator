@@ -120,6 +120,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Test and CI hardening.** The schema-sync CI check now fails loudly when the downstream Python
+  schema target is missing; local guards now lock JSON-schema dialect-sensitive keywords, persistence
+  fixtures, recursive view-model command catalog coverage, and selector-owned raw reads. The legacy
+  import/export baseline spec now fails when fixtures or controls are absent instead of self-skipping,
+  and the unused `ajv-formats` registration/dependency is removed because the checked-in schema has no
+  `format` keywords. No exported YAML bytes changed.
+
 - **Day editor: a new frame with day chips, an issue-driven readiness bar, and a four-tab body.** The
   day editor's six-section stepper chrome is replaced by `DayEditorFrame`: a header carrying the
   Workspace › Animal › Day breadcrumb, the date title, day chips (configuration version · an opto
@@ -214,7 +221,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Removed `react-scripts` and its ~927-package transitive tree (CRA toolchain — webpack, Babel, Jest).**
   Promoted to direct deps what react-scripts had provided transitively but the project still needs:
   `eslint` + `eslint-config-react-app` (the `.eslintrc.js` `"react-app"` preset; same versions, no behavior
-  change), and `ajv-formats` (imported in source). Removed the `eject` script. `.npmrc legacy-peer-deps`
+  change). Removed the `eject` script. `.npmrc legacy-peer-deps`
   is left in place for now — its removal (no longer forced by react-scripts' TS peer pin) is a separate
   follow-up that needs a clean `npm ci` validation.
 

@@ -16,7 +16,7 @@ import path from 'node:path';
  *   - `deviceNormalization.js` (the normalizer that PRODUCES canonical state),
  *   - `taskCatalogMigration.ts` (a v2→v3 workspace→workspace MIGRATION that rewrites raw
  *     persisted shapes — like a normalizer, it must read the old/raw shape it is converting),
- *   - `validation/` and `domain/validation.js` (raw-shape DETECTION must inspect
+ *   - `validation/rawShape.ts` and `domain/validation.js` (raw-shape DETECTION must inspect
  *     the corrupt shape on purpose — a selector would hide it),
  *   - `pages/DayEditor/validation.js` (page-only field-blur helper; no raw collection reads).
  */
@@ -64,9 +64,13 @@ const FORBIDDEN = SELECTOR_OWNED.flatMap((field) => [
   new RegExp(`${field}\\.(?:map|flatMap|filter|find|some|forEach|reduce|entries)\\s*\\(`),
 ]);
 
-// Exemptions are extension-agnostic: the definers/detectors (`workspaceSelectors`,
-// `deviceNormalization`, the `validation/` raw-shape detectors, the `domain/validation` barrel)
-// have migrated to TypeScript, so match `.js` and `.ts` alike.
+const VALIDATION_RAW_SHAPE_DETECTORS = [
+  `validation${path.sep}rawShape.ts`,
+];
+
+// Exemptions are extension-agnostic where modules have migrated to TypeScript. Keep the validation
+// exemption narrow: display helpers such as `validation/HintDisplay.jsx` are consumers and should
+// fail this guard if they start reading raw selector-owned shapes.
 const isExempt = (file) =>
   file.endsWith('workspaceSelectors.js') || file.endsWith('workspaceSelectors.ts') ||
   file.endsWith('deviceNormalization.js') || file.endsWith('deviceNormalization.ts') ||
@@ -77,7 +81,7 @@ const isExempt = (file) =>
   file.endsWith('taskCatalogMigration.ts') ||
   file.endsWith(`state${path.sep}taskCatalog.ts`) ||
   file.endsWith(`domain${path.sep}stepStatus.ts`) ||
-  file.includes(`${path.sep}validation${path.sep}`) ||
+  VALIDATION_RAW_SHAPE_DETECTORS.some((suffix) => file.endsWith(suffix)) ||
   file.endsWith(`domain${path.sep}validation.js`) || file.endsWith(`domain${path.sep}validation.ts`) ||
   file.includes(`${path.sep}__tests__${path.sep}`);
 

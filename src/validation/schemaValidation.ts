@@ -5,7 +5,6 @@
  */
 
 import Ajv from 'ajv';
-import addFormats from 'ajv-formats';
 import JsonSchemaFile from '../nwb_schema.json';
 import { normalizeAjvPath } from './paths';
 import type { ValidationIssue, ValidationModel } from './issueTypes';
@@ -16,7 +15,6 @@ const ajv = new Ajv({
   allErrors: true,
   strict: false // Allow non-standard keywords like "version" for metadata
 });
-addFormats(ajv);
 const compiledValidator = ajv.compile(JsonSchemaFile);
 
 /**

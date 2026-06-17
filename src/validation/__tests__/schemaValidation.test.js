@@ -394,13 +394,24 @@ describe('schemaValidation()', () => {
       const model = createTestYaml({
         subject: {
           weight: -50,  // Minimum violation
-          sex: 'invalid',  // Enum violation (if enforced)
-          date_of_birth: 'bad-date'  // Format violation
+          sex: 'invalid',  // Enum violation
+          date_of_birth: 'bad-date'  // Pattern violation
         }
       });
       const issues = schemaValidation(model);
 
-      expect(issues.some(i => i.path.startsWith('subject'))).toBe(true);
+      expect(issues).toContainEqual(expect.objectContaining({
+        path: 'subject.weight',
+        code: 'minimum',
+      }));
+      expect(issues).toContainEqual(expect.objectContaining({
+        path: 'subject.sex',
+        code: 'enum',
+      }));
+      expect(issues).toContainEqual(expect.objectContaining({
+        path: 'subject.date_of_birth',
+        code: 'pattern',
+      }));
     });
 
     it('should detect errors across arrays', () => {
@@ -492,6 +503,19 @@ describe('schemaValidation()', () => {
       const issues = schemaValidation(model);
 
       expect(issues.some(i => i.path.startsWith('electrode_groups'))).toBe(true);
+    });
+
+    it('should enforce uniqueItems with the AJV keyword code', () => {
+      const model = {
+        ...createTestYaml(),
+        experimenter_name: ['Doe, John', 'Doe, John'],
+      };
+      const issues = schemaValidation(model);
+
+      expect(issues).toContainEqual(expect.objectContaining({
+        path: 'experimenter_name',
+        code: 'uniqueItems',
+      }));
     });
   });
 });
