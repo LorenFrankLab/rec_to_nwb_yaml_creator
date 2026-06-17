@@ -30,6 +30,7 @@ import type {
   IssueViewModel,
   WorkflowAction,
 } from './types';
+import { DAY_STATUS, isDayStatus } from '../domain/dayRecovery';
 
 /** A ValidationSummary table row: the shared day-row plus the table's per-day scan cells.
  *  (`chipVariant`, the status-chip CSS modifier, is inherited from {@link DayRowViewModel}.) */
@@ -95,6 +96,7 @@ type DayCells = {
 /** Translate one flattened {@link SummaryRow} into the table's {@link DayStatusRowViewModel}. */
 function toDayStatusRow(row: SummaryRow): DayStatusRowViewModel {
   const day = row.day as DayCells;
+  const recovery: DayStatus = isDayStatus(row.status) ? row.status : DAY_STATUS.ORPHAN_NO_OWNER;
   const display = dayChipDisplay(row.chip, day?.state, {
     unreadable: row.unreadable,
     missingRecord: row.missingRecord,
@@ -104,7 +106,7 @@ function toDayStatusRow(row: SummaryRow): DayStatusRowViewModel {
     dayId: typeof day?.id === 'string' ? day.id : '',
     date: typeof day?.date === 'string' ? day.date : '',
     sessionDescription: row.scan?.sessionDescription || undefined,
-    recovery: row.status as DayStatus,
+    recovery,
     display,
     valid: row.chip === 'valid',
     state: day?.state,

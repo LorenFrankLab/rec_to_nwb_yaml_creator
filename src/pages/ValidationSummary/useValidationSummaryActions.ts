@@ -18,7 +18,8 @@ import { computeStepStatus, validateDay } from '../../domain/validation';
 import type { RepairableIssue } from '../../domain/repairRouting';
 import { getDayWorkflowStatus } from '../../domain/workflowStatus';
 import { describeDayOptoState } from '../../domain/optoStatus';
-import { classifyWorkspaceDays, isExportableDayStatus } from '../../domain/dayRecovery';
+import { classifyWorkspaceDays, isDayStatus, isExportableDayStatus } from '../../domain/dayRecovery';
+import type { DayStatus } from '../../domain/dayRecovery';
 import { exportDayFile } from '../../domain/exportDay';
 import { isFeatureEnabled } from '../../featureFlags';
 import {
@@ -271,7 +272,7 @@ export function useValidationSummaryActions({ rows, workspace, actions }: Valida
     // can't distinguish ('a|b','c') from ('a','b|c').
     const statusKey = (animalKeyArg: unknown, dayId: unknown): string => JSON.stringify([animalKeyArg, dayId]);
     const currentStatusByKey = new Map(
-      classifyWorkspaceDays(workspace).map((d): [string, string] => [statusKey(d.animalKey, d.dayId), d.status])
+      classifyWorkspaceDays(workspace).map((d): [string, DayStatus] => [statusKey(d.animalKey, d.dayId), d.status])
     );
     // Re-derive the per-animal cross-day context from the LIVE workspace so the final
     // re-validation enforces the bad-channel monotonicity block (a regressing day must not slip
@@ -294,7 +295,8 @@ export function useValidationSummaryActions({ rows, workspace, actions }: Valida
         stale.push({ ...identity, detail: 'No longer present since the preflight.' });
         return;
       }
-      if (!isExportableDayStatus(currentStatusByKey.get(statusKey(rowAnimalKey, rowDay.id)) as string)) {
+      const currentStatus = currentStatusByKey.get(statusKey(rowAnimalKey, rowDay.id));
+      if (!isDayStatus(currentStatus) || !isExportableDayStatus(currentStatus)) {
         // Became recovered-unlinked / wrong-owner / dangling since the preflight — not part of
         // the animal's recording days anymore, so it must not export from a stale preflight.
         stale.push({ ...identity, detail: "No longer part of the animal's day list since the preflight." });

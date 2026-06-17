@@ -10,6 +10,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   DAY_STATUS,
+  isDayStatus,
   isExportableDayStatus,
   isPresentRecordStatus,
   classifyAnimalDays,
@@ -69,6 +70,25 @@ describe('isExportableDayStatus', () => {
 describe('DAY_STATUS', () => {
   it('is frozen (the closed status set the export policy keys off must not be mutable)', () => {
     expect(Object.isFrozen(DAY_STATUS)).toBe(true);
+  });
+
+  it('keeps the runtime status literals unchanged', () => {
+    expect(DAY_STATUS.OK).toBe('ok');
+    expect(DAY_STATUS.DANGLING_REFERENCE).toBe('dangling_reference');
+    expect(DAY_STATUS.RECOVERED_UNLINKED).toBe('recovered_unlinked');
+    expect(DAY_STATUS.ORPHAN_NO_OWNER).toBe('orphan_no_owner');
+    expect(DAY_STATUS.WRONG_OWNER).toBe('wrong_owner');
+  });
+});
+
+describe('isDayStatus', () => {
+  it('narrows only the closed DAY_STATUS values', () => {
+    expect(isDayStatus('ok')).toBe(true);
+    expect(isDayStatus('recovered_unlinked')).toBe(true);
+
+    expect(isDayStatus('OK')).toBe(false);
+    expect(isDayStatus('bogus')).toBe(false);
+    expect(isDayStatus(null)).toBe(false);
   });
 });
 

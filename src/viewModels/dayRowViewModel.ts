@@ -85,10 +85,7 @@ export function buildDayRowViewModel(input: DayRowInput): DayRowViewModel {
   // Lifecycle + export-eligibility are meaningful only for a metadata-valid day. A valid day in its
   // normal place is exportable and carries the ready/validated/exported word; a valid recovered day is
   // valid metadata but blocked until it is re-linked into its animal's day list.
-  const lifecycle =
-    valid && recovery === 'ok'
-      ? (lifecycleForValidDay(state) as 'ready' | 'validated' | 'exported')
-      : undefined;
+  const lifecycle = valid && recovery === 'ok' ? lifecycleForValidDay(state) : undefined;
   const exportEligibility = valid
     ? recovery === 'recovered_unlinked'
       ? ('blocked-needs-relink' as const)

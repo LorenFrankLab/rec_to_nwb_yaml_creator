@@ -12,8 +12,21 @@ import { stepIdForIssue } from './repairRouting';
 import type { RepairableIssue } from './repairRouting';
 import { validateDay } from './dayValidationComposer';
 
+/**
+ * The closed vocabulary of per-step statuses `computeStepStatus` produces. Named + frozen so the
+ * gate ({@link module:domain/stepGate}) and the workflow-status helper consume the same tokens
+ * instead of re-typing string literals (which can drift). `'pending'` is reserved for steps awaiting
+ * async work.
+ */
+export const STEP_STATUS = Object.freeze({
+  VALID: 'valid',
+  INCOMPLETE: 'incomplete',
+  ERROR: 'error',
+  PENDING: 'pending',
+} as const);
+
 /** A per-step badge status. */
-export type StepStatus = 'valid' | 'incomplete' | 'error' | 'pending';
+export type StepStatus = typeof STEP_STATUS[keyof typeof STEP_STATUS];
 
 /** The minimal session fields the overview completeness check reads. */
 interface SessionLike {
@@ -55,19 +68,6 @@ type StepStatusMap = {
   validation: StepStatus;
   export: StepStatus;
 };
-
-/**
- * The closed vocabulary of per-step statuses `computeStepStatus` produces. Named + frozen so the
- * gate ({@link module:domain/stepGate}) and the workflow-status helper consume the same tokens
- * instead of re-typing string literals (which can drift). `'pending'` is reserved for steps awaiting
- * async work.
- */
-export const STEP_STATUS = Object.freeze({
-  VALID: 'valid',
-  INCOMPLETE: 'incomplete',
-  ERROR: 'error',
-  PENDING: 'pending',
-} as const);
 
 /**
  * Validates entire day and computes step status.

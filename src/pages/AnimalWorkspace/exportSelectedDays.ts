@@ -18,7 +18,8 @@
 import { mergeDayMetadata } from '../../state/workspaceUtils';
 import type { Animal, Day } from '../../state/workspaceTypes';
 import { computeStepStatus, validateDay } from '../../domain/validation';
-import { classifyWorkspaceDays, isExportableDayStatus } from '../../domain/dayRecovery';
+import { classifyWorkspaceDays, isDayStatus, isExportableDayStatus } from '../../domain/dayRecovery';
+import type { DayStatus } from '../../domain/dayRecovery';
 import { exportDayFile } from '../../domain/exportDay';
 import type { ExportDayActions } from '../../domain/exportDay';
 import { deriveChip, buildAnimalDaysByKey, isRecord } from '../../viewModels/validationSummaryRows';
@@ -75,7 +76,7 @@ export function exportSelectedDays(
   // Cross-day context + current recovery status — the SAME sources the Validation Summary gate reads.
   const animalDays = buildAnimalDaysByKey(workspace)[animalKey] || [];
   const statusByKey = new Map(
-    classifyWorkspaceDays(workspace).map((d): [string, string] => [statusKey(d.animalKey, d.dayId), d.status])
+    classifyWorkspaceDays(workspace).map((d): [string, DayStatus] => [statusKey(d.animalKey, d.dayId), d.status])
   );
 
   const exported: string[] = [];
@@ -92,7 +93,8 @@ export function exportSelectedDays(
     }
     // Not part of the animal's recording days (recovered-unlinked / wrong-owner / dangling) — not
     // exportable from here even if its metadata is otherwise valid.
-    if (!isExportableDayStatus(statusByKey.get(statusKey(animalKey, dayId)) as string)) {
+    const currentStatus = statusByKey.get(statusKey(animalKey, dayId));
+    if (!isDayStatus(currentStatus) || !isExportableDayStatus(currentStatus)) {
       skipped.push({ dayId, date, reason: "Not in this animal's day list — re-link it first.", href });
       continue;
     }

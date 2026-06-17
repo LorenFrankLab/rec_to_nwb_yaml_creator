@@ -31,6 +31,7 @@ import {
   dayHasArtifacts,
   describeOwner,
   getPresentDayCount,
+  isDayStatus,
   isPresentRecordStatus,
   DAY_STATUS,
 } from '../domain/dayRecovery';
@@ -38,6 +39,7 @@ import type { DayClassificationRow } from '../domain/dayRecovery';
 import { getDayRowStatus } from '../domain/workflowStatus';
 import { optoFieldsPresence } from '../domain/optoCompleteness';
 import { DAY_LIFECYCLE } from '../domain/dayLifecycle';
+import type { DayLifecycle } from '../domain/dayLifecycle';
 import { humanizeValidationMessage } from '../domain/humanizeValidationMessage';
 import {
   getAnimalBlockingSections,
@@ -58,13 +60,10 @@ import type {
   WorkflowCommandId,
 } from './types';
 
-/** A {@link DAY_LIFECYCLE} value (the rollup pill variant). */
-type DayLifecycleVariant = (typeof DAY_LIFECYCLE)[keyof typeof DAY_LIFECYCLE];
-
 /** The per-animal status rollup shown on the Animals home (its own summary over the day set). */
 export interface StatusRollupViewModel {
   /** A {@link DAY_LIFECYCLE} variant driving the rollup pill's color. */
-  variant: DayLifecycleVariant;
+  variant: DayLifecycle;
   /** Short label, e.g. "1 ready", "2 need review", "All exported", "No recording days". */
   label: string;
 }
@@ -233,7 +232,7 @@ function buildDayRow(
   animalDays: Array<Record<string, unknown>>
 ): DayRowViewModel {
   const { dayId, record, status } = classified;
-  const recovery = status as DayStatus;
+  const recovery: DayStatus = isDayStatus(status) ? status : DAY_STATUS.ORPHAN_NO_OWNER;
 
   // Dangling reference: the index lists an id with no resolvable record. The page renders a fixed
   // "Missing record" error chip with no editor link; the shared helper adds the remove-reference repair.

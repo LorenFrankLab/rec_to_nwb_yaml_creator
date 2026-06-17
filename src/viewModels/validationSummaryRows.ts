@@ -17,6 +17,7 @@ import { getDayWorkflowStatus } from '../domain/workflowStatus';
 import { DAY_LIFECYCLE_LABEL, lifecycleForValidDay } from '../domain/dayLifecycle';
 import { describeDayOptoState } from '../domain/optoStatus';
 import { classifyWorkspaceDays, DAY_STATUS, describeOwner } from '../domain/dayRecovery';
+import type { DayStatus } from '../domain/dayRecovery';
 
 /** A per-day validation chip variant. */
 export type ChipType = 'valid' | 'error' | 'incomplete';
@@ -37,7 +38,7 @@ export interface SummaryRow {
   animalKey: string;
   day: Record<string, unknown>;
   chip: ChipType;
-  status: string;
+  status: DayStatus;
   missingRecord?: boolean;
   orphaned?: boolean;
   ownerMissing?: boolean;
@@ -99,7 +100,7 @@ export function dayChipDisplay(
     // distinct from the row's "not in day list" state note.
     if (orphaned) return { variant: 'incomplete', label: 'Re-link to export' };
     const variant = lifecycleForValidDay(state); // 'ready' | 'validated' | 'exported'
-    return { variant, label: DAY_LIFECYCLE_LABEL[variant as keyof typeof DAY_LIFECYCLE_LABEL] };
+    return { variant, label: DAY_LIFECYCLE_LABEL[variant] };
   }
   return { variant: chip, label: CHIP_LABEL[chip] };
 }

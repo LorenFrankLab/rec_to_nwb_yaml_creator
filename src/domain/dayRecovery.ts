@@ -45,7 +45,7 @@ export interface DayClassificationRow {
   /** The resolved day record, or `null` for a dangling reference. */
   record: Record<string, unknown> | null;
   /** A {@link DAY_STATUS} value. */
-  status: string;
+  status: DayStatus;
   /**
    * The owning animal's STORE KEY. `null` ONLY for an `orphan_no_owner` row whose declared owner
    * is missing/non-string. (Workspace-wide rows only.)
@@ -68,13 +68,30 @@ function isRecord(value: unknown): value is Record<string, unknown> {
  * `isExportableDayStatus` is `status === DAY_STATUS.OK`) cannot be mutated at runtime, matching the
  * `Object.freeze` convention the state layer uses for its closed command vocabularies.
  */
-export const DAY_STATUS: Readonly<Record<string, string>> = Object.freeze({
+export const DAY_STATUS = Object.freeze({
   OK: 'ok',
   DANGLING_REFERENCE: 'dangling_reference',
   RECOVERED_UNLINKED: 'recovered_unlinked',
   ORPHAN_NO_OWNER: 'orphan_no_owner',
   WRONG_OWNER: 'wrong_owner',
-});
+} as const);
+
+/** The closed set of day recovery-status values. */
+export type DayStatus = typeof DAY_STATUS[keyof typeof DAY_STATUS];
+
+/** Every valid day recovery-status value, for runtime boundary checks. */
+const DAY_STATUS_VALUES: ReadonlySet<DayStatus> = new Set(Object.values(DAY_STATUS));
+
+/**
+ * Runtime guard for narrowing values from imported/persisted workspace boundaries into the closed
+ * {@link DayStatus} set.
+ *
+ * @param value - Candidate status value.
+ * @returns True when `value` is one of the {@link DAY_STATUS} values.
+ */
+export function isDayStatus(value: unknown): value is DayStatus {
+  return typeof value === 'string' && DAY_STATUS_VALUES.has(value as DayStatus);
+}
 
 /**
  * The status of an INDEX reference that resolves to a real record: `ok` when the record belongs
@@ -86,7 +103,7 @@ export const DAY_STATUS: Readonly<Record<string, string>> = Object.freeze({
  * @param animalKey - The animal whose index points at it.
  * @returns
  */
-function indexedRecordStatus(record: Record<string, unknown>, animalKey: string): string {
+function indexedRecordStatus(record: Record<string, unknown>, animalKey: string): DayStatus {
   return record.animalId != null && record.animalId !== animalKey
     ? DAY_STATUS.WRONG_OWNER
     : DAY_STATUS.OK;
@@ -100,7 +117,7 @@ function indexedRecordStatus(record: Record<string, unknown>, animalKey: string)
  * @param status - A {@link DAY_STATUS} value.
  * @returns
  */
-export function isExportableDayStatus(status: string): boolean {
+export function isExportableDayStatus(status: DayStatus): boolean {
   return status === DAY_STATUS.OK;
 }
 
@@ -115,7 +132,7 @@ export function isExportableDayStatus(status: string): boolean {
  * @param status - A {@link DAY_STATUS} value.
  * @returns
  */
-export function isPresentRecordStatus(status: string): boolean {
+export function isPresentRecordStatus(status: DayStatus): boolean {
   return status === DAY_STATUS.OK || status === DAY_STATUS.RECOVERED_UNLINKED;
 }
 

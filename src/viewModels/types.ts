@@ -21,6 +21,8 @@
  */
 
 import type { StepStatus } from '../domain/stepStatus';
+import type { DayStatus } from '../domain/dayRecovery';
+import type { ValidDayLifecycle } from '../domain/dayLifecycle';
 import type { WorkflowCategory } from '../domain/workflowCategories';
 import type { WorkflowCommandId } from './commands/commandCatalog';
 
@@ -54,17 +56,8 @@ import type { WorkflowCommandId } from './commands/commandCatalog';
  */
 export type WorkflowSeverity = 'ready' | 'todo' | 'warning' | 'error';
 
-/**
- * A recording day's recovery classification — the closed `DAY_STATUS` set (src/domain/dayRecovery).
- * The view-model freezes it as a union; a builder translates the domain enum (whose values are typed
- * as `string`) onto it at the boundary.
- */
-export type DayStatus =
-  | 'ok'
-  | 'dangling_reference'
-  | 'recovered_unlinked'
-  | 'orphan_no_owner'
-  | 'wrong_owner';
+/** Re-export the closed day recovery-status union from its domain source of truth. */
+export type { DayStatus };
 
 /**
  * Re-export of the day-editor step status (src/domain/stepStatus) so the step view-model can carry the
@@ -265,7 +258,7 @@ export interface DayRowViewModel {
    * saved validation reads `validated`, and a downloaded day reads `exported`. Lets the row show the
    * persisted-history word that `status` alone (all three map to `ready`) cannot express.
    */
-  lifecycle?: 'ready' | 'validated' | 'exported';
+  lifecycle?: ValidDayLifecycle;
   /**
    * Whether a metadata-valid day is actually exportable: `eligible`, or `blocked-needs-relink` for a
    * recovered-but-unlinked day that must be re-linked into its animal's day list before export.
@@ -387,7 +380,7 @@ export interface ExportGateViewModel {
    * `open`. Lets the readiness surfaces show the persisted-history word (`ready` is live-valid,
    * `validated` has a saved validation, `exported` has been downloaded) without re-deriving it.
    */
-  lifecycle?: 'ready' | 'validated' | 'exported';
+  lifecycle?: ValidDayLifecycle;
   /**
    * The short lifecycle status label ('Ready to export' | 'Validated' | 'Exported',
    * `DAY_LIFECYCLE_LABEL[lifecycle]`) — the Export step's status line. Only set when `open`.

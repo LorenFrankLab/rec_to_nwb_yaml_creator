@@ -57,6 +57,7 @@ import {
   WORKFLOW_CATEGORY_LABELS,
 } from '../domain/workflowCategories';
 import { lifecycleForValidDay, DAY_LIFECYCLE, DAY_LIFECYCLE_LABEL } from '../domain/dayLifecycle';
+import type { ValidDayLifecycle } from '../domain/dayLifecycle';
 import { getDayRowStatus } from '../domain/workflowStatus';
 import { optoFieldsPresence } from '../domain/optoCompleteness';
 import { describeOwner } from '../domain/dayRecovery';
@@ -659,11 +660,11 @@ function buildRepairAction(
  * is read verbatim from the lifecycle label so it can never drift from the other day surfaces.
  */
 function buildReadiness(dayState: unknown): {
-  lifecycle: 'ready' | 'validated' | 'exported';
+  lifecycle: ValidDayLifecycle;
   lifecycleStatusLabel: string;
   readyMessage: string;
 } {
-  const lifecycle = lifecycleForValidDay(dayState) as 'ready' | 'validated' | 'exported';
+  const lifecycle = lifecycleForValidDay(dayState);
   let readyMessage: string;
   switch (lifecycle) {
     case 'exported':

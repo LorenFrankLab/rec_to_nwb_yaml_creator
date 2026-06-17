@@ -23,7 +23,6 @@
 /**
  * The five day-lifecycle variants. Frozen to the closed-enum convention used across the
  * domain/state layers.
- * @type {Readonly<Record<string, 'needs_fixing'|'draft'|'ready'|'validated'|'exported'>>}
  */
 export const DAY_LIFECYCLE = Object.freeze({
   NEEDS_FIXING: 'needs_fixing',
@@ -31,13 +30,18 @@ export const DAY_LIFECYCLE = Object.freeze({
   READY: 'ready',
   VALIDATED: 'validated',
   EXPORTED: 'exported',
-});
+} as const);
+
+/** The closed set of day-lifecycle values. */
+export type DayLifecycle = typeof DAY_LIFECYCLE[keyof typeof DAY_LIFECYCLE];
+
+/** The valid/exportable lifecycle subset returned by {@link lifecycleForValidDay}. */
+export type ValidDayLifecycle = (typeof DAY_LIFECYCLE)['READY' | 'VALIDATED' | 'EXPORTED'];
 
 /**
  * The canonical plain-language label for each variant — the word every surface shows. Kept short
  * so each surface can add its own descriptive suffix (e.g. Animal Days appends "— not yet
  * validated" to the Draft label) without re-coining the base word.
- * @type {Readonly<Record<string, string>>}
  */
 export const DAY_LIFECYCLE_LABEL = Object.freeze({
   needs_fixing: 'Needs fixing',
@@ -45,13 +49,12 @@ export const DAY_LIFECYCLE_LABEL = Object.freeze({
   ready: 'Ready to export',
   validated: 'Validated',
   exported: 'Exported',
-});
+}) satisfies Readonly<Record<DayLifecycle, string>>;
 
 /**
  * A one-line explanation of each variant, for the shared legend and tooltips. These make the
  * live-vs-persisted distinction legible: "Ready to export" passes the checks now; "Validated" was
  * saved.
- * @type {Readonly<Record<string, string>>}
  */
 export const DAY_LIFECYCLE_DESCRIPTION = Object.freeze({
   needs_fixing: 'Has a blocking issue — resolve it before exporting.',
@@ -59,12 +62,11 @@ export const DAY_LIFECYCLE_DESCRIPTION = Object.freeze({
   ready: 'Passes every check right now, but the result has not been saved yet.',
   validated: 'Validation was saved, and the day still passes every check.',
   exported: 'Its YAML has been downloaded; it still passes every check.',
-});
+}) satisfies Readonly<Record<DayLifecycle, string>>;
 
 /**
  * Legend reading order — the lifecycle progression a day moves through, with the off-path
  * "Needs fixing" last. Drives the shared {@link DayLifecycleLegend}.
- * @type {ReadonlyArray<string>}
  */
 export const DAY_LIFECYCLE_ORDER = Object.freeze([
   DAY_LIFECYCLE.DRAFT,
@@ -72,7 +74,7 @@ export const DAY_LIFECYCLE_ORDER = Object.freeze([
   DAY_LIFECYCLE.VALIDATED,
   DAY_LIFECYCLE.EXPORTED,
   DAY_LIFECYCLE.NEEDS_FIXING,
-]);
+] as const) satisfies ReadonlyArray<DayLifecycle>;
 
 /**
  * True only for a plain object — not null, not an array. A corrupt import can persist `day.state`
@@ -93,7 +95,7 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
  * @param state - The day's persisted `state` (may be malformed).
  * @returns The lifecycle variant (`'ready'` | `'validated'` | `'exported'`) for a live-valid day.
  */
-export function lifecycleForValidDay(state: unknown): string {
+export function lifecycleForValidDay(state: unknown): ValidDayLifecycle {
   const s: Record<string, unknown> = isRecord(state) ? state : {};
   if (s.exported) return DAY_LIFECYCLE.EXPORTED;
   if (s.validated) return DAY_LIFECYCLE.VALIDATED;
