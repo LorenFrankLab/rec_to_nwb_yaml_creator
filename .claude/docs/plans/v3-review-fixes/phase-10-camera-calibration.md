@@ -39,7 +39,7 @@ camera to day-2's).
   silent overwrite of the existing calibration. (The within-file rule already covers the single-file case;
   this is the across-days extension.)
 - **Prefill the standardized camera hardware.** Today `CameraModal` seeds every field blank
-  ([src/pages/AnimalEditor/CameraModal.tsx:49-53](../../../src/pages/AnimalEditor/CameraModal.tsx)) — the
+  ([src/pages/AnimalEditor/CameraModal.tsx:49-53](../../../../src/pages/AnimalEditor/CameraModal.tsx)) — the
   cause of the corpus's `unknown`/`unknown2` make/model/lens pollution. The lab is overwhelmingly one rig:
   manufacturer **Allied Vision** (Manta), model **Manta G-158C**, lens **Theia SL183M** (corpus: G-158C
   448 / Theia SL183M 448, dominant when not left blank). Prefill those three on a **new** camera

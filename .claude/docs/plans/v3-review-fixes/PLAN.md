@@ -43,19 +43,27 @@ For agent invocation, **load only the slice you need**:
   - [phase-6-type-safety.md](phase-6-type-safety.md) — derive the closed status unions (`DAY_STATUS`/`StepStatus`/`DAY_LIFECYCLE`) + a boundary guard.
   - [phase-7-test-ci-hardening.md](phase-7-test-ci-hardening.md) — validation/migration/divergence test gaps, e2e self-skip, CI schema-sync fail-open, guard fragility.
   - **Data-grounded app improvements (from the `yaml-corpus-2` study):**
-    - [phase-8-import-robustness.md](phase-8-import-robustness.md) — fix the list-vs-scalar `orphaned_file`/`orphaned_video` bug (blocks ~63% of real-file imports) + `YYYYMMDD_<subject>` date parsing + repairable coercions. *(highest value)*
+    - [phase-8-import-robustness.md](phase-8-import-robustness.md) — fix the list-vs-scalar `orphaned_file`/`orphaned_video` bug (blocks ~63% of real-file imports) + `YYYYMMDD_<subject>` date parsing + known legacy space-key normalization + repairable coercions. *(highest value)*
     - [phase-9-opto-power-guard.md](phase-9-opto-power-guard.md) — `power_in_W` range warn-to-confirm (the one unguarded silent NWB corruption) + fix the misleading placeholder.
     - [phase-10-camera-calibration.md](phase-10-camera-calibration.md) — `meters_per_pixel > 0`, placeholder camera names, cross-day calibration-aliasing on import (within-file aliasing already guarded).
     - [phase-11-vocab-nudges.md](phase-11-vocab-nudges.md) — experimenter name-shape (Spyglass), genotype-vs-strain, placeholder-id, `location` typo nudge (catalog + species already done).
     - [phase-12-statescript-integrity.md](phase-12-statescript-integrity.md) — `associated_files` duplicate name/path + statescript description-keyword + path-shape guards.
-  - **UX efficiency & clarity (from the live UX walkthrough, [../../research/yaml-corpus-2/13-ux-live-walkthrough.md](../../research/yaml-corpus-2/13-ux-live-walkthrough.md)):**
+  - **UX efficiency & clarity (from the live UX walkthrough + Day Editor mock review: [13-ux-live-walkthrough.md](../../research/yaml-corpus-2/13-ux-live-walkthrough.md), [14-day-screen-vs-mock.md](../../research/yaml-corpus-2/14-day-screen-vs-mock.md)):**
     - [phase-13-validation-presentation.md](phase-13-validation-presentation.md) — *(keystone; sequence BEFORE 8–12)* group/tier/collapse the Day Editor banner + reward-early/punish-late (use the existing `DRAFT` status for untouched days) + extend `humanizeValidationMessage` coverage + status-signal consistency. Makes the presentation absorb the new guards instead of becoming a ~20-row wall.
-    - [phase-14-first-run-scope.md](phase-14-first-run-scope.md) — wizard collects `experiment_description` + pre-fills lab/institution (no first day born with errors). *(Its day-view read-only task moves into Phase 15 — trim Phase 14 to the wizard.)*
-    - [phase-15-day-editor-ia-realign.md](phase-15-day-editor-ia-realign.md) — *(largest UX phase; the daily path)* realign the Day Editor to the finalized mock: grouped **vertical rail** (SESSION/RECORDING/FINISH), single-column sections, subject + technical params **inherited read-only**, DIO folded into RECORDING, day view scoped to the day-delta. Fixes the smushed/wrapping nav + the crammed "Day" tab at the root.
+    - [phase-14-first-run-scope.md](phase-14-first-run-scope.md) — wizard collects `experiment_description` + pre-fills lab/institution (no first day born with errors).
+    - [phase-15-day-editor-ia-realign.md](phase-15-day-editor-ia-realign.md) — *(largest UX phase; the daily path)* realign the Day Editor to the finalized mock: grouped **vertical rail** (SESSION/RECORDING/FINISH), single-column sections, subject + rig constants inherited read-only while day-owned technical fields stay editable, DIO folded into RECORDING, day view scoped to the day-delta. Fixes the smushed/wrapping nav + the crammed "Day" tab at the root.
 
-> **Sequencing note:** Phase 13 should land **before** the guard phases 8–12 — adding ~8–10 new issue
-> types onto today's flat, punish-early banner would degrade the UX even as the data gets safer. Phases
-> 1 is independent and can land any time; 14 is independent of the guard rules but pairs naturally with
-> 13. **Phase 15 is the highest-leverage UX work** (the daily screen) and depends on Phase 13's
-> per-section status model; it absorbs Phase 14's day-view read-only task. The original 1–7 keep their
-> low-risk-first order.
+## Execution waves
+
+Use these waves as the source of truth for implementation order; phase numbers remain stable for review
+history and file references.
+
+1. **Foundation and safety:** Phase 1 → Phase 6 → Phase 7 → Phase 2.
+2. **Core data integrity:** Phase 3 → Phase 4 → Phase 5.
+3. **UX readiness for heavier validation:** Phase 14 → Phase 13 → Phase 15.
+   - Phase 13 must land before Phases 8–12 so the new guard issues do not create a flat warning wall.
+   - Phase 15 depends on Phase 13's per-section status model and owns the Day Editor scope/IA work.
+4. **Corpus-driven guards:** Phase 8 → Phase 9 → Phase 10 → Phase 11 → Phase 12.
+   - Phase 8 depends on or coordinates with Phase 4 for dual-key conflicts.
+   - Phase 10 depends on or coordinates with Phase 4 for existing-animal catalog merge.
+   - Phase 12 follows or coordinates with Phase 8 in `referenceRules`.

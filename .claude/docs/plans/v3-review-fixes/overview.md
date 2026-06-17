@@ -31,21 +31,24 @@ Verified against the live tree at planning time; re-confirm before editing.
 
 - `src/validation/rules/referenceRules.ts:200-228` (`orphaned_file`) + `:146-196` (`orphaned_video`) — `taskEpochSet.has(epoch)` false-positives when the referencing `task_epochs` is a **list** `[2]`; `src/nwb_schema.json:617-623` declares the field scalar `integer`. **Phase 8** (the list-vs-scalar bug; ~63% of real imports). Cover both `associated_files` and `associated_video_files`, including singular-only `task_epoch` legacy video rows and mixed singular/plural video rows, because the corpus shows video epoch linkage is the largest downstream drop-risk if normalized incorrectly.
 - `src/state/yamlImportPlan.ts:94-121` (`extractRecordingDate`) — parses only the template's `mmddYYYY_..._metadata.yml` + `session_id` ending `_YYYYMMDD`; real `YYYYMMDD_<subject>.yml` → `null` → `planImport` dead-end. **Phase 8**. (`src/state/importRepair.ts:348-420` is the normalization seam shared with **Phase 4**.)
+- `src/state/importRepair.ts` — legacy files can carry schema keys with spaces (`subject id`, `electrode groups`, `ntrode electrode group channel map`, `data acq device`). Normalize only these known aliases as listed benign import repairs before validation/decision/decompose; do not rewrite arbitrary user keys. **Phase 8**.
 - `src/validation/rules/optoRules.ts` — `optogeneticsRules` has **no `power_in_W` magnitude check**; `src/nwb_schema.json:36042` is the field; `src/pages/AnimalEditor/OptogeneticsStep.tsx:56` has the misleading `placeholder: 'e.g. 10'`. **Phase 9**.
 - `src/validation/rules/identityRules.ts:56-60` — the camera-name divergence signature **already includes `meters_per_pixel`** (within-file aliasing is done). Gaps: `meters_per_pixel > 0` (`src/nwb_schema.json:716`), placeholder names, and the cross-day case at the `src/state/yamlImportApply.ts:270-340` catalog-merge seam (shared with **Phase 4**). **Phase 10**.
 - `src/validation/rules/dandiSubjectRules.ts:24-36` — already rejects free-text `species` (`invalid_species`); add genotype-vs-strain + placeholder-`subject_id` nudges. `src/validation/rules/identityRules.ts` — add the experimenter name-shape rule (Spyglass `decompose_name`). `src/validation/rules/electrodeGroupRules.ts:105-160` — `empty_location` + the case warning; add a typo nudge. `src/ntrode/probeCatalog.ts:75-96` already has **all 12** probes (only `CLAUDE.md`'s "Current Supported Device Types" doc is stale at 8). **Phase 11**.
 - `src/validation/rules/referenceRules.ts` (sibling to `orphaned_file`) — no `associated_files` *internal* checks today (duplicate name → trodes `pynwb ValueError` hard-fail; duplicate path / missing statescript description-keyword / bad path-shape → silent drop). **Phase 12**.
 
-### Phases 13–14 — UX efficiency & clarity (from the live UX walkthrough)
+### Phases 13–15 — UX efficiency & clarity (from the live UX walkthrough + Day Editor mock review)
 
 Verified against the live tree; re-confirm line numbers before editing. Full findings:
-[../../research/yaml-corpus-2/13-ux-live-walkthrough.md](../../research/yaml-corpus-2/13-ux-live-walkthrough.md).
+[../../research/yaml-corpus-2/13-ux-live-walkthrough.md](../../research/yaml-corpus-2/13-ux-live-walkthrough.md),
+[../../research/yaml-corpus-2/14-day-screen-vs-mock.md](../../research/yaml-corpus-2/14-day-screen-vs-mock.md).
 
 - `src/pages/DayEditor/DayEditorFrame.tsx:144-157,407` — `readinessIssues` → the `ReadinessBar` banner (the surface to group/tier/collapse). `src/pages/ValidationSummary/index.tsx:200-302` already has the grouped/collapsed + `warningsAcknowledged` pattern to reuse. **Phase 13.**
 - `src/domain/humanizeValidationMessage.ts` (+ applied at `src/viewModels/dayEditorViewModel.ts:545`) — `HUMANIZE_LABELS` misses `must have required property '<X>'` / `must NOT have fewer than 1 items`; extend **at display**, leaving raw `issue.message` intact (a downstream parser reads it — the file says so). **Phase 13.**
 - `src/domain/dayLifecycle.ts:28-34` — `DAY_LIFECYCLE.DRAFT` already exists; `src/viewModels/animalWorkspaceViewModel.ts:62-170` rolls a fresh day straight to the export-gate "Needs fixing". Gate the surfacing on "touched yet?" so untouched = DRAFT. `src/pages/AnimalEditor/CamerasSection.tsx:154-158` fires the calibration warning on an empty step (same punish-early class). **Phase 13.**
 - `src/pages/Home/CreateAnimalWizard.tsx:108-204` (`TeamStep`) — collects `lab`/`institution` from blank seeds; `experiment_description` collected nowhere. `src/domain/animalCreation.ts:134,149,157` has the defaults that don't reach the step. **Phase 14.**
-- `src/pages/DayEditor/DayTab.tsx:400-433` — the inherited-subject-metadata disclosure that writes the animal record for all days behind a grey "UPDATES ALL DAYS" label; `src/pages/AnimalView/index.tsx` is the correct edit path. **Phase 14.**
+- `src/pages/DayEditor/DayEditorFrame.tsx` + `DayEditorFrame.module.css` + `DayEditor.scss` — the day editor is mid-refactor: a horizontal tab bar is squeezed into the old 230px rail column, sections wrap/cram, and the mock's grouped vertical rail is not restored. **Phase 15.**
+- `src/pages/DayEditor/DayTab.tsx:400-433` — the inherited-subject-metadata disclosure writes animal-static fields from the day view; `src/pages/AnimalView/index.tsx` is the correct edit path. `src/pages/DayEditor/DayTechnicalSection.tsx` already distinguishes rig constants (read-only inherited values) from day-owned technical fields (`default_header_file_path`, `units`). **Phase 15.**
 - `src/pages/AnimalEditor/ElectrodeGroupModal.tsx` (+ CSS) modal scroll; `src/pages/Home/CreateAnimalWizard.tsx:245-268` stepper + Save-draft; `src/pages/AnimalEditor/wiring/ElectrodeGroupsContainer.tsx` device-type label. **Phase 1** (pure layout/label).
 
 ## Scope and dependency policy
@@ -79,6 +82,7 @@ branch order or same-PR coordination:
 - **Phase 2 before/with Phase 9:** both can touch opto validation helpers; Phase 9 should reuse the Phase-2 helper shape if Phase 2 lands first.
 - **Phase 13 before Phases 8-12:** Phase 13 bounds and tiers the Day Editor validation banner so the new data-quality guards do not create an attention/working-memory wall.
 - **Phase 14 before or with Phase 13:** Phase 14 removes wizard-created first-day errors; Phase 13 controls when/how any remaining validation results surface.
+- **Phase 15 after Phase 13:** Phase 15 renders Phase 13's per-section status model in the day-editor rail and owns the Day Editor scope/IA realignment.
 - **Phase 7 before any deliberate schema migration:** this plan avoids schema changes; if one becomes unavoidable, the schema-sync and AJV/jsonschema divergence gates must already be hard.
 
 ## Metrics
@@ -108,10 +112,14 @@ branch order or same-PR coordination:
 
 All-at-once per phase (no feature flags). `modern` is local-only and unpushed; these land on `modern`
 the same way the epoch-editor phases did (branch off `modern` → full gate → independent review →
-`git merge --ff-only`; do not push unless asked). Suggested order: land the original review fixes
-low-risk-first (`1 → 7`), land the UX-presentation prep (`14` if convenient, then **13**), then land the
-data-grounded guard fixes (`8 → 12`) with the handoffs above. If a later phase is pulled forward,
-explicitly re-check its handoff partner before merging.
+`git merge --ff-only`; do not push unless asked). Suggested wave order:
+
+1. **Foundation and safety:** `1 → 6 → 7 → 2`.
+2. **Core data integrity:** `3 → 4 → 5`.
+3. **UX readiness for heavier validation:** `14 → 13 → 15`.
+4. **Corpus-driven guards:** `8 → 9 → 10 → 11 → 12`.
+
+If a later phase is pulled forward, explicitly re-check its handoff partner before merging.
 
 ## Open Questions
 
@@ -149,10 +157,9 @@ explicitly re-check its handoff partner before merging.
    recommend **warning** (blocking risks rejecting an unusual-but-real name). (b) Active-scoping the
    `empty_location` error so it doesn't fire on deliberately-unused/all-bad tetrodes needs a first-class
    **disabled-group** concept — recommend **deferring** it (its own phase) rather than scoping it here.
-8. **`screw` / `single_electrode` (66 files / 17 animals).** A real non-probe electrode class trodes
-   can't resolve (FileNotFoundError) and the app can't express. Genuine product decision: add a
-   first-class non-probe electrode path (needs pipeline coordination) vs. document as unsupported.
-   **Not** a Phase-11 catalog edit. Track here; decide before building.
+8. **`screw` / `single_electrode` (66 files / 17 animals).** Product decision for this plan: treat as
+   out-of-scope / one-off for now. Do not add a catalog entry or non-probe electrode workflow in v3
+   review fixes; revisit only if new users hit it again.
 9. **Associated-video rows with no epoch key.** The corpus has real `associated_video_files` rows without
    either `task_epoch` or `task_epochs`. Phase 8 must preserve/flag known singular/plural forms, but the
    no-key shape needs a product decision before gating: is it a valid videoless/Guidera workflow marker,
@@ -164,4 +171,5 @@ Small per phase. Rough diff sizing: Phase 1 ~150 LOC across 6 files (+ test upda
 Phase 3 ~120 LOC (the only non-trivial one — depends on Q1); Phase 4 ~100 LOC; Phase 5 ~60 LOC; Phase 6
 ~60 LOC (mechanical, multi-file); Phase 7 ~250 LOC (mostly new tests). Data-grounded phases: Phase 8
 ~160 LOC plus import fixtures; Phase 9 ~40 LOC; Phase 10 ~120 LOC; Phase 11 ~100 LOC; Phase 12 ~90 LOC.
-UX phases: Phase 13 ~180 LOC plus focused VM/component tests; Phase 14 ~120 LOC plus wizard/day-scope tests.
+UX phases: Phase 13 ~180 LOC plus focused VM/component tests; Phase 14 ~70 LOC plus wizard tests;
+Phase 15 ~250 LOC plus Day Editor component/e2e coverage.

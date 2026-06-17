@@ -7,7 +7,10 @@ The app's Import & Repair flow was validated against an empirical round-trip of 
 is otherwise solid — **0 crashes, 0 parse failures, and 0 silent data loss on accepted files** — so this
 phase fixes specific, byte-safe defects, not the model. Two are the dominant blockers: a validation-rule
 bug that false-positives on list-typed `task_epochs` (blocks ~63% of the corpus), and a filename
-date-parser that only understands the *template's* `mmddYYYY` convention (215 files). Evidence:
+date-parser that only understands the *template's* `mmddYYYY` convention (215 files). It also folds in
+known legacy space-key normalization (`subject id`, `electrode groups`, `ntrode electrode group channel
+map`, `data acq device`) because those files are recoverable and should not read as missing identity or
+missing devices. Evidence:
 [../../research/yaml-corpus-2/10-app-import-roundtrip.md](../../research/yaml-corpus-2/10-app-import-roundtrip.md).
 
 **Inputs to read first:**
@@ -18,6 +21,7 @@ date-parser that only understands the *template's* `mmddYYYY` convention (215 fi
 - [src/state/yamlImportPlan.ts:94-121](../../../../src/state/yamlImportPlan.ts) — `extractRecordingDate`: PRIMARY regex matches only `mmddYYYY_..._metadata.yml`; FALLBACK only `session_id` ending `_YYYYMMDD`. Real files are `YYYYMMDD_<subject>.yml` with short/non-conforming `session_id` → returns `null` → `planImport` rejects with no fixable field.
 - [src/state/importRepair.ts:348-420](../../../../src/state/importRepair.ts) — `detectBenignNormalizations`/`applyBenignNormalizations` (the `task_epoch`→`task_epochs` key shim; the place to add list→scalar value normalization). **Coordinate with Phase 4**, which owns the `task_epoch`/`task_epochs` dual-key *value-conflict* reconcile.
 - [src/pages/ImportRepair/index.tsx](../../../../src/pages/ImportRepair/index.tsx) — the repair screen + true-validate gate (where a date input would surface).
+- [../../research/yaml-corpus-2/10-app-import-roundtrip.md](../../research/yaml-corpus-2/10-app-import-roundtrip.md) — space-keyed legacy files are currently read as missing canonical fields; normalize only known aliases and list the recovery as benign, visible import repair.
 
 ## Tasks
 
@@ -42,12 +46,17 @@ date-parser that only understands the *template's* `mmddYYYY` convention (215 fi
   with a `^(\d{4})(\d{2})(\d{2})_.+\.ya?ml$` (YYYYMMDD) PRIMARY branch (validated through the existing
   `toIsoDate`). When extraction still returns `null`, surface a **recording-date input** in Import &
   Repair as a fixable repair item, so `planImport` no longer dead-ends with nothing to fix.
+- **Normalize known legacy space-key schema fields.** Before validation/decision/decompose, map only known
+  aliases (`subject id`→`subject_id`, `data acq device`→`data_acq_device`, `electrode groups`→
+  `electrode_groups`, `ntrode electrode group channel map`→`ntrode_electrode_group_channel_map`) through
+  the benign-normalization path. List the recovery ("recovered subject id", "recovered electrode groups")
+  so the import is transparent; never rewrite arbitrary user keys.
 - **Make type-coercion blockers repairable, not dead-ends.** `times_period_multiplier: "1.5cd"` (a string
   in a number field; downstream-ignored but app-schema-invalid) and a non-conforming `session_id` should
   become repair rows (coerce/confirm), not unfixable blocks.
-- **Docs.** CHANGELOG "Fixed": legacy YAMLs with list-typed `associated_files.task_epochs` and
-  `YYYYMMDD_<subject>` filenames now import (the false-positive orphaned-file error and the
-  no-recording-date dead-end are gone).
+- **Docs.** CHANGELOG "Fixed": legacy YAMLs with list-typed `associated_files.task_epochs`,
+  `YYYYMMDD_<subject>` filenames, and known space-key schema fields now import (the false-positive
+  orphaned-file error, the no-recording-date dead-end, and the missing-field space-key dead-end are gone).
 
 ## Deliberately not in this phase
 
@@ -68,6 +77,7 @@ date-parser that only understands the *template's* `mmddYYYY` convention (215 fi
 | `referenceRules` (extend) | `associated_files`/`associated_video_files` with `task_epochs: [2]` where task declares epoch 2 → **no** `orphaned_file`/`orphaned_video` (was a false error); `[9]` with no such task → flagged; scalar cases unchanged |
 | video epoch legacy keys (new/extend) | `associated_video_files` with `task_epoch: 2`, `task_epochs: 2`, and both keys equal → preserves epoch linkage; both keys different → Phase-4 reconcile item, not benign; no epoch key → explicit unresolved/deferred decision, not silent auto-assignment |
 | `importRepair` (extend) | single-element list `task_epochs: [4]` → normalized to `4` (benign); multi-element `[4,5]` → a surfaced repair item, not a silent pick |
+| space-key import repair (new/extend) | `subject.subject id`, `electrode groups`, and `ntrode electrode group channel map` normalize to canonical underscore keys, are listed as benign, and import attribution uses the recovered `subject_id` |
 | `extractRecordingDate` (extend) | `20231108_bs28.yml` → `2023-11-08`; `mmddYYYY_..._metadata.yml` still parses; unparseable name + non-conforming `session_id` → `null` → a date-input repair row appears |
 | import round-trip (new, gated by external path or a small in-repo fixture set) | a handful of representative legacy shapes (list epochs, YYYYMMDD name, `1.5cd`) import without an unfixable blocker |
 | `baselines` | byte-identical (the app still emits scalar `task_epochs`; only import normalization + a validation false-positive change) |
@@ -77,7 +87,8 @@ date-parser that only understands the *template's* `mmddYYYY` convention (215 fi
 Synthesize inline: `associated_files` items with `task_epochs` as `2`, `[2]`, `[2,3]`, and `[9]` against
 `tasks: [{task_epochs:[1,2]}]`; `associated_video_files` items with `task_epoch: 2`, `task_epochs: 2`,
 both keys equal, both keys different, and no epoch key; filenames `20231108_bs28.yml` and
-`11082023_bs28_metadata.yml`; a model with `times_period_multiplier: "1.5cd"`. Reuse
+`11082023_bs28_metadata.yml`; a model with `subject.subject id`, `electrode groups`, and
+`ntrode electrode group channel map`; a model with `times_period_multiplier: "1.5cd"`. Reuse
 `buildImportRepairPlan` fixtures.
 
 ## Review
@@ -86,6 +97,7 @@ Dispatch `code-reviewer` against the diff. Confirm:
 - The orphaned-file/video rule no longer false-flags valid list input but still catches genuine orphans (scalar + array paths both covered).
 - Legacy video singular/plural key shapes preserve linkage; no-epoch-key video rows are explicitly deferred/unresolved, not silently reinterpreted.
 - Import normalization is list→scalar only for single-element lists; multi-element is surfaced, never silently dropped; baselines byte-identical.
+- Known space-key aliases are recovered before validation and import decision; arbitrary keys with spaces are not rewritten.
 - `extractRecordingDate` gains the YYYYMMDD branch without breaking the template branch; the date-input fallback gates cleanly.
 - No schema change to `task_epochs`; the dual-key conflict remains Phase 4's.
 - Full gate green; no trivial tests; CHANGELOG updated.

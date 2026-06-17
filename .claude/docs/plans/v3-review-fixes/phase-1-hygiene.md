@@ -78,13 +78,13 @@ the *validation-timing* walkthrough findings (empty-Cameras warning, pre-greened
 - **Save-draft feedback (Med).** Show a brief inline "Draft saved" confirmation next to the wizard's
   "Save draft" button on click (a transient `role="status"` message), so the user knows work persisted.
 - **Duplicate "Add recording day" at zero days (Med).** The zero-days state renders the action twice — a
-  header button ([RecordingDaysTab.tsx:409-415](../../../src/pages/AnimalWorkspace/RecordingDaysTab.tsx))
-  **and** the EmptyState CTA ([DayList.tsx:78-92](../../../src/pages/AnimalWorkspace/DayList.tsx)), both
+  header button ([RecordingDaysTab.tsx:409-415](../../../../src/pages/AnimalWorkspace/RecordingDaysTab.tsx))
+  **and** the EmptyState CTA ([DayList.tsx:78-92](../../../../src/pages/AnimalWorkspace/DayList.tsx)), both
   opening the same calendar. Render only one in the empty state (keep the EmptyState CTA, hide/suppress the
   header button when there are zero days), so a new user sees a single clear call to action.
 - **Persistent "set up this animal" card (Med).** A fully-configured animal with zero recording days still
   shows the setup card because `showSetupCard = !(subjectPresent && dayCount > 0)`
-  ([animalWorkspaceViewModel.ts:546](../../../src/viewModels/animalWorkspaceViewModel.ts)) gates on
+  ([animalWorkspaceViewModel.ts:546](../../../../src/viewModels/animalWorkspaceViewModel.ts)) gates on
   *day-count*, not setup completeness. Gate it on actual section completeness (the same section-status the
   AnimalView SectionNav already computes) so a set-up animal with no days yet is invited to **add a day**,
   not to "set up the animal" again.

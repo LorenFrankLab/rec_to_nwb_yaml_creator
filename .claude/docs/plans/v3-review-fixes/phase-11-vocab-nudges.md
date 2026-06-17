@@ -43,7 +43,7 @@ Evidence: [../../research/yaml-corpus-2/06-spyglass-constraints.md](../../resear
 
 - Widening / changing the **device_type catalog** — it already has all 12 probes and is validated; the
   only stale artifact is the CLAUDE.md doc (fixed above). The `screw`/`single_electrode` hardware class is
-  a genuine product decision — see Open Question, not a catalog edit.
+  intentionally ignored for now as a one-off/out-of-scope workflow, not a catalog edit.
 - The **species** guard — already implemented (`invalid_species`).
 - The task-catalog name collision — **Phase 3**.
 - **Active-scoping the `empty_location` error** (so it doesn't fire on deliberately-unused/all-bad
