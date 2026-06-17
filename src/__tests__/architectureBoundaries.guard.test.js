@@ -74,6 +74,14 @@ const CROSS_PAGE_ALLOWLIST = new Set([
   // normalizers like any page. Lives under AnimalEditor (its origin); a neutral relocation to
   // src/components can follow when that opens up.
   'pages/AnimalEditor/CopyFromAnimalDialog',
+  // Phase 5 (epoch-editor): the per-animal "export all selected days" batch coordinator. It owns NO
+  // app-wide domain logic — it composes the shared byte-producing core (domain/exportDay) and the
+  // export deciders (domain/dayRecovery, domain/validation) like any page, returning an
+  // exported/skipped result. DELIBERATELY shared so the AnimalWorkspace Recording Days tab AND the
+  // Day Editor's export-preview "Export all days" run ONE batch path instead of forking it (the same
+  // "extract, don't fork" contract — there is exactly one exporter). Lives under AnimalWorkspace (its
+  // origin); a neutral relocation to a shared layer can follow.
+  'pages/AnimalWorkspace/exportSelectedDays',
 ]);
 
 /**
