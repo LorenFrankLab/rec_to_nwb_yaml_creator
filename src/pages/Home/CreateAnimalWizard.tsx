@@ -77,8 +77,10 @@ function readAdoptedAnimalId(existingAnimals: Record<string, unknown>): string |
 /**
  * Seed an identity draft from an existing animal's subject (for the adopt handshake). A known
  * species maps to its option; an unknown one falls to "other" + custom; the date is sliced to the
- * `YYYY-MM-DD` the date input wants (the commit re-derives the ISO datetime). The default
- * `description`/`weight` `createAnimal` seeds are treated as blank so the user fills real values.
+ * `YYYY-MM-DD` the date input wants (the commit re-derives the ISO datetime). The placeholder
+ * `description: 'Subject'` and `weight: 100` that `createAnimal` seeds for an identity-less animal
+ * (e.g. the copy-from flow, which copies setup but NOT identity) are treated as blank so the user
+ * supplies a real value rather than silently accepting the placeholder.
  *
  * @param animal - The existing animal record.
  * @returns The seeded identity draft.
@@ -87,6 +89,9 @@ function seedIdentityFromAnimal(animal: unknown): IdentityDraft {
   const subject = getAnimalSubject(animal);
   const speciesKnown = SPECIES_OPTIONS.some((o) => o.value === subject.species);
   const species = typeof subject.species === 'string' ? subject.species : '';
+  // The placeholders `createAnimal` seeds when the caller omits these (workspaceActions.ts).
+  const SEED_WEIGHT = 100;
+  const SEED_DESCRIPTION = 'Subject';
   return {
     subject_id: subject.subject_id || '',
     species: speciesKnown ? species : species ? 'other' : INITIAL_IDENTITY.species,
@@ -94,8 +99,8 @@ function seedIdentityFromAnimal(animal: unknown): IdentityDraft {
     sex: subject.sex || INITIAL_IDENTITY.sex,
     genotype: subject.genotype || INITIAL_IDENTITY.genotype,
     date_of_birth: typeof subject.date_of_birth === 'string' ? subject.date_of_birth.slice(0, 10) : '',
-    weight: subject.weight != null ? String(subject.weight) : '',
-    description: subject.description && subject.description !== 'Subject' ? subject.description : '',
+    weight: subject.weight != null && subject.weight !== SEED_WEIGHT ? String(subject.weight) : '',
+    description: subject.description && subject.description !== SEED_DESCRIPTION ? subject.description : '',
   };
 }
 

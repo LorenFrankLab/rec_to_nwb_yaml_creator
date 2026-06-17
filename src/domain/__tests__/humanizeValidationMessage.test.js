@@ -1,9 +1,8 @@
 /**
  * Tests for humanizeValidationMessage — the DISPLAY-ONLY presentation helper that rewrites
  * raw AJV validation jargon into user-facing sentences. It is never called by validate() /
- * schemaValidation (which must keep emitting the raw, parseable message so consumers like
- * ImportYamlDialog's remediationHint can extract the field name). It runs only at the point a
- * message is rendered to the user.
+ * schemaValidation (which must keep emitting the raw, parseable message so downstream consumers can
+ * extract the field name). It runs only at the point a message is rendered to the user.
  */
 
 import { describe, it, expect } from 'vitest';

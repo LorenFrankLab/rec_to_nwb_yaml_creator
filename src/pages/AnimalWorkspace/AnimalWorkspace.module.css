@@ -8,8 +8,9 @@
  *
  * OWNERSHIP NOTE: a few classes are kept `:global()` (byte-identical to the previous globals) because
  * they are SHARED across components or queried dynamically/by tests:
- *   - `.btn-primary` / `.btn-secondary` — the workspace's canonical button rules; ImportYamlDialog
- *     (a module) references them literally, and Home/CalendarDayCreator no longer define them globally.
+ *   - `.btn-primary` / `.btn-secondary` — the workspace's canonical button rules, referenced literally
+ *     by global-class consumers (ShortcutsHelp, the setup modals); Home/CalendarDayCreator no longer
+ *     define them globally.
  *   - `.status-chip` (+ variants) — also defined by ValidationSummary.css; a test asserts its absence.
  *   - `.empty-state` — a shared name defined (scoped) by several setup-table stylesheets too.
  *   - `.visually-hidden` — global a11y utility (also defined in index.css).
@@ -100,7 +101,7 @@
   border-width: 0;
 }
 
-/* GLOBAL shared button rules (ImportYamlDialog references these literally). */
+/* GLOBAL shared button rules (global-class consumers reference these literally). */
 :global(.btn-primary),
 :global(.btn-secondary) {
   padding: 0.5rem 1rem;

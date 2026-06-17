@@ -229,6 +229,12 @@ function stableStringify(value: unknown): string {
  * animals-map KEY or by a record's `subject.subject_id`. Returns the matching animal's
  * store key (its `existingAnimalId`), or `null` when none matches.
  *
+ * Matching is NORMALIZED (trim + lower-case) on both sides: an imported `Remy` must route to an
+ * existing `remy` (whether that animal was keyed by the lower-cased wizard id or a raw import id) so
+ * a case/whitespace variant becomes an "add a recording day", not a duplicate animal — which would
+ * fragment the subject downstream in Spyglass. The imported subject_id is preserved verbatim
+ * elsewhere (no laundering); only this comparison is normalized.
+ *
  * @param subjectId - The imported subject id.
  * @param workspace - The existing workspace slice (`{ animals }`).
  * @returns The conflicting animal's store key, or null.
@@ -239,10 +245,13 @@ export function findExistingAnimalId(
 ): string | null {
   const animals = workspace?.animals;
   if (animals === null || typeof animals !== 'object') return null;
+  const norm = (value: unknown): string => (typeof value === 'string' ? value.trim().toLowerCase() : '');
+  const target = norm(subjectId);
+  if (target === '') return null;
   // `Object.prototype.hasOwnProperty.call` is the pre-ES2022 form of `Object.hasOwn` (ES2020 lib).
   if (Object.prototype.hasOwnProperty.call(animals, subjectId)) return subjectId;
   for (const [key, animal] of Object.entries(animals)) {
-    if (animal?.subject?.subject_id === subjectId) return key;
+    if (norm(key) === target || norm(animal?.subject?.subject_id) === target) return key;
   }
   return null;
 }

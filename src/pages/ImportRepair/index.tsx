@@ -13,9 +13,11 @@
  * @module pages/ImportRepair
  */
 
-import { useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import type { ChangeEvent } from 'react';
 import { useStoreContext } from '../../state/StoreContext';
+import { validate } from '../../validation';
+import type { ValidationModel } from '../../validation/issueTypes';
 import { parseImportFiles } from '../../features/importYaml';
 import {
   buildImportRepairPlan,
@@ -35,20 +37,6 @@ interface ImportResult {
   animalId: string;
   /** A failure reason when the commit could not write (defensive; should not happen post-gate). */
   failure?: string;
-}
-
-/**
- * Whether a value resolves a repair item (a non-empty string / a finite number / a non-empty list).
- *
- * @param value - The current resolution value.
- * @returns True when the item is considered resolved.
- */
-function isResolvedValue(value: unknown): boolean {
-  if (value === undefined || value === null) return false;
-  if (typeof value === 'string') return value.trim() !== '';
-  if (Array.isArray(value)) return value.length > 0;
-  if (typeof value === 'number') return Number.isFinite(value);
-  return true;
 }
 
 /** Render a value for the "was → suggested" display (arrays join, others stringify). */
@@ -109,16 +97,23 @@ export default function ImportRepair() {
     setResolutions((prev) => ({ ...prev, [path]: value }));
   };
 
-  const allResolved =
-    !!plan &&
-    plan.decision.kind !== 'blocked' &&
-    plan.blockers.length === 0 &&
-    plan.items.every((item) => isResolvedValue(resolutions[item.path]));
+  // The TRUE import gate: a clean file OR every fix applied so the REPAIRED model validates with zero
+  // errors. (A non-empty check alone is fail-open — e.g. a text value typed for a field the schema
+  // needs as an array would "enable" import, then fail at commit; this re-runs the SAME validator
+  // the commit will, so the button only enables when the import will actually succeed.)
+  const repaired = useMemo(
+    () => (decoded ? applyImportRepairs(decoded.flatModel, resolutions) : null),
+    [decoded, resolutions]
+  );
+  const remainingErrors = useMemo(
+    () => (repaired ? validate(repaired as ValidationModel).filter((i) => i.severity === 'error') : []),
+    [repaired]
+  );
+  const canImport = !!plan && plan.decision.kind !== 'blocked' && remainingErrors.length === 0;
 
   /** Apply the accepted fixes, commit through the existing import path, and show the result. */
   const handleImport = () => {
-    if (!plan || !decoded || !allResolved) return;
-    const repaired = applyImportRepairs(decoded.flatModel, resolutions);
+    if (!plan || !decoded || !canImport || !repaired) return;
     const importPlan = planImport(
       [{ sourceName: decoded.sourceName, flatModel: repaired }],
       model.workspace
@@ -305,12 +300,14 @@ export default function ImportRepair() {
         )}
 
         <div className={styles.actions}>
-          <Button disabled={!allResolved} onClick={handleImport}>
+          <Button disabled={!canImport} onClick={handleImport}>
             {importLabel}
           </Button>
-          {!allResolved && (
+          {!canImport && (
             <span className={styles.blockerHint} role="status">
-              Accept or fill every flagged field to import.
+              {plan.decision.kind === 'blocked'
+                ? plan.decision.reason
+                : `Accept or fill every flagged field to import (${remainingErrors.length} still blocking).`}
             </span>
           )}
           <span className={styles.spacer} />

@@ -24,7 +24,7 @@ import {
   getAnimalTaskTypes,
   getDataAcqDevices,
 } from '../../state/workspaceSelectors';
-import type { Animal } from '../../state/workspaceTypes';
+import type { Animal, OptogeneticsConfig } from '../../state/workspaceTypes';
 import Button from '../../components/ui/Button';
 import styles from './CopyFromAnimal.module.css';
 
@@ -156,7 +156,9 @@ export default function CopyFromAnimal() {
       {
         devices,
         cameras: copyCameras ? structuredClone(getAnimalCameras(source)) : [],
-        optogenetics: copyOpto ? structuredClone((source as { optogenetics?: unknown }).optogenetics) as never : null,
+        optogenetics: copyOpto
+          ? (structuredClone((source as { optogenetics?: OptogeneticsConfig }).optogenetics) ?? null)
+          : null,
       }
     );
     if (copyTasks) {

@@ -116,6 +116,31 @@ describe('buildImportRepairPlan — new-animal vs existing-day decision', () => 
     const plan = buildImportRepairPlan(loadNonconforming(), 'nonconforming-remy.yml', workspace);
     expect(plan.decision).toEqual({ kind: 'existing', subjectId: 'remy', existingAnimalId: 'remy' });
   });
+
+  it('matches on a NORMALIZED subject id (a case/whitespace variant is the same animal)', () => {
+    const model = loadNonconforming();
+    (model.subject as { subject_id: string }).subject_id = '  Remy  ';
+    const workspace = { animals: { remy: { subject: { subject_id: 'remy' } } } };
+    const plan = buildImportRepairPlan(model, 'nonconforming-remy.yml', workspace);
+    // "  Remy  " must route to the existing "remy" (add a day), never a duplicate animal.
+    expect(plan.decision).toEqual({ kind: 'existing', subjectId: '  Remy  ', existingAnimalId: 'remy' });
+  });
+});
+
+describe('buildImportRepairPlan — structured required-missing fields are fix-in-file blockers', () => {
+  it('routes a missing experimenter_name / data_acq_device to blockers, not text inputs', () => {
+    const model = loadNonconforming();
+    delete (model as Record<string, unknown>).experimenter_name;
+    delete (model as Record<string, unknown>).data_acq_device;
+    const plan = buildImportRepairPlan(model, 'nonconforming-remy.yml', { animals: {} });
+    // They are NOT offered as inline inputs (a single text value can't satisfy an array schema)…
+    expect(plan.items.some((i) => i.path === 'experimenter_name')).toBe(false);
+    expect(plan.items.some((i) => i.path === 'data_acq_device')).toBe(false);
+    // …they are surfaced as fix-in-file blockers (which keep the import blocked).
+    expect(plan.blockers.map((b) => b.path)).toEqual(
+      expect.arrayContaining(['experimenter_name', 'data_acq_device'])
+    );
+  });
 });
 
 describe('applyImportRepairs — accepting fixes yields a model that validates clean', () => {

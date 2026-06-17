@@ -28,6 +28,14 @@ import type { ValidationModel } from '../validation/issueTypes';
 const SEX_ENUM: ReadonlyArray<string> = ['M', 'F', 'U', 'O'];
 
 /**
+ * Root-required fields that are structured collections (an array of strings / of device objects) —
+ * a single inline value can't repair them, so a MISSING one is a fix-in-file blocker, not an input.
+ * (The other root-required fields — `lab`, `institution`, `times_period_multiplier`,
+ * `raw_data_to_volts` — and every required `subject.*` field are scalars the user can supply inline.)
+ */
+const STRUCTURED_REQUIRED_FIELDS: ReadonlySet<string> = new Set(['experimenter_name', 'data_acq_device']);
+
+/**
  * Free-text → DANDI-valid species suggestions. The KEY is a lower-cased, trimmed lookup of the
  * source value; the VALUE is a Latin binomial that MUST pass `isValidSpecies` (a unit test asserts
  * this). A source value with no entry gets NO suggestion — it surfaces as a user-input row rather
@@ -212,8 +220,12 @@ function buildValidationItems(model: ValidationModel): {
   const items: RepairItem[] = [];
   const blockers: RepairBlocker[] = [];
   // One field can draw multiple errors (e.g. a null location fails BOTH the schema `type` check and
-  // the `empty_location` rule). Surface a path ONCE — the first matching error wins (`validate`
-  // sorts by path then code, so a rule's named code generally precedes the generic schema keyword).
+  // the `empty_location` rule). Surface a path ONCE — the first matching error wins. `validate` sorts
+  // by path then code, and today the repairable rule code sorts before the generic schema keyword at
+  // each shared path (`empty_location` < `type`; species/sex/weight don't co-occur with a competing
+  // same-path code), so the repairable item wins. NB: if a future repairable rule code at a shared
+  // path sorted AFTER a co-occurring schema keyword, that keyword would win and shadow the repair as
+  // a blocker — add an explicit "prefer the repairable code" rule here before that can happen.
   const handledPaths = new Set<string>();
 
   for (const issue of errors) {
@@ -269,6 +281,14 @@ function buildValidationItems(model: ValidationModel): {
     if (code === 'empty_location' || code === 'empty_targeted_location') {
       const label = code === 'empty_location' ? 'Electrode group location' : 'Electrode group targeted location';
       items.push({ path, label, code, group: 'attention', kind: 'input', was, why: message, inputType: 'text' });
+      continue;
+    }
+
+    // A structured root-required field (an array/object) that is entirely MISSING can't be repaired
+    // with a single inline value — surface it as a fix-in-file blocker instead of a text input that
+    // could never satisfy the schema (which would falsely enable import, then fail at commit).
+    if (code === 'required' && STRUCTURED_REQUIRED_FIELDS.has(path)) {
+      blockers.push({ path, code, why: message });
       continue;
     }
 
