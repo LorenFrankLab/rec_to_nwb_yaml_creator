@@ -9,6 +9,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Import & Repair screen — a teaching-validation import.** Importing a metadata YAML is now a
+  full-page screen (`#/import`): it decodes the file, runs the **same** validator the export gate uses,
+  and shows — per non-conforming field — a suggested fix drawn from the **same predicate** that flagged
+  it (`Rat` → `Rattus norvegicus` validated by `isValidSpecies`; `Male` → `M`; `"485g"` → `485`; a
+  scalar `experimenter_name` → a single-item list, name preserved verbatim; an empty/`null` electrode
+  location → a user-supplied region). Each row is Accept-or-edit; a **required-but-missing** field
+  (e.g. `date_of_birth`) blocks the import; benign, lossless normalizations (`task_epoch` →
+  `task_epochs`; filling the matching `volume_in_uL`/`volume_in_ul` spelling) are applied **and**
+  listed; a conflicting volume pair surfaces as a reconcile suggestion that keeps both keys. Nothing
+  is laundered — unmappable values stay flagged, never auto-erased. It decides **new animal vs. add a
+  recording day to an existing animal** by matching the subject id, then commits through the existing
+  import path (`planImport` / `applyImportPlan`) and links to the created animal / added day. A clean
+  file round-trips **byte-identical** (decode → model → merge → encode). This **replaces** the previous
+  multi-file batch import dialog (see Removed).
+- **Copy setup from another animal.** A new animal can reuse a same-rig animal's setup (`#/copy-from-animal`):
+  pick a source, choose which setup to copy (configuration/probes, cameras, recording system, task
+  types, optogenetics), name the new animal, and continue in the guided wizard. **Identity, recording
+  days, and DIO/behavioral events are never copied** — the new animal is its own subject and those are
+  per-day. "Copy & continue setup" creates the animal with the copied setup and hands off to the wizard
+  (`#/home?animal=<id>`), which adopts it: identity is seeded and locked, the copied setup is pre-filled.
 - **Guided create-animal wizard.** Creating a new animal from scratch is now a seven-step guided
   setup — Identity → Electrodes → Cameras → Optogenetics → Tasks → Recording system → Team — instead
   of a single long form. Identity (the subject) is committed through `createAnimal` on the first
@@ -18,9 +38,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   subject id) and the case-insensitive uniqueness check; the optogenetics step shows the
   all-or-nothing "Opto configured · N of 4" meter; electrodes offers a behavior-only skip. "Save
   draft" leaves a valid-but-partial animal; finishing lands on the new animal's days. The wizard also
-  offers "Import a YAML…" and "Copy from another animal…" as start options that route to the existing
-  entry points. Exported YAML is unchanged — animal creation moves no export bytes (the golden
-  baselines stay byte-identical).
+  offers "Import a YAML…" and "Copy from another animal…" as start options that route to the Import &
+  Repair (`#/import`) and copy-from-animal (`#/copy-from-animal`) screens. Exported YAML is unchanged —
+  animal creation moves no export bytes (the golden baselines stay byte-identical).
 - **Export preview — the day's export surface.** The day editor's Export action now opens an
   export-preview screen: an issue-driven readiness gate (quiet "✓ Ready to export" when clean; a loud
   "N issues block export" listing each blocking issue with a field-linked "Fix in …" route when not),
@@ -142,6 +162,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Removed
 
+- **Retired the multi-file batch import dialog (`ImportYamlDialog`).** The new single-file Import &
+  Repair screen (`#/import`) is the import experience; the modal batch dialog and its
+  `#/workspace?import=1` handshake are gone (both "Import YAML…" buttons and the wizard's "Import a
+  YAML…" start option now route to `#/import`). The pure reconcile cores it used — `parseImportFiles`,
+  `planImport`, `applyImportPlan` — are unchanged and drive the new screen's commit, so a clean import
+  still round-trips byte-identical. The dialog component, its CSS module, and its
+  `remediationHint`/`groupCreatedDaysByAnimal` presentation helpers (and their tests) are deleted.
+  Trade-off: importing several files at once is no longer one action — import is now one file at a
+  time (the multi-file `planImport`/`applyImportPlan` machinery remains, so batch import could be
+  re-surfaced later).
 - **Retired the one-shot `AnimalCreationForm` as the from-scratch create entry.** The guided
   create-animal wizard replaces it everywhere (the Home `#/home` route, the Animals home's
   "+ New animal", and the top selector's "+ New animal…"); the inline create panel on the Animals

@@ -12,7 +12,8 @@
  *   3. A FAILED autosave (storage write throws) keeps the unsaved-work guard armed and
  *      surfaces a save-failure state — proven in-browser by stubbing `localStorage.setItem`
  *      to throw for the workspace key while leaving reads working.
- *   4. A PARTIAL YAML import names the damaged file/section rather than failing silently.
+ *   4. A YAML import missing required fields surfaces them on the Import & Repair screen
+ *      (and blocks the import) rather than failing silently.
  *
  * Discipline: role/accessible-name or route selectors only (never CSS class for app
  * controls); wait on locators/URLs/events (never fixed sleeps); assert localStorage via
@@ -237,20 +238,18 @@ test.describe('Workspace persistence & recovery', () => {
     expect(guardArmed).toBe(true);
   });
 
-  test('importing a damaged YAML names the un-importable file rather than failing silently', async ({
+  test('importing a YAML missing required fields surfaces them for repair, never silently', async ({
     page,
   }) => {
-    // Start clean and open the import dialog from the picker.
+    // Start clean and reach the Import & Repair screen via the picker's "Import YAML…" entry.
     await resetWorkspace(page);
     await page.getByRole('button', { name: /import yaml/i }).first().click();
-    const dialog = page.getByRole('dialog', { name: 'Import YAML files' });
-    await expect(dialog).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Import metadata YAML' })).toBeVisible();
 
-    // A YAML that decodes fine but FAILS schema/business validation (missing the required
-    // lab/institution/data_acq_device/experimenter_name/raw_data_to_volts/
-    // times_period_multiplier animal-level fields). The import preview must route it to its
-    // "could not be imported" list and NAME the file + the validation reason — never drop
-    // it silently.
+    // A YAML that decodes fine but is MISSING the required animal-level fields
+    // (lab/institution/data_acq_device/experimenter_name/raw_data_to_volts/times_period_multiplier).
+    // The repair screen must SURFACE each missing field (in "Required, but missing") and BLOCK the
+    // import — never drop them silently and never write a half-animal.
     const damagedYaml = [
       'experiment_description: A session that is missing required animal-level fields',
       'session_description: Damaged import fixture',
@@ -266,50 +265,37 @@ test.describe('Workspace persistence & recovery', () => {
       '',
     ].join('\n');
 
-    // Exercise the DROP path (the drag-and-drop zone). This covers the un-importable list
-    // via the drop handler; the file-picker (<input>) path is covered separately by the
-    // "FILE PICKER advances the preview" test below.
-    const dropZone = dialog.getByRole('button', {
-      name: 'Drop YAML files here, or use the file picker below',
+    await page.getByLabel('Choose a metadata YAML file').setInputFiles({
+      name: '06222023_badrat_metadata.yml',
+      mimeType: 'text/yaml',
+      buffer: Buffer.from(damagedYaml),
     });
-    await dropZone.evaluate((el, content) => {
-      const dt = new DataTransfer();
-      dt.items.add(new File([content], '06222023_badrat_metadata.yml', { type: 'text/yaml' }));
-      el.dispatchEvent(
-        new DragEvent('drop', { bubbles: true, cancelable: true, dataTransfer: dt }),
-      );
-    }, damagedYaml);
 
-    // The preview advances and surfaces the un-importable region naming the file.
-    const unimportable = page.getByRole('region', {
-      name: 'Files that could not be imported',
-    });
-    await expect(unimportable).toBeVisible();
-    await expect(unimportable).toContainText('06222023_badrat_metadata.yml');
-    // The reason names WHY it was excluded (a validation failure naming the first missing
-    // required field), not a bare "error".
-    await expect(unimportable).toContainText(/Validation failed: must have required property/i);
+    // The missing required fields are surfaced (not silent) and the import is blocked until filled.
+    const required = page.getByRole('region', { name: 'Required, but missing' });
+    await expect(required).toBeVisible();
+    await expect(required).toContainText(/lab|institution|experimenter|data_acq/i);
+    await expect(page.getByRole('button', { name: /import as new animal/i })).toBeDisabled();
 
-    // Nothing is written until confirm: cancelling leaves the workspace empty.
-    await page.getByRole('button', { name: 'Cancel' }).click();
+    // Nothing is written: leaving for the workspace keeps it empty.
+    await page.getByRole('link', { name: 'Cancel' }).click();
     await expect(page.getByText('No animals created yet.')).toBeVisible();
   });
 
-  test('importing a valid YAML through the FILE PICKER advances the preview (not zero files)', async ({
+  test('a valid YAML imported through the FILE PICKER advances to the repair view (not zero files)', async ({
     page,
   }) => {
-    // Regression guard for the in-browser file-picker bug: ImportYamlDialog.onInputChange
-    // captured the live `e.target.files` FileList then cleared `e.target.value` BEFORE
-    // awaiting handleFiles, which empties that live list in a real browser, so the picker
-    // imported zero files and the preview never advanced. Drives the REAL picker path
-    // (setInputFiles → onChange) and asserts the preview advances with the parsed animal.
+    // Regression guard for the in-browser file-picker bug: an onInputChange that captured the live
+    // `e.target.files` then cleared `e.target.value` BEFORE awaiting the parse empties that live
+    // list in a real browser, so the picker imports zero files and the view never advances. The
+    // Import & Repair screen snapshots the File before clearing; drive the REAL picker path
+    // (setInputFiles → onChange) and assert the view advances with the parsed animal.
     await resetWorkspace(page);
     await page.getByRole('button', { name: /import yaml/i }).first().click();
-    const dialog = page.getByRole('dialog', { name: 'Import YAML files' });
-    await expect(dialog).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Import metadata YAML' })).toBeVisible();
 
-    // A valid, importable single-day YAML (proper {mmddYYYY}_{subject}_metadata.yml name
-    // and all required animal-level fields present).
+    // A valid, importable single-day YAML (proper {mmddYYYY}_{subject}_metadata.yml name and all
+    // required animal-level fields present) — no repairs needed.
     const validYaml = [
       'experimenter_name:',
       '  - Doe, Jane',
@@ -337,20 +323,16 @@ test.describe('Workspace persistence & recovery', () => {
       '',
     ].join('\n');
 
-    // Drive the hidden multi-file <input> directly — this is exactly the change event the
-    // "Choose YAML files" label triggers. setInputFiles fires onChange/onInputChange.
-    await dialog.getByLabel('Choose YAML files to import').setInputFiles({
+    await page.getByLabel('Choose a metadata YAML file').setInputFiles({
       name: '06222023_pickerrat_metadata.yml',
       mimeType: 'text/yaml',
       buffer: Buffer.from(validYaml),
     });
 
-    // The preview phase must advance and show the parsed animal — NOT stay stuck on pick
-    // (which is what the bug caused: zero files → handleFiles returns early → no preview).
-    const preview = page.getByRole('region', { name: 'Import preview' });
-    await expect(preview).toBeVisible();
-    await expect(page.getByRole('group', { name: 'Animal pickerrat' })).toBeVisible();
-    await expect(preview).toContainText('1 animal');
-    await expect(preview).toContainText('1 recording day');
+    // The view advances to the repair screen — a clean file has no repairs, so it shows the
+    // new-animal decision and an ENABLED import action (NOT stuck on the file picker).
+    await expect(page.getByText(/will create a new animal/i)).toBeVisible();
+    await expect(page.getByText(/pickerrat/)).toBeVisible();
+    await expect(page.getByRole('button', { name: /import as new animal/i })).toBeEnabled();
   });
 });
