@@ -216,17 +216,32 @@ export default function DayEditorFrame() {
     }
   }, []);
 
-  // A cross-day repair deep-link (`#/day/:id?field=…&step=…`, emitted by the export-preview batch
-  // "Fix in …" links) lands the user on the issue's OWNING tab + field. `useDayIdFromUrl` strips the
-  // query from the id; here we read it and route through the SAME `goToTab` the in-page readiness "Fix"
-  // uses. The explicit `step` is PREFERRED over inferring the step from the field name, because some
-  // issues route to a step their field name would not infer (e.g. `unpinned_configuration` → `devices`,
-  // field `configurationVersion`, which alone infers the `validation` catch-all). Re-fires once per
-  // (day, step, field) so it can't fight a subsequent user tab click; a step with no day-tab no-ops.
+  // The hash QUERY (everything after `?`), synced on `hashchange`. A cross-day Fix link changes the day
+  // id (which `useDayIdFromUrl` already tracks), but a SAME-day batch Fix link changes ONLY the query —
+  // `useDayIdFromUrl` strips the query and bails on an unchanged id, so the routing effect below would
+  // not see it without this dedicated subscription. Initialized synchronously from the current hash.
+  const [repairQuery, setRepairQuery] = useState(() =>
+    typeof window === 'undefined' ? '' : window.location.hash.split('?')[1] || ''
+  );
+  useEffect(() => {
+    const sync = () => setRepairQuery(window.location.hash.split('?')[1] || '');
+    sync(); // re-read in case the hash changed between the lazy initializer and this attach
+    window.addEventListener('hashchange', sync);
+    return () => window.removeEventListener('hashchange', sync);
+  }, []);
+
+  // A repair deep-link (`#/day/:id?field=…&step=…`, emitted by the export-preview batch "Fix in …"
+  // links) lands the user on the issue's OWNING tab + field, routing through the SAME `goToTab` the
+  // in-page readiness "Fix" uses. The explicit `step` is PREFERRED over inferring the step from the
+  // field name, because some issues route to a step their field name would not infer (e.g.
+  // `unpinned_configuration` → `devices`, field `configurationVersion`, which alone infers the
+  // `validation` catch-all). Keyed on `repairQuery` (not just `dayId`) so a SAME-day query-only change
+  // (the user already on this day's Export panel) still re-fires. Re-fires once per (day, step, field)
+  // so it can't fight a subsequent user tab click; a step with no day-tab no-ops.
   const lastFieldRouteRef = useRef<string | null>(null);
   useEffect(() => {
     if (!dayId || !day || !animal) return;
-    const params = new URLSearchParams(window.location.hash.split('?')[1] || '');
+    const params = new URLSearchParams(repairQuery);
     const field = params.get('field');
     const stepParam = params.get('step');
     if (!field && !stepParam) {
@@ -239,7 +254,7 @@ export default function DayEditorFrame() {
     const step = stepParam || stepIdForIssue({ path: field ?? '' });
     const tab = TAB_FOR_STEP[step];
     if (tab) goToTab(tab, field ?? undefined);
-  }, [dayId, day, animal, goToTab]);
+  }, [dayId, day, animal, repairQuery, goToTab]);
 
   // Alt+←/→ steps through the four tabs and CLAMPS at the ends (it does not wrap) — matching the
   // former stepper's section pager. Export is not in the sequence (it is a header affordance), so the

@@ -248,6 +248,29 @@ describe('DayEditorFrame', () => {
     }
   });
 
+  it('re-routes on a same-day query-only hash change (already on the day, a batch Fix click)', async () => {
+    // A batch "Fix in …" link for the CURRENT day changes ONLY the hash query (the day id is unchanged),
+    // so useDayIdFromUrl reports the same id and the routing must still fire — otherwise the user is left
+    // on the Export panel instead of the target tab.
+    const originalHash = window.location.hash;
+    window.location.hash = '#/day/remy-2023-06-22';
+    try {
+      renderFrame();
+      expect(screen.getByRole('button', { name: 'Day' })).toHaveAttribute('aria-current', 'page');
+
+      await act(async () => {
+        window.location.hash = '#/day/remy-2023-06-22?step=behavioral&field=behavioral_events';
+        window.dispatchEvent(new HashChangeEvent('hashchange'));
+      });
+
+      await waitFor(() =>
+        expect(screen.getByRole('button', { name: 'DIO' })).toHaveAttribute('aria-current', 'page')
+      );
+    } finally {
+      window.location.hash = originalHash;
+    }
+  });
+
   it('prefers an explicit ?step= over field-name inference when routing a deep-link', async () => {
     // unpinned_configuration routes to step `devices` but focuses `configurationVersion` — a field that
     // alone infers the `validation` catch-all (no tab). The explicit step must win → Failed channels tab.
