@@ -68,6 +68,24 @@ describe('firstBlockingRepairLink', () => {
     const { workspace, animalKey, dayId } = oneAnimal();
     expect(firstBlockingRepairLink(workspace, animalKey, dayId)).toBeNull();
   });
+
+  it('carries the issue\'s explicit step in the day link when it differs from the field-name inference', () => {
+    // An unpinned day in a multi-config animal routes to step `devices` but focuses `configurationVersion`
+    // — a field that would infer to the `validation` catch-all (no tab). The link must carry `step` so the
+    // receiver opens the right tab, not re-infer it from the field name.
+    const { workspace, animalKey, dayId } = oneAnimal((animal, day) => {
+      const cfg = animal.configurationHistory as Array<{ version: number; devices: unknown }>;
+      cfg.push({ version: 2, date: '2023-07-01', description: 'v2', devices: cfg[0].devices, appliedToDays: [] } as never);
+      delete (day as Record<string, unknown>).configurationVersion;
+    });
+
+    const link = firstBlockingRepairLink(workspace, animalKey, dayId);
+
+    expect(link).not.toBeNull();
+    expect(link!.label).toBe('Fix in Devices');
+    expect(link!.href).toContain('step=devices');
+    expect(link!.href).toContain('field=configurationVersion');
+  });
 });
 
 describe('exportAllDays', () => {

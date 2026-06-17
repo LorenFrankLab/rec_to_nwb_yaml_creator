@@ -248,6 +248,21 @@ describe('DayEditorFrame', () => {
     }
   });
 
+  it('prefers an explicit ?step= over field-name inference when routing a deep-link', async () => {
+    // unpinned_configuration routes to step `devices` but focuses `configurationVersion` — a field that
+    // alone infers the `validation` catch-all (no tab). The explicit step must win → Failed channels tab.
+    const originalHash = window.location.hash;
+    window.location.hash = '#/day/remy-2023-06-22?field=configurationVersion&step=devices';
+    try {
+      renderFrame();
+      await waitFor(() =>
+        expect(screen.getByRole('button', { name: 'Failed channels' })).toHaveAttribute('aria-current', 'page')
+      );
+    } finally {
+      window.location.hash = originalHash;
+    }
+  });
+
   it('moves focus to the panel (#main-content) on a tab change', async () => {
     const user = userEvent.setup();
     renderFrame();

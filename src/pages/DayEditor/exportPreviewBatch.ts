@@ -113,11 +113,17 @@ export function firstBlockingRepairLink(
     const base = `#/animal/${encodeURIComponent(animalKey)}/${tab}`;
     href = focusPath ? `${base}?field=${encodeURIComponent(focusPath)}` : base;
   } else if (target.surface === 'day') {
-    // The day route carries the field as a `?field=` deep-link (useDayIdFromUrl strips the query from
-    // the id; DayEditorFrame routes it to the owning tab + focuses on load) — so the cross-day link
-    // lands on the field, the same target the in-page single-day "Fix in …" routes to.
-    const base = `#/day/${encodeURIComponent(dayId)}`;
-    href = focusPath ? `${base}?field=${encodeURIComponent(focusPath)}` : base;
+    // The day route carries the issue's OWNING step + field as a `?field=&step=` deep-link
+    // (useDayIdFromUrl strips the query from the id; DayEditorFrame opens the step's tab + focuses the
+    // field on load) — the same target the in-page single-day "Fix in …" routes to. Carrying `step`
+    // explicitly is load-bearing: some issues route to a step their field NAME would not infer (e.g.
+    // `unpinned_configuration` → step `devices`, field `configurationVersion`, which alone infers the
+    // `validation` catch-all). Field first so the query reads `?field=…&step=…`.
+    const params = new URLSearchParams();
+    if (focusPath) params.set('field', focusPath);
+    if (target.step) params.set('step', target.step);
+    const query = params.toString();
+    href = query ? `#/day/${encodeURIComponent(dayId)}?${query}` : `#/day/${encodeURIComponent(dayId)}`;
   }
 
   return { message: issue.message || target.label, label: target.label, href };

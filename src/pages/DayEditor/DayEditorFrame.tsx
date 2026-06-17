@@ -216,24 +216,29 @@ export default function DayEditorFrame() {
     }
   }, []);
 
-  // A cross-day repair deep-link (`#/day/:id?field=…`, emitted by the export-preview batch "Fix in …"
-  // links) lands the user on the field's OWNING tab. `useDayIdFromUrl` strips the `?field=` query from
-  // the id; here we read it and route through the SAME `goToTab` the in-page readiness "Fix" uses, so a
-  // cross-day fix focuses the field, not the default Day tab. Re-fires once per (day, field) so it can't
-  // fight a subsequent user tab click. A field with no day-tab owner (catch-all `validation`) no-ops.
+  // A cross-day repair deep-link (`#/day/:id?field=…&step=…`, emitted by the export-preview batch
+  // "Fix in …" links) lands the user on the issue's OWNING tab + field. `useDayIdFromUrl` strips the
+  // query from the id; here we read it and route through the SAME `goToTab` the in-page readiness "Fix"
+  // uses. The explicit `step` is PREFERRED over inferring the step from the field name, because some
+  // issues route to a step their field name would not infer (e.g. `unpinned_configuration` → `devices`,
+  // field `configurationVersion`, which alone infers the `validation` catch-all). Re-fires once per
+  // (day, step, field) so it can't fight a subsequent user tab click; a step with no day-tab no-ops.
   const lastFieldRouteRef = useRef<string | null>(null);
   useEffect(() => {
     if (!dayId || !day || !animal) return;
-    const field = new URLSearchParams(window.location.hash.split('?')[1] || '').get('field');
-    if (!field) {
+    const params = new URLSearchParams(window.location.hash.split('?')[1] || '');
+    const field = params.get('field');
+    const stepParam = params.get('step');
+    if (!field && !stepParam) {
       lastFieldRouteRef.current = null;
       return;
     }
-    const routeKey = `${dayId}::${field}`;
+    const routeKey = `${dayId}::${stepParam ?? ''}::${field ?? ''}`;
     if (lastFieldRouteRef.current === routeKey) return;
     lastFieldRouteRef.current = routeKey;
-    const tab = TAB_FOR_STEP[stepIdForIssue({ path: field })];
-    if (tab) goToTab(tab, field);
+    const step = stepParam || stepIdForIssue({ path: field ?? '' });
+    const tab = TAB_FOR_STEP[step];
+    if (tab) goToTab(tab, field ?? undefined);
   }, [dayId, day, animal, goToTab]);
 
   // Alt+←/→ steps through the four tabs and CLAMPS at the ends (it does not wrap) — matching the
