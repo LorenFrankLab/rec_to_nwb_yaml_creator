@@ -19,7 +19,6 @@ import { test, expect } from '@playwright/test';
 import { AxeBuilder } from '@axe-core/playwright';
 import {
   STORAGE_KEY,
-  SCHEMA_VERSION,
   ANIMAL_ID,
   DAY_ID,
   seedWorkspace,
