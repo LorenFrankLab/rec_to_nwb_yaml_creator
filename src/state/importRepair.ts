@@ -72,6 +72,14 @@ const SEX_SUGGESTIONS: Readonly<Record<string, string>> = {
   hermaphrodite: 'O',
 };
 
+/** Known legacy YAML key spellings that differ only by spaces vs underscores. */
+const SPACE_KEY_ALIASES: Readonly<Record<string, string>> = {
+  'subject id': 'subject_id',
+  'data acq device': 'data_acq_device',
+  'electrode groups': 'electrode_groups',
+  'ntrode electrode group channel map': 'ntrode_electrode_group_channel_map',
+};
+
 /** How a repair item is resolved in the UI. */
 export type RepairKind = 'suggestion' | 'input';
 
@@ -203,6 +211,78 @@ interface VolumeShimItem {
   volume_in_uL?: unknown;
   volume_in_ul?: unknown;
   [key: string]: unknown;
+}
+
+/**
+ * Whether a decoded YAML value is a plain record that can carry schema keys.
+ *
+ * @param value - The value to check.
+ * @returns True for mutable object records; false for arrays, null, Date, and scalars.
+ */
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return (
+    value !== null &&
+    typeof value === 'object' &&
+    !Array.isArray(value) &&
+    !(value instanceof Date)
+  );
+}
+
+/**
+ * Convert a path segment list to a stable human-readable import-repair path.
+ *
+ * @param parts - The path parts.
+ * @returns A dot path, or `(root)` for the document root.
+ */
+function formatImportPath(parts: ReadonlyArray<string | number>): string {
+  if (parts.length === 0) return '(root)';
+  return parts.map((part) => String(part)).join('.');
+}
+
+/**
+ * Apply known legacy space-key aliases in place, returning the listed benign normalizations.
+ * Only known schema-key aliases are rewritten; arbitrary user keys are preserved.
+ *
+ * @param value - The decoded model or nested value.
+ * @param path - The current traversal path.
+ * @returns The benign normalizations applied.
+ */
+function applySpaceKeyAliases(
+  value: unknown,
+  path: Array<string | number> = []
+): BenignNormalization[] {
+  const benign: BenignNormalization[] = [];
+
+  if (Array.isArray(value)) {
+    value.forEach((item, index) => {
+      benign.push(...applySpaceKeyAliases(item, [...path, index]));
+    });
+    return benign;
+  }
+
+  if (!isRecord(value)) return benign;
+
+  for (const [legacyKey, canonicalKey] of Object.entries(SPACE_KEY_ALIASES)) {
+    if (!Object.prototype.hasOwnProperty.call(value, legacyKey)) continue;
+    if (Object.prototype.hasOwnProperty.call(value, canonicalKey)) continue;
+
+    value[canonicalKey] = value[legacyKey];
+    delete value[legacyKey];
+    const parentPath = formatImportPath(path);
+    benign.push({
+      path: parentPath,
+      label: `${legacyKey} → ${canonicalKey}`,
+      detail:
+        `Renamed legacy key \`${legacyKey}\` → \`${canonicalKey}\` ` +
+        `at ${parentPath} — no values changed.`,
+    });
+  }
+
+  for (const [key, child] of Object.entries(value)) {
+    benign.push(...applySpaceKeyAliases(child, [...path, key]));
+  }
+
+  return benign;
 }
 
 /**
@@ -350,6 +430,8 @@ function buildBenignAndShim(model: ValidationModel): {
   const benign: BenignNormalization[] = [];
   const shimItems: RepairItem[] = [];
 
+  benign.push(...applySpaceKeyAliases(structuredClone(model)));
+
   // --- task_epoch (singular) → task_epochs in file/video lists (the field the app reads). ---
   for (const key of ['associated_files', 'associated_video_files'] as const) {
     const list = (model as Record<string, unknown>)[key];
@@ -401,14 +483,17 @@ function buildBenignAndShim(model: ValidationModel): {
 }
 
 /**
- * Apply the benign, lossless normalizations to a (mutable) model: rename `task_epoch` → the
- * `task_epochs` key the app reads, and fill a missing volume spelling from the present one. Shared
- * by {@link buildImportRepairPlan} (which validates the NORMALIZED model, so a benign-fixable issue
- * never also surfaces as a repair item) and {@link applyImportRepairs}.
+ * Apply the benign, lossless normalizations to a (mutable) model: recover known legacy space-key
+ * schema spellings, rename `task_epoch` → the `task_epochs` key the app reads, and fill a missing
+ * volume spelling from the present one. Shared by {@link buildImportRepairPlan} (which validates
+ * the NORMALIZED model, so a benign-fixable issue never also surfaces as a repair item) and
+ * {@link applyImportRepairs}.
  *
  * @param model - The model to mutate in place.
  */
 function applyBenignNormalizations(model: Record<string, unknown>): void {
+  applySpaceKeyAliases(model);
+
   for (const key of ['associated_files', 'associated_video_files'] as const) {
     const list = model[key];
     if (!Array.isArray(list)) continue;
@@ -458,7 +543,7 @@ export function buildImportRepairPlan(
   const { items, blockers } = buildValidationItems(normalized as ValidationModel);
 
   // Decision: match the subject id against the existing workspace (by key or subject.subject_id).
-  const subjectId = (model.subject as { subject_id?: unknown } | undefined)?.subject_id;
+  const subjectId = (normalized.subject as { subject_id?: unknown } | undefined)?.subject_id;
   let decision: ImportDecision;
   if (typeof subjectId !== 'string' || subjectId.trim() === '') {
     decision = { kind: 'blocked', reason: 'The file has no subject_id, so it cannot be attributed to an animal.' };
@@ -482,8 +567,8 @@ export function buildImportRepairPlan(
 /**
  * Apply the benign normalizations and the user's accepted resolutions to a model, returning a NEW
  * model (the input is never mutated, and no key is dropped). Resolutions are keyed by the same path
- * the repair items carry; benign normalizations (task_epoch rename, single-spelling volume fill)
- * are applied unconditionally because the screen lists them.
+ * the repair items carry; benign normalizations (space-key aliases, task_epoch rename, single-spelling
+ * volume fill) are applied unconditionally because the screen lists them.
  *
  * @param flatModel - The decoded flat model.
  * @param resolutions - Accepted/edited values keyed by repair-item path.
@@ -495,7 +580,7 @@ export function applyImportRepairs(
 ): Record<string, unknown> {
   const model = structuredClone((flatModel ?? {}) as Record<string, unknown>);
 
-  // Benign, lossless normalizations (task_epoch rename, single-spelling volume fill).
+  // Benign, lossless normalizations (space-key aliases, task_epoch rename, single-spelling volume fill).
   applyBenignNormalizations(model);
 
   // Accepted/edited resolutions, applied at their paths. A reconciled volume sets BOTH spellings

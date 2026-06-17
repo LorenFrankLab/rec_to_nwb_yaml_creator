@@ -179,6 +179,37 @@ describe('applyImportRepairs — accepting fixes yields a model that validates c
 });
 
 describe('benign normalizations — auto-applied and listed, never silent', () => {
+  it('renames known legacy space-key schema fields before validation and attribution', () => {
+    const model = loadNonconforming();
+    const subject = model.subject as Record<string, unknown>;
+    subject['subject id'] = subject.subject_id;
+    delete subject.subject_id;
+    model['electrode groups'] = model.electrode_groups;
+    delete model.electrode_groups;
+    model['ntrode electrode group channel map'] = model.ntrode_electrode_group_channel_map;
+    delete model.ntrode_electrode_group_channel_map;
+
+    const plan = buildImportRepairPlan(model, 'legacy-space-keys.yml', { animals: {} });
+
+    expect(plan.decision).toEqual({ kind: 'new', subjectId: 'remy' });
+    expect(plan.blockers.some((b) => b.path === 'subject.subject_id')).toBe(false);
+    expect(plan.benign.map((b) => b.label)).toEqual(
+      expect.arrayContaining([
+        'subject id → subject_id',
+        'electrode groups → electrode_groups',
+        'ntrode electrode group channel map → ntrode_electrode_group_channel_map',
+      ])
+    );
+
+    const repaired = applyImportRepairs(model, {});
+    expect(repaired.subject).toHaveProperty('subject_id', 'remy');
+    expect(repaired.subject).not.toHaveProperty('subject id');
+    expect(repaired).toHaveProperty('electrode_groups');
+    expect(repaired).not.toHaveProperty('electrode groups');
+    expect(repaired).toHaveProperty('ntrode_electrode_group_channel_map');
+    expect(repaired).not.toHaveProperty('ntrode electrode group channel map');
+  });
+
   it('renames task_epoch (singular) to task_epochs and lists it', () => {
     const model = {
       associated_video_files: [{ name: 'v', camera_id: 0, task_epoch: 2 }],
