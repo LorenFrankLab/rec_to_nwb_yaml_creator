@@ -211,9 +211,15 @@ function buildValidationItems(model: ValidationModel): {
   const errors = validate(model).filter((issue) => issue.severity === 'error');
   const items: RepairItem[] = [];
   const blockers: RepairBlocker[] = [];
+  // One field can draw multiple errors (e.g. a null location fails BOTH the schema `type` check and
+  // the `empty_location` rule). Surface a path ONCE — the first matching error wins (`validate`
+  // sorts by path then code, so a rule's named code generally precedes the generic schema keyword).
+  const handledPaths = new Set<string>();
 
   for (const issue of errors) {
     const { path, code, message } = issue;
+    if (handledPaths.has(path)) continue;
+    handledPaths.add(path);
     const was = getAtPath(model, path);
 
     // --- DANDI species: a free-text value → suggest a binomial from the shared canon. ---
@@ -365,6 +371,40 @@ function buildBenignAndShim(model: ValidationModel): {
 }
 
 /**
+ * Apply the benign, lossless normalizations to a (mutable) model: rename `task_epoch` → the
+ * `task_epochs` key the app reads, and fill a missing volume spelling from the present one. Shared
+ * by {@link buildImportRepairPlan} (which validates the NORMALIZED model, so a benign-fixable issue
+ * never also surfaces as a repair item) and {@link applyImportRepairs}.
+ *
+ * @param model - The model to mutate in place.
+ */
+function applyBenignNormalizations(model: Record<string, unknown>): void {
+  for (const key of ['associated_files', 'associated_video_files'] as const) {
+    const list = model[key];
+    if (!Array.isArray(list)) continue;
+    for (const item of list) {
+      if (item && typeof item === 'object' && 'task_epoch' in (item as object)) {
+        const obj = item as Record<string, unknown>;
+        if (!('task_epochs' in obj)) obj.task_epochs = obj.task_epoch;
+        delete obj.task_epoch;
+      }
+    }
+  }
+
+  const injections = model.virus_injection;
+  if (Array.isArray(injections)) {
+    for (const raw of injections) {
+      if (!raw || typeof raw !== 'object') continue;
+      const inj = raw as VolumeShimItem;
+      const hasUpper = inj.volume_in_uL !== undefined;
+      const hasLower = inj.volume_in_ul !== undefined;
+      if (hasUpper && !hasLower) inj.volume_in_ul = inj.volume_in_uL;
+      else if (hasLower && !hasUpper) inj.volume_in_uL = inj.volume_in_ul;
+    }
+  }
+}
+
+/**
  * Build the import-repair plan for a parsed flat model.
  *
  * @param flatModel - The decoded flat NWB YAML model.
@@ -379,8 +419,13 @@ export function buildImportRepairPlan(
 ): ImportRepairPlan {
   const model = (flatModel ?? {}) as ValidationModel;
 
-  const { items, blockers } = buildValidationItems(model);
+  // Benign normalizations are detected from the RAW model but validation runs on the NORMALIZED
+  // model, so e.g. a `task_epoch`-only video file lists as a benign rename (not also a
+  // required-`task_epochs` repair item the rename already resolves).
   const { benign, shimItems } = buildBenignAndShim(model);
+  const normalized = structuredClone(model) as Record<string, unknown>;
+  applyBenignNormalizations(normalized);
+  const { items, blockers } = buildValidationItems(normalized as ValidationModel);
 
   // Decision: match the subject id against the existing workspace (by key or subject.subject_id).
   const subjectId = (model.subject as { subject_id?: unknown } | undefined)?.subject_id;
@@ -420,31 +465,8 @@ export function applyImportRepairs(
 ): Record<string, unknown> {
   const model = structuredClone((flatModel ?? {}) as Record<string, unknown>);
 
-  // Benign: task_epoch → task_epochs (lossless rename of a key the app reads either way).
-  for (const key of ['associated_files', 'associated_video_files'] as const) {
-    const list = model[key];
-    if (!Array.isArray(list)) continue;
-    for (const item of list) {
-      if (item && typeof item === 'object' && 'task_epoch' in (item as object)) {
-        const obj = item as Record<string, unknown>;
-        if (!('task_epochs' in obj)) obj.task_epochs = obj.task_epoch;
-        delete obj.task_epoch;
-      }
-    }
-  }
-
-  // Benign: fill the missing volume spelling (the converter reads volume_in_uL; schema wants ul).
-  const injections = model.virus_injection;
-  if (Array.isArray(injections)) {
-    for (const raw of injections) {
-      if (!raw || typeof raw !== 'object') continue;
-      const inj = raw as VolumeShimItem;
-      const hasUpper = inj.volume_in_uL !== undefined;
-      const hasLower = inj.volume_in_ul !== undefined;
-      if (hasUpper && !hasLower) inj.volume_in_ul = inj.volume_in_uL;
-      else if (hasLower && !hasUpper) inj.volume_in_uL = inj.volume_in_ul;
-    }
-  }
+  // Benign, lossless normalizations (task_epoch rename, single-spelling volume fill).
+  applyBenignNormalizations(model);
 
   // Accepted/edited resolutions, applied at their paths. A reconciled volume sets BOTH spellings
   // to the chosen value (keeping the shim key, never dropping it).

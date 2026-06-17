@@ -1,0 +1,193 @@
+.screen {
+  max-width: 840px;
+  margin: var(--spacing-lg) auto;
+  padding: 0 var(--spacing-lg);
+}
+
+.crumb {
+  font-size: var(--font-size-sm);
+  color: var(--color-ink-muted);
+  margin-bottom: var(--spacing-sm);
+}
+
+.heading {
+  font-size: var(--font-size-xl);
+  margin: 0 0 var(--spacing-xs);
+}
+
+.lede {
+  color: var(--color-ink-muted);
+  font-size: var(--font-size-sm);
+  margin: 0 0 var(--spacing-lg);
+  max-width: 620px;
+}
+
+.parseError {
+  color: var(--color-error);
+  background: var(--color-error-light);
+  border-radius: var(--radius-sm);
+  padding: var(--spacing-sm) var(--spacing-md);
+  margin-bottom: var(--spacing-md);
+}
+
+.card {
+  background: var(--color-white);
+  border: 1px solid var(--color-grey-200);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-md);
+  margin-bottom: var(--spacing-md);
+}
+
+.fileRow {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-sm);
+}
+
+.fileName {
+  font-family: ui-monospace, Menlo, monospace;
+  font-weight: 600;
+}
+
+.changeFile {
+  font: inherit;
+  font-size: var(--font-size-sm);
+  color: var(--color-primary);
+  background: none;
+  border: 0;
+  cursor: pointer;
+  padding: 0;
+}
+
+.fileLabel {
+  display: block;
+  font-weight: 600;
+  margin-bottom: var(--spacing-sm);
+}
+
+.fileInput {
+  display: block;
+}
+
+.decision {
+  font-size: var(--font-size-sm);
+  background: var(--color-primary-light);
+  border-radius: var(--radius-sm);
+  padding: var(--spacing-sm) var(--spacing-md);
+  margin: 0;
+}
+
+.section {
+  margin-bottom: var(--spacing-md);
+}
+
+.sectionHeading {
+  font-size: var(--font-size-base);
+  margin: var(--spacing-md) 0 var(--spacing-sm);
+}
+
+.row {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-md);
+  padding: var(--spacing-sm) var(--spacing-md);
+  border: 1px solid var(--color-grey-200);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--spacing-sm);
+  background: var(--color-white);
+}
+
+.rowBody {
+  flex: 1;
+}
+
+.rowLabel {
+  font-weight: 600;
+}
+
+.rowDetail {
+  font-size: var(--font-size-sm);
+  margin-top: var(--spacing-xs);
+}
+
+.was {
+  font-family: ui-monospace, Menlo, monospace;
+  color: var(--color-error);
+  text-decoration: line-through;
+}
+
+.now {
+  font-family: ui-monospace, Menlo, monospace;
+  color: var(--color-success);
+  font-weight: 600;
+}
+
+.rowWhy {
+  font-size: var(--font-size-sm);
+  color: var(--color-ink-muted);
+  margin-top: var(--spacing-xs);
+}
+
+.rowAction {
+  display: flex;
+  gap: var(--spacing-xs);
+  flex-shrink: 0;
+  align-items: center;
+}
+
+.acceptedBtn {
+  font: inherit;
+  font-size: var(--font-size-sm);
+  color: var(--color-success);
+  background: var(--color-success-light);
+  border: 1px solid var(--color-success);
+  border-radius: var(--radius-sm);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  cursor: pointer;
+}
+
+.blockerList {
+  margin: 0;
+  padding-left: var(--spacing-lg);
+  font-size: var(--font-size-sm);
+}
+
+.benign {
+  font-size: var(--font-size-sm);
+  color: var(--color-ink-muted);
+  background: var(--color-grey-100);
+  border-radius: var(--radius-sm);
+  padding: var(--spacing-sm) var(--spacing-md);
+  margin-bottom: var(--spacing-md);
+}
+
+.benignTitle {
+  font-weight: 600;
+  margin: 0 0 var(--spacing-xs);
+}
+
+.benignNote {
+  margin: var(--spacing-xs) 0 0;
+}
+
+.actions {
+  display: flex;
+  gap: var(--spacing-sm);
+  align-items: center;
+  margin-top: var(--spacing-lg);
+}
+
+.blockerHint {
+  font-size: var(--font-size-sm);
+  color: var(--color-warning);
+}
+
+.spacer {
+  flex: 1;
+}
+
+.resultLink {
+  font-weight: 600;
+  color: var(--color-primary);
+}
