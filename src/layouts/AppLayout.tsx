@@ -131,9 +131,9 @@ export function AppLayout() {
       window.location.hash = '#/workspace';
     }
   };
-  /** "+ New animal…" from the switcher → the workspace's inline create panel (Phase 4b handshake). */
+  /** "+ New animal…" from the switcher → the guided create-animal wizard (epoch-editor Phase 6). */
   const requestCreateAnimal = () => {
-    window.location.hash = '#/workspace?create=1';
+    window.location.hash = '#/home';
   };
 
   // Global keyboard shortcuts (mounted once so they work on every route). Step

@@ -4,7 +4,7 @@
  * The switcher renders in the primary nav ONLY on the animal-view route (`#/animal/:id/:tab`), where
  * there is a "current animal" to switch from. Its lifecycle actions are delegated UP to AppLayout,
  * which hosts the single shared AnimalDeleteDialog (per-row Delete → actions.deleteAnimal) and routes
- * "+ New animal…" to the workspace's inline create panel via `#/workspace?create=1`.
+ * "+ New animal…" to the guided create-animal wizard at `#/home` (epoch-editor Phase 6).
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render as rtlRender, screen, within } from '@testing-library/react';
@@ -122,11 +122,11 @@ describe('AppLayout — switcher lifecycle wiring', () => {
     expect(within(dialog).getByLabelText(/species/i)).toBeInTheDocument();
   });
 
-  it('"+ New animal…" routes to the workspace create handshake (#/workspace?create=1)', async () => {
+  it('"+ New animal…" routes to the guided create wizard (#/home)', async () => {
     const user = userEvent.setup();
     renderAt('#/animal/remy/days');
     await user.click(screen.getByRole('button', { name: /switch animal/i }));
     await user.click(screen.getByRole('button', { name: /new animal/i }));
-    expect(window.location.hash).toBe('#/workspace?create=1');
+    expect(window.location.hash).toBe('#/home');
   });
 });

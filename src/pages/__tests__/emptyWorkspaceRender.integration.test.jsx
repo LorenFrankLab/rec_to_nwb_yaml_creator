@@ -25,7 +25,7 @@ describe('rendering on a structurally-empty workspace', () => {
     expect(screen.getByText(/no animals/i)).toBeInTheDocument();
   });
 
-  it('Home renders the creation form (incl. the default-experimenter path) without crashing', () => {
+  it('Home renders the create-animal wizard (incl. the default-experimenter path) without crashing', () => {
     render(
       <StoreProvider initialState={seedEmptyWorkspace}>
         <Home />

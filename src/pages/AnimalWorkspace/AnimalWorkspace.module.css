@@ -437,11 +437,6 @@
   transition: background-color 0.2s;
 }
 
-/* Inline create-animal panel (Task 4.2): hosts the AnimalCreationForm on the picker. */
-.createAnimalPanel {
-  margin-top: 1rem;
-}
-
 .createAnimalLink:hover {
   background-color: var(--color-primary-hover);
 }

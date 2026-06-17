@@ -61,11 +61,12 @@ describe('AnimalWorkspace — Import YAML entry point', () => {
     expect(screen.getByRole('dialog', { name: /import yaml files/i })).toBeInTheDocument();
   });
 
-  it('the create flow is unchanged (the create button still opens the creation form)', async () => {
+  it('the create flow is independent of import (the create button routes to the wizard at #/home)', async () => {
     const user = userEvent.setup();
+    window.location.hash = '#/workspace';
     renderPicker();
 
     await user.click(screen.getByRole('button', { name: /new animal/i }));
-    expect(screen.getByRole('form', { name: /animal creation form/i })).toBeInTheDocument();
+    expect(window.location.hash).toBe('#/home');
   });
 });

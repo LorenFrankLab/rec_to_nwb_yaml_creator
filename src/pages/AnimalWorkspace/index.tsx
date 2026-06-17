@@ -14,16 +14,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useStoreContext } from '../../state/StoreContext';
 import { buildAnimalWorkspaceViewModel } from '../../viewModels/animalWorkspaceViewModel';
-import { commandHandlers } from '../../viewModels/commands';
-import type { CommandActions } from '../../viewModels/commands';
-import { buildAnimalFromForm, getDefaultExperimenters } from '../../domain/animalCreation';
-import type { AnimalCreationFormData } from '../../domain/animalCreation';
 import { getAnimalDayIds } from '../../state/workspaceSelectors';
 import StatusPill from '../../components/ui/StatusPill';
 import OverflowMenu from '../../components/OverflowMenu';
 import AnimalDeleteDialog from '../../components/AnimalDeleteDialog';
 import AnimalProfileDialog from '../../components/AnimalProfileDialog';
-import AnimalCreationForm from '../Home/AnimalCreationForm';
 import ImportYamlDialog from './ImportYamlDialog';
 import styles from './AnimalWorkspace.module.css';
 
@@ -48,13 +43,6 @@ export function AnimalWorkspace() {
   // renders its empty state instead of crashing on Object.keys(undefined). The raw maps stay for
   // the interaction handlers (create/delete/profile dialogs); the table's display comes from the VM.
   const { animals = {}, days = {} } = model.workspace;
-
-  // createAnimal routes through the descriptor command layer (the VM's `primaryAction` command).
-  // deleteAnimal / profile edits stay on the store actions — they are not VM-emitted descriptors.
-  const run = useMemo(
-    () => commandHandlers({ actions: actions as unknown as CommandActions }),
-    [actions]
-  );
 
   // The home view-model: one row per animal (identity, day metadata, status rollup) and the empty state.
   const vm = useMemo(() => buildAnimalWorkspaceViewModel(model.workspace), [model.workspace]);
@@ -91,10 +79,11 @@ export function AnimalWorkspace() {
   const [pendingProfileAnimalId, setPendingProfileAnimalId] = useState<string | null>(null);
   const pendingProfileAnimal = pendingProfileAnimalId ? animals[pendingProfileAnimalId] : null;
 
-  // Whether the inline create-animal panel is open. Create lives IN the workspace — an inline panel
-  // on the home, not a route to a separate screen — so first-animal creation uses the same pattern
-  // as everything else.
-  const [showCreate, setShowCreate] = useState(false);
+  // Create-from-scratch is the guided wizard at `#/home` (epoch-editor Phase 6) — the "+ New animal"
+  // entry points navigate there rather than opening an inline panel here.
+  const goToCreate = () => {
+    window.location.hash = '#/home';
+  };
 
   // Whether the YAML-import dialog is open. Import lives beside create — it brings existing
   // {mmddYYYY}_{subject}_metadata.yml files in as animals + days through the reconcile core, and
@@ -106,24 +95,6 @@ export function AnimalWorkspace() {
     const id = pendingDeleteAnimalId;
     setPendingDeleteAnimalId(null);
     if (id) actions.deleteAnimal(id);
-  };
-
-  /**
-   * Create the animal from the inline panel's form submission (the SAME builder Home uses), then
-   * land on the new animal's days route. createAnimal applies synchronously, so navigating
-   * immediately is safe.
-   *
-   * @param formData - The create form submission.
-   */
-  const handleCreate = (formData: AnimalCreationFormData) => {
-    const { animalId, subject, metadata } = buildAnimalFromForm(formData);
-    // Defense-in-depth (same as Home): the store throws on a duplicate id from inside a React
-    // updater, which can't be caught here — so guard before navigating, or a regressed form check
-    // would silently navigate "into the new animal" while the create failed. The form already
-    // enforces uniqueness; on collision we don't create or navigate.
-    if (animals[animalId]) return;
-    run.createAnimal({ id: 'createAnimal' }, { animalId, subject, metadata });
-    window.location.hash = `#/animal/${animalId}/days`;
   };
 
   // Handshake: `#/workspace?animal=<id>` (e.g. after creating a day) jumps straight to that
@@ -141,15 +112,15 @@ export function AnimalWorkspace() {
       window.dispatchEvent(new HashChangeEvent('hashchange'));
       return;
     }
-    // `#/workspace?create=1` handshake: the top selector's "+ New animal…" routes here to open the
-    // inline create panel, so create has ONE home. Strip the transient param so Back / a reload
-    // doesn't reopen the panel.
-    if (params.get('create') === '1') {
-      setShowCreate(true);
+    // `#/workspace?import=1` handshake: the create wizard's "Import a YAML…" start option routes
+    // here to open the import dialog (the existing import entry point). Strip the transient param so
+    // Back / a reload doesn't reopen the dialog.
+    if (params.get('import') === '1') {
+      setShowImport(true);
       window.history.replaceState(null, '', '#/workspace');
     }
     // Mount-only handshake: intentionally runs once. Re-running when `animals` changes would
-    // re-process the transient ?animal / ?create params and re-fire the redirect / open the panel.
+    // re-process the transient ?animal / ?import params and re-fire the redirect / open the dialog.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Run only on mount
 
@@ -157,23 +128,13 @@ export function AnimalWorkspace() {
     <main id="main-content" tabIndex={-1} role="main" aria-labelledby="workspace-heading">
       <h1 id="workspace-heading">Animal Workspace</h1>
 
-      {showCreate ? (
-        /* Inline create-animal panel: the existing AnimalCreationForm, hosted ON the home. On
-           success we navigate to the new animal's days route; cancel just closes it. */
-        <section className={styles.createAnimalPanel} aria-label="Create animal">
-          <AnimalCreationForm
-            onSubmit={handleCreate}
-            onCancel={() => setShowCreate(false)}
-            defaultExperimenters={getDefaultExperimenters(model.workspace)}
-            existingAnimals={animals}
-          />
-        </section>
-      ) : !hasAnimals ? (
-        /* Empty state: no animals — the onboarding card with the two primary CTAs. */
+      {!hasAnimals ? (
+        /* Empty state: no animals — the onboarding card with the two primary CTAs. "Create Animal"
+           opens the guided create-animal wizard at #/home (epoch-editor Phase 6). */
         <div className="empty-state" role="region" aria-label="Empty workspace">
           <p className={styles.emptyMessage}>{vm.empty?.message ?? 'No animals yet'}</p>
           <p>Create your first animal to start managing recording sessions.</p>
-          <button type="button" className={styles.createAnimalLink} onClick={() => setShowCreate(true)}>
+          <button type="button" className={styles.createAnimalLink} onClick={goToCreate}>
             Create Animal
           </button>
           <button type="button" className={styles.importYamlLink} onClick={() => setShowImport(true)}>
@@ -236,7 +197,7 @@ export function AnimalWorkspace() {
                 type="button"
                 className={styles.btnCreateAnimal}
                 aria-label="Create new animal"
-                onClick={() => setShowCreate(true)}
+                onClick={goToCreate}
               >
                 + New Animal
               </button>
