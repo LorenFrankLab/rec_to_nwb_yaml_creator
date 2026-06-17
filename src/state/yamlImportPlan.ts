@@ -568,6 +568,14 @@ export function planImport(
     // Intra-plan dedup: two ok+dated files resolving to the SAME (subject, date) would yield
     // two days with the same id. Keep the FIRST (input/source order); send the rest to
     // unimportable naming the collision.
+    //
+    // NB: this intra-batch grouping (here and the `bySubject` keying below) compares the RAW
+    // subjectId — unlike the existing-animal match (`findExistingAnimalId`), which is normalized. A
+    // multi-file batch carrying both `Remy` and `remy` would therefore plan two separate animals.
+    // This is currently unreachable: the sole caller imports ONE file at a time (Import & Repair,
+    // post-Phase-7), so a batch never holds two subject ids. If a multi-file import path returns,
+    // normalize the grouping key here (trim+lower-case, first-seen raw id wins) to keep the
+    // no-fragmentation guarantee the normalized matcher provides.
     const dayKey = `${subjectId} ${date}`;
     const keptSourceName = keptByDayKey.get(dayKey);
     if (keptSourceName !== undefined) {

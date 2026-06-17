@@ -25,6 +25,13 @@ const nonconformingYaml = fs.readFileSync(
   'utf8'
 );
 
+// A clean, decompose-valid export — used to exercise an importer-only precondition (no derivable
+// recording date) that the validator can't see.
+const cleanYaml = fs.readFileSync(
+  path.join(__dirname, '../../../__tests__/fixtures/golden/workspace-export.realistic.yml'),
+  'utf8'
+);
+
 /** The live workspace, captured for assertions. */
 let captured;
 
@@ -98,6 +105,41 @@ describe('ImportRepair — flagging + suggested fixes', () => {
     const required = screen.getByRole('region', { name: /required, but missing/i });
     expect(within(required).getByLabelText(/Date of birth/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /import as new animal/i })).toBeDisabled();
+  });
+
+  it('keeps import disabled while any flagged item is unresolved (every item must be resolved)', async () => {
+    const user = userEvent.setup();
+    renderScreen();
+    await uploadNonconforming(user);
+
+    // Accept every suggestion EXCEPT species, and fill the user-input fields.
+    for (const btn of screen.getAllByRole('button', { name: /^accept /i })) {
+      if (!/species/i.test(btn.getAttribute('aria-label') || '')) await user.click(btn);
+    }
+    await user.type(screen.getByLabelText(/Electrode group location/i), 'CA1');
+    fireEvent.change(screen.getByLabelText(/Date of birth/i), { target: { value: '2023-01-10' } });
+
+    // One item (species) is still unresolved → import stays blocked. This is the same gate that
+    // forces a (non-validator) volume-shim conflict to be reconciled before import.
+    expect(screen.getByRole('button', { name: /import as new animal/i })).toBeDisabled();
+  });
+
+  it('blocks a repairable file that the importer cannot accept — no derivable recording date', async () => {
+    const user = userEvent.setup();
+    renderScreen();
+    // A clean, valid export but with a date-less session_id and a non-conventional filename, so the
+    // importer can't derive the recording date. Validation passes, yet the import must NOT enable
+    // (then fail) — the gate runs the SAME pure importer the commit will.
+    const noDateYaml = cleanYaml.replace('session_id: remy_20230622', 'session_id: remy');
+    const input = screen.getByLabelText(/choose a metadata yaml file/i);
+    await user.upload(input, makeFile('metadata.yml', noDateYaml));
+
+    // It advances to the repair view (new-animal decision), but import is blocked with a reason
+    // naming the recording date — not a misleading "fill a field" prompt.
+    await screen.findByText(/will create a new animal/i);
+    const importBtn = screen.getByRole('button', { name: /import as new animal/i });
+    expect(importBtn).toBeDisabled();
+    expect(screen.getByText(/recording date/i)).toBeInTheDocument();
   });
 });
 
