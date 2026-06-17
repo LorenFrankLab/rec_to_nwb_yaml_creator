@@ -24,12 +24,25 @@ no old day-editor step/route is orphaned. Designs: [recovery-review.html](recove
 ## Tasks
 
 - Recovery-review screen (reached from the Animals-home load banner, Phase 1): render the `loadWorkspace`
-  recovered (FYI — "N upgraded, no data lost") + needs-review records from `dayRecovery`, each with concrete
-  repair actions (Create / Re-link / Discard for a dangling day; Reset / Open-in-editor for malformed
-  `bad_channels`; Add-task / Re-point / Discard for an orphaned file; Pick / Add / Remove for an unknown
-  camera). Repairs emit the existing commands. **Destructive repairs (Discard / Discard file) confirm or
-  undo** (Phase 0 `UndoToast` for the reversible ones; a confirm for the irreversible). Nothing silently
-  dropped.
+  recovered/discarded notice (FYI — "restored to empty, no data lost") + the needs-review records from
+  `dayRecovery` — the closed `DAY_STATUS` day-reference classes: a dangling reference (no record), a
+  recovered-but-unlinked record, a wrong-owner reference, and an orphan (record whose owning animal is
+  gone). Each carries its **existing** repair command (`removeDayReference` / `relinkDayReference` /
+  `unlinkDayReference`; an orphan has no in-app command, so it surfaces a re-create/re-import message).
+  **The destructive repair (`removeDayReference`, which deletes the unreadable leftover) is gated by a
+  confirm; constructive moves run directly and announce via a toast** (no fake Undo — the constructive
+  moves have no clean inverse among the existing actions; the task's "a confirm for the irreversible" is
+  what applies here). Nothing silently dropped.
+  - **Scope note (resolved in implementation):** the recovery-review mockup also sketched malformed
+    `bad_channels`, orphaned-file, and unknown-camera flags. Those are **content-validation** issues
+    (`validateDay` / `dayOverrideValidation`), NOT `dayRecovery` `DAY_STATUS` rows, and they are already
+    surfaced in the **Validation Summary** and **inline in the Day Editor** (the mockup itself notes the
+    camera case is "also offered inline"). Per [shared-contracts §2](shared-contracts.md#2-substrate-to-reuse)
+    (recovery substrate = `dayRecovery.*` + `loadWorkspace`, "renders these, doesn't recompute"), the
+    "don't extend the classifier" rule below, and the load-banner trigger (which fires on recovered/
+    discarded *persistence sections*, not per-day content), the recovery screen renders ONLY the
+    `dayRecovery` classes + the `loadWorkspace` notice. Surfacing content-validation issues here would
+    fragment that concern across a third partial surface; it is intentionally **not** done.
 - Remaining empty states: any surface not yet given its zero-state (animal with no setup, day with no
   epochs, etc.) — render the [empty-states.html](empty-states.html) onboarding pattern with the right CTA.
 - Keyboard-shortcuts help: the sidebar/help affordance listing the global shortcuts (reuse `useGlobalShortcuts`).
@@ -52,7 +65,7 @@ no old day-editor step/route is orphaned. Designs: [recovery-review.html](recove
 
 | Test | Asserts |
 | --- | --- |
-| `RecoveryReview.test.tsx` | renders auto-recovered FYI + needs-review records from `dayRecovery`/`loadWorkspace`; each repair emits the right command; Discard confirms/undoes; nothing silently dropped |
+| `RecoveryReview.test.tsx` | renders auto-recovered FYI + needs-review records from `dayRecovery`/`loadWorkspace` (the `DAY_STATUS` day-reference classes only); each repair emits the right existing command; the irreversible `removeDayReference` confirms; an orphan with no command still surfaces; nothing silently dropped |
 | `emptyStates.test.tsx` | each remaining zero-state renders its onboarding CTA |
 | `shortcuts.test.tsx` | help lists the global shortcuts; they fire |
 | `newSurfaces.a11y.test.tsx` (jest-axe) | every new surface zero violations; grids keyboard-operable |
