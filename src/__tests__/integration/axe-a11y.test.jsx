@@ -21,15 +21,34 @@ const ANIMAL_ID = 'remy';
 const DAY_ID = 'remy-2023-06-22';
 
 /**
- * Render <App/> seeded with the configured workspace at the given hash route.
+ * A workspace with one record of EACH non-ok recovery class, so the recovery-review screen renders
+ * its needs-review list + repair affordances (not just the all-clear state) for the Axe scan.
+ */
+const recoveryWorkspace = {
+  settings: {},
+  animals: {
+    bean: { id: 'bean', subject: { subject_id: 'bean' }, days: ['bean-shared'] },
+    remy: { id: 'remy', subject: { subject_id: 'remy' }, days: ['remy-missing'] },
+    wilbur: { id: 'wilbur', subject: { subject_id: 'wilbur' }, days: [] },
+  },
+  days: {
+    'bean-shared': { id: 'bean-shared', animalId: 'cleo', date: '2023-06-24' },
+    'wilbur-unlinked': { id: 'wilbur-unlinked', animalId: 'wilbur', date: '2023-06-25' },
+    'ghost-day': { id: 'ghost-day', animalId: 'nobody', date: '2023-06-26' },
+  },
+};
+
+/**
+ * Render <App/> seeded with a workspace at the given hash route.
  *
  * @param {string} hash - The hash route (e.g. '#/home').
+ * @param {object} [seed] - The workspace to seed (defaults to the configured workspace).
  * @returns {Promise<import('@testing-library/react').RenderResult>}
  */
-async function renderRoute(hash) {
+async function renderRoute(hash, seed = workspace) {
   window.location.hash = hash;
   const view = render(
-    <StoreProvider initialState={{ workspace }}>
+    <StoreProvider initialState={{ workspace: seed }}>
       <App />
     </StoreProvider>
   );
@@ -80,6 +99,32 @@ describe('axe-a11y (configured workspace, all routes)', () => {
   it('ValidationSummary has no violations', async () => {
     const { container } = await renderRoute('#/validation');
     await screen.findByRole('heading', { name: /validation summary/i });
+    await expectNoViolations(container);
+  });
+
+  it('Import & Repair has no violations', async () => {
+    const { container } = await renderRoute('#/import');
+    await screen.findByRole('heading', { name: /import/i });
+    await expectNoViolations(container);
+  });
+
+  it('Copy from another animal has no violations', async () => {
+    const { container } = await renderRoute('#/copy-from-animal');
+    await screen.findByRole('main');
+    await expectNoViolations(container);
+  });
+
+  it('Recovery review (all clear) has no violations', async () => {
+    const { container } = await renderRoute('#/recovery');
+    await screen.findByRole('heading', { name: /review recovered data/i });
+    await expectNoViolations(container);
+  });
+
+  it('Recovery review (needs-review records) has no violations', async () => {
+    const { container } = await renderRoute('#/recovery', recoveryWorkspace);
+    await screen.findByRole('heading', { name: /review recovered data/i });
+    // The needs-review list is present (not the all-clear state).
+    await screen.findByText(/missing record/i);
     await expectNoViolations(container);
   });
 
