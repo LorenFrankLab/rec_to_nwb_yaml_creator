@@ -330,9 +330,9 @@ test.describe('Workspace persistence & recovery', () => {
     });
 
     // The view advances to the repair screen — a clean file has no repairs, so it shows the
-    // new-animal decision and an ENABLED import action (NOT stuck on the file picker).
+    // picked file, the new-animal decision, and an ENABLED import action (NOT stuck on the picker).
+    await expect(page.getByText('06222023_pickerrat_metadata.yml')).toBeVisible();
     await expect(page.getByText(/will create a new animal/i)).toBeVisible();
-    await expect(page.getByText(/pickerrat/)).toBeVisible();
     await expect(page.getByRole('button', { name: /import as new animal/i })).toBeEnabled();
   });
 });
