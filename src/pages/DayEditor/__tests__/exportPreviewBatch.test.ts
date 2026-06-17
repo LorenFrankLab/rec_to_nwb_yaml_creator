@@ -58,7 +58,9 @@ describe('firstBlockingRepairLink', () => {
 
     expect(link).not.toBeNull();
     expect(link!.label).toBe('Fix in Overview');
-    expect(link!.href).toBe('#/day/remy-2023-06-22');
+    // The day route carries the field as a ?field= deep-link (useDayIdFromUrl strips it from the id),
+    // so the cross-day link lands on the owning tab/field — not the default Day tab.
+    expect(link!.href).toMatch(/^#\/day\/remy-2023-06-22\?field=/);
     expect(link!.message).toBeTruthy();
   });
 
@@ -103,6 +105,23 @@ describe('exportAllDays', () => {
     expect(skip.fixHref).toBeTruthy();
   });
 
+  it('routes a valid-but-warning day to the acknowledgement surface (not shipped unacknowledged)', () => {
+    // Lowercase one of the two CA1 electrode-group locations → a region-fragmentation WARNING (non-
+    // blocking), so the day stays valid but carries an unacknowledged warning.
+    const { animal, day } = buildRealisticWorkspace() as { animal: LooseAnimal; day: LooseDay };
+    const cfg = animal.configurationHistory as Array<{ devices: { electrode_groups: Array<{ location: string }> } }>;
+    const groups = cfg[0].devices.electrode_groups;
+    groups[groups.findIndex((g) => g.location === 'CA1')].location = 'ca1';
+    const workspace = { animals: { [animal.id]: animal }, days: { [day.id]: day } };
+
+    const result = exportAllDays(workspace, animal.id, { actions: { updateDay: vi.fn() }, strict: true });
+
+    // The day is NOT shipped unacknowledged — it is skipped with a link to Validation & Export (the ack flow).
+    expect(result.exported).toHaveLength(0);
+    expect(result.skipped).toHaveLength(1);
+    expect(result.skipped[0].fixHref).toBe(`#/animal/${animal.id}/export`);
+  });
+
   it('links a day skipped for a blocking ERROR to its issue via the field-level repair route', () => {
     // totoro's only day has a whitespace session_description (a real schema error) → skipped, and its
     // skip link is the field-level repair route (named issue + "Fix in Overview"), not a bare day link.
@@ -114,7 +133,8 @@ describe('exportAllDays', () => {
     const skip = result.skipped[0];
     expect(skip.dayId).toBe(ids.errorDayId);
     expect(skip.fixLabel).toBe('Fix in Overview');
-    expect(skip.fixHref).toBe(`#/day/${ids.errorDayId}`);
+    // Field-level: the day link carries the blocking field as a ?field= deep-link.
+    expect(skip.fixHref).toMatch(new RegExp(`^#/day/${ids.errorDayId}\\?field=`));
     // The message names the specific blocking issue (not a generic "has errors").
     expect(skip.message).toBeTruthy();
   });

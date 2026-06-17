@@ -24,8 +24,8 @@ interface DayEditorSectionNavProps {
  * calls `onNavigate(id)`, NOT an `<a href>` link.
  *
  * There is no nav-level gating: EVERY section (including Export) is freely reachable. The
- * export gate survives as a blocked DOWNLOAD ACTION inside ExportStep (which self-checks
- * `isExportEnabled`/`exportBlocked`), not as a nav lock. Each item renders the view-model's
+ * export gate survives as a blocked DOWNLOAD ACTION inside the export-preview surface (which
+ * gates on the authoritative `vm.export`), not as a nav lock. Each item renders the view-model's
  * step status as a glyph (✓ valid / ⚠ incomplete / ✗ error / ○ pending), so a blocked
  * Export remains visible (its ✗/⚠ glyph) while staying clickable.
  */

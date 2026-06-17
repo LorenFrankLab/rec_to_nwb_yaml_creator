@@ -20,8 +20,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   logic. A new **"Export all {N} days"** batch reuses the shared `exportDayFile` core (same
   parity/skip semantics as "Export Valid Only" — not a second exporter) and reports "Exported N ·
   Skipped M", each skipped day linked to its blocking issue via the same field-level repair route as
-  the single-day gate. Replaces the transitional `ExportStep` (the per-day download moves off the
-  DayEditor header panel onto this surface).
+  the single-day gate. (A valid day that still carries a non-blocking *warning* is not shipped
+  unacknowledged by the batch; it is skipped and linked to the per-animal Validation & Export surface,
+  which owns the acknowledgement flow — matching the animal Days-tab quick export.) Replaces the
+  transitional `ExportStep` (the per-day download moves off the DayEditor header panel onto this
+  surface).
 - **Epoch grid — the day editor's spine.** The Epochs tab is now a per-epoch grid: one row per epoch
   joining the day's tasks + statescript/video files + opto schedule (columns #, Task, Camera(s),
   Statescript, Video(s), Opto mW, Pulse ms, Status), with a per-epoch drill-in (What happened /

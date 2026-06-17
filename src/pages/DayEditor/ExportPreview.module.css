@@ -3,17 +3,17 @@
 }
 
 .header {
-  margin-bottom: var(--spacing-md, 16px);
+  margin-bottom: var(--spacing-md, 1rem);
 }
 
 .title {
-  margin: 0 0 var(--spacing-xs, 4px);
+  margin: 0 0 var(--spacing-xs, 0.25rem);
 }
 
 .lede {
   margin: 0;
-  color: var(--color-grey-600, #69727b);
-  font-size: var(--font-size-sm, 13px);
+  color: var(--color-grey-600, #666);
+  font-size: var(--font-size-sm, 0.875rem);
 }
 
 .lede code {
@@ -24,77 +24,79 @@
 .ready {
   display: flex;
   align-items: center;
-  gap: var(--spacing-sm, 8px);
-  padding: var(--spacing-sm, 11px) var(--spacing-md, 14px);
-  margin-bottom: var(--spacing-md, 16px);
-  background: var(--color-success-bg, #eaf6ee);
-  border: 1px solid var(--color-success, #1f8a4c);
-  border-radius: var(--radius-md, 10px);
+  gap: var(--spacing-sm, 0.5rem);
+  padding: var(--spacing-sm, 0.5rem) var(--spacing-md, 1rem);
+  margin-bottom: var(--spacing-md, 1rem);
+  background: var(--color-success-light, #e8f5e9);
+  border: 1px solid var(--color-success, #2e7d32);
+  border-radius: var(--radius-md, 8px);
   font-weight: 600;
-  color: var(--color-success-text, #1a6e3f);
+  color: var(--color-success, #2e7d32);
 }
 
 .readyIcon {
   font-weight: 700;
 }
 
-.blocked {
-  padding: var(--spacing-sm, 11px) var(--spacing-md, 14px);
-  margin-bottom: var(--spacing-md, 16px);
-  background: var(--color-error-bg, #fbecec);
-  border: 1px solid var(--color-error, #c23b3b);
-  border-radius: var(--radius-md, 10px);
+.blocked,
+.actionError {
+  padding: var(--spacing-sm, 0.5rem) var(--spacing-md, 1rem);
+  margin-bottom: var(--spacing-md, 1rem);
+  background: var(--color-error-light, #ffebee);
+  border: 1px solid var(--color-error, #c62828);
+  border-radius: var(--radius-md, 8px);
+  color: var(--color-error, #c62828);
 }
 
 .blockedHeading {
-  margin: 0 0 var(--spacing-sm, 8px);
+  margin: 0 0 var(--spacing-sm, 0.5rem);
   font-weight: 600;
-  color: var(--color-error-text, #a23030);
+  color: var(--color-error, #c62828);
 }
 
 .stepBlockers {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--spacing-sm, 8px);
+  gap: var(--spacing-sm, 0.5rem);
 }
 
 /* ── File card + preview ── */
 .filecard {
-  border: 1px solid var(--color-grey-200, #e4e7eb);
-  border-radius: var(--radius-md, 10px);
+  border: 1px solid var(--color-grey-200, #e0e0e0);
+  border-radius: var(--radius-md, 8px);
   overflow: hidden;
-  margin-bottom: var(--spacing-md, 14px);
+  margin-bottom: var(--spacing-md, 1rem);
 }
 
 .filebar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: var(--spacing-md, 12px);
-  padding: var(--spacing-sm, 11px) var(--spacing-md, 14px);
-  border-bottom: 1px solid var(--color-grey-100, #eef1f4);
+  gap: var(--spacing-md, 1rem);
+  padding: var(--spacing-sm, 0.5rem) var(--spacing-md, 1rem);
+  border-bottom: 1px solid var(--color-grey-100, #f5f5f5);
 }
 
 .fname {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: var(--font-size-sm, 13px);
+  font-size: var(--font-size-sm, 0.875rem);
   font-weight: 600;
 }
 
 .fmeta {
-  font-size: var(--font-size-xs, 12px);
-  color: var(--color-grey-600, #69727b);
+  font-size: 12px;
+  color: var(--color-grey-600, #666);
 }
 
 .code {
   margin: 0;
   max-height: 420px;
   overflow: auto;
-  padding: var(--spacing-md, 14px);
-  background: var(--color-grey-900, #1c2330);
-  color: var(--color-grey-100, #dde3ec);
+  padding: var(--spacing-md, 1rem);
+  background: var(--color-grey-900, #333);
+  color: var(--color-grey-100, #f5f5f5);
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: var(--font-size-xs, 12.5px);
+  font-size: 12px;
   line-height: 1.55;
   white-space: pre;
 }
@@ -103,24 +105,15 @@
 .actions {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--spacing-sm, 8px);
+  gap: var(--spacing-sm, 0.5rem);
   align-items: center;
-  margin-bottom: var(--spacing-md, 16px);
-}
-
-.actionError {
-  padding: var(--spacing-sm, 11px) var(--spacing-md, 14px);
-  margin-bottom: var(--spacing-md, 16px);
-  background: var(--color-error-bg, #fbecec);
-  border: 1px solid var(--color-error, #c23b3b);
-  border-radius: var(--radius-md, 10px);
-  color: var(--color-error-text, #a23030);
+  margin-bottom: var(--spacing-md, 1rem);
 }
 
 /* ── Batch ── */
 .batch {
-  font-size: var(--font-size-sm, 13px);
-  color: var(--color-grey-600, #69727b);
+  font-size: var(--font-size-sm, 0.875rem);
+  color: var(--color-grey-600, #666);
 }
 
 .batch p {
@@ -132,29 +125,29 @@
   border: 0;
   padding: 0;
   font: inherit;
-  color: var(--color-primary, #2f6fae);
+  color: var(--color-primary, #1565c0);
   cursor: pointer;
   text-decoration: underline;
 }
 
 .batchLink:hover {
-  color: var(--color-primary-dark, #255b91);
+  color: var(--color-primary-hover, #1976d2);
 }
 
 .batchResult {
-  margin-top: var(--spacing-md, 14px);
-  border: 1px solid var(--color-grey-200, #e4e7eb);
-  border-radius: var(--radius-md, 10px);
+  margin-top: var(--spacing-md, 1rem);
+  border: 1px solid var(--color-grey-200, #e0e0e0);
+  border-radius: var(--radius-md, 8px);
   overflow: hidden;
 }
 
 .batchHeading {
   margin: 0;
-  padding: var(--spacing-sm, 10px) var(--spacing-md, 14px);
-  background: var(--color-success-bg, #f1f8f3);
-  border-bottom: 1px solid var(--color-grey-100, #eef1f4);
+  padding: var(--spacing-sm, 0.5rem) var(--spacing-md, 1rem);
+  background: var(--color-success-light, #e8f5e9);
+  border-bottom: 1px solid var(--color-grey-100, #f5f5f5);
   font-weight: 600;
-  color: var(--color-success-text, #1a6e3f);
+  color: var(--color-success, #2e7d32);
 }
 
 .batchList {
@@ -165,17 +158,17 @@
 
 .batchExported,
 .batchSkipped {
-  padding: var(--spacing-sm, 9px) var(--spacing-md, 14px);
-  border-bottom: 1px solid var(--color-grey-100, #eef1f4);
-  font-size: var(--font-size-sm, 13px);
+  padding: var(--spacing-sm, 0.5rem) var(--spacing-md, 1rem);
+  border-bottom: 1px solid var(--color-grey-100, #f5f5f5);
+  font-size: var(--font-size-sm, 0.875rem);
 }
 
 .batchSkipped {
-  color: var(--color-error-text, #7a3434);
-  background: var(--color-error-bg, #fdf6f6);
+  color: var(--color-error, #c62828);
+  background: var(--color-error-light, #ffebee);
 }
 
 .batchFix {
-  color: var(--color-primary, #2f6fae);
+  color: var(--color-primary, #1565c0);
   white-space: nowrap;
 }

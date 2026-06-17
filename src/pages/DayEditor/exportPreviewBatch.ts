@@ -113,9 +113,11 @@ export function firstBlockingRepairLink(
     const base = `#/animal/${encodeURIComponent(animalKey)}/${tab}`;
     href = focusPath ? `${base}?field=${encodeURIComponent(focusPath)}` : base;
   } else if (target.surface === 'day') {
-    // The hash router parses `#/day/(.+)` greedily, so a `?field=` would be swallowed into the id — the
-    // day route cannot carry a field anchor. Link to the day editor (the owning surface) without one.
-    href = `#/day/${encodeURIComponent(dayId)}`;
+    // The day route carries the field as a `?field=` deep-link (useDayIdFromUrl strips the query from
+    // the id; DayEditorFrame routes it to the owning tab + focuses on load) — so the cross-day link
+    // lands on the field, the same target the in-page single-day "Fix in …" routes to.
+    const base = `#/day/${encodeURIComponent(dayId)}`;
+    href = focusPath ? `${base}?field=${encodeURIComponent(focusPath)}` : base;
   }
 
   return { message: issue.message || target.label, label: target.label, href };
@@ -124,6 +126,12 @@ export function firstBlockingRepairLink(
 /**
  * Export EVERY recording day of one animal, reusing the shared export core, and return the per-day result
  * with field-level repair links for the skipped days.
+ *
+ * This is the one-click batch the mockup specifies (export + a result panel, no preflight/ack modal). It
+ * inherits `exportSelectedDays`' established skip semantics — notably, a VALID day that still carries a
+ * non-blocking WARNING is NOT shipped unacknowledged here; it is skipped and linked to the per-animal
+ * Validation & Export surface, which owns the warning-acknowledgement flow. This matches the animal
+ * Days-tab quick export (the same shared path) rather than forking a second batch controller.
  *
  * @param workspace - The workspace (`{ animals, days }`), read live at action time.
  * @param animalKey - The owning animal whose days are exported.

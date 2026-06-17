@@ -7,7 +7,10 @@ import { useState, useEffect } from 'react';
  * @returns The decoded day id, or null.
  */
 function parseDayIdFromHash(hash: string): string | null {
-  const match = hash.match(/#\/day\/(.+)/);
+  // Capture everything up to a `?` so a repair deep-link query (`#/day/:id?field=…`) is not absorbed
+  // into the id. Day ids never contain `?`; they may contain `/` (legacy composite ids), which `[^?]`
+  // preserves.
+  const match = hash.match(/#\/day\/([^?]+)/);
   return match ? decodeURIComponent(match[1]) : null;
 }
 

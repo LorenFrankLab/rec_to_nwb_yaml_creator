@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, within, act } from '@testing-library/react';
+import { render, screen, within, act, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { StoreProvider } from '../../../state/StoreContext';
 import DayEditorFrame from '../DayEditorFrame';
@@ -231,6 +231,21 @@ describe('DayEditorFrame', () => {
     expect(screen.getByRole('button', { name: 'DIO' })).toHaveAttribute('aria-current', 'page');
     act(() => emitStepperShortcut('next'));
     expect(screen.getByRole('button', { name: 'DIO' })).toHaveAttribute('aria-current', 'page');
+  });
+
+  it('routes to the owning tab when arriving with a ?field= repair deep-link', async () => {
+    // A cross-day batch "Fix in …" link lands on #/day/:id?field=<field>; the frame resolves the
+    // field's owning tab and opens it on load (a behavioral_events field is DIO-owned).
+    const originalHash = window.location.hash;
+    window.location.hash = '#/day/remy-2023-06-22?field=behavioral_events';
+    try {
+      renderFrame();
+      await waitFor(() =>
+        expect(screen.getByRole('button', { name: 'DIO' })).toHaveAttribute('aria-current', 'page')
+      );
+    } finally {
+      window.location.hash = originalHash;
+    }
   });
 
   it('moves focus to the panel (#main-content) on a tab change', async () => {

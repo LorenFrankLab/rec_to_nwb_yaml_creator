@@ -58,6 +58,13 @@ describe('useDayIdFromUrl', () => {
     expect(result.current).toBe('complex/id/with/slashes');
   });
 
+  it('strips a ?field= repair deep-link query from the day id', () => {
+    // A cross-day "Fix in …" deep-link carries the field as a query; the id must not absorb it.
+    window.location.hash = '#/day/remy-2023-06-22?field=session.session_description';
+    const { result } = renderHook(() => useDayIdFromUrl());
+    expect(result.current).toBe('remy-2023-06-22');
+  });
+
   it('cleans up event listener on unmount', () => {
     const { unmount } = renderHook(() => useDayIdFromUrl());
     const listenerCount = window.getEventListeners?.('hashchange')?.length || 0;

@@ -631,8 +631,8 @@ describe('buildDayEditorViewModel — bad channels', () => {
   });
 
   it('the consumed vm.issues acknowledge repair is executable and carries its acks', () => {
-    // The same `bad_channel_unfailed_without_ack` issue surfaces in vm.issues (the list ValidationStep
-    // + ExportStep render). Its executable repair must carry the acks too, or the "Acknowledge
+    // The same `bad_channel_unfailed_without_ack` issue surfaces in vm.issues (the list the readiness
+    // bar / export-preview render). Its executable repair must carry the acks too, or the "Acknowledge
     // un-marking" button would dispatch the executor with no acks and silently no-op.
     const { workspace: ws, later } = twoDayRegression(false);
     const vm = buildDayEditorViewModel(ws, later.id);

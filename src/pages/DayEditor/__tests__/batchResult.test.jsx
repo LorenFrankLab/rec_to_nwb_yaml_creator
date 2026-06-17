@@ -87,9 +87,9 @@ describe('ExportPreview — "Export all days" batch', () => {
     await user.click(screen.getByRole('button', { name: /export all 2 days/i }));
 
     const result = await screen.findByRole('status', { name: /batch export result/i });
-    // The skipped day's link resolves through repairRouting to the issue's OWNER (Overview), not a bare
-    // "open this day" link.
+    // The skipped day's link resolves through repairRouting to the issue's OWNER (Overview), carrying
+    // the field as a ?field= deep-link — not a bare "open this day" link.
     const fix = within(result).getByRole('link', { name: /fix in overview/i });
-    expect(fix).toHaveAttribute('href', `#/day/${errorDay.id}`);
+    expect(fix.getAttribute('href')).toMatch(new RegExp(`^#/day/${errorDay.id}\\?field=`));
   });
 });

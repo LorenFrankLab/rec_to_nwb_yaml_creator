@@ -12,7 +12,7 @@ import {
 import { applyRepairCommand } from '../../state/repairCommands';
 import type { RepairCommand, RepairCommandContext } from '../../state/repairCommands';
 import { animalSetupTabForFieldPath } from '../../domain/validation';
-import { repairTargetForIssue } from '../../domain/repairRouting';
+import { repairTargetForIssue, stepIdForIssue } from '../../domain/repairRouting';
 import type { RepairableIssue } from '../../domain/repairRouting';
 import { validateDay } from '../../domain/dayValidationComposer';
 import { buildDayEditorViewModel } from '../../viewModels/dayEditorViewModel';
@@ -215,6 +215,26 @@ export default function DayEditorFrame() {
       setFocusRequest(null);
     }
   }, []);
+
+  // A cross-day repair deep-link (`#/day/:id?field=…`, emitted by the export-preview batch "Fix in …"
+  // links) lands the user on the field's OWNING tab. `useDayIdFromUrl` strips the `?field=` query from
+  // the id; here we read it and route through the SAME `goToTab` the in-page readiness "Fix" uses, so a
+  // cross-day fix focuses the field, not the default Day tab. Re-fires once per (day, field) so it can't
+  // fight a subsequent user tab click. A field with no day-tab owner (catch-all `validation`) no-ops.
+  const lastFieldRouteRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!dayId || !day || !animal) return;
+    const field = new URLSearchParams(window.location.hash.split('?')[1] || '').get('field');
+    if (!field) {
+      lastFieldRouteRef.current = null;
+      return;
+    }
+    const routeKey = `${dayId}::${field}`;
+    if (lastFieldRouteRef.current === routeKey) return;
+    lastFieldRouteRef.current = routeKey;
+    const tab = TAB_FOR_STEP[stepIdForIssue({ path: field })];
+    if (tab) goToTab(tab, field);
+  }, [dayId, day, animal, goToTab]);
 
   // Alt+←/→ steps through the four tabs and CLAMPS at the ends (it does not wrap) — matching the
   // former stepper's section pager. Export is not in the sequence (it is a header affordance), so the

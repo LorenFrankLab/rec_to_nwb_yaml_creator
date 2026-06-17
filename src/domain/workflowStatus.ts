@@ -443,8 +443,8 @@ export function getDayRowStatus(
 
   if (isExportEnabled(stepStatus)) {
     // Currently passes the full gate → refine by persisted history. Reuse the shared resolver so the
-    // `exported > validated > ready` precedence lives in ONE place (the same one
-    // ValidationStep/ExportStep/ValidationSummary use), not a second inline copy that could drift.
+    // `exported > validated > ready` precedence lives in ONE place (the same one the readiness bar /
+    // export-preview / ValidationSummary use), not a second inline copy that could drift.
     const persisted = lifecycleForValidDay(day?.state);
     if (persisted === DAY_LIFECYCLE.EXPORTED) {
       return { variant: DAY_LIFECYCLE.EXPORTED, label: DAY_LIFECYCLE_LABEL.exported };
