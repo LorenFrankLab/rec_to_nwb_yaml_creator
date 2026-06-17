@@ -162,10 +162,10 @@ test.describe('Ownership & discoverability — AnimalView header + section-nav +
     await expectRow('Cameras', 'if video');
     await expectRow('Optogenetics', 'if opto');
 
-    // NON-gating: a behavior-only animal can still reach its days surface — the empty-day state is
-    // shown (no mandatory-setup block prevents adding/exporting days), and the "Add Recording Days"
-    // primary action is available.
-    await expect(page.getByText('No recording days yet.')).toBeVisible();
+    // NON-gating: a behavior-only animal can still reach its days surface — the empty-day onboarding
+    // state is shown (no mandatory-setup block prevents adding/exporting days), and the "Add Recording
+    // Days" primary action is available.
+    await expect(page.getByRole('heading', { name: /no recording days yet/i })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Add Recording Days' })).toBeVisible();
   });
 

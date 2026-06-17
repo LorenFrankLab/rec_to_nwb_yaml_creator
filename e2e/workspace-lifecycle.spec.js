@@ -285,6 +285,6 @@ test.describe('Day lifecycle — undo-able delete + cleanup coherence', () => {
     await expect(targetLink).toHaveCount(0);
     await expect(siblingLink).toBeVisible();
     // The empty-state is NOT shown (a day still exists) — proves we didn't wipe the list.
-    await expect(page.getByText('No recording days yet.')).toHaveCount(0);
+    await expect(page.getByRole('heading', { name: /no recording days yet/i })).toHaveCount(0);
   });
 });
