@@ -233,7 +233,7 @@ function stableStringify(value: unknown): string {
  * @param workspace - The existing workspace slice (`{ animals }`).
  * @returns The conflicting animal's store key, or null.
  */
-function findExistingAnimalId(
+export function findExistingAnimalId(
   subjectId: string,
   workspace: { animals?: unknown } | null | undefined
 ): string | null {
