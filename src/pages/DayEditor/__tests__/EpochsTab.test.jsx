@@ -7,7 +7,7 @@
  * its off-export videolessEpochs writer, confirm-before-orphan (never auto-scrubbing), and a11y.
  */
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { axe } from 'jest-axe';
 import EpochsTab from '../EpochsTab';
@@ -15,9 +15,10 @@ import EpochsTab from '../EpochsTab';
 /**
  * An opto animal + catalog day: Sleep owns epochs 1,3 (no video); Run owns epoch 2 (one video).
  * @param {object} [overrides] - Day field overrides merged into the base day.
+ * @param {object} [animalOverrides] - Animal field overrides merged into the base animal.
  * @returns {object} The DayEditor bundle props EpochsTab consumes.
  */
-function makeBundle(overrides = {}) {
+function makeBundle(overrides = {}, animalOverrides = {}) {
   const animal = {
     id: 'r',
     subject: { subject_id: 'r' },
@@ -30,6 +31,7 @@ function makeBundle(overrides = {}) {
       { id: 'tasktype-0', task_name: 'Sleep', task_description: 'sleep', camera_id: [0] },
       { id: 'tasktype-1', task_name: 'Run', task_description: 'run', camera_id: [1] },
     ],
+    ...animalOverrides,
   };
   const day = {
     id: 'r-2023-06-22',
@@ -58,6 +60,37 @@ function makeBundle(overrides = {}) {
     actions: { updateAnimal },
     animalKey: 'r',
   };
+}
+
+/** A legacy inline day whose `Run` task collides with the animal's existing `Run` task type. */
+function makeDivergentInlineBundle() {
+  return makeBundle(
+    {
+      taskInstances: undefined,
+      tasks: [
+        {
+          task_name: 'Run',
+          task_description: 'Day-specific run definition',
+          task_environment: 'maze B',
+          camera_id: [1],
+          task_epochs: [1],
+        },
+      ],
+      associated_video_files: [],
+      associated_files: [],
+    },
+    {
+      taskTypes: [
+        {
+          id: 'tasktype-0',
+          task_name: 'Run',
+          task_description: 'Catalog run definition',
+          task_environment: 'maze A',
+          camera_id: [0],
+        },
+      ],
+    }
+  );
 }
 
 /**
@@ -159,6 +192,70 @@ describe('EpochsTab — write-back patches', () => {
     ]);
     expect(screen.getByText(/Epoch 1 deleted/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Undo/i })).toBeInTheDocument();
+  });
+});
+
+describe('EpochsTab — task-catalog collision review', () => {
+  it('surfaces a name collision and blocks epoch edits until the user chooses', async () => {
+    const user = userEvent.setup();
+    const bundle = makeDivergentInlineBundle();
+    render(<EpochsTab {...bundle} />);
+
+    const review = screen.getByRole('heading', { name: /review task catalog match/i }).closest('section');
+    expect(review).toBeInTheDocument();
+    expect(review).toHaveTextContent(/Run/);
+    expect(review).toHaveTextContent(/Day-specific run definition/);
+    expect(review).toHaveTextContent(/Catalog run definition/);
+
+    await user.click(screen.getByRole('button', { name: /Epoch 1 actions/i }));
+    await user.click(screen.getByRole('menuitem', { name: /Duplicate epoch/i }));
+
+    expect(lastPatch(bundle.onFieldUpdate, 'taskInstances')).toBeUndefined();
+    expect(lastPatch(bundle.onFieldUpdate, 'tasks')).toBeUndefined();
+  });
+
+  it('Keep this day values mints a distinct type and preserves the inline definition', async () => {
+    const user = userEvent.setup();
+    const bundle = makeDivergentInlineBundle();
+    render(<EpochsTab {...bundle} />);
+
+    await user.click(screen.getByRole('button', { name: /Keep this day's values/i }));
+
+    expect(bundle.actions.updateAnimal).toHaveBeenCalledWith('r', {
+      taskTypes: [
+        expect.objectContaining({
+          id: 'tasktype-0',
+          task_name: 'Run',
+          task_description: 'Catalog run definition',
+        }),
+        expect.objectContaining({
+          id: 'tasktype-1',
+          task_name: 'Run (r-2023-06-22)',
+          task_description: 'Day-specific run definition',
+          task_environment: 'maze B',
+          camera_id: [1],
+        }),
+      ],
+    });
+    expect(lastPatch(bundle.onFieldUpdate, 'taskInstances')).toEqual([
+      { taskTypeId: 'tasktype-1', task_epochs: [1] },
+    ]);
+    expect(lastPatch(bundle.onFieldUpdate, 'tasks')).toEqual([]);
+  });
+
+  it('Keep catalog definition explicitly commits the catalog-backed conversion', async () => {
+    const user = userEvent.setup();
+    const bundle = makeDivergentInlineBundle();
+    render(<EpochsTab {...bundle} />);
+
+    const review = screen.getByRole('heading', { name: /review task catalog match/i }).closest('section');
+    await user.click(within(review).getByRole('button', { name: /Keep catalog definition/i }));
+
+    expect(bundle.actions.updateAnimal).not.toHaveBeenCalled();
+    expect(lastPatch(bundle.onFieldUpdate, 'taskInstances')).toEqual([
+      { taskTypeId: 'tasktype-0', task_epochs: [1] },
+    ]);
+    expect(lastPatch(bundle.onFieldUpdate, 'tasks')).toEqual([]);
   });
 });
 

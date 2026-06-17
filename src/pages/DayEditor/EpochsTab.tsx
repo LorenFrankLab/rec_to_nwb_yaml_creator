@@ -38,7 +38,7 @@ import {
   getDayFsGuiYamls,
   getDayVideolessEpochs,
 } from '../../state/workspaceSelectors';
-import { resolveDayCatalogView } from '../../state/dayTaskCatalog';
+import { preserveInlineTaskDefinitions, resolveDayCatalogView } from '../../state/dayTaskCatalog';
 import { addTaskType, nextTaskTypeId } from '../../state/taskCatalogActions';
 import type { TaskTypeDefinitionInput } from '../../state/taskCatalogActions';
 import type { TaskInstance, TaskType, Camera } from '../../state/workspaceTypes';
@@ -67,6 +67,23 @@ function cameraName(cameras: Camera[], id: number | string): string {
   return cam?.camera_name || `camera ${id}`;
 }
 
+/** Compact display for task-definition values inside the collision review notice. */
+function formatDefinitionValue(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map((item) => String(item)).join(', ')}]`;
+  if (value === undefined || value === null || value === '') return '(blank)';
+  if (typeof value === 'object') return JSON.stringify(value);
+  return String(value);
+}
+
+/** The exported fields most useful when comparing an inline task with a catalog task type. */
+function taskDefinitionSummary(definition: Record<string, unknown>): string {
+  return [
+    `description: ${formatDefinitionValue(definition.task_description)}`,
+    `environment: ${formatDefinitionValue(definition.task_environment)}`,
+    `cameras: ${formatDefinitionValue(definition.camera_id)}`,
+  ].join('; ');
+}
+
 /**
  * EpochsTab — the epoch grid (Phase 4), the day editor's spine. A pure-view-model-driven table with
  * one row per epoch (caret + Task + Camera(s) + Statescript-naming + Video-presence + Opto + Status)
@@ -84,6 +101,7 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
   const grid = buildEpochGrid(animal, day);
   const view = resolveDayCatalogView(animal, day);
   const cameras = getAnimalCameras(animal);
+  const unresolvedTaskCatalogDivergence = view.derived && view.divergences.length > 0;
 
   const [expanded, setExpanded] = useState<Set<number>>(new Set());
   const [pendingOrphan, setPendingOrphan] = useState<PendingOrphan | null>(null);
@@ -132,7 +150,13 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
    * TasksEpochsStep write path.
    */
   const applyCommit = useCallback(
-    (nextInstances: TaskInstance[], nextTaskTypes: TaskType[], repair: boolean) => {
+    (
+      nextInstances: TaskInstance[],
+      nextTaskTypes: TaskType[],
+      repair: boolean,
+      allowTaskCatalogDivergence = false
+    ) => {
+      if (unresolvedTaskCatalogDivergence && !allowTaskCatalogDivergence) return;
       if (nextTaskTypes !== view.taskTypes && actions?.updateAnimal && ownerKey) {
         (actions.updateAnimal as (id: string, patch: Record<string, unknown>) => void)(ownerKey, {
           taskTypes: nextTaskTypes,
@@ -157,8 +181,17 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
         onFieldUpdate('associated_files', clear(getDayAssociatedFiles(day)));
       }
     },
-    [view.taskTypes, view.derived, actions, ownerKey, onFieldUpdate, day]
+    [unresolvedTaskCatalogDivergence, view.taskTypes, view.derived, actions, ownerKey, onFieldUpdate, day]
   );
+
+  const keepCatalogDefinition = useCallback(() => {
+    applyCommit(view.taskInstances, view.taskTypes, false, true);
+  }, [applyCommit, view.taskInstances, view.taskTypes]);
+
+  const keepDayValues = useCallback(() => {
+    const preserved = preserveInlineTaskDefinitions(animal, day);
+    applyCommit(preserved.taskInstances, preserved.taskTypes, false, true);
+  }, [animal, day, applyCommit]);
 
   /**
    * Commit a next instance set, prompting for orphan repair first when the edit would strand a bound
@@ -166,6 +199,7 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
    */
   const commit = useCallback(
     (nextInstances: TaskInstance[], nextTaskTypes: TaskType[] = view.taskTypes) => {
+      if (unresolvedTaskCatalogDivergence) return;
       const { videos, files } = epochsOrphanedBy(day, nextInstances);
       if (videos.length === 0 && files.length === 0) {
         applyCommit(nextInstances, nextTaskTypes, false);
@@ -175,7 +209,7 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
       pendingTypesRef.current = nextTaskTypes;
       setPendingOrphan({ nextInstances, videos, files });
     },
-    [view.taskTypes, day, applyCommit]
+    [unresolvedTaskCatalogDivergence, view.taskTypes, day, applyCommit]
   );
   const pendingTypesRef = useRef<TaskType[]>(view.taskTypes);
   // A callback to run AFTER a pending orphan-repair is confirmed (e.g. the delete's undo toast — it
@@ -191,6 +225,7 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
   // silently re-pointed at a different task. Because the refs follow, the edit creates no orphan
   // (no confirm needed); only the arrays that actually change are written.
   const renumberCommit = (nextInstances: TaskInstance[], remap: Map<number, number>) => {
+    if (unresolvedTaskCatalogDivergence) return;
     if (remap.size > 0) {
       const refs = remapEpochRefs(day, remap);
       const videos = getDayAssociatedVideos(day);
@@ -217,6 +252,7 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
     }
   };
   const onDelete = (epoch: number) => {
+    if (unresolvedTaskCatalogDivergence) return;
     const next = removeEpoch(view.taskInstances, epoch);
     const { videos, files } = epochsOrphanedBy(day, next);
     // Snapshot everything an Undo must restore — the instances AND any refs the orphan repair clears.
@@ -242,6 +278,7 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
 
   // ── "+ new task type" quick-add (define-and-assign to the epoch being edited) ──
   const saveNewType = (definition: TaskTypeDefinitionInput) => {
+    if (unresolvedTaskCatalogDivergence) return;
     // The catalog enforces one name → one definition (the Spyglass task-name identity): reusing an
     // existing name is blocked at its source. Keep the modal open with the clash message.
     const clashes = view.taskTypes.some((t) => t?.task_name === definition.task_name);
@@ -262,6 +299,7 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
 
   // ── Opto (fs_gui) per-epoch power / pulse ──
   const setOpto = (row: EpochGridRow, field: 'power_in_mW' | 'pulseLength', value: string) => {
+    if (unresolvedTaskCatalogDivergence) return;
     const fsgui = getDayFsGuiYamls(day);
     const parsed = value === '' ? '' : Number(value);
     if (row.opto) {
@@ -283,11 +321,13 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
       return next;
     });
   const writeStatescriptPath = (row: EpochGridRow, path: string) => {
+    if (unresolvedTaskCatalogDivergence) return;
     const files = getDayAssociatedFiles(day);
     if (!row.statescript) return;
     onFieldUpdate('associated_files', files.map((f, i) => (i === row.statescript!.index ? { ...f, path } : f)));
   };
   const addStatescript = (row: EpochGridRow) => {
+    if (unresolvedTaskCatalogDivergence) return;
     const name = statescriptDerivedName(row);
     const path = deriveStatescriptPath(grid.dataFolder, name);
     onFieldUpdate('associated_files', [
@@ -298,6 +338,7 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
 
   // ── Video 3-state ──
   const setVideoless = (epoch: number, on: boolean) => {
+    if (unresolvedTaskCatalogDivergence) return;
     const current = getDayVideolessEpochs(day);
     const next = on ? [...new Set([...current, epoch])] : current.filter((e) => e !== epoch);
     const state = (day as { state?: unknown }).state;
@@ -305,6 +346,7 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
     onFieldUpdate('state', { ...base, videolessEpochs: next });
   };
   const addVideo = (row: EpochGridRow) => {
+    if (unresolvedTaskCatalogDivergence) return;
     const videos = getDayAssociatedVideos(day);
     const index = videos.filter((v) => Number(v.task_epochs) === row.epoch).length + 1;
     const name = deriveVideoName({ date: grid.date, subjectId: grid.subjectId, epoch: row.epoch, tag: row.tag, index });
@@ -312,10 +354,14 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
     onFieldUpdate('associated_video_files', [...videos, { name, camera_id: camId, task_epochs: row.epoch }]);
     setVideoless(row.epoch, false);
   };
-  const removeVideo = (videoIndex: number) =>
+  const removeVideo = (videoIndex: number) => {
+    if (unresolvedTaskCatalogDivergence) return;
     onFieldUpdate('associated_video_files', getDayAssociatedVideos(day).filter((_, i) => i !== videoIndex));
-  const writeVideoName = (videoIndex: number, name: string) =>
+  };
+  const writeVideoName = (videoIndex: number, name: string) => {
+    if (unresolvedTaskCatalogDivergence) return;
     onFieldUpdate('associated_video_files', getDayAssociatedVideos(day).map((v, i) => (i === videoIndex ? { ...v, name } : v)));
+  };
 
   const confirmOrphanRepair = () => {
     if (!pendingOrphan) return;
@@ -338,6 +384,35 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
         row to set its task, generated files, and (for opto animals) its stimulation. File names derive
         from <code>{'{date}_{animal}_{epoch}_{tag}'}</code>; you set the data folder on the Day tab.
       </p>
+
+      {unresolvedTaskCatalogDivergence && (
+        <section className={styles.catalogConflict} aria-labelledby="task-catalog-conflict-heading">
+          <h3 id="task-catalog-conflict-heading" className={styles.catalogConflictHeading}>
+            Review task catalog match
+          </h3>
+          <p className={styles.catalogConflictText}>
+            This day has inline task values that match animal task types by name but differ in saved
+            details. Choose which definition should be used before changing epochs.
+          </p>
+          <ul className={styles.catalogConflictList}>
+            {view.divergences.map((divergence) => (
+              <li key={`${divergence.taskName}-${divergence.inlineTaskIndex}`}>
+                <strong>{divergence.taskName}</strong>
+                <span>Day: {taskDefinitionSummary(divergence.inline)}</span>
+                <span>Catalog: {taskDefinitionSummary(divergence.catalog)}</span>
+              </li>
+            ))}
+          </ul>
+          <div className={styles.catalogConflictActions}>
+            <Button variant="secondary" onClick={keepCatalogDefinition}>
+              Keep catalog definition
+            </Button>
+            <Button variant="primary" onClick={keepDayValues}>
+              Keep this day&apos;s values
+            </Button>
+          </div>
+        </section>
+      )}
 
       <div className={styles.toolbar}>
         <div className={styles.toolbarSpacer} />
@@ -525,6 +600,7 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
   /** Apply a starter template, writing the corresponding instances (+ minted task types). */
   function applyTemplate(kind: 'sleep' | 'wtrack' | 'copy' | 'blank') {
     setTemplateOpen(false);
+    if (unresolvedTaskCatalogDivergence) return;
     if (kind === 'copy') {
       const prior = priorDayInstances();
       if (prior) commit(structuredClone(prior));

@@ -12,6 +12,7 @@ import { mergeDayMetadata } from '../workspaceUtils';
 import { encodeYaml } from '../../io/yaml';
 import { buildRealisticWorkspace } from '../../__tests__/fixtures/workspaceBuilders';
 import { migrateTasksToCatalogV2ToV3 } from '../taskCatalogMigration';
+import { preserveInlineTaskDefinitions, resolveDayCatalogView } from '../dayTaskCatalog';
 
 /**
  * Convert a single `{ animal, day }` (inline tasks) into the catalog shape via the real migrator.
@@ -114,5 +115,95 @@ describe('mergeDayMetadata resolves taskInstances when present (catalog is the s
     expect(encodeYaml(mergeDayMetadata(catalog.animal, catalog.day))).toBe(
       encodeYaml(mergeDayMetadata(inline.animal, inline.day))
     );
+  });
+
+  it('after explicit Keep day values, export preserves the inline description/camera via a distinct task type', () => {
+    const { animal, day } = buildRealisticWorkspace();
+    const catalogAnimal = {
+      ...animal,
+      taskTypes: [
+        {
+          id: 'tasktype-0',
+          task_name: 'Run',
+          task_description: 'Catalog run definition',
+          task_environment: 'W-track A',
+          camera_id: [0],
+        },
+      ],
+    };
+    const inlineDay = {
+      ...day,
+      tasks: [
+        {
+          task_name: 'Run',
+          task_description: 'Day-specific run definition',
+          task_environment: 'W-track B',
+          camera_id: [1],
+          task_epochs: [2],
+        },
+      ],
+    };
+
+    const preserved = preserveInlineTaskDefinitions(catalogAnimal, inlineDay);
+    const merged = mergeDayMetadata(
+      { ...catalogAnimal, taskTypes: preserved.taskTypes },
+      { ...inlineDay, tasks: [], taskInstances: preserved.taskInstances }
+    );
+
+    expect(merged.tasks).toEqual([
+      expect.objectContaining({
+        task_name: 'Run (remy-2023-06-22)',
+        task_description: 'Day-specific run definition',
+        task_environment: 'W-track B',
+        camera_id: [1],
+        task_epochs: [2],
+      }),
+    ]);
+    expect(encodeYaml(merged)).toContain('task_description: Day-specific run definition');
+  });
+
+  it('after explicit Keep catalog definition, export uses the catalog definition', () => {
+    const { animal, day } = buildRealisticWorkspace();
+    const catalogAnimal = {
+      ...animal,
+      taskTypes: [
+        {
+          id: 'tasktype-0',
+          task_name: 'Run',
+          task_description: 'Catalog run definition',
+          task_environment: 'W-track A',
+          camera_id: [0],
+        },
+      ],
+    };
+    const inlineDay = {
+      ...day,
+      tasks: [
+        {
+          task_name: 'Run',
+          task_description: 'Day-specific run definition',
+          task_environment: 'W-track B',
+          camera_id: [1],
+          task_epochs: [2],
+        },
+      ],
+    };
+    const view = resolveDayCatalogView(catalogAnimal, inlineDay);
+    const merged = mergeDayMetadata(catalogAnimal, {
+      ...inlineDay,
+      tasks: [],
+      taskInstances: view.taskInstances,
+    });
+
+    expect(view.divergences).toHaveLength(1);
+    expect(merged.tasks).toEqual([
+      expect.objectContaining({
+        task_name: 'Run',
+        task_description: 'Catalog run definition',
+        task_environment: 'W-track A',
+        camera_id: [0],
+        task_epochs: [2],
+      }),
+    ]);
   });
 });

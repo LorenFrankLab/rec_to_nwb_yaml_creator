@@ -200,6 +200,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   merge visibly instead of silently substituting the first catalog device. FsGUI optogenetics
   references also use the shared strict opto-presence predicate, so corrupt non-array optogenetics
   fields no longer count as present in one validation path but absent in another.
+- **Task-catalog collision review.** Opening a legacy/imported day whose inline task name matches an
+  animal task type with different details no longer silently replaces the day's task metadata on the
+  first epoch edit. The Epochs tab surfaces the difference and requires an explicit choice to keep the
+  catalog definition or preserve the day's values as a distinct day-specific task type.
 
 ### Removed
 
