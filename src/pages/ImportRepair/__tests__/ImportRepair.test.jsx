@@ -13,6 +13,7 @@ import userEvent from '@testing-library/user-event';
 import fs from 'fs';
 import path from 'path';
 import { StoreProvider, useStoreContext } from '../../../state/StoreContext';
+import { decodeYaml, encodeYaml } from '../../../io/yaml';
 import ImportRepair from '../index';
 
 const originalHash = window.location.hash;
@@ -53,6 +54,39 @@ function StoreProbe() {
  */
 function makeFile(name, text) {
   return { name, text: () => Promise.resolve(text) };
+}
+
+/**
+ * Build a clean YAML file whose day references catalogs absent from the supplied existing animal.
+ * @returns {string} YAML text.
+ */
+function existingCatalogGapYaml() {
+  const model = decodeYaml(cleanYaml);
+  model.cameras = [
+    {
+      id: 3,
+      camera_name: 'arena_side',
+      meters_per_pixel: 0.001,
+      manufacturer: 'Allied',
+      model: 'Mako',
+      lens: '8mm',
+    },
+  ];
+  model.data_acq_device = [
+    { name: 'ImportedRig', system: 'MCU', amplifier: 'Intan', adc_circuit: 'Intan' },
+  ];
+  model.tasks = [
+    {
+      task_name: 'Run',
+      task_description: 'run',
+      task_environment: 'maze',
+      camera_id: [3],
+      task_epochs: [1],
+    },
+  ];
+  model.associated_files = [];
+  model.associated_video_files = [{ name: 'run_video', camera_id: 3, task_epochs: 1 }];
+  return encodeYaml(model);
 }
 
 /**
@@ -197,5 +231,58 @@ describe('ImportRepair — commit', () => {
     // A day was added to the existing animal (no new animal created).
     expect(Object.keys(captured.animals)).toEqual(['remy']);
     expect(Object.keys(captured.days).length).toBe(1);
+  });
+
+  it('gates existing-animal catalog gaps until the user accepts selected catalog entries', async () => {
+    const user = userEvent.setup();
+    renderScreen({
+      remy: {
+        id: 'remy',
+        subject: { subject_id: 'remy' },
+        days: [],
+        cameras: [{ id: 0, camera_name: 'existing_cam' }],
+        devices: {
+          data_acq_device: [
+            { name: 'ExistingRig', system: 'MCU', amplifier: 'Intan', adc_circuit: 'Intan' },
+          ],
+          device: { name: ['Trodes'] },
+          electrode_groups: [],
+          ntrode_electrode_group_channel_map: [],
+        },
+        configurationHistory: [
+          {
+            version: 1,
+            devices: { electrode_groups: [], ntrode_electrode_group_channel_map: [] },
+            appliedToDays: [],
+          },
+        ],
+      },
+    });
+
+    const input = screen.getByLabelText(/choose a metadata yaml file/i);
+    await user.upload(
+      input,
+      makeFile('06222023_remy_metadata.yml', existingCatalogGapYaml())
+    );
+    await screen.findByRole('heading', { name: /needs attention/i });
+
+    const addButton = screen.getByRole('button', { name: /add recording day/i });
+    expect(addButton).toBeDisabled();
+    expect(screen.getAllByText(/animal "remy" does not have it/i)).toHaveLength(2);
+    expect(screen.getByText(/Recording system "ImportedRig"/)).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /Accept Camera 3/i }));
+    expect(addButton).toBeDisabled();
+    await user.click(screen.getByRole('button', { name: /Accept Recording system/i }));
+    expect(addButton).toBeEnabled();
+    await user.click(addButton);
+
+    await screen.findByRole('heading', { name: /recording day added/i });
+    expect(captured.animals.remy.cameras.map((camera) => camera.id)).toEqual([0, 3]);
+    expect(captured.animals.remy.devices.data_acq_device.map((device) => device.name)).toEqual([
+      'ExistingRig',
+      'ImportedRig',
+    ]);
+    expect(Object.keys(captured.days)).toEqual(['remy-2023-06-22']);
   });
 });

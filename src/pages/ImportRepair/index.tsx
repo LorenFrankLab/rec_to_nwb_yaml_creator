@@ -20,6 +20,8 @@ import { parseImportFiles } from '../../features/importYaml';
 import {
   buildImportRepairPlan,
   applyImportRepairs,
+  collectExistingAnimalCatalogAdditions,
+  existingAnimalCatalogResolutionBlocker,
 } from '../../state/importRepair';
 import type { ImportRepairPlan, RepairItem } from '../../state/importRepair';
 import { planImport } from '../../state/yamlImportPlan';
@@ -131,6 +133,8 @@ export default function ImportRepair() {
     [repaired, decoded, model.workspace]
   );
   const itemsResolved = !!plan && plan.items.every((item) => isResolvedValue(resolutions[item.path]));
+  const catalogResolutionBlocker =
+    plan !== null ? existingAnimalCatalogResolutionBlocker(plan, resolutions) : null;
 
   // The single reason the import is blocked (null = ready), most-actionable first. Drives both the
   // button's disabled state and the hint, so they never disagree.
@@ -142,9 +146,11 @@ export default function ImportRepair() {
         ? `Fix ${plan.blockers.length} field${plan.blockers.length === 1 ? '' : 's'} in the file, then re-import.`
         : !itemsResolved
           ? 'Accept or fill every flagged field to import.'
-          : !importPlan || importPlan.animals.length !== 1
-            ? importPlan?.unimportable[0]?.reason ?? 'The repaired file cannot be imported yet.'
-            : null;
+          : catalogResolutionBlocker
+            ? catalogResolutionBlocker
+            : !importPlan || importPlan.animals.length !== 1
+              ? importPlan?.unimportable[0]?.reason ?? 'The repaired file cannot be imported yet.'
+              : null;
   const canImport = importBlockReason === null;
 
   /** Apply the accepted fixes, commit through the existing import path, and show the result. */
@@ -165,6 +171,7 @@ export default function ImportRepair() {
     const summary = applyImportPlan(importPlan, actions, {
       workspace: model.workspace,
       resolutions: isExisting ? { [subjectId]: 'add' } : {},
+      catalogAdditions: collectExistingAnimalCatalogAdditions(plan, resolutions),
     });
     const failure = summary.failed[0]?.reason;
     const animalId = isExisting
@@ -375,12 +382,19 @@ interface RepairRowProps {
  */
 function RepairRow({ item, value, accepted, onAccept, onInput }: RepairRowProps) {
   const dateValue = item.inputType === 'date' ? String(value ?? '').slice(0, 10) : '';
+  const suggestionAccepted = accepted && value === item.suggested;
+  const inputValue =
+    item.kind === 'choice' && value === item.suggested
+      ? ''
+      : value === undefined || value === null
+        ? ''
+        : String(value);
 
   return (
     <div className={styles.row}>
       <div className={styles.rowBody}>
         <div className={styles.rowLabel}>{item.label}</div>
-        {item.kind === 'suggestion' ? (
+        {item.kind === 'suggestion' || item.kind === 'choice' ? (
           <div className={styles.rowDetail}>
             <span className={styles.was}>{display(item.was)}</span>
             <span aria-hidden="true"> → </span>
@@ -390,18 +404,18 @@ function RepairRow({ item, value, accepted, onAccept, onInput }: RepairRowProps)
         <div className={styles.rowWhy}>{item.why}</div>
       </div>
       <div className={styles.rowAction}>
-        {item.kind === 'suggestion' && (
+        {(item.kind === 'suggestion' || item.kind === 'choice') && (
           <Button
-            variant={accepted ? 'secondary' : 'primary'}
+            variant={suggestionAccepted ? 'secondary' : 'primary'}
             size="small"
             aria-label={`Accept ${item.label}`}
-            aria-pressed={accepted}
+            aria-pressed={suggestionAccepted}
             onClick={onAccept}
           >
-            {accepted ? 'Accepted ✓' : 'Accept'}
+            {suggestionAccepted ? 'Accepted ✓' : 'Accept'}
           </Button>
         )}
-        {(item.kind === 'input' || accepted) && item.inputType === 'date' && (
+        {(item.kind === 'input' || item.kind === 'choice' || accepted) && item.inputType === 'date' && (
           <input
             type="date"
             aria-label={item.label}
@@ -409,11 +423,11 @@ function RepairRow({ item, value, accepted, onAccept, onInput }: RepairRowProps)
             onChange={(e) => onInput(e.target.value ? `${e.target.value}T00:00:00` : '')}
           />
         )}
-        {item.kind === 'input' && item.inputType !== 'date' && (
+        {(item.kind === 'input' || item.kind === 'choice') && item.inputType !== 'date' && (
           <input
             type={item.inputType === 'number' ? 'number' : 'text'}
-            aria-label={item.label}
-            value={value === undefined || value === null ? '' : String(value)}
+            aria-label={item.mapInputLabel ?? item.label}
+            value={inputValue}
             onChange={(e) =>
               onInput(
                 item.inputType === 'number' && e.target.value !== ''

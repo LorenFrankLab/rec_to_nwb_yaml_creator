@@ -31,6 +31,14 @@
  */
 
 import { generateDayId } from './workspaceUtils';
+import {
+  getAnimalCameras,
+  getDataAcqDevices,
+  getDayAssociatedVideos,
+  getDayCamerasUsed,
+  getDayFsGuiYamls,
+  getDayTasks,
+} from './workspaceSelectors';
 import type { ImportPlan, ImportPlanAnimal, ImportPlanDay } from './yamlImportPlan';
 
 /** The current workspace snapshot read (read-only) during pre-flight. */
@@ -59,6 +67,8 @@ interface ApplyImportOptions {
   workspace?: ApplyWorkspace;
   /** Per-subject overrides of `defaultResolution` for conflict animals. */
   resolutions?: Record<string, 'add' | 'skip' | 'replace'>;
+  /** Explicit catalog entries to merge before adding days to an existing animal. */
+  catalogAdditions?: Record<string, { cameras?: unknown[]; data_acq_device?: unknown[] }>;
 }
 
 /** The outcome of {@link applyImportPlan}: created/skipped ids and recorded (never thrown) failures. */
@@ -67,6 +77,114 @@ interface ApplyImportResult {
   createdDays: string[];
   skipped: string[];
   failed: Array<{ subjectId: string; reason: string }>;
+}
+
+/**
+ * Whether two catalog/reference values match exactly, without string-laundering numeric ids.
+ *
+ * @param a - First value.
+ * @param b - Second value.
+ * @returns True when the values are the same reference key.
+ */
+function sameRefValue(a: unknown, b: unknown): boolean {
+  return Object.is(a, b);
+}
+
+/**
+ * Add a non-empty decoded YAML camera id to a mutable list.
+ *
+ * @param refs - The list to append to.
+ * @param value - The candidate camera id.
+ */
+function pushCameraRef(refs: unknown[], value: unknown): void {
+  if (value === undefined || value === null || value === '') return;
+  if (!refs.some((existing) => sameRefValue(existing, value))) refs.push(value);
+}
+
+/**
+ * Camera ids a planned day will reference after it is added.
+ *
+ * @param day - The import-plan day.
+ * @returns Referenced camera ids in first-seen order.
+ */
+function dayCameraRefs(day: ImportPlanDay): unknown[] {
+  const refs: unknown[] = [];
+  getDayCamerasUsed(day).forEach((cameraId) => pushCameraRef(refs, cameraId));
+  getDayTasks(day).forEach((task) => {
+    if (Array.isArray(task?.camera_id)) {
+      task.camera_id.forEach((cameraId: unknown) => pushCameraRef(refs, cameraId));
+    }
+  });
+  getDayAssociatedVideos(day).forEach((video) => pushCameraRef(refs, video?.camera_id));
+  getDayFsGuiYamls(day).forEach((protocol) => pushCameraRef(refs, protocol?.camera_id));
+  return refs;
+}
+
+/**
+ * Validate selected catalog additions and all day refs for add-to-existing.
+ *
+ * @param animalPlan - The planned animal.
+ * @param targetAnimal - The existing target animal.
+ * @param additions - Explicit additions accepted by the user.
+ * @returns A failure reason, or null when refs resolve.
+ */
+function preflightExistingAnimalCatalogRefs(
+  animalPlan: ImportPlanAnimal,
+  targetAnimal: unknown,
+  additions: { cameras?: unknown[]; data_acq_device?: unknown[] } | undefined
+): string | null {
+  const existingCameras = getAnimalCameras(targetAnimal);
+  const cameraIds: unknown[] = existingCameras.map((camera) => camera.id);
+  const cameraNames = new Set(
+    existingCameras
+      .map((camera) => camera.camera_name)
+      .filter((name) => name !== undefined && name !== null)
+      .map((name) => String(name))
+  );
+
+  for (const camera of additions?.cameras ?? []) {
+    if (!camera || typeof camera !== 'object') continue;
+    const { id, camera_name: cameraName } = camera as { id?: unknown; camera_name?: unknown };
+    if (cameraIds.some((existing) => sameRefValue(existing, id))) {
+      return `Camera id "${String(id)}" already exists on animal "${animalPlan.existingAnimalId}".`;
+    }
+    if (cameraName !== undefined && cameraName !== null && cameraNames.has(String(cameraName))) {
+      return `Camera "${String(cameraName)}" already exists on animal "${animalPlan.existingAnimalId}".`;
+    }
+    cameraIds.push(id);
+    if (cameraName !== undefined && cameraName !== null) cameraNames.add(String(cameraName));
+  }
+
+  const existingDevices = getDataAcqDevices(targetAnimal);
+  const deviceNames: unknown[] = existingDevices
+    .map((device) => device.name)
+    .filter((name) => name !== undefined && name !== null);
+  for (const device of additions?.data_acq_device ?? []) {
+    if (!device || typeof device !== 'object') continue;
+    const name = (device as { name?: unknown }).name;
+    if (deviceNames.some((existing) => sameRefValue(existing, name))) {
+      return `Recording system "${String(name)}" already exists on animal "${animalPlan.existingAnimalId}".`;
+    }
+    deviceNames.push(name);
+  }
+
+  for (const day of animalPlan.days) {
+    const missingCamera = dayCameraRefs(day).find(
+      (cameraId) => !cameraIds.some((existing) => sameRefValue(existing, cameraId))
+    );
+    if (missingCamera !== undefined) {
+      return `Imported day "${day.date}" references camera id "${String(missingCamera)}", but animal "${animalPlan.existingAnimalId}" does not have that camera.`;
+    }
+    const deviceName = day.data_acq_device_name;
+    if (
+      deviceName !== undefined &&
+      !deviceNames.some((existing) => sameRefValue(existing, deviceName))
+    ) {
+      return `Imported day "${day.date}" references recording system "${String(deviceName)}", but animal "${animalPlan.existingAnimalId}" does not have that device.`;
+    }
+  }
+
+  return null;
 }
 
 /**
@@ -96,7 +214,8 @@ function preflightAnimal(
   animalPlan: ImportPlanAnimal,
   resolution: string | null,
   workspace: ApplyWorkspace | null | undefined,
-  reservedDayIds: Set<string>
+  reservedDayIds: Set<string>,
+  catalogAdditions: Record<string, { cameras?: unknown[]; data_acq_device?: unknown[] }>
 ): string | null {
   const animals = workspace?.animals ?? {};
   const days = workspace?.days ?? {};
@@ -117,6 +236,12 @@ function preflightAnimal(
     if (!targetId || !animals[targetId]) {
       return `Animal "${subjectId}" no longer exists to add days to.`;
     }
+    const catalogFailure = preflightExistingAnimalCatalogRefs(
+      animalPlan,
+      animals[targetId],
+      catalogAdditions[targetId]
+    );
+    if (catalogFailure !== null) return catalogFailure;
   } else if (animals[subjectId]) {
     // resolution === 'create' (new animal).
     return `Animal "${subjectId}" already exists; cannot import it as a new animal.`;
@@ -148,12 +273,18 @@ function preflightAnimal(
  *   any write (a collision is recorded in `failed`, never thrown out of a reducer). Defaults to an
  *   empty workspace (no pre-flight guarantees).
  * @param options.resolutions - Per-subject overrides of `defaultResolution` for conflict animals.
+ * @param options.catalogAdditions - Explicit existing-animal catalog entries accepted by import
+ *   repair and merged before adding days.
  * @returns The apply outcome; failures are RECORDED, never thrown.
  */
 export function applyImportPlan(
   plan: ImportPlan,
   actions: ImportActions,
-  { workspace = { animals: {}, days: {} }, resolutions = {} }: ApplyImportOptions = {}
+  {
+    workspace = { animals: {}, days: {} },
+    resolutions = {},
+    catalogAdditions = {},
+  }: ApplyImportOptions = {}
 ): ApplyImportResult {
   const createdAnimals: string[] = [];
   const createdDays: string[] = [];
@@ -178,7 +309,13 @@ export function applyImportPlan(
     // PRE-FLIGHT (synchronous, read-only): catch any precondition that would make a store
     // action throw out of its reducer. Nothing mutates the store between this check and the
     // writes below within one call, so SKIPPING here actually isolates the failure.
-    const reason = preflightAnimal(animalPlan, resolution, workspace, reservedDayIds);
+    const reason = preflightAnimal(
+      animalPlan,
+      resolution,
+      workspace,
+      reservedDayIds,
+      catalogAdditions
+    );
     if (reason !== null) {
       failed.push({ subjectId, reason });
       continue;
@@ -199,7 +336,13 @@ export function applyImportPlan(
       } else if (resolution === 'add') {
         // Conflict → add: layer the plan's days (+ any config versions) onto the existing
         // animal without recreating it or clobbering its animal-level facts.
-        applyAddToExistingAnimal(animalPlan, actions, createdDays);
+        applyAddToExistingAnimal(
+          animalPlan,
+          actions,
+          createdDays,
+          workspace,
+          catalogAdditions[animalPlan.existingAnimalId!]
+        );
       } else {
         // No conflict → create fresh.
         applyNewAnimal(animalPlan, actions, createdAnimals, createdDays);
@@ -282,26 +425,42 @@ function applyNewAnimal(
  * and its catalogs (cameras / data_acq_device) are NOT clobbered — the existing animal is
  * authoritative for those.
  *
- * LIMITATION (surfaced, not hidden): the public store actions expose no synchronous read of an
- * animal's current catalogs, so this executor cannot reliably UNION the plan's cameras /
- * data_acq_device into the existing animal without risking a wholesale clobber via `updateAnimal`
- * (which replaces, not merges, those collections). It therefore does NOT touch the catalogs: an
- * added day whose `cameras_used` / `data_acq_device_name` reference an entry the existing animal
- * lacks will surface a resolution gap on export, which the import UI (a later task) is expected to
- * preview so the user can reconcile the catalogs first. This keeps 'add' safe (never destructive)
- * at the cost of not auto-merging catalogs.
+ * The executor still does NOT auto-merge full catalogs. It accepts only explicit, targeted
+ * `catalogAdditions` selected by Import & Repair and preflights that every added day resolves
+ * against the existing animal's catalogs plus those selected additions before issuing writes.
  *
  * @param animalPlan - The planned animal.
  * @param actions - The store workspace actions.
  * @param createdDays - Accumulator (mutated).
+ * @param workspace - Current workspace snapshot used to build merged catalog arrays.
+ * @param catalogAdditions - Explicit catalog entries accepted by the user.
  */
 function applyAddToExistingAnimal(
   animalPlan: ImportPlanAnimal,
   actions: ImportActions,
-  createdDays: string[]
+  createdDays: string[],
+  workspace: ApplyWorkspace,
+  catalogAdditions: { cameras?: unknown[]; data_acq_device?: unknown[] } | undefined
 ): void {
   // Non-null here: `add` only runs after preflight confirmed the existing animal is present.
   const targetId = animalPlan.existingAnimalId!;
+  const existingAnimal = workspace.animals?.[targetId];
+  const animalUpdates: Record<string, unknown> = {};
+  if ((catalogAdditions?.cameras ?? []).length > 0) {
+    animalUpdates.cameras = [
+      ...getAnimalCameras(existingAnimal),
+      ...(catalogAdditions?.cameras ?? []).map((camera) => structuredClone(camera)),
+    ];
+  }
+  if ((catalogAdditions?.data_acq_device ?? []).length > 0) {
+    animalUpdates.data_acq_device = [
+      ...getDataAcqDevices(existingAnimal),
+      ...(catalogAdditions?.data_acq_device ?? []).map((device) => structuredClone(device)),
+    ];
+  }
+  if (Object.keys(animalUpdates).length > 0) {
+    actions.updateAnimal(targetId, animalUpdates);
+  }
 
   // Add each day (pins to the existing animal's latest version initially), then append each
   // imported config version and re-pin its days onto it.

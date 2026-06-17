@@ -22,6 +22,7 @@
 import { validate } from '../validation';
 import { isValidSpecies } from '../validation/dandiSubject';
 import { findExistingAnimalId } from './yamlImportPlan';
+import { getAnimalCameras, getDataAcqDevices } from './workspaceSelectors';
 import type { ValidationModel } from '../validation/issueTypes';
 
 /** The schema enum for `subject.sex` (mirrors nwb_schema.json — single-letter NWB/DANDI codes). */
@@ -80,8 +81,17 @@ const SPACE_KEY_ALIASES: Readonly<Record<string, string>> = {
   'ntrode electrode group channel map': 'ntrode_electrode_group_channel_map',
 };
 
+/** Resolution value used when a choice row accepts importing the referenced catalog entry. */
+const BRING_CATALOG_ENTRY = 'Bring referenced catalog entry';
+
+/** Internal repair path prefix for existing-animal add camera mapping. */
+const EXISTING_CAMERA_REF_PREFIX = '__importRepair.existingAnimal.camera.';
+
+/** Internal repair path prefix for existing-animal add data-acq mapping. */
+const EXISTING_DATA_ACQ_REF_PREFIX = '__importRepair.existingAnimal.data_acq_device.';
+
 /** How a repair item is resolved in the UI. */
-export type RepairKind = 'suggestion' | 'input';
+export type RepairKind = 'suggestion' | 'input' | 'choice';
 
 /** Where the item is grouped in the screen (mirrors the mockup's two sections). */
 export type RepairGroup = 'attention' | 'required';
@@ -100,12 +110,16 @@ export interface RepairItem {
   kind: RepairKind;
   /** The original value, verbatim (present whenever the field had one — never laundered away). */
   was?: unknown;
-  /** The suggested value (present iff `kind === 'suggestion'`), gated by the flagging predicate. */
+  /** The suggested value (present for suggestion/choice rows), gated by the flagging predicate. */
   suggested?: unknown;
   /** Why this is flagged (the validator's own message, or the shim explanation). */
   why: string;
   /** Hint for the input control the screen renders. */
   inputType: 'text' | 'number' | 'date';
+  /** Optional label for a choice-row alternate input. */
+  mapInputLabel?: string;
+  /** Optional structured action for import-only repairs. */
+  action?: ExistingAnimalCatalogRepairAction;
 }
 
 /** An error this screen cannot repair in place (structural / cross-field) — fix in the file. */
@@ -126,6 +140,32 @@ export interface BenignNormalization {
   label: string;
   /** What changed (and that no values were lost). */
   detail: string;
+}
+
+/** A selected catalog merge to apply before adding imported days to an existing animal. */
+export interface ExistingAnimalCatalogAdditions {
+  /** Camera catalog entries to append. */
+  cameras?: unknown[];
+  /** Data-acquisition device entries to append. */
+  data_acq_device?: unknown[];
+}
+
+/** Catalog repair metadata carried by an import-repair row. */
+interface ExistingAnimalCatalogRepairAction {
+  /** Discriminator for custom import-repair actions. */
+  kind: 'existing_animal_catalog_ref';
+  /** The catalog whose reference would dangle after add-to-existing. */
+  catalog: 'cameras' | 'data_acq_device';
+  /** Existing animal that will receive the day. */
+  targetAnimalId: string;
+  /** The missing camera id or recording-system name. */
+  missingValue: unknown;
+  /** The source catalog entry that can be brought into the existing animal. */
+  sourceEntry?: unknown;
+  /** Whether accepting the suggestion is allowed for this row. */
+  canBring: boolean;
+  /** Valid existing values the user may map to instead. */
+  validMapValues: unknown[];
 }
 
 /** The new-animal vs existing-day routing for the parsed file. */
@@ -206,6 +246,68 @@ function setAtPath(target: Record<string, unknown>, p: string, value: unknown): 
   cursor[segments[segments.length - 1]] = value;
 }
 
+/**
+ * Delete a key at a path on a mutable target. Missing parents are a no-op.
+ *
+ * @param target - The object to mutate.
+ * @param p - The path to delete.
+ */
+function deleteAtPath(target: Record<string, unknown>, p: string): void {
+  const segments = parsePath(p);
+  if (segments.length === 0) return;
+  let cursor: unknown = target;
+  for (let i = 0; i < segments.length - 1; i += 1) {
+    if (cursor === null || typeof cursor !== 'object') return;
+    cursor = (cursor as Record<PathSegment, unknown>)[segments[i]];
+  }
+  if (cursor !== null && typeof cursor === 'object') {
+    delete (cursor as Record<PathSegment, unknown>)[segments[segments.length - 1]];
+  }
+}
+
+/**
+ * Stable equality for decoded YAML values. Used only to decide whether dual legacy/current keys are
+ * value-identical and therefore safe to normalize silently.
+ *
+ * @param a - First value.
+ * @param b - Second value.
+ * @returns True when the values are structurally equal.
+ */
+function valuesEqual(a: unknown, b: unknown): boolean {
+  return JSON.stringify(a) === JSON.stringify(b);
+}
+
+/**
+ * Encode an arbitrary decoded YAML scalar for use inside an internal repair path.
+ *
+ * @param value - The value to encode.
+ * @returns A path-safe token.
+ */
+function encodeRepairToken(value: unknown): string {
+  return encodeURIComponent(JSON.stringify(value));
+}
+
+/**
+ * Decode a token produced by {@link encodeRepairToken}.
+ *
+ * @param token - The encoded token.
+ * @returns The decoded value.
+ */
+function decodeRepairToken(token: string): unknown {
+  return JSON.parse(decodeURIComponent(token));
+}
+
+/**
+ * Whether two catalog/reference values match exactly, without string laundering numeric ids.
+ *
+ * @param a - First value.
+ * @param b - Second value.
+ * @returns True when the values are the same reference key.
+ */
+function sameRefValue(a: unknown, b: unknown): boolean {
+  return Object.is(a, b);
+}
+
 /** A virus-injection array item carrying the two volume spellings. */
 interface VolumeShimItem {
   volume_in_uL?: unknown;
@@ -283,6 +385,241 @@ function applySpaceKeyAliases(
   }
 
   return benign;
+}
+
+/**
+ * Add a non-empty decoded YAML camera id to a mutable list.
+ *
+ * @param refs - The list to append to.
+ * @param value - The candidate camera id.
+ */
+function pushCameraRef(refs: unknown[], value: unknown): void {
+  if (value === undefined || value === null || value === '') return;
+  if (!refs.some((existing) => sameRefValue(existing, value))) refs.push(value);
+}
+
+/**
+ * Camera ids a flat YAML day will reference after decompose/import.
+ *
+ * @param model - The normalized flat model.
+ * @returns Referenced camera ids in first-seen order.
+ */
+function collectFlatCameraRefs(model: ValidationModel): unknown[] {
+  const refs: unknown[] = [];
+
+  if (Array.isArray(model.cameras)) {
+    model.cameras.forEach((camera) => pushCameraRef(refs, camera?.id));
+  }
+  if (Array.isArray(model.tasks)) {
+    model.tasks.forEach((task) => {
+      if (Array.isArray(task?.camera_id)) {
+        task.camera_id.forEach((cameraId: unknown) => pushCameraRef(refs, cameraId));
+      }
+    });
+  }
+  if (Array.isArray(model.associated_video_files)) {
+    model.associated_video_files.forEach((video) => pushCameraRef(refs, video?.camera_id));
+  }
+  if (Array.isArray(model.fs_gui_yamls)) {
+    model.fs_gui_yamls.forEach((protocol) => pushCameraRef(refs, protocol?.camera_id));
+  }
+
+  return refs;
+}
+
+/**
+ * Replace every occurrence of a camera id in the decoded flat model.
+ *
+ * @param model - The mutable normalized model.
+ * @param missingId - The imported camera id being mapped.
+ * @param mappedId - The existing animal camera id to use instead.
+ */
+function mapCameraReference(
+  model: Record<string, unknown>,
+  missingId: unknown,
+  mappedId: unknown
+): void {
+  const replace = (value: unknown): unknown => (sameRefValue(value, missingId) ? mappedId : value);
+
+  if (Array.isArray(model.cameras)) {
+    model.cameras.forEach((camera) => {
+      if (camera && typeof camera === 'object' && sameRefValue((camera as { id?: unknown }).id, missingId)) {
+        (camera as { id?: unknown }).id = mappedId;
+      }
+    });
+  }
+  if (Array.isArray(model.tasks)) {
+    model.tasks.forEach((task) => {
+      if (task && typeof task === 'object' && Array.isArray((task as { camera_id?: unknown }).camera_id)) {
+        (task as { camera_id: unknown[] }).camera_id = (task as { camera_id: unknown[] }).camera_id.map(replace);
+      }
+    });
+  }
+  if (Array.isArray(model.associated_video_files)) {
+    model.associated_video_files.forEach((video) => {
+      if (video && typeof video === 'object') {
+        const row = video as { camera_id?: unknown };
+        row.camera_id = replace(row.camera_id);
+      }
+    });
+  }
+  if (Array.isArray(model.fs_gui_yamls)) {
+    model.fs_gui_yamls.forEach((protocol) => {
+      if (protocol && typeof protocol === 'object') {
+        const row = protocol as { camera_id?: unknown };
+        row.camera_id = replace(row.camera_id);
+      }
+    });
+  }
+}
+
+/**
+ * Replace the imported recording-system name in the flat model.
+ *
+ * @param model - The mutable normalized model.
+ * @param missingName - The imported recording-system name being mapped.
+ * @param mappedName - The existing animal recording-system name to use instead.
+ */
+function mapDataAcqDeviceReference(
+  model: Record<string, unknown>,
+  missingName: unknown,
+  mappedName: unknown
+): void {
+  if (!Array.isArray(model.data_acq_device)) return;
+  model.data_acq_device.forEach((device) => {
+    if (device && typeof device === 'object') {
+      const row = device as { name?: unknown };
+      if (sameRefValue(row.name, missingName)) row.name = mappedName;
+    }
+  });
+}
+
+/**
+ * Human-readable display for a camera reference.
+ *
+ * @param camera - The source camera entry.
+ * @param id - The camera id.
+ * @returns A compact label.
+ */
+function cameraRefLabel(camera: unknown, id: unknown): string {
+  const name = camera && typeof camera === 'object' ? (camera as { camera_name?: unknown }).camera_name : undefined;
+  return name ? `camera id ${String(id)} (${String(name)})` : `camera id ${String(id)}`;
+}
+
+/**
+ * Human-readable list of valid existing values.
+ *
+ * @param values - Candidate values.
+ * @returns A display string.
+ */
+function validValueList(values: unknown[]): string {
+  return values.length > 0 ? values.map((value) => String(value)).join(', ') : '(none)';
+}
+
+/**
+ * Existing-animal import repair items for catalog refs that would dangle after an `add`.
+ *
+ * @param model - The normalized flat model.
+ * @param decision - The import-repair routing decision.
+ * @param workspace - The current workspace.
+ * @returns Additional repair items.
+ */
+function buildExistingAnimalCatalogItems(
+  model: ValidationModel,
+  decision: ImportDecision,
+  workspace: { animals?: unknown } | null | undefined
+): RepairItem[] {
+  if (decision.kind !== 'existing') return [];
+  const animals = workspace?.animals;
+  if (animals === null || typeof animals !== 'object') return [];
+  const existingAnimal = (animals as Record<string, unknown>)[decision.existingAnimalId];
+  if (!existingAnimal || typeof existingAnimal !== 'object') return [];
+
+  const items: RepairItem[] = [];
+  const existingCameras = getAnimalCameras(existingAnimal);
+  const existingCameraIds = existingCameras.map((camera) => camera.id);
+  const existingCameraNames = new Set(
+    existingCameras
+      .map((camera) => camera.camera_name)
+      .filter((name) => name !== undefined && name !== null)
+      .map((name) => String(name))
+  );
+  const sourceCameras = Array.isArray(model.cameras) ? model.cameras : [];
+
+  for (const cameraId of collectFlatCameraRefs(model)) {
+    if (existingCameraIds.some((id) => sameRefValue(id, cameraId))) continue;
+    const sourceCamera = sourceCameras.find((camera) => sameRefValue(camera?.id, cameraId));
+    if (!sourceCamera) continue;
+    const sourceName = sourceCamera.camera_name;
+    const nameConflicts =
+      sourceName !== undefined &&
+      sourceName !== null &&
+      existingCameraNames.has(String(sourceName));
+    const canBring = !nameConflicts;
+    const path = `${EXISTING_CAMERA_REF_PREFIX}${encodeRepairToken(cameraId)}`;
+    const base = cameraRefLabel(sourceCamera, cameraId);
+    items.push({
+      path,
+      label: `Camera ${String(cameraId)}`,
+      code: 'existing_animal_missing_camera',
+      group: 'attention',
+      kind: canBring ? 'choice' : 'input',
+      was: base,
+      suggested: canBring ? BRING_CATALOG_ENTRY : undefined,
+      why: canBring
+        ? `${base} is referenced by the imported day, but animal "${decision.existingAnimalId}" does not have it. Bring that camera into the animal, or map the day to an existing camera id.`
+        : `${base} is referenced by the imported day, but animal "${decision.existingAnimalId}" already has a camera named "${String(sourceName)}". Map the day to an existing camera id instead of importing a conflicting catalog entry.`,
+      inputType: 'number',
+      mapInputLabel: `Map camera ${String(cameraId)} to existing camera id`,
+      action: {
+        kind: 'existing_animal_catalog_ref',
+        catalog: 'cameras',
+        targetAnimalId: decision.existingAnimalId,
+        missingValue: cameraId,
+        sourceEntry: structuredClone(sourceCamera),
+        canBring,
+        validMapValues: existingCameraIds,
+      },
+    });
+  }
+
+  const existingDataAcqDevices = getDataAcqDevices(existingAnimal);
+  const existingDeviceNames = existingDataAcqDevices
+    .map((device) => device.name)
+    .filter((name) => name !== undefined && name !== null);
+  const sourceDevices = Array.isArray(model.data_acq_device) ? model.data_acq_device : [];
+  const importedDevice = sourceDevices[0];
+  const importedName = importedDevice?.name;
+  if (
+    importedName !== undefined &&
+    importedName !== null &&
+    !existingDeviceNames.some((name) => sameRefValue(name, importedName))
+  ) {
+    const path = `${EXISTING_DATA_ACQ_REF_PREFIX}${encodeRepairToken(importedName)}`;
+    items.push({
+      path,
+      label: 'Recording system',
+      code: 'existing_animal_missing_data_acq_device',
+      group: 'attention',
+      kind: importedDevice ? 'choice' : 'input',
+      was: String(importedName),
+      suggested: importedDevice ? BRING_CATALOG_ENTRY : undefined,
+      why: `Recording system "${String(importedName)}" is referenced by the imported day, but animal "${decision.existingAnimalId}" does not have it. Bring that recording-system entry into the animal, or map the day to an existing recording-system name.`,
+      inputType: 'text',
+      mapInputLabel: 'Map to existing recording-system name',
+      action: {
+        kind: 'existing_animal_catalog_ref',
+        catalog: 'data_acq_device',
+        targetAnimalId: decision.existingAnimalId,
+        missingValue: importedName,
+        sourceEntry: importedDevice ? structuredClone(importedDevice) : undefined,
+        canBring: !!importedDevice,
+        validMapValues: existingDeviceNames,
+      },
+    });
+  }
+
+  return items;
 }
 
 /**
@@ -436,10 +773,29 @@ function buildBenignAndShim(model: ValidationModel): {
   for (const key of ['associated_files', 'associated_video_files'] as const) {
     const list = (model as Record<string, unknown>)[key];
     if (!Array.isArray(list)) continue;
-    const hasSingular = list.some(
-      (item) => item && typeof item === 'object' && 'task_epoch' in (item as object)
-    );
-    if (hasSingular) {
+    let hasLosslessSingular = false;
+    list.forEach((item, i) => {
+      if (!item || typeof item !== 'object' || !('task_epoch' in (item as object))) return;
+      const obj = item as Record<string, unknown>;
+      if ('task_epochs' in obj && !valuesEqual(obj.task_epoch, obj.task_epochs)) {
+        shimItems.push({
+          path: `${key}[${i}].task_epochs`,
+          label: 'Task epoch',
+          code: 'task_epoch_conflict',
+          group: 'attention',
+          kind: 'suggestion',
+          was: obj.task_epoch,
+          suggested: obj.task_epochs,
+          why:
+            '`task_epoch` and `task_epochs` disagree. The app reads `task_epochs`; ' +
+            'accept that value to reconcile the legacy key before import, or fix the file.',
+          inputType: 'number',
+        });
+      } else {
+        hasLosslessSingular = true;
+      }
+    });
+    if (hasLosslessSingular) {
       benign.push({
         path: key,
         label: 'task_epoch → task_epochs',
@@ -500,6 +856,7 @@ function applyBenignNormalizations(model: Record<string, unknown>): void {
     for (const item of list) {
       if (item && typeof item === 'object' && 'task_epoch' in (item as object)) {
         const obj = item as Record<string, unknown>;
+        if ('task_epochs' in obj && !valuesEqual(obj.task_epoch, obj.task_epochs)) continue;
         if (!('task_epochs' in obj)) obj.task_epochs = obj.task_epoch;
         delete obj.task_epoch;
       }
@@ -553,15 +910,87 @@ export function buildImportRepairPlan(
       ? { kind: 'existing', subjectId, existingAnimalId }
       : { kind: 'new', subjectId };
   }
+  const existingAnimalCatalogItems = buildExistingAnimalCatalogItems(
+    normalized as ValidationModel,
+    decision,
+    workspace
+  );
+  const allItems = [...items, ...shimItems, ...existingAnimalCatalogItems];
 
   return {
     sourceName,
-    items: [...items, ...shimItems],
+    items: allItems,
     blockers,
     benign,
     decision,
-    hasErrors: items.length > 0 || blockers.length > 0,
+    hasErrors: allItems.length > 0 || blockers.length > 0,
   };
+}
+
+/**
+ * Validate custom existing-animal catalog repair rows after the user resolves them.
+ *
+ * @param plan - The import-repair plan.
+ * @param resolutions - Accepted/edited values keyed by repair-item path.
+ * @returns A blocking reason, or null when the custom catalog rows are resolved.
+ */
+export function existingAnimalCatalogResolutionBlocker(
+  plan: ImportRepairPlan,
+  resolutions: Record<string, unknown>
+): string | null {
+  for (const item of plan.items) {
+    const action = item.action;
+    if (action?.kind !== 'existing_animal_catalog_ref') continue;
+    const value = resolutions[item.path];
+    if (value === undefined || value === null || value === '') {
+      return `Resolve ${item.label} before importing.`;
+    }
+    if (value === item.suggested) {
+      if (action.canBring) continue;
+      return `Map ${item.label} to an existing value before importing.`;
+    }
+    if (!action.validMapValues.some((candidate) => sameRefValue(candidate, value))) {
+      const noun = action.catalog === 'cameras' ? 'camera id' : 'recording-system name';
+      return `Map ${item.label} to an existing ${noun}: ${validValueList(action.validMapValues)}.`;
+    }
+  }
+  return null;
+}
+
+/**
+ * Convert accepted "bring catalog entry" repair rows into executor catalog additions.
+ *
+ * @param plan - The import-repair plan.
+ * @param resolutions - Accepted/edited values keyed by repair-item path.
+ * @returns Catalog additions keyed by existing animal id.
+ */
+export function collectExistingAnimalCatalogAdditions(
+  plan: ImportRepairPlan,
+  resolutions: Record<string, unknown>
+): Record<string, ExistingAnimalCatalogAdditions> {
+  const additions: Record<string, ExistingAnimalCatalogAdditions> = {};
+  for (const item of plan.items) {
+    const action = item.action;
+    if (
+      action?.kind !== 'existing_animal_catalog_ref' ||
+      !action.canBring ||
+      resolutions[item.path] !== item.suggested ||
+      action.sourceEntry === undefined
+    ) {
+      continue;
+    }
+    const target = additions[action.targetAnimalId] ?? {};
+    if (action.catalog === 'cameras') {
+      target.cameras = [...(target.cameras ?? []), structuredClone(action.sourceEntry)];
+    } else {
+      target.data_acq_device = [
+        ...(target.data_acq_device ?? []),
+        structuredClone(action.sourceEntry),
+      ];
+    }
+    additions[action.targetAnimalId] = target;
+  }
+  return additions;
 }
 
 /**
@@ -586,9 +1015,31 @@ export function applyImportRepairs(
   // Accepted/edited resolutions, applied at their paths. A reconciled volume sets BOTH spellings
   // to the chosen value (keeping the shim key, never dropping it).
   for (const [path, value] of Object.entries(resolutions)) {
+    if (path.startsWith(EXISTING_CAMERA_REF_PREFIX)) {
+      if (value !== BRING_CATALOG_ENTRY) {
+        mapCameraReference(
+          model,
+          decodeRepairToken(path.slice(EXISTING_CAMERA_REF_PREFIX.length)),
+          value
+        );
+      }
+      continue;
+    }
+    if (path.startsWith(EXISTING_DATA_ACQ_REF_PREFIX)) {
+      if (value !== BRING_CATALOG_ENTRY) {
+        mapDataAcqDeviceReference(
+          model,
+          decodeRepairToken(path.slice(EXISTING_DATA_ACQ_REF_PREFIX.length)),
+          value
+        );
+      }
+      continue;
+    }
     setAtPath(model, path, value);
     const volMatch = path.match(/^(virus_injection\[\d+\])\.volume_in_ul$/);
     if (volMatch) setAtPath(model, `${volMatch[1]}.volume_in_uL`, value);
+    const taskEpochMatch = path.match(/^(associated_(?:video_)?files\[\d+\])\.task_epochs$/);
+    if (taskEpochMatch) deleteAtPath(model, `${taskEpochMatch[1]}.task_epoch`);
   }
 
   return model;

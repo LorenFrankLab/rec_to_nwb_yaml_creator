@@ -13,7 +13,12 @@ import path from 'path';
 import { decodeYaml } from '../../io/yaml';
 import { validate } from '../../validation';
 import { isValidSpecies } from '../../validation/dandiSubject';
-import { buildImportRepairPlan, applyImportRepairs } from '../importRepair';
+import {
+  buildImportRepairPlan,
+  applyImportRepairs,
+  collectExistingAnimalCatalogAdditions,
+  existingAnimalCatalogResolutionBlocker,
+} from '../importRepair';
 import type { RepairItem } from '../importRepair';
 
 const fixtureDir = path.join(__dirname, '../../__tests__/fixtures/import');
@@ -24,6 +29,18 @@ const fixtureDir = path.join(__dirname, '../../__tests__/fixtures/import');
  */
 function loadNonconforming(): Record<string, unknown> {
   const text = fs.readFileSync(path.join(fixtureDir, 'nonconforming-remy.yml'), 'utf8');
+  return decodeYaml(text) as Record<string, unknown>;
+}
+
+/**
+ * Decode a clean app export fixture into a flat model.
+ * @returns The decoded flat metadata object.
+ */
+function loadCleanExport(): Record<string, unknown> {
+  const text = fs.readFileSync(
+    path.join(__dirname, '../../__tests__/fixtures/golden/workspace-export.realistic.yml'),
+    'utf8'
+  );
   return decodeYaml(text) as Record<string, unknown>;
 }
 
@@ -222,6 +239,209 @@ describe('benign normalizations — auto-applied and listed, never silent', () =
     };
     expect(repaired.associated_video_files[0]).toHaveProperty('task_epochs', 2);
     expect(repaired.associated_video_files[0]).not.toHaveProperty('task_epoch');
+  });
+
+  it('treats equal task_epoch / task_epochs values as benign', () => {
+    const model = {
+      associated_files: [{ name: 'statescript', task_epoch: 2, task_epochs: 2 }],
+    };
+    const plan = buildImportRepairPlan(model, 'f.yml', { animals: {} });
+
+    expect(itemAt(plan.items, 'associated_files[0].task_epochs')).toBeUndefined();
+    expect(plan.benign.some((b) => b.detail.includes('task_epoch'))).toBe(true);
+
+    const repaired = applyImportRepairs(model, {}) as {
+      associated_files: Array<Record<string, unknown>>;
+    };
+    expect(repaired.associated_files[0]).toEqual({ name: 'statescript', task_epochs: 2 });
+  });
+
+  it('surfaces different task_epoch / task_epochs values as a reconcile item, not benign', () => {
+    const model = {
+      associated_files: [{ name: 'statescript', task_epoch: 2, task_epochs: 3 }],
+    };
+    const plan = buildImportRepairPlan(model, 'f.yml', { animals: {} });
+    const item = itemAt(plan.items, 'associated_files[0].task_epochs');
+
+    expect(item).toBeDefined();
+    expect(item!.code).toBe('task_epoch_conflict');
+    expect(item!.was).toBe(2);
+    expect(item!.suggested).toBe(3);
+    expect(plan.benign.some((b) => b.detail.includes('task_epoch'))).toBe(false);
+
+    const unresolved = applyImportRepairs(model, {}) as {
+      associated_files: Array<Record<string, unknown>>;
+    };
+    expect(unresolved.associated_files[0]).toEqual({
+      name: 'statescript',
+      task_epoch: 2,
+      task_epochs: 3,
+    });
+
+    const reconciled = applyImportRepairs(model, {
+      'associated_files[0].task_epochs': 3,
+    }) as { associated_files: Array<Record<string, unknown>> };
+    expect(reconciled.associated_files[0]).toEqual({ name: 'statescript', task_epochs: 3 });
+  });
+});
+
+describe('existing-animal add catalog refs — surface and resolve before import', () => {
+  it('surfaces missing imported camera and recording-system refs as choice rows', () => {
+    const model = loadCleanExport();
+    model.cameras = [
+      {
+        id: 3,
+        camera_name: 'arena_side',
+        meters_per_pixel: 0.001,
+        manufacturer: 'Allied',
+        model: 'Mako',
+        lens: '8mm',
+      },
+    ];
+    model.data_acq_device = [
+      { name: 'ImportedRig', system: 'MCU', amplifier: 'Intan', adc_circuit: 'Intan' },
+    ];
+    const workspace = {
+      animals: {
+        remy: {
+          id: 'remy',
+          subject: { subject_id: 'remy' },
+          cameras: [{ id: 0, camera_name: 'existing_cam' }],
+          devices: {
+            data_acq_device: [
+              { name: 'ExistingRig', system: 'MCU', amplifier: 'Intan', adc_circuit: 'Intan' },
+            ],
+          },
+        },
+      },
+    };
+
+    const plan = buildImportRepairPlan(model, '06222023_remy_metadata.yml', workspace);
+    const camera = plan.items.find((item) => item.code === 'existing_animal_missing_camera');
+    const device = plan.items.find(
+      (item) => item.code === 'existing_animal_missing_data_acq_device'
+    );
+
+    expect(camera).toMatchObject({
+      kind: 'choice',
+      suggested: 'Bring referenced catalog entry',
+    });
+    expect(device).toMatchObject({
+      kind: 'choice',
+      suggested: 'Bring referenced catalog entry',
+    });
+    expect(existingAnimalCatalogResolutionBlocker(plan, {})).toMatch(/Resolve Camera 3/);
+
+    const additions = collectExistingAnimalCatalogAdditions(plan, {
+      [camera!.path]: camera!.suggested,
+      [device!.path]: device!.suggested,
+    });
+    expect(additions.remy.cameras).toEqual([expect.objectContaining({ id: 3 })]);
+    expect(additions.remy.data_acq_device).toEqual([
+      expect.objectContaining({ name: 'ImportedRig' }),
+    ]);
+    expect(
+      existingAnimalCatalogResolutionBlocker(plan, {
+        [camera!.path]: camera!.suggested,
+        [device!.path]: device!.suggested,
+      })
+    ).toBeNull();
+  });
+
+  it('forces map/fix when a missing camera id would collide by camera name', () => {
+    const model = loadCleanExport();
+    model.cameras = [
+      {
+        id: 3,
+        camera_name: 'existing_cam',
+        meters_per_pixel: 0.001,
+        manufacturer: 'Allied',
+        model: 'Mako',
+        lens: '8mm',
+      },
+    ];
+    model.tasks = [
+      {
+        task_name: 'Run',
+        task_description: 'run',
+        task_environment: 'maze',
+        camera_id: [3],
+        task_epochs: [1],
+      },
+    ];
+    model.associated_video_files = [{ name: 'run_video', camera_id: 3, task_epochs: 1 }];
+    const workspace = {
+      animals: {
+        remy: {
+          id: 'remy',
+          subject: { subject_id: 'remy' },
+          cameras: [{ id: 0, camera_name: 'existing_cam' }],
+          devices: { data_acq_device: model.data_acq_device },
+        },
+      },
+    };
+
+    const plan = buildImportRepairPlan(model, '06222023_remy_metadata.yml', workspace);
+    const camera = plan.items.find((item) => item.code === 'existing_animal_missing_camera');
+    expect(camera).toMatchObject({ kind: 'input', suggested: undefined });
+    expect(existingAnimalCatalogResolutionBlocker(plan, { [camera!.path]: 99 })).toMatch(
+      /existing camera id: 0/
+    );
+    expect(existingAnimalCatalogResolutionBlocker(plan, { [camera!.path]: 0 })).toBeNull();
+
+    const repaired = applyImportRepairs(model, { [camera!.path]: 0 }) as {
+      cameras: Array<Record<string, unknown>>;
+      tasks: Array<Record<string, unknown>>;
+      associated_video_files: Array<Record<string, unknown>>;
+    };
+    expect(repaired.cameras[0].id).toBe(0);
+    expect(repaired.tasks[0].camera_id).toEqual([0]);
+    expect(repaired.associated_video_files[0].camera_id).toBe(0);
+    expect(collectExistingAnimalCatalogAdditions(plan, { [camera!.path]: 0 })).toEqual({});
+  });
+
+  it('maps a missing recording-system ref to an existing recording-system name', () => {
+    const model = loadCleanExport();
+    model.data_acq_device = [
+      { name: 'ImportedRig', system: 'MCU', amplifier: 'Intan', adc_circuit: 'Intan' },
+    ];
+    const workspace = {
+      animals: {
+        remy: {
+          id: 'remy',
+          subject: { subject_id: 'remy' },
+          cameras: model.cameras,
+          devices: {
+            data_acq_device: [
+              { name: 'ExistingRig', system: 'MCU', amplifier: 'Intan', adc_circuit: 'Intan' },
+            ],
+          },
+        },
+      },
+    };
+
+    const plan = buildImportRepairPlan(model, '06222023_remy_metadata.yml', workspace);
+    const device = plan.items.find(
+      (item) => item.code === 'existing_animal_missing_data_acq_device'
+    );
+    expect(device).toMatchObject({
+      kind: 'choice',
+      suggested: 'Bring referenced catalog entry',
+    });
+    expect(
+      existingAnimalCatalogResolutionBlocker(plan, { [device!.path]: 'BogusRig' })
+    ).toMatch(/existing recording-system name: ExistingRig/);
+    expect(
+      existingAnimalCatalogResolutionBlocker(plan, { [device!.path]: 'ExistingRig' })
+    ).toBeNull();
+
+    const repaired = applyImportRepairs(model, { [device!.path]: 'ExistingRig' }) as {
+      data_acq_device: Array<Record<string, unknown>>;
+    };
+    expect(repaired.data_acq_device[0].name).toBe('ExistingRig');
+    expect(collectExistingAnimalCatalogAdditions(plan, { [device!.path]: 'ExistingRig' })).toEqual(
+      {}
+    );
   });
 });
 

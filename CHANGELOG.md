@@ -204,6 +204,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   animal task type with different details no longer silently replaces the day's task metadata on the
   first epoch edit. The Epochs tab surfaces the difference and requires an explicit choice to keep the
   catalog definition or preserve the day's values as a distinct day-specific task type.
+- **Import-onto-existing animal integrity.** Import & Repair now blocks adding a recording day to an
+  existing animal when that day references cameras or a recording system the animal lacks; the user
+  must explicitly bring each referenced catalog entry into the animal or map the day to an existing
+  entry first. Legacy `task_epoch`/`task_epochs` rows with conflicting values are now surfaced as a
+  reconcile item instead of being labeled benign and silently dropping the singular value.
 
 ### Removed
 

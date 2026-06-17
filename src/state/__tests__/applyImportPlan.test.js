@@ -43,6 +43,48 @@ function makeFile({ subjectId = 'remy', date = '2023-06-22', mutateConfig } = {}
   return toDecodedFile(animal, day, `${month}${dd}${year}_${subjectId}_metadata.yml`);
 }
 
+/**
+ * Build an import file whose day references catalogs absent from a minimal existing animal.
+ *
+ * @returns {{ file: object, camera: object, device: object }} The decoded file and source entries.
+ */
+function makeExistingCatalogGapFile() {
+  const camera = {
+    id: 3,
+    meters_per_pixel: 0.001,
+    manufacturer: 'Allied Vision',
+    model: 'Mako G-158',
+    lens: 'Fujinon HF16HA-1B',
+    camera_name: 'arena_side',
+  };
+  const device = {
+    name: 'ImportedRig',
+    system: 'MCU',
+    amplifier: 'Intan',
+    adc_circuit: 'Intan',
+  };
+  const file = makeFile({
+    subjectId: 'remy',
+    date: '2023-06-22',
+    mutateConfig: (animal, day) => {
+      animal.cameras = [camera];
+      animal.devices.data_acq_device = [device];
+      day.tasks = [
+        {
+          task_name: 'run',
+          task_description: 'run',
+          task_environment: 'maze',
+          camera_id: [3],
+          task_epochs: [1],
+        },
+      ];
+      day.associated_video_files = [{ name: 'run_video', camera_id: 3, task_epochs: 1 }];
+      day.associated_files = [];
+    },
+  });
+  return { file, camera, device };
+}
+
 describe('applyImportPlan — fresh import', () => {
   it('creates a new animal with its days and config versions', () => {
     const files = [
@@ -115,13 +157,20 @@ describe('applyImportPlan — conflict resolutions', () => {
 
   it("adds days to the existing animal when resolved 'add' (does not recreate)", () => {
     const { result } = renderHook(() => useStore());
+    const file = makeFile({ subjectId: 'remy', date: '2023-06-22' });
     act(() => {
-      result.current.actions.createAnimal('remy', { subject_id: 'remy' });
+      result.current.actions.createAnimal('remy', { subject_id: 'remy' }, {
+        cameras: file.flatModel.cameras,
+        devices: {
+          data_acq_device: file.flatModel.data_acq_device,
+          device: { name: ['Trodes'] },
+          electrode_groups: [],
+          ntrode_electrode_group_channel_map: [],
+        },
+      });
     });
 
-    const plan = planImport([makeFile({ subjectId: 'remy', date: '2023-06-22' })], {
-      animals: { remy: { id: 'remy', subject: { subject_id: 'remy' } } },
-    });
+    const plan = planImport([file], result.current.model.workspace);
 
     let summary;
     act(() => {
@@ -137,6 +186,88 @@ describe('applyImportPlan — conflict resolutions', () => {
     // Animal still exists (not recreated) and now has the new day.
     expect(ws.animals.remy.days).toContain('remy-2023-06-22');
     expect(ws.days['remy-2023-06-22']).toBeTruthy();
+  });
+
+  it("blocks conflict→'add' when the imported day would reference missing target catalogs", () => {
+    const { result } = renderHook(() => useStore());
+    act(() => {
+      result.current.actions.createAnimal('remy', { subject_id: 'remy' }, {
+        cameras: [{ id: 0, camera_name: 'existing_cam' }],
+        devices: {
+          data_acq_device: [
+            { name: 'ExistingRig', system: 'MCU', amplifier: 'Intan', adc_circuit: 'Intan' },
+          ],
+          device: { name: ['Trodes'] },
+          electrode_groups: [],
+          ntrode_electrode_group_channel_map: [],
+        },
+      });
+    });
+
+    const { file } = makeExistingCatalogGapFile();
+    const plan = planImport([file], result.current.model.workspace);
+
+    let summary;
+    act(() => {
+      summary = applyImportPlan(plan, result.current.actions, {
+        workspace: result.current.model.workspace,
+        resolutions: { remy: 'add' },
+      });
+    });
+
+    expect(summary.createdDays).toEqual([]);
+    expect(summary.failed).toHaveLength(1);
+    expect(summary.failed[0].reason).toMatch(/camera id "3"/);
+    expect(result.current.model.workspace.days['remy-2023-06-22']).toBeUndefined();
+  });
+
+  it("merges only selected catalog entries before conflict→'add'", () => {
+    const { result } = renderHook(() => useStore());
+    act(() => {
+      result.current.actions.createAnimal('remy', { subject_id: 'remy' }, {
+        cameras: [{ id: 0, camera_name: 'existing_cam' }],
+        devices: {
+          data_acq_device: [
+            { name: 'ExistingRig', system: 'MCU', amplifier: 'Intan', adc_circuit: 'Intan' },
+          ],
+          device: { name: ['Trodes'] },
+          electrode_groups: [],
+          ntrode_electrode_group_channel_map: [],
+        },
+      });
+    });
+
+    const { file, camera, device } = makeExistingCatalogGapFile();
+    const plan = planImport([file], result.current.model.workspace);
+
+    let summary;
+    act(() => {
+      summary = applyImportPlan(plan, result.current.actions, {
+        workspace: result.current.model.workspace,
+        resolutions: { remy: 'add' },
+        catalogAdditions: {
+          remy: {
+            cameras: [camera],
+            data_acq_device: [device],
+          },
+        },
+      });
+    });
+
+    expect(summary.failed).toEqual([]);
+    expect(summary.createdDays).toEqual(['remy-2023-06-22']);
+    const ws = result.current.model.workspace;
+    expect(ws.animals.remy.cameras.map((c) => c.id)).toEqual([0, 3]);
+    expect(ws.animals.remy.devices.data_acq_device.map((d) => d.name)).toEqual([
+      'ExistingRig',
+      'ImportedRig',
+    ]);
+    expect(mergeDayMetadata(ws.animals.remy, ws.days['remy-2023-06-22']).cameras).toEqual([
+      expect.objectContaining({ id: 3, camera_name: 'arena_side' }),
+    ]);
+    expect(mergeDayMetadata(ws.animals.remy, ws.days['remy-2023-06-22']).data_acq_device).toEqual([
+      expect.objectContaining({ name: 'ImportedRig' }),
+    ]);
   });
 
   it("replaces a conflicting animal when resolved 'replace' (deletes then recreates)", () => {
@@ -226,15 +357,24 @@ describe('applyImportPlan — resilience (real store)', () => {
     // would make `createDay` throw INSIDE its setWorkspace reducer (escaping the synchronous
     // try/catch and crashing the render) if it were issued. Pre-flight must catch it first.
     const { result } = renderHook(() => useStore());
+    const remyFile = makeFile({ subjectId: 'remy', date: '2023-06-22' });
     act(() => {
-      result.current.actions.createAnimal('remy', { subject_id: 'remy' });
+      result.current.actions.createAnimal('remy', { subject_id: 'remy' }, {
+        cameras: remyFile.flatModel.cameras,
+        devices: {
+          data_acq_device: remyFile.flatModel.data_acq_device,
+          device: { name: ['Trodes'] },
+          electrode_groups: [],
+          ntrode_electrode_group_channel_map: [],
+        },
+      });
       result.current.actions.createDay('remy', '2023-06-22', { session_id: 'seeded' });
     });
 
     // Plan: the colliding 'remy' day AND a second, clean animal ('totoro').
     const plan = planImport(
       [
-        makeFile({ subjectId: 'remy', date: '2023-06-22' }),
+        remyFile,
         makeFile({ subjectId: 'totoro', date: '2024-01-15' }),
       ],
       result.current.model.workspace
