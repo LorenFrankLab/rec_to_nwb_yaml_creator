@@ -15,7 +15,7 @@
  *  3. the per-animal validation summary's day rows, status chips, and the repair action ("Open
  *     editor") are visible and not clipped at both widths, and the repair action is KEYBOARD
  *     reachable (tab-focusable + Enter-activatable) and navigates to the owning Day Editor;
- *  4. the valid day's Export step shows the preflight summary and a Download control that are
+ *  4. the valid day's export-preview shows the YAML preview and a Download control that are
  *     visible, not clipped, and keyboard reachable (focusable + Enter-activatable) at both widths.
  *
  * This is BEHAVIORAL accessibility smoke (bounding-box-in-viewport, focus containment, keyboard
@@ -257,7 +257,7 @@ test.describe('Responsive + a11y smoke — validation summary reachable at both 
 
 test.describe('Responsive + a11y smoke — Export reachable at both viewports', () => {
   for (const viewport of VIEWPORTS) {
-    test(`valid day's Export step: preflight + Download are in-viewport and keyboard reachable (${viewport.name})`, async ({
+    test(`valid day's export-preview: YAML preview + Download are in-viewport and keyboard reachable (${viewport.name})`, async ({
       page,
     }) => {
       await page.setViewportSize({ width: viewport.width, height: viewport.height });
@@ -268,20 +268,20 @@ test.describe('Responsive + a11y smoke — Export reachable at both viewports', 
         page.getByRole('heading', { level: 1, name: `Day Editor: ${ANIMAL_ID} - 2023-06-22` }),
       ).toBeVisible();
 
-      // Reach the Export section (a freely-navigable Day Editor tab).
+      // Reach the export-preview surface (a freely-navigable Day Editor header action).
       await page.getByRole('button', { name: 'Export', exact: true }).click();
-      await expect(page.getByRole('heading', { level: 2, name: 'Export YAML' })).toBeVisible();
+      await expect(page.getByRole('heading', { level: 2, name: 'Export — 2023-06-22' })).toBeVisible();
 
-      // --- The preflight summary (the confidence check before download) is visible + in-viewport. ---
-      const preflight = page.getByRole('region', { name: 'Export preflight summary' });
-      await expectWithinViewportHorizontally(preflight, viewport, 'Export preflight summary');
+      // --- The YAML preview (the read-only confidence check before download) is visible + in-viewport. ---
+      const preview = page.getByLabel('YAML preview');
+      await expectWithinViewportHorizontally(preview, viewport, 'YAML preview');
 
       // --- The Download control: a valid day enables it, it is in-viewport, and it is KEYBOARD
       //     reachable (focusable + Enter-activatable). Activating it produces a download (reachability
       //     proof — byte assertions live in the export spec). ---
-      const download = page.getByRole('button', { name: 'Download YAML' });
+      const download = page.getByRole('button', { name: 'Download' });
       await expect(download).toBeEnabled();
-      await expectWithinViewportHorizontally(download, viewport, 'Download YAML button');
+      await expectWithinViewportHorizontally(download, viewport, 'Download button');
       await download.focus();
       await expect(download).toBeFocused();
       const [downloadEvent] = await Promise.all([

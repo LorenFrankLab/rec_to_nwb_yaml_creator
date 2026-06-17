@@ -79,10 +79,10 @@ test.describe('Workspace export workflows', () => {
 
     // Day → Export → download, in one move (Export is the header action).
     await page.getByRole('button', { name: 'Export', exact: true }).click();
-    await expect(page.getByRole('heading', { level: 2, name: 'Export YAML' })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 2, name: 'Export — 2023-06-22' })).toBeVisible();
 
     const { filename, text } = await captureDownload(page, async () => {
-      await page.getByRole('button', { name: 'Download YAML' }).click();
+      await page.getByRole('button', { name: 'Download' }).click();
     });
 
     expect(filename).toBe(EXPECTED_FILENAME);

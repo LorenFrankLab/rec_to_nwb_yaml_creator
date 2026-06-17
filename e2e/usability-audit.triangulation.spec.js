@@ -60,9 +60,9 @@ async function readPersisted(page) {
  */
 async function captureExportedYaml(page) {
   await page.getByRole('button', { name: 'Export', exact: true }).click();
-  await expect(page.getByRole('heading', { level: 2, name: 'Export YAML' })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 2, name: 'Export — 2023-06-22' })).toBeVisible();
   const { text } = await captureDownload(page, async (p) => {
-    await p.getByRole('button', { name: 'Download YAML' }).click();
+    await p.getByRole('button', { name: 'Download' }).click();
   });
   return { text, doc: YAML.parse(text) };
 }
@@ -144,13 +144,8 @@ test.describe('Three-way agreement: UI ⇄ localStorage ⇄ exported YAML', () =
       { name: 'SpikeGadgets', system: 'SpikeGadgets', amplifier: 'Intan', adc_circuit: 'Intan' },
     ]);
 
-    // PLANE 3 (export) — and the preflight's "Data acquisition" summary line on the Export step.
+    // PLANE 3 (export) — drive the real download from the day and parse the YAML.
     await seedAndOpen(page, buildConfiguredWorkspaceBlob(), `/#/day/${DAY_ID}`);
-    await page.getByRole('button', { name: 'Export', exact: true }).click();
-    await expect(page.getByRole('heading', { level: 2, name: 'Export YAML' })).toBeVisible();
-    const preflight = page.getByRole('region', { name: 'Export preflight summary' });
-    await expect(preflight.getByText('1 device (SpikeGadgets)', { exact: true })).toBeVisible();
-
     const { doc } = await captureExportedYaml(page);
     // AGREEMENT: data_acq_device is a LIST (not a coerced object/string) with the same hardware fields.
     expect(doc.data_acq_device).toEqual([
@@ -158,7 +153,7 @@ test.describe('Three-way agreement: UI ⇄ localStorage ⇄ exported YAML', () =
     ]);
   });
 
-  test('electrode groups + ntrode maps: integer ids and day bad-channels agree across localStorage, preflight, and YAML', async ({
+  test('electrode groups + ntrode maps: integer ids and day bad-channels agree across localStorage and YAML', async ({
     page,
   }) => {
     // The configured remy has 8 tetrode electrode groups and 8 ntrode rows; two rows carry day
@@ -179,16 +174,8 @@ test.describe('Three-way agreement: UI ⇄ localStorage ⇄ exported YAML', () =
       .filter((b) => b.length);
     expect(persistedBad).toEqual([[2], [3]]);
 
-    // PLANE 1/3 (UI preflight + export) — open the day and read the preflight, then export.
+    // PLANE 3 (export) — open the day and drive the real download.
     await seedAndOpen(page, buildConfiguredWorkspaceBlob(), `/#/day/${DAY_ID}`);
-    await page.getByRole('button', { name: 'Export', exact: true }).click();
-    await expect(page.getByRole('heading', { level: 2, name: 'Export YAML' })).toBeVisible();
-    const preflight = page.getByRole('region', { name: 'Export preflight summary' });
-    // PLANE 1 (UI): the preflight states the same group + failed-channel counts the store holds.
-    await expect(
-      preflight.getByText('8 electrode groups, 2 failed channels', { exact: true }),
-    ).toBeVisible();
-
     const { text, doc } = await captureExportedYaml(page);
     // AGREEMENT (export): the YAML carries 8 groups + 8 ntrode rows with INTEGER ids (never quoted).
     expect(doc.electrode_groups.map((g) => g.id)).toEqual([0, 1, 2, 3, 4, 5, 6, 7]);
@@ -238,7 +225,7 @@ test.describe('Three-way agreement: UI ⇄ localStorage ⇄ exported YAML', () =
     expect(doc.experiment_description).toBe('Chronic tetrode recording during spatial navigation');
   });
 
-  test('tasks + videos: day tasks and associated video bindings agree across localStorage, preflight, and YAML', async ({
+  test('tasks + videos: day tasks and associated video bindings agree across localStorage and YAML', async ({
     page,
   }) => {
     await seedWorkspace(page, buildConfiguredWorkspaceBlob());
@@ -248,14 +235,8 @@ test.describe('Three-way agreement: UI ⇄ localStorage ⇄ exported YAML', () =
     expect(day.tasks.map((t) => t.task_name)).toEqual(['sleep', 'w_alternation', 'sleep']);
     expect(day.associated_video_files).toHaveLength(4);
 
-    // PLANE 1 (UI) + PLANE 3 (export).
+    // PLANE 3 (export).
     await seedAndOpen(page, buildConfiguredWorkspaceBlob(), `/#/day/${DAY_ID}`);
-    await page.getByRole('button', { name: 'Export', exact: true }).click();
-    await expect(page.getByRole('heading', { level: 2, name: 'Export YAML' })).toBeVisible();
-    const preflight = page.getByRole('region', { name: 'Export preflight summary' });
-    // PLANE 1 (UI preflight): the same task + video counts the store holds.
-    await expect(preflight.getByText('3 tasks, 4 videos', { exact: true })).toBeVisible();
-
     const { doc } = await captureExportedYaml(page);
     // AGREEMENT: tasks + video bindings survive the merge with the same names and camera bindings.
     expect(doc.tasks.map((t) => t.task_name)).toEqual(['sleep', 'w_alternation', 'sleep']);
@@ -265,7 +246,7 @@ test.describe('Three-way agreement: UI ⇄ localStorage ⇄ exported YAML', () =
     expect(wAlt.camera_id).toEqual([0, 1]);
   });
 
-  test('optogenetics: a non-opto day reads "No optogenetics" in the UI, has no implant in localStorage, and exports empty opto', async ({
+  test('optogenetics: a non-opto day has no implant in localStorage and exports empty opto', async ({
     page,
   }) => {
     await seedWorkspace(page, buildConfiguredWorkspaceBlob());
@@ -275,13 +256,6 @@ test.describe('Three-way agreement: UI ⇄ localStorage ⇄ exported YAML', () =
     expect(animal.optogenetics).toBeUndefined();
 
     await seedAndOpen(page, buildConfiguredWorkspaceBlob(), `/#/day/${DAY_ID}`);
-    await page.getByRole('button', { name: 'Export', exact: true }).click();
-    await expect(page.getByRole('heading', { level: 2, name: 'Export YAML' })).toBeVisible();
-
-    // PLANE 1 (UI) — the preflight reads the honest "No optogenetics" state (not an error, not On).
-    const preflight = page.getByRole('region', { name: 'Export preflight summary' });
-    await expect(preflight.getByText('No optogenetics', { exact: true })).toBeVisible();
-
     const { doc, text } = await captureExportedYaml(page);
     // PLANE 3 (export) — opto sections export EMPTY (the converter sees no opto), and the
     // schema-spelling compatibility duplicate (opto_software) is omitted for a non-opto export.

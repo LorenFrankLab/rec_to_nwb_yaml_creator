@@ -61,7 +61,7 @@ function buildInvalidCameraBlob() {
  * A full reload after the hash-nav forces a fresh document so the store hydrates from the seed.
  *
  * @param {import('@playwright/test').Page} page - The Playwright page.
- * @returns {Promise<void>} Resolves once the Export YAML heading is visible.
+ * @returns {Promise<void>} Resolves once the export-preview heading is visible.
  */
 async function openInvalidDayExportStep(page) {
   await seedAndOpen(page, buildInvalidCameraBlob(), `/#/day/${DAY_ID}`);
@@ -71,7 +71,7 @@ async function openInvalidDayExportStep(page) {
 
   // Reach the Export section (a freely-reachable tab; its DOWNLOAD action self-gates).
   await page.getByRole('button', { name: 'Export', exact: true }).click();
-  await expect(page.getByRole('heading', { level: 2, name: 'Export YAML' })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 2, name: 'Export — 2023-06-22' })).toBeVisible();
 }
 
 test.describe('Fail-closed export gate + repair navigation', () => {
@@ -89,7 +89,7 @@ test.describe('Fail-closed export gate + repair navigation', () => {
     await expect(page.getByRole('alert').filter({ hasText: /block(s)? export/i })).toBeVisible();
 
     // The Download control is GATED — assert the disabled state, not merely a missing button.
-    const download = page.getByRole('button', { name: 'Download YAML' });
+    const download = page.getByRole('button', { name: 'Download' });
     await expect(download).toBeVisible();
     await expect(download).toBeDisabled();
 
@@ -109,7 +109,7 @@ test.describe('Fail-closed export gate + repair navigation', () => {
   }) => {
     await openInvalidDayExportStep(page);
 
-    const download = page.getByRole('button', { name: 'Download YAML' });
+    const download = page.getByRole('button', { name: 'Download' });
     await expect(download).toBeDisabled();
 
     // Backstop: even a forced click (bypassing the disabled affordance) must not produce a
@@ -131,7 +131,7 @@ test.describe('Fail-closed export gate + repair navigation', () => {
     // channels / DIO). Export is no longer in the keyboard cycle (it is a header action), so the
     // keyboard cannot reach — let alone bypass — the export gate.
     await expect(page.getByRole('heading', { level: 2, name: 'Session Metadata' })).toBeVisible();
-    const exportHeading = page.getByRole('heading', { level: 2, name: 'Export YAML' });
+    const exportHeading = page.getByRole('heading', { level: 2, name: 'Export — 2023-06-22' });
     const MAX_NAV_STEPS = 8; // generous bound: even over-cycling never lands on Export
     for (let i = 0; i < MAX_NAV_STEPS; i += 1) {
       await page.keyboard.press('Alt+ArrowRight');
@@ -143,7 +143,7 @@ test.describe('Fail-closed export gate + repair navigation', () => {
 
     // Reaching Export via the header action still shows the BLOCKED state: Download disabled + repair.
     await page.getByRole('button', { name: 'Export', exact: true }).click();
-    const download = page.getByRole('button', { name: 'Download YAML' });
+    const download = page.getByRole('button', { name: 'Download' });
     await expect(download).toBeDisabled();
     await expect(
       page.getByRole('alert').getByRole('button', { name: 'Fix in Animal Setup → Cameras' }),

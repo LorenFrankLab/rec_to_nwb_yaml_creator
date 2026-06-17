@@ -2,7 +2,7 @@
  * E2E: Browser-export of a configured recording day (the real download path).
  *
  * These specs drive the SHIPPED export surfaces — the per-day Day Editor Export step
- * (`#/day/:id` → Export section → "Download YAML") and the per-animal Validation & Export
+ * (`#/day/:id` → Export → the YAML preview + "Download") and the per-animal Validation & Export
  * tab (`#/animal/:id/export` → "Export Valid Only" → batch preflight → "Confirm export (N)")
  * — capture the YAML the browser actually downloads, and assert the high-risk, previously
  * data-corrupting sections are correct in the downloaded TEXT.
@@ -33,7 +33,7 @@ test.describe('Browser export of a configured recording day', () => {
     await resetWorkspace(page);
   });
 
-  test('per-day Export step shows a preflight summary and downloads corrected YAML', async ({
+  test('per-day export shows the YAML preview and downloads corrected YAML', async ({
     page,
   }) => {
     await seedAndOpen(page, buildConfiguredWorkspaceBlob(), `/#/day/${DAY_ID}`);
@@ -41,38 +41,22 @@ test.describe('Browser export of a configured recording day', () => {
       page.getByRole('heading', { level: 1, name: `Day Editor: ${ANIMAL_ID} - 2023-06-22` }),
     ).toBeVisible();
 
-    // Navigate to the Export section (a freely-reachable tab; its DOWNLOAD action self-gates).
+    // Navigate to the export-preview surface (a freely-reachable header action; the DOWNLOAD self-gates).
     await page.getByRole('button', { name: 'Export', exact: true }).click();
-    await expect(page.getByRole('heading', { level: 2, name: 'Export YAML' })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 2, name: 'Export — 2023-06-22' })).toBeVisible();
 
-    // The resolved deterministic filename is shown before download.
-    await expect(page.getByText(EXPECTED_FILENAME)).toBeVisible();
+    // The resolved deterministic filename labels the (enabled) Download action.
+    await expect(page.getByRole('button', { name: 'Download' })).toBeEnabled();
 
-    // ---- Preflight summary: assert the ownership/confidence tiers the UI renders. ----
-    // Each row is a <dt>/<dd> pair. Assert the categories the current preflight actually shows
-    // (the term labels) and their resolved values — animal+day, subject+session, configuration
-    // version, probes/bad-channels, cameras/calibration, data-acq, tasks/videos, opto.
-    const preflight = page.getByRole('region', { name: 'Export preflight summary' });
-    await expect(preflight).toBeVisible();
-    await expect(preflight.getByText('Animal & day', { exact: true })).toBeVisible();
-    await expect(preflight.getByText(`${ANIMAL_ID} — 2023-06-22`, { exact: true })).toBeVisible();
-    await expect(preflight.getByText('Subject & session', { exact: true })).toBeVisible();
-    await expect(preflight.getByText('remy — session remy_20230622', { exact: true })).toBeVisible();
-    await expect(preflight.getByText('Configuration version', { exact: true })).toBeVisible();
-    await expect(preflight.getByText('Version 1 (current)', { exact: true })).toBeVisible();
-    await expect(preflight.getByText('Probes & failed channels', { exact: true })).toBeVisible();
-    await expect(
-      preflight.getByText('8 electrode groups, 2 failed channels', { exact: true }),
-    ).toBeVisible();
-    await expect(preflight.getByText('Cameras / calibration', { exact: true })).toBeVisible();
-    await expect(preflight.getByText('Data acquisition', { exact: true })).toBeVisible();
-    await expect(preflight.getByText('1 device (SpikeGadgets)', { exact: true })).toBeVisible();
-    await expect(preflight.getByText('Tasks & videos', { exact: true })).toBeVisible();
-    await expect(preflight.getByText('Optogenetics', { exact: true })).toBeVisible();
+    // ---- The read-only preview IS the real export bytes (encodeYaml(mergeDayMetadata)). ----
+    const preview = page.getByLabel('YAML preview');
+    await expect(preview).toBeVisible();
+    // Spot-check a corrected high-risk section is present in the preview the user reads before download.
+    await expect(preview).toContainText('species: Rattus norvegicus');
 
     // ---- Capture the real browser download and assert the corrected sections. ----
     const { filename, text } = await captureDownload(page, async () => {
-      await page.getByRole('button', { name: 'Download YAML' }).click();
+      await page.getByRole('button', { name: 'Download' }).click();
     });
 
     expect(filename).toBe(EXPECTED_FILENAME);
@@ -126,10 +110,10 @@ test.describe('Browser export of a configured recording day', () => {
     });
     await seedAndOpen(page, blob, `/#/day/${DAY_ID}`);
     await page.getByRole('button', { name: 'Export', exact: true }).click();
-    await expect(page.getByRole('heading', { level: 2, name: 'Export YAML' })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 2, name: 'Export — 2023-06-22' })).toBeVisible();
 
     const { text } = await captureDownload(page, async () => {
-      await page.getByRole('button', { name: 'Download YAML' }).click();
+      await page.getByRole('button', { name: 'Download' }).click();
     });
 
     // Referenced cameras present; the unreferenced one is NOT emitted (day-used binding).

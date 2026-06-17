@@ -11,7 +11,7 @@
  * These specs drive the SHIPPED surfaces and assert the CURRENT control serving each user job:
  *
  *  1. Opto OFF → a clean no-opto export (empty opto arrays, no `opto_software`/`volume_*`, no opto
- *     validation block) and the honest "No optogenetics" status in the preflight.
+ *     validation block) — Download is enabled for the valid non-opto day.
  *  2. Opto ON but incomplete → the four required sections are revealed/required AND export is BLOCKED
  *     by the all-or-nothing `partial_configuration` rule (Download disabled, blocking alert shown).
  *  3. The day-level FsGUI protocol editor requires camera + epoch references as CONTROLLED choices
@@ -139,17 +139,13 @@ test.describe('Optogenetics export gating and the two-layer opto model', () => {
     ).toBeVisible();
 
     await page.getByRole('button', { name: 'Export', exact: true }).click();
-    await expect(page.getByRole('heading', { level: 2, name: 'Export YAML' })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 2, name: 'Export — 2023-06-22' })).toBeVisible();
 
-    // The export is NOT blocked by opto: the preflight summary renders (the blocked-alert path
-    // would hide it), and the honest opto status reads "No optogenetics" (NONE state — not an error).
-    const preflight = page.getByRole('region', { name: 'Export preflight summary' });
-    await expect(preflight).toBeVisible();
-    await expect(preflight.getByText('Optogenetics', { exact: true })).toBeVisible();
-    await expect(preflight.getByText('No optogenetics', { exact: true })).toBeVisible();
+    // The export is NOT blocked by opto (a non-opto day is valid) — Download is enabled.
+    await expect(page.getByRole('button', { name: 'Download' })).toBeEnabled();
 
     const { filename, text } = await captureDownload(page, async () => {
-      await page.getByRole('button', { name: 'Download YAML' }).click();
+      await page.getByRole('button', { name: 'Download' }).click();
     });
     expect(filename).toBe(EXPECTED_FILENAME);
 
@@ -205,10 +201,10 @@ test.describe('Optogenetics export gating and the two-layer opto model', () => {
     // --- Export is BLOCKED for the day: the partial_configuration rule fires on the merged day. ---
     await seedAndOpen(page, blob, `/#/day/${DAY_ID}`);
     await page.getByRole('button', { name: 'Export', exact: true }).click();
-    await expect(page.getByRole('heading', { level: 2, name: 'Export YAML' })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 2, name: 'Export — 2023-06-22' })).toBeVisible();
 
-    // The Export step's blocking alert is shown (not the preflight) and names the opto all-or-nothing
-    // failure. Scoped by its text so it is not confused with the header readiness bar's alert.
+    // The export-preview's blocking alert names the opto all-or-nothing failure. Scoped by its text so
+    // it is not confused with the header readiness bar's alert.
     const blocked = page.getByRole('alert').filter({ hasText: /Resolve \d+ validation error/ });
     await expect(blocked).toBeVisible();
     await expect(blocked).toContainText(/Resolve \d+ validation error/);
@@ -218,11 +214,8 @@ test.describe('Optogenetics export gating and the two-layer opto model', () => {
     // The converter-gate field checklist is rendered (the present/absent marks) inside the message.
     await expect(blocked.getByText(/optical_fiber ✗/)).toBeVisible();
     await expect(blocked.getByText(/virus_injection ✗/)).toBeVisible();
-    // The preflight summary is NOT shown while blocked, and the incomplete state CANNOT export.
-    await expect(
-      page.getByRole('region', { name: 'Export preflight summary' }),
-    ).toHaveCount(0);
-    await expect(page.getByRole('button', { name: 'Download YAML' })).toBeDisabled();
+    // The incomplete opto state CANNOT export — Download is gated.
+    await expect(page.getByRole('button', { name: 'Download' })).toBeDisabled();
   });
 
   test('per-epoch optogenetics: power/pulse are controlled numeric inputs applied to a SELECTED epoch subset', async ({
@@ -268,14 +261,12 @@ test.describe('Optogenetics export gating and the two-layer opto model', () => {
     ).toBeVisible();
 
     await page.getByRole('button', { name: 'Export', exact: true }).click();
-    await expect(page.getByRole('heading', { level: 2, name: 'Export YAML' })).toBeVisible();
-    // A complete opto session is NOT blocked — the preflight renders and reports stimulation.
-    const preflight = page.getByRole('region', { name: 'Export preflight summary' });
-    await expect(preflight).toBeVisible();
-    await expect(preflight.getByText('Stimulation on epoch 2', { exact: true })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 2, name: 'Export — 2023-06-22' })).toBeVisible();
+    // A complete opto session is NOT blocked — Download is enabled.
+    await expect(page.getByRole('button', { name: 'Download' })).toBeEnabled();
 
     const { filename, text } = await captureDownload(page, async () => {
-      await page.getByRole('button', { name: 'Download YAML' }).click();
+      await page.getByRole('button', { name: 'Download' }).click();
     });
     expect(filename).toBe(EXPECTED_FILENAME);
 
