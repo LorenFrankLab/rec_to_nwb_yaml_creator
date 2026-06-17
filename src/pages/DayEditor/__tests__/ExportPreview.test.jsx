@@ -4,7 +4,8 @@ import userEvent from '@testing-library/user-event';
 import ExportPreview from '../ExportPreview';
 import { encodeYaml, downloadYamlFile } from '../../../io/yaml';
 import { mergeDayMetadata } from '../../../state/workspaceUtils';
-import { restoreFlags } from '../../../featureFlags';
+import * as shadowExport from '../../../domain/shadowExport';
+import { overrideFlags, restoreFlags } from '../../../featureFlags';
 import { buildRealisticWorkspace } from '../../../__tests__/fixtures/workspaceBuilders';
 import { buildDayEditorViewModel } from '../../../viewModels/dayEditorViewModel';
 
@@ -184,6 +185,61 @@ describe('ExportPreview — download & copy', () => {
     await user.click(button);
 
     expect(downloadYamlFile).not.toHaveBeenCalled();
+  });
+});
+
+describe('ExportPreview — encoder-stability (parity) gate', () => {
+  const UNSTABLE = {
+    ok: false,
+    yaml: 'shipped\n',
+    stableYaml: 'other\n',
+    diff: 'First difference at line 1:\n  encode A: "shipped"\n  encode B: "other"',
+  };
+
+  it('blocks Copy on a strict-mode encoder-stability failure (Copy is not a parity bypass)', async () => {
+    const user = userEvent.setup();
+    const writeText = stubClipboard();
+    // strict mode is the default; the day passes the readiness gate, so the ONLY gate left is parity.
+    vi.spyOn(shadowExport, 'checkShadowExport').mockReturnValue(UNSTABLE);
+    const { animal, day } = buildRealisticWorkspace();
+    renderPreview(animal, day);
+
+    await user.click(screen.getByRole('button', { name: /^copy$/i }));
+
+    // Copy did NOT reach the clipboard — the same parity gate Download enforces blocks it too.
+    expect(writeText).not.toHaveBeenCalled();
+    expect(await screen.findByText(/encoder-stability check failed/i)).toBeInTheDocument();
+  });
+
+  it('surfaces a strict-off parity override loudly on Download (never a silent success)', async () => {
+    const user = userEvent.setup();
+    overrideFlags({ shadowExportStrict: false });
+    vi.spyOn(shadowExport, 'checkShadowExport').mockReturnValue(UNSTABLE);
+    const { animal, day } = buildRealisticWorkspace();
+    renderPreview(animal, day, { actions: { updateDay: vi.fn() } });
+
+    await user.click(screen.getByRole('button', { name: /^download$/i }));
+
+    // The bytes DID ship (override), but the mismatch is surfaced loudly — not swallowed into success.
+    expect(downloadYamlFile).toHaveBeenCalledWith('06222023_remy_metadata.yml', 'shipped\n');
+    const notice = await screen.findByText(/encoder-stability/i);
+    expect(notice).toBeInTheDocument();
+    expect(screen.getByText(/strict mode off/i)).toBeInTheDocument();
+  });
+
+  it('copies the parity-checked bytes (same bytes Download ships), not the raw memoized preview', async () => {
+    const user = userEvent.setup();
+    const writeText = stubClipboard();
+    overrideFlags({ shadowExportStrict: false });
+    vi.spyOn(shadowExport, 'checkShadowExport').mockReturnValue(UNSTABLE);
+    const { animal, day } = buildRealisticWorkspace();
+    renderPreview(animal, day);
+
+    await user.click(screen.getByRole('button', { name: /^copy$/i }));
+
+    // Strict off → the override copies the SAME canonical bytes Download would ship, with a loud notice.
+    expect(writeText).toHaveBeenCalledWith('shipped\n');
+    expect(await screen.findByText(/encoder-stability/i)).toBeInTheDocument();
   });
 });
 

@@ -4,6 +4,7 @@ import { mergeDayMetadata } from '../../state/workspaceUtils';
 import { getAnimalDayIds } from '../../state/workspaceSelectors';
 import { exportDayFile } from '../../domain/exportDay';
 import type { ExportDayActions } from '../../domain/exportDay';
+import { checkShadowExport } from '../../domain/shadowExport';
 import { isFeatureEnabled } from '../../featureFlags';
 import { useUndoToast } from '../../components/ui/UndoToast';
 import RepairActions from './RepairActions';
@@ -85,9 +86,15 @@ export default function ExportPreview(props: ExportPreviewProps) {
     const outcome = exportDayFile(animal, day, { actions: actions as unknown as ExportDayActions, strict });
     switch (outcome.kind) {
       case 'exported':
-      case 'overridden':
         setActionError(null);
         showToast(`✓ Downloaded ${fileName}`);
+        break;
+      case 'overridden':
+        // The bytes shipped, but a parity mismatch was overridden (strict mode off). Per the
+        // exportDay contract this must be surfaced LOUDLY, never swallowed into a clean success.
+        setActionError(
+          `Downloaded ${fileName}, but the encoder-stability check mismatched (strict mode off). Review the file before use.`
+        );
         break;
       case 'skipped':
         setActionError('Export blocked: the encoder-stability check failed. Open the day to review.');
@@ -99,16 +106,28 @@ export default function ExportPreview(props: ExportPreviewProps) {
   };
 
   const handleCopy = () => {
-    if (blocked) return; // Copy emits the SAME bytes as Download, so it is gated identically
+    if (blocked) return; // the readiness gate blocks Copy too — Copy emits the SAME YAML as Download
     const clip = navigator.clipboard;
     if (!clip?.writeText) {
       setActionError('Copy is not available in this browser — use Download instead.');
       return;
     }
+    // Copy ships the SAME bytes Download does, so it runs the SAME encoder-stability/parity gate — it
+    // is not a way around it. A strict-mode mismatch blocks the copy; a strict-off mismatch copies the
+    // canonical bytes with a loud override notice (mirroring the download path's `exportDayFile`).
+    const { ok, yaml: bytes } = checkShadowExport(animal, day);
+    if (!ok && strict) {
+      setActionError('Copy blocked: the encoder-stability check failed. Open the day to review.');
+      return;
+    }
     clip
-      .writeText(yaml)
+      .writeText(bytes)
       .then(() => {
-        setActionError(null);
+        setActionError(
+          ok
+            ? null
+            : 'Copied to the clipboard, but the encoder-stability check mismatched (strict mode off). Review the file before use.'
+        );
         showToast('✓ YAML copied');
       })
       .catch(() => setActionError('Could not copy to the clipboard — use Download instead.'));
