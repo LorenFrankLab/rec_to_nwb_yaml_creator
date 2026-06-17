@@ -299,6 +299,36 @@ describe('CreateAnimalWizard — Save draft', () => {
   });
 });
 
+describe('CreateAnimalWizard — adopt handshake (#/home?animal=<id>)', () => {
+  it('continues an existing animal: identity is seeded + locked, the setup is the live record', () => {
+    window.location.hash = '#/home?animal=emmett';
+    renderWizard({
+      emmett: {
+        id: 'emmett',
+        subject: {
+          subject_id: 'emmett',
+          species: 'Rattus norvegicus',
+          sex: 'M',
+          genotype: 'PV-Cre',
+          date_of_birth: '2023-01-01T00:00:00',
+          weight: 450,
+          description: 'PV-Cre rat',
+        },
+        devices: { electrode_groups: [], ntrode_electrode_group_channel_map: [] },
+        days: [],
+        configurationHistory: [{ version: 1, devices: { electrode_groups: [], ntrode_electrode_group_channel_map: [] }, appliedToDays: [] }],
+      },
+    });
+
+    const subjectInput = screen.getByLabelText(/Subject ID/i);
+    expect(subjectInput).toHaveValue('emmett');
+    // The animal already exists, so its store-key subject_id is locked.
+    expect(subjectInput).toHaveAttribute('readonly');
+    // Identity is seeded from the adopted animal.
+    expect(screen.getByLabelText(/Species/i)).toHaveValue('Rattus norvegicus');
+  });
+});
+
 describe('CreateAnimalWizard — alternate start options', () => {
   it('offers import + copy start options that route to the existing entry points', () => {
     renderWizard();

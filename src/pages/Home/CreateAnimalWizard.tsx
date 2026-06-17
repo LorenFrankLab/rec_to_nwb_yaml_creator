@@ -28,7 +28,7 @@ import {
   WIZARD_STEP_KEYS,
 } from '../../viewModels/createAnimalWizardViewModel';
 import type { IdentityDraft, WizardStepKey } from '../../viewModels/createAnimalWizardViewModel';
-import { getAnimalExperimenters, getExperimenterNames } from '../../state/workspaceSelectors';
+import { getAnimalExperimenters, getAnimalSubject, getExperimenterNames } from '../../state/workspaceSelectors';
 import type { Animal, ExperimenterInfo } from '../../state/workspaceTypes';
 import Button from '../../components/ui/Button';
 import ElectrodeGroupsContainer from '../AnimalEditor/wiring/ElectrodeGroupsContainer';
@@ -59,6 +59,45 @@ const INITIAL_IDENTITY: IdentityDraft = {
   weight: '',
   description: '',
 };
+
+/**
+ * Read the `#/home?animal=<id>` adopt handshake: the id of an EXISTING animal the wizard should
+ * continue (e.g. the copy-from-animal flow creates an animal with the copied setup, then routes
+ * here to confirm identity + continue). Returns null when absent or unknown.
+ *
+ * @param existingAnimals - The workspace's animals map.
+ * @returns The adopted animal id, or null.
+ */
+function readAdoptedAnimalId(existingAnimals: Record<string, unknown>): string | null {
+  const query = window.location.hash.split('?')[1];
+  const id = query ? new URLSearchParams(query).get('animal') : null;
+  return id && existingAnimals[id] ? id : null;
+}
+
+/**
+ * Seed an identity draft from an existing animal's subject (for the adopt handshake). A known
+ * species maps to its option; an unknown one falls to "other" + custom; the date is sliced to the
+ * `YYYY-MM-DD` the date input wants (the commit re-derives the ISO datetime). The default
+ * `description`/`weight` `createAnimal` seeds are treated as blank so the user fills real values.
+ *
+ * @param animal - The existing animal record.
+ * @returns The seeded identity draft.
+ */
+function seedIdentityFromAnimal(animal: unknown): IdentityDraft {
+  const subject = getAnimalSubject(animal);
+  const speciesKnown = SPECIES_OPTIONS.some((o) => o.value === subject.species);
+  const species = typeof subject.species === 'string' ? subject.species : '';
+  return {
+    subject_id: subject.subject_id || '',
+    species: speciesKnown ? species : species ? 'other' : INITIAL_IDENTITY.species,
+    speciesCustom: speciesKnown ? '' : species,
+    sex: subject.sex || INITIAL_IDENTITY.sex,
+    genotype: subject.genotype || INITIAL_IDENTITY.genotype,
+    date_of_birth: typeof subject.date_of_birth === 'string' ? subject.date_of_birth.slice(0, 10) : '',
+    weight: subject.weight != null ? String(subject.weight) : '',
+    description: subject.description && subject.description !== 'Subject' ? subject.description : '',
+  };
+}
 
 /**
  * The Team (experimenters) step — a small local-state editor that commits to `updateAnimal` on blur.
@@ -174,10 +213,16 @@ export default function CreateAnimalWizard() {
   const { model, actions } = useStoreContext();
   const existingAnimals = model.workspace.animals || {};
 
-  const [identity, setIdentity] = useState<IdentityDraft>(INITIAL_IDENTITY);
+  // Adopt handshake (`#/home?animal=<id>`): continue an EXISTING animal (e.g. the copy-from-animal
+  // flow creates one with the copied setup, then routes here). Resolved once at mount.
+  const adoptedAnimalId = readAdoptedAnimalId(existingAnimals);
+
+  const [identity, setIdentity] = useState<IdentityDraft>(() =>
+    adoptedAnimalId ? seedIdentityFromAnimal(existingAnimals[adoptedAnimalId]) : INITIAL_IDENTITY
+  );
   const [identityErrors, setIdentityErrors] = useState<Record<string, string>>({});
   const [currentStepKey, setCurrentStepKey] = useState<WizardStepKey>('identity');
-  const [createdAnimalId, setCreatedAnimalId] = useState<string | null>(null);
+  const [createdAnimalId, setCreatedAnimalId] = useState<string | null>(adoptedAnimalId);
   const [behaviorOnly, setBehaviorOnly] = useState(false);
 
   const animal = (createdAnimalId ? existingAnimals[createdAnimalId] : null) as Animal | null;
