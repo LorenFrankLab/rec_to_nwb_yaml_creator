@@ -280,7 +280,8 @@ export function resolveDayConfig(
  * The animal owns a catalog (`animal.devices.data_acq_device`); a day references which one it used by
  * name (`day.data_acq_device_name`). The export carries exactly one device (trodes_to_nwb records one
  * acquisition system per session): the referenced catalog entry (resolved live, so editing that system
- * propagates), or the first catalog entry when the day is unreferenced / the reference is dangling.
+ * propagates), or the first catalog entry when the day is unreferenced. A day that explicitly
+ * names a missing catalog entry fails closed rather than substituting a different rig.
  *
  * @param animal - The animal record (its `devices.data_acq_device` catalog).
  * @param day - The day record (its optional `data_acq_device_name` reference).
@@ -288,10 +289,17 @@ export function resolveDayConfig(
  */
 export function resolveDayDataAcqDevice(animal: Animal, day: Day): unknown[] {
   const catalog = getDataAcqDevices(animal);
-  // Route the day's reference through the guarded selector (string or undefined); the `|| ''`
-  // keeps the falsy/empty handling byte-identical to the prior inline read.
+  // Route the day's reference through the guarded selector (string or undefined). An absent/empty
+  // reference still means "use the animal default"; a non-empty reference must resolve to THAT
+  // catalog entry, symmetric with resolveDayConfig's fail-closed pinned-snapshot behavior.
   const dayName = getDayDataAcqDeviceName(day) || '';
-  const chosen = (dayName && catalog.find((d) => d?.name === dayName)) || catalog[0];
+  const chosen = dayName ? catalog.find((d) => d?.name === dayName) : catalog[0];
+  if (dayName && !chosen) {
+    throw new Error(
+      `Cannot resolve data acquisition device for day "${day?.id}": animal "${animal?.id}" ` +
+        `has no data_acq_device named "${dayName}".`
+    );
+  }
   return chosen ? [reorderKeys(chosen, DATA_ACQ_DEVICE_ORDER)] : [];
 }
 
@@ -417,9 +425,10 @@ export function mergeDayMetadata(animal: Animal, day: Day): Record<string, unkno
     // === Recording System: the ONE catalog system this day used ===
     // The animal owns a CATALOG of recording systems (`animal.devices.data_acq_device`); a day picks
     // ONE it was recorded on, referenced by name (`day.data_acq_device_name`), defaulting to the first
-    // catalog entry when unreferenced. trodes_to_nwb records one acquisition system per session, so the
-    // export carries exactly ONE device — the referenced one (resolved live from the catalog so an
-    // edit to that system propagates), or the first. Byte-identical for a one-system animal with an
+    // catalog entry when unreferenced. A stale explicit reference fails closed before it can export
+    // a different rig. trodes_to_nwb records one acquisition system per session, so the export
+    // carries exactly ONE device — the referenced one (resolved live from the catalog so an
+    // edit to that system propagates), or the first default. Byte-identical for a one-system animal with an
     // unreferenced day (every golden fixture). Read RAW (not the normalized `devices`): byte-safe ONLY
     // because normalizeDevices does not transform data_acq_device items (it structuredClones them).
     data_acq_device: resolveDayDataAcqDevice(animal, day),

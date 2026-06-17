@@ -459,6 +459,27 @@ describe('rulesValidation()', () => {
       }));
     });
 
+    it('treats corrupt non-array opto list fields as absent for the FsGUI opto gate', () => {
+      const model = {
+        cameras: [{ id: 0 }],
+        tasks: [{ task_name: 't', task_epochs: [1] }],
+        behavioral_events: [{ name: 'laser' }],
+        fs_gui_yamls: [{ name: 'p.yaml', epochs: [1], camera_id: 0, dio_output_name: 'laser' }],
+        // These truthy strings used to satisfy the inline `?.length > 0` check even though
+        // the converter-required opto sections are list-backed and invalid here.
+        opto_excitation_source: 'LED',
+        optical_fiber: 'Fiber',
+        virus_injection: 'AAV',
+        optogenetic_stimulation_software: 'fsgui',
+      };
+      const issues = rulesValidation(model);
+
+      expect(issues).toContainEqual(expect.objectContaining({
+        code: 'fs_gui_requires_optogenetics',
+        severity: 'error',
+      }));
+    });
+
     it('errors when fs_gui dio_output_name has no matching behavioral event', () => {
       const model = {
         cameras: [{ id: 0 }],

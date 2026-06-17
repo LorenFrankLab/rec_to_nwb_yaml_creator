@@ -218,13 +218,10 @@ describe('mergeDayMetadata', () => {
       expect(merged.data_acq_device[0].amplifier).toBe('IMEC v2');
     });
 
-    it('falls back to the first catalog entry for a dangling / unset reference', () => {
-      expect(
+    it('throws instead of substituting the default for a dangling explicit reference', () => {
+      expect(() =>
         mergeDayMetadata(catalogAnimal(), createTestDay({ data_acq_device_name: 'deleted system' }))
-          .data_acq_device
-      ).toEqual([
-        { name: 'SpikeGadgets', system: 'SpikeGadgets', amplifier: 'Intan', adc_circuit: 'Intan' },
-      ]);
+      ).toThrow(/data acquisition device.*deleted system/i);
     });
 
     it('emits the device in canonical key order', () => {

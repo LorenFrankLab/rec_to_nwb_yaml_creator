@@ -318,11 +318,9 @@ export function unpinnedConfigurationIssues(
 
 /**
  * Export-blocking issue for a day whose `data_acq_device_name` references a recording system that is
- * no longer in the animal's catalog (renamed, removed, or a stale import). {@link resolveDayDataAcqDevice}
- * would SILENTLY fall back to the first catalog entry — exporting a DIFFERENT acquisition device than
- * the day recorded on (a wrong Spyglass `DataAcquisitionDevice` identity, which is irreversible once in
- * the NWB/Spyglass record). The reference is consumed during the merge, so the merged-model rules can't
- * see it; this catches it at the RAW boundary, mirroring `dangling_camera_ref` / `dangling_electrode_group_ref`.
+ * no longer in the animal's catalog (renamed, removed, or a stale import). The export merge also
+ * fails closed on this stale reference; this raw-boundary issue lets the editor route the repair
+ * before export, mirroring `dangling_camera_ref` / `dangling_electrode_group_ref`.
  *
  * An UNSET reference is the documented "use the animal default (first)" path and is NOT flagged.
  *
@@ -350,9 +348,9 @@ export function danglingDataAcqRefIssue(
       severity: 'error',
       message:
         `This recording day was set to use recording system "${name}", but no recording system with ` +
-        `that name exists for this animal anymore (it was renamed or removed). Without a fix the export ` +
-        `would silently use a different system. Pick an existing recording system for this day in its ` +
-        `setup, or restore "${name}" on the animal's Recording System tab.`,
+        `that name exists for this animal anymore (it was renamed or removed). Pick an existing ` +
+        `recording system for this day in its setup, or restore "${name}" on the animal's ` +
+        `Recording System tab.`,
     },
   ];
 }

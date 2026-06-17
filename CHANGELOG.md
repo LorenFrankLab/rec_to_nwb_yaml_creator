@@ -193,6 +193,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Verified each phase: typecheck, full suite (4787), `vite build`, the production bundle rendering with
     zero console errors served exactly as GitHub Pages does, and e2e (104).
 
+### Fixed
+
+- **Export merge fail-closed for stale recording systems.** A day whose
+  `data_acq_device_name` points at a missing animal recording-system catalog entry now fails export
+  merge visibly instead of silently substituting the first catalog device. FsGUI optogenetics
+  references also use the shared strict opto-presence predicate, so corrupt non-array optogenetics
+  fields no longer count as present in one validation path but absent in another.
+
 ### Removed
 
 - **Retired the multi-file batch import dialog (`ImportYamlDialog`).** The new single-file Import &

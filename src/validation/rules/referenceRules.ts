@@ -11,6 +11,7 @@
 
 import type { ValidationIssue, ValidationModel } from '../issueTypes';
 
+import { optoFieldsPresence } from '../../domain/optoCompleteness';
 import { duplicateTaskEpochs } from '../taskEpochs';
 
 /**
@@ -272,12 +273,7 @@ export function fsGuiReferences(model: ValidationModel): ValidationIssue[] {
     // gate passed. So FsGUI rows REQUIRE a complete optogenetics configuration — otherwise
     // conversion crashes (KeyError on optogenetic_experiment_metadata). This also catches
     // a stale fs_gui block left behind after optogenetics was turned off.
-    const optoComplete =
-      model.opto_excitation_source?.length > 0 &&
-      model.optical_fiber?.length > 0 &&
-      model.virus_injection?.length > 0 &&
-      typeof model.optogenetic_stimulation_software === 'string' &&
-      model.optogenetic_stimulation_software.trim() !== '';
+    const optoComplete = optoFieldsPresence(model).count === 4;
     if (!optoComplete) {
       issues.push({
         path: 'fs_gui_yamls',

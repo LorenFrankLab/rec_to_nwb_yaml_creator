@@ -51,11 +51,12 @@ describe('domain validation module preserves the issue list', () => {
   });
 
   it('a day referencing a non-existent recording system is BLOCKED (dangling_data_acq_ref, day/devices)', () => {
-    // Guards the silent-substitution path: resolveDayDataAcqDevice would fall back to catalog[0] and
-    // export a DIFFERENT acquisition device than the day recorded on. This must be surfaced, not laundered.
+    // Guards the stale-reference path at both boundaries: validation surfaces the dangling day choice,
+    // and the export merge itself fails closed instead of falling through to catalog[0].
     const { animal, day } = buildRealisticWorkspace();
     const dayRef = { ...day, data_acq_device_name: 'Ghost rig (renamed/removed)' };
-    const merged = mergeDayMetadata(animal, dayRef);
+    const merged = mergeDayMetadata(animal, day);
+    expect(() => mergeDayMetadata(animal, dayRef)).toThrow(/data acquisition device/i);
 
     const issues = validateDay(dayRef, merged, animal);
     const issue = issues.find((i) => i.code === 'dangling_data_acq_ref');
