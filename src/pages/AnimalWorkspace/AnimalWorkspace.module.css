@@ -409,58 +409,13 @@
   }
 }
 
-/* Empty States — GLOBAL `.empty-state` (a shared name also defined, scoped, by setup-table CSS). */
+/* Empty States — GLOBAL `.empty-state` (a shared name also defined, scoped, by setup-table CSS).
+   Still used by the per-animal day list's basic empty/corrupt states; the no-animals onboarding
+   card now uses the shared `EmptyState` component (epoch-editor Phase 8). */
 :global(.empty-state) {
   text-align: center;
   padding: 3rem 2rem;
   color: var(--color-grey-600);
-}
-
-.emptyMessage {
-  font-size: 1.1rem;
-  font-weight: 500;
-  margin-bottom: 0.5rem;
-}
-
-/* Now a <button> (opens the inline create panel) — reset the user-agent button chrome. */
-.createAnimalLink {
-  display: inline-block;
-  margin-top: 1rem;
-  padding: 0.75rem 1.5rem;
-  background-color: var(--color-primary);
-  color: var(--color-white);
-  text-decoration: none;
-  border: none;
-  border-radius: 4px;
-  font: inherit;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background-color 0.2s;
-}
-
-.createAnimalLink:hover {
-  background-color: var(--color-primary-hover);
-}
-
-/* Empty-state "Import YAML…" — secondary affordance beside the loud "Create Animal" button. */
-.importYamlLink {
-  display: inline-block;
-  margin-top: 1rem;
-  margin-left: 0.5rem;
-  padding: 0.75rem 1.5rem;
-  background-color: transparent;
-  color: var(--color-primary);
-  border: 1px solid var(--color-primary);
-  border-radius: 4px;
-  font: inherit;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background-color 0.2s, color 0.2s;
-}
-
-.importYamlLink:hover {
-  background-color: var(--color-primary);
-  color: var(--color-white);
 }
 
 /* Picker header actions: "Import YAML…" + "+ New Animal" sit together at the right. */

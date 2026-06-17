@@ -16,6 +16,8 @@ import { useStoreContext } from '../../state/StoreContext';
 import { buildAnimalWorkspaceViewModel } from '../../viewModels/animalWorkspaceViewModel';
 import { getAnimalDayIds } from '../../state/workspaceSelectors';
 import StatusPill from '../../components/ui/StatusPill';
+import Button from '../../components/ui/Button';
+import EmptyState from '../../components/ui/EmptyState';
 import OverflowMenu from '../../components/OverflowMenu';
 import AnimalDeleteDialog from '../../components/AnimalDeleteDialog';
 import AnimalProfileDialog from '../../components/AnimalProfileDialog';
@@ -122,18 +124,27 @@ export function AnimalWorkspace() {
       <h1 id="workspace-heading">Animal Workspace</h1>
 
       {!hasAnimals ? (
-        /* Empty state: no animals — the onboarding card with the two primary CTAs. "Create Animal"
-           opens the guided create-animal wizard at #/home (epoch-editor Phase 6). */
-        <div className="empty-state" role="region" aria-label="Empty workspace">
-          <p className={styles.emptyMessage}>{vm.empty?.message ?? 'No animals yet'}</p>
-          <p>Create your first animal to start managing recording sessions.</p>
-          <button type="button" className={styles.createAnimalLink} onClick={goToCreate}>
-            Create Animal
-          </button>
-          <button type="button" className={styles.importYamlLink} onClick={goToImport}>
-            Import YAML…
-          </button>
-        </div>
+        /* Empty state: no animals — the shared onboarding card with the two primary CTAs. "Create
+           Animal" opens the guided create-animal wizard at #/home (epoch-editor Phase 6); "Import
+           YAML…" opens the Import & Repair screen (Phase 7). */
+        <EmptyState
+          icon="＋"
+          title={vm.empty?.message ?? 'No animals yet'}
+          actions={
+            <>
+              <Button variant="primary" onClick={goToCreate}>
+                Create Animal
+              </Button>
+              <Button variant="secondary" onClick={goToImport}>
+                Import YAML…
+              </Button>
+            </>
+          }
+        >
+          Start by setting up an animal — its identity and implant, entered once — then log a
+          recording day. Already have metadata YAMLs? Import one to bring an animal in and
+          standardize it.
+        </EmptyState>
       ) : (
         /* Animals table: each name links to the animal's tabbed view. */
         <section className={styles.animalsHome} aria-label="Animals">

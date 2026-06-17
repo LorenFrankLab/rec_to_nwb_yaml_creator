@@ -509,6 +509,7 @@ export function RecordingDaysTab({ animalId }: RecordingDaysTabProps) {
           onDuplicateDay={openDuplicateDay}
           onExportDay={(dayId) => handleExportDays([dayId])}
           onDeleteDay={(dayId) => handleDeleteDays([dayId])}
+          onAddDay={() => setShowCalendar(true)}
         />
       </div>
 

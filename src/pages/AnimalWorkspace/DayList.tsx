@@ -1,6 +1,8 @@
 import type { ComponentProps } from 'react';
 import type { DayRowViewModel, WorkflowCommand } from '../../viewModels/types';
 import StatusPill from '../../components/ui/StatusPill';
+import Button from '../../components/ui/Button';
+import EmptyState from '../../components/ui/EmptyState';
 import OverflowMenu from '../../components/OverflowMenu';
 import styles from './AnimalWorkspace.module.css';
 
@@ -29,6 +31,8 @@ interface DayListProps {
   onExportDay: (dayId: string) => void;
   /** Delete this day (undo-able — the parent shows the UndoToast; no hard confirm). */
   onDeleteDay: (dayId: string) => void;
+  /** Open the add-recording-days affordance from the zero-state CTA (omitted → no CTA shown). */
+  onAddDay?: () => void;
 }
 
 /** The command carried by the row action with the given id (delete / duplicate). */
@@ -59,20 +63,32 @@ export default function DayList({
   onDuplicateDay,
   onExportDay,
   onDeleteDay,
+  onAddDay,
 }: DayListProps) {
   if (rows.length === 0) {
     return daysCorrupt ? (
-      /* Corrupt index AND no recoverable records — see the review state above. */
+      /* Corrupt index AND no recoverable records — see the review state above. This is an ERROR
+         state (not onboarding), so it stays a plain notice that points at the review above. */
       <div className="empty-state">
         <p>This animal&apos;s recording-day list is corrupt and can&apos;t be shown.</p>
         <p>See &quot;Review existing data&quot; above to resolve it.</p>
       </div>
     ) : (
-      /* Empty State: No Days */
-      <div className="empty-state">
-        <p>No recording days yet.</p>
-        <p>Add your first recording day to get started.</p>
-      </div>
+      /* Zero-days onboarding: the shared EmptyState with the "add recording day(s)" CTA. */
+      <EmptyState
+        icon="📅"
+        title="No recording days yet"
+        actions={
+          onAddDay && (
+            <Button variant="primary" onClick={onAddDay}>
+              ＋ Add recording day(s)
+            </Button>
+          )
+        }
+      >
+        Add the first recording day to log what the animal did and where the files are — the next
+        day will pre-fill from it, so you only edit what changed.
+      </EmptyState>
     );
   }
 
