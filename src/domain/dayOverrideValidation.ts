@@ -48,7 +48,7 @@ interface MergedDayOverrideInput {
  * instead of vanishing (fail-open), being smeared onto the geometry path (mis-routed
  * to the Animal Editor), or dead-ending repair. This is the validation "shadow" of
  * `resolveDayConfig`; the two MUST stay in lockstep — whenever the merge can't honor an
- * override cleanly, this surfaces a day-routed escape, and {@link DevicesStep} renders a
+ * override cleanly, this surfaces a day-routed escape, and the Failed channels tab renders a
  * removal control for it.
  *
  * Covered shapes (all → `day` surface, `devices` step, error severity):

@@ -146,7 +146,7 @@ export function resolveToSrcRel(fromRel, spec) {
 
 describe('architecture boundaries — classifier (synthetic)', () => {
   it('flags a domain module importing a page (reversed import)', () => {
-    expect(importViolation('domain/validation.js', 'pages/DayEditor/ExportStep'))
+    expect(importViolation('domain/validation.js', 'pages/DayEditor/ExportPreview'))
       .toEqual({ rule: 'domain-or-state-imports-page' });
   });
 
@@ -171,12 +171,12 @@ describe('architecture boundaries — classifier (synthetic)', () => {
   });
 
   it('allows pages → domain and pages → state (the permitted direction)', () => {
-    expect(importViolation('pages/DayEditor/ExportStep.jsx', 'domain/validation')).toBeNull();
+    expect(importViolation('pages/DayEditor/ExportPreview.jsx', 'domain/validation')).toBeNull();
     expect(importViolation('pages/AnimalView/index.jsx', 'state/repairCommands')).toBeNull();
   });
 
   it('allows a same-folder page import and the allowlisted presentational component', () => {
-    expect(importViolation('pages/DayEditor/ExportStep.jsx', 'pages/DayEditor/RepairActions')).toBeNull();
+    expect(importViolation('pages/DayEditor/ExportPreview.jsx', 'pages/DayEditor/RepairActions')).toBeNull();
     expect(importViolation('pages/AnimalView/index.jsx', 'pages/AnimalEditor/wiring/CamerasContainer')).toBeNull();
   });
 
@@ -203,10 +203,10 @@ describe('architecture boundaries — classifier (synthetic)', () => {
   });
 
   it('resolves the @/* alias so an aliased page import cannot bypass the guard', () => {
-    expect(resolveToSrcRel('domain/validation.js', '@/pages/DayEditor/ExportStep'))
-      .toBe('pages/DayEditor/ExportStep');
+    expect(resolveToSrcRel('domain/validation.js', '@/pages/DayEditor/ExportPreview'))
+      .toBe('pages/DayEditor/ExportPreview');
     // …and the resolved alias path is then caught as a reversed import.
-    expect(importViolation('domain/validation.js', resolveToSrcRel('domain/validation.js', '@/pages/DayEditor/ExportStep')))
+    expect(importViolation('domain/validation.js', resolveToSrcRel('domain/validation.js', '@/pages/DayEditor/ExportPreview')))
       .toEqual({ rule: 'domain-or-state-imports-page' });
     // A bare module still resolves to null (out of scope).
     expect(resolveToSrcRel('domain/validation.js', 'react')).toBeNull();

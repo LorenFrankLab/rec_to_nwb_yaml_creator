@@ -1,12 +1,9 @@
 /**
- * Day Editor View - Session Metadata Editor (M5 Implementation)
+ * Day Editor View — recording-session metadata editor (`#/day/:id`).
  *
- * Multi-step guided editor for recording session metadata with:
- * - Overview: Session information with inherited animal defaults
- * - Devices: Electrode groups, cameras (M6 - stub)
- * - Epochs: Tasks, behavioral events (M7 - stub)
- * - Validation: Summary of all errors (M9 - stub)
- * - Export: YAML file download (M10 - stub)
+ * Renders the tabbed {@link DayEditorFrame} (Day / Epochs / Failed channels / DIO, plus the
+ * export-preview surface). This replaced the legacy multi-step `DayEditorStepper` in the
+ * epoch-editor redesign; the per-section content now lives in the frame's tabs.
  */
 
 import DayEditorFrame from './DayEditorFrame';
