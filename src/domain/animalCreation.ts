@@ -1,11 +1,12 @@
 /**
- * Shared animal-creation glue (Phase 4b).
+ * Shared animal-creation glue.
  *
- * The Home route and the workspace's inline "+ New Animal" panel both turn an AnimalCreationForm
- * payload into the exact `subject` + `metadata` shapes `createAnimal` expects, and both seed the
- * creation form with the same default experimenters. Extracting that here (verbatim from the Home
- * container) means the two entry points build IDENTICAL animals — neither can drift from the other
- * or from the NWB schema seeds.
+ * `buildAnimalFromForm` turns a processed creation payload into the exact `subject` + `metadata`
+ * shapes `createAnimal` expects; `getDefaultExperimenters` resolves the experimenter seed. The
+ * guided create-animal wizard commits through these (via `buildWizardCommitPayload`), so the wizard
+ * — and any other entry that reuses this glue (e.g. the YAML import path) — builds IDENTICAL
+ * animals, none drifting from the others or from the NWB schema seeds. (Originally extracted from
+ * the retired Home/AnimalCreationForm container.)
  *
  * @module domain/animalCreation
  */
