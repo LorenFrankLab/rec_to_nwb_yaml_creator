@@ -1,0 +1,253 @@
+/**
+ * Styles for the guided create-animal wizard. Token-driven (no raw colors / spacing); the stacking
+ * uses the shared z-index scale. Scoped via CSS Modules so class names can't collide app-wide.
+ */
+
+.wizard {
+  max-width: 860px;
+  margin: var(--spacing-lg) auto;
+  padding: 0 var(--spacing-lg);
+}
+
+.crumb {
+  font-size: var(--font-size-sm);
+  color: var(--color-grey-600);
+  margin-bottom: var(--spacing-sm);
+}
+
+.crumb a {
+  color: var(--color-grey-600);
+}
+
+.heading {
+  font-size: var(--font-size-xl);
+  margin: 0 0 var(--spacing-xs);
+}
+
+.lede {
+  color: var(--color-grey-700);
+  font-size: var(--font-size-sm);
+  margin: 0 0 var(--spacing-md);
+  max-width: 640px;
+}
+
+.startOptions {
+  font-size: var(--font-size-sm);
+  color: var(--color-grey-700);
+  margin: 0 0 var(--spacing-lg);
+}
+
+.startOptions a {
+  color: var(--color-primary);
+}
+
+/* Stepper (tablist) */
+.stepper {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-xs);
+  margin-bottom: var(--spacing-lg);
+  padding: 0;
+}
+
+.step {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  border: 1px solid var(--color-grey-200);
+  background: var(--color-white);
+  border-radius: 999px;
+  padding: var(--spacing-xs) var(--spacing-md);
+  font-size: var(--font-size-sm);
+  color: var(--color-grey-700);
+  cursor: pointer;
+}
+
+.step:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.stepActive {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+  font-weight: 600;
+}
+
+.stepDone {
+  border-color: var(--color-success);
+}
+
+.stepNum {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 50%;
+  background: var(--color-grey-100);
+  color: var(--color-grey-700);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.stepActive .stepNum {
+  background: var(--color-primary);
+  color: var(--color-white);
+}
+
+.stepDone .stepNum {
+  background: var(--color-success);
+  color: var(--color-white);
+}
+
+.stepOptional {
+  font-size: 0.6875rem;
+  color: var(--color-grey-500);
+}
+
+/* Panel */
+.panel {
+  background: var(--color-white);
+  border: 1px solid var(--color-grey-200);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-lg);
+  margin-bottom: var(--spacing-md);
+}
+
+.panel h2 {
+  font-size: var(--font-size-lg);
+  margin: 0 0 var(--spacing-xs);
+}
+
+.panelDesc {
+  color: var(--color-grey-700);
+  font-size: var(--font-size-sm);
+  margin: 0 0 var(--spacing-md);
+}
+
+/* Identity fields */
+.field {
+  margin-bottom: var(--spacing-md);
+}
+
+.field > label {
+  display: block;
+  font-size: var(--font-size-sm);
+  color: var(--color-grey-800);
+  margin-bottom: var(--spacing-xs);
+  font-weight: 600;
+}
+
+.field input,
+.field select {
+  font: inherit;
+  border: 1px solid var(--color-grey-300);
+  border-radius: var(--radius-sm);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  width: 100%;
+  max-width: 420px;
+}
+
+/* The locked subject_id (read-only once the animal is created) reads as non-editable. */
+.field input:read-only {
+  background: var(--color-grey-100);
+  color: var(--color-grey-700);
+}
+
+.two {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--spacing-md);
+  max-width: 420px;
+}
+
+.hint {
+  display: block;
+  font-size: var(--font-size-sm);
+  color: var(--color-grey-600);
+  margin-top: var(--spacing-xs);
+}
+
+.error {
+  display: block;
+  font-size: var(--font-size-sm);
+  color: var(--color-error);
+  margin-top: var(--spacing-xs);
+}
+
+.meter {
+  display: inline-block;
+  background: var(--color-primary-light);
+  border: 1px solid var(--color-primary);
+  border-radius: var(--radius-sm);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  font-size: var(--font-size-sm);
+  color: var(--color-primary);
+  margin-bottom: var(--spacing-md);
+}
+
+.skip {
+  font-size: var(--font-size-sm);
+  color: var(--color-grey-700);
+  margin-top: var(--spacing-md);
+}
+
+.skipButton {
+  font: inherit;
+  font-size: var(--font-size-sm);
+  background: none;
+  border: none;
+  color: var(--color-primary);
+  cursor: pointer;
+  text-decoration: underline;
+  padding: 0;
+}
+
+.behaviorOnlyNote {
+  background: var(--color-success-light);
+  border: 1px solid var(--color-success);
+  border-radius: var(--radius-sm);
+  padding: var(--spacing-sm) var(--spacing-md);
+  font-size: var(--font-size-sm);
+  color: var(--color-grey-900);
+  margin-bottom: var(--spacing-md);
+}
+
+.calibrationNote {
+  background: var(--color-warning-light);
+  border: 1px solid var(--color-warning);
+  border-radius: var(--radius-sm);
+  padding: var(--spacing-sm) var(--spacing-md);
+  font-size: var(--font-size-sm);
+  color: var(--color-grey-900);
+  margin-bottom: var(--spacing-md);
+}
+
+/* Team */
+.teamRow {
+  display: flex;
+  gap: var(--spacing-sm);
+  align-items: center;
+  margin-bottom: var(--spacing-sm);
+}
+
+/* A class (not a bare `input` element selector) so it never sits in a no-descending-specificity
+   comparison with the `.field input:read-only` rule above. */
+.teamNameInput {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Footer */
+.footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: var(--spacing-lg);
+}
+
+.footerRight {
+  display: flex;
+  gap: var(--spacing-sm);
+}
