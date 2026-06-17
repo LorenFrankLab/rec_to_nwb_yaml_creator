@@ -3,6 +3,8 @@ import { ConfirmDialog } from '../../components/Modal';
 import { useUndoToast } from '../../components/ui/UndoToast';
 import { EpochStatusPill } from '../../components/ui/StatusPill';
 import GeneratedValue from '../../components/ui/GeneratedValue';
+import Button from '../../components/ui/Button';
+import EmptyState from '../../components/ui/EmptyState';
 import TaskTypeModal from '../AnimalEditor/TaskTypeModal';
 import { useStepperShortcut } from '../../hooks/stepperShortcuts';
 import { useDayEditorContext } from './DayEditorContext';
@@ -375,10 +377,19 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
       </div>
 
       {grid.rows.length === 0 ? (
-        <p className={styles.emptyState}>
-          No epochs yet. Use <strong>+ from template</strong> to start, or add a task type on the
-          animal&apos;s Task Types tab.
-        </p>
+        <EmptyState
+          icon="▦"
+          title="No epochs yet"
+          actions={
+            <Button variant="primary" onClick={() => applyTemplate('blank')}>
+              ＋ Add an epoch
+            </Button>
+          }
+        >
+          Each epoch is a numbered recording block belonging to a task. Start from a template above
+          (<strong>+ from template</strong>) for a full day, or add a single epoch and fill in its
+          task and files. Need a new task? Add one on the animal&apos;s Task Types tab.
+        </EmptyState>
       ) : (
         <table className={styles.table}>
           <thead>

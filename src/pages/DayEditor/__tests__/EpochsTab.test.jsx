@@ -101,6 +101,28 @@ describe('EpochsTab — grid render + collapsed state cells', () => {
   });
 });
 
+describe('EpochsTab — no-epochs onboarding empty state (Phase 8)', () => {
+  it('renders the EmptyState onboarding card with an add-epoch CTA when there are no epochs', () => {
+    render(<EpochsTab {...makeBundle({ taskInstances: [] })} />);
+    expect(screen.getByRole('heading', { name: /no epochs yet/i })).toBeInTheDocument();
+    // No epoch rows are rendered (no caret).
+    expect(screen.queryByRole('button', { name: /Toggle epoch/i })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /add an epoch/i })).toBeInTheDocument();
+  });
+
+  it('the add-epoch CTA writes a taskInstances patch adding one epoch to the first task type', async () => {
+    const user = userEvent.setup();
+    // A genuine no-epochs day has no file/video refs (so adding the first epoch orphans nothing).
+    const bundle = makeBundle({ taskInstances: [], associated_video_files: [], associated_files: [] });
+    render(<EpochsTab {...bundle} />);
+    await user.click(screen.getByRole('button', { name: /add an epoch/i }));
+    // 'blank' template adds one epoch to the first task type (Sleep / tasktype-0).
+    expect(lastPatch(bundle.onFieldUpdate, 'taskInstances')).toEqual([
+      { taskTypeId: 'tasktype-0', task_epochs: [1] },
+    ]);
+  });
+});
+
 describe('EpochsTab — write-back patches', () => {
   it('per-epoch opto power writes a fs_gui_yamls patch', async () => {
     const user = userEvent.setup();

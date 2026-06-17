@@ -260,10 +260,3 @@
   font-weight: 600;
   margin-left: 6px;
 }
-
-.emptyState {
-  color: var(--color-grey-600, #555);
-  padding: var(--spacing-md, 16px);
-  border: 1px dashed var(--color-grey-300, #ccc);
-  border-radius: var(--radius-md, 8px);
-}
