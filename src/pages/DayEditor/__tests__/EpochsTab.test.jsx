@@ -193,6 +193,27 @@ describe('EpochsTab — write-back patches', () => {
     expect(screen.getByText(/Epoch 1 deleted/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Undo/i })).toBeInTheDocument();
   });
+
+  it('deleting a declared-videoless epoch drops the declaration and Undo restores it', async () => {
+    const user = userEvent.setup();
+    const bundle = makeBundle({ state: { draft: true, videolessEpochs: [1, 3] } });
+    render(<EpochsTab {...bundle} />);
+    await user.click(screen.getByRole('button', { name: /Epoch 1 actions/i }));
+    await user.click(screen.getByRole('menuitem', { name: /Delete epoch/i }));
+
+    expect(lastPatch(bundle.onFieldUpdate, 'taskInstances')).toEqual([
+      { taskTypeId: 'tasktype-0', task_epochs: [3] },
+      { taskTypeId: 'tasktype-1', task_epochs: [2] },
+    ]);
+    expect(lastPatch(bundle.onFieldUpdate, 'state')).toEqual({ draft: true, videolessEpochs: [3] });
+
+    await user.click(screen.getByRole('button', { name: /Undo/i }));
+    expect(lastPatch(bundle.onFieldUpdate, 'taskInstances')).toEqual([
+      { taskTypeId: 'tasktype-0', task_epochs: [1, 3] },
+      { taskTypeId: 'tasktype-1', task_epochs: [2] },
+    ]);
+    expect(lastPatch(bundle.onFieldUpdate, 'state')).toEqual({ draft: true, videolessEpochs: [1, 3] });
+  });
 });
 
 describe('EpochsTab — task-catalog collision review', () => {
@@ -288,6 +309,29 @@ describe('EpochsTab — confirm-before-orphan (never auto-scrub)', () => {
       { name: 'run_video', camera_id: 1, task_epochs: '' },
     ]);
   });
+
+  it('confirming a delete repair drops videoless state, and Undo restores it', async () => {
+    const user = userEvent.setup();
+    const bundle = makeBundle({ state: { draft: true, videolessEpochs: [2, 3] } });
+    render(<EpochsTab {...bundle} />);
+    await user.click(screen.getByRole('button', { name: /Epoch 2 actions/i }));
+    await user.click(screen.getByRole('menuitem', { name: /Delete epoch/i }));
+
+    expect(screen.getByText(/Repair affected files\?/i)).toBeInTheDocument();
+    expect(lastPatch(bundle.onFieldUpdate, 'state')).toBeUndefined();
+
+    await user.click(screen.getByRole('button', { name: /Clear references/i }));
+    expect(lastPatch(bundle.onFieldUpdate, 'associated_video_files')).toEqual([
+      { name: 'run_video', camera_id: 1, task_epochs: '' },
+    ]);
+    expect(lastPatch(bundle.onFieldUpdate, 'state')).toEqual({ draft: true, videolessEpochs: [3] });
+
+    await user.click(screen.getByRole('button', { name: /Undo/i }));
+    expect(lastPatch(bundle.onFieldUpdate, 'associated_video_files')).toEqual([
+      { name: 'run_video', camera_id: 1, task_epochs: 2 },
+    ]);
+    expect(lastPatch(bundle.onFieldUpdate, 'state')).toEqual({ draft: true, videolessEpochs: [2, 3] });
+  });
 });
 
 describe('EpochsTab — renumber moves bound refs in lockstep (no silent misassociation)', () => {
@@ -308,6 +352,23 @@ describe('EpochsTab — renumber moves bound refs in lockstep (no silent misasso
     expect(lastPatch(bundle.onFieldUpdate, 'associated_video_files')).toEqual([
       { name: 'run_video', camera_id: 1, task_epochs: 1 },
     ]);
+  });
+
+  it('Insert after remaps no-video declarations with the same epoch map as files/videos', async () => {
+    const user = userEvent.setup();
+    const bundle = makeBundle({ state: { draft: true, videolessEpochs: [1, 3, 9] } });
+    render(<EpochsTab {...bundle} />);
+    await user.click(screen.getByRole('button', { name: /Epoch 1 actions/i }));
+    await user.click(screen.getByRole('menuitem', { name: /Insert epoch after/i }));
+
+    expect(lastPatch(bundle.onFieldUpdate, 'taskInstances')).toEqual([
+      { taskTypeId: 'tasktype-0', task_epochs: [1, 4, 2] },
+      { taskTypeId: 'tasktype-1', task_epochs: [3] },
+    ]);
+    expect(lastPatch(bundle.onFieldUpdate, 'associated_video_files')).toEqual([
+      { name: 'run_video', camera_id: 1, task_epochs: 3 },
+    ]);
+    expect(lastPatch(bundle.onFieldUpdate, 'state')).toEqual({ draft: true, videolessEpochs: [1, 4, 9] });
   });
 });
 

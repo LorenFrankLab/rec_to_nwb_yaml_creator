@@ -19,6 +19,8 @@ import {
   swapEpochRemap,
   insertAfterRemap,
   remapEpochRefs,
+  remapVideolessEpochs,
+  removeVideolessEpoch,
 } from '../epochOperations';
 
 const inst = (taskTypeId: string, task_epochs: Array<number | string>) => ({ taskTypeId, task_epochs });
@@ -125,6 +127,24 @@ describe('renumber remaps keep bound refs attached to their task content', () =>
     expect(next.associated_video_files[0].task_epochs).toBe(4); // was 3
     expect(next.associated_files[0].task_epochs).toBe(5); // was 4
     expect(next.fs_gui_yamls[0].epochs).toEqual([4, 5]);
+  });
+
+  it('remapVideolessEpochs moves no-video declarations through insert and leaves unrelated epochs', () => {
+    const remap = insertAfterRemap([inst('a', [1, 2, 3]), inst('b', [4])], 1);
+    expect(remapVideolessEpochs([1, '3', 9], remap)).toEqual([1, 4, 9]);
+  });
+
+  it('remapVideolessEpochs moves no-video declarations through swaps', () => {
+    expect(remapVideolessEpochs([2, 9], swapEpochRemap(2, 3))).toEqual([3, 9]);
+  });
+
+  it('remapVideolessEpochs preserves list identity when a swap leaves the videoless set unchanged', () => {
+    expect(remapVideolessEpochs([2, 3], swapEpochRemap(2, 3))).toEqual([2, 3]);
+    expect(remapVideolessEpochs([3, 2], swapEpochRemap(2, 3))).toEqual([3, 2]);
+  });
+
+  it('removeVideolessEpoch drops the deleted epoch from the no-video declarations', () => {
+    expect(removeVideolessEpoch([1, '2', 2, 3], 2)).toEqual([1, 3]);
   });
 
   it('the same remap applied to instances + refs leaves NO orphan (refs follow, never stranded)', () => {

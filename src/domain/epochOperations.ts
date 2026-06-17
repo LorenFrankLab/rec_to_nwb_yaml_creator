@@ -34,6 +34,23 @@ function asInstances(instances: unknown): TaskInstance[] {
   return Array.isArray(instances) ? (instances as TaskInstance[]) : [];
 }
 
+/** A normalized, de-duplicated epoch-number list (tolerant; non-integers dropped). */
+function asEpochList(epochs: unknown): number[] {
+  const seen = new Set<number>();
+  for (const value of Array.isArray(epochs) ? epochs : []) {
+    const n = Number(value);
+    if (Number.isInteger(n)) seen.add(n);
+  }
+  return [...seen];
+}
+
+/** True when two normalized epoch lists have the same set of values, regardless of order. */
+function sameEpochSet(a: number[], b: number[]): boolean {
+  if (a.length !== b.length) return false;
+  const seen = new Set(a);
+  return b.every((value) => seen.has(value));
+}
+
 /** Build an instance with the given epochs (preserving its taskTypeId). */
 function withEpochs(instance: TaskInstance, task_epochs: number[]): TaskInstance {
   return { taskTypeId: instance.taskTypeId, task_epochs };
@@ -252,6 +269,37 @@ export function remapEpochRefs(day: unknown, remap: Map<number, number>): Remapp
       epochs: (Array.isArray(g.epochs) ? g.epochs : []).map((e: number) => (remap.has(Number(e)) ? (remap.get(Number(e)) as number) : e)),
     })),
   };
+}
+
+/**
+ * Apply the same old→new epoch map to off-export "no video recorded" declarations. Epoch numbers not
+ * present in the map stay as-is; duplicates created by a corrupt or partial remap collapse to one
+ * declaration, matching the selector's set semantics.
+ *
+ * @param videolessEpochs - The day's `state.videolessEpochs` value.
+ * @param remap - The old→new epoch map ({@link swapEpochRemap} / {@link insertAfterRemap}).
+ * @returns The remapped declaration list.
+ */
+export function remapVideolessEpochs(videolessEpochs: unknown, remap: Map<number, number>): number[] {
+  const current = asEpochList(videolessEpochs);
+  const seen = new Set<number>();
+  for (const epoch of current) {
+    seen.add(remap.has(epoch) ? (remap.get(epoch) as number) : epoch);
+  }
+  const next = [...seen];
+  return sameEpochSet(current, next) ? current : next;
+}
+
+/**
+ * Drop a deleted epoch from off-export "no video recorded" declarations.
+ *
+ * @param videolessEpochs - The day's `state.videolessEpochs` value.
+ * @param epoch - The deleted epoch.
+ * @returns The declaration list without the deleted epoch.
+ */
+export function removeVideolessEpoch(videolessEpochs: unknown, epoch: number): number[] {
+  const target = Number(epoch);
+  return asEpochList(videolessEpochs).filter((value) => value !== target);
 }
 
 /** Associated refs that a candidate instance set would leave dangling (the confirm-before-orphan set). */

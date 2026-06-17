@@ -21,6 +21,8 @@ import {
   swapEpochRemap,
   insertAfterRemap,
   remapEpochRefs,
+  remapVideolessEpochs,
+  removeVideolessEpoch,
   epochsOrphanedBy,
   nextEpochNumber,
 } from '../../domain/epochOperations';
@@ -220,6 +222,15 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
   const reassignTask = (epoch: number, taskTypeId: string) =>
     commit(setEpochTask(view.taskInstances, epoch, taskTypeId));
   const onDuplicate = (epoch: number) => commit(duplicateEpoch(view.taskInstances, epoch));
+  const statePatchWithVideoless = (videolessEpochs: number[], sourceDay = day) => {
+    const state = (sourceDay as { state?: unknown }).state;
+    const base =
+      state !== null && typeof state === 'object' && !Array.isArray(state)
+        ? (state as Record<string, unknown>)
+        : {};
+    return { ...base, videolessEpochs };
+  };
+
   // A renumber (insert / move) shifts epoch numbers, so the day's bound file/video/fs_gui refs are
   // remapped in LOCKSTEP — each follows its task content to the new epoch number instead of being
   // silently re-pointed at a different task. Because the refs follow, the edit creates no orphan
@@ -240,6 +251,11 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
       if (JSON.stringify(refs.fs_gui_yamls) !== JSON.stringify(fsgui)) {
         onFieldUpdate('fs_gui_yamls', refs.fs_gui_yamls);
       }
+      const videoless = getDayVideolessEpochs(day);
+      const nextVideoless = remapVideolessEpochs(videoless, remap);
+      if (JSON.stringify(nextVideoless) !== JSON.stringify(videoless)) {
+        onFieldUpdate('state', statePatchWithVideoless(nextVideoless));
+      }
     }
     applyCommit(nextInstances, view.taskTypes, false);
   };
@@ -259,20 +275,31 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
     const snapInstances = view.taskInstances;
     const snapVideos = getDayAssociatedVideos(day);
     const snapFiles = getDayAssociatedFiles(day);
+    const snapVideoless = getDayVideolessEpochs(day);
+    const nextVideoless = removeVideolessEpoch(snapVideoless, epoch);
+    const videolessChanged = JSON.stringify(nextVideoless) !== JSON.stringify(snapVideoless);
+    const writeDeletedVideoless = () => {
+      if (videolessChanged) onFieldUpdate('state', statePatchWithVideoless(nextVideoless));
+    };
     const announce = () =>
       showToast(`Epoch ${epoch} deleted`, () => {
         onFieldUpdate('taskInstances', snapInstances);
         onFieldUpdate('associated_video_files', snapVideos);
         onFieldUpdate('associated_files', snapFiles);
+        if (videolessChanged) onFieldUpdate('state', statePatchWithVideoless(snapVideoless));
       });
     if (videos.length === 0 && files.length === 0) {
       applyCommit(next, view.taskTypes, false);
+      writeDeletedVideoless();
       announce();
       return;
     }
     // Orphan: confirm first. The toast (and its full-restore Undo) fires only AFTER the user confirms.
     pendingTypesRef.current = view.taskTypes;
-    pendingAfterRef.current = announce;
+    pendingAfterRef.current = () => {
+      writeDeletedVideoless();
+      announce();
+    };
     setPendingOrphan({ nextInstances: next, videos, files });
   };
 
@@ -341,9 +368,7 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
     if (unresolvedTaskCatalogDivergence) return;
     const current = getDayVideolessEpochs(day);
     const next = on ? [...new Set([...current, epoch])] : current.filter((e) => e !== epoch);
-    const state = (day as { state?: unknown }).state;
-    const base = state !== null && typeof state === 'object' && !Array.isArray(state) ? (state as Record<string, unknown>) : {};
-    onFieldUpdate('state', { ...base, videolessEpochs: next });
+    onFieldUpdate('state', statePatchWithVideoless(next));
   };
   const addVideo = (row: EpochGridRow) => {
     if (unresolvedTaskCatalogDivergence) return;

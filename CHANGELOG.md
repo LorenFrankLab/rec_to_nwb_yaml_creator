@@ -209,6 +209,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   must explicitly bring each referenced catalog entry into the animal or map the day to an existing
   entry first. Legacy `task_epoch`/`task_epochs` rows with conflicting values are now surfaced as a
   reconcile item instead of being labeled benign and silently dropping the singular value.
+- **Epoch no-video declarations follow epoch edits.** "No video recorded" declarations now move with
+  their epoch through insert/move/delete and are restored by Undo, so video-readiness no longer reports
+  against stale epoch numbers after renumbering.
 
 ### Removed
 
