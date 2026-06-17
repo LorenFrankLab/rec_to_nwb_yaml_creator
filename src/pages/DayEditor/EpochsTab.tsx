@@ -27,6 +27,7 @@ import {
   deriveStatescriptName,
   deriveStatescriptPath,
   deriveVideoName,
+  isDerivedVideo,
 } from '../../domain/fileNaming';
 import {
   getAnimalCameras,
@@ -175,6 +176,9 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
     [view.taskTypes, day, applyCommit]
   );
   const pendingTypesRef = useRef<TaskType[]>(view.taskTypes);
+  // A callback to run AFTER a pending orphan-repair is confirmed (e.g. the delete's undo toast — it
+  // must fire only once the delete is actually committed, not while the confirm dialog is still open).
+  const pendingAfterRef = useRef<(() => void) | null>(null);
 
   // ── Task / epoch write-backs (instance-array transforms) ──
   const reassignTask = (epoch: number, taskTypeId: string) =>
@@ -211,9 +215,27 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
     }
   };
   const onDelete = (epoch: number) => {
-    const snapshot = view.taskInstances;
-    commit(removeEpoch(view.taskInstances, epoch));
-    showToast(`Epoch ${epoch} deleted`, () => applyCommit(snapshot, view.taskTypes, false));
+    const next = removeEpoch(view.taskInstances, epoch);
+    const { videos, files } = epochsOrphanedBy(day, next);
+    // Snapshot everything an Undo must restore — the instances AND any refs the orphan repair clears.
+    const snapInstances = view.taskInstances;
+    const snapVideos = getDayAssociatedVideos(day);
+    const snapFiles = getDayAssociatedFiles(day);
+    const announce = () =>
+      showToast(`Epoch ${epoch} deleted`, () => {
+        onFieldUpdate('taskInstances', snapInstances);
+        onFieldUpdate('associated_video_files', snapVideos);
+        onFieldUpdate('associated_files', snapFiles);
+      });
+    if (videos.length === 0 && files.length === 0) {
+      applyCommit(next, view.taskTypes, false);
+      announce();
+      return;
+    }
+    // Orphan: confirm first. The toast (and its full-restore Undo) fires only AFTER the user confirms.
+    pendingTypesRef.current = view.taskTypes;
+    pendingAfterRef.current = announce;
+    setPendingOrphan({ nextInstances: next, videos, files });
   };
 
   // ── "+ new task type" quick-add (define-and-assign to the epoch being edited) ──
@@ -297,6 +319,10 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
     if (!pendingOrphan) return;
     applyCommit(pendingOrphan.nextInstances, pendingTypesRef.current, true);
     setPendingOrphan(null);
+    // Fire any post-commit follow-up (e.g. the delete's undo toast) now that the write has happened.
+    const after = pendingAfterRef.current;
+    pendingAfterRef.current = null;
+    if (after) after();
   };
 
   const hasOpto = grid.isOpto;
@@ -461,7 +487,10 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
         cancelLabel="Cancel"
         destructive
         onConfirm={confirmOrphanRepair}
-        onCancel={() => setPendingOrphan(null)}
+        onCancel={() => {
+          setPendingOrphan(null);
+          pendingAfterRef.current = null;
+        }}
       />
 
       {toastNode}
@@ -595,8 +624,19 @@ function EpochRowBlock(p: EpochRowProps) {
           </button>
         </td>
         <td className={styles.numCell}>{row.epoch}</td>
-        <td className={styles.taskCell} onClick={p.onToggle}>
-          {row.taskName || <em>(no task)</em>} <span className={styles.tag}>· {row.tag}</span>
+        <td>
+          {/* A real button so the larger task target is keyboard-operable; its accessible name is the
+              task label (distinct from the caret's "Toggle epoch N details"), and it shares the
+              disclosure semantics (aria-expanded/-controls) with the caret. */}
+          <button
+            type="button"
+            className={styles.taskCellButton}
+            aria-expanded={isOpen}
+            aria-controls={drillInId}
+            onClick={p.onToggle}
+          >
+            {row.taskName || <em>(no task)</em>} <span className={styles.tag}>· {row.tag}</span>
+          </button>
           {row.duplicate && <span className={styles.duplicateBadge} title="This epoch is claimed by more than one task">duplicate</span>}
         </td>
         <td>
@@ -727,11 +767,22 @@ function EpochRowBlock(p: EpochRowProps) {
                       <>
                         {row.videos.map((v, vi) => {
                           const key = `e${row.epoch}-v${v.index}`;
+                          // Generated only when the STORED name matches what derivation would produce
+                          // (so an imported/manual name like `run_video` reads `manual`), unless the user
+                          // has clicked Rename this session (an explicit override on a derived name).
+                          const isDerived =
+                            isDerivedVideo(v.entry, {
+                              date: grid.date,
+                              subjectId: grid.subjectId,
+                              epoch: row.epoch,
+                              tag: row.tag,
+                              index: vi + 1,
+                            }) && !p.manualVideoKeys.has(key);
                           return (
                             <span key={v.index} style={{ display: 'block', marginBottom: 4 }}>
                               <GeneratedValue
                                 value={v.entry.name ?? ''}
-                                derived={!p.manualVideoKeys.has(key)}
+                                derived={isDerived}
                                 overrideLabel="Rename"
                                 ariaLabel={`Epoch ${row.epoch} video ${vi + 1} name`}
                                 onOverride={() => p.onVideoOverride(key)}

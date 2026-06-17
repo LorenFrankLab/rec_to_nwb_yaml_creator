@@ -68,8 +68,19 @@
   color: var(--color-primary, #2b6cb0);
 }
 
-.taskCell {
+.taskCellButton {
+  background: none;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  color: inherit;
+  text-align: left;
   cursor: pointer;
+}
+
+.taskCellButton:hover {
+  color: var(--color-primary, #2b6cb0);
 }
 
 .tag {
