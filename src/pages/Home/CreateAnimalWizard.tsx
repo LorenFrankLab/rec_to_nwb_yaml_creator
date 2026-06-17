@@ -202,17 +202,34 @@ export default function CreateAnimalWizard() {
   const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
 
   /**
-   * Materialize the animal in the store (once) so the store-bound setup containers can edit it.
-   * Requires a valid identity; on an invalid identity it surfaces the errors and routes back to
-   * step 1, returning null. Idempotent: a second call returns the already-created id.
+   * The animals to check identity uniqueness against. The created animal is excluded: its subject_id
+   * (the store key) is locked, so it would otherwise self-collide and block every legitimate
+   * post-create edit (and falsely surface an "already exists" error).
    */
-  const ensureCreated = (): string | null => {
-    if (createdAnimalId) return createdAnimalId;
-    const result = validateWizardIdentity(identity, existingAnimals);
+  const identityCheckAnimals = (): Record<string, unknown> => {
+    if (!createdAnimalId) return existingAnimals;
+    const others = { ...existingAnimals };
+    delete others[createdAnimalId];
+    return others;
+  };
+
+  /**
+   * The single identity leave/commit gate. Validates the WHOLE draft; on failure it surfaces ALL
+   * errors and stays on step 1 (an invalid edit is NEVER silently dropped — the user always sees why
+   * it didn't save), returning null. On success it materializes the animal the first time (so the
+   * store-bound setup containers can edit it) or commits the subject edit post-create, returning the
+   * animal id. Idempotent for the create.
+   */
+  const tryCommitIdentity = (): string | null => {
+    const result = validateWizardIdentity(identity, identityCheckAnimals());
     if (!result.valid) {
       setIdentityErrors(result.errors);
       setCurrentStepKey('identity');
       return null;
+    }
+    if (createdAnimalId) {
+      handleFieldUpdate('subject', buildWizardCommitPayload(identity, defaults).subject);
+      return createdAnimalId;
     }
     const payload = buildWizardCommitPayload(identity, defaults);
     // Defense-in-depth: createAnimal throws on a duplicate id from inside a React updater (uncatchable
@@ -225,17 +242,15 @@ export default function CreateAnimalWizard() {
   };
 
   /**
-   * Post-create, persist the subject from `draft` ONLY when the WHOLE identity draft validates — a
-   * single field's blur must never write a subject that another field has made invalid (e.g.
-   * species "other" + blank custom would otherwise persist an empty species). The created animal is
-   * excluded from the uniqueness check: its subject_id (the store key) is locked, so it would
-   * otherwise self-collide and block every legitimate post-create edit.
+   * Post-create, incrementally persist the subject from `draft` on a field's blur/select-change ONLY
+   * when the WHOLE draft validates — a single field's edit must never write a subject that another
+   * field has made invalid (e.g. species "other" + blank custom would otherwise persist an empty
+   * species). Silent when invalid; the user is told what's wrong by the per-field error
+   * (`handleIdentityBlur`) and by the leave gate ({@link tryCommitIdentity}).
    */
   const commitIdentityIfCreated = (draft: IdentityDraft) => {
     if (!createdAnimalId) return;
-    const others = { ...existingAnimals };
-    delete others[createdAnimalId];
-    if (validateWizardIdentity(draft, others).valid) {
+    if (validateWizardIdentity(draft, identityCheckAnimals()).valid) {
       handleFieldUpdate('subject', buildWizardCommitPayload(draft, defaults).subject);
     }
   };
@@ -259,7 +274,7 @@ export default function CreateAnimalWizard() {
 
   /** Validate one identity field on blur; persist the subject edit when the animal already exists. */
   const handleIdentityBlur = (field: keyof IdentityDraft) => {
-    const { errors } = validateWizardIdentity(identity, existingAnimals);
+    const { errors } = validateWizardIdentity(identity, identityCheckAnimals());
     setIdentityErrors((prev) => {
       const copy = { ...prev };
       if (errors[field]) copy[field] = errors[field];
@@ -276,11 +291,13 @@ export default function CreateAnimalWizard() {
   /** Advance (or, on the last step, finish — navigate to the new animal's days). */
   const handleNext = () => {
     if (vm.isLastStep) {
-      const id = createdAnimalId ?? ensureCreated();
+      const id = createdAnimalId ?? tryCommitIdentity();
       if (id) goToAnimal(id);
       return;
     }
-    if (currentStepKey === 'identity' && !ensureCreated()) return;
+    // Leaving Identity forward goes through the commit gate, which blocks + surfaces errors on an
+    // invalid draft (so an invalid edit is never silently dropped).
+    if (currentStepKey === 'identity' && !tryCommitIdentity()) return;
     setCurrentStepKey(WIZARD_STEP_KEYS[currentIndex + 1]);
   };
 
@@ -290,17 +307,17 @@ export default function CreateAnimalWizard() {
 
   /** Save draft: commit the (valid) animal and leave; the partial draft persists. */
   const handleSaveDraft = () => {
-    const id = ensureCreated();
+    const id = tryCommitIdentity();
     if (id) goToAnimal(id);
   };
 
-  /** Jump to a step pill. Steps past identity require the animal to exist first. */
+  /** Jump to a step pill. Leaving Identity (or creating the animal) goes through the commit gate. */
   const handleTabActivate = (key: WizardStepKey) => {
     if (key === 'identity') {
       setCurrentStepKey('identity');
       return;
     }
-    if (!ensureCreated()) return;
+    if ((!createdAnimalId || currentStepKey === 'identity') && !tryCommitIdentity()) return;
     setCurrentStepKey(key);
   };
 

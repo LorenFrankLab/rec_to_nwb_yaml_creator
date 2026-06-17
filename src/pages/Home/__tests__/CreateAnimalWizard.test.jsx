@@ -226,6 +226,32 @@ describe('CreateAnimalWizard — post-create identity edits (the fragile create-
     expect(captured.animals.laurent.subject.species).not.toBe('');
     expect(captured.animals.laurent.subject.species).toBe('Rattus norvegicus');
   });
+
+  it('surfaces the error and BLOCKS navigation when a post-create identity edit is invalid (no silent drop)', async () => {
+    const user = userEvent.setup();
+    renderWizard();
+    await createThenEditIdentity(user);
+    await user.selectOptions(screen.getByLabelText('Species'), 'other'); // custom left blank → invalid
+    await user.click(screen.getByRole('button', { name: /Next/i }));
+    // The user's invalid edit is not silently dropped: the wizard stays on Identity and surfaces
+    // the error, rather than navigating on with the edit lost.
+    expect(screen.getByRole('tab', { name: /Identity/ })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByText(/Custom species name is required/i)).toBeInTheDocument();
+  });
+
+  it('lets a VALID post-create edit advance (the locked subject_id must not self-collision-block)', async () => {
+    const user = userEvent.setup();
+    renderWizard();
+    await createThenEditIdentity(user);
+    const genotype = screen.getByRole('textbox', { name: /Genotype/i });
+    await user.clear(genotype);
+    await user.type(genotype, 'scn2a');
+    await user.click(screen.getByRole('button', { name: /Next/i }));
+    // Advances to the next step (the self-collision against the just-created animal must be excluded),
+    // and the edit is persisted.
+    expect(screen.getByRole('tab', { name: /Electrodes/ })).toHaveAttribute('aria-selected', 'true');
+    expect(captured.animals.laurent.subject.genotype).toBe('scn2a');
+  });
 });
 
 describe('CreateAnimalWizard — Team step', () => {
