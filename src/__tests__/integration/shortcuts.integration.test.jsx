@@ -74,7 +74,7 @@ describe('global shortcuts + help (integration)', () => {
     await screen.findByRole('heading', { name: /day editor/i });
 
     // Go to the Epochs tab.
-    await user.click(screen.getByRole('button', { name: /^Epochs$/i }));
+    await user.click(screen.getByRole('button', { name: /^Epochs:/i }));
     await screen.findByRole('heading', { name: /^Epochs$/i });
 
     // Alt+N opens the grid's add affordance — the "+ from template" menu.

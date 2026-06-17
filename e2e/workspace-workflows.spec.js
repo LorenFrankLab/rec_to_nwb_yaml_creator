@@ -69,10 +69,10 @@ test.describe('Workspace export workflows', () => {
     // day-scoped tabs (Day / Epochs / Failed channels / DIO) and NOT an electrode-group or camera
     // configuration step. (Export is a header action, not a tab.)
     const dayNav = page.getByRole('navigation', { name: 'Day editor sections' });
-    await expect(dayNav.getByRole('button', { name: 'Day', exact: true })).toBeVisible();
-    await expect(dayNav.getByRole('button', { name: 'Failed channels', exact: true })).toBeVisible();
-    await expect(dayNav.getByRole('button', { name: 'Epochs', exact: true })).toBeVisible();
-    await expect(dayNav.getByRole('button', { name: 'DIO', exact: true })).toBeVisible();
+    await expect(dayNav.getByRole('button', { name: /^Day:/ })).toBeVisible();
+    await expect(dayNav.getByRole('button', { name: /^Failed channels:/ })).toBeVisible();
+    await expect(dayNav.getByRole('button', { name: /^Epochs:/ })).toBeVisible();
+    await expect(dayNav.getByRole('button', { name: /^DIO:/ })).toBeVisible();
     // No camera / electrode-group setup form is part of the day flow.
     await expect(dayNav.getByRole('button', { name: /Electrode Groups/i })).toHaveCount(0);
     await expect(dayNav.getByRole('button', { name: /Cameras/i })).toHaveCount(0);

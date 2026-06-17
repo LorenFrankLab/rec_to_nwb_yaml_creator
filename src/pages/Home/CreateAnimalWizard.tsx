@@ -229,6 +229,8 @@ export default function CreateAnimalWizard() {
   const [currentStepKey, setCurrentStepKey] = useState<WizardStepKey>('identity');
   const [createdAnimalId, setCreatedAnimalId] = useState<string | null>(adoptedAnimalId);
   const [behaviorOnly, setBehaviorOnly] = useState(false);
+  const [draftSaved, setDraftSaved] = useState(false);
+  const draftSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const animal = (createdAnimalId ? existingAnimals[createdAnimalId] : null) as Animal | null;
   const defaults = useMemo(() => getDefaultExperimenters(model.workspace), [model.workspace]);
@@ -250,6 +252,13 @@ export default function CreateAnimalWizard() {
   const [focusIndex, setFocusIndex] = useState(activeIndex);
   useEffect(() => setFocusIndex(activeIndex), [activeIndex]);
   const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
+
+  useEffect(
+    () => () => {
+      if (draftSaveTimerRef.current) clearTimeout(draftSaveTimerRef.current);
+    },
+    []
+  );
 
   /**
    * The animals to check identity uniqueness against. The created animal is excluded: its subject_id
@@ -358,7 +367,13 @@ export default function CreateAnimalWizard() {
   /** Save draft: commit the (valid) animal and leave; the partial draft persists. */
   const handleSaveDraft = () => {
     const id = tryCommitIdentity();
-    if (id) goToAnimal(id);
+    if (!id) {
+      setDraftSaved(false);
+      return;
+    }
+    setDraftSaved(true);
+    if (draftSaveTimerRef.current) clearTimeout(draftSaveTimerRef.current);
+    draftSaveTimerRef.current = setTimeout(() => goToAnimal(id), 500);
   };
 
   /** Jump to a step pill. Leaving Identity (or creating the animal) goes through the commit gate. */
@@ -411,7 +426,13 @@ export default function CreateAnimalWizard() {
         </p>
 
         {/* Stepper — a WAI-ARIA tablist over the seven steps; the active step's panel follows. */}
-        <div className={styles.stepper} role="tablist" aria-label="Setup steps">
+        <div
+          className={styles.stepper}
+          role="tablist"
+          aria-label="Setup steps"
+          data-testid="wizard-stepper"
+          data-layout="single-row-scroll"
+        >
           {vm.steps.map((step, index) => {
             const done = step.status === 'complete' || step.status === 'skipped';
             return (
@@ -706,6 +727,11 @@ export default function CreateAnimalWizard() {
             <Button variant="secondary" onClick={handleSaveDraft}>
               Save draft
             </Button>
+            {draftSaved && (
+              <span className={styles.draftStatus} role="status" aria-live="polite">
+                Draft saved
+              </span>
+            )}
             <Button variant="primary" onClick={handleNext}>
               {vm.nextLabel}
             </Button>

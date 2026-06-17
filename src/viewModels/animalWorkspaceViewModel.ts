@@ -41,7 +41,9 @@ import { DAY_LIFECYCLE } from '../domain/dayLifecycle';
 import { humanizeValidationMessage } from '../domain/humanizeValidationMessage';
 import {
   getAnimalBlockingSections,
+  getAnimalOptoCompleteness,
   getAnimalSectionStatus,
+  OPTO_COMPLETENESS,
   SECTION_STATUS,
 } from '../domain/sectionStatus';
 import { DOWNSTREAM_NOT_DELETED_NOTE } from '../domain/animalDeleteCascade';
@@ -127,7 +129,7 @@ export interface AnimalWorkspaceViewModel {
     dayRows: DayRowViewModel[];
     /** The first-run "Set up this animal" card sections. */
     setupSections: SectionViewModel[];
-    /** Whether the first-run setup card is shown (an animal is established once it has a subject + a day). */
+    /** Whether the setup card is shown (missing subject or required setup, not merely zero days). */
     showSetupCard: boolean;
     /** Whether the recording-day list itself is corrupt (empty-state copy). */
     daysCorrupt: boolean;
@@ -159,6 +161,27 @@ const SETUP_CARD_SECTIONS: ReadonlyArray<{ key: string; label: string }> = [
   { key: 'cameras', label: 'Cameras' },
   { key: 'optogenetics', label: 'Optogenetics' },
 ];
+
+/**
+ * The setup card is an onboarding prompt for missing REQUIRED setup. A no-opto animal can be fully
+ * configured; a partially-configured opto animal still needs review because it will block export.
+ */
+function shouldShowSetupCard(
+  subjectPresent: boolean,
+  sections: SectionViewModel[],
+  animal: unknown
+): boolean {
+  if (!subjectPresent) return true;
+  const optoCompleteness = getAnimalOptoCompleteness(
+    animal as Parameters<typeof getAnimalOptoCompleteness>[0]
+  );
+  return sections.some((section) => {
+    if (section.status === 'error') return true;
+    if (section.status !== 'todo') return false;
+    if (section.key !== 'optogenetics') return true;
+    return optoCompleteness === OPTO_COMPLETENESS.PARTIAL;
+  });
+}
 
 /** Whether a value is a non-null, non-array object. */
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -541,9 +564,9 @@ export function buildAnimalWorkspaceViewModel(
       buildDayRow(c, selectedAnimalId, animal, animalDays)
     );
 
-    const dayCount = classification.filter((d) => isPresentRecordStatus(d.status)).length;
     const subjectPresent = Boolean(getAnimalSubject(animal).subject_id);
-    const showSetupCard = !(subjectPresent && dayCount > 0);
+    const setupSections = buildSetupSections(selectedAnimalId, animal, daysMap);
+    const showSetupCard = shouldShowSetupCard(subjectPresent, setupSections, animal);
 
     const mostRecentDayId = getMostRecentDayId(animal, daysMap);
     const lastDayDate =
@@ -554,7 +577,7 @@ export function buildAnimalWorkspaceViewModel(
     vm.selectedAnimal = {
       id: selectedAnimalId,
       dayRows,
-      setupSections: buildSetupSections(selectedAnimalId, animal, daysMap),
+      setupSections,
       showSetupCard,
       daysCorrupt,
       carryForward: {

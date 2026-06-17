@@ -328,6 +328,7 @@ export function AppLayout() {
               `body:has(.primary-nav) .home-region` banner rule depends on; `styles.primaryNav`
               carries the styling moved out of index.css. */}
           <nav
+            id="navigation"
             className={`primary-nav ${styles.primaryNav}`}
             role="navigation"
             aria-label="Primary"

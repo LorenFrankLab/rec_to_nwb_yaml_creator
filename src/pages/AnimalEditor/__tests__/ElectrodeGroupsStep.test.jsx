@@ -67,11 +67,12 @@ describe('ElectrodeGroupsStep', () => {
     expect(screen.getByText('CA3')).toBeInTheDocument();
   });
 
-  it('shows correct device type for each group', () => {
+  it('shows the friendly device type label for each group', () => {
     render(<ElectrodeGroupsStep animal={mockAnimal} onFieldUpdate={mockOnFieldUpdate} />);
 
-    const rows = screen.getAllByText('tetrode_12.5');
+    const rows = screen.getAllByText('Tetrode (12.5 µm)');
     expect(rows).toHaveLength(2);
+    expect(screen.queryByText('tetrode_12.5')).not.toBeInTheDocument();
   });
 
   it('shows channel count based on device type', () => {

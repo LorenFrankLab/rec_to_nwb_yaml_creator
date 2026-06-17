@@ -13,6 +13,7 @@ const mockPersistence = {
   saveError: null,
   hasPendingWrite: false,
   loadNotice: null,
+  loadOutcome: null,
   dismissLoadNotice: vi.fn(),
   saveNow: vi.fn(),
 };

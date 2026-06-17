@@ -4,7 +4,8 @@
  * Captures the five states the walkthrough ([docs/testing/task-catalog-walkthrough.md]) describes to
  * `docs/testing/screenshots/task-catalog/` — committed artifacts for the Phase 10B user-testing
  * handoff. Reproducible: each seeds a catalog-shaped workspace and screenshots the relevant surface.
- * Run with `npx playwright test task-catalog-screenshots`.
+ * Default `npm run test:e2e` ignores `*-screenshots.spec.js` so committed PNGs are not rewritten
+ * during the normal e2e lane. Regenerate intentionally with `npm run test:e2e:screenshots`.
  */
 import { test } from '@playwright/test';
 import {
@@ -110,7 +111,7 @@ test.describe('Task-type catalog screenshots', () => {
       ],
     });
     await seedAndOpen(page, blob, `/#/day/${DAY_ID}`);
-    await page.getByRole('button', { name: 'Epochs', exact: true }).click();
+    await page.getByRole('button', { name: /^Epochs:/ }).click();
     await expect(page.getByRole('heading', { level: 2, name: 'Epochs' })).toBeVisible();
     await page.screenshot({ path: `${DIR}/conflict-desktop.png`, fullPage: true });
   });

@@ -3,11 +3,22 @@
  */
 
 import { useState } from 'react';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import ElectrodeGroupModal from '../ElectrodeGroupModal';
 import { deviceTypes } from '../../../valueList';
+
+const electrodeModalCss = readFileSync(
+  join(process.cwd(), 'src/pages/AnimalEditor/ElectrodeGroupModal.scss'),
+  'utf8'
+);
+const sharedModalCss = readFileSync(
+  join(process.cwd(), 'src/components/Modal/Modal.module.scss'),
+  'utf8'
+);
 
 /**
  * Tests for ElectrodeGroupModal component.
@@ -18,6 +29,17 @@ import { deviceTypes } from '../../../valueList';
  * entry for `location` / `targeted_location`, and emits NO stray `bad_channels`
  * string (bad channels are managed per-ntrode in the Channel Map editor).
  */
+
+/**
+ * Return a CSS rule body for a simple class selector.
+ * @param {string} css - CSS source.
+ * @param {string} selector - Class selector, e.g. `.body`.
+ * @returns {string} The declaration body, or an empty string when absent.
+ */
+function cssRule(css, selector) {
+  const escapedSelector = selector.replace('.', '\\.');
+  return css.match(new RegExp(`${escapedSelector}\\s*\\{([^}]*)\\}`))?.[1] || '';
+}
 
 /**
  * Fill the required fields for a tetrode group. `location` and `description` are
@@ -115,6 +137,30 @@ describe('ElectrodeGroupModal', () => {
       render(<ElectrodeGroupModal isOpen mode="add" onSave={() => {}} onCancel={() => {}} />);
       expect(screen.getByRole('button', { name: /save/i })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: /cancel/i })).toBeInTheDocument();
+    });
+
+    it('keeps tall-form fields in the scrollable body and actions in the pinned footer', () => {
+      render(<ElectrodeGroupModal isOpen mode="add" onSave={() => {}} onCancel={() => {}} />);
+
+      const dialog = screen.getByRole('dialog', { name: /add electrode group/i });
+      expect(dialog).toHaveClass('electrode-group-modal-content');
+
+      const body = screen.getByTestId('modal-body');
+      expect(within(body).getByLabelText(/device type/i)).toBeInTheDocument();
+      expect(within(body).getByLabelText(/ap|anterior[- ]?posterior/i)).toBeInTheDocument();
+      expect(within(body).getByLabelText(/ml|medial[- ]?lateral/i)).toBeInTheDocument();
+      expect(within(body).getByLabelText(/dv|dorsal[- ]?ventral/i)).toBeInTheDocument();
+
+      const footer = screen.getByTestId('modal-footer');
+      expect(within(footer).getByRole('button', { name: /cancel/i })).toBeInTheDocument();
+      expect(within(footer).getByRole('button', { name: /save/i })).toBeInTheDocument();
+
+      expect(cssRule(electrodeModalCss, '.electrode-group-modal-content')).toMatch(
+        /max-height:\s*90vh/
+      );
+      expect(cssRule(sharedModalCss, '.withFooter')).toMatch(/overflow:\s*hidden/);
+      expect(cssRule(sharedModalCss, '.body')).toMatch(/overflow-y:\s*auto/);
+      expect(cssRule(sharedModalCss, '.footer')).toMatch(/flex-shrink:\s*0/);
     });
   });
 

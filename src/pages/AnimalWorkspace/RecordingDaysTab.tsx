@@ -406,13 +406,15 @@ export function RecordingDaysTab({ animalId }: RecordingDaysTabProps) {
                 control / screen readers find the control by what it says. `aria-expanded` conveys
                 the open/closed state; the visible text already flips Add Recording Days ↔ Hide
                 Calendar for sighted users. */}
-            <button
-              className="btn-primary"
-              onClick={handleToggleCalendar}
-              aria-expanded={showCalendar}
-            >
-              {showCalendar ? 'Hide Calendar' : 'Add Recording Days'}
-            </button>
+            {dayRows.length > 0 && (
+              <button
+                className="btn-primary"
+                onClick={handleToggleCalendar}
+                aria-expanded={showCalendar}
+              >
+                {showCalendar ? 'Hide Calendar' : 'Add Recording Days'}
+              </button>
+            )}
             {carryForwardVm.available && (
               <label className={styles.carryForwardToggle}>
                 <input

@@ -72,6 +72,7 @@ describe('useStore public API contract', () => {
       'hasPendingWrite',
       'lastSaved',
       'loadNotice',
+      'loadOutcome',
       'saveError',
       'saveNow',
     ]);

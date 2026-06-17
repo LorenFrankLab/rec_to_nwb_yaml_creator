@@ -2,7 +2,7 @@
  * DayList zero-state tests (epoch-editor Phase 8).
  *
  * The per-animal recording-days pane's empty state. Pins the onboarding zero-state with its
- * "add recording day(s)" CTA, that the CTA invokes the add handler, and that the corrupt-index error
+ * add-recording-day CTA, that the CTA invokes the add handler, and that the corrupt-index error
  * state stays a plain notice (not the onboarding card).
  */
 import { describe, it, expect, vi } from 'vitest';

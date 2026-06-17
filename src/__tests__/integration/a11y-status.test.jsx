@@ -59,7 +59,7 @@ describe('status conveyed without relying on color', () => {
 
     // Navigate to the Failed channels tab.
     const { fireEvent } = await import('@testing-library/react');
-    fireEvent.click(screen.getByRole('button', { name: 'Failed channels' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Failed channels:/ }));
     await screen.findByRole('heading', { name: /setup & failed channels/i });
 
     const badges = container.querySelectorAll('.status-badge');

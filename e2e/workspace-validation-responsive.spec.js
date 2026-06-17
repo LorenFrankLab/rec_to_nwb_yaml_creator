@@ -107,12 +107,9 @@ test.describe('Validation & Export — narrow viewport layout', () => {
 
     // The dense 6-column table is genuinely wider than this phone viewport (verified ~1157px vs a
     // ~374px wrapper), so the fix must keep its content REACHABLE via inner horizontal scroll — not
-    // merely keep the page narrow by hiding the overflow. Resolve the scroll wrapper from the table's
-    // own DOM (closest .validation-summary-table-scroll). This class is the scroll-affordance
-    // mechanism, used here as the sanctioned framework-scroll exception (analogous to
-    // .repair-target-highlight); the anchor is still the role-located <table>, not a CSS lookup of
-    // the table itself.
-    const innerScroll = table.locator('xpath=ancestor::div[contains(@class,"validation-summary-table-scroll")][1]');
+    // merely keep the page narrow by hiding the overflow. Resolve the stable scroll wrapper from
+    // the table's own DOM; the class is CSS-module hashed, so the test uses the explicit hook.
+    const innerScroll = table.locator('xpath=ancestor::div[@data-testid="validation-table-scroll"][1]');
     await expect(innerScroll).toBeVisible();
 
     // Genuinely scrollable: the table content is wider than its container, so there is content to

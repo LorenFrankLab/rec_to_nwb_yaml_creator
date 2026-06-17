@@ -184,7 +184,7 @@ describe('Keyboard Navigation Accessibility', () => {
       });
 
       // Open the Failed channels tab (the electrode-group disclosures live there).
-      await user.click(screen.getByRole('button', { name: 'Failed channels' }));
+      await user.click(screen.getByRole('button', { name: /^Failed channels:/ }));
       await screen.findByRole('heading', { name: /setup & failed channels/i });
 
       // Each electrode group is a native <details><summary> disclosure — nested,

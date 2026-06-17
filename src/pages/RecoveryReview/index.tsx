@@ -61,8 +61,8 @@ export function RecoveryReview() {
   const { model, actions, persistence } = useStoreContext();
 
   const vm = useMemo(
-    () => buildRecoveryReviewViewModel(model.workspace, persistence.loadNotice),
-    [model.workspace, persistence.loadNotice]
+    () => buildRecoveryReviewViewModel(model.workspace, persistence.loadNotice, persistence.loadOutcome),
+    [model.workspace, persistence.loadNotice, persistence.loadOutcome]
   );
 
   // Day-reference repairs route through the shared descriptor command layer (one named write surface);
@@ -106,6 +106,9 @@ export function RecoveryReview() {
     setPendingDestructive(null);
   };
 
+  const discardedLoad = vm.loadOutcome === 'discarded';
+  const recoveredLoad = vm.loadOutcome === 'recovered';
+
   return (
     <main
       id="main-content"
@@ -120,11 +123,18 @@ export function RecoveryReview() {
       <h1 id="recovery-heading" className={styles.heading}>
         Review recovered data
       </h1>
-      <p className={styles.lede}>
-        When the workspace loaded, some saved records didn&apos;t fit the current shape.{' '}
-        <strong>Nothing was discarded</strong> — resolve each below. Affected items can&apos;t export
-        until they&apos;re sorted.
-      </p>
+      {discardedLoad ? (
+        <p className={styles.lede}>
+          When the workspace loaded, the saved data <strong>could not be restored and was discarded</strong>.
+          The app started with an empty workspace, so there may be no recovered records to review.
+        </p>
+      ) : (
+        <p className={styles.lede}>
+          When the workspace loaded, some saved records didn&apos;t fit the current shape.{' '}
+          <strong>Nothing was discarded</strong> — resolve each below. Affected items can&apos;t export
+          until they&apos;re sorted.
+        </p>
+      )}
 
       {vm.notice && (
         <div className={styles.noticeCard} role="status">
@@ -136,9 +146,18 @@ export function RecoveryReview() {
       {vm.allClear ? (
         <div className={styles.allClear} role="status">
           <p className={styles.allClearTitle}>Nothing to review</p>
-          <p className={styles.allClearBody}>
-            Every recovered record is in good shape — no day records need attention.
-          </p>
+          {discardedLoad ? (
+            <p className={styles.allClearBody}>
+              There are no recovered records to review because the unusable saved workspace was
+              discarded.
+            </p>
+          ) : (
+            <p className={styles.allClearBody}>
+              {recoveredLoad
+                ? 'Every recovered record is in good shape — no day records need attention.'
+                : 'No recovered day records need attention.'}
+            </p>
+          )}
           <a className={styles.primaryLink} href="#/workspace">
             Back to animals
           </a>

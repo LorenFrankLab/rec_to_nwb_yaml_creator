@@ -1,10 +1,10 @@
 /**
  * @fileoverview Recovery-review view-model builder (epoch-editor Phase 8).
  *
- * `buildRecoveryReviewViewModel(workspace, notice?)` turns the workspace into the data the
- * recovery-review screen renders: the auto-recovered FYI notice (the persistence load notice, passed
- * in — it is a runtime concern, not derivable from the workspace), and the "needs review" records
- * each with a concrete repair action.
+ * `buildRecoveryReviewViewModel(workspace, notice?, outcome?)` turns the workspace into the data the
+ * recovery-review screen renders: the auto-recovered/discard FYI notice and outcome (runtime
+ * persistence concerns, not derivable from the workspace), and the "needs review" records each with
+ * a concrete repair action.
  *
  * It RENDERS the existing day-recovery classification — it does NOT recompute or extend it. The
  * needs-review rows are the non-`ok` rows of the shared {@link buildValidationSummaryViewModel}
@@ -20,6 +20,7 @@
 import { buildValidationSummaryViewModel } from './validationSummaryViewModel';
 import type { DayStatusRowViewModel } from './validationSummaryViewModel';
 import type { DayStatus, WorkflowCommand } from './types';
+import type { PersistenceLoadOutcome } from '../state/workspaceTypes';
 
 /** One needs-review record: a non-`ok` classified day decorated with title/detail + its repair. */
 export interface RecoveryRowViewModel {
@@ -51,6 +52,8 @@ export interface RecoveryRowViewModel {
 export interface RecoveryReviewViewModel {
   /** The auto-recovered / discard load notice (passed in from persistence), when present. */
   notice?: string;
+  /** Runtime-only load outcome, so the UI can keep recovered vs discarded copy honest. */
+  loadOutcome: PersistenceLoadOutcome;
   /** The needs-review records (every non-`ok` classified day), in the classifier's table order. */
   needsReview: RecoveryRowViewModel[];
   /** `needsReview.length` — the "Needs review" count badge. */
@@ -165,13 +168,15 @@ function toRecoveryRow(row: DayStatusRowViewModel): RecoveryRowViewModel {
  */
 export function buildRecoveryReviewViewModel(
   workspace: unknown,
-  notice?: string | null
+  notice?: string | null,
+  loadOutcome: PersistenceLoadOutcome = null
 ): RecoveryReviewViewModel {
   // Reuse the shared classification + repair affordances; filter to the records that need review.
   const days = buildValidationSummaryViewModel(workspace).days;
   const needsReview = days.filter((row) => row.recovery !== 'ok').map(toRecoveryRow);
 
   const vm: RecoveryReviewViewModel = {
+    loadOutcome,
     needsReview,
     reviewCount: needsReview.length,
     allClear: needsReview.length === 0,

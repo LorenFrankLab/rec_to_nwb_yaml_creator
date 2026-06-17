@@ -17,6 +17,7 @@ import type { RepairableIssue } from '../../domain/repairRouting';
 import { validateDay } from '../../domain/dayValidationComposer';
 import { buildDayEditorViewModel } from '../../viewModels/dayEditorViewModel';
 import type { DayTabKey } from '../../viewModels/dayEditorViewModel';
+import type { StepStatus } from '../../viewModels/types';
 import { buildAnimalViewModel } from '../../viewModels/animalViewModel';
 import Breadcrumb from './Breadcrumb';
 import StatusPill from '../../components/ui/StatusPill';
@@ -46,6 +47,16 @@ type FrameMode = DayTabKey | 'export';
 
 /** The four tabs' fixed order (drives the Alt+←/→ cycle). */
 const TAB_ORDER: DayTabKey[] = ['day', 'epochs', 'channels', 'dio'];
+
+/** Visual status glyph for a frame tab (same vocabulary as DayEditorSectionNav). */
+function getTabStatusIcon(status: StepStatus): string {
+  switch (status) {
+    case 'valid': return '✓';
+    case 'incomplete': return '⚠';
+    case 'error': return '✗';
+    default: return '○';
+  }
+}
 
 /**
  * An underlying step key → the tab that folds it, for routing a repair (which targets the old step
@@ -416,9 +427,13 @@ export default function DayEditorFrame() {
               type="button"
               className={`${styles.tab} ${mode === tab.key ? styles.tabActive : ''}`}
               aria-current={mode === tab.key ? 'page' : undefined}
+              aria-label={`${tab.label}: ${tab.statusLabel}`}
               onClick={() => goToTab(tab.key)}
             >
-              {tab.label}
+              <span>{tab.label}</span>
+              <span className={styles.tabStatus} aria-hidden="true">
+                {getTabStatusIcon(tab.status)}
+              </span>
             </button>
           ))}
         </nav>

@@ -11,12 +11,29 @@
  * reachable (its setup container renders / the store holds it), never by a spy on the store.
  */
 import { describe, it, expect, afterEach } from 'vitest';
-import { render, screen, within, fireEvent } from '@testing-library/react';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { render, screen, within, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { StoreProvider, useStoreContext } from '../../../state/StoreContext';
 import CreateAnimalWizard from '../CreateAnimalWizard';
 
 const originalHash = window.location.hash;
+const wizardCss = readFileSync(
+  join(process.cwd(), 'src/pages/Home/CreateAnimalWizard.module.css'),
+  'utf8'
+);
+
+/**
+ * Return a CSS rule body for a simple class selector.
+ * @param {string} selector - Class selector, e.g. `.stepper`.
+ * @returns {string} The declaration body, or an empty string when absent.
+ */
+function cssRule(selector) {
+  const escapedSelector = selector.replace('.', '\\.');
+  return wizardCss.match(new RegExp(`${escapedSelector}\\s*\\{([^}]*)\\}`))?.[1] || '';
+}
+
 afterEach(() => {
   window.location.hash = originalHash;
 });
@@ -81,6 +98,18 @@ describe('CreateAnimalWizard — structure', () => {
       'aria-selected',
       'true'
     );
+  });
+
+  it('keeps the 7-step tablist on a single scroll row', () => {
+    renderWizard();
+    const tablist = screen.getByTestId('wizard-stepper');
+    expect(tablist).toHaveAttribute('data-layout', 'single-row-scroll');
+    expect(within(tablist).getAllByRole('tab')).toHaveLength(7);
+    expect(cssRule('.stepper')).toMatch(/display:\s*flex/);
+    expect(cssRule('.stepper')).toMatch(/flex-wrap:\s*nowrap/);
+    expect(cssRule('.stepper')).toMatch(/overflow-x:\s*auto/);
+    expect(cssRule('.step')).toMatch(/flex:\s*0 0 auto/);
+    expect(cssRule('.step')).toMatch(/white-space:\s*nowrap/);
   });
 
   it('shows the DANDI identity guidance (binomial species + single-letter sex)', () => {
@@ -286,8 +315,9 @@ describe('CreateAnimalWizard — Save draft', () => {
     renderWizard();
     await fillIdentity(user);
     await user.click(screen.getByRole('button', { name: /Save draft/i }));
+    expect(screen.getByRole('status')).toHaveTextContent(/draft saved/i);
     expect(captured.animals.laurent).toBeTruthy();
-    expect(window.location.hash).toBe('#/animal/laurent/days');
+    await waitFor(() => expect(window.location.hash).toBe('#/animal/laurent/days'));
   });
 
   it('blocks Save draft on an invalid identity', async () => {
@@ -296,6 +326,7 @@ describe('CreateAnimalWizard — Save draft', () => {
     await user.click(screen.getByRole('button', { name: /Save draft/i }));
     expect(Object.keys(captured.animals)).toHaveLength(0);
     expect(screen.getByText(/Subject ID is required/i)).toBeInTheDocument();
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
   });
 });
 

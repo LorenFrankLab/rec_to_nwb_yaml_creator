@@ -7,6 +7,7 @@ import {
 import type { ElectrodeGroup } from '../../state/workspaceTypes';
 import { animalElectrodeSetupNeedsSync } from '../../domain/workflowStatus';
 import { getChannelCount, getShankCount } from '../../utils/deviceTypeUtils';
+import { deviceTypeLabel } from '../../valueList';
 import Button from '../../components/ui/Button';
 import './ElectrodeGroupsStep.scss';
 
@@ -201,7 +202,9 @@ export default function ElectrodeGroupsStep({ animal, onFieldUpdate, onEdit, onA
           {electrodeGroups.map((group) => (
             <tr key={group.id}>
               <td data-label="ID">{group.id}</td>
-              <td data-label="Device Type">{group.device_type}</td>
+              <td data-label="Device Type" title={String(group.device_type ?? '')}>
+                {deviceTypeLabel(group.device_type)}
+              </td>
               <td data-label="Location">{group.location}</td>
               <td data-label="Channels">{formatGeometryCount(getChannelCount(group.device_type))}</td>
               <td data-label="Shanks">{formatGeometryCount(getShankCount(group.device_type))}</td>
@@ -243,4 +246,3 @@ export default function ElectrodeGroupsStep({ animal, onFieldUpdate, onEdit, onA
     </div>
   );
 }
-

@@ -166,7 +166,7 @@ test.describe('Ownership & discoverability — AnimalView header + section-nav +
     // state is shown (no mandatory-setup block prevents adding/exporting days), and the "Add Recording
     // Days" primary action is available.
     await expect(page.getByRole('heading', { name: /no recording days yet/i })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Add Recording Days' })).toBeVisible();
+    await expect(page.getByRole('button', { name: /add recording day/i })).toBeVisible();
   });
 
   test('a camera missing meters_per_pixel: the Cameras nav row shows a blocking ● and the in-animal export-review link targets THIS animal', async ({

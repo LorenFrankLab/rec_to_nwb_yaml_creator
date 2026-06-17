@@ -44,16 +44,20 @@
 /* Stepper (tablist) */
 .stepper {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: var(--spacing-xs);
   margin-bottom: var(--spacing-lg);
   padding: 0;
+  overflow-x: auto;
+  max-width: 100%;
+  -webkit-overflow-scrolling: touch;
 }
 
 .step {
   display: flex;
   align-items: center;
   gap: var(--spacing-sm);
+  flex: 0 0 auto;
   border: 1px solid var(--color-grey-200);
   background: var(--color-white);
   border-radius: 999px;
@@ -61,6 +65,7 @@
   font-size: var(--font-size-sm);
   color: var(--color-grey-700);
   cursor: pointer;
+  white-space: nowrap;
 }
 
 .step:hover {
@@ -249,5 +254,12 @@
 
 .footerRight {
   display: flex;
+  align-items: center;
   gap: var(--spacing-sm);
+}
+
+.draftStatus {
+  font-size: var(--font-size-sm);
+  color: var(--color-success);
+  white-space: nowrap;
 }

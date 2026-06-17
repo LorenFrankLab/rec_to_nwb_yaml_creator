@@ -74,6 +74,9 @@
   font-size: var(--font-size-base);
   color: var(--color-grey-600);
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-xs);
 }
 
 .tab:hover {
@@ -84,4 +87,9 @@
   color: var(--color-grey-900);
   font-weight: 600;
   border-bottom-color: var(--color-primary);
+}
+
+.tabStatus {
+  font-size: var(--font-size-sm);
+  line-height: 1;
 }

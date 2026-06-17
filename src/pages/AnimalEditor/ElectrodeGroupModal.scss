@@ -8,6 +8,10 @@
    (.modal-overlay / .modal-content / .modal-title). Only form-layout rules remain.
    CopyFromAnimalDialog's body styles live in CopyFromAnimalDialog.scss. */
 
+.electrode-group-modal-content {
+  max-height: 90vh;
+}
+
 .electrode-group-modal-form {
   display: flex;
   flex-direction: column;
@@ -81,7 +85,7 @@
   display: flex;
   gap: 1rem;
   justify-content: flex-end;
-  margin-top: 1.5rem;
+  margin-top: 0;
   padding-top: 1.5rem;
   border-top: 1px solid #eee;
 }
@@ -138,4 +142,3 @@ button {
     color: #999;
   }
 }
-

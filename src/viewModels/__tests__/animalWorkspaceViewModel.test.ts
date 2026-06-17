@@ -301,13 +301,49 @@ describe('buildAnimalWorkspaceViewModel — setup sections', () => {
       expect(s.action?.label).toBe('Set up');
       expect(s.action?.intent).toBe('setup');
     }
-    // A fresh animal with no day is not established → the setup card shows.
+    // A fresh animal with missing required setup → the setup card shows.
     expect(vm.selectedAnimal!.showSetupCard).toBe(true);
   });
 
-  it('hides the setup card once an animal has a subject and at least one day', () => {
+  it('hides the setup card once an animal has a subject and complete required setup', () => {
     const { animal, day } = loadRealistic();
-    const vm = buildAnimalWorkspaceViewModel(wrap(animal, day), animal.id);
+    const completeAnimal = {
+      ...animal,
+      devices: {
+        ...(animal.devices as Record<string, unknown>),
+        electrode_groups: structuredClone(
+          (animal.configurationHistory as Array<Record<string, any>>)[0].devices.electrode_groups
+        ),
+        ntrode_electrode_group_channel_map: structuredClone(
+          (animal.configurationHistory as Array<Record<string, any>>)[0].devices
+            .ntrode_electrode_group_channel_map
+        ),
+      },
+    } as Idable;
+    const vm = buildAnimalWorkspaceViewModel(wrap(completeAnimal, day), animal.id);
+    expect(vm.selectedAnimal!.showSetupCard).toBe(false);
+  });
+
+  it('hides the setup card for a complete animal with zero recording days', () => {
+    const { animal } = loadRealistic();
+    const completeAnimal = {
+      ...animal,
+      days: [],
+      devices: {
+        ...(animal.devices as Record<string, unknown>),
+        electrode_groups: structuredClone(
+          (animal.configurationHistory as Array<Record<string, any>>)[0].devices.electrode_groups
+        ),
+        ntrode_electrode_group_channel_map: structuredClone(
+          (animal.configurationHistory as Array<Record<string, any>>)[0].devices
+            .ntrode_electrode_group_channel_map
+        ),
+      },
+    } as Idable;
+    const vm = buildAnimalWorkspaceViewModel(
+      { animals: { [completeAnimal.id]: completeAnimal }, days: {} },
+      completeAnimal.id
+    );
     expect(vm.selectedAnimal!.showSetupCard).toBe(false);
   });
 });

@@ -149,12 +149,10 @@
 .cameras-table {
   width: 100%;
 
-  /* Auto layout so each free-text column sizes to its content instead of being squeezed into an
-     equal share of the leftover (with `table-layout: fixed` the four name columns collapsed to
-     ~96px and truncated readable values like "overhead_camera" → "overh…" even though the page had
-     unused width — friction E). The scroll wrapper above (overflow-x: auto) keeps the Actions
-     column reachable when the full-content table is wider than the panel. */
-  table-layout: auto;
+  /* Fixed layout keeps the Actions column in the visible grid at desktop widths; free-text columns
+     are capped and ellipsized with the full value available via title. The scroll wrapper remains
+     for smaller widths and pathological content, with the Actions column sticky inside it. */
+  table-layout: fixed;
   border-collapse: collapse;
   background-color: var(--color-white);
   border: 1px solid var(--color-grey-200);
@@ -180,6 +178,15 @@
     white-space: nowrap;
   }
 
+  .cameras-actions-cell {
+    position: sticky;
+    right: 0;
+    z-index: 1;
+    background-color: var(--color-white);
+    box-shadow: -1px 0 0 var(--color-grey-200);
+    white-space: nowrap;
+  }
+
   thead {
     background-color: var(--color-grey-100);
     border-bottom: 2px solid var(--color-grey-300);
@@ -202,6 +209,11 @@
         &:last-child {
           padding-right: var(--spacing-lg);
         }
+
+        &.cameras-actions-cell {
+          z-index: 2;
+          background-color: var(--color-grey-100);
+        }
       }
     }
   }
@@ -217,6 +229,10 @@
 
       &:hover {
         background-color: #fafafa;
+
+        .cameras-actions-cell {
+          background-color: #fafafa;
+        }
       }
 
       td {
@@ -481,6 +497,11 @@
       overflow: visible;
       text-overflow: clip;
       white-space: normal;
+    }
+
+    .cameras-actions-cell {
+      position: static;
+      box-shadow: none;
     }
 
     tbody tr {

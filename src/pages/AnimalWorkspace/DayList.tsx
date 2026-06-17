@@ -74,14 +74,14 @@ export default function DayList({
         <p>See &quot;Review existing data&quot; above to resolve it.</p>
       </div>
     ) : (
-      /* Zero-days onboarding: the shared EmptyState with the "add recording day(s)" CTA. */
+      /* Zero-days onboarding: the shared EmptyState with the add-recording-day CTA. */
       <EmptyState
         icon="📅"
         title="No recording days yet"
         actions={
           onAddDay && (
             <Button variant="primary" onClick={onAddDay}>
-              ＋ Add recording day(s)
+              ＋ Add recording day
             </Button>
           )
         }

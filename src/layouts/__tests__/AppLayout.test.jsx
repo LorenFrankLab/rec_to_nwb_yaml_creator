@@ -7,6 +7,7 @@
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render as rtlRender, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { StoreProvider } from '../../state/StoreContext';
 import { AppLayout } from '../AppLayout';
 
@@ -450,11 +451,31 @@ describe('AppLayout', () => {
 
       const nav = screen.getByRole('navigation', { name: /primary/i });
       expect(nav).toBeInTheDocument();
+      expect(nav).toHaveAttribute('id', 'navigation');
       expect(screen.getByRole('link', { name: /^workspace$/i })).toHaveAttribute('href', '#/workspace');
       // Batch Validation & Export is now discoverable in the chrome nav (Task 4.3/4.4).
       expect(screen.getByRole('link', { name: /validation & export/i })).toHaveAttribute('href', '#/validation');
       // The redundant standalone Home entry is gone — create-animal now lives in the workspace.
       expect(screen.queryByRole('link', { name: /^home$/i })).not.toBeInTheDocument();
+    });
+
+    it('focuses the primary nav when the skip-to-navigation link is activated', async () => {
+      const user = userEvent.setup();
+      const originalRaf = window.requestAnimationFrame;
+      window.requestAnimationFrame = (cb) => {
+        cb(0);
+        return 0;
+      };
+      window.location.hash = '#/workspace';
+
+      try {
+        render(<AppLayout />);
+        const nav = screen.getByRole('navigation', { name: /primary/i });
+        await user.click(screen.getByRole('link', { name: /skip to navigation/i }));
+        expect(nav).toHaveFocus();
+      } finally {
+        window.requestAnimationFrame = originalRaf;
+      }
     });
 
     it('marks the current route link with aria-current=page', () => {

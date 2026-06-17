@@ -125,6 +125,13 @@ afterEach(() => {
 });
 
 describe('ElectrodeGroupsContainer — bulk add', () => {
+  it('renders the friendly device-type label while keeping the raw stored id', () => {
+    renderContainer({ remy: buildAnimal([group(0)]) });
+
+    expect(screen.getByText('Tetrode (12.5 µm)')).toBeInTheDocument();
+    expect(groups()[0].device_type).toBe('tetrode_12.5');
+  });
+
   it('creates N sequential groups with per-group channel maps and a success toast', async () => {
     const user = userEvent.setup();
     renderContainer({ remy: buildAnimal([group(0)]) }); // start with one group (id 0) + 1 map

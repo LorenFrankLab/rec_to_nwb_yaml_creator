@@ -128,6 +128,12 @@ describe('scenario: complete animal, no days', () => {
     expect(ring(workspace, animalId, 'electrode-groups')?.status).not.toBe('todo');
     expect(ring(workspace, animalId, 'recording-system')?.status).not.toBe('todo');
   });
+
+  it('AnimalWorkspace hides the setup card and lets the zero-day add-day CTA lead', () => {
+    const aw = buildAnimalWorkspaceViewModel(workspace, animalId);
+    expect(aw.selectedAnimal?.showSetupCard).toBe(false);
+    expect(aw.selectedAnimal?.dayRows).toEqual([]);
+  });
 });
 
 // ── decision lock: what the AnimalView setup ring reflects ───────────────────────────────────────

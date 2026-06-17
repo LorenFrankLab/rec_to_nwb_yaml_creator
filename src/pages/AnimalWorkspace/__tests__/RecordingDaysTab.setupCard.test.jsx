@@ -5,9 +5,9 @@
  * card driven by getAnimalSectionStatus (the SAME source as the section-nav hollow-○ todo rings,
  * so we don't show "todo" three ways). It is honest and NON-gating: behavior-only days are valid,
  * so a never-configured electrode section is a neutral "To do", never a "set up electrodes first"
- * gate. Each item links to its setup TAB (not the legacy stepper). The card disappears once the
- * animal is established (subject set AND at least one recording day); the ambient nav rings then
- * carry the signal. The separate "Review existing data" state is a different concern and stays.
+ * gate. Each item links to its setup TAB (not the legacy stepper). The card disappears once required
+ * setup is complete, even before the first recording day; the zero-day add-day CTA then leads. The
+ * separate "Review existing data" state is a different concern and stays.
  */
 import { describe, it, expect, afterEach } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
@@ -92,15 +92,11 @@ describe('Set up this animal card — first-run onboarding', () => {
     expect(within(card).getByRole('link', { name: /set up optogenetics/i })).toBeInTheDocument();
   });
 
-  it('marks never-configured sections "To do" and configured sections done', () => {
+  it('hides the setup card for a fully configured animal with zero days', () => {
     renderPane('remy', { remy: configuredAnimal });
-    const card = screen.getByRole('region', { name: /set up this animal/i });
-    // Cameras + electrodes are configured → not flagged todo; optogenetics is not configured.
-    // Assert the user-visible per-section state label (the CSS-Module modifier class is hashed).
-    const cameras = within(card).getByText('Cameras').closest('li');
-    const optogenetics = within(card).getByText('Optogenetics').closest('li');
-    expect(within(cameras).queryByText('To do')).not.toBeInTheDocument();
-    expect(within(optogenetics).getByText('To do')).toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: /set up this animal/i })).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /no recording days yet/i })).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: /add recording day/i })).toHaveLength(1);
   });
 
   it('marks a configured section "Needs fixing" (NOT "Done") when it holds an export-blocking error', () => {
@@ -143,8 +139,10 @@ describe('Set up this animal card — first-run onboarding', () => {
 });
 
 describe('Set up this animal card — established animals (absent)', () => {
-  it('hides the card once the animal has a subject AND at least one recording day', () => {
+  it('hides the card once the animal has complete required setup and at least one recording day', () => {
     const animal = { ...newAnimal, days: ['newbie-2024-01-02'] };
+    animal.devices = configuredAnimal.devices;
+    animal.cameras = configuredAnimal.cameras;
     const days = {
       'newbie-2024-01-02': { id: 'newbie-2024-01-02', animalId: 'newbie', date: '2024-01-02', session: { session_id: 's' }, state: {} },
     };

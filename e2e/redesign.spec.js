@@ -62,7 +62,7 @@ test.describe('redesign — core flow', () => {
     await expect(page.getByRole('heading', { level: 1, name: /Day Editor/ })).toBeVisible();
 
     // Epochs tab: drill into an epoch via its caret (keyboard-operable disclosure button).
-    await page.getByRole('button', { name: /^Epochs$/i }).click();
+    await page.getByRole('button', { name: /^Epochs:/i }).click();
     const caret = page.getByRole('button', { name: /toggle epoch .* details/i }).first();
     await expect(caret).toBeVisible();
     await expect(caret).toHaveAttribute('aria-expanded', 'false');
@@ -148,7 +148,7 @@ test.describe('redesign — accessibility (axe)', () => {
 test.describe('redesign — keyboard operability', () => {
   test('the epoch caret is a keyboard-operable disclosure', async ({ page }) => {
     await seedAndOpen(page, buildConfiguredWorkspaceBlob(), `/#/day/${DAY_ID}`);
-    await page.getByRole('button', { name: /^Epochs$/i }).click();
+    await page.getByRole('button', { name: /^Epochs:/i }).click();
 
     const caret = page.getByRole('button', { name: /toggle epoch .* details/i }).first();
     await expect(caret).toHaveAttribute('aria-expanded', 'false');
@@ -161,7 +161,7 @@ test.describe('redesign — keyboard operability', () => {
 
   test('the failed-channels grid toggles are keyboard-operable checkboxes', async ({ page }) => {
     await seedAndOpen(page, buildConfiguredWorkspaceBlob(), `/#/day/${DAY_ID}`);
-    await page.getByRole('button', { name: /^Failed channels$/i }).click();
+    await page.getByRole('button', { name: /^Failed channels:/i }).click();
 
     // Each electrode group is a native <details> disclosure (keyboard-operable); its per-channel
     // toggles live inside. Expand a group with all channels OK so every revealed checkbox is enabled.

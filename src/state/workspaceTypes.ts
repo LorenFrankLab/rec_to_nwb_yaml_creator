@@ -57,11 +57,16 @@ export interface PersistenceStatus {
   saveError: string | null;
   /** True while a debounced write is in flight. */
   hasPendingWrite: boolean;
-  /** Notice shown when a saved workspace was discarded, or null. */
+  /** Notice shown when a saved workspace was recovered or discarded, or null. */
   loadNotice: string | null;
+  /** The load-time persistence outcome, kept runtime-only so the UI can distinguish repair vs discard. */
+  loadOutcome: PersistenceLoadOutcome;
   /** Clears the load notice. */
   dismissLoadNotice: () => void;
 }
+
+/** Runtime-only load outcome from persistence hydration. Never serialized into workspace/YAML. */
+export type PersistenceLoadOutcome = 'recovered' | 'discarded' | null;
 
 /**
  * Shared metadata across all recording days.

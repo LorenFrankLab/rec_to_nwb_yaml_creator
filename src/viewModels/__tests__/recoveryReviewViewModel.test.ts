@@ -101,8 +101,13 @@ describe('buildRecoveryReviewViewModel', () => {
   });
 
   it('passes the auto-recovered notice through verbatim', () => {
-    const vm = buildRecoveryReviewViewModel(recoveryWorkspace(), 'Restored 2 sections — no data lost.');
+    const vm = buildRecoveryReviewViewModel(
+      recoveryWorkspace(),
+      'Restored 2 sections — no data lost.',
+      'recovered'
+    );
     expect(vm.notice).toBe('Restored 2 sections — no data lost.');
+    expect(vm.loadOutcome).toBe('recovered');
   });
 
   it('reports all-clear for a clean workspace (no notice, no rows)', () => {
@@ -111,6 +116,7 @@ describe('buildRecoveryReviewViewModel', () => {
     expect(vm.reviewCount).toBe(0);
     expect(vm.needsReview).toEqual([]);
     expect(vm.notice).toBeUndefined();
+    expect(vm.loadOutcome).toBeNull();
   });
 
   it('is all-clear for a workspace with only ok days, even with a notice', () => {

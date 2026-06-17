@@ -165,7 +165,7 @@ export default function CamerasSection({ animal, onFieldUpdate, onEdit, onAdd, o
             <th>Lens</th>
             <th>Meters per Pixel</th>
             <th>Status</th>
-            <th>Actions</th>
+            <th className="cameras-actions-cell">Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -194,7 +194,7 @@ export default function CamerasSection({ animal, onFieldUpdate, onEdit, onAdd, o
                   );
                 })()}
               </td>
-              <td data-label="Actions">
+              <td data-label="Actions" className="cameras-actions-cell">
                 <Button
                   variant="neutral"
                   size="small"
@@ -220,4 +220,3 @@ export default function CamerasSection({ animal, onFieldUpdate, onEdit, onAdd, o
     </div>
   );
 }
-

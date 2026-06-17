@@ -1,5 +1,15 @@
 import { defineConfig, devices } from '@playwright/test';
 
+const screenshotSpecs = '**/*-screenshots.spec.js';
+const visualRegressionSpecs = '**/visual-regression.spec.js';
+
+function getTestIgnore() {
+  if (process.env.RUN_SCREENSHOT_SPECS) {
+    return process.env.CI ? visualRegressionSpecs : undefined;
+  }
+  return process.env.CI ? [visualRegressionSpecs, screenshotSpecs] : screenshotSpecs;
+}
+
 export default defineConfig({
   testDir: './e2e',
   fullyParallel: true,
@@ -8,8 +18,9 @@ export default defineConfig({
   // Use 4 workers in CI for faster parallel execution (26 tests / 4 = ~6.5 tests per worker)
   // GitHub Actions runners have 2 cores, but can handle 4 parallel browser instances
   workers: process.env.CI ? 4 : undefined,
-  // Skip visual regression tests in CI (keep them local-only)
-  testIgnore: process.env.CI ? '**/visual-regression.spec.js' : undefined,
+  // Screenshot regeneration is opt-in (`npm run test:e2e:screenshots`) so the default e2e lane
+  // cannot rewrite committed PNGs. Visual regression tests also remain local-only in CI.
+  testIgnore: getTestIgnore(),
   reporter: [
     ['html'],
     ['json', { outputFile: 'test-results/results.json' }],

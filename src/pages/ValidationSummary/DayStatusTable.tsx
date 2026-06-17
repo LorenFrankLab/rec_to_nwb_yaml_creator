@@ -53,7 +53,7 @@ export default function DayStatusTable({
     // The table can be wider than a phone viewport (6 columns of dense scan/session text), so
     // it scrolls horizontally WITHIN this container instead of forcing the whole page to
     // overflow — the page stays at the viewport width at ~390px and no cell is clipped off.
-    <div className={styles.tableScroll}>
+    <div className={styles.tableScroll} data-testid="validation-table-scroll">
       <table className={styles.table}>
         <caption className="visually-hidden">
           Recording days across all animals with validation status

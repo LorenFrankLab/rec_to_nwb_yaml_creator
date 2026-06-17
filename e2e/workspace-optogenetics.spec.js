@@ -230,7 +230,7 @@ test.describe('Optogenetics export gating and the two-layer opto model', () => {
     blob.workspace.days[DAY_ID].fs_gui_yamls = [];
     await seedAndOpen(page, blob, `/#/day/${DAY_ID}`);
 
-    await page.getByRole('button', { name: 'Epochs', exact: true }).click();
+    await page.getByRole('button', { name: /^Epochs:/ }).click();
     await expect(page.getByRole('heading', { level: 2, name: 'Epochs' })).toBeVisible();
 
     // The opto columns render ONLY for an implanted animal (the two-layer model's day layer).

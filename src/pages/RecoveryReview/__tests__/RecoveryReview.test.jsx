@@ -107,6 +107,7 @@ describe('RecoveryReview', () => {
   it('shows the all-clear state for a clean workspace', () => {
     renderWith({ settings: {}, animals: {}, days: {} });
     expect(screen.getByText(/nothing to review/i)).toBeInTheDocument();
+    expect(screen.getByText(/no recovered day records need attention/i)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /back to animals/i })).toHaveAttribute(
       'href',
       '#/workspace'
@@ -126,5 +127,25 @@ describe('RecoveryReview', () => {
       </StoreProvider>
     );
     expect(await screen.findByText(/missing required sections/i)).toBeInTheDocument();
+    expect(screen.getByText(/nothing was discarded/i)).toBeInTheDocument();
+    expect(screen.getByText(/every recovered record is in good shape/i)).toBeInTheDocument();
+  });
+
+  it('is honest when a saved workspace was discarded and no recovered records exist', async () => {
+    window.localStorage.setItem(WORKSPACE_STORAGE_KEY, '{not valid json');
+
+    render(
+      <StoreProvider>
+        <RecoveryReview />
+      </StoreProvider>
+    );
+
+    expect(await screen.findByText(/could not be restored and was discarded/i)).toBeInTheDocument();
+    expect(screen.getByText(/Saved workspace data could not be restored/i)).toBeInTheDocument();
+    expect(screen.queryByText(/nothing was discarded/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/every recovered record is in good shape/i)).not.toBeInTheDocument();
+    expect(
+      screen.getByText(/because the unusable saved workspace was discarded/i)
+    ).toBeInTheDocument();
   });
 });

@@ -208,7 +208,7 @@ test.describe('Mistake-prevention UX on high-risk edit surfaces', () => {
       page.getByRole('heading', { level: 1, name: `Day Editor: ${ANIMAL_ID} - 2023-06-22` }),
     ).toBeVisible();
 
-    await page.getByRole('button', { name: 'Epochs', exact: true }).click();
+    await page.getByRole('button', { name: /^Epochs:/ }).click();
     await expect(page.getByRole('heading', { level: 2, name: 'Epochs' })).toBeVisible();
 
     // In the epoch grid, epochs ARE the rows (never free-typed) and a video inherits its task's
@@ -236,7 +236,7 @@ test.describe('Mistake-prevention UX on high-risk edit surfaces', () => {
     // reuses an existing name is blocked at its SOURCE — the animal catalog — the structural guarantee
     // behind the Spyglass task-name identity. (The seeded day uses task_name "w_alternation".)
     await seedAndOpen(page, buildConfiguredWorkspaceBlob(), `/#/day/${DAY_ID}`);
-    await page.getByRole('button', { name: 'Epochs', exact: true }).click();
+    await page.getByRole('button', { name: /^Epochs:/ }).click();
     await expect(page.getByRole('heading', { level: 2, name: 'Epochs' })).toBeVisible();
 
     // Expand an epoch to reach its task picker — a controlled combobox, no free-text task name.
@@ -271,7 +271,7 @@ test.describe('Mistake-prevention UX on high-risk edit surfaces', () => {
 
     await seedAndOpen(page, blob, `/#/day/${DAY_ID}`);
     // Behavioral events have their own day-editor tab (separate from Tasks & Epochs).
-    await page.getByRole('button', { name: 'DIO', exact: true }).click();
+    await page.getByRole('button', { name: /^DIO:/ }).click();
     await expect(page.getByRole('heading', { level: 2, name: 'Behavioral Events' })).toBeVisible();
 
     // The tab opens on the read-only carry-forward summary; reveal the editable ECU wiring table.
@@ -305,7 +305,7 @@ test.describe('Mistake-prevention UX on high-risk edit surfaces', () => {
 
     // The Overview section hosts the Technical parameters block as a collapsible <details>; expand
     // it via the same robust open pattern, asserting a revealed value, then check the rest.
-    await page.getByRole('button', { name: 'Day', exact: true }).click();
+    await page.getByRole('button', { name: /^Day:/ }).click();
     await openDetails(
       page.getByText('Technical parameters', { exact: true }),
       page.getByText('Raw data to volts', { exact: true }),

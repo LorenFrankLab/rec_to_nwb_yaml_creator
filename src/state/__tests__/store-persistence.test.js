@@ -37,6 +37,7 @@ describe('useStore persistence', () => {
 
     expect(result.current.model.workspace.animals).toHaveProperty('remy');
     expect(result.current.model.workspace.days).toHaveProperty('remy_20230622');
+    expect(result.current.persistence.loadOutcome).toBeNull();
   });
 
   it('does not write on legacy formData edits, but does on workspace edits', () => {
@@ -104,6 +105,7 @@ describe('useStore persistence', () => {
     const { result } = renderHook(() => useStore());
 
     expect(result.current.persistence.loadNotice).not.toBeNull();
+    expect(result.current.persistence.loadOutcome).toBe('discarded');
     expect(window.localStorage.getItem(WORKSPACE_STORAGE_KEY)).toBeNull();
     // Starts with an empty workspace rather than crashing.
     expect(result.current.model.workspace.animals).toEqual({});
@@ -190,6 +192,7 @@ describe('useStore persistence', () => {
     expect(result.current.model.workspace.days).toEqual({});
     expect(result.current.persistence.loadNotice).toMatch(/animals/);
     expect(result.current.persistence.loadNotice).toMatch(/days/);
+    expect(result.current.persistence.loadOutcome).toBe('recovered');
   });
 
   it('recovery notice names only the genuinely-missing section (settings), not present ones', () => {
@@ -200,6 +203,7 @@ describe('useStore persistence', () => {
     expect(result.current.persistence.loadNotice).toMatch(/settings/);
     expect(result.current.persistence.loadNotice).not.toMatch(/animals/);
     expect(result.current.persistence.loadNotice).not.toMatch(/days/);
+    expect(result.current.persistence.loadOutcome).toBe('recovered');
   });
 
   it('discards (not recovers) a corrupt-typed section: discard notice + cleared blob + empty workspace', () => {
@@ -210,6 +214,7 @@ describe('useStore persistence', () => {
     const { result } = renderHook(() => useStore());
 
     expect(result.current.persistence.loadNotice).toMatch(/could not be restored/i);
+    expect(result.current.persistence.loadOutcome).toBe('discarded');
     expect(window.localStorage.getItem(WORKSPACE_STORAGE_KEY)).toBeNull();
     expect(result.current.model.workspace.animals).toEqual({});
   });

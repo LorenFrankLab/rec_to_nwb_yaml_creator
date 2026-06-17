@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { FLAGS } from '../featureFlags';
 import { saveWorkspace, clearWorkspace } from './persistence';
 import type { LoadDiscardReason } from './persistence';
-import type { Workspace, PersistenceStatus } from './workspaceTypes';
+import type { Workspace, PersistenceLoadOutcome, PersistenceStatus } from './workspaceTypes';
 
 /** Inputs to {@link useWorkspacePersistence} (the workspace + the refs `useWorkspace` owns). */
 export interface UseWorkspacePersistenceParams {
@@ -51,7 +51,8 @@ export function useWorkspacePersistence({
   const [lastSaved, setLastSaved] = useState<string | null>(null); // ISO string of last confirmed write, or null
   const [saveError, setSaveError] = useState<string | null>(null); // user-facing save-failure message, or null
   const [hasPendingWrite, setHasPendingWrite] = useState(false); // debounce in flight
-  const [loadNotice, setLoadNotice] = useState<string | null>(null); // discard notice for the UI, or null
+  const [loadNotice, setLoadNotice] = useState<string | null>(null); // recovery/discard notice for the UI
+  const [loadOutcome, setLoadOutcome] = useState<PersistenceLoadOutcome>(null);
 
   // Surface a discard notice after mount when a saved blob could not be restored,
   // and clear the unusable blob so it isn't re-read.
@@ -61,6 +62,7 @@ export function useWorkspacePersistence({
         'Saved workspace data could not be restored (it was from an incompatible ' +
           'or corrupted version) and was discarded. Starting with an empty workspace.'
       );
+      setLoadOutcome('discarded');
       initialDiscardRef.current = null;
       clearWorkspace();
     } else if (initialRecoverRef.current) {
@@ -71,6 +73,7 @@ export function useWorkspacePersistence({
         `Saved workspace was missing required sections (${missing}); they were ` +
           'restored to empty so your existing data could be loaded. Please review before exporting.'
       );
+      setLoadOutcome('recovered');
       initialRecoverRef.current = null;
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -143,10 +146,11 @@ export function useWorkspacePersistence({
       saveError,
       hasPendingWrite,
       loadNotice,
+      loadOutcome,
       dismissLoadNotice,
       saveNow,
     }),
-    [lastSaved, saveError, hasPendingWrite, loadNotice, dismissLoadNotice, saveNow]
+    [lastSaved, saveError, hasPendingWrite, loadNotice, loadOutcome, dismissLoadNotice, saveNow]
   );
 
   return persistence;

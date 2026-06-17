@@ -1309,6 +1309,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **v3 review fixes — presentation & a11y.** Recovery review copy now distinguishes recovered data
+  from discarded unusable saves; the primary skip link target resolves and focuses correctly; Day
+  Editor tabs expose their validation status; camera row actions stay reachable with long names; the
+  electrode-group modal keeps tall forms scrollable with pinned actions; the create-animal stepper
+  stays in one row and "Save draft" confirms; electrode-group tables show friendly probe labels; and
+  zero-day animals no longer show duplicate add-day actions or a setup card once required setup is
+  complete.
 - **Switching directly between two recording days no longer carries the prior day's field values.**
   The Day Editor is now remounted per routed day id, so a direct `#/day/A` → `#/day/B` change (e.g.
   browser back/forward between days) shows the new day's data — previously the Overview
