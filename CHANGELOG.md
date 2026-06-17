@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Guided create-animal wizard.** Creating a new animal from scratch is now a seven-step guided
+  setup — Identity → Electrodes → Cameras → Optogenetics → Tasks → Recording system → Team — instead
+  of a single long form. Identity (the subject) is committed through `createAnimal` on the first
+  advance, then each setup step edits the live animal through the **same** Animal-View setup
+  containers (electrode groups, cameras, optogenetics, task types, recording system) — no
+  reimplementation. Identity reuses the DANDI predicates (Latin-binomial / NCBI species, no-slash
+  subject id) and the case-insensitive uniqueness check; the optogenetics step shows the
+  all-or-nothing "Opto configured · N of 4" meter; electrodes offers a behavior-only skip. "Save
+  draft" leaves a valid-but-partial animal; finishing lands on the new animal's days. The wizard also
+  offers "Import a YAML…" and "Copy from another animal…" as start options that route to the existing
+  entry points. Exported YAML is unchanged — animal creation moves no export bytes (the golden
+  baselines stay byte-identical).
 - **Export preview — the day's export surface.** The day editor's Export action now opens an
   export-preview screen: an issue-driven readiness gate (quiet "✓ Ready to export" when clean; a loud
   "N issues block export" listing each blocking issue with a field-linked "Fix in …" route when not),
@@ -130,6 +142,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Removed
 
+- **Retired the one-shot `AnimalCreationForm` as the from-scratch create entry.** The guided
+  create-animal wizard replaces it everywhere (the Home `#/home` route, the Animals home's
+  "+ New animal", and the top selector's "+ New animal…"); the inline create panel on the Animals
+  home and the `#/workspace?create=1` handshake are gone (the selector now routes to `#/home`). The
+  component and its tests are deleted, and its identity validation moved into the pure
+  `createAnimalWizardViewModel` (which still reuses the shared `buildAnimalFromForm` glue, so every
+  entry builds an identical animal). The lower-level field components and `domain/animalCreation` are
+  kept.
 - **Retired the Day Editor's `ExportStep` and `ValidationStep`.** The Phase-3 readiness bar already
   replaced the inline Validation step's role, and the new export-preview surface replaces Export — so
   both components (and their tests) are removed. The single-day export gate is unchanged (it lives in
