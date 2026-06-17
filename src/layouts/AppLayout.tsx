@@ -25,6 +25,7 @@ import { Home } from '../pages/Home';
 import { AnimalWorkspace } from '../pages/AnimalWorkspace';
 import ImportRepair from '../pages/ImportRepair';
 import CopyFromAnimal from '../pages/CopyFromAnimal';
+import { RecoveryReview } from '../pages/RecoveryReview';
 import { DayEditor } from '../pages/DayEditor';
 import { ValidationSummary } from '../pages/ValidationSummary';
 import { AnimalView } from '../pages/AnimalView';
@@ -42,6 +43,7 @@ function getViewName(view: string): string {
     workspace: 'Animal Workspace',
     import: 'Import Metadata YAML',
     'copy-from-animal': 'Copy from Another Animal',
+    recovery: 'Review Recovered Data',
     day: 'Day Editor',
     validation: 'Validation Summary',
     'animal-view': 'Animal',
@@ -217,6 +219,9 @@ export function AppLayout() {
       case 'copy-from-animal':
         return <CopyFromAnimal />;
 
+      case 'recovery':
+        return <RecoveryReview />;
+
       case 'day':
         // Key by the routed day id so a DIRECT day→day hash change (e.g. browser back/forward
         // between two day URLs, with no intervening view change) REMOUNTS the editor. Without it,
@@ -372,13 +377,14 @@ export function AppLayout() {
       <ShortcutsHelp isOpen={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
 
       {/* Notice when previously-saved workspace data was recovered or could not be restored, so a
-          recovered/discarded workspace is never silent. The "Review animals" link routes to the
-          Animals home, where each animal's rolled-up status surfaces any that now need review. */}
+          recovered/discarded workspace is never silent. The "Review recovered data" link routes to
+          the recovery-review screen (epoch-editor Phase 8), which renders each needs-review record
+          (dangling / recovered-unlinked / wrong-owner / orphan) with its concrete repair. */}
       {persistence.loadNotice && (
         <div className={styles.loadNotice} role="alert">
           <span>{persistence.loadNotice}</span>
-          <a className={styles.loadNoticeReview} href="#/workspace">
-            Review animals
+          <a className={styles.loadNoticeReview} href="#/recovery">
+            Review recovered data
           </a>
           <button
             type="button"

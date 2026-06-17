@@ -35,7 +35,7 @@ export const DEFAULT_ANIMAL_VIEW_TAB = 'days';
 /** Parsed route information. */
 export interface RouteInfo {
   /** Current view name. */
-  view: 'home' | 'workspace' | 'import' | 'copy-from-animal' | 'day' | 'validation' | 'animal-view' | 'legacy';
+  view: 'home' | 'workspace' | 'import' | 'copy-from-animal' | 'recovery' | 'day' | 'validation' | 'animal-view' | 'legacy';
   /** Route parameters (e.g., `{id: '123'}` or `{animalId, tab}`). */
   params: Record<string, string>;
   /** True if route was not recognized. */
@@ -95,6 +95,12 @@ export function parseHashRoute(
 
   if (pathWithoutQuery === '/copy-from-animal') {
     return { view: 'copy-from-animal', params: {} };
+  }
+
+  // Recovery review (epoch-editor Phase 8): the load-time "review recovered data" surface, reached
+  // from the AppLayout load-notice banner.
+  if (pathWithoutQuery === '/recovery') {
+    return { view: 'recovery', params: {} };
   }
 
   if (pathWithoutQuery === '/validation') {
