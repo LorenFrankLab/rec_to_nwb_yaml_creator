@@ -61,14 +61,14 @@ describe('Day editor export gate (integration)', () => {
     );
 
     // Export is a freely reachable tab — never nav-locked.
-    const exportButton = screen.getByRole('button', { name: /^Export/ });
+    const exportButton = screen.getByRole('button', { name: /^Export$/ });
     expect(exportButton).not.toHaveAttribute('aria-disabled', 'true');
 
     await user.click(exportButton);
 
-    // ExportStep rendered: the resolved filename is shown and the download is enabled.
-    expect(screen.getByText(/06222023_remy_metadata\.yml/)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /download yaml/i })).toBeEnabled();
+    // The export-preview surface rendered: its header + the resolved filename Download is enabled.
+    expect(screen.getByRole('heading', { name: /Export — 2023-06-22/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Download' })).toBeEnabled();
   });
 
   it('reaches the Export step but blocks the download when a prerequisite step is invalid', async () => {
@@ -85,11 +85,11 @@ describe('Day editor export gate (integration)', () => {
       </StoreProvider>
     );
 
-    const exportButton = screen.getByRole('button', { name: /^Export/ });
+    const exportButton = screen.getByRole('button', { name: /^Export$/ });
     expect(exportButton).not.toHaveAttribute('aria-disabled', 'true');
     await user.click(exportButton);
 
-    expect(screen.getByRole('button', { name: /download yaml/i })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Download' })).toBeDisabled();
   });
 
   it('reaches the Export step on a day with an export-blocking schema error but keeps the download blocked', async () => {
@@ -103,14 +103,14 @@ describe('Day editor export gate (integration)', () => {
       </StoreProvider>
     );
 
-    const exportButton = screen.getByRole('button', { name: /^Export/ });
+    const exportButton = screen.getByRole('button', { name: /^Export$/ });
     // Freely reachable — the gate is the download action, not the tab.
     expect(exportButton).not.toHaveAttribute('aria-disabled', 'true');
     await user.click(exportButton);
 
-    // ExportStep renders (filename line present) but its self-gate keeps the download disabled.
-    expect(screen.getByText(/06222023_remy_metadata\.yml/)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /download yaml/i })).toBeDisabled();
+    // The export-preview surface renders (its header is present) but the gate keeps the download disabled.
+    expect(screen.getByRole('heading', { name: /Export — 2023-06-22/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Download' })).toBeDisabled();
   });
 
   it('shows the always-visible readiness bar "Ready to export" for a clean day (no Validation step to navigate to)', () => {

@@ -242,13 +242,14 @@ describe('DayEditorFrame', () => {
     expect(main).toHaveFocus();
   });
 
-  // ── Transitional Export affordance (ExportStep kept until Phase 5) ──
-  it('reveals the kept Export step via the header Export action, with the download disabled while invalid', async () => {
+  // ── Export-preview surface (revealed by the header Export action) ──
+  it('reveals the export-preview surface via the header Export action, with the download disabled while invalid', async () => {
     const user = userEvent.setup();
     renderFrame();
     await user.click(screen.getByRole('button', { name: /^Export$/ }));
-    expect(screen.getByRole('heading', { name: /Export YAML/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /download yaml/i })).toBeDisabled();
+    expect(screen.getByRole('heading', { name: /Export — 2023-06-22/ })).toBeInTheDocument();
+    // The mock animal's species "Rat" is not DANDI-valid → the export gate blocks the download.
+    expect(screen.getByRole('button', { name: /^Download$/ })).toBeDisabled();
   });
 
   // ── Repair flows (executable repairs surface on the readiness bar / Day tab) ──

@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Export preview — the day's export surface.** The day editor's Export action now opens an
+  export-preview screen: an issue-driven readiness gate (quiet "✓ Ready to export" when clean; a loud
+  "N issues block export" listing each blocking issue with a field-linked "Fix in …" route when not),
+  the derived download filename, and a read-only preview of the **real export bytes**
+  (`encodeYaml(mergeDayMetadata(animal, day))` — never an approximation). **Download** and **Copy** are
+  BOTH gated while blocking — both emit the YAML, so Copy is not a way around the gate — and each emits
+  a success toast ("✓ Downloaded {filename}" / "✓ YAML copied"). The gate is the authoritative
+  `validateDay`/export gate (`vm.export`) every other readiness surface already reads — no new gate
+  logic. A new **"Export all {N} days"** batch reuses the shared `exportDayFile` core (same
+  parity/skip semantics as "Export Valid Only" — not a second exporter) and reports "Exported N ·
+  Skipped M", each skipped day linked to its blocking issue via the same field-level repair route as
+  the single-day gate. Replaces the transitional `ExportStep` (the per-day download moves off the
+  DayEditor header panel onto this surface).
 - **Epoch grid — the day editor's spine.** The Epochs tab is now a per-epoch grid: one row per epoch
   joining the day's tasks + statescript/video files + opto schedule (columns #, Task, Camera(s),
   Statescript, Video(s), Opto mW, Pulse ms, Status), with a per-epoch drill-in (What happened /
@@ -114,6 +127,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Removed
 
+- **Retired the Day Editor's `ExportStep` and `ValidationStep`.** The Phase-3 readiness bar already
+  replaced the inline Validation step's role, and the new export-preview surface replaces Export — so
+  both components (and their tests) are removed. The single-day export gate is unchanged (it lives in
+  the shared `vm.export` / `validateDay` gate the new surface reads); the per-day export's "preflight
+  summary" is replaced by the read-only YAML preview (the real bytes the user is about to download).
 - **Removed `react-scripts` and its ~927-package transitive tree (CRA toolchain — webpack, Babel, Jest).**
   Promoted to direct deps what react-scripts had provided transitively but the project still needs:
   `eslint` + `eslint-config-react-app` (the `.eslintrc.js` `"react-app"` preset; same versions, no behavior

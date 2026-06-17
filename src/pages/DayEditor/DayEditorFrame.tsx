@@ -30,7 +30,7 @@ import DayTab from './DayTab';
 import FailedChannelsTab from './FailedChannelsTab';
 import EpochsTab from './EpochsTab';
 import DioTab from './DioTab';
-import ExportStep from './ExportStep';
+import ExportPreview from './ExportPreview';
 import type { CopyableDioSource } from './BehavioralEventsDisplay';
 import ErrorState from './ErrorState';
 import styles from './DayEditorFrame.module.css';
@@ -83,8 +83,8 @@ function toScopeSummary(summary: ReturnType<typeof buildAnimalViewModel>['summar
  * issue-driven {@link ReadinessBar} (fed the authoritative `validateDay` issues — never a local
  * check). The body is a 4-tab bar — **Day / Epochs / Failed channels / DIO** — with free navigation
  * and Alt+←/→; the tab panels read their data through {@link DayEditorProvider} (NOT props), so the
- * provider must wrap them. A transitional header **Export** action reveals the kept {@link ExportStep}
- * until the Phase-5 export-preview screen replaces it.
+ * provider must wrap them. A header **Export** action reveals the {@link ExportPreview} surface (the
+ * issue-gated download/copy + the YAML preview + the batch "export all days").
  *
  * Behavior reused from the former stepper: owner resolution, the merge, the field/subject writers,
  * executable repairs, and the repair-focus + section-change focus effects.
@@ -414,11 +414,12 @@ export default function DayEditorFrame() {
               />
             )}
             {mode === 'export' && (
-              <ExportStep
+              <ExportPreview
                 {...dayEditorContextValue}
+                workspace={model.workspace}
                 issues={vm.issues}
                 exportGate={vm.export}
-                // ExportStep's blocked list dispatches an executable repair; run it in place. (Its
+                // The blocked list dispatches an executable repair; run it in place. (Its
                 // RepairDispatch carries the repairCommand the executor reads.)
                 onRepair={(dispatch) => handleRepair(dispatch as unknown as RepairableIssue)}
                 onNavigate={(stepId, fieldPath) => {

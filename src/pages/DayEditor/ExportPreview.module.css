@@ -1,0 +1,181 @@
+.surface {
+  max-width: 860px;
+}
+
+.header {
+  margin-bottom: var(--spacing-md, 16px);
+}
+
+.title {
+  margin: 0 0 var(--spacing-xs, 4px);
+}
+
+.lede {
+  margin: 0;
+  color: var(--color-grey-600, #69727b);
+  font-size: var(--font-size-sm, 13px);
+}
+
+.lede code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+/* ── Readiness gate ── */
+.ready {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm, 8px);
+  padding: var(--spacing-sm, 11px) var(--spacing-md, 14px);
+  margin-bottom: var(--spacing-md, 16px);
+  background: var(--color-success-bg, #eaf6ee);
+  border: 1px solid var(--color-success, #1f8a4c);
+  border-radius: var(--radius-md, 10px);
+  font-weight: 600;
+  color: var(--color-success-text, #1a6e3f);
+}
+
+.readyIcon {
+  font-weight: 700;
+}
+
+.blocked {
+  padding: var(--spacing-sm, 11px) var(--spacing-md, 14px);
+  margin-bottom: var(--spacing-md, 16px);
+  background: var(--color-error-bg, #fbecec);
+  border: 1px solid var(--color-error, #c23b3b);
+  border-radius: var(--radius-md, 10px);
+}
+
+.blockedHeading {
+  margin: 0 0 var(--spacing-sm, 8px);
+  font-weight: 600;
+  color: var(--color-error-text, #a23030);
+}
+
+.stepBlockers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-sm, 8px);
+}
+
+/* ── File card + preview ── */
+.filecard {
+  border: 1px solid var(--color-grey-200, #e4e7eb);
+  border-radius: var(--radius-md, 10px);
+  overflow: hidden;
+  margin-bottom: var(--spacing-md, 14px);
+}
+
+.filebar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-md, 12px);
+  padding: var(--spacing-sm, 11px) var(--spacing-md, 14px);
+  border-bottom: 1px solid var(--color-grey-100, #eef1f4);
+}
+
+.fname {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: var(--font-size-sm, 13px);
+  font-weight: 600;
+}
+
+.fmeta {
+  font-size: var(--font-size-xs, 12px);
+  color: var(--color-grey-600, #69727b);
+}
+
+.code {
+  margin: 0;
+  max-height: 420px;
+  overflow: auto;
+  padding: var(--spacing-md, 14px);
+  background: var(--color-grey-900, #1c2330);
+  color: var(--color-grey-100, #dde3ec);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: var(--font-size-xs, 12.5px);
+  line-height: 1.55;
+  white-space: pre;
+}
+
+/* ── Actions ── */
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-sm, 8px);
+  align-items: center;
+  margin-bottom: var(--spacing-md, 16px);
+}
+
+.actionError {
+  padding: var(--spacing-sm, 11px) var(--spacing-md, 14px);
+  margin-bottom: var(--spacing-md, 16px);
+  background: var(--color-error-bg, #fbecec);
+  border: 1px solid var(--color-error, #c23b3b);
+  border-radius: var(--radius-md, 10px);
+  color: var(--color-error-text, #a23030);
+}
+
+/* ── Batch ── */
+.batch {
+  font-size: var(--font-size-sm, 13px);
+  color: var(--color-grey-600, #69727b);
+}
+
+.batch p {
+  margin: 0;
+}
+
+.batchLink {
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  color: var(--color-primary, #2f6fae);
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.batchLink:hover {
+  color: var(--color-primary-dark, #255b91);
+}
+
+.batchResult {
+  margin-top: var(--spacing-md, 14px);
+  border: 1px solid var(--color-grey-200, #e4e7eb);
+  border-radius: var(--radius-md, 10px);
+  overflow: hidden;
+}
+
+.batchHeading {
+  margin: 0;
+  padding: var(--spacing-sm, 10px) var(--spacing-md, 14px);
+  background: var(--color-success-bg, #f1f8f3);
+  border-bottom: 1px solid var(--color-grey-100, #eef1f4);
+  font-weight: 600;
+  color: var(--color-success-text, #1a6e3f);
+}
+
+.batchList {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.batchExported,
+.batchSkipped {
+  padding: var(--spacing-sm, 9px) var(--spacing-md, 14px);
+  border-bottom: 1px solid var(--color-grey-100, #eef1f4);
+  font-size: var(--font-size-sm, 13px);
+}
+
+.batchSkipped {
+  color: var(--color-error-text, #7a3434);
+  background: var(--color-error-bg, #fdf6f6);
+}
+
+.batchFix {
+  color: var(--color-primary, #2f6fae);
+  white-space: nowrap;
+}
