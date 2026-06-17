@@ -238,15 +238,13 @@ export function buildConfiguredWorkspaceBlob(overrides = {}) {
 }
 
 /**
- * Create a valid animal through the real create-animal UI and land on its days tab.
+ * Create a valid animal through the real create-animal wizard and land on its days tab.
  *
- * Fills only the genuinely-required fields (verified against
- * src/pages/Home/AnimalCreationForm.jsx AND by driving the form): Subject ID, Date of
- * Birth, Weight (grams), and Experimenter 1. Species/Sex/Genotype default to valid
- * values; Lab/Institution default from the workspace's saved defaults — on a fresh
- * store those are empty, so this helper fills them too unless caller opts out via the
- * defaults already being present (the submit button stays disabled until valid, which
- * this helper asserts before clicking).
+ * From-scratch creation is the guided wizard at `#/home` (epoch-editor Phase 6). This helper opens it
+ * from the picker, fills the Identity step's genuinely-required fields (Subject ID, Date of Birth,
+ * Weight — Species/Sex/Genotype default to valid values), then uses "Save draft" to commit the animal
+ * and land on its days tab. The remaining setup steps (electrodes, cameras, team, …) are left for the
+ * caller to drive when a fuller animal is needed; this helper produces the minimal valid draft.
  *
  * Waits on the resulting animal-route URL + header, never a sleep.
  *
@@ -255,27 +253,13 @@ export function buildConfiguredWorkspaceBlob(overrides = {}) {
  * @param {string} opts.subjectId - Unique subject id (letters/numbers/-/_; no spaces).
  * @param {string} [opts.dateOfBirth] - ISO date (YYYY-MM-DD). Default '2023-01-01'.
  * @param {string|number} [opts.weight] - Weight in grams. Default 450.
- * @param {string} [opts.experimenter] - Experimenter 1 name. Default 'Doe, Jane'.
- * @param {string} [opts.lab] - Lab. Default 'Frank' (fills only if the field is empty).
- * @param {string} [opts.institution] - Institution. Default 'UCSF' (fills only if empty).
  * @returns {Promise<{ animalId: string }>} The lowercased animal id now in the route.
  */
-export async function createAnimalViaUI(
-  page,
-  {
-    subjectId,
-    dateOfBirth = '2023-01-01',
-    weight = 450,
-    experimenter = 'Doe, Jane',
-    lab = 'Frank',
-    institution = 'UCSF',
-  },
-) {
+export async function createAnimalViaUI(page, { subjectId, dateOfBirth = '2023-01-01', weight = 450 }) {
   if (!subjectId) throw new Error('createAnimalViaUI requires a subjectId');
 
-  // Open the inline create panel from the picker. Both the empty-state ("Create Animal")
-  // and the populated-picker ("+ New Animal", aria-label "Create new animal") routes open
-  // the same form; prefer whichever is present.
+  // Open the wizard from the picker. Both the empty-state ("Create Animal") and the populated-picker
+  // ("+ New Animal", aria-label "Create new animal") navigate to the guided wizard at #/home.
   const newAnimalButton = page.getByRole('button', { name: 'Create new animal' });
   const firstAnimalButton = page.getByRole('button', { name: 'Create Animal' }).first();
   if (await newAnimalButton.isVisible().catch(() => false)) {
@@ -284,24 +268,17 @@ export async function createAnimalViaUI(
     await firstAnimalButton.click();
   }
 
-  const form = page.getByRole('form', { name: 'Animal creation form' });
-  await expect(form).toBeVisible();
+  // The wizard (a tablist of setup steps) is now on screen at #/home.
+  await expect(page).toHaveURL(/#\/home/);
+  await expect(page.getByRole('tablist', { name: 'Setup steps' })).toBeVisible();
 
-  await form.getByRole('textbox', { name: 'Subject ID *' }).fill(subjectId);
-  await form.getByRole('textbox', { name: 'Date of Birth *' }).fill(dateOfBirth);
-  await form.getByRole('spinbutton', { name: /Weight \(grams\)/ }).fill(String(weight));
-  await form.getByRole('textbox', { name: /Experimenter 1/ }).fill(experimenter);
+  // Fill the Identity step's required fields. Species/Sex/Genotype default to valid values.
+  await page.getByRole('textbox', { name: 'Subject ID' }).fill(subjectId);
+  await page.getByLabel('Weight (grams)').fill(String(weight));
+  await page.getByLabel('Date of Birth').fill(dateOfBirth);
 
-  // Lab/Institution default from workspace settings; on a fresh store they are empty and
-  // required. Fill only when empty so a defaulted value isn't clobbered.
-  const labField = form.getByRole('textbox', { name: 'Lab *' });
-  if (!(await labField.inputValue())) await labField.fill(lab);
-  const institutionField = form.getByRole('textbox', { name: 'Institution *' });
-  if (!(await institutionField.inputValue())) await institutionField.fill(institution);
-
-  const submit = form.getByRole('button', { name: 'Create Animal' });
-  await expect(submit).toBeEnabled();
-  await submit.click();
+  // Save draft commits the animal (createAnimal) and lands on its days tab.
+  await page.getByRole('button', { name: 'Save draft' }).click();
 
   const animalId = subjectId.toLowerCase().trim();
   await expect(page).toHaveURL(new RegExp(`#/animal/${animalId}/days`));

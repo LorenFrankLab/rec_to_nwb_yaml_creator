@@ -14,9 +14,9 @@ test.describe('Workspace persistence', () => {
     // Start clean (clears storage + re-hydrates an empty store via a fresh document).
     await resetWorkspace(page);
 
-    // Create a valid animal through the real UI. The shared harness fills the full
-    // currently-required set (Subject ID, Date of Birth, Weight, Experimenter 1, and
-    // Lab/Institution — empty on a fresh store) and waits for the create to land.
+    // Create a valid animal through the real create wizard. The shared harness fills the Identity
+    // step's required fields (Subject ID, Date of Birth, Weight) and saves a draft, then waits for
+    // the create to land on the animal's days route.
     const { animalId } = await createAnimalViaUI(page, { subjectId: 'e2erat' });
 
     // Lands on the new animal's route and shows its id.

@@ -41,7 +41,7 @@ test.describe('Animal lifecycle — create & switch', () => {
     await resetWorkspace(page);
   });
 
-  test('"+ New Animal" opens an inline create panel ON the picker (not a route) and lands on the new animal', async ({
+  test('"+ New Animal" routes to the guided create wizard and lands on the new animal', async ({
     page,
   }) => {
     // Seed one animal so the populated-picker "+ New Animal" button (aria-label "Create new animal")
@@ -53,14 +53,14 @@ test.describe('Animal lifecycle — create & switch', () => {
 
     await page.getByRole('button', { name: 'Create new animal' }).click();
 
-    // The create form appears INLINE on the picker — the route stays #/workspace (no jump to #/home).
-    await expect(page).toHaveURL(/#\/workspace$/);
-    await expect(page.getByRole('form', { name: 'Animal creation form' })).toBeVisible();
+    // The guided wizard opens at #/home (a tablist of setup steps), not an inline panel.
+    await expect(page).toHaveURL(/#\/home/);
+    await expect(page.getByRole('tablist', { name: 'Setup steps' })).toBeVisible();
 
-    // Completing the form (via the shared helper, which fills only the genuinely-required fields)
-    // creates the animal and lands on its days route.
-    // (The helper re-uses the "Create new animal" button it sees here.)
-    await page.getByRole('button', { name: 'Cancel' }).click();
+    // Completing the wizard's Identity step (via the shared helper) creates the animal and lands on
+    // its days route. The helper re-opens the wizard from the picker, so return there first.
+    await page.goto('/#/workspace');
+    await page.reload();
     const { animalId } = await createAnimalViaUI(page, { subjectId: 'nina' });
     await expect(page).toHaveURL(new RegExp(`#/animal/${animalId}/days`));
     await expect(page.getByRole('heading', { level: 1, name: animalId })).toBeVisible();

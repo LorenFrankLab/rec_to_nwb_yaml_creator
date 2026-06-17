@@ -3,7 +3,7 @@
  *
  * Proves each helper works against the REAL app so the ~8 later specs can rely on it:
  *   - resetWorkspace      → clean empty-state picker
- *   - createAnimalViaUI   → real create form lands on the animal's days tab
+ *   - createAnimalViaUI   → real create wizard lands on the animal's days tab
  *   - seedWorkspace + buildConfiguredWorkspaceBlob → complex state hydrates from storage
  *   - captureDownload     → captures a real YAML download's text for structural asserts
  *   - disableAnimations   → registers without error and the screen still renders
@@ -38,7 +38,7 @@ test.describe('workspace harness', () => {
       .toBeNull();
   });
 
-  test('createAnimalViaUI creates a valid animal through the form and lands on its days tab', async ({
+  test('createAnimalViaUI creates a valid animal through the wizard and lands on its days tab', async ({
     page,
   }) => {
     await resetWorkspace(page);
