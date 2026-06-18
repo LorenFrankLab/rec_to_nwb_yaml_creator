@@ -16,7 +16,20 @@
   margin-bottom: var(--spacing-xs, 6px);
 }
 
+.epochToolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spacing-sm, 8px) var(--spacing-md, 12px);
+}
+
 .summaryStrip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-xs, 6px);
+}
+
+.bulkActions {
   display: flex;
   flex-wrap: wrap;
   gap: var(--spacing-xs, 6px);

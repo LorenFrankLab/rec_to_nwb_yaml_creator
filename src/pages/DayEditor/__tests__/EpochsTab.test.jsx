@@ -462,6 +462,26 @@ describe('EpochsTab — video 3-state', () => {
     expect(patch).toContainEqual({ name: '20230622_r_01_s1.1.h264', camera_id: 0, task_epochs: 1 });
   });
 
+  it('generates all missing expected videos and offers Undo', async () => {
+    const user = userEvent.setup();
+    const bundle = makeBundle();
+    render(<EpochsTab {...bundle} />);
+
+    await user.click(screen.getByRole('button', { name: /Generate videos \(2\)/i }));
+
+    expect(lastPatch(bundle.onFieldUpdate, 'associated_video_files')).toEqual([
+      { name: 'run_video', camera_id: 1, task_epochs: 2 },
+      { name: '20230622_r_01_s1.1.h264', camera_id: 0, task_epochs: 1 },
+      { name: '20230622_r_03_s2.1.h264', camera_id: 0, task_epochs: 3 },
+    ]);
+    expect(screen.getByText(/Generated 2 video files/i)).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /Undo/i }));
+    expect(lastPatch(bundle.onFieldUpdate, 'associated_video_files')).toEqual([
+      { name: 'run_video', camera_id: 1, task_epochs: 2 },
+    ]);
+  });
+
   it('offers missing-video fixes from collapsed rows', async () => {
     const user = userEvent.setup();
     const bundle = makeBundle();
@@ -515,6 +535,39 @@ describe('EpochsTab — statescript naming', () => {
         task_epochs: 1,
       },
     ]);
+  });
+
+  it('generates all missing statescripts and offers Undo', async () => {
+    const user = userEvent.setup();
+    const bundle = makeBundle();
+    render(<EpochsTab {...bundle} />);
+
+    await user.click(screen.getByRole('button', { name: /Generate statescripts \(3\)/i }));
+
+    expect(lastPatch(bundle.onFieldUpdate, 'associated_files')).toEqual([
+      {
+        name: '20230622_r_01_s1.stateScriptLog',
+        description: '',
+        path: '/data/r/20230622/20230622_r_01_s1.stateScriptLog',
+        task_epochs: 1,
+      },
+      {
+        name: '20230622_r_02_r1.stateScriptLog',
+        description: '',
+        path: '/data/r/20230622/20230622_r_02_r1.stateScriptLog',
+        task_epochs: 2,
+      },
+      {
+        name: '20230622_r_03_s2.stateScriptLog',
+        description: '',
+        path: '/data/r/20230622/20230622_r_03_s2.stateScriptLog',
+        task_epochs: 3,
+      },
+    ]);
+    expect(screen.getByText(/Generated 3 statescript files/i)).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /Undo/i }));
+    expect(lastPatch(bundle.onFieldUpdate, 'associated_files')).toEqual([]);
   });
 
   it('offers missing-statescript fixes from collapsed rows', async () => {

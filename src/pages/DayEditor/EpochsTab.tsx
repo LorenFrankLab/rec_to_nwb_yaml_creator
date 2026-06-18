@@ -34,6 +34,12 @@ import {
   isDerivedVideo,
 } from '../../domain/fileNaming';
 import {
+  addMissingGeneratedStatescripts,
+  addMissingGeneratedVideos,
+  countMissingGeneratedStatescripts,
+  countMissingGeneratedVideos,
+} from '../../domain/epochGeneratedFiles';
+import {
   getAnimalCameras,
   getDayAssociatedVideos,
   getDayAssociatedFiles,
@@ -500,6 +506,8 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
   const epochCount = grid.rows.length;
   const missingVideoCount = grid.rows.filter((row) => row.status === 'needs_video').length;
   const missingStatescriptCount = grid.rows.filter((row) => row.statescript == null).length;
+  const generatedStatescriptCount = countMissingGeneratedStatescripts(grid);
+  const generatedVideoCount = countMissingGeneratedVideos(grid, cameras);
   const hasCustomFilename = (row: EpochGridRow) =>
     row.statescriptNaming === 'manual' ||
     row.videos.some((video, index) => !isDerivedVideo(video.entry, {
@@ -525,6 +533,28 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
     ]
       .filter(Boolean)
       .join(' ');
+  const generateMissingStatescripts = () => {
+    if (unresolvedTaskCatalogDivergence || !grid.dataFolder) return;
+    const current = getDayAssociatedFiles(day);
+    const next = addMissingGeneratedStatescripts(grid, current);
+    if (next === current) return;
+    onFieldUpdate('associated_files', next);
+    setEpochFilter('all');
+    showToast(`Generated ${next.length - current.length} statescript files`, () => {
+      onFieldUpdate('associated_files', current);
+    });
+  };
+  const generateMissingVideos = () => {
+    if (unresolvedTaskCatalogDivergence) return;
+    const current = getDayAssociatedVideos(day);
+    const next = addMissingGeneratedVideos(grid, current, cameras);
+    if (next === current) return;
+    onFieldUpdate('associated_video_files', next);
+    setEpochFilter('all');
+    showToast(`Generated ${next.length - current.length} video files`, () => {
+      onFieldUpdate('associated_video_files', current);
+    });
+  };
 
   return (
     <div id="epochs-workspace" className={`day-editor-section ${styles.root}`} tabIndex={-1}>
@@ -532,48 +562,69 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
         <div>
           <h2>Epochs</h2>
           {epochCount > 0 && (
-            <div className={styles.summaryStrip} aria-label="Epoch status summary">
-              <button
-                type="button"
-                className={filterButtonClass('all')}
-                aria-pressed={epochFilter === 'all'}
-                onClick={() => setEpochFilter('all')}
-              >
-                {epochCount} {epochCount === 1 ? 'epoch' : 'epochs'}
-              </button>
-              <button
-                type="button"
-                className={filterButtonClass(
-                  'needs-video',
-                  missingVideoCount > 0 ? styles.summaryNeedsAttention : ''
-                )}
-                aria-pressed={epochFilter === 'needs-video'}
-                onClick={() => setEpochFilter('needs-video')}
-              >
-                {missingVideoCount} {missingVideoCount === 1 ? 'video' : 'videos'} needed
-              </button>
-              <button
-                type="button"
-                className={filterButtonClass(
-                  'missing-statescript',
-                  missingStatescriptCount > 0 ? styles.summaryNeedsAttention : ''
-                )}
-                aria-pressed={epochFilter === 'missing-statescript'}
-                onClick={() => setEpochFilter('missing-statescript')}
-              >
-                {missingStatescriptCount} {missingStatescriptCount === 1 ? 'statescript' : 'statescripts'} missing
-              </button>
-              <button
-                type="button"
-                className={filterButtonClass(
-                  'custom-filenames',
-                  customFilenameCount > 0 ? styles.summaryReview : ''
-                )}
-                aria-pressed={epochFilter === 'custom-filenames'}
-                onClick={() => setEpochFilter('custom-filenames')}
-              >
-                {customFilenameCount} custom {customFilenameCount === 1 ? 'filename' : 'filenames'}
-              </button>
+            <div className={styles.epochToolbar}>
+              <div className={styles.summaryStrip} aria-label="Epoch status summary">
+                <button
+                  type="button"
+                  className={filterButtonClass('all')}
+                  aria-pressed={epochFilter === 'all'}
+                  onClick={() => setEpochFilter('all')}
+                >
+                  {epochCount} {epochCount === 1 ? 'epoch' : 'epochs'}
+                </button>
+                <button
+                  type="button"
+                  className={filterButtonClass(
+                    'needs-video',
+                    missingVideoCount > 0 ? styles.summaryNeedsAttention : ''
+                  )}
+                  aria-pressed={epochFilter === 'needs-video'}
+                  onClick={() => setEpochFilter('needs-video')}
+                >
+                  {missingVideoCount} {missingVideoCount === 1 ? 'video' : 'videos'} needed
+                </button>
+                <button
+                  type="button"
+                  className={filterButtonClass(
+                    'missing-statescript',
+                    missingStatescriptCount > 0 ? styles.summaryNeedsAttention : ''
+                  )}
+                  aria-pressed={epochFilter === 'missing-statescript'}
+                  onClick={() => setEpochFilter('missing-statescript')}
+                >
+                  {missingStatescriptCount} {missingStatescriptCount === 1 ? 'statescript' : 'statescripts'} missing
+                </button>
+                <button
+                  type="button"
+                  className={filterButtonClass(
+                    'custom-filenames',
+                    customFilenameCount > 0 ? styles.summaryReview : ''
+                  )}
+                  aria-pressed={epochFilter === 'custom-filenames'}
+                  onClick={() => setEpochFilter('custom-filenames')}
+                >
+                  {customFilenameCount} custom {customFilenameCount === 1 ? 'filename' : 'filenames'}
+                </button>
+              </div>
+              <div className={styles.bulkActions} aria-label="Generate expected files">
+                <Button
+                  variant="secondary"
+                  size="small"
+                  disabled={generatedStatescriptCount === 0 || !grid.dataFolder}
+                  title={!grid.dataFolder ? 'Set the data folder in Daily Setup first' : undefined}
+                  onClick={generateMissingStatescripts}
+                >
+                  Generate statescripts ({generatedStatescriptCount})
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="small"
+                  disabled={generatedVideoCount === 0}
+                  onClick={generateMissingVideos}
+                >
+                  Generate videos ({generatedVideoCount})
+                </Button>
+              </div>
             </div>
           )}
         </div>
