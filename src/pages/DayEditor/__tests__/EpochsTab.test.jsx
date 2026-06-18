@@ -187,6 +187,20 @@ describe('EpochsTab — grid render + collapsed state cells', () => {
     expect(screen.getByRole('complementary', { name: /Epoch 2: Run/i })).toBeInTheDocument();
   });
 
+  it('closes the details panel when a filter hides the selected epoch', async () => {
+    const user = userEvent.setup();
+    render(<EpochsTab {...makeBundle()} />);
+
+    await user.click(screen.getByRole('button', { name: /Show epoch 1 details/i }));
+    expect(screen.getByRole('complementary', { name: /Epoch 1: Sleep/i })).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /1 custom filename/i }));
+
+    expect(screen.queryByRole('complementary')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Show epoch 1 details/i })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Show epoch 2 details/i })).toBeInTheDocument();
+  });
+
   it('opens the owning epoch for a statescript associated_files repair focus path', async () => {
     render(
       <EpochsTab
@@ -433,6 +447,21 @@ describe('EpochsTab — confirm-before-orphan (never auto-scrub)', () => {
 });
 
 describe('EpochsTab — renumber moves bound refs in lockstep (no silent misassociation)', () => {
+  it('keeps the details panel attached to the moved task after Move up renumbers it', async () => {
+    const user = userEvent.setup();
+    const bundle = makeBundle();
+    render(<StatefulEpochsTab bundle={bundle} />);
+
+    await user.click(screen.getByRole('button', { name: /Show epoch 2 details/i }));
+    expect(screen.getByRole('complementary', { name: /Epoch 2: Run/i })).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /^Move up$/i }));
+
+    expect(screen.getByRole('button', { name: /Hide epoch 1 details/i })).toBeInTheDocument();
+    expect(screen.getByRole('complementary', { name: /Epoch 1: Run/i })).toBeInTheDocument();
+    expect(screen.queryByRole('complementary', { name: /Epoch 2: Sleep/i })).not.toBeInTheDocument();
+  });
+
   it('Move up swaps the epoch numbers AND remaps the bound video to follow its task (no confirm)', async () => {
     const user = userEvent.setup();
     const bundle = makeBundle();

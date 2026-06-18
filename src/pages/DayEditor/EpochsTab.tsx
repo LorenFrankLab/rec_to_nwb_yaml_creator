@@ -321,6 +321,9 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
   const renumberCommit = (nextInstances: TaskInstance[], remap: Map<number, number>, insertedEpoch?: number) => {
     if (unresolvedTaskCatalogDivergence) return;
     const stateUpdates: Record<string, unknown> = {};
+    const nextActiveEpoch = activeEpoch != null && remap.has(activeEpoch)
+      ? remap.get(activeEpoch) ?? activeEpoch
+      : activeEpoch;
     if (remap.size > 0) {
       const refs = remapEpochRefs(day, remap);
       const videos = getDayAssociatedVideos(day);
@@ -354,6 +357,9 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
       stateUpdates.deferredEpochs = [...new Set([...deferred, insertedEpoch])];
     }
     applyCommit(nextInstances, view.taskTypes, false, false, { trackAddedEpochs: false });
+    if (nextActiveEpoch !== activeEpoch) {
+      setActiveEpoch(nextActiveEpoch);
+    }
     if (Object.keys(stateUpdates).length > 0) {
       onFieldUpdate('state', statePatch(stateUpdates));
     }
@@ -385,6 +391,9 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
         onFieldUpdate('state', statePatch({ videolessEpochs: nextVideoless, deferredEpochs: nextDeferred }));
       }
     };
+    const closeDeletedEpoch = () => {
+      if (activeEpoch === epoch) setActiveEpoch(null);
+    };
     const announce = () =>
       showToast(`Epoch ${epoch} deleted`, () => {
         onFieldUpdate('taskInstances', snapInstances);
@@ -397,6 +406,7 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
     if (videos.length === 0 && files.length === 0) {
       applyCommit(next, view.taskTypes, false);
       writeDeletedState();
+      closeDeletedEpoch();
       announce();
       return;
     }
@@ -404,6 +414,7 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
     pendingTypesRef.current = view.taskTypes;
     pendingAfterRef.current = () => {
       writeDeletedState();
+      closeDeletedEpoch();
       announce();
     };
     setPendingOrphan({ nextInstances: next, videos, files });
@@ -527,15 +538,22 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
       index: index + 1,
     }));
   const customFilenameCount = grid.rows.filter(hasCustomFilename).length;
-  const filteredRows = grid.rows.filter((row) => {
-    if (epochFilter === 'needs-video') return row.status === 'needs_video';
-    if (epochFilter === 'missing-statescript') return row.statescript == null;
-    if (epochFilter === 'custom-filenames') return hasCustomFilename(row);
+  const matchesEpochFilter = (row: EpochGridRow, filter: EpochFilter) => {
+    if (filter === 'needs-video') return row.status === 'needs_video';
+    if (filter === 'missing-statescript') return row.statescript == null;
+    if (filter === 'custom-filenames') return hasCustomFilename(row);
     return true;
-  });
+  };
+  const filteredRows = grid.rows.filter((row) => matchesEpochFilter(row, epochFilter));
   const activeRow = activeEpoch == null
     ? null
     : grid.rows.find((row) => row.epoch === activeEpoch) ?? null;
+  const changeFilter = (filter: EpochFilter) => {
+    setEpochFilter(filter);
+    if (activeEpoch == null) return;
+    const row = grid.rows.find((candidate) => candidate.epoch === activeEpoch);
+    if (!row || !matchesEpochFilter(row, filter)) setActiveEpoch(null);
+  };
   const filterButtonClass = (filter: EpochFilter, tone?: string) =>
     [
       styles.summaryChip,
@@ -583,7 +601,7 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
                     type="button"
                     className={filterButtonClass('all')}
                     aria-pressed={epochFilter === 'all'}
-                    onClick={() => setEpochFilter('all')}
+                    onClick={() => changeFilter('all')}
                   >
                     {epochCount} {epochCount === 1 ? 'epoch' : 'epochs'}
                   </button>
@@ -594,7 +612,7 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
                       missingVideoCount > 0 ? styles.summaryNeedsAttention : ''
                     )}
                     aria-pressed={epochFilter === 'needs-video'}
-                    onClick={() => setEpochFilter('needs-video')}
+                    onClick={() => changeFilter('needs-video')}
                   >
                     {missingVideoCount} {missingVideoCount === 1 ? 'video' : 'videos'} needed
                   </button>
@@ -605,7 +623,7 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
                       missingStatescriptCount > 0 ? styles.summaryNeedsAttention : ''
                     )}
                     aria-pressed={epochFilter === 'missing-statescript'}
-                    onClick={() => setEpochFilter('missing-statescript')}
+                    onClick={() => changeFilter('missing-statescript')}
                   >
                     {missingStatescriptCount} {missingStatescriptCount === 1 ? 'statescript' : 'statescripts'} missing
                   </button>
@@ -616,7 +634,7 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
                       customFilenameCount > 0 ? styles.summaryReview : ''
                     )}
                     aria-pressed={epochFilter === 'custom-filenames'}
-                    onClick={() => setEpochFilter('custom-filenames')}
+                    onClick={() => changeFilter('custom-filenames')}
                   >
                     {customFilenameCount} custom {customFilenameCount === 1 ? 'filename' : 'filenames'}
                   </button>
