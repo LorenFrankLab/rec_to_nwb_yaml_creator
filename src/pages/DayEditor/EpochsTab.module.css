@@ -16,11 +16,33 @@
   margin-bottom: var(--spacing-xs, 6px);
 }
 
+.workspaceIntro {
+  margin: 0 0 var(--spacing-sm, 8px);
+  color: var(--color-grey-600, #555);
+  font-size: var(--font-size-sm, 0.875rem);
+}
+
 .epochToolbar {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
-  gap: var(--spacing-sm, 8px) var(--spacing-md, 12px);
+  align-items: flex-start;
+  gap: var(--spacing-sm, 8px) var(--spacing-lg, 16px);
+}
+
+.toolbarGroup {
+  display: grid;
+  gap: 4px;
+}
+
+.toolbarLabel {
+  color: var(--color-grey-600, #555);
+  font-size: var(--font-size-xs, 0.75rem);
+  font-weight: 700;
+}
+
+.bulkGroup {
+  padding-left: var(--spacing-md, 12px);
+  border-left: 1px solid var(--color-grey-200, #e6e6e6);
 }
 
 .summaryStrip {

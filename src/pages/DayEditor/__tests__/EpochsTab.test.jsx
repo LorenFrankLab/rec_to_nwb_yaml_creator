@@ -124,6 +124,9 @@ function lastPatch(onFieldUpdate, field) {
 describe('EpochsTab — grid render + collapsed state cells', () => {
   it('renders one row per epoch with a task disclosure <button aria-expanded>', () => {
     render(<EpochsTab {...makeBundle()} />);
+    expect(screen.getByText(/Confirm what happened/i)).toBeInTheDocument();
+    expect(screen.getByText('Show')).toBeInTheDocument();
+    expect(screen.getByText('Generate missing')).toBeInTheDocument();
     expect(screen.getByLabelText(/epoch status summary/i)).toHaveTextContent(/3 epochs/i);
     expect(screen.getByLabelText(/epoch status summary/i)).toHaveTextContent(/2 videos needed/i);
     expect(screen.getByLabelText(/epoch status summary/i)).toHaveTextContent(/3 statescripts missing/i);
@@ -493,7 +496,7 @@ describe('EpochsTab — video 3-state', () => {
     const bundle = makeBundle();
     render(<EpochsTab {...bundle} />);
 
-    await user.click(screen.getByRole('button', { name: /Generate videos \(2\)/i }));
+    await user.click(screen.getByRole('button', { name: /Videos \(2\)/i }));
 
     expect(lastPatch(bundle.onFieldUpdate, 'associated_video_files')).toEqual([
       { name: 'run_video', camera_id: 1, task_epochs: 2 },
@@ -568,7 +571,7 @@ describe('EpochsTab — statescript naming', () => {
     const bundle = makeBundle();
     render(<EpochsTab {...bundle} />);
 
-    await user.click(screen.getByRole('button', { name: /Generate statescripts \(3\)/i }));
+    await user.click(screen.getByRole('button', { name: /Statescripts \(3\)/i }));
 
     expect(lastPatch(bundle.onFieldUpdate, 'associated_files')).toEqual([
       {
