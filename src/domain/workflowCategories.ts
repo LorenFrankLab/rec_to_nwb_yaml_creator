@@ -97,6 +97,10 @@ export const CATEGORY_BY_CODE: Readonly<Record<string, WorkflowCategory>> = Obje
   duplicate_channels: WORKFLOW_CATEGORY.ANIMAL_SETUP,
   missing_channels: WORKFLOW_CATEGORY.ANIMAL_SETUP,
   duplicate_camera_id: WORKFLOW_CATEGORY.ANIMAL_SETUP,
+  camera_meters_per_pixel_missing: WORKFLOW_CATEGORY.ANIMAL_SETUP,
+  camera_meters_per_pixel_nonpositive: WORKFLOW_CATEGORY.ANIMAL_SETUP,
+  camera_meters_per_pixel_implausible: WORKFLOW_CATEGORY.ANIMAL_SETUP,
+  placeholder_camera_name: WORKFLOW_CATEGORY.ANIMAL_SETUP,
   divergent_camera_identity: WORKFLOW_CATEGORY.ANIMAL_SETUP,
   divergent_data_acq_identity: WORKFLOW_CATEGORY.ANIMAL_SETUP,
   // Task-type catalog DEFINITION uniqueness is shared animal setup (the Task Types tab).

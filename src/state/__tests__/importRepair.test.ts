@@ -103,6 +103,37 @@ describe('buildImportRepairPlan — flags each non-conforming field from the sha
     expect(loc!.group).toBe('attention');
   });
 
+  it('surfaces camera placeholder names and nonpositive calibration as repair rows', () => {
+    const model = loadCleanExport();
+    model.cameras = [
+      {
+        id: 0,
+        camera_name: 'XXX',
+        meters_per_pixel: 0,
+        manufacturer: 'Allied Vision',
+        model: 'Manta G-158C',
+        lens: 'Theia SL183M',
+      },
+    ];
+
+    const plan = buildImportRepairPlan(model, '06222023_remy_metadata.yml', { animals: {} });
+    const name = itemAt(plan.items, 'cameras[0].camera_name');
+    const mpp = itemAt(plan.items, 'cameras[0].meters_per_pixel');
+
+    expect(name).toMatchObject({
+      code: 'placeholder_camera_name',
+      kind: 'input',
+      inputType: 'text',
+      was: 'XXX',
+    });
+    expect(mpp).toMatchObject({
+      code: 'camera_meters_per_pixel_nonpositive',
+      kind: 'input',
+      inputType: 'number',
+      was: 0,
+    });
+  });
+
   it('blocks on a required-but-missing date_of_birth', () => {
     const plan = buildImportRepairPlan(loadNonconforming(), 'nonconforming-remy.yml', { animals: {} });
     const dob = itemAt(plan.items, 'subject.date_of_birth');
@@ -518,15 +549,26 @@ describe('existing-animal add catalog refs — surface and resolve before import
         remy: {
           id: 'remy',
           subject: { subject_id: 'remy' },
-          cameras: [{ id: 0, camera_name: 'existing_cam' }],
+          cameras: [
+            {
+              id: 0,
+              camera_name: 'existing_cam',
+              meters_per_pixel: 0.002,
+              manufacturer: 'Allied',
+              model: 'Mako',
+              lens: '8mm',
+            },
+          ],
           devices: { data_acq_device: model.data_acq_device },
         },
       },
     };
 
     const plan = buildImportRepairPlan(model, '06222023_remy_metadata.yml', workspace);
-    const camera = plan.items.find((item) => item.code === 'existing_animal_missing_camera');
-    expect(camera).toMatchObject({ kind: 'input', suggested: undefined });
+    const camera = plan.items.find((item) => item.code === 'divergent_camera_identity');
+    expect(camera).toMatchObject({ kind: 'input' });
+    expect(camera!.suggested).toBeUndefined();
+    expect(camera!.why).toContain('meters_per_pixel');
     expect(existingAnimalCatalogResolutionBlocker(plan, { [camera!.path]: 99 })).toMatch(
       /existing camera id: 0/
     );
@@ -540,6 +582,108 @@ describe('existing-animal add catalog refs — surface and resolve before import
     expect(repaired.cameras[0].id).toBe(0);
     expect(repaired.tasks[0].camera_id).toEqual([0]);
     expect(repaired.associated_video_files[0].camera_id).toBe(0);
+    expect(collectExistingAnimalCatalogAdditions(plan, { [camera!.path]: 0 })).toEqual({});
+  });
+
+  it('does not surface cross-day camera divergence when identity fields match', () => {
+    const model = loadCleanExport();
+    model.cameras = [
+      {
+        id: 0,
+        camera_name: 'maze_camera',
+        meters_per_pixel: 0.0025,
+        manufacturer: 'Allied',
+        model: 'Mako',
+        lens: '8mm',
+      },
+    ];
+    model.tasks = [
+      {
+        task_name: 'Run',
+        task_description: 'run',
+        task_environment: 'maze',
+        camera_id: [0],
+        task_epochs: [1],
+      },
+    ];
+    const workspace = {
+      animals: {
+        remy: {
+          id: 'remy',
+          subject: { subject_id: 'remy' },
+          cameras: [
+            {
+              id: 0,
+              camera_name: 'maze_camera',
+              meters_per_pixel: 0.0025,
+              manufacturer: 'Allied',
+              model: 'Mako',
+              lens: '8mm',
+            },
+          ],
+          devices: { data_acq_device: model.data_acq_device },
+        },
+      },
+    };
+
+    const plan = buildImportRepairPlan(model, '06222023_remy_metadata.yml', workspace);
+
+    expect(plan.items.some((item) => item.code === 'divergent_camera_identity')).toBe(false);
+    expect(plan.items.some((item) => item.code === 'existing_animal_missing_camera')).toBe(false);
+  });
+
+  it('surfaces same-id camera-name reuse with different calibration before import', () => {
+    const model = loadCleanExport();
+    model.cameras = [
+      {
+        id: 0,
+        camera_name: 'maze_camera',
+        meters_per_pixel: 0.0016,
+        manufacturer: 'Allied',
+        model: 'Mako',
+        lens: '8mm',
+      },
+    ];
+    model.tasks = [
+      {
+        task_name: 'Run',
+        task_description: 'run',
+        task_environment: 'maze',
+        camera_id: [0],
+        task_epochs: [1],
+      },
+    ];
+    const workspace = {
+      animals: {
+        remy: {
+          id: 'remy',
+          subject: { subject_id: 'remy' },
+          cameras: [
+            {
+              id: 0,
+              camera_name: 'maze_camera',
+              meters_per_pixel: 0.0025,
+              manufacturer: 'Allied',
+              model: 'Mako',
+              lens: '8mm',
+            },
+          ],
+          devices: { data_acq_device: model.data_acq_device },
+        },
+      },
+    };
+
+    const plan = buildImportRepairPlan(model, '06222023_remy_metadata.yml', workspace);
+    const camera = plan.items.find((item) => item.code === 'divergent_camera_identity');
+
+    expect(camera).toMatchObject({
+      kind: 'input',
+      was: 'camera id 0 (maze_camera)',
+    });
+    expect(camera!.suggested).toBeUndefined();
+    expect(camera!.why).toContain('meters_per_pixel');
+    expect(existingAnimalCatalogResolutionBlocker(plan, {})).toMatch(/Resolve Camera 0/);
+    expect(existingAnimalCatalogResolutionBlocker(plan, { [camera!.path]: 0 })).toBeNull();
     expect(collectExistingAnimalCatalogAdditions(plan, { [camera!.path]: 0 })).toEqual({});
   });
 

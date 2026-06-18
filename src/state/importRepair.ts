@@ -21,8 +21,10 @@
 
 import { validate } from '../validation';
 import { isValidSpecies } from '../validation/dandiSubject';
+import { findIdentityDivergence } from './identityDivergence';
 import { extractRecordingDate, findExistingAnimalId } from './yamlImportPlan';
 import { getAnimalCameras, getDataAcqDevices } from './workspaceSelectors';
+import type { IdentityRegistryEntry } from './identityDivergence';
 import type { ValidationModel } from '../validation/issueTypes';
 
 /** The schema enum for `subject.sex` (mirrors nwb_schema.json — single-letter NWB/DANDI codes). */
@@ -92,6 +94,16 @@ const EXISTING_DATA_ACQ_REF_PREFIX = '__importRepair.existingAnimal.data_acq_dev
 
 /** Internal repair path used when a legacy filename/session_id cannot provide the recording date. */
 const IMPORT_RECORDING_DATE_PATH = '__importRepair.recording_date';
+
+const CAMERA_IDENTITY_FIELDS = ['id', 'meters_per_pixel', 'lens', 'model', 'manufacturer'] as const;
+
+const CAMERA_IDENTITY_FIELD_LABELS: Readonly<Record<string, string>> = Object.freeze({
+  id: 'id',
+  meters_per_pixel: 'meters_per_pixel',
+  lens: 'lens',
+  model: 'model',
+  manufacturer: 'manufacturer',
+});
 
 /** How a repair item is resolved in the UI. */
 export type RepairKind = 'suggestion' | 'input' | 'choice';
@@ -337,6 +349,47 @@ function sameRefValue(a: unknown, b: unknown): boolean {
   return Object.is(a, b);
 }
 
+/**
+ * Dependent fields that make a camera_name identity safe to reuse.
+ *
+ * @param camera - A decoded camera catalog entry.
+ * @returns The comparable dependent-field record.
+ */
+function cameraIdentityFields(camera: Record<string, unknown>): Record<string, unknown> {
+  return Object.fromEntries(CAMERA_IDENTITY_FIELDS.map((field) => [field, camera[field]]));
+}
+
+/**
+ * Build a registry for existing-animal camera identities keyed by camera_name.
+ *
+ * @param cameras - Existing animal camera catalog rows.
+ * @param animalId - Existing animal id for display.
+ * @returns Comparable camera identity entries.
+ */
+function cameraIdentityRegistry(
+  cameras: unknown[],
+  animalId: string
+): IdentityRegistryEntry[] {
+  return cameras
+    .filter(isRecord)
+    .filter((camera) => String(camera.camera_name ?? '').trim() !== '')
+    .map((camera) => ({
+      name: String(camera.camera_name).trim(),
+      fields: cameraIdentityFields(camera),
+      label: `animal "${animalId}" camera id ${String(camera.id)}`,
+    }));
+}
+
+/**
+ * Human-readable field list for camera identity divergence messages.
+ *
+ * @param fields - Dependent fields that differ.
+ * @returns A comma-separated field list.
+ */
+function formatCameraIdentityFields(fields: ReadonlyArray<string>): string {
+  return fields.map((field) => CAMERA_IDENTITY_FIELD_LABELS[field] ?? field).join(', ');
+}
+
 /** A virus-injection array item carrying the two volume spellings. */
 interface VolumeShimItem {
   volume_in_uL?: unknown;
@@ -574,8 +627,57 @@ function buildExistingAnimalCatalogItems(
       .map((name) => String(name))
   );
   const sourceCameras = Array.isArray(model.cameras) ? model.cameras : [];
+  const cameraRefs = collectFlatCameraRefs(model);
+  const existingCameraRegistry = cameraIdentityRegistry(existingCameras, decision.existingAnimalId);
+  const divergentCameraRefs: unknown[] = [];
 
-  for (const cameraId of collectFlatCameraRefs(model)) {
+  for (const sourceCamera of sourceCameras) {
+    if (!sourceCamera || typeof sourceCamera !== 'object') continue;
+    const sourceRow = sourceCamera as Record<string, unknown>;
+    const sourceId = sourceRow.id;
+    if (sourceId === undefined || sourceId === null || sourceId === '') continue;
+    if (!cameraRefs.some((cameraRef) => sameRefValue(cameraRef, sourceId))) continue;
+    if (divergentCameraRefs.some((cameraRef) => sameRefValue(cameraRef, sourceId))) continue;
+
+    const divergence = findIdentityDivergence(
+      String(sourceRow.camera_name ?? ''),
+      cameraIdentityFields(sourceRow),
+      existingCameraRegistry
+    );
+    if (!divergence) continue;
+
+    divergentCameraRefs.push(sourceId);
+    const path = `${EXISTING_CAMERA_REF_PREFIX}${encodeRepairToken(sourceId)}`;
+    const base = cameraRefLabel(sourceRow, sourceId);
+    items.push({
+      path,
+      label: `Camera ${String(sourceId)}`,
+      code: 'divergent_camera_identity',
+      group: 'attention',
+      kind: 'input',
+      was: base,
+      why:
+        `${base} reuses camera_name "${String(sourceRow.camera_name)}" from ` +
+        `${divergence.existing.label ?? `animal "${decision.existingAnimalId}"`} but differs in ` +
+        `${formatCameraIdentityFields(divergence.differingFields)}. Spyglass keys cameras by ` +
+        'camera_name; if this was recalibrated or repositioned, give it a distinct camera_name ' +
+        'in the YAML, or map the day to an existing camera id.',
+      inputType: 'number',
+      mapInputLabel: `Map camera ${String(sourceId)} to existing camera id`,
+      action: {
+        kind: 'existing_animal_catalog_ref',
+        catalog: 'cameras',
+        targetAnimalId: decision.existingAnimalId,
+        missingValue: sourceId,
+        sourceEntry: structuredClone(sourceRow),
+        canBring: false,
+        validMapValues: existingCameraIds,
+      },
+    });
+  }
+
+  for (const cameraId of cameraRefs) {
+    if (divergentCameraRefs.some((cameraRef) => sameRefValue(cameraRef, cameraId))) continue;
     if (existingCameraIds.some((id) => sameRefValue(id, cameraId))) continue;
     const sourceCamera = sourceCameras.find((camera) => sameRefValue(camera?.id, cameraId));
     if (!sourceCamera) continue;
@@ -749,6 +851,38 @@ function buildValidationItems(model: ValidationModel): {
     if (code === 'empty_location' || code === 'empty_targeted_location') {
       const label = code === 'empty_location' ? 'Electrode group location' : 'Electrode group targeted location';
       items.push({ path, label, code, group: 'attention', kind: 'input', was, why: message, inputType: 'text' });
+      continue;
+    }
+
+    // --- camera catalog identity/calibration: scalar repairs on the Animal camera catalog. ---
+    if (code === 'placeholder_camera_name') {
+      items.push({
+        path,
+        label: 'Camera name',
+        code,
+        group: 'attention',
+        kind: 'input',
+        was,
+        why: message,
+        inputType: 'text',
+      });
+      continue;
+    }
+
+    if (
+      code === 'camera_meters_per_pixel_missing' ||
+      code === 'camera_meters_per_pixel_nonpositive'
+    ) {
+      items.push({
+        path,
+        label: 'Meters per pixel',
+        code,
+        group: code === 'camera_meters_per_pixel_missing' ? 'required' : 'attention',
+        kind: 'input',
+        was,
+        why: message,
+        inputType: 'number',
+      });
       continue;
     }
 

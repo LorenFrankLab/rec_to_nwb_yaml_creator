@@ -30,13 +30,13 @@ raw_data_to_volts: 999999.999999  # Very large conversion factor
 
 cameras:
   - id: 0
-    meters_per_pixel: 0.0000000001  # Very small pixel size
+    meters_per_pixel: 0.0005  # Very small plausible pixel size
     manufacturer: "M"
     model: "M"
     lens: "L"
     camera_name: "c1"
   - id: 1
-    meters_per_pixel: 1000.0  # Very large pixel size
+    meters_per_pixel: 0.2  # Very large plausible pixel size
     manufacturer: "Manufacturer"
     model: "Model"
     lens: "Lens"

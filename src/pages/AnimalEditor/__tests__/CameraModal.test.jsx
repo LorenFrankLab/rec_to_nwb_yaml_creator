@@ -54,6 +54,49 @@ describe('CameraModal', () => {
     });
   });
 
+  describe('Default camera catalog values', () => {
+    it('prefills common hardware while leaving camera name and calibration explicit', () => {
+      render(
+        <CameraModal
+          isOpen={true}
+          mode="add"
+          existingCameras={[]}
+          onSave={() => {}}
+          onCancel={() => {}}
+        />
+      );
+
+      expect(screen.getByLabelText(/^camera name$/i)).toHaveValue('');
+      expect(screen.getByLabelText(/manufacturer/i)).toHaveValue('Allied Vision');
+      expect(screen.getByLabelText(/model/i)).toHaveValue('Manta G-158C');
+      expect(screen.getByLabelText(/lens/i)).toHaveValue('Theia SL183M');
+      expect(screen.getByLabelText(/meters per pixel/i)).toHaveValue(null);
+    });
+
+    it('offers recurring camera-name suggestions', () => {
+      render(
+        <CameraModal
+          isOpen={true}
+          mode="add"
+          existingCameras={[]}
+          onSave={() => {}}
+          onCancel={() => {}}
+        />
+      );
+
+      const nameInput = screen.getByLabelText(/^camera name$/i);
+      expect(nameInput).toHaveAttribute('list', 'camera-name-suggestions');
+      const datalist = document.getElementById('camera-name-suggestions');
+      expect(Array.from(datalist.querySelectorAll('option')).map((option) => option.value)).toEqual([
+        'HomeBox_camera',
+        'SleepBox_camera',
+        'HaightRight_HaightLeft_camera',
+        'sleep_camera',
+        'maze_camera',
+      ]);
+    });
+  });
+
   describe('ID auto-assignment', () => {
     it('should auto-assign next sequential ID when no cameras exist', () => {
       render(
@@ -93,7 +136,7 @@ describe('CameraModal', () => {
   });
 
   describe('Validation - Required fields', () => {
-    it('should validate required fields (name, manufacturer, model)', async () => {
+    it('should validate required fields (name and meters_per_pixel)', async () => {
       const onSave = vi.fn();
 
       render(
@@ -115,21 +158,8 @@ describe('CameraModal', () => {
       await user.type(screen.getByLabelText(/^camera name$/i), 'Test Camera');
       expect(saveButton).toBeDisabled();
 
-      // Fill in manufacturer
-      await user.type(screen.getByLabelText(/manufacturer/i), 'Test Manufacturer');
-      expect(saveButton).toBeDisabled();
-
-      // Fill in model
-      await user.type(screen.getByLabelText(/model/i), 'Test Model');
-      expect(saveButton).toBeDisabled();
-
       // Fill in meters_per_pixel
       await user.type(screen.getByLabelText(/meters per pixel/i), '0.001');
-      // Still disabled — lens is schema-required.
-      expect(saveButton).toBeDisabled();
-
-      // Fill in lens (required)
-      await user.type(screen.getByLabelText(/lens/i), '16mm');
 
       // Now save button should be enabled
       await waitFor(() => {
@@ -154,9 +184,6 @@ describe('CameraModal', () => {
 
       // Fill required fields
       await user.type(screen.getByLabelText(/^camera name$/i), 'Test Camera');
-      await user.type(screen.getByLabelText(/manufacturer/i), 'Test Manufacturer');
-      await user.type(screen.getByLabelText(/model/i), 'Test Model');
-      await user.type(screen.getByLabelText(/lens/i), '16mm');
 
       const metersPerPixelInput = screen.getByLabelText(/meters per pixel/i);
 
@@ -242,10 +269,7 @@ describe('CameraModal', () => {
 
       // Fill all required fields
       await user.type(screen.getByLabelText(/^camera name$/i), 'Test Camera');
-      await user.type(screen.getByLabelText(/manufacturer/i), 'Test Manufacturer');
-      await user.type(screen.getByLabelText(/model/i), 'Test Model');
       await user.type(screen.getByLabelText(/meters per pixel/i), '0.001');
-      await user.type(screen.getByLabelText(/lens/i), '16mm');
 
       await waitFor(() => {
         expect(saveButton).not.toBeDisabled();
@@ -329,9 +353,6 @@ describe('CameraModal', () => {
 
       // Fill all required fields
       await user.type(screen.getByLabelText(/^camera name$/i), 'New Camera');
-      await user.type(screen.getByLabelText(/manufacturer/i), 'Manta');
-      await user.type(screen.getByLabelText(/model/i), 'G-146B');
-      await user.type(screen.getByLabelText(/lens/i), '16mm');
       await user.type(screen.getByLabelText(/meters per pixel/i), '0.000842');
 
       // Click save
@@ -346,9 +367,9 @@ describe('CameraModal', () => {
       expect(onSave).toHaveBeenCalledWith({
         id: 0,
         camera_name: 'New Camera',
-        manufacturer: 'Manta',
-        model: 'G-146B',
-        lens: '16mm',
+        manufacturer: 'Allied Vision',
+        model: 'Manta G-158C',
+        lens: 'Theia SL183M',
         meters_per_pixel: 0.000842,
       });
     });
@@ -385,9 +406,6 @@ describe('CameraModal', () => {
 
       // Fill required fields to enable Save button
       await user.type(screen.getByLabelText(/^camera name$/i), 'Test');
-      await user.type(screen.getByLabelText(/manufacturer/i), 'Test');
-      await user.type(screen.getByLabelText(/model/i), 'Test');
-      await user.type(screen.getByLabelText(/lens/i), '16mm');
       await user.type(screen.getByLabelText(/meters per pixel/i), '0.001');
 
       // Wait for Save button to be enabled
@@ -421,9 +439,6 @@ describe('CameraModal', () => {
 
       // Fill required fields to enable Save button
       await user.type(screen.getByLabelText(/^camera name$/i), 'Test');
-      await user.type(screen.getByLabelText(/manufacturer/i), 'Test');
-      await user.type(screen.getByLabelText(/model/i), 'Test');
-      await user.type(screen.getByLabelText(/lens/i), '16mm');
       await user.type(screen.getByLabelText(/meters per pixel/i), '0.001');
 
       // Wait for Save button to be enabled

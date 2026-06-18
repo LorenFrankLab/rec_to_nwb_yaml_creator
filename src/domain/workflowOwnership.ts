@@ -196,6 +196,10 @@ export const PATTERN_REFINEMENT_BY_CODE: Readonly<Record<string, string>> = Obje
 
   // animal_setup → animal_catalog_reference: a camera is a reusable catalog identity.
   duplicate_camera_id: OWNERSHIP_PATTERN.ANIMAL_CATALOG_REFERENCE,
+  camera_meters_per_pixel_missing: OWNERSHIP_PATTERN.ANIMAL_CATALOG_REFERENCE,
+  camera_meters_per_pixel_nonpositive: OWNERSHIP_PATTERN.ANIMAL_CATALOG_REFERENCE,
+  camera_meters_per_pixel_implausible: OWNERSHIP_PATTERN.ANIMAL_CATALOG_REFERENCE,
+  placeholder_camera_name: OWNERSHIP_PATTERN.ANIMAL_CATALOG_REFERENCE,
   divergent_camera_identity: OWNERSHIP_PATTERN.ANIMAL_CATALOG_REFERENCE,
 
   // day_metadata → animal_catalog_reference: the day side of a camera reference (selection).

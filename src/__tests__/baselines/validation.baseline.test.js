@@ -383,7 +383,14 @@ describe('BASELINE: Custom Rules Validation', () => {
       const yaml = {
         ...loadFixture('valid', 'minimal-valid.yml'),
         cameras: [
-          { id: 0, meters_per_pixel: 0.001 }
+          {
+            id: 0,
+            camera_name: 'maze_camera',
+            meters_per_pixel: 0.001,
+            manufacturer: 'Allied Vision',
+            model: 'Manta G-158C',
+            lens: 'Theia SL183M',
+          }
         ],
         tasks: [
           {

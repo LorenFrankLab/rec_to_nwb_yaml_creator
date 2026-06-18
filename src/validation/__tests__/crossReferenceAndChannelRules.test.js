@@ -571,6 +571,62 @@ describe('workspace/dataset identity consistency', () => {
     }))).not.toContain('divergent_camera_identity');
   });
 
+  it('errors when meters_per_pixel is missing, blank, zero, or negative', () => {
+    const issues = rulesValidation({
+      cameras: [
+        { id: 0, camera_name: 'missing', lens: 'A', model: 'M', manufacturer: 'X' },
+        { id: 1, camera_name: 'blank', meters_per_pixel: '', lens: 'A', model: 'M', manufacturer: 'X' },
+        { id: 2, camera_name: 'zero', meters_per_pixel: 0, lens: 'A', model: 'M', manufacturer: 'X' },
+        { id: 3, camera_name: 'negative', meters_per_pixel: -0.001, lens: 'A', model: 'M', manufacturer: 'X' },
+      ],
+    });
+
+    expect(codes(issues).filter((code) => code === 'camera_meters_per_pixel_missing')).toHaveLength(2);
+    expect(codes(issues).filter((code) => code === 'camera_meters_per_pixel_nonpositive')).toHaveLength(2);
+    expect(
+      issues.filter((issue) =>
+        issue.code === 'camera_meters_per_pixel_missing' ||
+        issue.code === 'camera_meters_per_pixel_nonpositive'
+      ).every((issue) => issue.severity === 'error' && issue.repairSurface === 'animal')
+    ).toBe(true);
+  });
+
+  it('warns on implausible positive meters_per_pixel without blocking export', () => {
+    const issues = rulesValidation({
+      cameras: [
+        { id: 0, camera_name: 'tiny', meters_per_pixel: 0.0001, lens: 'A', model: 'M', manufacturer: 'X' },
+        { id: 1, camera_name: 'huge', meters_per_pixel: 5, lens: 'A', model: 'M', manufacturer: 'X' },
+        { id: 2, camera_name: 'typical', meters_per_pixel: 0.002, lens: 'A', model: 'M', manufacturer: 'X' },
+      ],
+    });
+    const warnings = issues.filter((issue) => issue.code === 'camera_meters_per_pixel_implausible');
+
+    expect(warnings).toHaveLength(2);
+    expect(warnings.every((issue) => issue.severity === 'warning')).toBe(true);
+    expect(codes(issues.filter((issue) => issue.path === 'cameras[2].meters_per_pixel'))).not.toContain(
+      'camera_meters_per_pixel_implausible'
+    );
+  });
+
+  it('errors on placeholder camera names', () => {
+    const issues = rulesValidation({
+      cameras: [
+        { id: 0, camera_name: '1', meters_per_pixel: 0.001, lens: 'A', model: 'M', manufacturer: 'X' },
+        { id: 1, camera_name: 'camera', meters_per_pixel: 0.001, lens: 'A', model: 'M', manufacturer: 'X' },
+        { id: 2, camera_name: 'XXX', meters_per_pixel: 0.001, lens: 'A', model: 'M', manufacturer: 'X' },
+        { id: 3, camera_name: '', meters_per_pixel: 0.001, lens: 'A', model: 'M', manufacturer: 'X' },
+        { id: 4, camera_name: 'maze_camera', meters_per_pixel: 0.001, lens: 'A', model: 'M', manufacturer: 'X' },
+      ],
+    });
+    const placeholders = issues.filter((issue) => issue.code === 'placeholder_camera_name');
+
+    expect(placeholders).toHaveLength(4);
+    expect(placeholders.every((issue) => issue.severity === 'error')).toBe(true);
+    expect(codes(issues.filter((issue) => issue.path === 'cameras[4].camera_name'))).not.toContain(
+      'placeholder_camera_name'
+    );
+  });
+
   it('errors on reused data_acq_device name with divergent technical fields', () => {
     const issues = rulesValidation({
       data_acq_device: [
@@ -635,6 +691,9 @@ describe('repair metadata on new error rules', () => {
     'duplicate_behavioral_event_name',
     'duplicate_task_epoch',
     'orphaned_video',
+    'camera_meters_per_pixel_missing',
+    'camera_meters_per_pixel_nonpositive',
+    'placeholder_camera_name',
     'divergent_camera_identity',
     'divergent_data_acq_identity',
     'divergent_task_identity',
@@ -644,6 +703,8 @@ describe('repair metadata on new error rules', () => {
     cameras: [
       { id: 0, camera_name: 'overhead', meters_per_pixel: 0.001, lens: 'A', model: 'M', manufacturer: 'X' },
       { id: 0, camera_name: 'overhead', meters_per_pixel: 0.002, lens: 'A', model: 'M', manufacturer: 'X' },
+      { id: 2, camera_name: 'XXX', meters_per_pixel: 0, lens: 'A', model: 'M', manufacturer: 'X' },
+      { id: 3, camera_name: 'arena_side', lens: 'A', model: 'M', manufacturer: 'X' },
     ],
     data_acq_device: [
       { name: 'acq', system: 'S1', amplifier: 'A', adc_circuit: 'C' },

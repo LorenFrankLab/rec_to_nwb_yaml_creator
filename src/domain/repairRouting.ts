@@ -166,6 +166,10 @@ export const SURFACE_BY_CODE: Record<string, RepairSurface> = {
   duplicate_channels: 'animal',
   missing_channels: 'animal',
   duplicate_camera_id: 'animal',
+  camera_meters_per_pixel_missing: 'animal',
+  camera_meters_per_pixel_nonpositive: 'animal',
+  camera_meters_per_pixel_implausible: 'animal',
+  placeholder_camera_name: 'animal',
   divergent_camera_identity: 'animal',
   divergent_data_acq_identity: 'animal',
   // Task-type catalog (Phase 8C): a duplicate catalog task_name is an animal-catalog problem.

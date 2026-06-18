@@ -39,8 +39,11 @@ describe('CamerasContainer — add + persist', () => {
 
     await user.click(screen.getByRole('button', { name: /add (first )?camera/i }));
     await user.type(screen.getByLabelText(/^camera name$/i), 'overhead');
+    await user.clear(screen.getByLabelText(/manufacturer/i));
     await user.type(screen.getByLabelText(/manufacturer/i), 'Allied');
+    await user.clear(screen.getByLabelText(/model/i));
     await user.type(screen.getByLabelText(/model/i), 'Mako');
+    await user.clear(screen.getByLabelText(/lens/i));
     await user.type(screen.getByLabelText(/lens/i), '8mm');
     await user.type(screen.getByLabelText(/meters per pixel/i), '0.001');
     await user.click(screen.getByRole('button', { name: /save camera/i }));
@@ -61,8 +64,11 @@ describe('CamerasContainer — identity safety', () => {
 
     await user.click(screen.getByRole('button', { name: /add (first )?camera/i }));
     await user.type(screen.getByLabelText(/^camera name$/i), 'overhead');
+    await user.clear(screen.getByLabelText(/manufacturer/i));
     await user.type(screen.getByLabelText(/manufacturer/i), 'Allied');
+    await user.clear(screen.getByLabelText(/model/i));
     await user.type(screen.getByLabelText(/model/i), 'Mako');
+    await user.clear(screen.getByLabelText(/lens/i));
     await user.type(screen.getByLabelText(/lens/i), '8mm'); // diverges from jaq's 6mm
     await user.type(screen.getByLabelText(/meters per pixel/i), '0.001');
     await user.click(screen.getByRole('button', { name: /save camera/i }));

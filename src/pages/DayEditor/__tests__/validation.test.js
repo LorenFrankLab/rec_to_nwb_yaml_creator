@@ -425,6 +425,10 @@ describe('repairTargetForIssue (Repair Routing Contract)', () => {
     { code: 'duplicate_channels', issue: { code: 'duplicate_channels', path: 'ntrode_electrode_group_channel_map[0]', repairSurface: 'animal' } },
     { code: 'missing_channels', issue: { code: 'missing_channels', path: 'ntrode_electrode_group_channel_map[0]', repairSurface: 'animal' } },
     { code: 'duplicate_camera_id', issue: { code: 'duplicate_camera_id', path: 'cameras', field: 'id', step: 'devices', repairSurface: 'animal' } },
+    { code: 'camera_meters_per_pixel_missing', issue: { code: 'camera_meters_per_pixel_missing', path: 'cameras[0].meters_per_pixel', field: 'meters_per_pixel', step: 'devices', repairSurface: 'animal' } },
+    { code: 'camera_meters_per_pixel_nonpositive', issue: { code: 'camera_meters_per_pixel_nonpositive', path: 'cameras[0].meters_per_pixel', field: 'meters_per_pixel', step: 'devices', repairSurface: 'animal' } },
+    { code: 'camera_meters_per_pixel_implausible', issue: { code: 'camera_meters_per_pixel_implausible', path: 'cameras[0].meters_per_pixel', field: 'meters_per_pixel', step: 'devices', repairSurface: 'animal', severity: 'warning' } },
+    { code: 'placeholder_camera_name', issue: { code: 'placeholder_camera_name', path: 'cameras[0].camera_name', field: 'camera_name', step: 'devices', repairSurface: 'animal' } },
     { code: 'divergent_camera_identity', issue: { code: 'divergent_camera_identity', path: 'cameras', field: 'camera_name', step: 'devices', repairSurface: 'animal' } },
     { code: 'divergent_data_acq_identity', issue: { code: 'divergent_data_acq_identity', path: 'data_acq_device', field: 'name', step: 'devices', repairSurface: 'animal' } },
     // Optogenetics completeness lives on the Animal Editor Optogenetics step — the rule emits

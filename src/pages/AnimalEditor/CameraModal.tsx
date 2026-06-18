@@ -8,6 +8,17 @@ import './CameraModal.scss';
 
 const TYPICAL_MIN = 0.0005;
 const TYPICAL_MAX = 0.002;
+const DEFAULT_CAMERA_MANUFACTURER = 'Allied Vision';
+const DEFAULT_CAMERA_MODEL = 'Manta G-158C';
+const DEFAULT_CAMERA_LENS = 'Theia SL183M';
+const CAMERA_NAME_DATALIST_ID = 'camera-name-suggestions';
+const CAMERA_NAME_SUGGESTIONS = [
+  'HomeBox_camera',
+  'SleepBox_camera',
+  'HaightRight_HaightLeft_camera',
+  'sleep_camera',
+  'maze_camera',
+];
 
 /** Local form state for the camera editor (all fields are strings while editing). */
 interface CameraFormData {
@@ -47,9 +58,9 @@ function getInitialFormData(mode: string, camera: Camera | null, existingCameras
   return {
     id: String(nextId),
     camera_name: '',
-    manufacturer: '',
-    model: '',
-    lens: '',
+    manufacturer: DEFAULT_CAMERA_MANUFACTURER,
+    model: DEFAULT_CAMERA_MODEL,
+    lens: DEFAULT_CAMERA_LENS,
     meters_per_pixel: '',
   };
 }
@@ -170,11 +181,17 @@ function CameraForm({ mode, camera = null, existingCameras, onSave, onCancel, di
           name="camera_name"
           ref={nameInputRef}
           placeholder="e.g., HomeBox_camera"
+          list={CAMERA_NAME_DATALIST_ID}
           value={formData.camera_name}
           onChange={handleInputChange}
           aria-describedby="camera_name_help"
           required
         />
+        <datalist id={CAMERA_NAME_DATALIST_ID}>
+          {CAMERA_NAME_SUGGESTIONS.map((name) => (
+            <option key={name} value={name} />
+          ))}
+        </datalist>
         {/* Proactive Spyglass identity guidance (the divergence alert below is the reactive
             catch). camera_name is the CameraDevice primary key downstream. */}
         <span id="camera_name_help" className="help-text">
@@ -190,7 +207,7 @@ function CameraForm({ mode, camera = null, existingCameras, onSave, onCancel, di
           id="manufacturer"
           type="text"
           name="manufacturer"
-          placeholder="e.g., Manta"
+          placeholder={DEFAULT_CAMERA_MANUFACTURER}
           value={formData.manufacturer}
           onChange={handleInputChange}
           required
@@ -204,7 +221,7 @@ function CameraForm({ mode, camera = null, existingCameras, onSave, onCancel, di
           id="model"
           type="text"
           name="model"
-          placeholder="e.g., G-146B"
+          placeholder={DEFAULT_CAMERA_MODEL}
           value={formData.model}
           onChange={handleInputChange}
           required
@@ -218,7 +235,7 @@ function CameraForm({ mode, camera = null, existingCameras, onSave, onCancel, di
           id="lens"
           type="text"
           name="lens"
-          placeholder="e.g., 16mm"
+          placeholder={DEFAULT_CAMERA_LENS}
           value={formData.lens}
           onChange={handleInputChange}
           required
@@ -234,7 +251,7 @@ function CameraForm({ mode, camera = null, existingCameras, onSave, onCancel, di
           name="meters_per_pixel"
           placeholder="0.000842"
           step="0.000001"
-          min="0"
+          min="0.000001"
           value={formData.meters_per_pixel}
           onChange={handleInputChange}
           required

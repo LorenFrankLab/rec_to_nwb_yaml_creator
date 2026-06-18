@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Camera calibration and identity guardrails.** New camera entries prefill the common Allied Vision
+  / Manta G-158C / Theia SL183M hardware values, offer recurring camera-name suggestions, and still
+  require explicit meters-per-pixel calibration. Validation now blocks missing/zero/nonpositive
+  camera calibration and placeholder camera names (`1`, `camera`, `XXX`, blank), warns on implausible
+  positive meters-per-pixel values, and surfaces existing-animal imports that reuse a camera name with
+  different calibration/hardware as an explicit map-or-fix decision instead of silently merging it.
 - **Optogenetics source-power sanity check.** `opto_excitation_source.power_in_W` now emits a
   confirmable warning when a milliwatt-scale device rating appears to have been entered into the
   Watts field, and the source-power placeholder now shows the mW equivalent for a Watts value.

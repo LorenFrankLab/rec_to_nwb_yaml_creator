@@ -9,6 +9,123 @@
 
 import type { ValidationIssue, ValidationModel } from '../issueTypes';
 
+const CAMERA_MPP_PLAUSIBLE_MIN = 0.0005;
+const CAMERA_MPP_PLAUSIBLE_MAX = 0.2;
+const PLACEHOLDER_CAMERA_NAMES = new Set(['camera', 'xxx']);
+
+function finiteNumber(value: unknown): number | null {
+  if (typeof value === 'number') return Number.isFinite(value) ? value : null;
+  if (typeof value === 'string' && value.trim() !== '') {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+  return null;
+}
+
+function isBlank(value: unknown): boolean {
+  return value === undefined || value === null || (typeof value === 'string' && value.trim() === '');
+}
+
+function cameraNameText(value: unknown): string {
+  return String(value ?? '').trim();
+}
+
+function isPlaceholderCameraName(value: unknown): boolean {
+  const name = cameraNameText(value);
+  if (name === '') return true;
+  return /^\d+$/.test(name) || PLACEHOLDER_CAMERA_NAMES.has(name.toLowerCase());
+}
+
+function cameraLabel(camera: Record<string, unknown>, index: number): string {
+  const name = cameraNameText(camera.camera_name);
+  return name === '' ? `Camera ${index + 1}` : `Camera "${name}"`;
+}
+
+function cameraNameDisplay(value: unknown): string {
+  const name = cameraNameText(value);
+  return name === '' ? 'a blank camera_name' : `placeholder camera_name "${name}"`;
+}
+
+function cameraCalibrationAndNameIssues(model: ValidationModel): ValidationIssue[] {
+  const issues: ValidationIssue[] = [];
+  if (!Array.isArray(model.cameras)) return issues;
+
+  model.cameras.forEach((camera, index) => {
+    if (!camera || typeof camera !== 'object') return;
+    const row = camera as Record<string, unknown>;
+    const label = cameraLabel(row, index);
+
+    if (isPlaceholderCameraName(row.camera_name)) {
+      issues.push({
+        path: `cameras[${index}].camera_name`,
+        field: 'camera_name',
+        step: 'devices',
+        repairSurface: 'animal',
+        actionLabel: 'Name this camera',
+        code: 'placeholder_camera_name',
+        severity: 'error',
+        message:
+          `${label} uses ${cameraNameDisplay(row.camera_name)}. Spyglass keys cameras by ` +
+          'camera_name; use a stable physical camera/location name such as HomeBox_camera.',
+      });
+    }
+
+    const rawMetersPerPixel = row.meters_per_pixel;
+    const path = `cameras[${index}].meters_per_pixel`;
+    if (isBlank(rawMetersPerPixel)) {
+      issues.push({
+        path,
+        field: 'meters_per_pixel',
+        step: 'devices',
+        repairSurface: 'animal',
+        actionLabel: 'Enter meters per pixel',
+        code: 'camera_meters_per_pixel_missing',
+        severity: 'error',
+        message:
+          `${label} is missing meters_per_pixel. Enter the positive meter-per-pixel ` +
+          'tracking calibration for this physical camera.',
+      });
+      return;
+    }
+
+    const metersPerPixel = finiteNumber(rawMetersPerPixel);
+    if (metersPerPixel === null) return;
+    if (metersPerPixel <= 0) {
+      issues.push({
+        path,
+        field: 'meters_per_pixel',
+        step: 'devices',
+        repairSurface: 'animal',
+        actionLabel: 'Enter a positive calibration',
+        code: 'camera_meters_per_pixel_nonpositive',
+        severity: 'error',
+        message:
+          `${label} has meters_per_pixel ${String(rawMetersPerPixel)}. ` +
+          'Camera calibration must be greater than 0 meters per pixel.',
+      });
+      return;
+    }
+
+    if (metersPerPixel < CAMERA_MPP_PLAUSIBLE_MIN || metersPerPixel > CAMERA_MPP_PLAUSIBLE_MAX) {
+      issues.push({
+        path,
+        field: 'meters_per_pixel',
+        step: 'devices',
+        repairSurface: 'animal',
+        actionLabel: 'Review camera calibration',
+        code: 'camera_meters_per_pixel_implausible',
+        severity: 'warning',
+        message:
+          `${label} has meters_per_pixel ${String(rawMetersPerPixel)}, outside the expected ` +
+          `${CAMERA_MPP_PLAUSIBLE_MIN}-${CAMERA_MPP_PLAUSIBLE_MAX} m/px range. Confirm the ` +
+          'tracking calibration before export.',
+      });
+    }
+  });
+
+  return issues;
+}
+
 /**
  * Rule 16: workspace/dataset identity consistency (Spyglass) — cameras, data-acq devices, tasks.
  *
@@ -16,7 +133,7 @@ import type { ValidationIssue, ValidationModel } from '../issueTypes';
  * @returns Validation issues.
  */
 export function identityDivergences(model: ValidationModel): ValidationIssue[] {
-  const issues: ValidationIssue[] = [];
+  const issues: ValidationIssue[] = cameraCalibrationAndNameIssues(model);
 
   const checkDivergences = (
     items: unknown,

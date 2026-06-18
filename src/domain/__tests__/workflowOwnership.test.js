@@ -178,7 +178,16 @@ describe('ownershipForIssue — pattern refinement', () => {
   });
 
   it('camera identity AND day camera references are animal-catalog references', () => {
-    for (const code of ['duplicate_camera_id', 'divergent_camera_identity', 'dangling_camera_ref', 'missing_camera']) {
+    for (const code of [
+      'duplicate_camera_id',
+      'camera_meters_per_pixel_missing',
+      'camera_meters_per_pixel_nonpositive',
+      'camera_meters_per_pixel_implausible',
+      'placeholder_camera_name',
+      'divergent_camera_identity',
+      'dangling_camera_ref',
+      'missing_camera',
+    ]) {
       expect(ownershipForIssue({ code }).pattern, code).toBe(OWNERSHIP_PATTERN.ANIMAL_CATALOG_REFERENCE);
     }
   });
