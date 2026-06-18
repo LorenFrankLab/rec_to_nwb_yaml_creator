@@ -82,7 +82,7 @@ export interface EpochGridRow {
   taskName: string;
   /** The owning task's environment. */
   taskEnvironment: string;
-  /** Derived display/derivation tag (`s1`, `w2`, …) — never stored. */
+  /** Derived display/derivation tag (`s1`, `r2`, etc.) — never stored. */
   tag: string;
   /** The owning task's cameras (`camera_id`). */
   cameras: Array<number | string>;
@@ -143,8 +143,46 @@ function scalarEpochMatches(rawEpoch: unknown, e: number): boolean {
   return Number(rawEpoch) === e;
 }
 
-/** The short code for a task's tag: the first alphabetic char of its name (lowercased), else 't'. */
-function tagShortCode(taskName: string): string {
+/** Extract the compact file tag (`r1`, `s2`, etc.) from a stored file/video name if present. */
+function extractFileTag(value: unknown): string | null {
+  if (typeof value !== 'string') return null;
+  const basename = value.split(/[\\/]/).pop() ?? value;
+  const tagPattern = /(?:^|[_\-\s])([a-z]{1,3})(\d+)(?=[_\-\s.]|$)/gi;
+  let match: RegExpExecArray | null;
+  let found: string | null = null;
+  while ((match = tagPattern.exec(basename)) != null) {
+    const index = Number(match[2]);
+    if (Number.isInteger(index) && index > 0) {
+      found = `${match[1].toLowerCase()}${index}`;
+    }
+  }
+  return found;
+}
+
+/** Prefer a tag already present on linked statescript/video files; imported names are authoritative. */
+function tagFromExistingFiles(statescript: EpochFileRef | null, videos: EpochVideoRef[]): string | null {
+  const fromStatescript =
+    extractFileTag(statescript?.entry.path) ?? extractFileTag(statescript?.entry.name);
+  if (fromStatescript != null) return fromStatescript;
+
+  for (const video of videos) {
+    const tag = extractFileTag(video.entry.name);
+    if (tag != null) return tag;
+  }
+  return null;
+}
+
+/** Semantic fallback tag prefix for new generated file names when the day has no matching files yet. */
+function tagShortCode(taskName: string, taskEnvironment: string): string {
+  const text = `${taskName} ${taskEnvironment}`.toLowerCase();
+  if (/\b(home|homebox|home box)\b/.test(text)) return 'h';
+  if (
+    /\b(run|w[-\s]?track|linear[-\s]?track|track|maze|fork|bandit|alternation|haight|exploration|spatial|hex)\b/.test(text)
+  ) {
+    return 'r';
+  }
+  if (/\b(sleep|rest)\b/.test(text)) return 's';
+
   const match = /[a-z]/i.exec(taskName);
   return match ? match[0].toLowerCase() : 't';
 }
@@ -196,11 +234,6 @@ export function buildEpochGrid(animal: unknown, day: unknown): EpochGrid {
     const taskName = (task?.task_name as string) || '';
     const taskEnvironment = (task?.task_environment as string) || '';
     const cameras = Array.isArray(task?.camera_id) ? (task!.camera_id as Array<number | string>) : [];
-    // 1-based occurrence of this epoch among the owning task's sorted epochs → the tag suffix.
-    const ownEpochs = taskIndex >= 0 ? [...taskEpochs[taskIndex]].sort((a, b) => a - b) : [];
-    const occurrence = ownEpochs.indexOf(epoch) + 1;
-    const tag = `${tagShortCode(taskName)}${occurrence > 0 ? occurrence : 1}`;
-
     const fileIndex = files.findIndex((f) => scalarEpochMatches(f.task_epochs, epoch));
     const statescript: EpochFileRef | null =
       fileIndex >= 0 ? { entry: files[fileIndex], index: fileIndex } : null;
@@ -209,6 +242,13 @@ export function buildEpochGrid(animal: unknown, day: unknown): EpochGrid {
     videos.forEach((entry, index) => {
       if (scalarEpochMatches(entry.task_epochs, epoch)) matchedVideos.push({ entry, index });
     });
+
+    // 1-based occurrence of this epoch among the owning task's sorted epochs → the fallback suffix.
+    const ownEpochs = taskIndex >= 0 ? [...taskEpochs[taskIndex]].sort((a, b) => a - b) : [];
+    const occurrence = ownEpochs.indexOf(epoch) + 1;
+    const tag =
+      tagFromExistingFiles(statescript, matchedVideos)
+      ?? `${tagShortCode(taskName, taskEnvironment)}${occurrence > 0 ? occurrence : 1}`;
 
     const optoIndex = fsgui.findIndex((g) => normalizeEpochs(g.epochs).includes(epoch));
     const opto: EpochOptoRef | null = optoIndex >= 0 ? { entry: fsgui[optoIndex], index: optoIndex } : null;

@@ -85,7 +85,7 @@
 
 .caretCell,
 .menuCell {
-  width: 32px;
+  width: 64px;
 }
 
 .numCell {
@@ -93,20 +93,31 @@
   font-variant-numeric: tabular-nums;
 }
 
-.caret {
+.editButton {
   border: 1px solid var(--color-grey-300, #ccc);
   background: var(--color-white, #fff);
   border-radius: var(--radius-sm, 4px);
-  width: 28px;
-  height: 26px;
+  min-width: 58px;
+  min-height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 3px 8px;
   cursor: pointer;
   color: var(--color-grey-600, #555);
+  font-size: var(--font-size-xs, 0.75rem);
+  font-weight: 600;
   line-height: 1;
 }
 
-.caret:hover {
+.editButton:hover {
   border-color: var(--color-primary, #2b6cb0);
   color: var(--color-primary, #2b6cb0);
+}
+
+.editChevron {
+  font-size: var(--font-size-sm, 0.875rem);
 }
 
 .taskCellButton {
@@ -114,6 +125,10 @@
   border: 0;
   padding: 0;
   margin: 0;
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
   font: inherit;
   color: inherit;
   text-align: left;
@@ -125,7 +140,12 @@
 }
 
 .tag {
-  color: var(--color-grey-500, #777);
+  color: var(--color-grey-600, #555);
+  background: var(--color-grey-100, #f2f2f2);
+  border: 1px solid var(--color-grey-200, #e6e6e6);
+  border-radius: var(--radius-sm, 4px);
+  padding: 1px 5px;
+  font-size: var(--font-size-xs, 0.75rem);
   font-variant-numeric: tabular-nums;
 }
 
@@ -326,6 +346,27 @@
 .fieldLabel {
   font-size: var(--font-size-sm, 0.8125rem);
   color: var(--color-grey-600, #555);
+}
+
+.inlineControls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spacing-xs, 6px);
+}
+
+.contextDetails {
+  margin-top: var(--spacing-sm, 8px);
+  padding-top: var(--spacing-sm, 8px);
+  border-top: 1px solid var(--color-grey-200, #e6e6e6);
+}
+
+.contextDetails summary {
+  cursor: pointer;
+  color: var(--color-grey-600, #555);
+  font-size: var(--font-size-sm, 0.8125rem);
+  font-weight: 600;
+  margin-bottom: var(--spacing-xs, 6px);
 }
 
 .derivedNote {

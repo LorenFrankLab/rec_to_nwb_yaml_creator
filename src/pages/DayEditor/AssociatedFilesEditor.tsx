@@ -95,14 +95,12 @@ export default function AssociatedFilesEditor({ files = [], tasks = [], onChange
 
   return (
     <section className="associated-files-editor" aria-labelledby={`${baseId}-heading`}>
-      <header className="associated-files-header">
-        <h3 id={`${baseId}-heading`}>Associated files</h3>
+      <div className="associated-files-header">
+        <h3 id={`${baseId}-heading`}>File rows</h3>
         <p className="associated-files-hint">
-          Link supplementary files (e.g., DIO event lists, state-script logs) to a
-          task epoch. The epoch is chosen from this day&apos;s task epochs, so a file
-          can never point at one that does not exist.
+          Link each file to one of this day&apos;s task epochs.
         </p>
-      </header>
+      </div>
 
       {fileList.length === 0 ? (
         <p className="associated-files-empty">No associated files yet.</p>

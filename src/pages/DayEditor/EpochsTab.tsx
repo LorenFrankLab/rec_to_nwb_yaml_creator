@@ -100,8 +100,8 @@ function taskInstanceEpochs(instances: TaskInstance[]): Set<number> {
 
 /**
  * EpochsTab — the epoch grid (Phase 4), the day editor's spine. A pure-view-model-driven table with
- * one row per epoch (caret + Task + Camera(s) + Statescript-naming + Video-presence + Opto + Status)
- * and a per-epoch drill-in (What happened / Generated files / Optogenetics). Every edit maps to an
+ * one row per epoch (Edit + Task + Camera(s) + Statescript-naming + Video-presence + Opto + Status)
+ * and a per-epoch drill-in (Epoch task / Files for this epoch / Optogenetics). Every edit maps to an
  * {@link updateDay} patch over the day's EXISTING arrays via the pure {@link buildEpochGrid} join +
  * {@link module:domain/epochOperations} transforms — storage/export are unchanged. Replaces the
  * `TasksEpochsStep` bridge.
@@ -568,7 +568,7 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
         <table className={styles.table}>
           <thead>
             <tr>
-              <th scope="col" className={styles.caretCell}><span className="sr-only">Expand</span></th>
+              <th scope="col" className={styles.caretCell}>Edit</th>
               <th scope="col" className={styles.numCell}>#</th>
               <th scope="col">Task</th>
               <th scope="col">Camera(s)</th>
@@ -785,7 +785,7 @@ const STATESCRIPT_LABEL: Record<EpochGridRow['statescriptNaming'], string> = {
   none: '—',
 };
 
-/** One epoch row (collapsed cells = STATE, not names) + its 3-group drill-in. */
+/** One epoch row (collapsed cells = STATE, not names) + its focused drill-in groups. */
 function EpochRowBlock(p: EpochRowProps) {
   const { row, isOpen, drillInId, hasOpto, colCount, cameras, taskTypes, grid } = p;
   const videoLabel =
@@ -807,19 +807,20 @@ function EpochRowBlock(p: EpochRowProps) {
         <td className={styles.caretCell}>
           <button
             type="button"
-            className={styles.caret}
+            className={styles.editButton}
             aria-expanded={isOpen}
             aria-controls={drillInId}
-            aria-label={`Toggle epoch ${row.epoch} details`}
+            aria-label={`${isOpen ? 'Hide' : 'Edit'} epoch ${row.epoch} details`}
             onClick={p.onToggle}
           >
-            {isOpen ? '▾' : '▸'}
+            <span className={styles.editChevron} aria-hidden="true">{isOpen ? '▾' : '▸'}</span>
+            <span>{isOpen ? 'Hide' : 'Edit'}</span>
           </button>
         </td>
         <td className={styles.numCell}>{row.epoch}</td>
         <td>
           {/* A real button so the larger task target is keyboard-operable; its accessible name is the
-              task label (distinct from the caret's "Toggle epoch N details"), and it shares the
+              task label (distinct from the row's "Edit epoch N details"), and it shares the
               disclosure semantics (aria-expanded/-controls) with the caret. */}
           <button
             type="button"
@@ -828,7 +829,7 @@ function EpochRowBlock(p: EpochRowProps) {
             aria-controls={drillInId}
             onClick={p.onToggle}
           >
-            {row.taskName || <em>(no task)</em>} <span className={styles.tag}>· {row.tag}</span>
+            {row.taskName || <em>(no task)</em>} <span className={styles.tag}>file tag {row.tag}</span>
           </button>
           {row.duplicate && <span className={styles.duplicateBadge} title="This epoch is claimed by more than one task">duplicate</span>}
         </td>
@@ -886,12 +887,11 @@ function EpochRowBlock(p: EpochRowProps) {
         <tr className={styles.drillIn}>
           <td colSpan={colCount + 1}>
             <div className={styles.drillInInner} id={drillInId}>
-              {/* What happened */}
               <div className={styles.group}>
-                <h3 className={styles.groupHeading}>What happened</h3>
+                <h3 className={styles.groupHeading}>Epoch task</h3>
                 <div className={styles.fieldRow}>
                   <span className={styles.fieldLabel}>Task</span>
-                  <span>
+                  <span className={styles.inlineControls}>
                     <select
                       aria-label={`Epoch ${row.epoch} task`}
                       value={ownerTypeId}
@@ -902,23 +902,24 @@ function EpochRowBlock(p: EpochRowProps) {
                         <option key={t.id} value={t.id}>{t.task_name || t.id}</option>
                       ))}
                     </select>
-                    <span className={styles.derivedNote}> tag derives: {row.tag}</span>
                     <button type="button" className="button-small" onClick={p.onNewTaskType}>+ new task type</button>
                   </span>
                 </div>
-                <div className={styles.fieldRow}>
-                  <span className={styles.fieldLabel}>Environment</span>
-                  <span className={styles.derivedNote}>{row.taskEnvironment || '—'} (set on the task type)</span>
-                </div>
-                <div className={styles.fieldRow}>
-                  <span className={styles.fieldLabel}>Cameras</span>
-                  <span>
-                    {row.cameras.length === 0
-                      ? <span className={styles.derivedNote}>none</span>
-                      : row.cameras.map((id) => <span key={String(id)} className={styles.cam}>{cameraName(cameras, id)}</span>)}
-                    <span className={styles.derivedNote}> (set on the task type)</span>
-                  </span>
-                </div>
+                <details className={styles.contextDetails}>
+                  <summary>Task type context</summary>
+                  <div className={styles.fieldRow}>
+                    <span className={styles.fieldLabel}>Environment</span>
+                    <span className={styles.derivedNote}>{row.taskEnvironment || '—'}</span>
+                  </div>
+                  <div className={styles.fieldRow}>
+                    <span className={styles.fieldLabel}>Cameras</span>
+                    <span>
+                      {row.cameras.length === 0
+                        ? <span className={styles.derivedNote}>none</span>
+                        : row.cameras.map((id) => <span key={String(id)} className={styles.cam}>{cameraName(cameras, id)}</span>)}
+                    </span>
+                  </div>
+                </details>
               </div>
 
               <details
@@ -926,22 +927,26 @@ function EpochRowBlock(p: EpochRowProps) {
                 open={generatedFilesNeedReview}
               >
                 <summary className={styles.generatedSummary}>
-                  <span>Generated files</span>
+                  <span>Files for this epoch</span>
                   <span className={styles.generatedStatus}>
                     {generatedFilesNeedReview ? 'needs review' : 'generated'}
                   </span>
                 </summary>
                 <div className={styles.generatedContent}>
-                  <p className={styles.genNote}>
-                    File <strong>names</strong> derive from <code>{'{date}_{animal}_{epoch}_{tag}'}</code>. You set <strong>where the files live</strong> — the day&apos;s data folder, in Daily Setup. Override a name only for exceptions.
-                  </p>
-                <div className={styles.fieldRow}>
-                  <span className={styles.fieldLabel}>Data folder</span>
-                  <span className={styles.mono}>{grid.dataFolder || <span className={styles.derivedNote}>not set — add it in Daily Setup</span>}</span>
-                </div>
-                <div className={styles.fieldRow}>
-                  <span className={styles.fieldLabel}>Statescript</span>
-                  <span>
+                  <div className={styles.fieldRow}>
+                    <span className={styles.fieldLabel}>File tag</span>
+                    <span>
+                      <code className={styles.mono}>{row.tag}</code>
+                      <span className={styles.derivedNote}> used in generated statescript and video names</span>
+                    </span>
+                  </div>
+                  <div className={styles.fieldRow}>
+                    <span className={styles.fieldLabel}>Data folder</span>
+                    <span className={styles.mono}>{grid.dataFolder || <span className={styles.derivedNote}>not set — add it in Daily Setup</span>}</span>
+                  </div>
+                  <div className={styles.fieldRow}>
+                    <span className={styles.fieldLabel}>Statescript</span>
+                    <span>
                     {row.statescript ? (
                       <GeneratedValue
                         value={p.manualStatescript || row.statescriptNaming === 'manual' ? row.statescript.entry.path ?? '' : p.statescriptDerivedName}
@@ -959,11 +964,11 @@ function EpochRowBlock(p: EpochRowProps) {
                         <button type="button" className="button-small" onClick={p.onAddStatescript}>+ Add statescript</button>
                       </>
                     )}
-                  </span>
-                </div>
-                <div className={styles.fieldRow} data-field-path={`epoch-${row.epoch}-video`} tabIndex={-1}>
-                  <span className={styles.fieldLabel}>Video</span>
-                  <span>
+                    </span>
+                  </div>
+                  <div className={styles.fieldRow} data-field-path={`epoch-${row.epoch}-video`} tabIndex={-1}>
+                    <span className={styles.fieldLabel}>Video</span>
+                    <span>
                     {row.videoPresence === 'present' && (
                       <>
                         {row.videos.map((v, vi) => {
@@ -1013,8 +1018,8 @@ function EpochRowBlock(p: EpochRowProps) {
                         <button type="button" className="button-small" onClick={p.onUndoNoVideo}>Undo “no video”</button>
                       </>
                     )}
-                  </span>
-                </div>
+                    </span>
+                  </div>
                 </div>
               </details>
 

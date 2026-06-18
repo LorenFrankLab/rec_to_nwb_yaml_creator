@@ -156,121 +156,153 @@ export default function DayTab(props: DayTabProps) {
       </div>
 
       {/* Daily setup metadata (day-specific editable fields) */}
-      <section className="day-editor-section">
-        <h2>Daily Setup</h2>
+      <section className="day-editor-section daily-setup-section">
+        <div className="daily-setup-header">
+          <h2>Daily Setup</h2>
+        </div>
 
-        <div className="form-grid">
-          <div className="form-field">
-            <label htmlFor="day-data-folder">Data folder</label>
-            <input
-              id="day-data-folder"
-              type="text"
-              name="dataFolder"
-              data-field-path="dataFolder"
-              key={`day-data-folder-${day.dataFolder ?? ''}`}
-              defaultValue={day.dataFolder ?? ''}
-              placeholder="e.g. /stelmo/denisse/Laurent/20260514/"
-              aria-describedby="day-data-folder-help"
-              onBlur={(e) => onFieldUpdate('dataFolder', e.target.value)}
-            />
-            <span id="day-data-folder-help" className="field-help-text">
-              Where this day&apos;s files live. Epoch file names derive inside it and the value is
-              carried forward to the next day.
-            </span>
+        <div className="daily-setup-stack">
+          <div className="daily-setup-group daily-setup-group-primary">
+            <div className="daily-setup-group-header">
+              <h3>File location</h3>
+              <span className="daily-setup-priority">Start here</span>
+            </div>
+            <div className="form-grid daily-setup-single-grid">
+              <div className="form-field">
+                <label htmlFor="day-data-folder">Data folder</label>
+                <input
+                  id="day-data-folder"
+                  type="text"
+                  name="dataFolder"
+                  data-field-path="dataFolder"
+                  key={`day-data-folder-${day.dataFolder ?? ''}`}
+                  defaultValue={day.dataFolder ?? ''}
+                  placeholder="e.g. /stelmo/denisse/Laurent/20260514/"
+                  aria-describedby="day-data-folder-help"
+                  onBlur={(e) => onFieldUpdate('dataFolder', e.target.value)}
+                />
+                <span id="day-data-folder-help" className="field-help-text">
+                  Where this day&apos;s files live. Epoch file names derive inside it and the value is
+                  carried forward to the next day.
+                </span>
+              </div>
+            </div>
           </div>
 
-          <div className="form-field">
-            <label htmlFor="session-weight">Recording-day weight (grams)</label>
-            <input
-              id="session-weight"
-              type="number"
-              min="0"
-              step="any"
-              name="session.weight"
-              data-field-path="session.weight"
-              key={`session-weight-${session.weight ?? ''}`}
-              defaultValue={session.weight ?? ''}
-              aria-describedby="session-weight-help"
-              placeholder={
-                overviewField('session.weight')?.fallbackValue
-                ?? (typeof subject.weight === 'number'
-                  ? `${subject.weight} (animal baseline)`
-                  : 'e.g. 450')
-              }
-              onBlur={(e) => {
-                const value = e.target.valueAsNumber;
-                onFieldUpdate('session.weight', Number.isFinite(value) ? value : undefined);
-              }}
-            />
-            <span id="session-weight-help" className="field-help-text">
-              {overviewField('session.weight')?.helpText
-                ?? (session.weight !== undefined
-                  ? 'Weight recorded for this session — the value exported for this day.'
-                  : typeof subject.weight === 'number'
-                    ? `No weight set for this day — the animal baseline (${subject.weight} g) will be `
-                      + `exported as a fallback. Enter this session's weight to set it for this day.`
-                    : 'Enter the weight recorded for this session (exported for this day).')}
-            </span>
+          <div className="daily-setup-group">
+            <div className="daily-setup-group-header">
+              <h3>Required descriptions</h3>
+              <span className="daily-setup-priority">Export required</span>
+            </div>
+            <div className="form-grid daily-setup-description-grid">
+              <div className="form-field">
+                <label htmlFor="session-description" className="required">
+                  Session Description
+                </label>
+                <textarea
+                  id="session-description"
+                  name="session.session_description"
+                  data-field-path="session_description"
+                  rows={3}
+                  defaultValue={session.session_description}
+                  onBlur={(e) => handleBlur('session.session_description', e.target.value)}
+                  className={fieldErrors['session.session_description'] ? 'invalid' : ''}
+                  aria-invalid={!!fieldErrors['session.session_description']}
+                  aria-describedby={
+                    fieldErrors['session.session_description'] ? 'session-description-error' : undefined
+                  }
+                  required
+                  aria-required="true"
+                />
+                {fieldErrors['session.session_description'] && (
+                  <span id="session-description-error" className="validation-error" role="alert">
+                    {fieldErrors['session.session_description'].message}
+                  </span>
+                )}
+              </div>
+
+              <div className="form-field">
+                <label htmlFor="experiment-description" className="required">
+                  Experiment Description
+                </label>
+                <textarea
+                  id="experiment-description"
+                  name="session.experiment_description"
+                  data-field-path="experiment_description"
+                  rows={3}
+                  defaultValue={session.experiment_description || animal.experiment_description || ''}
+                  onBlur={(e) => handleBlur('session.experiment_description', e.target.value)}
+                  placeholder="e.g., Chronic tetrode recording during spatial navigation"
+                  className={fieldErrors['session.experiment_description'] ? 'invalid' : ''}
+                  aria-invalid={!!fieldErrors['session.experiment_description']}
+                  required
+                  aria-required="true"
+                />
+                <span className="field-help-text">
+                  {overviewField('session.experiment_description')?.helpText
+                    ?? 'Describes the overall experiment. Required for export and written to the NWB file.'}
+                </span>
+                {fieldErrors['session.experiment_description'] && (
+                  <span className="validation-error" role="alert">
+                    {fieldErrors['session.experiment_description'].message}
+                  </span>
+                )}
+              </div>
+            </div>
           </div>
 
-          <div className="form-field">
-            <label htmlFor="session-description" className="required">
-              Session Description
-            </label>
-            <textarea
-              id="session-description"
-              name="session.session_description"
-              data-field-path="session_description"
-              rows={3}
-              defaultValue={session.session_description}
-              onBlur={(e) => handleBlur('session.session_description', e.target.value)}
-              className={fieldErrors['session.session_description'] ? 'invalid' : ''}
-              aria-invalid={!!fieldErrors['session.session_description']}
-              aria-describedby={
-                fieldErrors['session.session_description'] ? 'session-description-error' : undefined
-              }
-              required
-              aria-required="true"
-            />
-            {fieldErrors['session.session_description'] && (
-              <span id="session-description-error" className="validation-error" role="alert">
-                {fieldErrors['session.session_description'].message}
-              </span>
-            )}
-          </div>
+          <div className="daily-setup-secondary-grid">
+            <div className="daily-setup-group">
+              <div className="daily-setup-group-header">
+                <h3>Session measurement</h3>
+              </div>
+              <div className="form-grid daily-setup-single-grid">
+                <div className="form-field">
+                  <label htmlFor="session-weight">Recording-day weight (grams)</label>
+                  <input
+                    id="session-weight"
+                    type="number"
+                    min="0"
+                    step="any"
+                    name="session.weight"
+                    data-field-path="session.weight"
+                    key={`session-weight-${session.weight ?? ''}`}
+                    defaultValue={session.weight ?? ''}
+                    aria-describedby="session-weight-help"
+                    placeholder={
+                      overviewField('session.weight')?.fallbackValue
+                      ?? (typeof subject.weight === 'number'
+                        ? `${subject.weight} (animal baseline)`
+                        : 'e.g. 450')
+                    }
+                    onBlur={(e) => {
+                      const value = e.target.valueAsNumber;
+                      onFieldUpdate('session.weight', Number.isFinite(value) ? value : undefined);
+                    }}
+                  />
+                  <span id="session-weight-help" className="field-help-text">
+                    {overviewField('session.weight')?.helpText
+                      ?? (session.weight !== undefined
+                        ? 'Weight recorded for this session — the value exported for this day.'
+                        : typeof subject.weight === 'number'
+                          ? `No weight set for this day — the animal baseline (${subject.weight} g) will be `
+                            + `exported as a fallback. Enter this session's weight to set it for this day.`
+                          : 'Enter the weight recorded for this session (exported for this day).')}
+                  </span>
+                </div>
+              </div>
+            </div>
 
-          <div className="form-field">
-            <label htmlFor="experiment-description" className="required">
-              Experiment Description
-            </label>
-            <textarea
-              id="experiment-description"
-              name="session.experiment_description"
-              data-field-path="experiment_description"
-              rows={3}
-              defaultValue={session.experiment_description || animal.experiment_description || ''}
-              onBlur={(e) => handleBlur('session.experiment_description', e.target.value)}
-              placeholder="e.g., Chronic tetrode recording during spatial navigation"
-              className={fieldErrors['session.experiment_description'] ? 'invalid' : ''}
-              aria-invalid={!!fieldErrors['session.experiment_description']}
-              required
-              aria-required="true"
-            />
-            <span className="field-help-text">
-              {overviewField('session.experiment_description')?.helpText
-                ?? 'Describes the overall experiment. Required for export and written to the NWB file.'}
-            </span>
-            {fieldErrors['session.experiment_description'] && (
-              <span className="validation-error" role="alert">
-                {fieldErrors['session.experiment_description'].message}
-              </span>
-            )}
+            <div className="daily-setup-group">
+              <div className="daily-setup-group-header">
+                <h3>Search terms</h3>
+              </div>
+              <KeywordsEditor
+                value={keywords}
+                onChange={(keywords) => onFieldUpdate('keywords', keywords)}
+              />
+            </div>
           </div>
-
-          <KeywordsEditor
-            value={keywords}
-            onChange={(keywords) => onFieldUpdate('keywords', keywords)}
-          />
         </div>
       </section>
 
