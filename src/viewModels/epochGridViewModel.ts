@@ -173,19 +173,9 @@ function tagFromExistingFiles(statescript: EpochFileRef | null, videos: EpochVid
   return null;
 }
 
-/** Semantic fallback tag prefix for new generated file names when the day has no matching files yet. */
-function tagShortCode(taskName: string, taskEnvironment: string): string {
-  const text = `${taskName} ${taskEnvironment}`.toLowerCase();
-  if (/\b(home|homebox|home box)\b/.test(text)) return 'h';
-  if (
-    /\b(run|w[-\s]?track|linear[-\s]?track|track|maze|fork|bandit|alternation|haight|exploration|spatial|hex)\b/.test(text)
-  ) {
-    return 'r';
-  }
-  if (/\b(sleep|rest)\b/.test(text)) return 's';
-
-  const match = /[a-z]/i.exec(taskName);
-  return match ? match[0].toLowerCase() : 't';
+/** Fallback tag prefix for new generated file names when the day has no matching files yet. */
+function tagShortCode(taskName: string): string {
+  return /\bsleep\b/i.test(taskName) ? 's' : 'r';
 }
 
 /** The `YYYYMMDD` date token for derivation, from the day's `YYYY-MM-DD` date. */
@@ -227,6 +217,16 @@ export function buildEpochGrid(animal: unknown, day: unknown): EpochGrid {
 
   // The ascending set of distinct epoch numbers across all tasks.
   const allEpochs = [...new Set(taskEpochs.flat())].sort((a, b) => a - b);
+  const fallbackTagByEpoch = new Map<number, string>();
+  const fallbackCounts: Record<string, number> = {};
+
+  allEpochs.forEach((epoch) => {
+    const taskIndex = taskEpochs.findIndex((epochs) => epochs.includes(epoch));
+    const task = taskIndex >= 0 ? tasks[taskIndex] : undefined;
+    const prefix = tagShortCode((task?.task_name as string) || '');
+    fallbackCounts[prefix] = (fallbackCounts[prefix] ?? 0) + 1;
+    fallbackTagByEpoch.set(epoch, `${prefix}${fallbackCounts[prefix]}`);
+  });
 
   const rows: EpochGridRow[] = allEpochs.map((epoch) => {
     // The first task that owns this epoch (a duplicate is flagged separately).
@@ -244,12 +244,10 @@ export function buildEpochGrid(animal: unknown, day: unknown): EpochGrid {
       if (scalarEpochMatches(entry.task_epochs, epoch)) matchedVideos.push({ entry, index });
     });
 
-    // 1-based occurrence of this epoch among the owning task's sorted epochs → the fallback suffix.
-    const ownEpochs = taskIndex >= 0 ? [...taskEpochs[taskIndex]].sort((a, b) => a - b) : [];
-    const occurrence = ownEpochs.indexOf(epoch) + 1;
     const tag =
       tagFromExistingFiles(statescript, matchedVideos)
-      ?? `${tagShortCode(taskName, taskEnvironment)}${occurrence > 0 ? occurrence : 1}`;
+      ?? fallbackTagByEpoch.get(epoch)
+      ?? 'r1';
 
     const optoIndex = fsgui.findIndex((g) => normalizeEpochs(g.epochs).includes(epoch));
     const opto: EpochOptoRef | null = optoIndex >= 0 ? { entry: fsgui[optoIndex], index: optoIndex } : null;

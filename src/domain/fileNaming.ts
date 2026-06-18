@@ -25,7 +25,7 @@ export interface FileNameTokens {
   subjectId: string;
   /** Epoch number (rendered `:02d`, widening past 99). */
   epoch: number;
-  /** Per-type tag, e.g. `s1` / `r1` (task short code + 1-based occurrence). */
+  /** Sleep/run category tag, e.g. `s1` / `r1` (category code + 1-based occurrence). */
   tag: string;
 }
 

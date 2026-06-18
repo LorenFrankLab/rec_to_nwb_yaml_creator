@@ -80,13 +80,30 @@ describe('buildEpochGrid — join shape', () => {
     expect(byEpoch).toEqual({ 1: 's1', 2: 'r1', 3: 's2', 4: 'r2', 5: 's3' });
   });
 
-  it('uses semantic per-occurrence fallback tags when no linked filenames carry one', () => {
+  it('uses sleep/run fallback tags when no linked filenames carry one', () => {
     const { animal, day } = goldenInlineWorkspace();
     day.associated_files = [];
     day.associated_video_files = [];
     const grid = buildEpochGrid(animal, day);
     const byEpoch = Object.fromEntries(grid.rows.map((r) => [r.epoch, r.tag]));
     expect(byEpoch).toEqual({ 1: 's1', 2: 'r1', 3: 's2', 4: 'r2', 5: 's3' });
+  });
+
+  it('uses s only for sleep and counts all non-sleep fallback tags as one r sequence', () => {
+    const { animal, day } = goldenInlineWorkspace();
+    day.tasks = [
+      { task_name: 'Sleep', task_description: 'sleeping', task_environment: 'sleep box', camera_id: [0], task_epochs: [1, 5] },
+      { task_name: 'lineartrack', task_description: 'run', task_environment: 'track', camera_id: [1], task_epochs: [2] },
+      { task_name: 'rest', task_description: 'rest box', task_environment: 'home', camera_id: [1], task_epochs: [3] },
+      { task_name: 'home', task_description: 'home cage', task_environment: 'home', camera_id: [1], task_epochs: [4] },
+    ];
+    day.associated_files = [];
+    day.associated_video_files = [];
+
+    const grid = buildEpochGrid(animal, day);
+    const byEpoch = Object.fromEntries(grid.rows.map((r) => [r.epoch, r.tag]));
+
+    expect(byEpoch).toEqual({ 1: 's1', 2: 'r1', 3: 'r2', 4: 'r3', 5: 's2' });
   });
 
   it('carries the task cameras onto each row', () => {
