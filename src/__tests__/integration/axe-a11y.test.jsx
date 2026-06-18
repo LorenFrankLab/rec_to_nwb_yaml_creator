@@ -130,11 +130,12 @@ describe('axe-a11y (configured workspace, all routes)', () => {
 
   describe('DayEditor sections', () => {
     const sections = [
-      'Overview',
-      'Files & Weight',
-      'Devices & Failed Channels',
-      'Tasks & Epochs',
-      'Validation & Export',
+      'Daily Setup',
+      'Tasks & Files',
+      'Recording Setup',
+      'Failed Channels',
+      'DIO Wiring',
+      'Fix & Export',
     ];
 
     it.each(sections)('section %s has no violations', async (sectionLabel) => {

@@ -34,11 +34,12 @@ describe('tab order through the DayEditor frame', () => {
       (el.getAttribute('aria-label') || el.textContent).replace(/\s+[—-].+$/, '').trim()
     );
     expect(labels).toEqual([
-      'Overview',
-      'Files & Weight',
-      'Devices & Failed Channels',
-      'Tasks & Epochs',
-      'Validation & Export',
+      'Daily Setup',
+      'Tasks & Files',
+      'Recording Setup',
+      'Failed Channels',
+      'DIO Wiring',
+      'Fix & Export',
     ]);
   });
 

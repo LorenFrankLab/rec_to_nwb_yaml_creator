@@ -57,24 +57,24 @@ describe('global shortcuts + help (integration)', () => {
 
   it('Alt+ArrowRight / Alt+ArrowLeft move the DayEditor sections', async () => {
     await renderRoute(`#/day/${DAY_ID}`);
-    await screen.findByRole('heading', { name: /overview/i }); // the Overview section is active
+    await screen.findByRole('heading', { name: /daily setup/i });
 
-    // Advance to Files & Weight.
+    // Advance to Tasks & Files.
     fireEvent.keyDown(document.body, { key: 'ArrowRight', altKey: true });
-    expect(await screen.findByRole('heading', { name: /files & weight/i })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: /^Tasks & Files\b/i })).toHaveAttribute('aria-current', 'page');
 
-    // Retreat back to Overview.
+    // Retreat back to Daily Setup.
     fireEvent.keyDown(document.body, { key: 'ArrowLeft', altKey: true });
-    expect(await screen.findByRole('heading', { name: /overview/i })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: /daily setup/i })).toBeInTheDocument();
   });
 
-  it('Alt+N opens the epoch template menu in Tasks & Epochs', async () => {
+  it('Alt+N opens the epoch template menu in Tasks & Files', async () => {
     const user = userEvent.setup();
     await renderRoute(`#/day/${DAY_ID}`);
     await screen.findByRole('heading', { name: /day editor/i });
 
-    // Go to the Tasks & Epochs section.
-    await user.click(screen.getByRole('button', { name: /^Tasks & Epochs\b/i }));
+    // Go to the Tasks & Files section.
+    await user.click(screen.getByRole('button', { name: /^Tasks & Files\b/i }));
     await screen.findByRole('heading', { name: /^Epochs$/i });
 
     // Alt+N opens the grid's add affordance — the "+ from template" menu.
@@ -82,20 +82,20 @@ describe('global shortcuts + help (integration)', () => {
     expect(await screen.findByRole('menuitem', { name: /Sleep day/i })).toBeInTheDocument();
   });
 
-  it('Alt+N is a no-op on a step with no add target (Overview)', async () => {
+  it('Alt+N is a no-op on a section with no add target (Daily Setup)', async () => {
     await renderRoute(`#/day/${DAY_ID}`);
-    await screen.findByRole('heading', { name: /overview/i });
+    await screen.findByRole('heading', { name: /daily setup/i });
 
     fireEvent.keyDown(document.body, { key: 'n', altKey: true });
     await act(async () => { await Promise.resolve(); });
     // No dialog appears and the view is unchanged.
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: /overview/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /daily setup/i })).toBeInTheDocument();
   });
 
   it('further shortcuts are ignored while the help dialog is open', async () => {
     await renderRoute(`#/day/${DAY_ID}`);
-    await screen.findByRole('heading', { name: /overview/i });
+    await screen.findByRole('heading', { name: /daily setup/i });
 
     fireEvent.keyDown(document.body, { key: '?' });
     expect(await screen.findByRole('dialog', { name: /keyboard shortcuts/i })).toBeInTheDocument();

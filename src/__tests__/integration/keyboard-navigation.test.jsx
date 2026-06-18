@@ -183,9 +183,9 @@ describe('Keyboard Navigation Accessibility', () => {
         await Promise.resolve();
       });
 
-      // Open the Devices & Failed Channels section (the electrode-group disclosures live there).
-      await user.click(screen.getByRole('button', { name: /^Devices & Failed Channels\b/ }));
-      await screen.findByRole('heading', { name: /devices & failed channels/i });
+      // Open the Failed Channels section (the electrode-group disclosures live there).
+      await user.click(screen.getByRole('button', { name: /^Failed Channels\b/ }));
+      await screen.findByRole('heading', { name: /failed channels/i });
 
       // Each electrode group is a native <details><summary> disclosure — nested,
       // keyboard-focusable, and operable. Focus the first and toggle it open.
