@@ -34,9 +34,9 @@ export default function TasksFilesSection(props: TasksFilesSectionProps) {
       <section className="day-editor-section supplemental-files-section" aria-labelledby="supplemental-files-heading">
         <div className="supplemental-files-header">
           <div>
-            <h2 id="supplemental-files-heading">Supplemental files</h2>
+            <h2 id="supplemental-files-heading">Other associated files</h2>
             <p>
-              Extra epoch-linked files such as realtime output, stimulus scripts, and non-primary logs.
+              Files outside the epoch statescript and video rows, such as realtime output or stimulus scripts.
             </p>
           </div>
           <span className="supplemental-files-badge">

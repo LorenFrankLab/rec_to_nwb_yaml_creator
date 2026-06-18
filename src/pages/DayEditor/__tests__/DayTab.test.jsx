@@ -102,6 +102,8 @@ describe('DayTab', () => {
     expect(screen.getByRole('heading', { name: /required descriptions/i })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: /session measurement/i })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: /search terms/i })).toBeInTheDocument();
+    expect(screen.queryByText(/start here/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/export required/i)).not.toBeInTheDocument();
 
     const dataFolder = screen.getByLabelText(/Data folder/i);
     const weight = screen.getByLabelText(/Recording-day weight/i);

@@ -474,48 +474,43 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
 
   const hasOpto = grid.isOpto;
   const colCount = hasOpto ? 9 : 7;
+  const epochCount = grid.rows.length;
+  const missingVideoCount = grid.rows.filter((row) => row.status === 'needs_video').length;
+  const missingStatescriptCount = grid.rows.filter((row) => row.statescript == null).length;
+  const manualVideoCount = grid.rows.reduce((count, row) => {
+    const manualForRow = row.videos.filter((video, index) => !isDerivedVideo(video.entry, {
+      date: grid.date,
+      subjectId: grid.subjectId,
+      epoch: row.epoch,
+      tag: row.tag,
+      index: index + 1,
+    })).length;
+    return count + manualForRow;
+  }, 0);
+  const manualFileCount =
+    grid.rows.filter((row) => row.statescriptNaming === 'manual').length + manualVideoCount;
 
   return (
     <div className={`day-editor-section ${styles.root}`}>
-      <h2>Epochs</h2>
-      <p className={styles.intro}>
-        Each row is one <strong>epoch</strong> — a numbered recording block belonging to a task. Open a
-        row to set its task, generated files, and (for opto animals) its stimulation. File names derive
-        from <code>{'{date}_{animal}_{epoch}_{tag}'}</code>; you set the data folder in Daily Setup.
-      </p>
-
-      {unresolvedTaskCatalogDivergence && (
-        <section className={styles.catalogConflict} aria-labelledby="task-catalog-conflict-heading">
-          <h3 id="task-catalog-conflict-heading" className={styles.catalogConflictHeading}>
-            Review task catalog match
-          </h3>
-          <p className={styles.catalogConflictText}>
-            This day has inline task values that match animal task types by name but differ in saved
-            details. Choose which definition should be used before changing epochs.
-          </p>
-          <ul className={styles.catalogConflictList}>
-            {view.divergences.map((divergence) => (
-              <li key={`${divergence.taskName}-${divergence.inlineTaskIndex}`}>
-                <strong>{divergence.taskName}</strong>
-                <span>Day: {taskDefinitionSummary(divergence.inline)}</span>
-                <span>Catalog: {taskDefinitionSummary(divergence.catalog)}</span>
-              </li>
-            ))}
-          </ul>
-          <div className={styles.catalogConflictActions}>
-            <Button variant="secondary" onClick={keepCatalogDefinition}>
-              Keep catalog definition
-            </Button>
-            <Button variant="primary" onClick={keepDayValues}>
-              Keep this day&apos;s values
-            </Button>
-          </div>
-        </section>
-      )}
-
-      <div className={styles.toolbar}>
-        <div className={styles.toolbarSpacer} />
-        <div style={{ position: 'relative' }}>
+      <div className={styles.workspaceHeader}>
+        <div>
+          <h2>Epochs</h2>
+          {epochCount > 0 && (
+            <div className={styles.summaryStrip} aria-label="Epoch status summary">
+              <span className={styles.summaryChip}>{epochCount} {epochCount === 1 ? 'epoch' : 'epochs'}</span>
+              <span className={`${styles.summaryChip} ${missingVideoCount > 0 ? styles.summaryNeedsAttention : ''}`}>
+                {missingVideoCount} {missingVideoCount === 1 ? 'video' : 'videos'} needed
+              </span>
+              <span className={`${styles.summaryChip} ${missingStatescriptCount > 0 ? styles.summaryNeedsAttention : ''}`}>
+                {missingStatescriptCount} {missingStatescriptCount === 1 ? 'statescript' : 'statescripts'} missing
+              </span>
+              <span className={`${styles.summaryChip} ${manualFileCount > 0 ? styles.summaryReview : ''}`}>
+                {manualFileCount} manual {manualFileCount === 1 ? 'name' : 'names'}
+              </span>
+            </div>
+          )}
+        </div>
+        <div className={styles.templateMenu}>
           <button
             type="button"
             className="button-primary"
@@ -549,6 +544,35 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
           )}
         </div>
       </div>
+
+      {unresolvedTaskCatalogDivergence && (
+        <section className={styles.catalogConflict} aria-labelledby="task-catalog-conflict-heading">
+          <h3 id="task-catalog-conflict-heading" className={styles.catalogConflictHeading}>
+            Review task catalog match
+          </h3>
+          <p className={styles.catalogConflictText}>
+            This day has inline task values that match animal task types by name but differ in saved
+            details. Choose which definition should be used before changing epochs.
+          </p>
+          <ul className={styles.catalogConflictList}>
+            {view.divergences.map((divergence) => (
+              <li key={`${divergence.taskName}-${divergence.inlineTaskIndex}`}>
+                <strong>{divergence.taskName}</strong>
+                <span>Day: {taskDefinitionSummary(divergence.inline)}</span>
+                <span>Catalog: {taskDefinitionSummary(divergence.catalog)}</span>
+              </li>
+            ))}
+          </ul>
+          <div className={styles.catalogConflictActions}>
+            <Button variant="secondary" onClick={keepCatalogDefinition}>
+              Keep catalog definition
+            </Button>
+            <Button variant="primary" onClick={keepDayValues}>
+              Keep this day&apos;s values
+            </Button>
+          </div>
+        </section>
+      )}
 
       {grid.rows.length === 0 ? (
         <EmptyState

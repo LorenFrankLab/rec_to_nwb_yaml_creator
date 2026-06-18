@@ -107,6 +107,10 @@ function lastPatch(onFieldUpdate, field) {
 describe('EpochsTab — grid render + collapsed state cells', () => {
   it('renders one row per epoch with a focusable edit <button aria-expanded>', () => {
     render(<EpochsTab {...makeBundle()} />);
+    expect(screen.getByLabelText(/epoch status summary/i)).toHaveTextContent(/3 epochs/i);
+    expect(screen.getByLabelText(/epoch status summary/i)).toHaveTextContent(/2 videos needed/i);
+    expect(screen.getByLabelText(/epoch status summary/i)).toHaveTextContent(/3 statescripts missing/i);
+    expect(screen.getByLabelText(/epoch status summary/i)).toHaveTextContent(/1 manual name/i);
     const edit = screen.getByRole('button', { name: /Edit epoch 1 details/i });
     expect(edit.tagName).toBe('BUTTON');
     expect(edit).toHaveAttribute('aria-expanded', 'false');

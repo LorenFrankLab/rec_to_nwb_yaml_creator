@@ -273,10 +273,6 @@
 }
 
 .daily-setup-group-header {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--spacing-md);
   margin-bottom: var(--spacing-sm);
 }
 
@@ -284,17 +280,6 @@
   margin: 0;
   font-size: var(--font-size-sm);
   color: var(--color-grey-800);
-}
-
-.daily-setup-priority {
-  flex: none;
-  padding: 2px 8px;
-  border: 1px solid var(--color-grey-200);
-  border-radius: 999px;
-  background: var(--color-grey-100);
-  color: var(--color-grey-600);
-  font-size: var(--font-size-xs);
-  font-weight: 600;
 }
 
 .day-editor-stepper .daily-setup-section .form-grid {
@@ -501,7 +486,6 @@
     grid-template-columns: 1fr;
   }
 
-  .daily-setup-group-header,
   .supplemental-files-header {
     align-items: flex-start;
     flex-direction: column;

@@ -96,7 +96,7 @@ export default function AssociatedFilesEditor({ files = [], tasks = [], onChange
   return (
     <section className="associated-files-editor" aria-labelledby={`${baseId}-heading`}>
       <div className="associated-files-header">
-        <h3 id={`${baseId}-heading`}>File rows</h3>
+        <h3 id={`${baseId}-heading`}>Associated file rows</h3>
         <p className="associated-files-hint">
           Link each file to one of this day&apos;s task epochs.
         </p>

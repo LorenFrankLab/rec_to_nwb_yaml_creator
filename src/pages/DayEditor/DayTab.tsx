@@ -165,7 +165,6 @@ export default function DayTab(props: DayTabProps) {
           <div className="daily-setup-group daily-setup-group-primary">
             <div className="daily-setup-group-header">
               <h3>File location</h3>
-              <span className="daily-setup-priority">Start here</span>
             </div>
             <div className="form-grid daily-setup-single-grid">
               <div className="form-field">
@@ -192,7 +191,6 @@ export default function DayTab(props: DayTabProps) {
           <div className="daily-setup-group">
             <div className="daily-setup-group-header">
               <h3>Required descriptions</h3>
-              <span className="daily-setup-priority">Export required</span>
             </div>
             <div className="form-grid daily-setup-description-grid">
               <div className="form-field">

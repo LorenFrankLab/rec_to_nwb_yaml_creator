@@ -39,7 +39,7 @@ describe('TasksFilesSection', () => {
   it('keeps supplemental files visible below the epoch workspace by default', () => {
     renderSection();
 
-    const section = screen.getByRole('heading', { name: /supplemental files/i }).closest('section');
+    const section = screen.getByRole('heading', { name: /other associated files/i }).closest('section');
     expect(section).toBeInTheDocument();
     expect(section).toHaveTextContent(/1 file/i);
     expect(screen.getByRole('button', { name: /add file/i })).toBeInTheDocument();
