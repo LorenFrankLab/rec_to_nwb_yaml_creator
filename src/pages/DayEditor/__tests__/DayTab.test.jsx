@@ -102,6 +102,7 @@ describe('DayTab', () => {
     expect(screen.getByRole('heading', { name: /required descriptions/i })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: /session measurement/i })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: /search terms/i })).toBeInTheDocument();
+    expect(screen.getByText(/fields specific to this recording day/i)).toBeInTheDocument();
     expect(screen.queryByText(/start here/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/export required/i)).not.toBeInTheDocument();
 

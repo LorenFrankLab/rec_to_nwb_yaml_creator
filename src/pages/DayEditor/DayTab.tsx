@@ -159,6 +159,9 @@ export default function DayTab(props: DayTabProps) {
       <section className="day-editor-section daily-setup-section">
         <div className="daily-setup-header">
           <h2>Daily Setup</h2>
+          <p className="daily-setup-lede">
+            Fields specific to this recording day. Animal-wide setup is read-only below.
+          </p>
         </div>
 
         <div className="daily-setup-stack">

@@ -121,6 +121,7 @@ describe('DayEditorFrame', () => {
   });
 
   it('clears first-run validation deferral on open so real blockers surface', async () => {
+    const user = userEvent.setup();
     const { animal, day } = buildRealisticWorkspace();
     day.tasks = 'not-an-array';
     day.state = { draft: true, validated: false, exported: false, validationDeferred: true };
@@ -129,6 +130,7 @@ describe('DayEditorFrame', () => {
       workspace: { animals: { [animal.id]: animal }, days: { [day.id]: day }, settings: {} },
     });
 
+    await user.click(screen.getByRole('button', { name: /^Tasks & Files/ }));
     await waitFor(() => expect(screen.getByText(/issues? block export/i)).toBeInTheDocument());
   });
 
@@ -164,22 +166,31 @@ describe('DayEditorFrame', () => {
   });
 
   // ── Readiness bar (issue-driven, from validateDay) ──
-  it('readiness bar is loud with per-issue Fix actions when the day has blocking errors', () => {
+  it('readiness bar stays off Daily Setup but is loud with per-issue Fix actions on work sections', async () => {
+    const user = userEvent.setup();
     // The mock animal's species "Rat" is not DANDI-valid → a blocking error.
     renderFrame();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /^Tasks & Files/ }));
     const alert = screen.getByRole('alert');
     expect(alert).toHaveTextContent(/issue(s)? block export/i);
     expect(within(alert).getAllByRole('button').length).toBeGreaterThan(0);
   });
 
-  it('readiness bar is quiet ("Ready to export") when nothing blocks', () => {
+  it('readiness bar is quiet ("Ready to export") on work sections when nothing blocks', async () => {
+    const user = userEvent.setup();
     useDayIdFromUrl.mockReturnValue(validState.dayId);
     renderFrame({ workspace: validState.workspace });
+    expect(screen.queryByText(/ready to export/i)).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /^Tasks & Files/ }));
     expect(screen.getByText(/ready to export/i)).toBeInTheDocument();
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 
-  it('shows a non-actionable blocking issue (slash session_id) with its message but no dead Fix button', () => {
+  it('shows a non-actionable blocking issue (slash session_id) with its message but no dead Fix button', async () => {
+    const user = userEvent.setup();
     // A slash in the derived session_id is DANDI-invalid but read-only (no in-app field to fix), so
     // the readiness bar must surface the message WITHOUT a dead "Fix" button (repairSurface 'none').
     renderFrame({
@@ -191,6 +202,7 @@ describe('DayEditorFrame', () => {
         settings: {},
       },
     });
+    await user.click(screen.getByRole('button', { name: /^Tasks & Files/ }));
     const slashMsg = screen.getByText(/Session ID "remy\/20230622" must not contain/i);
     expect(within(slashMsg.closest('li')).queryByRole('button')).not.toBeInTheDocument();
   });
@@ -335,6 +347,7 @@ describe('DayEditorFrame', () => {
     renderFrame({
       workspace: { animals: { remy: mockAnimal }, days: { 'remy-2023-06-22': { ...mockDay, tasks: {} } }, settings: {} },
     });
+    await user.click(screen.getByRole('button', { name: /^Tasks & Files/ }));
     const reset = screen.getByRole('button', { name: /^reset tasks$/i });
     await user.click(reset);
     expect(screen.queryByRole('button', { name: /^reset tasks$/i })).not.toBeInTheDocument();
@@ -345,6 +358,7 @@ describe('DayEditorFrame', () => {
     renderFrame({
       workspace: { animals: { remy: { ...mockAnimal, configurationHistory: [] } }, days: { 'remy-2023-06-22': mockDay }, settings: {} },
     });
+    await user.click(screen.getByRole('button', { name: /^Recording Setup/ }));
     const rebuild = screen.getByRole('button', { name: /^rebuild device configuration history$/i });
     await user.click(rebuild);
     expect(screen.queryByRole('button', { name: /^rebuild device configuration history$/i })).not.toBeInTheDocument();

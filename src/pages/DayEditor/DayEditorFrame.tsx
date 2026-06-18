@@ -423,6 +423,7 @@ export default function DayEditorFrame() {
 
   const chips = vm.chips;
   const dioCopyableSources: CopyableDioSource[] = copyableDioSources;
+  const showReadinessBar = mode !== 'daily' && mode !== 'export';
 
   return (
     <div className="day-editor-stepper">
@@ -463,7 +464,7 @@ export default function DayEditorFrame() {
           <AnimalScopeCard summary={scopeSummary} editHref={`#/animal/${ownerKey}/days`} />
         )}
 
-        {mode !== 'export' && (
+        {showReadinessBar && (
           <ReadinessBar issues={readinessIssues} onFix={handleFix} canFix={canFixIssue} />
         )}
       </div>
