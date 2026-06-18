@@ -110,11 +110,31 @@ describe('EpochsTab — grid render + collapsed state cells', () => {
     expect(screen.getByLabelText(/epoch status summary/i)).toHaveTextContent(/3 epochs/i);
     expect(screen.getByLabelText(/epoch status summary/i)).toHaveTextContent(/2 videos needed/i);
     expect(screen.getByLabelText(/epoch status summary/i)).toHaveTextContent(/3 statescripts missing/i);
-    expect(screen.getByLabelText(/epoch status summary/i)).toHaveTextContent(/1 manual name/i);
+    expect(screen.getByLabelText(/epoch status summary/i)).toHaveTextContent(/1 custom filename/i);
     const edit = screen.getByRole('button', { name: /Edit epoch 1 details/i });
     expect(edit.tagName).toBe('BUTTON');
     expect(edit).toHaveAttribute('aria-expanded', 'false');
     expect(edit).toHaveAttribute('aria-controls', 'epoch-1-details');
+    expect(screen.getByRole('button', { name: /Edit epoch 2 details/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Edit epoch 3 details/i })).toBeInTheDocument();
+  });
+
+  it('filters epochs from the summary chips', async () => {
+    const user = userEvent.setup();
+    render(<EpochsTab {...makeBundle()} />);
+
+    await user.click(screen.getByRole('button', { name: /2 videos needed/i }));
+    expect(screen.getByRole('button', { name: /Edit epoch 1 details/i })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Edit epoch 2 details/i })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Edit epoch 3 details/i })).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /1 custom filename/i }));
+    expect(screen.queryByRole('button', { name: /Edit epoch 1 details/i })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Edit epoch 2 details/i })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Edit epoch 3 details/i })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /3 epochs/i }));
+    expect(screen.getByRole('button', { name: /Edit epoch 1 details/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Edit epoch 2 details/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Edit epoch 3 details/i })).toBeInTheDocument();
   });
@@ -425,6 +445,20 @@ describe('EpochsTab — video 3-state', () => {
     expect(patch).toContainEqual({ name: '20230622_r_01_s1.1.h264', camera_id: 0, task_epochs: 1 });
   });
 
+  it('offers missing-video fixes from collapsed rows', async () => {
+    const user = userEvent.setup();
+    const bundle = makeBundle();
+    render(<EpochsTab {...bundle} />);
+
+    await user.click(screen.getByRole('button', { name: /Add video for epoch 1/i }));
+
+    expect(lastPatch(bundle.onFieldUpdate, 'associated_video_files')).toContainEqual({
+      name: '20230622_r_01_s1.1.h264',
+      camera_id: 0,
+      task_epochs: 1,
+    });
+  });
+
   it('a declared-videoless epoch reads "absent" and never blocks (toggling never changes export shape)', () => {
     const bundle = makeBundle({ state: { videolessEpochs: [1, 3] } });
     render(<EpochsTab {...bundle} />);
@@ -440,7 +474,24 @@ describe('EpochsTab — statescript naming', () => {
     const bundle = makeBundle();
     render(<EpochsTab {...bundle} />);
     await user.click(screen.getByRole('button', { name: /Edit epoch 1 details/i }));
-    await user.click(screen.getByRole('button', { name: /Add statescript/i }));
+    await user.click(screen.getByRole('button', { name: /^\+ Add statescript$/i }));
+    expect(lastPatch(bundle.onFieldUpdate, 'associated_files')).toEqual([
+      {
+        name: '20230622_r_01_s1.stateScriptLog',
+        description: '',
+        path: '/data/r/20230622/20230622_r_01_s1.stateScriptLog',
+        task_epochs: 1,
+      },
+    ]);
+  });
+
+  it('offers missing-statescript fixes from collapsed rows', async () => {
+    const user = userEvent.setup();
+    const bundle = makeBundle();
+    render(<EpochsTab {...bundle} />);
+
+    await user.click(screen.getByRole('button', { name: /Add statescript for epoch 1/i }));
+
     expect(lastPatch(bundle.onFieldUpdate, 'associated_files')).toEqual([
       {
         name: '20230622_r_01_s1.stateScriptLog',

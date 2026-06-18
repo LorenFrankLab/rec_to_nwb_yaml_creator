@@ -58,6 +58,8 @@ interface PendingOrphan extends OrphanedReferences {
   nextInstances: TaskInstance[];
 }
 
+type EpochFilter = 'all' | 'needs-video' | 'missing-statescript' | 'custom-filenames';
+
 /** Parse an `epoch-<n>-video` repair focus path → the epoch number (or null). */
 function epochFromFocusPath(fieldPath: string | undefined): number | null {
   const match = /^epoch-(\d+)-/.exec(fieldPath ?? '');
@@ -100,7 +102,7 @@ function taskInstanceEpochs(instances: TaskInstance[]): Set<number> {
 
 /**
  * EpochsTab — the epoch grid (Phase 4), the day editor's spine. A pure-view-model-driven table with
- * one row per epoch (Edit + Task + Camera(s) + Statescript-naming + Video-presence + Opto + Status)
+ * one row per epoch (Edit + Task/status + Camera(s) + Statescript-naming + Video-presence + Opto)
  * and a per-epoch drill-in (Epoch task / Files for this epoch / Optogenetics). Every edit maps to an
  * {@link updateDay} patch over the day's EXISTING arrays via the pure {@link buildEpochGrid} join +
  * {@link module:domain/epochOperations} transforms — storage/export are unchanged. Replaces the
@@ -123,6 +125,7 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
   const [quickAddError, setQuickAddError] = useState<string | null>(null);
   const [menuEpoch, setMenuEpoch] = useState<number | null>(null);
   const [templateOpen, setTemplateOpen] = useState(false);
+  const [epochFilter, setEpochFilter] = useState<EpochFilter>('all');
   // Epochs whose statescript/video name is being manually overridden (UI mode; GeneratedValue's
   // `derived` flag is consumer-driven). A name only becomes stored-manual once the user types.
   const [manualStatescript, setManualStatescript] = useState<Set<number>>(new Set());
@@ -473,47 +476,90 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
   };
 
   const hasOpto = grid.isOpto;
-  const colCount = hasOpto ? 9 : 7;
+  const colCount = hasOpto ? 8 : 6;
   const epochCount = grid.rows.length;
   const missingVideoCount = grid.rows.filter((row) => row.status === 'needs_video').length;
   const missingStatescriptCount = grid.rows.filter((row) => row.statescript == null).length;
-  const manualVideoCount = grid.rows.reduce((count, row) => {
-    const manualForRow = row.videos.filter((video, index) => !isDerivedVideo(video.entry, {
+  const hasCustomFilename = (row: EpochGridRow) =>
+    row.statescriptNaming === 'manual' ||
+    row.videos.some((video, index) => !isDerivedVideo(video.entry, {
       date: grid.date,
       subjectId: grid.subjectId,
       epoch: row.epoch,
       tag: row.tag,
       index: index + 1,
-    })).length;
-    return count + manualForRow;
-  }, 0);
-  const manualFileCount =
-    grid.rows.filter((row) => row.statescriptNaming === 'manual').length + manualVideoCount;
+    }));
+  const customFilenameCount = grid.rows.filter(hasCustomFilename).length;
+  const filteredRows = grid.rows.filter((row) => {
+    if (epochFilter === 'needs-video') return row.status === 'needs_video';
+    if (epochFilter === 'missing-statescript') return row.statescript == null;
+    if (epochFilter === 'custom-filenames') return hasCustomFilename(row);
+    return true;
+  });
+  const filterButtonClass = (filter: EpochFilter, tone?: string) =>
+    [
+      styles.summaryChip,
+      styles.summaryButton,
+      epochFilter === filter ? styles.summaryActive : '',
+      tone ?? '',
+    ]
+      .filter(Boolean)
+      .join(' ');
 
   return (
-    <div className={`day-editor-section ${styles.root}`}>
+    <div id="epochs-workspace" className={`day-editor-section ${styles.root}`}>
       <div className={styles.workspaceHeader}>
         <div>
           <h2>Epochs</h2>
           {epochCount > 0 && (
             <div className={styles.summaryStrip} aria-label="Epoch status summary">
-              <span className={styles.summaryChip}>{epochCount} {epochCount === 1 ? 'epoch' : 'epochs'}</span>
-              <span className={`${styles.summaryChip} ${missingVideoCount > 0 ? styles.summaryNeedsAttention : ''}`}>
+              <button
+                type="button"
+                className={filterButtonClass('all')}
+                aria-pressed={epochFilter === 'all'}
+                onClick={() => setEpochFilter('all')}
+              >
+                {epochCount} {epochCount === 1 ? 'epoch' : 'epochs'}
+              </button>
+              <button
+                type="button"
+                className={filterButtonClass(
+                  'needs-video',
+                  missingVideoCount > 0 ? styles.summaryNeedsAttention : ''
+                )}
+                aria-pressed={epochFilter === 'needs-video'}
+                onClick={() => setEpochFilter('needs-video')}
+              >
                 {missingVideoCount} {missingVideoCount === 1 ? 'video' : 'videos'} needed
-              </span>
-              <span className={`${styles.summaryChip} ${missingStatescriptCount > 0 ? styles.summaryNeedsAttention : ''}`}>
+              </button>
+              <button
+                type="button"
+                className={filterButtonClass(
+                  'missing-statescript',
+                  missingStatescriptCount > 0 ? styles.summaryNeedsAttention : ''
+                )}
+                aria-pressed={epochFilter === 'missing-statescript'}
+                onClick={() => setEpochFilter('missing-statescript')}
+              >
                 {missingStatescriptCount} {missingStatescriptCount === 1 ? 'statescript' : 'statescripts'} missing
-              </span>
-              <span className={`${styles.summaryChip} ${manualFileCount > 0 ? styles.summaryReview : ''}`}>
-                {manualFileCount} manual {manualFileCount === 1 ? 'name' : 'names'}
-              </span>
+              </button>
+              <button
+                type="button"
+                className={filterButtonClass(
+                  'custom-filenames',
+                  customFilenameCount > 0 ? styles.summaryReview : ''
+                )}
+                aria-pressed={epochFilter === 'custom-filenames'}
+                onClick={() => setEpochFilter('custom-filenames')}
+              >
+                {customFilenameCount} custom {customFilenameCount === 1 ? 'filename' : 'filenames'}
+              </button>
             </div>
           )}
         </div>
         <div className={styles.templateMenu}>
-          <button
-            type="button"
-            className="button-primary"
+          <Button
+            variant="secondary"
             aria-haspopup="menu"
             aria-expanded={templateOpen}
             onClick={(e) => {
@@ -521,8 +567,8 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
               setTemplateOpen((o) => !o);
             }}
           >
-            + from template ▾
-          </button>
+            Templates ▾
+          </Button>
           {templateOpen && (
             <div className={styles.menu} role="menu" onClick={(e) => e.stopPropagation()}>
               <button type="button" role="menuitem" className={styles.menuItem} onClick={() => applyTemplate('sleep')}>
@@ -574,6 +620,12 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
         </section>
       )}
 
+      {!grid.dataFolder && (
+        <div className={styles.dataFolderNotice} role="status">
+          Data folder missing: generated paths need Daily Setup before export.
+        </div>
+      )}
+
       {grid.rows.length === 0 ? (
         <EmptyState
           icon="▦"
@@ -584,10 +636,14 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
             </Button>
           }
         >
-          Each epoch is a numbered recording block belonging to a task. Start from a template above
-          (<strong>+ from template</strong>) for a full day, or add a single epoch and fill in its
-          task and files. Need a new task? Add one on the animal&apos;s Task Types tab.
+          Each epoch is a numbered recording block belonging to a task. Use Templates for a full
+          day, or add a single epoch and fill in its task and files. Need a new task? Add one on the
+          animal&apos;s Task Types tab.
         </EmptyState>
+      ) : filteredRows.length === 0 ? (
+        <div className={styles.filterEmpty} role="status">
+          No epochs match this filter.
+        </div>
       ) : (
         <table className={styles.table}>
           <thead>
@@ -600,12 +656,11 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
               <th scope="col">Video(s)</th>
               {hasOpto && <th scope="col">Opto (mW)</th>}
               {hasOpto && <th scope="col">Pulse (ms)</th>}
-              <th scope="col">Status</th>
               <th scope="col" className={styles.menuCell}><span className="sr-only">Actions</span></th>
             </tr>
           </thead>
           <tbody>
-            {grid.rows.map((row) => {
+            {filteredRows.map((row) => {
               const isOpen = expanded.has(row.epoch);
               const drillInId = `epoch-${row.epoch}-details`;
               return (
@@ -819,7 +874,6 @@ function EpochRowBlock(p: EpochRowProps) {
   const ownerTypeId = row.taskTypeId ?? '';
   const hasManualVideo = row.videos.some((v) => p.manualVideoKeys.has(`e${row.epoch}-v${v.index}`));
   const generatedFilesNeedReview =
-    !grid.dataFolder ||
     !row.statescript ||
     row.statescriptNaming === 'manual' ||
     row.videoPresence !== 'present' ||
@@ -843,19 +897,28 @@ function EpochRowBlock(p: EpochRowProps) {
         </td>
         <td className={styles.numCell}>{row.epoch}</td>
         <td>
-          {/* A real button so the larger task target is keyboard-operable; its accessible name is the
-              task label (distinct from the row's "Edit epoch N details"), and it shares the
-              disclosure semantics (aria-expanded/-controls) with the caret. */}
-          <button
-            type="button"
-            className={styles.taskCellButton}
-            aria-expanded={isOpen}
-            aria-controls={drillInId}
-            onClick={p.onToggle}
-          >
-            {row.taskName || <em>(no task)</em>} <span className={styles.tag}>file tag {row.tag}</span>
-          </button>
-          {row.duplicate && <span className={styles.duplicateBadge} title="This epoch is claimed by more than one task">duplicate</span>}
+          <div className={styles.taskCellStack}>
+            {/* A real button so the larger task target is keyboard-operable; its accessible name is the
+                task label (distinct from the row's "Edit epoch N details"), and it shares the
+                disclosure semantics (aria-expanded/-controls) with the caret. */}
+            <button
+              type="button"
+              className={styles.taskCellButton}
+              aria-expanded={isOpen}
+              aria-controls={drillInId}
+              onClick={p.onToggle}
+            >
+              {row.taskName || <em>(no task)</em>} <span className={styles.tag}>file tag {row.tag}</span>
+            </button>
+            <span className={styles.taskMeta}>
+              <EpochStatusPill status={row.status} />
+              {row.duplicate && (
+                <span className={styles.duplicateBadge} title="This epoch is claimed by more than one task">
+                  duplicate
+                </span>
+              )}
+            </span>
+          </div>
         </td>
         <td>
           {row.cameras.length === 0
@@ -863,11 +926,47 @@ function EpochRowBlock(p: EpochRowProps) {
             : row.cameras.map((id) => <span key={String(id)} className={styles.cam}>{cameraName(cameras, id)}</span>)}
         </td>
         <td>
-          <span className={`${styles.fstate} ${row.statescriptNaming === 'manual' ? styles.fstateManual : row.statescriptNaming === 'generated' ? styles.fstateGenerated : styles.fstateNone}`}>
-            {STATESCRIPT_LABEL[row.statescriptNaming]}
+          <span className={styles.cellStack}>
+            <span className={`${styles.fstate} ${row.statescriptNaming === 'manual' ? styles.fstateManual : row.statescriptNaming === 'generated' ? styles.fstateGenerated : styles.fstateNone}`}>
+              {STATESCRIPT_LABEL[row.statescriptNaming]}
+            </span>
+            {!row.statescript && (
+              <button
+                type="button"
+                className={styles.inlineAction}
+                aria-label={`Add statescript for epoch ${row.epoch}`}
+                onClick={p.onAddStatescript}
+              >
+                Add
+              </button>
+            )}
           </span>
         </td>
-        <td><span className={videoClass}>{videoLabel}</span></td>
+        <td>
+          <span className={styles.cellStack}>
+            <span className={videoClass}>{videoLabel}</span>
+            {row.videoPresence === 'missing' && (
+              <span className={styles.inlineActions}>
+                <button
+                  type="button"
+                  className={styles.inlineAction}
+                  aria-label={`Add video for epoch ${row.epoch}`}
+                  onClick={p.onAddVideo}
+                >
+                  Add
+                </button>
+                <button
+                  type="button"
+                  className={styles.inlineAction}
+                  aria-label={`Mark epoch ${row.epoch} as no video`}
+                  onClick={p.onMarkNoVideo}
+                >
+                  No video
+                </button>
+              </span>
+            )}
+          </span>
+        </td>
         {hasOpto && (
           <td>
             <input
@@ -890,7 +989,6 @@ function EpochRowBlock(p: EpochRowProps) {
             />
           </td>
         )}
-        <td><EpochStatusPill status={row.status} /></td>
         <td className={styles.menuCell} style={{ position: 'relative' }}>
           <button type="button" className={styles.menuButton} aria-haspopup="menu" aria-expanded={p.menuOpen} aria-label={`Epoch ${row.epoch} actions`} onClick={p.onOpenMenu}>
             ⋯

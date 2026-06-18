@@ -29,9 +29,20 @@ export default function TasksFilesSection(props: TasksFilesSectionProps) {
 
   return (
     <div className="tasks-files-step">
+      <nav className="tasks-files-subnav" aria-label="Tasks and files sections">
+        <a href="#epochs-workspace">Epochs</a>
+        <a href="#other-associated-files">
+          Other files <span>{files.length}</span>
+        </a>
+      </nav>
+
       <EpochsTab {...props} focusRequest={focusRequest} />
 
-      <section className="day-editor-section supplemental-files-section" aria-labelledby="supplemental-files-heading">
+      <section
+        id="other-associated-files"
+        className="day-editor-section supplemental-files-section"
+        aria-labelledby="supplemental-files-heading"
+      >
         <div className="supplemental-files-header">
           <div>
             <h2 id="supplemental-files-heading">Other associated files</h2>

@@ -39,6 +39,11 @@ describe('TasksFilesSection', () => {
   it('keeps supplemental files visible below the epoch workspace by default', () => {
     renderSection();
 
+    expect(screen.getByRole('link', { name: /^epochs$/i })).toHaveAttribute('href', '#epochs-workspace');
+    expect(screen.getByRole('link', { name: /other files 1/i })).toHaveAttribute(
+      'href',
+      '#other-associated-files'
+    );
     const section = screen.getByRole('heading', { name: /other associated files/i }).closest('section');
     expect(section).toBeInTheDocument();
     expect(section).toHaveTextContent(/1 file/i);
