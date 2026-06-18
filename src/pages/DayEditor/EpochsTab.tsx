@@ -1017,19 +1017,6 @@ function EpochRowBlock(p: EpochRowProps) {
         <td className={styles.taskCell}>
           <div className={styles.taskCellStack}>
             <div className={styles.taskDisclosureRow}>
-              {/* The task disclosure is visually separate from row metadata; the trailing menu is
-                  reserved for structural row actions such as move/delete. */}
-              <button
-                type="button"
-                className={styles.taskDisclosureButton}
-                aria-expanded={isOpen}
-                aria-controls={drillInId}
-                aria-label={`${isOpen ? 'Hide' : 'Edit'} epoch ${row.epoch} details`}
-                onClick={p.onToggle}
-              >
-                <span className={styles.editChevron} aria-hidden="true">{isOpen ? '▾' : '▸'}</span>
-                <span>{isOpen ? 'Close' : 'Edit'}</span>
-              </button>
               <div className={styles.taskIdentity}>
                 <span className={styles.taskName}>{row.taskName || <em>(no task)</em>}</span>
                 <span className={styles.taskMeta}>
@@ -1042,6 +1029,19 @@ function EpochRowBlock(p: EpochRowProps) {
                   )}
                 </span>
               </div>
+              {/* The task disclosure opens the editor; the trailing menu is reserved for row
+                  structure actions such as insert, move, duplicate, and delete. */}
+              <button
+                type="button"
+                className={styles.taskDisclosureButton}
+                aria-expanded={isOpen}
+                aria-controls={drillInId}
+                aria-label={`${isOpen ? 'Hide' : 'Show'} epoch ${row.epoch} details`}
+                onClick={p.onToggle}
+              >
+                <span>{isOpen ? 'Hide' : 'Details'}</span>
+                <span className={styles.editChevron} aria-hidden="true">{isOpen ? '▴' : '▾'}</span>
+              </button>
             </div>
           </div>
         </td>

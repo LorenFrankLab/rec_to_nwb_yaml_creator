@@ -131,15 +131,15 @@ describe('EpochsTab — grid render + collapsed state cells', () => {
     expect(screen.getByLabelText(/epoch status summary/i)).toHaveTextContent(/2 videos needed/i);
     expect(screen.getByLabelText(/epoch status summary/i)).toHaveTextContent(/3 statescripts missing/i);
     expect(screen.getByLabelText(/epoch status summary/i)).toHaveTextContent(/1 custom filename/i);
-    const edit = screen.getByRole('button', { name: /Edit epoch 1 details/i });
+    const edit = screen.getByRole('button', { name: /Show epoch 1 details/i });
     expect(edit.tagName).toBe('BUTTON');
-    expect(edit).toHaveTextContent(/edit/i);
+    expect(edit).toHaveTextContent(/details/i);
     expect(edit).not.toHaveTextContent(/tag/i);
     expect(edit).toHaveAttribute('aria-expanded', 'false');
     expect(edit).toHaveAttribute('aria-controls', 'epoch-1-details');
     expect(screen.getAllByText('Sleep')).not.toHaveLength(0);
-    expect(screen.getByRole('button', { name: /Edit epoch 2 details/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Edit epoch 3 details/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Show epoch 2 details/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Show epoch 3 details/i })).toBeInTheDocument();
   });
 
   it('filters epochs from the summary chips', async () => {
@@ -147,19 +147,19 @@ describe('EpochsTab — grid render + collapsed state cells', () => {
     render(<EpochsTab {...makeBundle()} />);
 
     await user.click(screen.getByRole('button', { name: /2 videos needed/i }));
-    expect(screen.getByRole('button', { name: /Edit epoch 1 details/i })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /Edit epoch 2 details/i })).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Edit epoch 3 details/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Show epoch 1 details/i })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Show epoch 2 details/i })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Show epoch 3 details/i })).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: /1 custom filename/i }));
-    expect(screen.queryByRole('button', { name: /Edit epoch 1 details/i })).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Edit epoch 2 details/i })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /Edit epoch 3 details/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Show epoch 1 details/i })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Show epoch 2 details/i })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Show epoch 3 details/i })).not.toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: /3 epochs/i }));
-    expect(screen.getByRole('button', { name: /Edit epoch 1 details/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Edit epoch 2 details/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Edit epoch 3 details/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Show epoch 1 details/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Show epoch 2 details/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Show epoch 3 details/i })).toBeInTheDocument();
   });
 
   it('shows video presence (not names) in the collapsed Video cell', () => {
@@ -174,7 +174,7 @@ describe('EpochsTab — grid render + collapsed state cells', () => {
   it('expands the drill-in when the task disclosure is clicked', async () => {
     const user = userEvent.setup();
     render(<EpochsTab {...makeBundle()} />);
-    const edit = screen.getByRole('button', { name: /Edit epoch 1 details/i });
+    const edit = screen.getByRole('button', { name: /Show epoch 1 details/i });
     await user.click(edit);
     expect(edit).toHaveAttribute('aria-expanded', 'true');
     expect(screen.getByRole('heading', { name: /Epoch task/i })).toBeInTheDocument();
@@ -209,7 +209,7 @@ describe('EpochsTab — no-epochs onboarding empty state (Phase 8)', () => {
     render(<EpochsTab {...makeBundle({ taskInstances: [] })} />);
     expect(screen.getByRole('heading', { name: /no epochs yet/i })).toBeInTheDocument();
     // No epoch rows are rendered (no task disclosure buttons).
-    expect(screen.queryByRole('button', { name: /Edit epoch/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Show epoch/i })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: /add an epoch/i })).toBeInTheDocument();
   });
 
@@ -242,7 +242,7 @@ describe('EpochsTab — write-back patches', () => {
     const user = userEvent.setup();
     const bundle = makeBundle();
     render(<EpochsTab {...bundle} />);
-    await user.click(screen.getByRole('button', { name: /Edit epoch 1 details/i }));
+    await user.click(screen.getByRole('button', { name: /Show epoch 1 details/i }));
     await user.selectOptions(screen.getByRole('combobox', { name: /Epoch 1 task/i }), 'tasktype-1');
     expect(lastPatch(bundle.onFieldUpdate, 'taskInstances')).toEqual([
       { taskTypeId: 'tasktype-0', task_epochs: [3] },
@@ -472,7 +472,7 @@ describe('EpochsTab — video 3-state', () => {
     const user = userEvent.setup();
     const bundle = makeBundle();
     render(<EpochsTab {...bundle} />);
-    await user.click(screen.getByRole('button', { name: /Edit epoch 1 details/i }));
+    await user.click(screen.getByRole('button', { name: /Show epoch 1 details/i }));
     await user.click(screen.getByRole('button', { name: /Mark .no video./i }));
     expect(lastPatch(bundle.onFieldUpdate, 'state')).toEqual({
       validationDeferred: false,
@@ -484,7 +484,7 @@ describe('EpochsTab — video 3-state', () => {
     const user = userEvent.setup();
     const bundle = makeBundle();
     render(<EpochsTab {...bundle} />);
-    await user.click(screen.getByRole('button', { name: /Edit epoch 1 details/i }));
+    await user.click(screen.getByRole('button', { name: /Show epoch 1 details/i }));
     await user.click(screen.getByRole('button', { name: /^\+ Add video$/i }));
     const patch = lastPatch(bundle.onFieldUpdate, 'associated_video_files');
     // Derived name for epoch 1 (Sleep, tag s1) in the day's data folder convention.
@@ -554,7 +554,7 @@ describe('EpochsTab — statescript naming', () => {
     const user = userEvent.setup();
     const bundle = makeBundle();
     render(<EpochsTab {...bundle} />);
-    await user.click(screen.getByRole('button', { name: /Edit epoch 1 details/i }));
+    await user.click(screen.getByRole('button', { name: /Show epoch 1 details/i }));
     await user.click(screen.getByRole('button', { name: /^\+ Add statescript$/i }));
     expect(lastPatch(bundle.onFieldUpdate, 'associated_files')).toEqual([
       {
@@ -625,7 +625,7 @@ describe('EpochsTab — accessibility', () => {
     const user = userEvent.setup();
     const { container } = render(<EpochsTab {...makeBundle()} />);
     expect(await axe(container)).toHaveNoViolations();
-    await user.click(screen.getByRole('button', { name: /Edit epoch 1 details/i }));
+    await user.click(screen.getByRole('button', { name: /Show epoch 1 details/i }));
     expect(await axe(container)).toHaveNoViolations();
   });
 });
