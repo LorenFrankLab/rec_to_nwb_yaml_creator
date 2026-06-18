@@ -591,13 +591,20 @@ When adding a new probe/device type to support:
 
 ### Current Supported Device Types
 
+Source of truth: `src/ntrode/probeCatalog.ts` (`PROBE_CATALOG`). The app currently supports these 12
+probe/device types:
+
 - `tetrode_12.5` - 4-channel tetrode with 12.5 μm spacing
 - `A1x32-6mm-50-177-H32_21mm` - 32-channel single shank
+- `128c-4s4mm6cm-15um-26um-sl` - 128-channel, 4 shanks
+- `128c-4s4mm6cm-20um-40um-sl` - 128-channel, 4 shanks
+- `128c-4s6mm6cm-15um-26um-sl` - 128-channel, 4 shanks
+- `128c-4s6mm6cm-20um-40um-sl` - 128-channel, 4 shanks
+- `128c-4s8mm6cm-15um-26um-sl` - 128-channel, 4 shanks
 - `128c-4s8mm6cm-20um-40um-sl` - 128-channel, 4 shanks
-- `128c-4s6mm6cm-15um-26um-sl` - 128-channel, 4 shanks (alternate spacing)
 - `32c-2s8mm6cm-20um-40um-dl` - 32-channel, 2 shanks
-- `64c-4s6mm6cm-20um-40um-dl` - 64-channel, 4 shanks
 - `64c-3s6mm6cm-20um-40um-sl` - 64-channel, 3 shanks
+- `64c-4s6mm6cm-20um-40um-dl` - 64-channel, 4 shanks
 - `NET-EBL-128ch-single-shank` - 128-channel single shank
 
 ## Regression Prevention Protocol

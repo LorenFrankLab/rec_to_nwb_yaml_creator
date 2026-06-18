@@ -987,6 +987,34 @@ describe('rulesValidation()', () => {
       const issues = rulesValidation({ subject: { subject_id: 'remy' }, session_id: 'remy_20230622' });
       expect(issues.some((x) => x.code === 'subject_id_slash' || x.code === 'session_id_slash')).toBe(false);
     });
+
+    it('warns when genotype appears to contain strain/background text', () => {
+      const issues = rulesValidation({ subject: { genotype: 'Long Evans Rat' } });
+      const nudge = issues.find((x) => x.code === 'subject_genotype_strain');
+      expect(nudge).toBeDefined();
+      expect(nudge.severity).toBe('warning');
+      expect(nudge.path).toBe('subject.genotype');
+      expect(nudge.message).toMatch(/description/i);
+    });
+
+    it('does not warn for genetic-modification genotype values', () => {
+      const issues = rulesValidation({ subject: { genotype: 'PV-Cre' } });
+      expect(issues.some((x) => x.code === 'subject_genotype_strain')).toBe(false);
+    });
+
+    it('warns on placeholder subject ids without changing the slash-id error', () => {
+      const issues = rulesValidation({ subject: { subject_id: '54321' } });
+      const placeholder = issues.find((x) => x.code === 'placeholder_subject_id');
+      expect(placeholder).toBeDefined();
+      expect(placeholder.severity).toBe('warning');
+      expect(placeholder.path).toBe('subject.subject_id');
+      expect(issues.some((x) => x.code === 'subject_id_slash')).toBe(false);
+    });
+
+    it('does not warn on real subject ids', () => {
+      const issues = rulesValidation({ subject: { subject_id: 'remy' } });
+      expect(issues.some((x) => x.code === 'placeholder_subject_id')).toBe(false);
+    });
   });
 
   describe('Multiple Rules Violations', () => {

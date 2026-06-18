@@ -164,7 +164,7 @@ describe('computeStepStatus', () => {
         weight: 400,
         date_of_birth: '2023-01-01T00:00:00',
       },
-      experimenter_name: ['Test'],
+      experimenter_name: ['Test User'],
       lab: 'Lab',
       institution: 'Inst',
     };
@@ -418,6 +418,7 @@ describe('repairTargetForIssue (Repair Routing Contract)', () => {
     { code: 'empty_location', issue: { code: 'empty_location', path: 'electrode_groups[0].location', field: 'location', step: 'devices', repairSurface: 'animal' } },
     { code: 'empty_targeted_location', issue: { code: 'empty_targeted_location', path: 'electrode_groups[0].targeted_location', field: 'targeted_location', step: 'devices', repairSurface: 'animal' } },
     { code: 'inconsistent_location_case', issue: { code: 'inconsistent_location_case', path: 'electrode_groups', field: 'location', step: 'devices', repairSurface: 'animal', severity: 'warning' } },
+    { code: 'location_typo_nudge', issue: { code: 'location_typo_nudge', path: 'electrode_groups[0].location', field: 'location', step: 'devices', repairSurface: 'animal', severity: 'warning' } },
     { code: 'unknown_device_type', issue: { code: 'unknown_device_type', path: 'electrode_groups[0].device_type', field: 'device_type', step: 'devices', repairSurface: 'animal' } },
     { code: 'duplicate_electrode_group_id', issue: { code: 'duplicate_electrode_group_id', path: 'electrode_groups', repairSurface: 'animal' } },
     { code: 'duplicate_ntrode_id', issue: { code: 'duplicate_ntrode_id', path: 'ntrode_electrode_group_channel_map', repairSurface: 'animal' } },
@@ -450,6 +451,9 @@ describe('repairTargetForIssue (Repair Routing Contract)', () => {
     { code: 'missing_camera', step: 'epochs', issue: { code: 'missing_camera', path: 'tasks', repairSurface: 'day' } },
     // DANDI species is animal-static; Phase 15 repairs it in the Animal profile, not the Day view.
     { code: 'invalid_species', step: null, issue: { code: 'invalid_species', path: 'subject.species', repairSurface: 'animal' } },
+    { code: 'subject_genotype_strain', step: null, issue: { code: 'subject_genotype_strain', path: 'subject.genotype', repairSurface: 'animal', severity: 'warning' } },
+    { code: 'placeholder_subject_id', step: null, issue: { code: 'placeholder_subject_id', path: 'subject.subject_id', repairSurface: 'animal', severity: 'warning' } },
+    { code: 'experimenter_name_shape', step: null, issue: { code: 'experimenter_name_shape', path: 'experimenter_name[0]', repairSurface: 'animal', severity: 'warning' } },
   ];
 
   const NONE_CODES = [

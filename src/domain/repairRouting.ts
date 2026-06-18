@@ -159,6 +159,7 @@ export const SURFACE_BY_CODE: Record<string, RepairSurface> = {
   empty_location: 'animal',
   empty_targeted_location: 'animal',
   inconsistent_location_case: 'animal',
+  location_typo_nudge: 'animal',
   unknown_device_type: 'animal',
   duplicate_electrode_group_id: 'animal',
   duplicate_ntrode_id: 'animal',
@@ -176,6 +177,9 @@ export const SURFACE_BY_CODE: Record<string, RepairSurface> = {
   duplicate_task_type_name: 'animal',
   // Editable in the Animal View profile.
   invalid_species: 'animal',
+  subject_genotype_strain: 'animal',
+  placeholder_subject_id: 'animal',
+  experimenter_name_shape: 'animal',
   // Editable in the Day Editor (task/video/event re-picks, day bad-channel overrides,
   // session metadata, day-owned technical fields, optogenetics completeness).
   dangling_camera_ref: 'day',

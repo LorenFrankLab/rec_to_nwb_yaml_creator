@@ -172,6 +172,7 @@ describe('ownershipForIssue — pattern refinement', () => {
       'unknown_device_type',
       'duplicate_electrode_group_id',
       'empty_location',
+      'location_typo_nudge',
     ]) {
       expect(ownershipForIssue({ code }).pattern, code).toBe(OWNERSHIP_PATTERN.CONFIGURATION_VERSION);
     }
@@ -229,7 +230,14 @@ describe('ownershipForIssue — pattern refinement', () => {
   });
 
   it('subject identity codes are shared animal setup (constant facts)', () => {
-    for (const code of ['invalid_species', 'subject_id_slash', 'session_id_slash']) {
+    for (const code of [
+      'invalid_species',
+      'subject_genotype_strain',
+      'placeholder_subject_id',
+      'experimenter_name_shape',
+      'subject_id_slash',
+      'session_id_slash',
+    ]) {
       expect(ownershipForIssue({ code }).pattern, code).toBe(OWNERSHIP_PATTERN.ANIMAL_SETUP);
     }
   });

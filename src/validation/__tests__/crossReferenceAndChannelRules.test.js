@@ -374,6 +374,29 @@ describe('location + targeted_location', () => {
     expect(warn).toBeDefined();
     expect(warn.severity).toBe('warning');
   });
+
+  it('warns on a likely location typo when a close location is already used', () => {
+    const issues = rulesValidation({
+      electrode_groups: [
+        group({ id: 0, location: 'hippocampus', targeted_location: 'hippocampus' }),
+        group({ id: 1, location: 'hippcoampus', targeted_location: 'hippcoampus' }),
+      ],
+    });
+    const warn = issues.find((i) => i.code === 'location_typo_nudge');
+    expect(warn).toBeDefined();
+    expect(warn.severity).toBe('warning');
+    expect(warn.message).toContain('hippocampus');
+  });
+
+  it('does not warn on exact repeated locations', () => {
+    const issues = rulesValidation({
+      electrode_groups: [
+        group({ id: 0, location: 'hippocampus', targeted_location: 'hippocampus' }),
+        group({ id: 1, location: 'hippocampus', targeted_location: 'hippocampus' }),
+      ],
+    });
+    expect(codes(issues)).not.toContain('location_typo_nudge');
+  });
 });
 
 describe('device_type known probe', () => {
@@ -546,6 +569,28 @@ describe('task/video dependency + camera refs', () => {
     });
     expect(codes(issues)).not.toContain('orphaned_video');
     expect(codes(issues)).not.toContain('dangling_camera_ref');
+  });
+});
+
+describe('experimenter name shape', () => {
+  it('accepts Spyglass-friendly experimenter name shapes', () => {
+    const issues = rulesValidation({
+      experimenter_name: ['Last, First', 'First Last'],
+    });
+
+    expect(codes(issues)).not.toContain('experimenter_name_shape');
+  });
+
+  it('warns on experimenter names Spyglass may not decompose', () => {
+    const issues = rulesValidation({
+      experimenter_name: ['First M Last', 'Single'],
+    });
+    const warnings = issues.filter((issue) => issue.code === 'experimenter_name_shape');
+
+    expect(warnings).toHaveLength(2);
+    expect(warnings.every((issue) => issue.severity === 'warning')).toBe(true);
+    expect(warnings[0].message).toContain('First Last');
+    expect(warnings[0].message).toContain('Last, First');
   });
 });
 

@@ -192,6 +192,7 @@ export const PATTERN_REFINEMENT_BY_CODE: Readonly<Record<string, string>> = Obje
   empty_location: OWNERSHIP_PATTERN.CONFIGURATION_VERSION,
   empty_targeted_location: OWNERSHIP_PATTERN.CONFIGURATION_VERSION,
   inconsistent_location_case: OWNERSHIP_PATTERN.CONFIGURATION_VERSION,
+  location_typo_nudge: OWNERSHIP_PATTERN.CONFIGURATION_VERSION,
   inconsistent_probe_catalog: OWNERSHIP_PATTERN.CONFIGURATION_VERSION,
 
   // animal_setup → animal_catalog_reference: a camera is a reusable catalog identity.

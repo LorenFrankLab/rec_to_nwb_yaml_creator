@@ -90,6 +90,7 @@ export const CATEGORY_BY_CODE: Readonly<Record<string, WorkflowCategory>> = Obje
   empty_location: WORKFLOW_CATEGORY.ANIMAL_SETUP,
   empty_targeted_location: WORKFLOW_CATEGORY.ANIMAL_SETUP,
   inconsistent_location_case: WORKFLOW_CATEGORY.ANIMAL_SETUP,
+  location_typo_nudge: WORKFLOW_CATEGORY.ANIMAL_SETUP,
   unknown_device_type: WORKFLOW_CATEGORY.ANIMAL_SETUP,
   duplicate_electrode_group_id: WORKFLOW_CATEGORY.ANIMAL_SETUP,
   duplicate_ntrode_id: WORKFLOW_CATEGORY.ANIMAL_SETUP,
@@ -112,6 +113,9 @@ export const CATEGORY_BY_CODE: Readonly<Record<string, WorkflowCategory>> = Obje
   missing_opto_reference: WORKFLOW_CATEGORY.ANIMAL_SETUP,
   // Subject identity is part of the animal's shared setup and is edited from the animal profile.
   invalid_species: WORKFLOW_CATEGORY.ANIMAL_SETUP,
+  subject_genotype_strain: WORKFLOW_CATEGORY.ANIMAL_SETUP,
+  placeholder_subject_id: WORKFLOW_CATEGORY.ANIMAL_SETUP,
+  experimenter_name_shape: WORKFLOW_CATEGORY.ANIMAL_SETUP,
   subject_id_slash: WORKFLOW_CATEGORY.ANIMAL_SETUP,
   session_id_slash: WORKFLOW_CATEGORY.ANIMAL_SETUP,
 

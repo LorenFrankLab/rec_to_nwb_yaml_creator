@@ -27,6 +27,15 @@ function loadFixture(category, filename) {
   return yaml.parse(content);
 }
 
+/**
+ *
+ * @param data
+ */
+function expectNoBlockingValidationErrors(data) {
+  const errors = validate(data).filter(issue => issue.severity !== 'warning');
+  expect(errors).toEqual([]);
+}
+
 describe('Fixture Verification', () => {
   describe('Valid Fixtures', () => {
     it('minimal-valid.yml should pass validation', () => {
@@ -185,8 +194,9 @@ describe('Fixture Verification', () => {
       expect(data.lab).toContain('研究室');
       expect(data.experiment_description).toContain('🧠');
 
-      // Should pass validation (UTF-8 support)
-      expect(data).toBeValidYaml();
+      // Should not have blocking validation errors (UTF-8 support)
+      expectNoBlockingValidationErrors(data);
+      expect(validate(data).map(issue => issue.code)).toContain('experimenter_name_shape');
     });
 
     it('boundary-values.yml should pass validation', () => {
@@ -203,8 +213,9 @@ describe('Fixture Verification', () => {
       const allBad = data.ntrode_electrode_group_channel_map[0];
       expect(allBad.bad_channels).toEqual([0, 1, 2, 3]);
 
-      // Should pass validation
-      expect(data).toBeValidYaml();
+      // Should not have blocking validation errors
+      expectNoBlockingValidationErrors(data);
+      expect(validate(data).map(issue => issue.code)).toContain('experimenter_name_shape');
     });
 
     it('empty-optional-arrays.yml should pass validation', () => {

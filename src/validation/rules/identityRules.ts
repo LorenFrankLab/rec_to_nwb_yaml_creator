@@ -13,6 +13,43 @@ const CAMERA_MPP_PLAUSIBLE_MIN = 0.0005;
 const CAMERA_MPP_PLAUSIBLE_MAX = 0.2;
 const PLACEHOLDER_CAMERA_NAMES = new Set(['camera', 'xxx']);
 
+function hasValidExperimenterNameShape(value: string): boolean {
+  const name = value.trim().replace(/\s+/g, ' ');
+  if (name === '') return true;
+
+  if (!name.includes(',')) return name.split(' ').length === 2;
+
+  const parts = name.split(',');
+  if (parts.length !== 2) return false;
+  const [last, first] = parts.map((part) => part.trim());
+  return last.split(/\s+/).length === 1 && first.split(/\s+/).length === 1 && last !== '' && first !== '';
+}
+
+function experimenterNameShapeIssues(model: ValidationModel): ValidationIssue[] {
+  const issues: ValidationIssue[] = [];
+  if (!Array.isArray(model.experimenter_name)) return issues;
+
+  model.experimenter_name.forEach((rawName, index) => {
+    if (typeof rawName !== 'string') return;
+    if (hasValidExperimenterNameShape(rawName)) return;
+
+    issues.push({
+      path: `experimenter_name[${index}]`,
+      field: 'experimenter_name',
+      step: 'overview',
+      repairSurface: 'animal',
+      actionLabel: 'Review experimenter name',
+      code: 'experimenter_name_shape',
+      severity: 'warning',
+      message:
+        `Experimenter name "${rawName}" may not decompose cleanly in Spyglass. ` +
+        'Use either "First Last" or "Last, First" to preserve experimenter linkage.',
+    });
+  });
+
+  return issues;
+}
+
 function finiteNumber(value: unknown): number | null {
   if (typeof value === 'number') return Number.isFinite(value) ? value : null;
   if (typeof value === 'string' && value.trim() !== '') {
@@ -133,7 +170,10 @@ function cameraCalibrationAndNameIssues(model: ValidationModel): ValidationIssue
  * @returns Validation issues.
  */
 export function identityDivergences(model: ValidationModel): ValidationIssue[] {
-  const issues: ValidationIssue[] = cameraCalibrationAndNameIssues(model);
+  const issues: ValidationIssue[] = [
+    ...experimenterNameShapeIssues(model),
+    ...cameraCalibrationAndNameIssues(model),
+  ];
 
   const checkDivergences = (
     items: unknown,

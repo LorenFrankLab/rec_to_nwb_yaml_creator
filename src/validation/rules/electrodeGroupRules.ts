@@ -13,6 +13,62 @@ import type { ValidationIssue, ValidationModel } from '../issueTypes';
 import { validateDeviceType } from '../../utils/deviceTypeUtils';
 import { getProbeShanks, isProbeCatalogConsistent } from '../../ntrode/probeCatalog';
 
+const CANONICAL_LOCATION_NAMES = [
+  'hippocampus',
+  'dentate gyrus',
+  'subiculum',
+  'prefrontal cortex',
+  'cortex',
+  'striatum',
+  'thalamus',
+  'amygdala',
+];
+const LOCATION_TYPO_MIN_LENGTH = 5;
+const LOCATION_TYPO_MAX_DISTANCE = 2;
+
+function normalizeLocation(value: string): string {
+  return value.trim().toLowerCase().replace(/\s+/g, ' ');
+}
+
+function editDistance(a: string, b: string): number {
+  const previous = Array.from({ length: b.length + 1 }, (_, index) => index);
+  const current = Array.from({ length: b.length + 1 }, () => 0);
+
+  for (let i = 1; i <= a.length; i += 1) {
+    current[0] = i;
+    for (let j = 1; j <= b.length; j += 1) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+      current[j] = Math.min(
+        current[j - 1] + 1,
+        previous[j] + 1,
+        previous[j - 1] + cost
+      );
+    }
+    previous.splice(0, previous.length, ...current);
+  }
+
+  return previous[b.length];
+}
+
+function closestLocationTypo(
+  location: string,
+  candidates: Map<string, string>,
+  canonicalLocations: Map<string, string>
+): string | null {
+  const normalized = normalizeLocation(location);
+  if (normalized.length < LOCATION_TYPO_MIN_LENGTH || canonicalLocations.has(normalized)) return null;
+
+  let best: { value: string; distance: number } | null = null;
+  for (const [candidateKey, candidateValue] of candidates) {
+    if (candidateKey === normalized || candidateKey.length < LOCATION_TYPO_MIN_LENGTH) continue;
+    const distance = editDistance(normalized, candidateKey);
+    if (distance > LOCATION_TYPO_MAX_DISTANCE) continue;
+    if (!best || distance < best.distance) best = { value: candidateValue, distance };
+  }
+
+  return best?.value ?? null;
+}
+
 /**
  * Rule 6: Electrode-group ids must be unique within a session.
  *
@@ -172,6 +228,36 @@ export function electrodeGroupLocations(model: ValidationModel): ValidationIssue
             `treats these as different brain regions and fragments queries.`,
         });
       }
+    });
+
+    const canonicalLocations = new Map(
+      CANONICAL_LOCATION_NAMES.map((location) => [normalizeLocation(location), location])
+    );
+    const usedLocations = new Map<string, string>();
+    model.electrode_groups.forEach((group) => {
+      const loc = group?.location;
+      if (typeof loc !== 'string' || loc.trim() === '') return;
+      const normalized = normalizeLocation(loc);
+      if (!usedLocations.has(normalized)) usedLocations.set(normalized, loc.trim());
+    });
+    const typoCandidates = new Map([...canonicalLocations, ...usedLocations]);
+    model.electrode_groups.forEach((group, gi) => {
+      const loc = group?.location;
+      if (typeof loc !== 'string' || loc.trim() === '') return;
+      const suggestion = closestLocationTypo(loc, typoCandidates, canonicalLocations);
+      if (!suggestion) return;
+      issues.push({
+        path: `electrode_groups[${gi}].location`,
+        field: 'location',
+        step: 'devices',
+        actionLabel: 'Review location spelling',
+        code: 'location_typo_nudge',
+        repairSurface: 'animal',
+        severity: 'warning',
+        message:
+          `Electrode group ${group?.id ?? gi} location "${loc}" looks close to ` +
+          `"${suggestion}". Confirm the spelling so Spyglass does not fragment brain regions.`,
+      });
     });
   }
 
