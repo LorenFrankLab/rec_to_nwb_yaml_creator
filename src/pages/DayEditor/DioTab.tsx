@@ -24,9 +24,9 @@ interface DioTabProps extends DayEditorBundle {
   carriedFrom?: string;
 }
 
-// The day-owned collections whose corrupt-shape reset control belongs on THIS tab (one source of
-// truth: the field's repairStep). So the corruption badges the DIO tab AND can be reset here —
-// the badge is never a dead-end on a different tab.
+// The day-owned collections whose corrupt-shape reset control belongs on this subsection (one source
+// of truth: the field's repairStep). So the corruption badges Devices & Failed Channels AND can be
+// reset here — the badge is never a dead-end in a different section.
 const BEHAVIORAL_STEP_COLLECTIONS = RAW_DAY_ARRAY_FIELDS.filter((f) => f.repairStep === 'behavioral');
 
 /** The two ECU directions shown side by side in the read-only summary. */
@@ -45,10 +45,9 @@ function parseChannel(description: unknown): { dir: 'Din' | 'Dout' | 'Other'; in
 }
 
 /**
- * DioTab — the day editor's **DIO** (behavioral-events) tab (folded from the former
- * BehavioralEventsStep).
+ * DioTab — the day editor's DIO / behavioral-events subsection inside Devices & Failed Channels.
  *
- * Behavioral (DIO) events carry forward day to day and rarely change, so the tab opens on a
+ * Behavioral (DIO) events carry forward day to day and rarely change, so the subsection opens on a
  * read-only **carry-forward summary** (the named Din/Dout channels in two columns, "carried from
  * <date> · unchanged"). Only when the user rewired the rig do they click **Edit · rewired the rig**
  * to reveal the full ECU channel editor ({@link BehavioralEventsDisplay}). An empty day opens

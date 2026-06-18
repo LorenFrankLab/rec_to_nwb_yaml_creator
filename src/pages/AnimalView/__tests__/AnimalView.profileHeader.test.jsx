@@ -9,7 +9,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
+import { render, screen, within, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { StoreProvider, useStoreContext } from '../../../state/StoreContext';
 import { AnimalView } from '../index';
@@ -92,6 +92,15 @@ describe('AnimalView — subject profile in the header (Phase 3-4)', () => {
     renderView('cameras');
     await user.click(screen.getByRole('button', { name: /actions for remy/i }));
     expect(screen.getByRole('menuitem', { name: /edit profile/i })).toBeInTheDocument();
+  });
+
+  it('opens the profile dialog for a subject-field repair deep-link', async () => {
+    delete window.location;
+    window.location = { hash: '#/animal/remy/days?field=subject.species' };
+    renderView('days');
+
+    expect(screen.getByRole('dialog', { name: /edit animal profile/i })).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByLabelText(/^species$/i)).toHaveFocus());
   });
 
   it('editing + confirming the blast-radius writes the subject via updateAnimal', async () => {

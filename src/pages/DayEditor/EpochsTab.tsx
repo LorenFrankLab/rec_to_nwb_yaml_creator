@@ -481,7 +481,7 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
       <p className={styles.intro}>
         Each row is one <strong>epoch</strong> — a numbered recording block belonging to a task. Open a
         row to set its task, generated files, and (for opto animals) its stimulation. File names derive
-        from <code>{'{date}_{animal}_{epoch}_{tag}'}</code>; you set the data folder on the Day tab.
+        from <code>{'{date}_{animal}_{epoch}_{tag}'}</code>; you set the data folder in Files & Weight.
       </p>
 
       {unresolvedTaskCatalogDivergence && (
@@ -918,11 +918,11 @@ function EpochRowBlock(p: EpochRowProps) {
               <div className={`${styles.group} ${styles.genPanel}`}>
                 <h3 className={styles.groupHeading}>Generated files</h3>
                 <p className={styles.genNote}>
-                  File <strong>names</strong> derive from <code>{'{date}_{animal}_{epoch}_{tag}'}</code>. You set <strong>where the files live</strong> — the day&apos;s data folder, on the Day tab. Override a name only for exceptions.
+                  File <strong>names</strong> derive from <code>{'{date}_{animal}_{epoch}_{tag}'}</code>. You set <strong>where the files live</strong> — the day&apos;s data folder, in Files & Weight. Override a name only for exceptions.
                 </p>
                 <div className={styles.fieldRow}>
                   <span className={styles.fieldLabel}>Data folder</span>
-                  <span className={styles.mono}>{grid.dataFolder || <span className={styles.derivedNote}>not set — add it on the Day tab</span>}</span>
+                  <span className={styles.mono}>{grid.dataFolder || <span className={styles.derivedNote}>not set — add it in Files & Weight</span>}</span>
                 </div>
                 <div className={styles.fieldRow}>
                   <span className={styles.fieldLabel}>Statescript</span>
@@ -1020,7 +1020,7 @@ function EpochRowBlock(p: EpochRowProps) {
                   </div>
                   <div className={styles.fieldRow}>
                     <span className={styles.fieldLabel}>Protocol</span>
-                    <span className={styles.derivedNote}>The laser DIO + FsGUI file are set on the Day tab.</span>
+                    <span className={styles.derivedNote}>The laser DIO + FsGUI file are set in Tasks & Epochs.</span>
                   </div>
                 </div>
               )}

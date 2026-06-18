@@ -253,10 +253,10 @@ describe('ownershipForIssue — pattern refinement', () => {
 });
 
 describe('ownershipForIssue — edit surface and blast radius are orthogonal', () => {
-  it('species is animal-owned (blast radius) but editable from the Day Overview surface', () => {
+  it('species is animal-owned and edited from the animal profile surface', () => {
     const descriptor = ownershipForIssue({ code: 'invalid_species' });
     expect(descriptor.pattern).toBe(OWNERSHIP_PATTERN.ANIMAL_SETUP);
-    expect(descriptor.editSurface).toBe('day');
+    expect(descriptor.editSurface).toBe('animal');
     expect(descriptor.reachesBeyondDay).toBe(true);
   });
 

@@ -1,4 +1,4 @@
-/** DayEditorFrame styles (CSS Module). The day-editor chrome: header, day chips, and tab bar. */
+/** DayEditorFrame styles (CSS Module). The day-editor chrome: header, actions, and day chips. */
 
 .frameHeader {
   display: flex;
@@ -55,41 +55,4 @@
 .chipOpto {
   border-color: var(--color-primary);
   color: var(--color-primary);
-}
-
-.tabBar {
-  display: flex;
-  gap: var(--spacing-xs);
-  border-bottom: 1px solid var(--color-grey-200);
-  margin-bottom: var(--spacing-md);
-  flex-wrap: wrap;
-}
-
-.tab {
-  appearance: none;
-  background: none;
-  border: none;
-  border-bottom: 2px solid transparent;
-  padding: var(--spacing-sm) var(--spacing-md);
-  font-size: var(--font-size-base);
-  color: var(--color-grey-600);
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: var(--spacing-xs);
-}
-
-.tab:hover {
-  color: var(--color-grey-900);
-}
-
-.tabActive {
-  color: var(--color-grey-900);
-  font-weight: 600;
-  border-bottom-color: var(--color-primary);
-}
-
-.tabStatus {
-  font-size: var(--font-size-sm);
-  line-height: 1;
 }

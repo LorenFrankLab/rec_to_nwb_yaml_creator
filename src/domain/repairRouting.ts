@@ -111,20 +111,27 @@ export function stepIdForIssue(issue: RepairableIssue): RoutableStep {
 }
 
 /**
- * User-facing step names, the single source of truth for step→label mapping shared by
- * the repair-action buttons and the Validation summary's step-group headings (re-exported
- * from RepairActions for back-compat). The catch-all `validation` step reads as
- * "Other required fields".
- *
+ * User-facing section names for repair-action buttons. The keys remain the underlying gate
+ * substrate; the labels name the Phase 15 sections users can actually navigate to.
  */
 export const STEP_LABELS: Record<string, string> = {
   overview: 'Overview',
-  devices: 'Devices',
-  epochs: 'Epochs',
-  behavioral: 'Behavioral Events',
-  validation: 'Other required fields',
-  export: 'Export',
+  devices: 'Devices & Failed Channels',
+  epochs: 'Tasks & Epochs',
+  behavioral: 'Devices & Failed Channels',
+  validation: 'Validation & Export',
+  export: 'Validation & Export',
 };
+
+/** Whether a day-owned issue is fixed in the Files & Weight section. */
+function isFilesWeightPath(path: string): boolean {
+  const normalized = path.replace(/^\//, '').replace(/\//g, '.');
+  return (
+    normalized.startsWith('associated_files') ||
+    normalized.includes('subject.weight') ||
+    normalized.includes('session.weight')
+  );
+}
 
 /**
  * The valid repair surfaces. `day` issues are editable in the Day Editor's own steps;
@@ -163,10 +170,10 @@ export const SURFACE_BY_CODE: Record<string, RepairSurface> = {
   divergent_data_acq_identity: 'animal',
   // Task-type catalog (Phase 8C): a duplicate catalog task_name is an animal-catalog problem.
   duplicate_task_type_name: 'animal',
+  // Editable in the Animal View profile.
+  invalid_species: 'animal',
   // Editable in the Day Editor (task/video/event re-picks, day bad-channel overrides,
-  // session metadata incl. the inherited subject fields repairable in Overview,
-  // optogenetics completeness).
-  invalid_species: 'day',
+  // session metadata, day-owned technical fields, optogenetics completeness).
   dangling_camera_ref: 'day',
   dangling_data_acq_ref: 'day',
   duplicate_behavioral_event_name: 'day',
@@ -249,13 +256,21 @@ function deriveSurfaceFromPath(issue: RepairableIssue): RepairSurface {
     return 'none';
   }
 
-  // Session/overview fields stay in the Day Editor. The inherited SUBJECT fields
-  // (species/sex/genotype/DOB/weight/description) are repairable in the Day Editor
-  // Overview step (the Animal Editor has no subject step), so they route to 'day'
-  // too — check these BEFORE the device matches below.
+  // Session/overview fields stay in the Day Editor. Animal-static SUBJECT fields route to the
+  // Animal View profile; recording-day weight remains day-owned even though the exported schema
+  // nests it under subject.weight.
+  if (path.includes('subject.weight')) return 'day';
+  if (
+    path.includes('subject.species') ||
+    path.includes('subject.sex') ||
+    path.includes('subject.genotype') ||
+    path.includes('subject.date_of_birth') ||
+    path.includes('subject.description')
+  ) {
+    return 'animal';
+  }
   if (
     path.includes('session') ||
-    path.includes('subject') ||
     path.includes('experimenter') ||
     path.includes('lab') ||
     path.includes('institution') ||
@@ -298,6 +313,7 @@ function deriveSurfaceFromPath(issue: RepairableIssue): RepairSurface {
  * the single field→section attribution shared by repair routing AND the section-nav blocking dot.
  */
 export const ANIMAL_SETUP_TABS: Record<string, string> = {
+  days: 'Profile',
   'electrode-groups': 'Electrode Groups',
   'recording-system': 'Recording System',
   cameras: 'Cameras',
@@ -320,6 +336,7 @@ export function animalSetupTabForFieldPath(fieldPath?: string): { tab: string; l
   const path = String(fieldPath || '').replace(/^\//, '').replace(/\//g, '.');
   const result = (tab: string) => ({ tab, label: ANIMAL_SETUP_TABS[tab] });
 
+  if (path.startsWith('subject.')) return result('days');
   // Animal-level task-type catalog (camelCase `taskTypes` path) — match before the camera check so a
   // task-type issue routes to its own tab, not Cameras. (Day-level task issues are day-owned and
   // never reach this animal resolver.)
@@ -384,8 +401,9 @@ export function repairTargetForIssue(
     return { surface: 'none', step: null, label: 'No in-app fix' };
   }
 
-  // Day surface: route to the owning Day-Editor step.
+  // Day surface: route to the owning Day-Editor step while labeling the visible Phase 15 section.
   const step = stepIdForIssue(issue);
-  const stepLabel = STEP_LABELS[step] || step;
+  const focusPath = issue.focusPath || issue.path || issue.instancePath || '';
+  const stepLabel = isFilesWeightPath(focusPath) ? 'Files & Weight' : (STEP_LABELS[step] || step);
   return { surface: 'day', step, label: `Fix in ${stepLabel}` };
 }

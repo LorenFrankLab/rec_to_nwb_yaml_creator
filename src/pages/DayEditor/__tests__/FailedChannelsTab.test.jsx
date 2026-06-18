@@ -242,7 +242,7 @@ describe('FailedChannelsTab', () => {
       />
     );
 
-    expect(screen.getByRole('heading', { name: /setup & failed channels/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /devices & failed channels/i })).toBeInTheDocument();
   });
 
   it('renders with integer IDs without PropType warnings', () => {
@@ -505,9 +505,9 @@ describe('FailedChannelsTab', () => {
     );
 
     expect(screen.getByText(/no electrodes are set up/i)).toBeInTheDocument();
-    // The empty state routes to electrode setup and explains failed channels come after.
-    expect(screen.getByText(/mark failed channels for this recording day only after electrodes exist/i)).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /set up electrodes/i })).toHaveAttribute(
+    // Animal-static setup is explained and routed to AnimalView, not edited from the day.
+    expect(screen.getByText(/failed-channel editing appears here after the animal has electrode groups/i)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /edit animal setup/i })).toHaveAttribute(
       'href',
       '#/animal/test-animal/electrode-groups?field=electrode_groups'
     );
@@ -591,7 +591,7 @@ describe('FailedChannelsTab', () => {
     );
 
     // Should render without errors
-    expect(screen.getByRole('heading', { name: /setup & failed channels/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /devices & failed channels/i })).toBeInTheDocument();
   });
 
   it('allows multiple groups to be expanded simultaneously', async () => {
@@ -661,7 +661,7 @@ describe('FailedChannelsTab', () => {
     );
 
     // Should still render without crashing
-    expect(screen.getByRole('heading', { name: /setup & failed channels/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /devices & failed channels/i })).toBeInTheDocument();
     // Check that error message is present (multiple groups show this error)
     const errorMessages = screen.getAllByText(/no channel mapping found/i);
     expect(errorMessages.length).toBeGreaterThan(0);

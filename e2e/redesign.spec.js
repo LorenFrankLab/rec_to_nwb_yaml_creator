@@ -61,8 +61,8 @@ test.describe('redesign — core flow', () => {
     await expect(page).toHaveURL(new RegExp(`#/day/${DAY_ID}`));
     await expect(page.getByRole('heading', { level: 1, name: /Day Editor/ })).toBeVisible();
 
-    // Epochs tab: drill into an epoch via its caret (keyboard-operable disclosure button).
-    await page.getByRole('button', { name: /^Epochs:/i }).click();
+    // Tasks & Epochs section: drill into an epoch via its caret (keyboard-operable disclosure button).
+    await page.getByRole('button', { name: /^Tasks & Epochs\b/i }).click();
     const caret = page.getByRole('button', { name: /toggle epoch .* details/i }).first();
     await expect(caret).toBeVisible();
     await expect(caret).toHaveAttribute('aria-expanded', 'false');
@@ -117,6 +117,82 @@ test.describe('redesign — recovery review', () => {
   });
 });
 
+test.describe('redesign — Day Editor IA layout', () => {
+  test('1280x720 renders a grouped vertical rail and single-column Overview', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 720 });
+    await seedAndOpen(page, buildConfiguredWorkspaceBlob(), `/#/day/${DAY_ID}`);
+
+    const nav = page.getByRole('navigation', { name: 'Day editor sections' });
+    await expect(nav).toBeVisible();
+    for (const group of ['SESSION', 'RECORDING', 'FINISH']) {
+      await expect(nav.getByText(group, { exact: true })).toBeVisible();
+    }
+
+    const sectionLabels = [
+      'Overview',
+      'Files & Weight',
+      'Devices & Failed Channels',
+      'Tasks & Epochs',
+      'Validation & Export',
+    ];
+    for (const label of sectionLabels) {
+      await expect(nav.getByRole('button', { name: new RegExp(`^${label}\\b`) })).toBeVisible();
+    }
+    await expect(nav.getByRole('button', { name: /^DIO\b/ })).toHaveCount(0);
+
+    const railMetrics = await nav.getByRole('button').evaluateAll((buttons) =>
+      buttons.map((button) => {
+        const rect = button.getBoundingClientRect();
+        return {
+          left: rect.left,
+          top: rect.top,
+          width: rect.width,
+          height: rect.height,
+        };
+      }),
+    );
+    expect(railMetrics).toHaveLength(5);
+    for (let i = 0; i < railMetrics.length; i += 1) {
+      expect(railMetrics[i].width, `rail button ${i + 1} fills the rail`).toBeGreaterThan(180);
+      expect(railMetrics[i].height, `rail button ${i + 1} label should not wrap`).toBeLessThanOrEqual(52);
+      expect(
+        Math.abs(railMetrics[i].left - railMetrics[0].left),
+        `rail button ${i + 1} should align in one vertical column`,
+      ).toBeLessThanOrEqual(1);
+      if (i > 0) {
+        expect(
+          railMetrics[i].top,
+          `rail button ${i + 1} should be below the previous section`,
+        ).toBeGreaterThan(railMetrics[i - 1].top + railMetrics[i - 1].height - 1);
+      }
+    }
+
+    const overviewGrid = page
+      .locator('.day-editor-section')
+      .filter({ has: page.getByRole('heading', { level: 2, name: 'Overview' }) })
+      .locator('.form-grid')
+      .first();
+    const overviewLayout = await overviewGrid.evaluate((grid) => {
+      const columns = getComputedStyle(grid)
+        .gridTemplateColumns
+        .trim()
+        .split(/\s+/)
+        .filter(Boolean);
+      const fields = Array.from(grid.querySelectorAll(':scope > .form-field'))
+        .slice(0, 3)
+        .map((field) => {
+          const rect = field.getBoundingClientRect();
+          return { top: rect.top, bottom: rect.bottom, left: rect.left };
+        });
+      return { columns, fields };
+    });
+    expect(overviewLayout.columns).toHaveLength(1);
+    expect(overviewLayout.fields).toHaveLength(3);
+    expect(overviewLayout.fields[1].top).toBeGreaterThanOrEqual(overviewLayout.fields[0].bottom - 1);
+    expect(overviewLayout.fields[2].top).toBeGreaterThanOrEqual(overviewLayout.fields[1].bottom - 1);
+  });
+});
+
 test.describe('redesign — accessibility (axe)', () => {
   /** The redesigned routes, each seeded with the configured workspace, scanned for axe violations. */
   const routes = [
@@ -148,7 +224,7 @@ test.describe('redesign — accessibility (axe)', () => {
 test.describe('redesign — keyboard operability', () => {
   test('the epoch caret is a keyboard-operable disclosure', async ({ page }) => {
     await seedAndOpen(page, buildConfiguredWorkspaceBlob(), `/#/day/${DAY_ID}`);
-    await page.getByRole('button', { name: /^Epochs:/i }).click();
+    await page.getByRole('button', { name: /^Tasks & Epochs\b/i }).click();
 
     const caret = page.getByRole('button', { name: /toggle epoch .* details/i }).first();
     await expect(caret).toHaveAttribute('aria-expanded', 'false');
@@ -161,7 +237,7 @@ test.describe('redesign — keyboard operability', () => {
 
   test('the failed-channels grid toggles are keyboard-operable checkboxes', async ({ page }) => {
     await seedAndOpen(page, buildConfiguredWorkspaceBlob(), `/#/day/${DAY_ID}`);
-    await page.getByRole('button', { name: /^Failed channels:/i }).click();
+    await page.getByRole('button', { name: /^Devices & Failed Channels\b/i }).click();
 
     // Each electrode group is a native <details> disclosure (keyboard-operable); its per-channel
     // toggles live inside. Expand a group with all channels OK so every revealed checkbox is enabled.

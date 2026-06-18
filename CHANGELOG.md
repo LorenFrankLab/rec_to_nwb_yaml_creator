@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Day Editor IA realignment.** The daily editor now matches the finalized mock: a grouped vertical
+  rail (SESSION / RECORDING / FINISH), five single-column sections, Files & Weight split out from
+  Overview, DIO folded into the recording section, and Validation & Export as one finish panel.
+  Subject/team facts and recording-system rig constants are inherited read-only with links to Animal
+  setup, while day-owned technical fields, files, weight, tasks, failed channels, and behavioral
+  events remain editable on the recording day. Export bytes are unchanged.
 - **Validation presentation polish.** Day-editor readiness findings are now grouped by section,
   tiered by severity, and warnings collapse behind an acknowledgement disclosure while info nudges stay
   inline. Freshly created days and freshly inserted epochs remain Draft/Incomplete until opened,
@@ -36,11 +42,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Day-editor redesign complete.** With the recovery, empty-state, accessibility, and end-to-end
   coverage in place, the day-editor redesign is finished: the legacy `DayEditorStepper` and its six
   step components (Overview / Devices / Tasks & Epochs / Behavioral events / Validation / Export) are
-  fully retired (a source-scanning guard now prevents their return), replaced by the tabbed
-  `DayEditorFrame` (Day / Epochs / Failed channels / DIO) and the export-preview surface. Every new
-  surface is `axe`-clean (jest-axe in jsdom + `@axe-core/playwright` in a real browser), and the
-  click-to-toggle grids (failed channels, DIO) and the epoch caret are keyboard-operable. Exported
-  YAML is unchanged throughout — the golden baselines stay byte-identical.
+  fully retired (a source-scanning guard now prevents their return), replaced by the sectioned
+  `DayEditorFrame` (Overview / Files & Weight / Devices & Failed Channels / Tasks & Epochs /
+  Validation & Export) and the export-preview surface. Every new surface is `axe`-clean (jest-axe in
+  jsdom + `@axe-core/playwright` in a real browser), and the click-to-toggle grids (failed channels,
+  DIO) and the epoch caret are keyboard-operable. Exported YAML is unchanged throughout — the golden
+  baselines stay byte-identical.
 - **Import & Repair screen — a teaching-validation import.** Importing a metadata YAML is now a
   full-page screen (`#/import`): it decodes the file, runs the **same** validator the export gate uses,
   and shows — per non-conforming field — a suggested fix drawn from the **same predicate** that flagged
@@ -89,7 +96,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   which owns the acknowledgement flow — matching the animal Days-tab quick export.) Replaces the
   transitional `ExportStep` (the per-day download moves off the DayEditor header panel onto this
   surface).
-- **Epoch grid — the day editor's spine.** The Epochs tab is now a per-epoch grid: one row per epoch
+- **Epoch grid — the day editor's spine.** The Tasks & Epochs section is now a per-epoch grid: one row per epoch
   joining the day's tasks + statescript/video files + opto schedule (columns #, Task, Camera(s),
   Statescript, Video(s), Opto mW, Pulse ms, Status), with a per-epoch drill-in (What happened /
   Generated files / Optogenetics), an epoch ⋯ menu (insert / duplicate / move / delete-with-undo), and
@@ -102,7 +109,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `TaskInstanceModal`) are now unused and slated for removal in a follow-up.
 - **Per-epoch filename derivation + a day data folder.** Statescript / video filenames derive from the
   `{YYYYMMDD}_{subject}_{epoch:02d}_{tag}` convention inside the day's data folder (`day.dataFolder`,
-  set on the Day tab); the drill-in shows each file as `generated` (derived) or `manual` (overridden),
+  set in Files & Weight); the drill-in shows each file as `generated` (derived) or `manual` (overridden),
   with Override / Revert. Derivation is additive — it reproduces the values the export already stored,
   and existing/imported files keep their explicit paths (`manual`).
 - **Video declaration (the one new validation rule).** Each task epoch must either bind a video or be
@@ -133,24 +140,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and the unused `ajv-formats` registration/dependency is removed because the checked-in schema has no
   `format` keywords. No exported YAML bytes changed.
 
-- **Day editor: a new frame with day chips, an issue-driven readiness bar, and a four-tab body.** The
+- **Day editor: a new frame with day chips, an issue-driven readiness bar, and a grouped section rail.** The
   day editor's six-section stepper chrome is replaced by `DayEditorFrame`: a header carrying the
   Workspace › Animal › Day breadcrumb, the date title, day chips (configuration version · an opto
   badge · "↩ carried from &lt;date&gt;" · the lifecycle `StatusPill`), the autosave indicator, the
-  read-only `AnimalScopeCard` (the animal-static scope boundary, summarized from the animal
-  view-model), and the issue-driven `ReadinessBar` — fed the authoritative `validateDay` output, so
-  it never re-checks readiness locally. The body is a four-tab bar — **Day / Epochs / Failed channels
-  / DIO** — with free navigation and `Alt+←/→`. The former `OverviewStep`, `DevicesStep`, and
-  `BehavioralEventsStep` are folded into the **Day**, **Failed channels**, and **DIO** tabs
-  respectively and removed; `TasksEpochsStep` is kept as the **Epochs** tab bridge (the epoch grid
-  lands in a later phase); `ValidationStep`/`ExportStep` are retained until the export-preview screen
-  arrives (the readiness bar replaces the inline Validation step, and a transitional header **Export**
-  action reveals the kept Export step). The **DIO** tab opens on a read-only carry-forward summary
+  read-only inherited subject/team and rig-constant summaries, and the issue-driven `ReadinessBar` —
+  fed the authoritative `validateDay` output, so it never re-checks readiness locally. The body is a
+  grouped rail — **Overview / Files & Weight / Devices & Failed Channels / Tasks & Epochs / Validation
+  & Export** — with free navigation and `Alt+←/→`. The former `OverviewStep`, `DevicesStep`, and
+  `BehavioralEventsStep` are folded into these sections and removed; `ValidationStep`/`ExportStep`
+  now resolve to the Validation & Export surface. The DIO subsection opens on a read-only
+  carry-forward summary
   (Din/Dout in two columns, "carried from &lt;date&gt; · unchanged") and reveals the full ECU channel
   editor only on "Edit · rewired the rig"; collision gates reuse the existing
   `duplicateBehavioralEvent*` helpers. **No change to exported YAML.**
 
-- **Day editor: a per-day data folder.** The **Day** tab adds an editable `Data folder` field (the
+- **Day editor: a per-day data folder.** The **Files & Weight** section includes an editable `Data folder` field (the
   directory on disk where this day's recording files live). It is set once and carried forward to the
   next same-block day (`createDayRecord`). The field is **off-export** — `mergeDayMetadata` never
   reads `day.dataFolder`, so the YAML is byte-identical (no schema bump; the golden baselines are

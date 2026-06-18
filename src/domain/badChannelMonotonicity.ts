@@ -3,7 +3,7 @@
  *
  * Bad channels accumulate across a study: a channel that failed on an earlier recording day
  * does not heal on a later one. These pure helpers — shared by the in-context un-mark confirm
- * (the Failed channels tab / {@link BadChannelsEditor}) and the export-blocking validation rule
+ * (the Devices & Failed Channels section / {@link BadChannelsEditor}) and the export-blocking validation rule
  * ({@link module:domain/validation}) — compute that monotonic contract from a day's own
  * effective bad-channel set and its EARLIER same-configuration siblings.
  *

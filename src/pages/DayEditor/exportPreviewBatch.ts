@@ -6,8 +6,9 @@
  * download the Validation Summary's "Export Valid Only" path uses) — it is NOT a second export path. It
  * then enriches each SKIPPED day with a FIELD-LEVEL repair link resolved through {@link repairTargetForIssue}
  * (the same routing the single-day export gate uses): an animal-owned blocker deep-links the owning
- * animal-setup tab with a `?field=` anchor; a day-owned blocker links to the day editor. Days skipped for a
- * non-issue reason (incomplete, parity, not-in-list) fall back to the shared skip reason + day link.
+ * animal-setup tab with a `?field=` anchor; a day-owned blocker links to the day editor with the
+ * owning field/step query. Days skipped for a non-issue reason (incomplete, parity, not-in-list) fall
+ * back to the shared skip reason + day link.
  *
  * The field-level resolver {@link firstBlockingRepairLink} is pure (no side effects).
  */
@@ -66,9 +67,9 @@ function isRecord(value: unknown): value is Record<string, unknown> {
  * Resolve the field-level repair link for a day's FIRST blocking (error-severity) issue, via the same
  * `repairRouting` the single-day export gate uses. Returns `null` when the day has no blocking error
  * (the caller then falls back to the shared skip reason): an animal-owned issue deep-links the owning
- * animal-setup tab with a `?field=` anchor; a day-owned issue links to the day editor (the hash router's
- * `#/day/:id` route cannot carry a query string, so the field is not appended there); a `none`-surface
- * issue carries no href.
+ * animal-setup tab with a `?field=` anchor; a day-owned issue links to the day editor with
+ * `?field=&step=` so the frame can open the owning section and focus the field; a `none`-surface issue
+ * carries no href.
  *
  * @param workspace - The workspace (`{ animals, days }`).
  * @param animalKey - The owning animal key.

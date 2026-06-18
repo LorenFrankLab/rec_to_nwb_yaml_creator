@@ -48,8 +48,8 @@ describe('Day editor repair-action navigation (integration)', () => {
     const bar = screen.getByRole('alert');
     await user.click(within(bar).getByRole('button'));
 
-    // Navigated to the Day tab…
-    expect(screen.getByText('Session Metadata')).toBeInTheDocument();
+    // Navigated to the Overview section…
+    expect(screen.getByRole('heading', { name: /overview/i })).toBeInTheDocument();
     // …and focused the session-description control.
     const textarea = screen.getByRole('textbox', { name: /session description/i });
     await waitFor(() => expect(textarea).toHaveFocus());

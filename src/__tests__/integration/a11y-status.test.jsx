@@ -53,14 +53,14 @@ describe('status conveyed without relying on color', () => {
     });
   });
 
-  it('the Failed-channels tab health badges expose a non-color status label', async () => {
+  it('the Devices & Failed Channels health badges expose a non-color status label', async () => {
     const { container } = await renderRoute(`#/day/${DAY_ID}`);
     await screen.findByRole('heading', { name: /day editor/i });
 
-    // Navigate to the Failed channels tab.
+    // Navigate to the Devices & Failed Channels section.
     const { fireEvent } = await import('@testing-library/react');
-    fireEvent.click(screen.getByRole('button', { name: /^Failed channels:/ }));
-    await screen.findByRole('heading', { name: /setup & failed channels/i });
+    fireEvent.click(screen.getByRole('button', { name: /^Devices & Failed Channels\b/ }));
+    await screen.findByRole('heading', { name: /devices & failed channels/i });
 
     const badges = container.querySelectorAll('.status-badge');
     expect(badges.length).toBeGreaterThan(0);

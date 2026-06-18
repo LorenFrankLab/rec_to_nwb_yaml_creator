@@ -1,5 +1,5 @@
 /**
- * Tab order through the DayEditor tab frame must follow the logical tab order, and
+ * Tab order through the DayEditor frame must follow the logical section order, and
  * no control may use a positive tabindex (which would scramble the natural order).
  */
 import { describe, it, expect, afterEach } from 'vitest';
@@ -16,7 +16,7 @@ afterEach(() => {
 });
 
 describe('tab order through the DayEditor frame', () => {
-  it('tab controls appear in DOM order matching the tab sequence', async () => {
+  it('section controls appear in DOM order matching the section sequence', async () => {
     window.location.hash = `#/day/${DAY_ID}`;
     render(
       <StoreProvider initialState={{ workspace: makeConfiguredWorkspace() }}>
@@ -31,10 +31,15 @@ describe('tab order through the DayEditor frame', () => {
 
     const tabBar = screen.getByRole('navigation', { name: /day editor sections/i });
     const labels = [...tabBar.querySelectorAll('button')].map((el) =>
-      (el.getAttribute('aria-label') || el.textContent).replace(/:.+$/, '').trim()
+      (el.getAttribute('aria-label') || el.textContent).replace(/\s+[—-].+$/, '').trim()
     );
-    // The redesigned frame's 4-tab bar, in DOM order.
-    expect(labels).toEqual(['Day', 'Epochs', 'Failed channels', 'DIO']);
+    expect(labels).toEqual([
+      'Overview',
+      'Files & Weight',
+      'Devices & Failed Channels',
+      'Tasks & Epochs',
+      'Validation & Export',
+    ]);
   });
 
   it('no interactive control uses a positive tabindex', async () => {

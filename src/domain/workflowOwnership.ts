@@ -321,8 +321,7 @@ function patternForPath(pathOrSection?: string): string {
  * orthogonal, so this is computed per issue rather than read from the pattern default:
  *   - an `animal`-surface fix edits the shared/catalog/config item → reaches the days using it;
  *   - a `day`-surface fix is day-local (picking a camera for this day, pinning this day, a day
- *     fact) — EXCEPT a constant animal fact editable from the Day Overview (species/DOB, pattern
- *     `animal_setup`), which still propagates to all days;
+ *     fact);
  *   - a `none`-surface (read-only identity) keeps the pattern's inherent reach.
  *
  * @param pattern - The resolved {@link OWNERSHIP_PATTERN}.
@@ -332,8 +331,8 @@ function patternForPath(pathOrSection?: string): string {
 function issueReachesBeyondDay(pattern: string, editSurface: RepairSurface): boolean {
   if (editSurface === 'animal') return true;
   if (editSurface === 'none') return OWNERSHIP_PATTERN_META[pattern].reachesBeyondDay;
-  // day surface: local repair unless it is a constant animal fact edited from the day.
-  return pattern === OWNERSHIP_PATTERN.ANIMAL_SETUP;
+  // day surface: local repair.
+  return false;
 }
 
 /**

@@ -82,87 +82,82 @@ export default function DayTechnicalSection({ technical = {}, onFieldUpdate, rec
 
   return (
     <section className="day-editor-section day-technical-section">
-      <details>
-        {/* Not "(this day)": this section mixes recording-system values (the read-only rig
-            constants) with genuine day-only facts (header path, units), each labelled in place. */}
-        <summary>Technical parameters</summary>
+      <h3>Technical parameters</h3>
 
-        {/* Recording-system rig constants — effective, READ-ONLY values for this day (copied
-            from the recording-system defaults at creation). Not routine day edits; edit the
-            default in Recording System (it affects future days). A day keeps the value it
-            recorded, so a default changed later reads as "different", never silently inherited. */}
-        <div className="form-grid rig-constants" aria-label="Recording-system values (effective for this day)">
-          <div className="form-field readonly-field">
-            <span className="field-label">Raw data to volts</span>
-            <span className="readonly-value">{raw.display}</span>
-            <span className="field-help-text">{rigCue(raw)}</span>
-          </div>
-          <div className="form-field readonly-field">
-            <span className="field-label">Times period multiplier</span>
-            <span className="readonly-value">{mult.display}</span>
-            <span className="field-help-text">{rigCue(mult)}</span>
-          </div>
-          {animalKey && (
-            <p className="rig-constants-edit-link field-help-text">
-              These are recording-system constants —{' '}
-              <a href={`#/animal/${animalKey}/recording-system?field=data_acq_device`}>Edit in Recording System</a>.
-            </p>
+      {/* Recording-system rig constants — effective, READ-ONLY values for this day (copied
+          from the recording-system defaults at creation). Not routine day edits; edit the
+          default in Recording System (it affects future days). A day keeps the value it
+          recorded, so a default changed later reads as "different", never silently inherited. */}
+      <div className="form-grid rig-constants" aria-label="Recording-system values (effective for this day)">
+        <div className="form-field readonly-field">
+          <span className="field-label">Raw data to volts</span>
+          <span className="readonly-value">{raw.display}</span>
+          <span className="field-help-text">{rigCue(raw)}</span>
+        </div>
+        <div className="form-field readonly-field">
+          <span className="field-label">Times period multiplier</span>
+          <span className="readonly-value">{mult.display}</span>
+          <span className="field-help-text">{rigCue(mult)}</span>
+        </div>
+        {animalKey && (
+          <p className="rig-constants-edit-link field-help-text">
+            These are recording-system constants —{' '}
+            <a href={`#/animal/${animalKey}/recording-system?field=data_acq_device`}>Edit in Recording System</a>.
+          </p>
+        )}
+      </div>
+
+      <div className="form-grid">
+        <div className="form-field">
+          <label htmlFor="default-header-file-path">
+            Default header file path <span className="ownership-cue">This day only</span>
+          </label>
+          <input
+            id="default-header-file-path"
+            type="text"
+            value={local.default_header_file_path}
+            onChange={(e) => change('default_header_file_path', e.target.value)}
+            onBlur={commitHeader}
+            placeholder="/path/to/config.trodesconf"
+          />
+          <span className="field-help-text">
+            Optional. Path to the .trodesconf configuration file for this day. If blank, the default
+            header from the .rec file is used.
+          </span>
+        </div>
+
+        <div className="form-field">
+          <label htmlFor="units-analog">Analog units</label>
+          <input
+            id="units-analog"
+            type="text"
+            value={local.analog}
+            onChange={(e) => change('analog', e.target.value)}
+            onBlur={commitUnits}
+            placeholder="e.g. unspecified"
+          />
+        </div>
+
+        <div className="form-field">
+          <label htmlFor="units-behavioral-events">Behavioral-event units</label>
+          <input
+            id="units-behavioral-events"
+            type="text"
+            value={local.behavioral_events}
+            onChange={(e) => change('behavioral_events', e.target.value)}
+            onBlur={commitUnits}
+            placeholder="e.g. unspecified"
+          />
+          <span className="field-help-text">
+            Analog and behavioral-event units are required together when either is set.
+          </span>
+          {unitsPartial && (
+            <span className="validation-error" role="alert">
+              Enter both analog and behavioral-event units, or clear both.
+            </span>
           )}
         </div>
-
-        <div className="form-grid">
-          <div className="form-field">
-            <label htmlFor="default-header-file-path">
-              Default header file path <span className="ownership-cue">This day only</span>
-            </label>
-            <input
-              id="default-header-file-path"
-              type="text"
-              value={local.default_header_file_path}
-              onChange={(e) => change('default_header_file_path', e.target.value)}
-              onBlur={commitHeader}
-              placeholder="/path/to/config.trodesconf"
-            />
-            <span className="field-help-text">
-              Optional. Path to the .trodesconf configuration file for this day. If blank, the default
-              header from the .rec file is used.
-            </span>
-          </div>
-
-          <div className="form-field">
-            <label htmlFor="units-analog">Analog units</label>
-            <input
-              id="units-analog"
-              type="text"
-              value={local.analog}
-              onChange={(e) => change('analog', e.target.value)}
-              onBlur={commitUnits}
-              placeholder="e.g. unspecified"
-            />
-          </div>
-
-          <div className="form-field">
-            <label htmlFor="units-behavioral-events">Behavioral-event units</label>
-            <input
-              id="units-behavioral-events"
-              type="text"
-              value={local.behavioral_events}
-              onChange={(e) => change('behavioral_events', e.target.value)}
-              onBlur={commitUnits}
-              placeholder="e.g. unspecified"
-            />
-            <span className="field-help-text">
-              Analog and behavioral-event units are required together when either is set.
-            </span>
-            {unitsPartial && (
-              <span className="validation-error" role="alert">
-                Enter both analog and behavioral-event units, or clear both.
-              </span>
-            )}
-          </div>
-        </div>
-      </details>
+      </div>
     </section>
   );
 }
-

@@ -297,7 +297,14 @@ describe('buildDayEditorViewModel — overview field sources', () => {
   it('inherited subject identity facts are read-only and inherited from the animal', () => {
     const { animal, day } = loadRealistic();
     const fields = fieldsByPath(animal, day);
-    for (const path of ['subject.subject_id', 'subject.sex', 'subject.genotype']) {
+    for (const path of [
+      'subject.subject_id',
+      'subject.species',
+      'subject.sex',
+      'subject.genotype',
+      'subject.date_of_birth',
+      'subject.description',
+    ]) {
       expect(fields[path].source).toBe('inherited');
       expect(fields[path].inheritedFrom).toBe('animal');
       expect(fields[path].readOnly).toBe(true);
@@ -724,11 +731,11 @@ describe('buildDayEditorViewModel — bad channels', () => {
 });
 
 // ──────────────────────────────────────────────────────────────────────────────────────────
-// Phase 3 — day chips + the 4-tab frame model.
+// Phase 3 / Phase 15 — day chips + the grouped section rail model.
 //
 // The redesigned day editor's header shows day chips (configuration version, an opto badge, a
-// "carried from <date>" hint, and the lifecycle StatusPill) and a 4-tab bar (Day / Epochs /
-// Failed channels / DIO) that replaces the 6-section nav. The view-model exposes both as data so
+// "carried from <date>" hint, and the lifecycle StatusPill) and a grouped rail that replaces the
+// old horizontal tab bar. The view-model exposes both as data so
 // the frame is a thin renderer; the chip/tab truths are recomputed here from the same domain
 // functions the rest of the app reads (`getDayRowStatus`, `optoFieldsPresence`).
 // ──────────────────────────────────────────────────────────────────────────────────────────
@@ -792,38 +799,45 @@ describe('buildDayEditorViewModel — day chips', () => {
   });
 });
 
-describe('buildDayEditorViewModel — 4-tab frame model', () => {
-  it('exposes exactly the four tabs Day / Epochs / Failed channels / DIO in order', () => {
+describe('buildDayEditorViewModel — grouped section rail model', () => {
+  it('exposes exactly the five mock sections in order', () => {
     const { animal, day } = loadRealistic();
     const vm = buildDayEditorViewModel(wrap(animal, day), day.id);
-    expect(vm.tabs.map((t) => t.key)).toEqual(['day', 'epochs', 'channels', 'dio']);
+    expect(vm.tabs.map((t) => t.key)).toEqual(['overview', 'files', 'devices', 'epochs', 'finish']);
     expect(vm.tabs.map((t) => t.label)).toEqual([
-      'Day',
-      'Epochs',
-      'Failed channels',
-      'DIO',
+      'Overview',
+      'Files & Weight',
+      'Devices & Failed Channels',
+      'Tasks & Epochs',
+      'Validation & Export',
     ]);
+    expect(vm.sectionGroups.map((group) => group.label)).toEqual(['SESSION', 'RECORDING', 'FINISH']);
   });
 
-  it('marks the requested tab active (default is the Day tab)', () => {
+  it('marks the requested section active (default is Overview)', () => {
     const { animal, day } = loadRealistic();
     const ws = wrap(animal, day);
-    expect(buildDayEditorViewModel(ws, day.id).tabs.find((t) => t.active)?.key).toBe('day');
+    expect(buildDayEditorViewModel(ws, day.id).tabs.find((t) => t.active)?.key).toBe('overview');
     expect(
-      buildDayEditorViewModel(ws, day.id, 'channels').tabs.find((t) => t.active)?.key
-    ).toBe('channels');
+      buildDayEditorViewModel(ws, day.id, 'devices').tabs.find((t) => t.active)?.key
+    ).toBe('devices');
   });
 
-  it('rolls each tab status up from its underlying step (channels←devices)', () => {
+  it('rolls the recording section status up from devices and behavioral events', () => {
     const { animal, day } = loadRealistic();
     const ws = wrap(animal, day);
     const animalDays = getAnimalDays(ws, animal.id) as unknown as Day[];
     const stepStatus = expectedStepStatus(animal, day, animalDays as unknown as Idable[]);
     const vm = buildDayEditorViewModel(ws, day.id);
     const byKey = Object.fromEntries(vm.tabs.map((t) => [t.key, t.status]));
-    expect(byKey.day).toBe(stepStatus.overview);
+    expect(byKey.overview).toBe(stepStatus.overview);
     expect(byKey.epochs).toBe(stepStatus.epochs);
-    expect(byKey.channels).toBe(stepStatus.devices);
-    expect(byKey.dio).toBe(stepStatus.behavioral);
+    expect(byKey.devices).toBe(
+      [stepStatus.devices, stepStatus.behavioral].includes('error')
+        ? 'error'
+        : [stepStatus.devices, stepStatus.behavioral].includes('incomplete')
+          ? 'incomplete'
+          : 'valid'
+    );
   });
 });

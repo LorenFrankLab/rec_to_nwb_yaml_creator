@@ -195,72 +195,77 @@ describe('DayEditorFrame', () => {
     expect(within(slashMsg.closest('li')).queryByRole('button')).not.toBeInTheDocument();
   });
 
-  // ── 4-tab bar ──
-  it('renders exactly the four tabs Day / Epochs / Failed channels / DIO', () => {
+  // ── Grouped vertical rail ──
+  it('renders the grouped vertical rail with the five mock sections', () => {
     renderFrame();
     const nav = screen.getByRole('navigation', { name: /day editor sections/i });
-    expect(within(nav).getByRole('button', { name: /^Day:/ })).toBeInTheDocument();
-    expect(within(nav).getByRole('button', { name: /^Epochs:/ })).toBeInTheDocument();
-    expect(within(nav).getByRole('button', { name: /^Failed channels:/ })).toBeInTheDocument();
-    expect(within(nav).getByRole('button', { name: /^DIO:/ })).toBeInTheDocument();
+    expect(within(nav).getByText('SESSION')).toBeInTheDocument();
+    expect(within(nav).getByText('RECORDING')).toBeInTheDocument();
+    expect(within(nav).getByText('FINISH')).toBeInTheDocument();
+    expect(within(nav).getByRole('button', { name: /^Overview/ })).toBeInTheDocument();
+    expect(within(nav).getByRole('button', { name: /^Files & Weight/ })).toBeInTheDocument();
+    expect(within(nav).getByRole('button', { name: /^Devices & Failed Channels/ })).toBeInTheDocument();
+    expect(within(nav).getByRole('button', { name: /^Tasks & Epochs/ })).toBeInTheDocument();
+    expect(within(nav).getByRole('button', { name: /^Validation & Export/ })).toBeInTheDocument();
+    expect(within(nav).queryByRole('button', { name: /^DIO/ })).not.toBeInTheDocument();
   });
 
   it('folds each tab status label into the accessible name', () => {
     renderFrame();
     const nav = screen.getByRole('navigation', { name: /day editor sections/i });
-    expect(within(nav).getByRole('button', { name: /Day: Has errors/i })).toBeInTheDocument();
-    expect(within(nav).getByRole('button', { name: /Epochs: Incomplete/i })).toBeInTheDocument();
+    expect(within(nav).getByRole('button', { name: /Overview.*Has errors/i })).toBeInTheDocument();
+    expect(within(nav).getByRole('button', { name: /Tasks & Epochs.*Incomplete/i })).toBeInTheDocument();
   });
 
-  it('opens on the Day tab and freely navigates to any tab on click', async () => {
+  it('opens on Overview and freely navigates to any section on click', async () => {
     const user = userEvent.setup();
     renderFrame();
-    expect(screen.getByRole('button', { name: /^Day:/ })).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByRole('button', { name: /^Overview/ })).toHaveAttribute('aria-current', 'page');
 
-    await user.click(screen.getByRole('button', { name: /^Failed channels:/ }));
-    expect(screen.getByText(/Setup & Failed Channels/i)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /^Failed channels:/ })).toHaveAttribute('aria-current', 'page');
-
-    await user.click(screen.getByRole('button', { name: /^Epochs:/ }));
-    expect(screen.getByRole('button', { name: /^Epochs:/ })).toHaveAttribute('aria-current', 'page');
-
-    await user.click(screen.getByRole('button', { name: /^DIO:/ }));
+    await user.click(screen.getByRole('button', { name: /^Devices & Failed Channels/ }));
+    expect(screen.getByRole('heading', { level: 2, name: /Devices & Failed Channels/i })).toBeInTheDocument();
     expect(screen.getByRole('heading', { level: 2, name: /behavioral events/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^Devices & Failed Channels/ })).toHaveAttribute('aria-current', 'page');
+
+    await user.click(screen.getByRole('button', { name: /^Tasks & Epochs/ }));
+    expect(screen.getByRole('button', { name: /^Tasks & Epochs/ })).toHaveAttribute('aria-current', 'page');
+
+    await user.click(screen.getByRole('button', { name: /^Files & Weight/ }));
+    expect(screen.getByRole('heading', { level: 2, name: /Files & Weight/i })).toBeInTheDocument();
   });
 
   it('steps tabs with the Alt+→ / Alt+← keyboard shortcuts', () => {
     renderFrame();
-    act(() => emitStepperShortcut('next')); // day → epochs
-    expect(screen.getByRole('button', { name: /^Epochs:/ })).toHaveAttribute('aria-current', 'page');
-    act(() => emitStepperShortcut('next')); // → channels
-    expect(screen.getByRole('button', { name: /^Failed channels:/ })).toHaveAttribute('aria-current', 'page');
-    act(() => emitStepperShortcut('prev')); // → epochs
-    expect(screen.getByRole('button', { name: /^Epochs:/ })).toHaveAttribute('aria-current', 'page');
+    act(() => emitStepperShortcut('next')); // overview → files
+    expect(screen.getByRole('button', { name: /^Files & Weight/ })).toHaveAttribute('aria-current', 'page');
+    act(() => emitStepperShortcut('next')); // → devices
+    expect(screen.getByRole('button', { name: /^Devices & Failed Channels/ })).toHaveAttribute('aria-current', 'page');
+    act(() => emitStepperShortcut('prev')); // → files
+    expect(screen.getByRole('button', { name: /^Files & Weight/ })).toHaveAttribute('aria-current', 'page');
   });
 
   it('CLAMPS the Alt+ tab stepping at both ends (does not wrap)', () => {
     renderFrame();
-    // At the first tab (Day), Alt+← stays on Day (no wrap to DIO).
-    expect(screen.getByRole('button', { name: /^Day:/ })).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByRole('button', { name: /^Overview/ })).toHaveAttribute('aria-current', 'page');
     act(() => emitStepperShortcut('prev'));
-    expect(screen.getByRole('button', { name: /^Day:/ })).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByRole('button', { name: /^Overview/ })).toHaveAttribute('aria-current', 'page');
 
-    // Step to the last tab (DIO), then Alt+→ stays on DIO (no wrap to Day).
+    // Step to the last section, then Alt+→ stays there.
     for (let i = 0; i < 5; i += 1) act(() => emitStepperShortcut('next'));
-    expect(screen.getByRole('button', { name: /^DIO:/ })).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByRole('button', { name: /^Validation & Export/ })).toHaveAttribute('aria-current', 'page');
     act(() => emitStepperShortcut('next'));
-    expect(screen.getByRole('button', { name: /^DIO:/ })).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByRole('button', { name: /^Validation & Export/ })).toHaveAttribute('aria-current', 'page');
   });
 
   it('routes to the owning tab when arriving with a ?field= repair deep-link', async () => {
-    // A cross-day batch "Fix in …" link lands on #/day/:id?field=<field>; the frame resolves the
-    // field's owning tab and opens it on load (a behavioral_events field is DIO-owned).
+    // A cross-day batch "Fix in …" link lands on #/day/:id?field=<field>; behavioral events now
+    // fold into the recording section.
     const originalHash = window.location.hash;
     window.location.hash = '#/day/remy-2023-06-22?field=behavioral_events';
     try {
       renderFrame();
       await waitFor(() =>
-        expect(screen.getByRole('button', { name: /^DIO:/ })).toHaveAttribute('aria-current', 'page')
+        expect(screen.getByRole('button', { name: /^Devices & Failed Channels/ })).toHaveAttribute('aria-current', 'page')
       );
     } finally {
       window.location.hash = originalHash;
@@ -275,7 +280,7 @@ describe('DayEditorFrame', () => {
     window.location.hash = '#/day/remy-2023-06-22';
     try {
       renderFrame();
-      expect(screen.getByRole('button', { name: /^Day:/ })).toHaveAttribute('aria-current', 'page');
+      expect(screen.getByRole('button', { name: /^Overview/ })).toHaveAttribute('aria-current', 'page');
 
       await act(async () => {
         window.location.hash = '#/day/remy-2023-06-22?step=behavioral&field=behavioral_events';
@@ -283,7 +288,7 @@ describe('DayEditorFrame', () => {
       });
 
       await waitFor(() =>
-        expect(screen.getByRole('button', { name: /^DIO:/ })).toHaveAttribute('aria-current', 'page')
+        expect(screen.getByRole('button', { name: /^Devices & Failed Channels/ })).toHaveAttribute('aria-current', 'page')
       );
     } finally {
       window.location.hash = originalHash;
@@ -292,13 +297,13 @@ describe('DayEditorFrame', () => {
 
   it('prefers an explicit ?step= over field-name inference when routing a deep-link', async () => {
     // unpinned_configuration routes to step `devices` but focuses `configurationVersion` — a field that
-    // alone infers the `validation` catch-all (no tab). The explicit step must win → Failed channels tab.
+    // alone infers the `validation` catch-all. The explicit step must win → Devices section.
     const originalHash = window.location.hash;
     window.location.hash = '#/day/remy-2023-06-22?field=configurationVersion&step=devices';
     try {
       renderFrame();
       await waitFor(() =>
-        expect(screen.getByRole('button', { name: /^Failed channels:/ })).toHaveAttribute('aria-current', 'page')
+        expect(screen.getByRole('button', { name: /^Devices & Failed Channels/ })).toHaveAttribute('aria-current', 'page')
       );
     } finally {
       window.location.hash = originalHash;
@@ -310,7 +315,7 @@ describe('DayEditorFrame', () => {
     renderFrame();
     const main = document.getElementById('main-content');
     expect(main).not.toHaveFocus(); // initial mount does not steal focus
-    await user.click(screen.getByRole('button', { name: /^Failed channels:/ }));
+    await user.click(screen.getByRole('button', { name: /^Devices & Failed Channels/ }));
     expect(main).toHaveFocus();
   });
 
@@ -324,7 +329,7 @@ describe('DayEditorFrame', () => {
     expect(screen.getByRole('button', { name: /^Download$/ })).toBeDisabled();
   });
 
-  // ── Repair flows (executable repairs surface on the readiness bar / Day tab) ──
+  // ── Repair flows (executable repairs surface on the readiness bar / Overview section) ──
   it('executes a raw-shape repair from the readiness bar (Reset tasks clears the corruption)', async () => {
     const user = userEvent.setup();
     renderFrame({
@@ -345,12 +350,12 @@ describe('DayEditorFrame', () => {
     expect(screen.queryByRole('button', { name: /^rebuild device configuration history$/i })).not.toBeInTheDocument();
   });
 
-  it('executes a session reset in place from the Day tab (malformed session → Reset session clears it)', async () => {
+  it('executes a session reset in place from Overview (malformed session → Reset session clears it)', async () => {
     const user = userEvent.setup();
     renderFrame({
       workspace: { animals: { remy: mockAnimal }, days: { 'remy-2023-06-22': { ...mockDay, session: 'corrupt' } }, settings: {} },
     });
-    // The Day tab is the default; its RawCorruptionBanner offers the reset. (The readiness bar also
+    // Overview is the default; its RawCorruptionBanner offers the reset. (The readiness bar also
     // surfaces a "Reset session" fix for the same blocker, so scope to the panel.)
     const panel = document.getElementById('main-content');
     const reset = within(panel).getByRole('button', { name: /^reset session$/i });

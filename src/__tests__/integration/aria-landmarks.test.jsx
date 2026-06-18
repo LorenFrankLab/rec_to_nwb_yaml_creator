@@ -203,8 +203,8 @@ describe('ARIA Landmarks', () => {
       expect(container.querySelectorAll('[role="banner"], header')).toHaveLength(1);
       expect(container.querySelectorAll('[role="contentinfo"], footer')).toHaveLength(1);
 
-      // Exactly one TAB is marked current within the 4-tab bar (aria-current="page"). Scoped to the
-      // tab bar so the breadcrumb's own trailing-page aria-current isn't counted.
+      // Exactly one section is marked current within the day-editor rail (aria-current="page").
+      // Scoped to the rail so the breadcrumb's own trailing-page aria-current isn't counted.
       const tabBar = screen.getByRole('navigation', { name: /day editor sections/i });
       expect(tabBar.querySelectorAll('[aria-current="page"]')).toHaveLength(1);
     });

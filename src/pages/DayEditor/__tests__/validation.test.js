@@ -27,7 +27,7 @@ describe('stepIdForIssue', () => {
     expect(stepIdForIssue({ path: 'tasks[0].task_name' })).toBe('epochs');
   });
 
-  it('routes behavioral-event issues to the behavioral step (DIO has its own tab)', () => {
+  it('routes behavioral-event issues to the behavioral step (folded into Devices & Failed Channels)', () => {
     expect(stepIdForIssue({ path: 'behavioral_events[0].name' })).toBe('behavioral');
     expect(stepIdForIssue({ instancePath: '/behavioral_events/0/name' })).toBe('behavioral');
     expect(
@@ -444,9 +444,8 @@ describe('repairTargetForIssue (Repair Routing Contract)', () => {
     { code: 'multishank_bad_channels_ignored', step: 'devices', issue: { code: 'multishank_bad_channels_ignored', path: 'ntrode_electrode_group_channel_map[1]', field: 'bad_channels', step: 'devices', repairSurface: 'day' } },
     { code: 'stale_bad_channel_override', step: 'devices', issue: { code: 'stale_bad_channel_override', path: 'deviceOverrides.bad_channels', field: 'bad_channels', step: 'devices', repairSurface: 'day' } },
     { code: 'missing_camera', step: 'epochs', issue: { code: 'missing_camera', path: 'tasks', repairSurface: 'day' } },
-    // DANDI species check is repairable inline in the Day Overview — the rule emits
-    // repairSurface:'day' (rulesValidation.js) and the subject.species path routes to Overview.
-    { code: 'invalid_species', step: 'overview', issue: { code: 'invalid_species', path: 'subject.species', repairSurface: 'day' } },
+    // DANDI species is animal-static; Phase 15 repairs it in the Animal profile, not the Day view.
+    { code: 'invalid_species', step: null, issue: { code: 'invalid_species', path: 'subject.species', repairSurface: 'animal' } },
   ];
 
   const NONE_CODES = [
@@ -468,11 +467,17 @@ describe('repairTargetForIssue (Repair Routing Contract)', () => {
     expect(repairTargetForIssue(issue).surface).toBe('animal');
   });
 
-  it.each(DAY_CODES)('routes $code to the day surface on step $step', ({ issue, step }) => {
+  it.each(DAY_CODES.filter(({ step }) => step != null))('routes $code to the day surface on step $step', ({ issue, step }) => {
     const target = repairTargetForIssue(issue);
     expect(target.surface).toBe('day');
     expect(ROUTABLE_STEPS).toContain(target.step);
     expect(target.step).toBe(step);
+  });
+
+  it('routes invalid_species to the animal profile surface', () => {
+    const target = repairTargetForIssue({ code: 'invalid_species', path: 'subject.species', repairSurface: 'animal' });
+    expect(target.surface).toBe('animal');
+    expect(target.label).toMatch(/Profile/);
   });
 
   it.each(NONE_CODES)('routes $code to the none surface (no button)', ({ issue }) => {

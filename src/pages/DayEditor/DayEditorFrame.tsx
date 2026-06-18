@@ -5,7 +5,6 @@ import { useStepperShortcut } from '../../hooks/stepperShortcuts';
 import { useDayIdFromUrl } from '../../hooks/useDayIdFromUrl';
 import { mergeDayMetadata } from '../../state/workspaceUtils';
 import {
-  getAnimalSubject,
   getCopyableDioSources,
   resolveDayOwner,
 } from '../../state/workspaceSelectors';
@@ -21,7 +20,6 @@ import {
 } from '../../domain/validationPresentation';
 import { buildDayEditorViewModel } from '../../viewModels/dayEditorViewModel';
 import type { DayTabKey } from '../../viewModels/dayEditorViewModel';
-import type { StepStatus } from '../../viewModels/types';
 import { buildAnimalViewModel } from '../../viewModels/animalViewModel';
 import Breadcrumb from './Breadcrumb';
 import StatusPill from '../../components/ui/StatusPill';
@@ -32,10 +30,12 @@ import { DayEditorProvider } from './DayEditorContext';
 import type { DayEditorBundle } from './DayEditorContext';
 import SaveIndicator from './SaveIndicator';
 import DayTab from './DayTab';
+import DayFilesWeightSection from './DayFilesWeightSection';
 import FailedChannelsTab from './FailedChannelsTab';
 import EpochsTab from './EpochsTab';
 import DioTab from './DioTab';
 import ExportPreview from './ExportPreview';
+import DayEditorSectionNav from './DayEditorSectionNav';
 import type { CopyableDioSource } from './BehavioralEventsDisplay';
 import ErrorState from './ErrorState';
 import styles from './DayEditorFrame.module.css';
@@ -46,35 +46,39 @@ interface FocusRequest {
   token: number;
 }
 
-/** The frame's main-content modes: one of the four tabs, or the transitional Export panel. */
-type FrameMode = DayTabKey | 'export';
+/** The frame's main-content modes: one of the five IA sections. */
+type FrameMode = DayTabKey;
 
-/** The four tabs' fixed order (drives the Alt+←/→ cycle). */
-const TAB_ORDER: DayTabKey[] = ['day', 'epochs', 'channels', 'dio'];
-
-/** Visual status glyph for a frame tab (same vocabulary as DayEditorSectionNav). */
-function getTabStatusIcon(status: StepStatus): string {
-  switch (status) {
-    case 'valid': return '✓';
-    case 'incomplete': return '⚠';
-    case 'error': return '✗';
-    default: return '○';
-  }
-}
+/** The five sections' fixed order (drives the Alt+←/→ cycle). */
+const TAB_ORDER: DayTabKey[] = ['overview', 'files', 'devices', 'epochs', 'finish'];
 
 /**
  * An underlying step key → the tab that folds it, for routing a repair (which targets the old step
- * keys) to its tab. `validation`/`export` map to null — the readiness bar owns validation, and the
- * transitional Export panel owns export — so a repair there does not switch tabs.
+ * keys) to its Phase 15 section. Behavioral/DIO folds into RECORDING, and validation/export fold
+ * into the finish panel.
  */
 const TAB_FOR_STEP: Record<string, DayTabKey | null> = {
-  overview: 'day',
-  devices: 'channels',
+  overview: 'overview',
+  devices: 'devices',
   epochs: 'epochs',
-  behavioral: 'dio',
-  validation: null,
-  export: null,
+  behavioral: 'devices',
+  validation: 'finish',
+  export: 'finish',
 };
+
+/** Presentation-only repair routing for fields that moved to new Phase 15 sections. */
+function sectionForRepair(step: string | null | undefined, focusPath?: string): DayTabKey | null {
+  const path = focusPath ?? '';
+  if (path.startsWith('associated_files')) return 'files';
+  if (path === 'subject.weight' || path === 'session.weight') return 'files';
+  return TAB_FOR_STEP[step ?? ''] ?? null;
+}
+
+/** The field path rendered by the section, when it differs from the validation/export path. */
+function focusPathForSection(path?: string): string | undefined {
+  if (path === 'subject.weight') return 'session.weight';
+  return path;
+}
 
 /** Map the animal-static summary view-model to the AnimalScopeCard's render contract. */
 function toScopeSummary(summary: ReturnType<typeof buildAnimalViewModel>['summary']): AnimalScopeSummary {
@@ -96,9 +100,9 @@ function toScopeSummary(summary: ReturnType<typeof buildAnimalViewModel>['summar
  * (configuration version · opto · "carried from <date>" · the lifecycle StatusPill), the autosave
  * indicator, the read-only {@link AnimalScopeCard} (the animal-static scope boundary), and the
  * issue-driven {@link ReadinessBar} (fed the authoritative `validateDay` issues — never a local
- * check). The body is a 4-tab bar — **Day / Epochs / Failed channels / DIO** — with free navigation
- * and Alt+←/→; the tab panels read their data through {@link DayEditorProvider} (NOT props), so the
- * provider must wrap them. A header **Export** action reveals the {@link ExportPreview} surface (the
+ * check). The body is a grouped vertical rail — SESSION / RECORDING / FINISH — with free navigation
+ * and Alt+←/→; the panels read their data through {@link DayEditorProvider} (NOT props), so the
+ * provider must wrap them. A header **Export** action opens the Validation & Export section (the
  * issue-gated download/copy + the YAML preview + the batch "export all days").
  *
  * Behavior reused from the former stepper: owner resolution, the merge, the field/subject writers,
@@ -111,7 +115,7 @@ function toScopeSummary(summary: ReturnType<typeof buildAnimalViewModel>['summar
 export default function DayEditorFrame() {
   const { model, actions, selectors, persistence } = useStoreContext();
   const dayId = useDayIdFromUrl();
-  const [mode, setMode] = useState<FrameMode>('day');
+  const [mode, setMode] = useState<FrameMode>('overview');
 
   const day = model.workspace?.days?.[dayId as string];
   const { ownerKey, animal } = resolveDayOwner(model.workspace, dayId);
@@ -137,10 +141,10 @@ export default function DayEditorFrame() {
     [model.workspace, ownerKey]
   );
 
-  // The day-editor view-model: chips, the 4-tab model, the breadcrumb, the Overview field slice, and
-  // the bad-channel marks — all from the SAME builder, so the frame is a thin renderer.
+  // The day-editor view-model: chips, grouped rail, breadcrumb, the Overview field slice, and the
+  // bad-channel marks — all from the SAME builder, so the frame is a thin renderer.
   const vm = useMemo(
-    () => buildDayEditorViewModel(model.workspace, dayId, mode === 'export' ? 'day' : mode),
+    () => buildDayEditorViewModel(model.workspace, dayId, mode),
     [model.workspace, dayId, mode]
   );
 
@@ -277,13 +281,12 @@ export default function DayEditorFrame() {
     if (lastFieldRouteRef.current === routeKey) return;
     lastFieldRouteRef.current = routeKey;
     const step = stepParam || stepIdForIssue({ path: field ?? '' });
-    const tab = TAB_FOR_STEP[step];
-    if (tab) goToTab(tab, field ?? undefined);
+    const tab = sectionForRepair(step, field ?? undefined);
+    if (tab) goToTab(tab, focusPathForSection(field ?? undefined));
   }, [dayId, day, animal, repairQuery, goToTab]);
 
-  // Alt+←/→ steps through the four tabs and CLAMPS at the ends (it does not wrap) — matching the
-  // former stepper's section pager. Export is not in the sequence (it is a header affordance), so the
-  // keyboard can never reach it.
+  // Alt+←/→ steps through the five sections and CLAMPS at the ends (it does not wrap), matching the
+  // former stepper's section pager.
   const stepTab = useCallback((direction: 'next' | 'prev') => {
     setMode((cur) => {
       const idx = TAB_ORDER.indexOf(cur as DayTabKey);
@@ -329,11 +332,6 @@ export default function DayEditorFrame() {
     } as unknown as RepairCommandContext);
   }, [actions, animal, ownerKey, dayId, day]);
 
-  const handleSubjectUpdate = useCallback((field: string, value: string) => {
-    if (!animal) return;
-    actions.updateAnimal(ownerKey as string, { subject: { ...getAnimalSubject(animal), [field]: value } });
-  }, [animal, ownerKey, actions]);
-
   // The readiness bar / Export-panel "Fix" routing: an executable repair runs in place; an
   // animal-surface issue deep-links the owning setup tab; a day-surface issue switches to the tab
   // that folds the owning step and focuses the field.
@@ -354,8 +352,8 @@ export default function DayEditorFrame() {
       return;
     }
     if (target.surface === 'day') {
-      const tab = TAB_FOR_STEP[target.step ?? ''];
-      if (tab) goToTab(tab, focusPath);
+      const tab = sectionForRepair(target.step, focusPath);
+      if (tab) goToTab(tab, focusPathForSection(focusPath));
     }
     // A `none`/validation/export issue has no in-tab field to focus; the message is shown in the bar.
   }, [handleRepair, ownerKey, goToTab]);
@@ -368,7 +366,10 @@ export default function DayEditorFrame() {
     if (issue?.repairCommand) return true;
     const target = repairTargetForIssue(issue);
     if (target.surface === 'animal') return true;
-    if (target.surface === 'day') return TAB_FOR_STEP[target.step ?? ''] != null;
+    if (target.surface === 'day') {
+      const focusPath = issue.focusPath || issue.path || issue.instancePath;
+      return sectionForRepair(target.step, focusPath) != null;
+    }
     return false;
   }, []);
 
@@ -401,8 +402,8 @@ export default function DayEditorFrame() {
             <button
               type="button"
               className="button-secondary"
-              onClick={() => setMode('export')}
-              aria-pressed={mode === 'export'}
+              onClick={() => setMode('finish')}
+              aria-pressed={mode === 'finish'}
             >
               Export
             </button>
@@ -433,24 +434,7 @@ export default function DayEditorFrame() {
       </div>
 
       <div className="day-editor-body">
-        {/* Tab bar: Day / Epochs / Failed channels / DIO. Free navigation; Alt+←/→ cycles. */}
-        <nav className={styles.tabBar} aria-label="Day editor sections">
-          {vm.tabs.map((tab) => (
-            <button
-              key={tab.key}
-              type="button"
-              className={`${styles.tab} ${mode === tab.key ? styles.tabActive : ''}`}
-              aria-current={mode === tab.key ? 'page' : undefined}
-              aria-label={`${tab.label}: ${tab.statusLabel}`}
-              onClick={() => goToTab(tab.key)}
-            >
-              <span>{tab.label}</span>
-              <span className={styles.tabStatus} aria-hidden="true">
-                {getTabStatusIcon(tab.status)}
-              </span>
-            </button>
-          ))}
-        </nav>
+        <DayEditorSectionNav groups={vm.sectionGroups} onNavigate={(section) => goToTab(section as DayTabKey)} />
 
         <main
           id="main-content"
@@ -460,10 +444,9 @@ export default function DayEditorFrame() {
           tabIndex={-1}
         >
           <DayEditorProvider value={dayEditorContextValue}>
-            {mode === 'day' && (
+            {mode === 'overview' && (
               <DayTab
                 {...dayEditorContextValue}
-                onSubjectUpdate={handleSubjectUpdate}
                 // DayTab's onRepair is typed `(issue: unknown)`; it forwards the RawCorruptionBanner's
                 // issue (which carries a repairCommand) — narrow it to the executor's input.
                 onRepair={(issue) => handleRepair(issue as RepairableIssue)}
@@ -471,18 +454,26 @@ export default function DayEditorFrame() {
                 overviewFields={vm.overview.fields}
               />
             )}
-            {mode === 'epochs' && <EpochsTab {...dayEditorContextValue} focusRequest={focusRequest} />}
-            {mode === 'channels' && (
-              <FailedChannelsTab {...dayEditorContextValue} badChannelMarks={vm.badChannels.marks} />
-            )}
-            {mode === 'dio' && (
-              <DioTab
+            {mode === 'files' && (
+              <DayFilesWeightSection
                 {...dayEditorContextValue}
-                copyableDioSources={dioCopyableSources}
-                carriedFrom={chips.carriedFrom}
+                overviewFields={vm.overview.fields}
               />
             )}
-            {mode === 'export' && (
+            {mode === 'epochs' && <EpochsTab {...dayEditorContextValue} focusRequest={focusRequest} />}
+            {mode === 'devices' && (
+              <>
+                <FailedChannelsTab {...dayEditorContextValue} badChannelMarks={vm.badChannels.marks} />
+                <section className="day-editor-section recording-dio-section">
+                  <DioTab
+                    {...dayEditorContextValue}
+                    copyableDioSources={dioCopyableSources}
+                    carriedFrom={chips.carriedFrom}
+                  />
+                </section>
+              </>
+            )}
+            {mode === 'finish' && (
               <ExportPreview
                 {...dayEditorContextValue}
                 workspace={model.workspace}
@@ -504,8 +495,8 @@ export default function DayEditorFrame() {
                     }
                     return;
                   }
-                  const tab = TAB_FOR_STEP[stepId];
-                  if (tab) goToTab(tab, fieldPath);
+                  const tab = sectionForRepair(stepId, fieldPath);
+                  if (tab) goToTab(tab, focusPathForSection(fieldPath));
                 }}
               />
             )}

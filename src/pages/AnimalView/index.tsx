@@ -257,6 +257,14 @@ export function AnimalView({ animalId, tab }: AnimalViewProps) {
   // Transient reconfiguration context from the hash (`?context=reconfigure&version=…`), parsed by the
   // shared useReconfigContext hook — the single source for the header banner (no per-surface forks).
   const routeContext = useReconfigContext();
+  const profileFocusPath =
+    typeof routeContext.field === 'string' && routeContext.field.startsWith('subject.')
+      ? routeContext.field
+      : null;
+
+  useEffect(() => {
+    if (profileFocusPath) setProfileOpen(true);
+  }, [profileFocusPath]);
 
   // The page view-model: the animal header facts, the grouped section-nav (each tab's status ring +
   // count token + link), the resolved active tab, and the active panel's heading + scope — all
@@ -575,6 +583,7 @@ export function AnimalView({ animalId, tab }: AnimalViewProps) {
         isOpen={profileOpen}
         animal={animal}
         dayCount={getAnimalDayIds(animal).length}
+        focusPath={profileFocusPath}
         onSave={(subject) => {
           // Identity is animal-static — the change applies to every day, so surface the re-export
           // consequence for already-exported days.

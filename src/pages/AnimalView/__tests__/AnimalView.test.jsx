@@ -133,7 +133,7 @@ describe('AnimalView — section-nav status (Task 1.1c)', () => {
 
   it('does not mark the day-work sections as todo', () => {
     renderView('days');
-    expect(screen.getByRole('link', { name: /^recording days$/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /^recording days\b/i })).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: /recording days — not set up/i })).not.toBeInTheDocument();
   });
 
@@ -178,7 +178,7 @@ describe('AnimalView — section-nav count + chevron affordance (decision 10)', 
     // value the fixture doesn't pin.
     renderView('days', { animals: { remy: configuredRemy } });
     const nav = screen.getByRole('navigation', { name: /animal sections/i });
-    expect(within(within(nav).getByRole('link', { name: /^recording days$/i })).getByText('1')).toBeInTheDocument();
+    expect(within(within(nav).getByRole('link', { name: /^recording days\b/i })).getByText('1')).toBeInTheDocument();
     expect(
       within(within(nav).getByRole('link', { name: /validation & export/i })).getByText(/\d+ ready/i)
     ).toBeInTheDocument();

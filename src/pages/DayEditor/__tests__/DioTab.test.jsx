@@ -4,8 +4,9 @@ import userEvent from '@testing-library/user-event';
 import DioTab from '../DioTab';
 
 /**
- * DioTab is the Day Editor's DIO tab. It opens on a read-only carry-forward SUMMARY of the named
- * Din/Dout channels and reveals the full ECU channel editor only when the user clicks
+ * DioTab is the Day Editor's DIO subsection inside Devices & Failed Channels. It opens on a
+ * read-only carry-forward SUMMARY of the named Din/Dout channels and reveals the full ECU channel
+ * editor only when the user clicks
  * "Edit · rewired the rig". The grid editing itself is covered at the BehavioralEventsDisplay level;
  * here we cover the summary/edit toggle, the carry-forward provenance line, and the collision gate.
  */

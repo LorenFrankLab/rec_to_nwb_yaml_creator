@@ -1,9 +1,9 @@
 /**
  * Retire-sweep guard (epoch-editor Phase 8).
  *
- * The day-editor redesign (Phases 3–5) replaced the legacy multi-step `DayEditorStepper` + its six
- * step components with the tabbed `DayEditorFrame` (Day / Epochs / Failed channels / DIO) and the
- * `ExportPreview` surface. This guard locks the retirement structurally so a step file can never
+ * The day-editor redesign replaced the legacy multi-step `DayEditorStepper` + its six step
+ * components with the sectioned `DayEditorFrame` and the `ExportPreview` surface. This guard locks
+ * the retirement structurally so a step file can never
  * reappear — as a real file OR as a live import — and silently re-fork the day-editor flow.
  *
  * It scans the real source tree (not a curated list) so a re-introduced step is caught wherever it

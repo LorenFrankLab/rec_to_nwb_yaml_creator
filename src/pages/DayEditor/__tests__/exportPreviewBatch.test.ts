@@ -48,18 +48,18 @@ describe('firstBlockingRepairLink', () => {
     expect(link!.message).toBeTruthy();
   });
 
-  it('routes a DAY-owned blocking issue to the day editor (the route cannot carry a ?field=)', () => {
-    // A free-text species ("Rat") is a day-owned blocking error (DANDI rejects it), repaired in Overview.
+  it('routes a DAY-owned blocking issue to the day editor with a field deep-link', () => {
+    // Weight is a day-owned exported value even though the schema nests it under subject.weight.
     const { workspace, animalKey, dayId } = oneAnimal((animal) => {
-      (animal.subject as { species: string }).species = 'Rat';
+      (animal.subject as { weight: number }).weight = -50;
     });
 
     const link = firstBlockingRepairLink(workspace, animalKey, dayId);
 
     expect(link).not.toBeNull();
-    expect(link!.label).toBe('Fix in Overview');
+    expect(link!.label).toBe('Fix in Files & Weight');
     // The day route carries the field as a ?field= deep-link (useDayIdFromUrl strips it from the id),
-    // so the cross-day link lands on the owning tab/field — not the default Day tab.
+    // so the cross-day link lands on the owning section/field — not the default Overview section.
     expect(link!.href).toMatch(/^#\/day\/remy-2023-06-22\?field=/);
     expect(link!.message).toBeTruthy();
   });
@@ -82,7 +82,7 @@ describe('firstBlockingRepairLink', () => {
     const link = firstBlockingRepairLink(workspace, animalKey, dayId);
 
     expect(link).not.toBeNull();
-    expect(link!.label).toBe('Fix in Devices');
+    expect(link!.label).toBe('Fix in Devices & Failed Channels');
     expect(link!.href).toContain('step=devices');
     expect(link!.href).toContain('field=configurationVersion');
   });

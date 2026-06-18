@@ -7,7 +7,7 @@
  * AnimalProfileSection; only the host (collapsible → on-demand dialog) changed.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import AnimalProfileDialog from '../AnimalProfileDialog';
 
@@ -112,6 +112,14 @@ describe('AnimalProfileDialog', () => {
     renderOpen();
     const today = new Date().toISOString().split('T')[0];
     expect(screen.getByLabelText(/Date of Birth/i)).toHaveAttribute('max', today);
+  });
+
+  it('exposes subject repair-focus anchors and focuses the requested field', async () => {
+    renderOpen({ focusPath: 'subject.species' });
+    const species = screen.getByLabelText(/Species/i);
+    expect(species).toHaveAttribute('data-field-path', 'subject.species');
+    expect(screen.getByLabelText(/Date of Birth/i)).toHaveAttribute('data-field-path', 'subject.date_of_birth');
+    await waitFor(() => expect(species).toHaveFocus());
   });
 
   it('disables save when nothing has changed (no accidental animal-wide write)', () => {

@@ -87,25 +87,32 @@ import type {
   WorkflowSeverity,
 } from './types';
 
-/** The four day-editor frame tab keys, in display order. */
-export type DayTabKey = 'day' | 'epochs' | 'channels' | 'dio';
+/** The five day-editor section keys, in display order. */
+export type DayTabKey = 'overview' | 'files' | 'devices' | 'epochs' | 'finish';
 
 /**
- * One tab of the redesigned day-editor frame. Its `status` rolls up from the underlying step the
- * tab folds (Day←overview, Epochs←epochs, Failed channels←devices, DIO←behavioral), so the tab
- * agrees with the validation truth without re-deriving it.
+ * One section of the day-editor frame. Its `status` rolls up from the underlying step(s) the
+ * section folds, so the rail agrees with validation truth without replacing the gate substrate.
  */
 export interface DayTabViewModel {
-  /** Tab key (the frame's local nav state). */
+  /** Section key (the frame's local nav state). */
   key: DayTabKey;
-  /** Tab label (e.g. 'Failed channels'). */
+  /** Section label (e.g. 'Devices & Failed Channels'). */
   label: string;
   /** Rolled-up status of the step this tab folds. */
   status: StepStatus;
   /** Accessible status label (e.g. 'Complete'). */
   statusLabel: string;
-  /** Whether this is the active tab. */
+  /** Whether this is the active section. */
   active: boolean;
+}
+
+/** One grouped rail block in the Day Editor. */
+export interface DayEditorSectionGroupViewModel {
+  /** Group heading (SESSION / RECORDING / FINISH). */
+  label: string;
+  /** The group's sections, in display order. */
+  steps: StepViewModel[];
 }
 
 /**
@@ -135,8 +142,10 @@ export interface DayEditorViewModel {
   breadcrumb: BreadcrumbViewModel;
   /** The header day chips (config / opto / carried-from / lifecycle). */
   chips: DayChipsViewModel;
-  /** The 4-tab frame model (Day / Epochs / Failed channels / DIO). */
+  /** The flat section model, retained for consumers/tests that do not need group headings. */
   tabs: DayTabViewModel[];
+  /** The grouped vertical-rail model (SESSION / RECORDING / FINISH). */
+  sectionGroups: DayEditorSectionGroupViewModel[];
   /** The section stepper, in display order, each with its domain step status + the active flag. */
   steps: StepViewModel[];
   /** The single severity the page banner renders (mapped from the step statuses / export gate). */
@@ -159,10 +168,10 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 // ──────────────────────────────────────────────────────────────────────────────────────────
-// Shared structure: the underlying step order + labels. The frame now renders the 4-tab model
-// (see TAB_ORDER) rather than these six steps directly, but the step statuses still drive the
-// export gate, repair routing, and the tab-status rollup — so this order is retained as the
-// validation/gate substrate. Behavioral is its own step; the Validation step carries "N to fix".
+// Shared structure: the underlying step order + labels. The frame renders a five-section grouped
+// rail over these six steps, but the step statuses still drive the export gate, repair routing, and
+// the section-status rollup — so this order is retained as the validation/gate substrate.
+// Behavioral is still its own step; Phase 15 only folds its surface into RECORDING.
 // ──────────────────────────────────────────────────────────────────────────────────────────
 
 /** The underlying step order + labels (the validation/export-gate substrate the tabs roll up from). */
@@ -175,7 +184,7 @@ const STEP_ORDER: ReadonlyArray<{ key: string; label: string }> = [
   { key: 'export', label: 'Export' },
 ];
 
-/** The default active step the editor opens on. */
+/** The default active section the editor opens on. */
 const DEFAULT_STEP = 'overview';
 
 /** The accessible status label per step status — rendered verbatim by DayEditorSectionNav (it reads `step.statusLabel`). */
@@ -186,46 +195,132 @@ const STEP_STATUS_LABEL: Record<StepStatus, string> = {
   pending: 'Not started',
 };
 
-/**
- * The 4-tab frame model: each tab folds one underlying step (Day←overview, Epochs←epochs, Failed
- * channels←devices, DIO←behavioral). The frame renders these tabs; the validation/repair/export-gate
- * machinery still runs on the underlying step keys, so this is a presentation join — not a re-model.
- */
-const TAB_ORDER: ReadonlyArray<{ key: DayTabKey; label: string; step: string }> = [
-  { key: 'day', label: 'Day', step: 'overview' },
-  { key: 'epochs', label: 'Epochs', step: 'epochs' },
-  { key: 'channels', label: 'Failed channels', step: 'devices' },
-  { key: 'dio', label: 'DIO', step: 'behavioral' },
+/** The five section rows rendered by the grouped vertical rail. */
+const TAB_ORDER: ReadonlyArray<{ key: DayTabKey; label: string; steps: string[] }> = [
+  { key: 'overview', label: 'Overview', steps: ['overview'] },
+  { key: 'files', label: 'Files & Weight', steps: ['overview'] },
+  { key: 'devices', label: 'Devices & Failed Channels', steps: ['devices', 'behavioral'] },
+  { key: 'epochs', label: 'Tasks & Epochs', steps: ['epochs'] },
+  { key: 'finish', label: 'Validation & Export', steps: ['validation', 'export'] },
 ];
 
-/** The valid tab keys (the frame's nav allow-list), derived from the tab order. */
+/** The valid section keys (the frame's nav allow-list), derived from the section order. */
 const TAB_KEYS: ReadonlySet<string> = new Set(TAB_ORDER.map((t) => t.key));
 
-/** Underlying step key → the tab that folds it (for resolving an active step to its tab). */
+/** Underlying step key → the section that folds it (for resolving repair routing to the rail). */
 const TAB_FOR_STEP: Record<string, DayTabKey> = Object.fromEntries(
-  TAB_ORDER.map((t): [string, DayTabKey] => [t.step, t.key])
+  TAB_ORDER.flatMap((t) => t.steps.map((step): [string, DayTabKey] => [step, t.key]))
 );
 
 /**
- * Resolve the active TAB from the `active` argument, which may be a tab key (the frame's nav state)
- * OR an underlying step key (a repair routing to e.g. 'devices'). A `validation`/`export` step — which
- * no tab folds (the readiness bar / animal-level export own those) — falls back to the Day tab.
+ * Resolve the active section from the `active` argument, which may be a section key (the frame's nav
+ * state) OR an underlying step key (a repair routing to e.g. 'devices').
  */
 function resolveActiveTab(active: string): DayTabKey {
   if (TAB_KEYS.has(active)) return active as DayTabKey;
-  return TAB_FOR_STEP[active] ?? 'day';
+  return TAB_FOR_STEP[active] ?? 'overview';
 }
 
 /**
- * Build the 4-tab frame model, each tab's status rolled up from the step it folds (so the tab can
- * never disagree with the validation truth).
+ * Return the highest-severity status for a section that folds multiple underlying statuses.
  */
-function buildTabs(stepStatus: Record<string, StepStatus>, activeStep: string): DayTabViewModel[] {
+function rollupStepStatus(statuses: StepStatus[]): StepStatus {
+  if (statuses.includes('error')) return 'error';
+  if (statuses.includes('incomplete')) return 'incomplete';
+  if (statuses.includes('pending')) return 'pending';
+  return 'valid';
+}
+
+function issuePath(issue: RepairableIssue): string {
+  return String(issue.focusPath || issue.path || issue.instancePath || issue.field || '');
+}
+
+function hasErrorIssue(issues: RepairableIssue[], matcher: (issue: RepairableIssue) => boolean): boolean {
+  return issues.some((issue) => issue.severity === 'error' && matcher(issue));
+}
+
+function isFilesWeightIssue(issue: RepairableIssue): boolean {
+  const path = issuePath(issue);
+  return (
+    path.includes('associated_files') ||
+    path === 'subject.weight' ||
+    path === 'session.weight' ||
+    issue.code === 'orphaned_file' ||
+    (issue.code === 'malformed_day_collection' && issue.field === 'associated_files')
+  );
+}
+
+function buildSectionItems(
+  stepStatus: Record<string, StepStatus>,
+  toFixCount: number,
+  activeStep: string,
+  issues: RepairableIssue[] = []
+): StepViewModel[] {
   const activeTab = resolveActiveTab(activeStep);
-  return TAB_ORDER.map(({ key, label, step }) => {
-    const status = stepStatus[step] ?? 'incomplete';
-    return { key, label, status, statusLabel: STEP_STATUS_LABEL[status], active: key === activeTab };
-  });
+  const filesStatus: StepStatus = hasErrorIssue(issues, isFilesWeightIssue) ? 'error' : 'valid';
+  const specs: Array<{ key: DayTabKey; label: string; status: StepStatus; issueCount?: number }> = [
+    { key: 'overview', label: 'Overview', status: stepStatus.overview ?? 'incomplete' },
+    { key: 'files', label: 'Files & Weight', status: filesStatus },
+    {
+      key: 'devices',
+      label: 'Devices & Failed Channels',
+      status: rollupStepStatus([
+        stepStatus.devices ?? 'incomplete',
+        stepStatus.behavioral ?? 'incomplete',
+      ]),
+    },
+    { key: 'epochs', label: 'Tasks & Epochs', status: stepStatus.epochs ?? 'incomplete' },
+    {
+      key: 'finish',
+      label: 'Validation & Export',
+      status: rollupStepStatus([
+        stepStatus.validation ?? 'incomplete',
+        stepStatus.export ?? 'incomplete',
+      ]),
+      ...(toFixCount > 0 ? { issueCount: toFixCount } : {}),
+    },
+  ];
+  return specs.map((spec) => ({
+    key: spec.key,
+    label: spec.label,
+    status: spec.status,
+    statusLabel: STEP_STATUS_LABEL[spec.status],
+    active: spec.key === activeTab,
+    ...(spec.issueCount != null ? { issueCount: spec.issueCount } : {}),
+  }));
+}
+
+/**
+ * Build the flat five-section model, each section's status rolled up from the step(s) it folds.
+ */
+function buildTabs(
+  stepStatus: Record<string, StepStatus>,
+  activeStep: string,
+  issues: RepairableIssue[] = []
+): DayTabViewModel[] {
+  return buildSectionItems(stepStatus, 0, activeStep, issues).map((section) => ({
+    key: section.key as DayTabKey,
+    label: section.label,
+    status: section.status,
+    statusLabel: section.statusLabel,
+    active: section.active,
+  }));
+}
+
+/** Build the grouped vertical-rail model the Day Editor frame renders. */
+function buildSectionGroups(
+  stepStatus: Record<string, StepStatus>,
+  toFixCount: number,
+  activeStep: string,
+  issues: RepairableIssue[] = []
+): DayEditorSectionGroupViewModel[] {
+  const sections = buildSectionItems(stepStatus, toFixCount, activeStep, issues);
+  const byKey = Object.fromEntries(sections.map((section) => [section.key, section]));
+  return [
+    { label: 'SESSION', steps: [byKey.overview as StepViewModel, byKey.files as StepViewModel] },
+    { label: 'RECORDING', steps: [byKey.devices as StepViewModel, byKey.epochs as StepViewModel] },
+    { label: 'FINISH', steps: [byKey.finish as StepViewModel] },
+  ];
 }
 
 /**
@@ -457,8 +552,11 @@ function buildOverviewFields(
 
   // Read-only inherited subject identity facts (always animal-owned / inherited on this surface).
   fields.push(readOnlyInherited('subject.subject_id', 'Subject ID', subject.subject_id));
+  fields.push(readOnlyInherited('subject.species', 'Species', subject.species));
   fields.push(readOnlyInherited('subject.sex', 'Sex', subject.sex));
   fields.push(readOnlyInherited('subject.genotype', 'Genotype', subject.genotype));
+  fields.push(readOnlyInherited('subject.date_of_birth', 'Date of Birth', subject.date_of_birth));
+  fields.push(readOnlyInherited('subject.description', 'Subject Description', subject.description));
 
   // Read-only inherited experimenter facts.
   fields.push(
@@ -1081,6 +1179,7 @@ function emptyShellViewModel(
     breadcrumb: buildBreadcrumb(ownerKey, dayDate),
     chips: DEFAULT_CHIPS,
     tabs: buildTabs(FAIL_CLOSED_STEP_STATUS, DEFAULT_STEP),
+    sectionGroups: buildSectionGroups(FAIL_CLOSED_STEP_STATUS, 0, DEFAULT_STEP),
     steps,
     overall: 'error',
     overview: { fields: [] },
@@ -1248,7 +1347,8 @@ export function buildDayEditorViewModel(
     shell,
     breadcrumb: buildBreadcrumb(ownerKey, day.date),
     chips: buildChips(day, animal as Animal, merged, animalDays as Day[], mergeFailed),
-    tabs: buildTabs(stepStatus, activeStep),
+    tabs: buildTabs(stepStatus, activeStep, rawIssues),
+    sectionGroups: buildSectionGroups(stepStatus, toFixCount, activeStep, rawIssues),
     steps,
     overall,
     overview: { fields: overviewFields },

@@ -1,11 +1,9 @@
 import { useState, useCallback } from 'react';
 import ReadOnlyField from './ReadOnlyField';
 import KeywordsEditor from './KeywordsEditor';
-import DayTechnicalSection from './DayTechnicalSection';
 import MalformedCollectionNotice from './MalformedCollectionNotice';
 import RawCorruptionBanner from '../../components/RawCorruptionBanner';
 import { validateField } from './validation';
-import { isValidSpecies } from '../../validation/dandiSubject';
 import { RAW_DAY_ARRAY_FIELDS } from '../../validation/rawShape';
 import {
   getDaySession,
@@ -14,16 +12,13 @@ import {
   getAnimalSubject,
   getAnimalExperimenters,
   getExperimenterNames,
-  getAnimalDayIds,
 } from '../../state/workspaceSelectors';
 import { useDayEditorContext } from './DayEditorContext';
 import type { DayEditorBundle } from './DayEditorContext';
 import type { FieldValueViewModel } from '../../viewModels/types';
 
 interface DayTabProps extends DayEditorBundle {
-  /** Writes a subject field through to the animal record (e.g. `('species', value)`). */
-  onSubjectUpdate?: (field: string, value: string) => void;
-  /** A repair request focusing a subject field — expands the inherited section during render. */
+  /** A repair request focusing a field in this section. */
   focusRequest?: { fieldPath?: string; token?: number } | null;
   /** Executes an issue's `repairCommand` in place (resets a malformed session record). */
   onRepair?: (issue: unknown) => void;
@@ -40,26 +35,25 @@ interface DayTabProps extends DayEditorBundle {
 const OVERVIEW_STEP_COLLECTIONS = RAW_DAY_ARRAY_FIELDS.filter((f) => f.repairStep === 'overview');
 
 /**
- * DayTab — the day editor's **Day** tab (folded from the former OverviewStep).
+ * DayTab — the day editor's Overview section (folded from the former OverviewStep).
  *
- * Day-specific session metadata: the derived session id, the editable data folder (the directory
- * this day's files live in), weight, session/experiment descriptions, keywords, the per-day
- * technical parameters, an opto-protocol summary for opto animals, and the collapsible
- * inherited-from-animal metadata (subject identity + experimenters, repairable in place).
+ * Day-specific overview metadata: the derived session id, session/experiment descriptions,
+ * keywords, an opto-protocol summary for opto animals, and a read-only inherited animal profile
+ * summary (subject identity + experimenters).
  *
  * The Workspace › Animal › Day breadcrumb now lives in the frame header (DayEditorFrame), not here,
- * so a single breadcrumb is shared across all four tabs.
+ * so a single breadcrumb is shared across all sections.
  *
  * UX Philosophy:
  * - Show what matters: animal ID + date for context (in the frame header)
  * - Edit what's unique: session-specific metadata
- * - Hide what's inherited: subject/experimenters (available if needed)
+ * - Show inherited subject/team facts read-only, with animal-wide edits kept on AnimalView
  */
 export default function DayTab(props: DayTabProps) {
   // The shared day bundle comes from DayEditorContext in the Day Editor (an isolated render
   // passes the same fields as props). Section-specific props stay direct.
   const { animal, day, mergedDay, onFieldUpdate, animalKey = undefined } = useDayEditorContext(props);
-  const { onSubjectUpdate = () => {}, focusRequest = null, onRepair } = props;
+  const { onRepair } = props;
   // The store OWNER KEY (resolved by DayEditorFrame). Animal-editor links and the derived
   // session_id help text use it so a stale/missing `animal.id` record field can't misroute a
   // recovered animal's repair; falls back to `animal.id` for isolated renders that don't pass it.
@@ -71,9 +65,6 @@ export default function DayTab(props: DayTabProps) {
   // blank/crashed step.
   const session = getDaySession(day);
   const subject = getAnimalSubject(animal);
-  // Phase 8.7 Task 2b: name the blast radius (count) for the inherited-subject edits below — a
-  // subject correction reaches every recording day this animal owns, not just this one.
-  const animalDayCount = getAnimalDayIds(animal).length;
   const experimenters = getAnimalExperimenters(animal);
   const experimenterNames = getExperimenterNames(animal);
   const keywords = getDayKeywords(day);
@@ -92,31 +83,8 @@ export default function DayTab(props: DayTabProps) {
   const overviewField = (path: string) => fieldsByPath.get(path);
 
   const [fieldErrors, setFieldErrors] = useState<Record<string, { message: string } | null>>({});
-  // Write-only: the setter drives the species-repair validation flow (below); the value itself
-  // is never read, so it's left unbound to avoid an unused-var warning while preserving behavior.
+  // Write-only: blur-time validation toggles this transient state; the value itself is never read.
   const [, setValidatingField] = useState<string | null>(null);
-  const [showInherited, setShowInherited] = useState(false);
-  // Inline error for the species repair field — without it the field could silently
-  // write an invalid value through to the animal, recreating the "blocked at export
-  // with no place to fix" trap this repair surface exists to remove.
-  const [speciesError, setSpeciesError] = useState('');
-
-  // A repair action for a subject field (e.g. subject.date_of_birth) routes here, but
-  // those controls live inside the collapsed "inherited metadata" section. Expand the
-  // section when a subject field is the focus target, **during render** (the
-  // adjust-state-from-props pattern) rather than in a passive effect — so the control
-  // is present in the same commit the parent stepper searches for the focus anchor.
-  // A passive effect would expand a tick later and the stepper could search first,
-  // miss the anchor, and fall back to the step with no retry.
-  const focusFieldPath = focusRequest?.fieldPath;
-  const focusToken = focusRequest?.token ?? null;
-  const [seenFocusToken, setSeenFocusToken] = useState<number | null>(null);
-  if (focusToken !== seenFocusToken) {
-    setSeenFocusToken(focusToken);
-    if (typeof focusFieldPath === 'string' && focusFieldPath.startsWith('subject.')) {
-      setShowInherited(true);
-    }
-  }
 
   // Validate field on blur. The session fields are stored nested under `day.session`
   // (the write path, e.g. `session.experiment_description`) but the export emits them
@@ -162,7 +130,7 @@ export default function DayTab(props: DayTabProps) {
   const errorCount = Object.values(fieldErrors).filter(Boolean).length;
 
   // The Workspace › Animal › Day breadcrumb is rendered ONCE by the frame header (DayEditorFrame),
-  // not per-tab, so a single breadcrumb is shared across all four tabs.
+  // not per-section, so a single breadcrumb is shared across the rail.
 
   return (
     <div className="overview-step">
@@ -190,9 +158,9 @@ export default function DayTab(props: DayTabProps) {
         {errorCount > 0 && `${errorCount} validation ${errorCount === 1 ? 'error' : 'errors'}`}
       </div>
 
-      {/* Session Metadata (Day-Specific Editable Fields) */}
+      {/* Overview metadata (day-specific editable fields) */}
       <section className="day-editor-section">
-        <h2>Session Metadata</h2>
+        <h2>Overview</h2>
 
         <div className="form-grid">
           <ReadOnlyField
@@ -203,30 +171,6 @@ export default function DayTab(props: DayTabProps) {
               ?? `Auto-generated from animal ID and date: ${ownerKey}_${dayDateKey}`
             }
           />
-
-          {/* Data folder: the directory on disk where this day's recording files live. The user
-              provides it; per-epoch file names derive inside it (the derivation lands in a later
-              phase). Set once and carried forward to same-block days. OFF-EXPORT — the merge never
-              reads `day.dataFolder`, so it does not appear in the YAML. Uncontrolled input keyed by
-              the stored value so a route-level day remount re-seeds it. */}
-          <div className="form-field">
-            <label htmlFor="day-data-folder">Data folder</label>
-            <input
-              id="day-data-folder"
-              type="text"
-              name="dataFolder"
-              data-field-path="dataFolder"
-              key={`day-data-folder-${day.dataFolder ?? ''}`}
-              defaultValue={day.dataFolder ?? ''}
-              placeholder="e.g. /stelmo/denisse/Laurent/20260514/"
-              aria-describedby="day-data-folder-help"
-              onBlur={(e) => onFieldUpdate('dataFolder', e.target.value)}
-            />
-            <span id="day-data-folder-help" className="field-help-text">
-              Where this day&apos;s files live (you provide it); epoch file names derive inside it.
-              Set once · carried forward to the next day.
-            </span>
-          </div>
 
           <div className="form-field">
             <label htmlFor="session-description" className="required">
@@ -282,48 +226,6 @@ export default function DayTab(props: DayTabProps) {
             )}
           </div>
 
-          {/* Phase 8.7 Task 2.5: weight is a RECORDING-DAY fact for export. The Day Overview is
-              the primary review/edit surface for the exported session weight — it writes
-              `session.weight` (the merge prefers it over the animal baseline). An animal-created
-              weight is only an initial/fallback value, labelled as such and confirmable here; it
-              is no longer silently reused as the normal exported value for every day, and editing
-              the day weight no longer mutates the shared animal record. */}
-          <div className="form-field">
-            <label htmlFor="session-weight">Recording-day weight (grams)</label>
-            <input
-              id="session-weight"
-              type="number"
-              min="0"
-              step="any"
-              name="session.weight"
-              data-field-path="session.weight"
-              key={`session-weight-${session.weight ?? ''}`}
-              defaultValue={session.weight ?? ''}
-              aria-describedby="session-weight-help"
-              placeholder={
-                overviewField('session.weight')?.fallbackValue
-                ?? (typeof subject.weight === 'number'
-                  ? `${subject.weight} (animal baseline)`
-                  : 'e.g. 450')
-              }
-              onBlur={(e) => {
-                // Guard against NaN reaching state from a partially-valid number entry — write
-                // undefined (the fallback) rather than a NaN weight on the primary export path.
-                const value = e.target.valueAsNumber;
-                onFieldUpdate('session.weight', Number.isFinite(value) ? value : undefined);
-              }}
-            />
-            <span id="session-weight-help" className="field-help-text">
-              {overviewField('session.weight')?.helpText
-                ?? (session.weight !== undefined
-                  ? 'Weight recorded for this session — the value exported for this day.'
-                  : typeof subject.weight === 'number'
-                    ? `No weight set for this day — the animal baseline (${subject.weight} g) will be `
-                      + `exported as a fallback. Enter this session's weight to set it for this day.`
-                    : 'Enter the weight recorded for this session (exported for this day).')}
-            </span>
-          </div>
-
           <KeywordsEditor
             value={keywords}
             onChange={(keywords) => onFieldUpdate('keywords', keywords)}
@@ -362,153 +264,53 @@ export default function DayTab(props: DayTabProps) {
         </section>
       )}
 
-      {/* Per-day technical parameters (default header path + units) live on
-          day.technical, where the export reads them. */}
-      <DayTechnicalSection
-        technical={day.technical}
-        onFieldUpdate={onFieldUpdate}
-        recordingSystemDefaults={animal?.technicalDefaults}
-        animalKey={ownerKey}
-      />
+      <section className="day-editor-section inherited-metadata-section">
+        <h2>Subject + team inherited from the animal</h2>
+        <div className="inherited-notice">
+          Subject facts and experimenter metadata are animal-wide. They are shown here for review
+          and edited from the animal profile.
+          <a href={`#/animal/${ownerKey}/days?field=subject.species`}>Edit animal setup</a>
+        </div>
 
-      {/* Collapsible Inherited Metadata */}
-      <section className="inherited-metadata-section">
-        <button
-          type="button"
-          className="inherited-metadata-toggle"
-          onClick={() => setShowInherited(!showInherited)}
-          aria-expanded={showInherited}
-          aria-controls="inherited-metadata-content"
-        >
-          <span className="toggle-icon" aria-hidden="true">
-            {showInherited ? '▼' : '▶'}
-          </span>
-          View / edit inherited subject metadata
-          <span className="inherited-metadata-badge">Updates all days</span>
-        </button>
-
-        {showInherited && (
-          <div id="inherited-metadata-content" className="inherited-metadata-content">
-            {/* Subject Information. Identity fields are read-only; the constant subject facts a
-                recording-day scientist commonly needs to repair (date of birth, species,
-                description) are editable here and write through to the animal so existing animals
-                can be fixed without leaving the day. Weight is NOT here — it is a recording-day
-                fact edited in Session Metadata above (Phase 8.7 Task 2.5). */}
-            <div className="inherited-section">
-              <h3>Subject Information</h3>
-              <div className="inherited-notice">
-                Inherited from Animal — editing these fields updates the animal record
-                shared by all {animalDayCount} recording day{animalDayCount === 1 ? '' : 's'},
-                including any already exported.
-                <a href={`#/animal/${ownerKey}/days`}>Edit Animal</a>
-              </div>
-
-              <div className="form-grid">
-                <ReadOnlyField
-                  label="Subject ID"
-                  value={overviewField('subject.subject_id')?.value ?? subject.subject_id}
-                />
-                <ReadOnlyField label="Sex" value={overviewField('subject.sex')?.value ?? subject.sex} />
-                <ReadOnlyField
-                  label="Genotype"
-                  value={overviewField('subject.genotype')?.value ?? subject.genotype}
-                />
-
-                <div className="form-field">
-                  <label htmlFor="subject-date-of-birth">Date of Birth</label>
-                  <input
-                    id="subject-date-of-birth"
-                    type="date"
-                    data-field-path="subject.date_of_birth"
-                    key={subject.date_of_birth || ''}
-                    defaultValue={(subject.date_of_birth || '').split('T')[0]}
-                    max={new Date().toISOString().split('T')[0]}
-                    onBlur={(e) =>
-                      onSubjectUpdate(
-                        'date_of_birth',
-                        e.target.value ? new Date(e.target.value).toISOString() : ''
-                      )
-                    }
-                  />
-                </div>
-
-                <div className="form-field">
-                  <label htmlFor="subject-species">Species</label>
-                  <input
-                    id="subject-species"
-                    type="text"
-                    data-field-path="subject.species"
-                    key={`species-${subject.species || ''}`}
-                    defaultValue={subject.species || ''}
-                    aria-invalid={!!speciesError}
-                    aria-describedby={speciesError ? 'subject-species-error' : 'subject-species-hint'}
-                    onBlur={(e) => {
-                      const value = e.target.value.trim();
-                      // Surface the format error here (the value still writes through so
-                      // the export gate agrees), so the user isn't silently left invalid.
-                      setSpeciesError(
-                        value !== '' && !isValidSpecies(value)
-                          ? 'Use a Latin binomial (e.g. Rattus norvegicus) or an NCBI Taxonomy URI.'
-                          : ''
-                      );
-                      onSubjectUpdate('species', value);
-                    }}
-                  />
-                  <span id="subject-species-hint" className="field-help-text">
-                    Scientific name (e.g. Rattus norvegicus) or an NCBI Taxonomy URI. Free text
-                    like &quot;Rat&quot; is rejected by NWB archives.
-                  </span>
-                  {speciesError && (
-                    <span id="subject-species-error" className="validation-error" role="alert">
-                      {speciesError}
-                    </span>
-                  )}
-                </div>
-
-                <div className="form-field">
-                  <label htmlFor="subject-description">Description</label>
-                  <input
-                    id="subject-description"
-                    type="text"
-                    data-field-path="subject.description"
-                    key={`desc-${subject.description || ''}`}
-                    defaultValue={subject.description || ''}
-                    onBlur={(e) => onSubjectUpdate('description', e.target.value)}
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Experimenters */}
-            <div className="inherited-section">
-              <h3>Experimenters</h3>
-              <div className="inherited-notice">
-                Inherited from Animal
-                <a href={`#/animal/${ownerKey}/days`}>Edit Animal</a>
-              </div>
-
-              <div className="form-grid">
-                <ReadOnlyField
-                  label="Names"
-                  value={
-                    overviewField('experimenters.experimenter_name')?.value
-                    ?? experimenterNames.join(', ')
-                  }
-                />
-                <ReadOnlyField
-                  label="Lab"
-                  value={overviewField('experimenters.lab')?.value ?? experimenters.lab}
-                />
-                <ReadOnlyField
-                  label="Institution"
-                  value={overviewField('experimenters.institution')?.value ?? experimenters.institution}
-                />
-              </div>
-            </div>
-          </div>
-        )}
+        <div className="form-grid read-only-summary-grid">
+          <ReadOnlyField
+            label="Subject ID"
+            value={overviewField('subject.subject_id')?.value ?? subject.subject_id}
+          />
+          <ReadOnlyField
+            label="Species"
+            value={overviewField('subject.species')?.value ?? subject.species}
+          />
+          <ReadOnlyField label="Sex" value={overviewField('subject.sex')?.value ?? subject.sex} />
+          <ReadOnlyField
+            label="Genotype"
+            value={overviewField('subject.genotype')?.value ?? subject.genotype}
+          />
+          <ReadOnlyField
+            label="Date of Birth"
+            value={overviewField('subject.date_of_birth')?.value ?? subject.date_of_birth}
+          />
+          <ReadOnlyField
+            label="Subject Description"
+            value={overviewField('subject.description')?.value ?? subject.description}
+          />
+          <ReadOnlyField
+            label="Names"
+            value={
+              overviewField('experimenters.experimenter_name')?.value
+              ?? experimenterNames.join(', ')
+            }
+          />
+          <ReadOnlyField
+            label="Lab"
+            value={overviewField('experimenters.lab')?.value ?? experimenters.lab}
+          />
+          <ReadOnlyField
+            label="Institution"
+            value={overviewField('experimenters.institution')?.value ?? experimenters.institution}
+          />
+        </div>
       </section>
     </div>
   );
 }
-

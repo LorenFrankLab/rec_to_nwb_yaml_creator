@@ -105,8 +105,7 @@ export const CATEGORY_BY_CODE: Readonly<Record<string, WorkflowCategory>> = Obje
   multiple_excitation_sources: WORKFLOW_CATEGORY.ANIMAL_SETUP,
   // Optical-fiber / virus-injection coordinate reference is part of the animal's opto setup.
   missing_opto_reference: WORKFLOW_CATEGORY.ANIMAL_SETUP,
-  // Subject identity is part of the animal's shared setup (set at animal creation; species is
-  // the one editable in the Day Overview, but it still belongs to the Subject setup item).
+  // Subject identity is part of the animal's shared setup and is edited from the animal profile.
   invalid_species: WORKFLOW_CATEGORY.ANIMAL_SETUP,
   subject_id_slash: WORKFLOW_CATEGORY.ANIMAL_SETUP,
   session_id_slash: WORKFLOW_CATEGORY.ANIMAL_SETUP,

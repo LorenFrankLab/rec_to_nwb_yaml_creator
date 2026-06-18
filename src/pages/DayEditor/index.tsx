@@ -1,9 +1,10 @@
 /**
  * Day Editor View — recording-session metadata editor (`#/day/:id`).
  *
- * Renders the tabbed {@link DayEditorFrame} (Day / Epochs / Failed channels / DIO, plus the
- * export-preview surface). This replaced the legacy multi-step `DayEditorStepper` in the
- * epoch-editor redesign; the per-section content now lives in the frame's tabs.
+ * Renders the sectioned {@link DayEditorFrame} (Overview / Files & Weight /
+ * Devices & Failed Channels / Tasks & Epochs / Validation & Export). This replaced the legacy
+ * multi-step `DayEditorStepper` in the epoch-editor redesign; the per-section content now lives in
+ * the frame.
  */
 
 import DayEditorFrame from './DayEditorFrame';
@@ -21,7 +22,7 @@ interface DayEditorProps {
  * Day Editor - Entry point for day editing workflow
  *
  * Renders the DayEditorFrame, which manages the day-editor chrome (header chips + readiness bar +
- * the Day / Epochs / Failed channels / DIO tab bar).
+ * the grouped section rail).
  */
 export function DayEditor(_props: DayEditorProps) {
   // DayEditorFrame reads dayId from URL via useDayIdFromUrl hook

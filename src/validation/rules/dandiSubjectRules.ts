@@ -28,7 +28,7 @@ export function dandiSubjectConformance(model: ValidationModel): ValidationIssue
       issues.push({
         path: 'subject.species',
         code: 'invalid_species',
-        repairSurface: 'day',
+        repairSurface: 'animal',
         severity: 'error',
         message:
           `Species "${sp}" is not DANDI-valid. Use a Latin binomial (e.g. ` +

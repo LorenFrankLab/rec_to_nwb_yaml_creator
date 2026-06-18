@@ -55,26 +55,26 @@ describe('global shortcuts + help (integration)', () => {
     expect(screen.queryByRole('dialog', { name: /keyboard shortcuts/i })).not.toBeInTheDocument();
   });
 
-  it('Alt+ArrowRight / Alt+ArrowLeft move the DayEditor tabs', async () => {
+  it('Alt+ArrowRight / Alt+ArrowLeft move the DayEditor sections', async () => {
     await renderRoute(`#/day/${DAY_ID}`);
-    await screen.findByRole('heading', { name: /session metadata/i }); // the Day tab is active
+    await screen.findByRole('heading', { name: /overview/i }); // the Overview section is active
 
-    // Advance to the Epochs tab.
+    // Advance to Files & Weight.
     fireEvent.keyDown(document.body, { key: 'ArrowRight', altKey: true });
-    expect(await screen.findByRole('heading', { name: /^Epochs$/i })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: /files & weight/i })).toBeInTheDocument();
 
-    // Retreat back to the Day tab.
+    // Retreat back to Overview.
     fireEvent.keyDown(document.body, { key: 'ArrowLeft', altKey: true });
-    expect(await screen.findByRole('heading', { name: /session metadata/i })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: /overview/i })).toBeInTheDocument();
   });
 
-  it('Alt+N opens the epoch template menu on the Epochs tab', async () => {
+  it('Alt+N opens the epoch template menu in Tasks & Epochs', async () => {
     const user = userEvent.setup();
     await renderRoute(`#/day/${DAY_ID}`);
     await screen.findByRole('heading', { name: /day editor/i });
 
-    // Go to the Epochs tab.
-    await user.click(screen.getByRole('button', { name: /^Epochs:/i }));
+    // Go to the Tasks & Epochs section.
+    await user.click(screen.getByRole('button', { name: /^Tasks & Epochs\b/i }));
     await screen.findByRole('heading', { name: /^Epochs$/i });
 
     // Alt+N opens the grid's add affordance — the "+ from template" menu.
@@ -84,18 +84,18 @@ describe('global shortcuts + help (integration)', () => {
 
   it('Alt+N is a no-op on a step with no add target (Overview)', async () => {
     await renderRoute(`#/day/${DAY_ID}`);
-    await screen.findByRole('heading', { name: /session metadata/i });
+    await screen.findByRole('heading', { name: /overview/i });
 
     fireEvent.keyDown(document.body, { key: 'n', altKey: true });
     await act(async () => { await Promise.resolve(); });
     // No dialog appears and the view is unchanged.
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: /session metadata/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /overview/i })).toBeInTheDocument();
   });
 
   it('further shortcuts are ignored while the help dialog is open', async () => {
     await renderRoute(`#/day/${DAY_ID}`);
-    await screen.findByRole('heading', { name: /session metadata/i });
+    await screen.findByRole('heading', { name: /overview/i });
 
     fireEvent.keyDown(document.body, { key: '?' });
     expect(await screen.findByRole('dialog', { name: /keyboard shortcuts/i })).toBeInTheDocument();
@@ -111,5 +111,5 @@ describe('global shortcuts + help (integration)', () => {
 
   // The AnimalEditor stepper (and its Alt+N / Alt+Arrow step shortcuts) was removed in Phase 5;
   // the tabbed Animal View uses section-nav links + per-section add buttons, not stepper shortcuts.
-  // The Day Editor stepper shortcuts above remain the live stepper-shortcut surface.
+  // The Day Editor section shortcuts above remain the live stepper-shortcut surface.
 });

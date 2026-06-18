@@ -17,9 +17,9 @@
  *    from controlled selects/checkboxes of known cameras/epochs — a stale id cannot be typed in.
  *  - Task-name divergence (Day → Tasks & Epochs → Task modal): reusing a known `task_name` with a
  *    different `task_description` is blocked with old-vs-new context.
- *  - Behavioral events (Day → Behavioral Events tab): a day-owned DIO channel grid grouped into Inputs
- *    (Din) / Outputs (Dout); there is no animal-level library or "Use on this day" path.
- *  - Day technical read-only / route-to-Recording-System (Day → Overview → Technical parameters):
+ *  - Behavioral events (Day → Devices & Failed Channels): a day-owned DIO channel grid grouped into
+ *    Inputs (Din) / Outputs (Dout); there is no animal-level library or "Use on this day" path.
+ *  - Day technical read-only / route-to-Recording-System (Day → Devices & Failed Channels):
  *    `raw_data_to_volts` / `times_period_multiplier` are presented as effective recording-system
  *    values (read-only), with an "Edit in Recording System" link rather than a routine day edit.
  *
@@ -35,26 +35,6 @@ import {
   ANIMAL_ID,
   DAY_ID,
 } from './helpers/workspace';
-
-/**
- * Robustly open a `<details>` disclosure by its summary and assert its content is revealed.
- *
- * Headless Chromium intermittently swallows the first synthetic click on a `<summary>`, so this
- * clicks the summary, then — only if the content has not appeared — falls back to a keyboard
- * Enter on the summary. The unconditional `toBeVisible()` makes a disclosure that never opens
- * hard-fail (rather than silently passing a later content assertion against a hidden node).
- *
- * @param {import('@playwright/test').Locator} summaryLocator - The `<summary>` (or its text) to toggle.
- * @param {import('@playwright/test').Locator} contentLocator - A node revealed once the disclosure opens.
- * @returns {Promise<void>} Resolves once the content is visible.
- */
-async function openDetails(summaryLocator, contentLocator) {
-  await summaryLocator.click();
-  if (!(await contentLocator.isVisible().catch(() => false))) {
-    await summaryLocator.press('Enter');
-  }
-  await expect(contentLocator).toBeVisible();
-}
 
 test.describe('Mistake-prevention UX on high-risk edit surfaces', () => {
   test.beforeEach(async ({ page }) => {
@@ -208,7 +188,7 @@ test.describe('Mistake-prevention UX on high-risk edit surfaces', () => {
       page.getByRole('heading', { level: 1, name: `Day Editor: ${ANIMAL_ID} - 2023-06-22` }),
     ).toBeVisible();
 
-    await page.getByRole('button', { name: /^Epochs:/ }).click();
+    await page.getByRole('button', { name: /^Tasks & Epochs\b/ }).click();
     await expect(page.getByRole('heading', { level: 2, name: 'Epochs' })).toBeVisible();
 
     // In the epoch grid, epochs ARE the rows (never free-typed) and a video inherits its task's
@@ -236,7 +216,7 @@ test.describe('Mistake-prevention UX on high-risk edit surfaces', () => {
     // reuses an existing name is blocked at its SOURCE — the animal catalog — the structural guarantee
     // behind the Spyglass task-name identity. (The seeded day uses task_name "w_alternation".)
     await seedAndOpen(page, buildConfiguredWorkspaceBlob(), `/#/day/${DAY_ID}`);
-    await page.getByRole('button', { name: /^Epochs:/ }).click();
+    await page.getByRole('button', { name: /^Tasks & Epochs\b/ }).click();
     await expect(page.getByRole('heading', { level: 2, name: 'Epochs' })).toBeVisible();
 
     // Expand an epoch to reach its task picker — a controlled combobox, no free-text task name.
@@ -270,8 +250,8 @@ test.describe('Mistake-prevention UX on high-risk edit surfaces', () => {
     ];
 
     await seedAndOpen(page, blob, `/#/day/${DAY_ID}`);
-    // Behavioral events have their own day-editor tab (separate from Tasks & Epochs).
-    await page.getByRole('button', { name: /^DIO:/ }).click();
+    // Behavioral events live inside Devices & Failed Channels, not as a top-level rail item.
+    await page.getByRole('button', { name: /^Devices & Failed Channels\b/ }).click();
     await expect(page.getByRole('heading', { level: 2, name: 'Behavioral Events' })).toBeVisible();
 
     // The tab opens on the read-only carry-forward summary; reveal the editable ECU wiring table.
@@ -303,13 +283,10 @@ test.describe('Mistake-prevention UX on high-risk edit surfaces', () => {
       page.getByRole('heading', { level: 1, name: `Day Editor: ${ANIMAL_ID} - 2023-06-22` }),
     ).toBeVisible();
 
-    // The Overview section hosts the Technical parameters block as a collapsible <details>; expand
-    // it via the same robust open pattern, asserting a revealed value, then check the rest.
-    await page.getByRole('button', { name: /^Day:/ }).click();
-    await openDetails(
-      page.getByText('Technical parameters', { exact: true }),
-      page.getByText('Raw data to volts', { exact: true }),
-    );
+    // Devices & Failed Channels hosts the Technical parameters block.
+    await page.getByRole('button', { name: /^Devices & Failed Channels\b/ }).click();
+    await expect(page.getByText('Technical parameters', { exact: true })).toBeVisible();
+    await expect(page.getByText('Raw data to volts', { exact: true })).toBeVisible();
 
     // The rig constants are presented as effective recording-system values for this day.
     await expect(page.getByText('Times period multiplier', { exact: true })).toBeVisible();

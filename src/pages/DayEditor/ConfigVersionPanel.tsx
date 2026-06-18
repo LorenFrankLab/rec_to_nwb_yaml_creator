@@ -83,7 +83,7 @@ export default function ConfigVersionPanel({ reconfig, day, animal, ownerKey, on
               </span>
               {/* Repairable: assign an existing configuration version to this day. The
                   data-field-path is on the focusable <select> (not the wrapper) so the export
-                  gate's "Fix in Devices" repair-focus actually moves keyboard/SR focus here. */}
+                  gate's "Fix in Devices & Failed Channels" repair-focus moves keyboard/SR focus here. */}
               <div className="config-version-pin">
                 <label htmlFor="pin-config-version">Pin this day to:</label>
                 <select
@@ -138,4 +138,3 @@ export default function ConfigVersionPanel({ reconfig, day, animal, ownerKey, on
     </>
   );
 }
-

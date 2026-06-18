@@ -48,6 +48,7 @@ export default function DayEditorSectionNav({ groups, onNavigate }: DayEditorSec
                 className={`section-nav-item ${step.active ? 'is-active' : ''} step-${step.status}`}
                 aria-current={step.active ? 'page' : undefined}
                 aria-label={`${step.label} — ${step.statusLabel}${countLabel ? `, ${countLabel}` : ''}`}
+                tabIndex={step.active ? 0 : -1}
                 onClick={() => onNavigate(step.key)}
               >
                 <span className="section-nav-item-name">{step.label}</span>

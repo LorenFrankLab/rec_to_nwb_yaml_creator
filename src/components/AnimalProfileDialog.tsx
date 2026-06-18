@@ -26,6 +26,8 @@ interface AnimalProfileDialogProps {
   onSave: (changedFields: Partial<ProfileForm>) => void;
   /** Called for ESC / overlay / Cancel. */
   onClose: () => void;
+  /** Optional repair-focus field path, e.g. `subject.species`. */
+  focusPath?: string | null;
 }
 
 /**
@@ -50,6 +52,7 @@ export default function AnimalProfileDialog({
   dayCount,
   onSave,
   onClose,
+  focusPath = null,
 }: AnimalProfileDialogProps) {
   const baseId = useId();
   const titleId = `${baseId}-title`;
@@ -81,6 +84,15 @@ export default function AnimalProfileDialog({
       setConfirmOpen(false);
     }
   }, [isOpen, initial]);
+
+  useEffect(() => {
+    if (!isOpen || !focusPath) return undefined;
+    const raf = requestAnimationFrame(() => {
+      const target = document.querySelector<HTMLElement>(`[data-field-path="${focusPath}"]`);
+      target?.focus();
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [isOpen, focusPath]);
 
   const setField = (field: keyof ProfileForm, value: string) =>
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -161,6 +173,7 @@ export default function AnimalProfileDialog({
             <input
               id="profile-species"
               type="text"
+              data-field-path="subject.species"
               value={form.species}
               aria-invalid={!!speciesError}
               aria-describedby={speciesError ? 'profile-species-error' : 'profile-species-hint'}
@@ -190,7 +203,12 @@ export default function AnimalProfileDialog({
 
           <div className="form-field">
             <label htmlFor="profile-sex">Sex</label>
-            <select id="profile-sex" value={form.sex} onChange={(e) => setField('sex', e.target.value)}>
+            <select
+              id="profile-sex"
+              data-field-path="subject.sex"
+              value={form.sex}
+              onChange={(e) => setField('sex', e.target.value)}
+            >
               <option value="">Unspecified</option>
               <option value="M">Male (M)</option>
               <option value="F">Female (F)</option>
@@ -203,6 +221,7 @@ export default function AnimalProfileDialog({
             <input
               id="profile-dob"
               type="date"
+              data-field-path="subject.date_of_birth"
               value={form.date_of_birth}
               // A birth date can't be in the future — cap at today, matching the creation form and
               // the Day Overview DOB field (DOB has no downstream future-date guard).
@@ -219,6 +238,7 @@ export default function AnimalProfileDialog({
             <input
               id="profile-genotype"
               type="text"
+              data-field-path="subject.genotype"
               value={form.genotype}
               onChange={(e) => setField('genotype', e.target.value)}
             />
@@ -229,6 +249,7 @@ export default function AnimalProfileDialog({
             <input
               id="profile-description"
               type="text"
+              data-field-path="subject.description"
               value={form.description}
               onChange={(e) => setField('description', e.target.value)}
             />
@@ -250,4 +271,3 @@ export default function AnimalProfileDialog({
     </>
   );
 }
-

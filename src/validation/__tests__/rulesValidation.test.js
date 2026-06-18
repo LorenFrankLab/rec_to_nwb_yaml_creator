@@ -900,6 +900,7 @@ describe('rulesValidation()', () => {
       expect(i).toBeDefined();
       expect(i.severity).toBe('error');
       expect(i.path).toBe('subject.species');
+      expect(i.repairSurface).toBe('animal');
     });
 
     it('accepts a Latin binomial and an NCBI URI species', () => {

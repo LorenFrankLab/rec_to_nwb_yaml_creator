@@ -1,5 +1,6 @@
 import { useMemo, useCallback } from 'react';
 import DayRecordingSystem from './DayRecordingSystem';
+import DayTechnicalSection from './DayTechnicalSection';
 import { reconcileAppliedToDays } from '../../state/configDiff';
 import { resolveDayConfig } from '../../state/workspaceUtils';
 import {
@@ -21,7 +22,7 @@ import type { Day } from '../../state/workspaceTypes';
 import './DayEditor.scss';
 
 /**
- * FailedChannelsTab — the day editor's **Failed channels** tab (folded from the former DevicesStep).
+ * FailedChannelsTab — the day editor's Devices & Failed Channels section.
  *
  * Displays inherited electrode group configuration from animal level and allows editing of
  * day-specific bad channels — the only device configuration that changes day-to-day as hardware
@@ -293,7 +294,7 @@ export default function FailedChannelsTab(props: FailedChannelsTabProps) {
   if (configError) {
     return (
       <div className="devices-step">
-        <h2>Setup &amp; Failed Channels</h2>
+        <h2>Devices &amp; Failed Channels</h2>
         <div className="error-state-inline" role="alert">
           <p>
             This animal&apos;s device configuration is missing or corrupt, so devices
@@ -312,19 +313,27 @@ export default function FailedChannelsTab(props: FailedChannelsTabProps) {
   if (electrodeGroups.length === 0) {
     return (
       <div className="devices-step">
-        <h2>Setup &amp; Failed Channels</h2>
+        <h2>Devices &amp; Failed Channels</h2>
         {recordingSystemPicker}
         {camerasUsedSection}
+        <DayTechnicalSection
+          technical={day.technical}
+          onFieldUpdate={onFieldUpdate}
+          recordingSystemDefaults={animal?.technicalDefaults}
+          animalKey={ownerKey}
+        />
         {overrideCleanupSection}
         <div className="empty-state">
           <p>No electrodes are set up for {ownerKey} yet.</p>
           <p className="empty-state-hint">
-            Electrodes/probes are shared animal setup. You can mark failed channels for this
-            recording day only after electrodes exist.
+            Electrodes/probes are shared animal setup. Failed-channel editing appears here after
+            the animal has electrode groups.
           </p>
-          <a href={`#/animal/${ownerKey}/electrode-groups?field=electrode_groups`} className="button-primary">
-            Set Up Electrodes
-          </a>
+          <p className="empty-state-hint">
+            <a href={`#/animal/${ownerKey}/electrode-groups?field=electrode_groups`}>
+              Edit animal setup
+            </a>
+          </p>
         </div>
       </div>
     );
@@ -332,11 +341,18 @@ export default function FailedChannelsTab(props: FailedChannelsTabProps) {
 
   return (
     <div className="devices-step">
-      <h2>Setup &amp; Failed Channels</h2>
+      <h2>Devices &amp; Failed Channels</h2>
 
       {recordingSystemPicker}
 
       {camerasUsedSection}
+
+      <DayTechnicalSection
+        technical={day.technical}
+        onFieldUpdate={onFieldUpdate}
+        recordingSystemDefaults={animal?.technicalDefaults}
+        animalKey={ownerKey}
+      />
 
       {/* This day's relationship to shared animal setup: it USES an animal configuration
           version; probe geometry is edited in the shared animal setup, not here. */}
