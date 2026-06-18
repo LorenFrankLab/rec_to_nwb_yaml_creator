@@ -17,7 +17,8 @@ function renderSection(focusRequest = null) {
   const dayWithFiles = {
     ...day,
     associated_files: [
-      { name: 'statescript', description: 'StateScript file', path: 'statescript_01.py', task_epochs: 1 },
+      { name: 'statescript', description: 'StateScript file', path: 'statescript_01.stateScriptLog', task_epochs: 1 },
+      { name: 'stim1', description: 'Psychopy stim generation script for stim 1', path: 'stim1.py', task_epochs: 1 },
     ],
   };
   const mergedDay = mergeDayMetadata(animal, dayWithFiles);
@@ -55,9 +56,9 @@ describe('TasksFilesSection', () => {
   });
 
   it('keeps associated-file repair anchors available without opening a disclosure', () => {
-    const { container } = renderSection({ fieldPath: 'associated_files[0].path', token: 1 });
+    const { container } = renderSection({ fieldPath: 'associated_files[1].path', token: 1 });
 
-    expect(container.querySelector('[data-field-path="associated_files[0].path"]')).toBeInTheDocument();
+    expect(container.querySelector('[data-field-path="associated_files[1].path"]')).toBeInTheDocument();
   });
 
   it('renders the supplemental files editor and writes associated_files', async () => {
@@ -68,7 +69,8 @@ describe('TasksFilesSection', () => {
     await user.click(within(section).getByRole('button', { name: /custom file/i }));
 
     expect(onFieldUpdate).toHaveBeenCalledWith('associated_files', [
-      { name: 'statescript', description: 'StateScript file', path: 'statescript_01.py', task_epochs: 1 },
+      { name: 'statescript', description: 'StateScript file', path: 'statescript_01.stateScriptLog', task_epochs: 1 },
+      { name: 'stim1', description: 'Psychopy stim generation script for stim 1', path: 'stim1.py', task_epochs: 1 },
       { name: '', description: '', path: '', task_epochs: '' },
     ]);
   });

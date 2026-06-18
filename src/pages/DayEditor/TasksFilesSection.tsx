@@ -1,5 +1,6 @@
 import EpochsTab from './EpochsTab';
 import AssociatedFilesEditor from './AssociatedFilesEditor';
+import { getIndexedSupplementalFiles } from '../../domain/associatedFiles';
 import { getDayAssociatedFiles } from '../../state/workspaceSelectors';
 import { useDayEditorContext } from './DayEditorContext';
 import type { DayEditorBundle } from './DayEditorContext';
@@ -26,6 +27,7 @@ export default function TasksFilesSection(props: TasksFilesSectionProps) {
   const focusRequest = props.focusRequest ?? null;
   const tasks = Array.isArray(mergedDay?.tasks) ? (mergedDay.tasks as Task[]) : [];
   const files = getDayAssociatedFiles(day);
+  const supplementalFileCount = getIndexedSupplementalFiles(files).length;
   const scrollToSection = (id: string) => {
     const section = document.getElementById(id);
     section?.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
@@ -39,7 +41,7 @@ export default function TasksFilesSection(props: TasksFilesSectionProps) {
           Epochs
         </button>
         <button type="button" onClick={() => scrollToSection('other-associated-files')}>
-          Supplemental files <span>{files.length}</span>
+          Supplemental files <span>{supplementalFileCount}</span>
         </button>
       </nav>
 
@@ -59,12 +61,13 @@ export default function TasksFilesSection(props: TasksFilesSectionProps) {
             </p>
           </div>
           <span className="supplemental-files-badge">
-            {files.length} {files.length === 1 ? 'file' : 'files'}
+            {supplementalFileCount} {supplementalFileCount === 1 ? 'file' : 'files'}
           </span>
         </div>
         <AssociatedFilesEditor
           files={files}
           tasks={tasks}
+          supplementalOnly
           onChange={(nextFiles) => onFieldUpdate('associated_files', nextFiles)}
         />
       </section>

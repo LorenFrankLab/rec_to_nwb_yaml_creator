@@ -1,5 +1,6 @@
 import { useId } from 'react';
 import Button from '../../components/ui/Button';
+import { isStatescriptAssociatedFile } from '../../domain/associatedFiles';
 import type { Task } from '../../state/workspaceTypes';
 import './AssociatedFilesEditor.scss';
 
@@ -97,6 +98,8 @@ interface AssociatedFilesEditorProps {
   files?: FileRow[];
   /** The day's tasks (task_epochs options). */
   tasks?: Task[];
+  /** When true, hide epoch statescript rows and edit only true supplemental files. */
+  supplementalOnly?: boolean;
   /** Called with the next files array. */
   onChange: (files: FileRow[]) => void;
 }
@@ -124,32 +127,40 @@ interface AssociatedFilesEditorProps {
  * Persisted through `onChange(nextArray)` (the step routes that to
  * `onFieldUpdate('associated_files', nextArray)`).
  */
-export default function AssociatedFilesEditor({ files = [], tasks = [], onChange }: AssociatedFilesEditorProps) {
+export default function AssociatedFilesEditor({
+  files = [],
+  tasks = [],
+  supplementalOnly = false,
+  onChange,
+}: AssociatedFilesEditorProps) {
   const baseId = useId();
   // Tolerate corrupt persisted state: a non-array `files` (`{}`) must not crash render.
   const fileList = Array.isArray(files) ? files : [];
+  const visibleFiles = fileList
+    .map((file, index) => ({ file, index }))
+    .filter(({ file }) => !supplementalOnly || !isStatescriptAssociatedFile(file));
   const validEpochs = collectValidEpochs(tasks);
   const validEpochSet = new Set(validEpochs);
 
   /**
    * Replace one row's field and emit the updated array.
    */
-  function updateRow(index: number, field: keyof FileRow, value: string | number) {
-    onChange(fileList.map((file, i) => (i === index ? { ...file, [field]: value } as FileRow : file)));
+  function updateRow(originalIndex: number, field: keyof FileRow, value: string | number) {
+    onChange(fileList.map((file, i) => (i === originalIndex ? { ...file, [field]: value } as FileRow : file)));
   }
 
   /**
    * Append a supplemental file row, optionally seeded from corpus-backed presets.
    */
   function addRow(preset: SupplementalFilePreset) {
-    onChange([...fileList, createPresetRow(preset, fileList)]);
+    onChange([...fileList, createPresetRow(preset, visibleFiles.map(({ file }) => file))]);
   }
 
   /**
    * Remove the row at `index`.
    */
-  function removeRow(index: number) {
-    onChange(fileList.filter((_, i) => i !== index));
+  function removeRow(originalIndex: number) {
+    onChange(fileList.filter((_, i) => i !== originalIndex));
   }
 
   return (
@@ -161,16 +172,16 @@ export default function AssociatedFilesEditor({ files = [], tasks = [], onChange
         </p>
       </div>
 
-      {fileList.length === 0 ? (
+      {visibleFiles.length === 0 ? (
         <p className="associated-files-empty">No supplemental files yet.</p>
       ) : (
         <ul className="associated-files-rows">
-          {fileList.map((file, index) => {
+          {visibleFiles.map(({ file, index }, displayIndex) => {
             const epoch = file.task_epochs;
             const epochStale =
               epoch !== '' && epoch != null && !validEpochSet.has(Number(epoch));
             const staleId = `${baseId}-stale-${index}`;
-            const label = file.name || `file ${index + 1}`;
+            const label = file.name || `file ${displayIndex + 1}`;
             return (
               <li key={index} className="associated-file-row">
                 <div className="form-group">

@@ -79,6 +79,12 @@ function epochFromFocusPath(fieldPath: string | undefined): number | null {
   return match ? Number(match[1]) : null;
 }
 
+/** Parse an `associated_files[<n>]...` repair focus path → the associated_files index. */
+function associatedFileIndexFromFocusPath(fieldPath: string | undefined): number | null {
+  const match = /^associated_files\[(\d+)]/.exec(fieldPath ?? '');
+  return match ? Number(match[1]) : null;
+}
+
 /** Resolve a camera id to its display name (falls back to "camera <id>"). */
 function cameraName(cameras: Camera[], id: number | string): string {
   const cam = cameras.find((c) => c?.id === id || String(c?.id) === String(id));
@@ -153,8 +159,17 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
   // Repair landing: expand the targeted epoch (the frame's focus effect then focuses the control).
   useEffect(() => {
     const epoch = epochFromFocusPath(focusRequest?.fieldPath);
-    if (epoch != null) setExpanded((prev) => new Set(prev).add(epoch));
-  }, [focusRequest]);
+    if (epoch != null) {
+      setExpanded((prev) => (prev.has(epoch) ? prev : new Set(prev).add(epoch)));
+      return;
+    }
+
+    const fileIndex = associatedFileIndexFromFocusPath(focusRequest?.fieldPath);
+    if (fileIndex != null) {
+      const row = grid.rows.find((candidate) => candidate.statescript?.index === fileIndex);
+      if (row) setExpanded((prev) => (prev.has(row.epoch) ? prev : new Set(prev).add(row.epoch)));
+    }
+  }, [focusRequest, grid.rows]);
 
   // Close any open popup menu on an outside click.
   useEffect(() => {
@@ -1174,7 +1189,12 @@ function EpochRowBlock(p: EpochRowProps) {
                   </div>
                   <div className={styles.fieldRow} data-field-path={`epoch-${row.epoch}-statescript`} tabIndex={-1}>
                     <span className={styles.fieldLabel}>Statescript</span>
-                    <span>
+                    <span
+                      data-field-path={
+                        row.statescript ? `associated_files[${row.statescript.index}].path` : undefined
+                      }
+                      tabIndex={row.statescript ? -1 : undefined}
+                    >
                     {row.statescript ? (
                       <GeneratedValue
                         value={p.manualStatescript || row.statescriptNaming === 'manual' ? row.statescript.entry.path ?? '' : p.statescriptDerivedName}

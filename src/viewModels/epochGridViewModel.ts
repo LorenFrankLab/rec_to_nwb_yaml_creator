@@ -31,6 +31,7 @@ import {
 import { resolveDayCatalogView } from '../state/dayTaskCatalog';
 import { resolveTaskInstances } from '../state/taskCatalog';
 import { duplicateTaskEpochs } from '../validation/taskEpochs';
+import { getIndexedStatescriptFiles } from '../domain/associatedFiles';
 import { isDerivedStatescript } from '../domain/fileNaming';
 import type {
   AssociatedFile,
@@ -209,7 +210,7 @@ export function buildEpochGrid(animal: unknown, day: unknown): EpochGrid {
   const instanceTypeIds = view.taskInstances.map((i) => i?.taskTypeId ?? '');
 
   const videos = getDayAssociatedVideos(day);
-  const files = getDayAssociatedFiles(day);
+  const files = getIndexedStatescriptFiles(getDayAssociatedFiles(day));
   const fsgui = getDayFsGuiYamls(day);
   const absentSet = new Set(getDayVideolessEpochs(day));
   const deferredSet = new Set(getDayDeferredEpochs(day));
@@ -234,9 +235,9 @@ export function buildEpochGrid(animal: unknown, day: unknown): EpochGrid {
     const taskName = (task?.task_name as string) || '';
     const taskEnvironment = (task?.task_environment as string) || '';
     const cameras = Array.isArray(task?.camera_id) ? (task!.camera_id as Array<number | string>) : [];
-    const fileIndex = files.findIndex((f) => scalarEpochMatches(f.task_epochs, epoch));
+    const fileIndex = files.findIndex((file) => scalarEpochMatches(file.entry.task_epochs, epoch));
     const statescript: EpochFileRef | null =
-      fileIndex >= 0 ? { entry: files[fileIndex], index: fileIndex } : null;
+      fileIndex >= 0 ? files[fileIndex] : null;
 
     const matchedVideos: EpochVideoRef[] = [];
     videos.forEach((entry, index) => {

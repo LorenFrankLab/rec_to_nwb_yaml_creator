@@ -176,6 +176,29 @@ describe('EpochsTab — grid render + collapsed state cells', () => {
     expect(edit).toHaveAttribute('aria-expanded', 'true');
     expect(screen.getByRole('heading', { name: /Epoch task/i })).toBeInTheDocument();
   });
+
+  it('opens the owning epoch for a statescript associated_files repair focus path', async () => {
+    render(
+      <EpochsTab
+        {...makeBundle({
+          associated_files: [
+            {
+              name: 'statescript_s1',
+              description: 'Statescript Log',
+              path: '20230622_r_01_s1.stateScriptLog',
+              task_epochs: 1,
+            },
+          ],
+        })}
+        focusRequest={{ fieldPath: 'associated_files[0].path', token: 1 }}
+      />
+    );
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /Hide epoch 1 details/i })).toBeInTheDocument();
+    });
+    expect(document.querySelector('[data-field-path="associated_files[0].path"]')).toBeInTheDocument();
+  });
 });
 
 describe('EpochsTab — no-epochs onboarding empty state (Phase 8)', () => {

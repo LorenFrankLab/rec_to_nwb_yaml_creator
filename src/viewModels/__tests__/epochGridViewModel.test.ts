@@ -43,8 +43,8 @@ function goldenInlineWorkspace(): { animal: { id: string } & Record<string, unkn
       { task_name: 'wtrack', task_description: 'reward finding', task_environment: 'wtrack arena', camera_id: [1], task_epochs: [2, 4] },
     ],
     associated_files: [
-      { name: 'associated1.txt', description: 'good file', path: 'path/', task_epochs: 1 },
-      { name: 'associated2.txt', description: 'good file', path: 'path/', task_epochs: 2 },
+      { name: 'statescript_s1', description: 'Statescript Log', path: 'path/20230622_54321_01_s1.stateScriptLog', task_epochs: 1 },
+      { name: 'statescript_r1', description: 'Statescript Log', path: 'path/20230622_54321_02_r1.stateScriptLog', task_epochs: 2 },
     ],
     associated_video_files: [
       { name: '20230622_sample_01_a1.1.h264', camera_id: 0, task_epochs: 1 },
@@ -77,7 +77,7 @@ describe('buildEpochGrid — join shape', () => {
     const { animal, day } = goldenInlineWorkspace();
     const grid = buildEpochGrid(animal, day);
     const byEpoch = Object.fromEntries(grid.rows.map((r) => [r.epoch, r.tag]));
-    expect(byEpoch).toEqual({ 1: 'a1', 2: 'a1', 3: 's2', 4: 'r2', 5: 's3' });
+    expect(byEpoch).toEqual({ 1: 's1', 2: 'r1', 3: 's2', 4: 'r2', 5: 's3' });
   });
 
   it('uses semantic per-occurrence fallback tags when no linked filenames carry one', () => {
@@ -115,6 +115,20 @@ describe('buildEpochGrid — file/video/opto join (no reshaping)', () => {
     expect(e1.statescript?.entry).toBe(day.associated_files[0]);
     expect(e1.statescript?.index).toBe(0);
     expect(grid.rows.find((r) => r.epoch === 3)?.statescript).toBeNull();
+  });
+
+  it('does not join supplemental associated files as epoch statescripts', () => {
+    const { animal, day } = goldenInlineWorkspace();
+    day.associated_files = [
+      { name: 'stim1', description: 'Psychopy stim generation script for stim 1', path: 'stim/stim1.py', task_epochs: 1 },
+      { name: 'statescript_s1', description: 'Statescript Log', path: 'path/20230622_54321_01_s1.stateScriptLog', task_epochs: 1 },
+    ];
+
+    const grid = buildEpochGrid(animal, day);
+    const e1 = grid.rows.find((r) => r.epoch === 1)!;
+
+    expect(e1.statescript?.entry).toBe(day.associated_files[1]);
+    expect(e1.statescript?.index).toBe(1);
   });
 
   it('joins all videos for an epoch by reference', () => {
