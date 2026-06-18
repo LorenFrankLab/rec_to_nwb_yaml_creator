@@ -68,12 +68,12 @@ test.describe('Workspace export workflows', () => {
     // animal-level shared setup, not re-entered per day. Assert the day's grouped rail exposes only
     // day-scoped sections and NOT an electrode-group or camera configuration section.
     const dayNav = page.getByRole('navigation', { name: 'Day editor sections' });
-    await expect(dayNav.getByRole('button', { name: /^Overview\b/ })).toBeVisible();
-    await expect(dayNav.getByRole('button', { name: /^Files & Weight\b/ })).toBeVisible();
-    await expect(dayNav.getByRole('button', { name: /^Devices & Failed Channels\b/ })).toBeVisible();
-    await expect(dayNav.getByRole('button', { name: /^Tasks & Epochs\b/ })).toBeVisible();
-    await expect(dayNav.getByRole('button', { name: /^Validation & Export\b/ })).toBeVisible();
-    await expect(dayNav.getByRole('button', { name: /^DIO\b/ })).toHaveCount(0);
+    await expect(dayNav.getByRole('button', { name: /^Daily Setup\b/ })).toBeVisible();
+    await expect(dayNav.getByRole('button', { name: /^Tasks & Files\b/ })).toBeVisible();
+    await expect(dayNav.getByRole('button', { name: /^Recording Setup\b/ })).toBeVisible();
+    await expect(dayNav.getByRole('button', { name: /^Failed Channels\b/ })).toBeVisible();
+    await expect(dayNav.getByRole('button', { name: /^DIO Wiring\b/ })).toBeVisible();
+    await expect(dayNav.getByRole('button', { name: /^Fix & Export\b/ })).toBeVisible();
     // No camera / electrode-group setup form is part of the day flow.
     await expect(dayNav.getByRole('button', { name: /Electrode Groups/i })).toHaveCount(0);
     await expect(dayNav.getByRole('button', { name: /Cameras/i })).toHaveCount(0);

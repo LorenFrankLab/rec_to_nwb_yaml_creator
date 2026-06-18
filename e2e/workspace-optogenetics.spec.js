@@ -224,13 +224,13 @@ test.describe('Optogenetics export gating and the two-layer opto model', () => {
     // The two-layer opto model: the animal is implanted; the DAY records which epochs were stimulated
     // and at what power/pulse. In the epoch grid that is per-epoch numeric inputs (Opto mW / Pulse ms),
     // shown ONLY for an implanted animal — opto is epoch-scoped, never forced day-wide. (The protocol's
-    // camera + DIO output are chosen in Tasks & Epochs, not free-typed per epoch.)
+    // camera + DIO output are chosen in Tasks & Files, not free-typed per epoch.)
     const blob = buildConfiguredWorkspaceBlob();
     blob.workspace.animals[ANIMAL_ID].optogenetics = structuredClone(COMPLETE_OPTOGENETICS);
     blob.workspace.days[DAY_ID].fs_gui_yamls = [];
     await seedAndOpen(page, blob, `/#/day/${DAY_ID}`);
 
-    await page.getByRole('button', { name: /^Tasks & Epochs\b/ }).click();
+    await page.getByRole('button', { name: /^Tasks & Files\b/ }).click();
     await expect(page.getByRole('heading', { level: 2, name: 'Epochs' })).toBeVisible();
 
     // The opto columns render ONLY for an implanted animal (the two-layer model's day layer).

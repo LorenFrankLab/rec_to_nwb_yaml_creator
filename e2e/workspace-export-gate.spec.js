@@ -2,12 +2,12 @@
  * E2E: Fail-closed export gate + repair navigation.
  *
  * Proves an invalid recording day cannot reach or use the YAML download from ANY route —
- * the Day Editor Validation & Export section's own Download button, keyboard navigation (Alt+→)
+ * the Day Editor Fix & Export section's own Download button, keyboard navigation (Alt+→)
  * into that section, or the per-animal "Export Valid Only" batch path — and that the visible
  * blocking UI offers a repair action that deep-links to the editable owner of the fix.
  *
  * The Day Editor sections are FREELY navigable (no step-locking); the gate lives INSIDE the
- * Validation & Export section (ExportPreview consults isExportEnabled(computeStepStatus(...))). So "stepper
+ * Fix & Export section (ExportPreview consults isExportEnabled(computeStepStatus(...))). So "stepper
  * click / keyboard next cannot bypass" means: reaching Export by any route still shows the
  * BLOCKED state with a repair action and the Download is disabled / never fires — not that
  * navigation itself is blocked.
@@ -57,7 +57,7 @@ function buildInvalidCameraBlob() {
 }
 
 /**
- * Seed the invalid-camera workspace and land on the day's Validation & Export section.
+ * Seed the invalid-camera workspace and land on the day's Fix & Export section.
  * A full reload after the hash-nav forces a fresh document so the store hydrates from the seed.
  *
  * @param {import('@playwright/test').Page} page - The Playwright page.
@@ -119,7 +119,7 @@ test.describe('Fail-closed export gate + repair navigation', () => {
     await expect(noDownload).rejects.toThrow();
   });
 
-  test('the Alt+ keyboard cycle reaches Validation & Export, and the gate still blocks', async ({
+  test('the Alt+ keyboard cycle reaches Fix & Export, and the gate still blocks', async ({
     page,
   }) => {
     await seedAndOpen(page, buildInvalidCameraBlob(), `/#/day/${DAY_ID}`);
@@ -127,16 +127,16 @@ test.describe('Fail-closed export gate + repair navigation', () => {
       page.getByRole('heading', { level: 1, name: `Day Editor: ${ANIMAL_ID} - 2023-06-22` }),
     ).toBeVisible();
 
-    // Alt+←/→ walks the five grouped sections. Reaching Validation & Export by keyboard still lands
+    // Alt+←/→ walks the six grouped sections. Reaching Fix & Export by keyboard still lands
     // on the same gated surface as the header action.
-    await expect(page.getByRole('heading', { level: 2, name: 'Overview' })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 2, name: 'Daily Setup' })).toBeVisible();
     const exportHeading = page.getByRole('heading', { level: 2, name: 'Export — 2023-06-22' });
-    for (let i = 0; i < 4; i += 1) {
+    for (let i = 0; i < 5; i += 1) {
       await page.keyboard.press('Alt+ArrowRight');
     }
     await expect(exportHeading).toBeVisible();
 
-    // Reaching Validation & Export by keyboard still shows the BLOCKED state: Download disabled + repair.
+    // Reaching Fix & Export by keyboard still shows the BLOCKED state: Download disabled + repair.
     const download = page.getByRole('button', { name: 'Download' });
     await expect(download).toBeDisabled();
     await expect(

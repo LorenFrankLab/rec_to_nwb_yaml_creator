@@ -98,6 +98,10 @@ describe('DayTab', () => {
     expect(screen.getByLabelText(/Recording-day weight/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/Session Description/i)).toBeRequired();
     expect(screen.getByLabelText(/Experiment Description/i)).toBeRequired();
+    expect(screen.getByRole('heading', { name: /file location/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /required descriptions/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /session measurement/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /search terms/i })).toBeInTheDocument();
 
     const dataFolder = screen.getByLabelText(/Data folder/i);
     const weight = screen.getByLabelText(/Recording-day weight/i);
@@ -107,10 +111,10 @@ describe('DayTab', () => {
     const context = screen.getByText(/session identity and animal context/i);
     const sessionId = screen.getByDisplayValue('remy_20230622');
 
-    expect(dataFolder.compareDocumentPosition(weight) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(weight.compareDocumentPosition(sessionDescription) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(dataFolder.compareDocumentPosition(sessionDescription) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(sessionDescription.compareDocumentPosition(experimentDescription) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(experimentDescription.compareDocumentPosition(keywords) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(experimentDescription.compareDocumentPosition(weight) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(weight.compareDocumentPosition(keywords) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(keywords.compareDocumentPosition(context) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(context.closest('details')).not.toHaveAttribute('open');
     expect(sessionId).not.toBeVisible();

@@ -73,12 +73,20 @@ describe('buildEpochGrid — join shape', () => {
     expect(byEpoch).toEqual({ 1: 'Sleep', 2: 'wtrack', 3: 'Sleep', 4: 'wtrack', 5: 'Sleep' });
   });
 
-  it('derives a per-occurrence tag (short code + 1-based occurrence within the task)', () => {
+  it('prefers tags already present on linked filenames', () => {
     const { animal, day } = goldenInlineWorkspace();
     const grid = buildEpochGrid(animal, day);
     const byEpoch = Object.fromEntries(grid.rows.map((r) => [r.epoch, r.tag]));
-    // Sleep owns 1,3,5 → s1,s2,s3; wtrack owns 2,4 → w1,w2.
-    expect(byEpoch).toEqual({ 1: 's1', 2: 'w1', 3: 's2', 4: 'w2', 5: 's3' });
+    expect(byEpoch).toEqual({ 1: 'a1', 2: 'a1', 3: 's2', 4: 'r2', 5: 's3' });
+  });
+
+  it('uses semantic per-occurrence fallback tags when no linked filenames carry one', () => {
+    const { animal, day } = goldenInlineWorkspace();
+    day.associated_files = [];
+    day.associated_video_files = [];
+    const grid = buildEpochGrid(animal, day);
+    const byEpoch = Object.fromEntries(grid.rows.map((r) => [r.epoch, r.tag]));
+    expect(byEpoch).toEqual({ 1: 's1', 2: 'r1', 3: 's2', 4: 'r2', 5: 's3' });
   });
 
   it('carries the task cameras onto each row', () => {

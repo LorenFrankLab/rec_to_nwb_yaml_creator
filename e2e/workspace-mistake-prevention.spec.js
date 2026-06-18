@@ -13,13 +13,13 @@
  *    another animal with different hardware is blocked with a comparison.
  *  - Region case-drift (Animal → Electrode Groups modal): a case-only variant of a known region is
  *    canonicalized (the BrainRegionAutocomplete snaps "ca1" → "CA1") rather than fragmenting rows.
- *  - Controlled task/video references (Day → Tasks & Epochs): camera + epoch references are chosen
+ *  - Controlled task/video references (Day → Tasks & Files): camera + epoch references are chosen
  *    from controlled selects/checkboxes of known cameras/epochs — a stale id cannot be typed in.
- *  - Task-name divergence (Day → Tasks & Epochs → Task modal): reusing a known `task_name` with a
+ *  - Task-name divergence (Day → Tasks & Files → Task modal): reusing a known `task_name` with a
  *    different `task_description` is blocked with old-vs-new context.
- *  - Behavioral events (Day → Devices & Failed Channels): a day-owned DIO channel grid grouped into
+ *  - Behavioral events (Day → DIO Wiring): a day-owned DIO channel grid grouped into
  *    Inputs (Din) / Outputs (Dout); there is no animal-level library or "Use on this day" path.
- *  - Day technical read-only / route-to-Recording-System (Day → Devices & Failed Channels):
+ *  - Day technical read-only / route-to-Recording-System (Day → Recording Setup):
  *    `raw_data_to_volts` / `times_period_multiplier` are presented as effective recording-system
  *    values (read-only), with an "Edit in Recording System" link rather than a routine day edit.
  *
@@ -188,13 +188,13 @@ test.describe('Mistake-prevention UX on high-risk edit surfaces', () => {
       page.getByRole('heading', { level: 1, name: `Day Editor: ${ANIMAL_ID} - 2023-06-22` }),
     ).toBeVisible();
 
-    await page.getByRole('button', { name: /^Tasks & Epochs\b/ }).click();
+    await page.getByRole('button', { name: /^Tasks & Files\b/ }).click();
     await expect(page.getByRole('heading', { level: 2, name: 'Epochs' })).toBeVisible();
 
     // In the epoch grid, epochs ARE the rows (never free-typed) and a video inherits its task's
     // camera (defined once on the animal catalog) — so the normal path cannot persist a stale camera
     // or epoch id. The seeded day records video on epochs 2 and 4 (W-track); expand epoch 2.
-    await page.getByRole('button', { name: /Toggle epoch 2 details/i }).click();
+    await page.getByRole('button', { name: /Edit epoch 2 details/i }).click();
 
     // The task picker is a CONTROLLED combobox of the animal's task types — no free-text task name,
     // and no free-typed epoch number anywhere on the row.
@@ -216,11 +216,11 @@ test.describe('Mistake-prevention UX on high-risk edit surfaces', () => {
     // reuses an existing name is blocked at its SOURCE — the animal catalog — the structural guarantee
     // behind the Spyglass task-name identity. (The seeded day uses task_name "w_alternation".)
     await seedAndOpen(page, buildConfiguredWorkspaceBlob(), `/#/day/${DAY_ID}`);
-    await page.getByRole('button', { name: /^Tasks & Epochs\b/ }).click();
+    await page.getByRole('button', { name: /^Tasks & Files\b/ }).click();
     await expect(page.getByRole('heading', { level: 2, name: 'Epochs' })).toBeVisible();
 
     // Expand an epoch to reach its task picker — a controlled combobox, no free-text task name.
-    await page.getByRole('button', { name: /Toggle epoch 2 details/i }).click();
+    await page.getByRole('button', { name: /Edit epoch 2 details/i }).click();
     await expect(page.getByRole('combobox', { name: /Epoch 2 task/i })).toBeVisible();
     await expect(page.getByRole('textbox', { name: /^task name$/i })).toHaveCount(0);
 
@@ -250,8 +250,8 @@ test.describe('Mistake-prevention UX on high-risk edit surfaces', () => {
     ];
 
     await seedAndOpen(page, blob, `/#/day/${DAY_ID}`);
-    // Behavioral events live inside Devices & Failed Channels, not as a top-level rail item.
-    await page.getByRole('button', { name: /^Devices & Failed Channels\b/ }).click();
+    // Behavioral events live in the focused DIO Wiring section.
+    await page.getByRole('button', { name: /^DIO Wiring\b/ }).click();
     await expect(page.getByRole('heading', { level: 2, name: 'Behavioral Events' })).toBeVisible();
 
     // The tab opens on the read-only carry-forward summary; reveal the editable ECU wiring table.
@@ -283,8 +283,8 @@ test.describe('Mistake-prevention UX on high-risk edit surfaces', () => {
       page.getByRole('heading', { level: 1, name: `Day Editor: ${ANIMAL_ID} - 2023-06-22` }),
     ).toBeVisible();
 
-    // Devices & Failed Channels hosts the Technical parameters block.
-    await page.getByRole('button', { name: /^Devices & Failed Channels\b/ }).click();
+    // Recording Setup hosts the Technical parameters block.
+    await page.getByRole('button', { name: /^Recording Setup\b/ }).click();
     await expect(page.getByText('Technical parameters', { exact: true })).toBeVisible();
     await expect(page.getByText('Raw data to volts', { exact: true })).toBeVisible();
 
