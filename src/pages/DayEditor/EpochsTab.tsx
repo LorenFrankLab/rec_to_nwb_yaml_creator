@@ -766,9 +766,8 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
                 <tr>
                   <th scope="col" className={styles.numCell}>#</th>
                   <th scope="col">Task</th>
+                  <th scope="col">Files</th>
                   <th scope="col">Camera(s)</th>
-                  <th scope="col">Statescript</th>
-                  <th scope="col">Video(s)</th>
                   {hasOpto && <th scope="col">Opto</th>}
                   <th scope="col" className={styles.menuCell}><span className="sr-only">Actions</span></th>
                 </tr>
@@ -793,15 +792,6 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
                     onMoveUp={() => onMove(row.epoch, 'up')}
                     onMoveDown={() => onMove(row.epoch, 'down')}
                     onDelete={() => onDelete(row.epoch)}
-                    onAddStatescript={() => {
-                      openFileEditor(row.epoch, 'statescript');
-                      addStatescript(row);
-                    }}
-                    onAddVideo={() => {
-                      openFileEditor(row.epoch, 'video');
-                      addVideo(row);
-                    }}
-                    onMarkNoVideo={() => setVideoless(row.epoch, true)}
                   />
                 ))}
               </tbody>
@@ -994,9 +984,6 @@ interface EpochRowProps {
   onMoveUp: () => void;
   onMoveDown: () => void;
   onDelete: () => void;
-  onAddStatescript: () => void;
-  onAddVideo: () => void;
-  onMarkNoVideo: () => void;
 }
 
 /** Props for the focused epoch details panel. */
@@ -1046,9 +1033,24 @@ const STATESCRIPT_LABEL: Record<EpochGridRow['statescriptNaming'], string> = {
 function EpochRowBlock(p: EpochRowProps) {
   const { row, isActive, panelId, hasOpto, cameras } = p;
   const videoLabel =
-    row.videoPresence === 'absent' ? 'No video' : row.videoPresence === 'missing' ? 'Missing' : `${row.videos.length} video`;
-  const videoClass =
-    row.videoPresence === 'absent' ? styles.vidNone : row.videoPresence === 'missing' ? styles.vidMissing : styles.vidPresent;
+    row.videoPresence === 'absent'
+      ? 'No video'
+      : row.videoPresence === 'missing'
+        ? 'Missing'
+        : `${row.videos.length} ${row.videos.length === 1 ? 'video' : 'videos'}`;
+  const statescriptLabel = STATESCRIPT_LABEL[row.statescriptNaming];
+  const statescriptSummaryClass =
+    row.statescriptNaming === 'generated'
+      ? styles.fileSummaryReady
+      : row.statescriptNaming === 'manual'
+        ? styles.fileSummaryReview
+        : styles.fileSummaryMissing;
+  const videoSummaryClass =
+    row.videoPresence === 'missing'
+      ? styles.fileSummaryMissing
+      : row.videoPresence === 'absent'
+        ? styles.fileSummaryMuted
+        : styles.fileSummaryReady;
   const optoLabel = row.opto?.entry.power_in_mW != null && row.opto.entry.power_in_mW !== ''
     ? `${row.opto.entry.power_in_mW} mW`
     : '—';
@@ -1063,7 +1065,6 @@ function EpochRowBlock(p: EpochRowProps) {
               <span className={styles.taskName}>{row.taskName || <em>(no task)</em>}</span>
               <span className={styles.taskMeta}>
                 <span className={styles.tag}>tag {row.tag}</span>
-                <EpochStatusPill status={row.status} />
                 {row.duplicate && (
                   <span className={styles.duplicateBadge} title="This epoch is claimed by more than one task">
                     duplicate
@@ -1087,52 +1088,20 @@ function EpochRowBlock(p: EpochRowProps) {
           </div>
         </div>
       </td>
+      <td className={styles.fileSummaryCell}>
+        <span className={styles.fileSummaryStack}>
+          <span className={`${styles.fileSummaryChip} ${statescriptSummaryClass}`}>
+            Statescript: {statescriptLabel === '—' ? 'Missing' : statescriptLabel}
+          </span>
+          <span className={`${styles.fileSummaryChip} ${videoSummaryClass}`}>
+            Video: {videoLabel}
+          </span>
+        </span>
+      </td>
       <td>
         {row.cameras.length === 0
           ? <span className={styles.vidNone}>—</span>
           : row.cameras.map((id) => <span key={String(id)} className={styles.cam}>{cameraName(cameras, id)}</span>)}
-      </td>
-      <td>
-        <span className={styles.cellStack}>
-          <span className={`${styles.fstate} ${row.statescriptNaming === 'manual' ? styles.fstateManual : row.statescriptNaming === 'generated' ? styles.fstateGenerated : styles.fstateNone}`}>
-            {STATESCRIPT_LABEL[row.statescriptNaming]}
-          </span>
-          {!row.statescript && (
-            <button
-              type="button"
-              className={styles.inlineAction}
-              aria-label={`Add statescript for epoch ${row.epoch}`}
-              onClick={p.onAddStatescript}
-            >
-              Add
-            </button>
-          )}
-        </span>
-      </td>
-      <td>
-        <span className={styles.cellStack}>
-          <span className={videoClass}>{videoLabel}</span>
-          {row.videoPresence === 'missing' && (
-            <span className={styles.inlineActions}>
-              <button
-                type="button"
-                className={styles.inlineAction}
-                aria-label={`Add video for epoch ${row.epoch}`}
-                onClick={p.onAddVideo}
-              >
-                Add
-              </button>
-              <button
-                type="button"
-                className={styles.inlineAction}
-                aria-label={`Mark epoch ${row.epoch} as no video`}
-                onClick={p.onMarkNoVideo}
-              >
-                No video
-              </button>
-            </span>
-          )}
-        </span>
       </td>
       {hasOpto && <td><span className={styles.optoReadout}>{optoLabel}</span></td>}
       <td className={styles.menuCell}>
@@ -1230,53 +1199,6 @@ function EpochDetailsPanel(p: EpochDetailsPanelProps) {
       </div>
 
       <div className={styles.detailsPanelBody}>
-        <section className={styles.group} aria-labelledby={`epoch-${row.epoch}-task-heading`}>
-          <div className={styles.taskEditorHeader}>
-            <h3 id={`epoch-${row.epoch}-task-heading`} className={styles.groupHeading}>Task</h3>
-            <span className={styles.groupNote}>What did the animal do?</span>
-          </div>
-          <div className={styles.taskEditorGrid}>
-            <label className={styles.stackedField}>
-              <span className={styles.fieldLabel}>Task type</span>
-              <select
-                aria-label={`Epoch ${row.epoch} task`}
-                value={ownerTypeId}
-                onChange={(e) => p.onReassignTask(e.target.value)}
-              >
-                {taskTypes.length === 0 && <option value="">(no task types)</option>}
-                {taskTypes.map((t) => (
-                  <option key={t.id} value={t.id}>{t.task_name || t.id}</option>
-                ))}
-              </select>
-            </label>
-            <button type="button" className="button-small" onClick={p.onNewTaskType}>
-              + new task type
-            </button>
-          </div>
-          <dl className={styles.taskContextGrid}>
-            <div>
-              <dt>Derived tag</dt>
-              <dd><code className={styles.mono}>{row.tag}</code></dd>
-            </div>
-            <div>
-              <dt>Task source</dt>
-              <dd>{row.taskTypeId ? 'animal catalog' : 'day task'}</dd>
-            </div>
-            <div>
-              <dt>Environment</dt>
-              <dd>{row.taskEnvironment || '—'}</dd>
-            </div>
-            <div>
-              <dt>Expected cameras</dt>
-              <dd>
-                {row.cameras.length === 0
-                  ? <span className={styles.derivedNote}>none</span>
-                  : row.cameras.map((id) => <span key={String(id)} className={styles.cam}>{cameraName(cameras, id)}</span>)}
-              </dd>
-            </div>
-          </dl>
-        </section>
-
         <section
           className={`${styles.group} ${styles.genPanel}`}
           aria-labelledby={`epoch-${row.epoch}-files-heading`}
@@ -1410,6 +1332,53 @@ function EpochDetailsPanel(p: EpochDetailsPanelProps) {
           </div>
         </section>
 
+        <section className={styles.group} aria-labelledby={`epoch-${row.epoch}-task-heading`}>
+          <div className={styles.taskEditorHeader}>
+            <h3 id={`epoch-${row.epoch}-task-heading`} className={styles.groupHeading}>Task</h3>
+            <span className={styles.groupNote}>Change only if this epoch was assigned wrong.</span>
+          </div>
+          <div className={styles.taskEditorGrid}>
+            <label className={styles.stackedField}>
+              <span className={styles.fieldLabel}>Task type</span>
+              <select
+                aria-label={`Epoch ${row.epoch} task`}
+                value={ownerTypeId}
+                onChange={(e) => p.onReassignTask(e.target.value)}
+              >
+                {taskTypes.length === 0 && <option value="">(no task types)</option>}
+                {taskTypes.map((t) => (
+                  <option key={t.id} value={t.id}>{t.task_name || t.id}</option>
+                ))}
+              </select>
+            </label>
+            <button type="button" className="button-small" onClick={p.onNewTaskType}>
+              + new task type
+            </button>
+          </div>
+          <dl className={styles.taskContextGrid}>
+            <div>
+              <dt>Derived tag</dt>
+              <dd><code className={styles.mono}>{row.tag}</code></dd>
+            </div>
+            <div>
+              <dt>Task source</dt>
+              <dd>{row.taskTypeId ? 'animal catalog' : 'day task'}</dd>
+            </div>
+            <div>
+              <dt>Environment</dt>
+              <dd>{row.taskEnvironment || '—'}</dd>
+            </div>
+            <div>
+              <dt>Expected cameras</dt>
+              <dd>
+                {row.cameras.length === 0
+                  ? <span className={styles.derivedNote}>none</span>
+                  : row.cameras.map((id) => <span key={String(id)} className={styles.cam}>{cameraName(cameras, id)}</span>)}
+              </dd>
+            </div>
+          </dl>
+        </section>
+
         {hasOpto && (
           <section className={styles.group} aria-labelledby={`epoch-${row.epoch}-opto-heading`}>
             <div className={styles.taskEditorHeader}>
@@ -1431,11 +1400,11 @@ function EpochDetailsPanel(p: EpochDetailsPanelProps) {
           </section>
         )}
 
-        <section className={styles.group} aria-labelledby={`epoch-${row.epoch}-more-heading`}>
-          <div className={styles.taskEditorHeader}>
-            <h3 id={`epoch-${row.epoch}-more-heading`} className={styles.groupHeading}>More actions</h3>
-            <span className={styles.groupNote}>Structural changes for this epoch.</span>
-          </div>
+        <details className={styles.structureDetails}>
+          <summary>
+            <span>Epoch structure actions</span>
+            <span>Insert, duplicate, move, or delete this epoch.</span>
+          </summary>
           <div className={styles.panelActions}>
             <button type="button" className="button-small" onClick={p.onInsertAfter}>Insert after</button>
             <button type="button" className="button-small" onClick={p.onDuplicate}>Duplicate</button>
@@ -1443,7 +1412,7 @@ function EpochDetailsPanel(p: EpochDetailsPanelProps) {
             <button type="button" className="button-small" onClick={p.onMoveDown}>Move down</button>
             <button type="button" className="button-small" onClick={p.onDelete}>Delete</button>
           </div>
-        </section>
+        </details>
       </div>
     </aside>
   );

@@ -162,11 +162,12 @@ describe('EpochsTab — grid render + collapsed state cells', () => {
     expect(screen.getByRole('button', { name: /Show epoch 3 details/i })).toBeInTheDocument();
   });
 
-  it('shows video presence (not names) in the collapsed Video cell', () => {
+  it('shows file presence summaries (not names) in the collapsed Files cell', () => {
     render(<EpochsTab {...makeBundle()} />);
-    // epoch 2 has a bound video → "1 video"; epochs 1,3 are undeclared-videoless → "Missing".
-    expect(screen.getByText('1 video')).toBeInTheDocument();
-    expect(screen.getAllByText('Missing')).toHaveLength(2);
+    // epoch 2 has a bound video; epochs 1,3 still need video declarations.
+    expect(screen.getByText(/Video:\s*1 video/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/Video:\s*Missing/i)).toHaveLength(2);
+    expect(screen.getAllByText(/Statescript:\s*Missing/i)).toHaveLength(3);
     // The video filename lives only in the drill-in, never the collapsed grid.
     expect(screen.queryByText('run_video')).not.toBeInTheDocument();
   });
@@ -566,12 +567,15 @@ describe('EpochsTab — video 3-state', () => {
     ]);
   });
 
-  it('offers missing-video fixes from collapsed rows', async () => {
+  it('keeps missing-video fixes in the selected epoch panel', async () => {
     const user = userEvent.setup();
     const bundle = makeBundle();
     render(<StatefulEpochsTab bundle={bundle} />);
 
-    await user.click(screen.getByRole('button', { name: /Add video for epoch 1/i }));
+    expect(screen.queryByRole('button', { name: /Add video for epoch 1/i })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /Show epoch 1 details/i }));
+    await user.click(screen.getByRole('button', { name: /^Add expected video$/i }));
 
     expect(lastPatch(bundle.onFieldUpdate, 'associated_video_files')).toContainEqual({
       name: '20230622_r_01_s1.1.h264',
@@ -589,7 +593,8 @@ describe('EpochsTab — video 3-state', () => {
     render(<StatefulEpochsTab bundle={bundle} />);
 
     await user.click(screen.getByRole('button', { name: /2 videos needed/i }));
-    await user.click(screen.getByRole('button', { name: /Add video for epoch 1/i }));
+    await user.click(screen.getByRole('button', { name: /Show epoch 1 details/i }));
+    await user.click(screen.getByRole('button', { name: /^Add expected video$/i }));
 
     expect(screen.getByRole('button', { name: /3 epochs/i })).toHaveAttribute('aria-pressed', 'true');
     expect(screen.getByRole('button', { name: /Hide epoch 1 details/i })).toBeInTheDocument();
@@ -599,8 +604,8 @@ describe('EpochsTab — video 3-state', () => {
     const bundle = makeBundle({ state: { videolessEpochs: [1, 3] } });
     render(<EpochsTab {...bundle} />);
     // epochs 1,3 declared absent → "No video"; epoch 2 still present.
-    expect(screen.getAllByText('No video')).toHaveLength(2);
-    expect(screen.queryByText('Missing')).not.toBeInTheDocument();
+    expect(screen.getAllByText(/Video:\s*No video/i)).toHaveLength(2);
+    expect(screen.queryByText(/Video:\s*Missing/i)).not.toBeInTheDocument();
   });
 });
 
@@ -675,12 +680,15 @@ describe('EpochsTab — statescript naming', () => {
     expect(lastPatch(bundle.onFieldUpdate, 'associated_files')).toEqual([]);
   });
 
-  it('offers missing-statescript fixes from collapsed rows', async () => {
+  it('keeps missing-statescript fixes in the selected epoch panel', async () => {
     const user = userEvent.setup();
     const bundle = makeBundle();
     render(<StatefulEpochsTab bundle={bundle} />);
 
-    await user.click(screen.getByRole('button', { name: /Add statescript for epoch 1/i }));
+    expect(screen.queryByRole('button', { name: /Add statescript for epoch 1/i })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /Show epoch 1 details/i }));
+    await user.click(screen.getByRole('button', { name: /^Add expected statescript$/i }));
 
     expect(lastPatch(bundle.onFieldUpdate, 'associated_files')).toEqual([
       {
