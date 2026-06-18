@@ -194,6 +194,33 @@ describe('planImport — conflict with existing workspace', () => {
 });
 
 describe('planImport — unimportable files', () => {
+  it('imports a legacy YYYYMMDD_subject filename even when session_id has no date suffix', () => {
+    const file = makeFile({ subjectId: 'remy', date: '2023-11-08' });
+    file.sourceName = '20231108_remy.yml';
+    file.flatModel.session_id = 'remy';
+
+    const plan = planImport([file], createDefaultWorkspace());
+
+    expect(plan.unimportable).toEqual([]);
+    const remy = plan.animals.find((a) => a.subjectId === 'remy');
+    expect(remy.days).toHaveLength(1);
+    expect(remy.days[0].date).toBe('2023-11-08');
+  });
+
+  it('imports with the Import & Repair manual recording-date marker when filename/session_id are dateless', () => {
+    const file = makeFile({ subjectId: 'remy', date: '2023-11-08' });
+    file.sourceName = 'metadata.yml';
+    file.flatModel.session_id = 'remy';
+    file.flatModel.__importRepair = { recording_date: '2023-11-08T00:00:00' };
+
+    const plan = planImport([file], createDefaultWorkspace());
+
+    expect(plan.unimportable).toEqual([]);
+    const remy = plan.animals.find((a) => a.subjectId === 'remy');
+    expect(remy.days).toHaveLength(1);
+    expect(remy.days[0].date).toBe('2023-11-08');
+  });
+
   it('lists a dateless file in unimportable but still plans the valid ones', () => {
     const valid = makeFile({ subjectId: 'remy', date: '2023-06-22' });
     // A file with no derivable date: strip session_id and give it a dateless name.

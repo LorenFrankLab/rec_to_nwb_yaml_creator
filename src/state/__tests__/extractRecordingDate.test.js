@@ -10,6 +10,11 @@ describe('extractRecordingDate', () => {
     expect(extractRecordingDate({}, '06222023_remy_metadata.yml')).toBe('2023-06-22');
   });
 
+  it('parses the legacy {YYYYMMDD}_{subject}.yml filename convention (primary)', () => {
+    expect(extractRecordingDate({}, '20231108_bs28.yml')).toBe('2023-11-08');
+    expect(extractRecordingDate({}, '20231108_bs28.yaml')).toBe('2023-11-08');
+  });
+
   it('parses the filename even when session_id is present (filename wins)', () => {
     expect(
       extractRecordingDate({ session_id: 'remy_19991231' }, '06222023_remy_metadata.yml')
@@ -24,6 +29,15 @@ describe('extractRecordingDate', () => {
 
   it('falls back to session_id when the filename has no date', () => {
     expect(extractRecordingDate({ session_id: 'totoro_20240115' }, null)).toBe('2024-01-15');
+  });
+
+  it('falls back to the Import & Repair manual recording date marker', () => {
+    expect(
+      extractRecordingDate(
+        { session_id: 'no_date_here', __importRepair: { recording_date: '2023-11-08T00:00:00' } },
+        'metadata.yml'
+      )
+    ).toBe('2023-11-08');
   });
 
   it('returns null when neither filename nor session_id yields a valid date', () => {

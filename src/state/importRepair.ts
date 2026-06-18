@@ -21,7 +21,7 @@
 
 import { validate } from '../validation';
 import { isValidSpecies } from '../validation/dandiSubject';
-import { findExistingAnimalId } from './yamlImportPlan';
+import { extractRecordingDate, findExistingAnimalId } from './yamlImportPlan';
 import { getAnimalCameras, getDataAcqDevices } from './workspaceSelectors';
 import type { ValidationModel } from '../validation/issueTypes';
 
@@ -89,6 +89,9 @@ const EXISTING_CAMERA_REF_PREFIX = '__importRepair.existingAnimal.camera.';
 
 /** Internal repair path prefix for existing-animal add data-acq mapping. */
 const EXISTING_DATA_ACQ_REF_PREFIX = '__importRepair.existingAnimal.data_acq_device.';
+
+/** Internal repair path used when a legacy filename/session_id cannot provide the recording date. */
+const IMPORT_RECORDING_DATE_PATH = '__importRepair.recording_date';
 
 /** How a repair item is resolved in the UI. */
 export type RepairKind = 'suggestion' | 'input' | 'choice';
@@ -275,6 +278,32 @@ function deleteAtPath(target: Record<string, unknown>, p: string): void {
  */
 function valuesEqual(a: unknown, b: unknown): boolean {
   return JSON.stringify(a) === JSON.stringify(b);
+}
+
+/** Whether a decoded epoch reference is a one-item legacy list that can become the scalar schema form. */
+function isSingleEpochList(value: unknown): value is [unknown] {
+  return Array.isArray(value) && value.length === 1;
+}
+
+/** Whether a decoded epoch reference is a legacy list that cannot be picked losslessly. */
+function isNonScalarEpochList(value: unknown): boolean {
+  return Array.isArray(value) && value.length !== 1;
+}
+
+/**
+ * Canonicalize a scalar-or-one-item-list epoch reference for equality and suggested values.
+ * Multi-item lists are intentionally left as arrays so they do not compare equal to a scalar.
+ */
+function canonicalEpochReference(value: unknown): unknown {
+  return isSingleEpochList(value) ? value[0] : value;
+}
+
+/**
+ * Equality for legacy singular/plural epoch keys. `task_epoch: 2` and `task_epochs: [2]` are a
+ * lossless spelling difference; `2` vs `[2, 3]` is not.
+ */
+function epochReferencesEqual(a: unknown, b: unknown): boolean {
+  return valuesEqual(canonicalEpochReference(a), canonicalEpochReference(b));
 }
 
 /**
@@ -684,6 +713,28 @@ function buildValidationItems(model: ValidationModel): {
       continue;
     }
 
+    // --- technical scalar: a legacy string like "1.5cd" → suggest the numeric prefix. ---
+    if (code === 'type' && path === 'times_period_multiplier') {
+      const parsed = parseFloat(String(was));
+      if (Number.isFinite(parsed)) {
+        items.push({ path, label: 'Times period multiplier', code, group: 'attention', kind: 'suggestion', was, suggested: parsed, why: message, inputType: 'number' });
+      } else {
+        items.push({ path, label: 'Times period multiplier', code, group: 'attention', kind: 'input', was, why: message, inputType: 'number' });
+      }
+      continue;
+    }
+
+    // --- session_id: unlike subject_id, this is a day/session fact and can be repaired on import. ---
+    if (code === 'session_id_slash' && path === 'session_id') {
+      const suggested = String(was ?? '').replace(/[\\/]+/g, '_').trim();
+      if (suggested !== '') {
+        items.push({ path, label: 'Session ID', code, group: 'attention', kind: 'suggestion', was, suggested, why: message, inputType: 'text' });
+      } else {
+        items.push({ path, label: 'Session ID', code, group: 'attention', kind: 'input', was, why: message, inputType: 'text' });
+      }
+      continue;
+    }
+
     // --- experimenter_name: a scalar string → suggest wrapping into a single-item list (verbatim). ---
     if (code === 'type' && path === 'experimenter_name') {
       if (typeof was === 'string' && was.trim() !== '') {
@@ -769,30 +820,58 @@ function buildBenignAndShim(model: ValidationModel): {
 
   benign.push(...applySpaceKeyAliases(structuredClone(model)));
 
-  // --- task_epoch (singular) → task_epochs in file/video lists (the field the app reads). ---
+  // --- task_epoch (singular) + one-item task_epochs lists → canonical scalar task_epochs. ---
   for (const key of ['associated_files', 'associated_video_files'] as const) {
     const list = (model as Record<string, unknown>)[key];
     if (!Array.isArray(list)) continue;
     let hasLosslessSingular = false;
+    let hasLosslessListScalar = false;
     list.forEach((item, i) => {
-      if (!item || typeof item !== 'object' || !('task_epoch' in (item as object))) return;
+      if (!item || typeof item !== 'object') return;
       const obj = item as Record<string, unknown>;
-      if ('task_epochs' in obj && !valuesEqual(obj.task_epoch, obj.task_epochs)) {
+      const hasSingular = 'task_epoch' in obj;
+      const hasPlural = 'task_epochs' in obj;
+      const pluralValue = obj.task_epochs;
+      const pluralIsRepairableList = isNonScalarEpochList(pluralValue);
+
+      if (hasSingular && hasPlural && !epochReferencesEqual(obj.task_epoch, pluralValue)) {
+        const canonicalPlural = canonicalEpochReference(pluralValue);
+        const canSuggest = !Array.isArray(canonicalPlural);
         shimItems.push({
           path: `${key}[${i}].task_epochs`,
           label: 'Task epoch',
           code: 'task_epoch_conflict',
           group: 'attention',
-          kind: 'suggestion',
+          kind: canSuggest ? 'suggestion' : 'input',
           was: obj.task_epoch,
-          suggested: obj.task_epochs,
+          ...(canSuggest ? { suggested: canonicalPlural } : {}),
           why:
             '`task_epoch` and `task_epochs` disagree. The app reads `task_epochs`; ' +
             'accept that value to reconcile the legacy key before import, or fix the file.',
           inputType: 'number',
         });
-      } else {
+        return;
+      }
+
+      if (hasSingular) {
         hasLosslessSingular = true;
+      }
+
+      if (hasPlural && isSingleEpochList(pluralValue)) {
+        hasLosslessListScalar = true;
+      } else if (hasPlural && pluralIsRepairableList) {
+        shimItems.push({
+          path: `${key}[${i}].task_epochs`,
+          label: 'Task epoch',
+          code: 'task_epochs_multi_value',
+          group: 'attention',
+          kind: 'input',
+          was: pluralValue,
+          why:
+            '`task_epochs` is a legacy list with more than one value. Associated files/videos ' +
+            'import as one epoch reference here; choose the epoch this row belongs to, or fix the file.',
+          inputType: 'number',
+        });
       }
     });
     if (hasLosslessSingular) {
@@ -800,6 +879,13 @@ function buildBenignAndShim(model: ValidationModel): {
         path: key,
         label: 'task_epoch → task_epochs',
         detail: `Renamed \`task_epoch\` → \`task_epochs\` in ${key} (the field the app reads) — no values changed.`,
+      });
+    }
+    if (hasLosslessListScalar) {
+      benign.push({
+        path: key,
+        label: 'task_epochs list → scalar',
+        detail: `Converted one-item \`task_epochs\` lists to scalar values in ${key} — no epoch linkage changed.`,
       });
     }
   }
@@ -854,12 +940,14 @@ function applyBenignNormalizations(model: Record<string, unknown>): void {
     const list = model[key];
     if (!Array.isArray(list)) continue;
     for (const item of list) {
-      if (item && typeof item === 'object' && 'task_epoch' in (item as object)) {
-        const obj = item as Record<string, unknown>;
-        if ('task_epochs' in obj && !valuesEqual(obj.task_epoch, obj.task_epochs)) continue;
+      if (!item || typeof item !== 'object') continue;
+      const obj = item as Record<string, unknown>;
+      if ('task_epoch' in obj) {
+        if ('task_epochs' in obj && !epochReferencesEqual(obj.task_epoch, obj.task_epochs)) continue;
         if (!('task_epochs' in obj)) obj.task_epochs = obj.task_epoch;
         delete obj.task_epoch;
       }
+      if (isSingleEpochList(obj.task_epochs)) obj.task_epochs = obj.task_epochs[0];
     }
   }
 
@@ -897,7 +985,24 @@ export function buildImportRepairPlan(
   const { benign, shimItems } = buildBenignAndShim(model);
   const normalized = structuredClone(model) as Record<string, unknown>;
   applyBenignNormalizations(normalized);
-  const { items, blockers } = buildValidationItems(normalized as ValidationModel);
+  const validation = buildValidationItems(normalized as ValidationModel);
+  const shimPaths = new Set(shimItems.map((item) => item.path));
+  const items = validation.items.filter((item) => !shimPaths.has(item.path));
+  const blockers = validation.blockers.filter((blocker) => !shimPaths.has(blocker.path));
+  const importOnlyItems: RepairItem[] = [];
+  if (extractRecordingDate(normalized as ValidationModel, sourceName) === null) {
+    importOnlyItems.push({
+      path: IMPORT_RECORDING_DATE_PATH,
+      label: 'Recording date',
+      code: 'missing_recording_date',
+      group: 'required',
+      kind: 'input',
+      why:
+        'Could not determine the recording date from the filename or session_id. ' +
+        'Choose the recording date for this YAML before importing.',
+      inputType: 'date',
+    });
+  }
 
   // Decision: match the subject id against the existing workspace (by key or subject.subject_id).
   const subjectId = (normalized.subject as { subject_id?: unknown } | undefined)?.subject_id;
@@ -915,7 +1020,7 @@ export function buildImportRepairPlan(
     decision,
     workspace
   );
-  const allItems = [...items, ...shimItems, ...existingAnimalCatalogItems];
+  const allItems = [...items, ...shimItems, ...importOnlyItems, ...existingAnimalCatalogItems];
 
   return {
     sourceName,

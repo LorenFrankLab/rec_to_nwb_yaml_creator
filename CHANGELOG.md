@@ -206,6 +206,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Legacy YAML import robustness.** Import & Repair now accepts corpus-style metadata files with
+  list-typed `associated_files.task_epochs` / `associated_video_files.task_epochs` when the list has
+  one epoch, normalizing them to the scalar export form and no longer false-flagging them as
+  orphaned. Legacy `YYYYMMDD_<subject>.yml` filenames now provide the recording date, dateless files
+  get a manual recording-date repair row instead of a dead-end, and known space-key schema aliases
+  (`subject id`, `data acq device`, `electrode groups`, `ntrode electrode group channel map`) are
+  recovered transparently while arbitrary space keys are preserved.
 - **Export merge fail-closed for stale recording systems.** A day whose
   `data_acq_device_name` points at a missing animal recording-system catalog entry now fails export
   merge visibly instead of silently substituting the first catalog device. FsGUI optogenetics

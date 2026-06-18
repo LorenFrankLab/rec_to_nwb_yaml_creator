@@ -158,22 +158,24 @@ describe('ImportRepair — flagging + suggested fixes', () => {
     expect(screen.getByRole('button', { name: /import as new animal/i })).toBeDisabled();
   });
 
-  it('blocks a repairable file that the importer cannot accept — no derivable recording date', async () => {
+  it('surfaces a manual recording-date input when the importer cannot derive one', async () => {
     const user = userEvent.setup();
     renderScreen();
     // A clean, valid export but with a date-less session_id and a non-conventional filename, so the
-    // importer can't derive the recording date. Validation passes, yet the import must NOT enable
-    // (then fail) — the gate runs the SAME pure importer the commit will.
+    // importer can't derive the recording date. Validation passes, yet import stays blocked until
+    // the user supplies the import-only recording date.
     const noDateYaml = cleanYaml.replace('session_id: remy_20230622', 'session_id: remy');
     const input = screen.getByLabelText(/choose a metadata yaml file/i);
     await user.upload(input, makeFile('metadata.yml', noDateYaml));
 
-    // It advances to the repair view (new-animal decision), but import is blocked with a reason
-    // naming the recording date — not a misleading "fill a field" prompt.
     await screen.findByText(/will create a new animal/i);
     const importBtn = screen.getByRole('button', { name: /import as new animal/i });
     expect(importBtn).toBeDisabled();
-    expect(screen.getByText(/recording date/i)).toBeInTheDocument();
+    const required = screen.getByRole('region', { name: /required, but missing/i });
+    fireEvent.change(within(required).getByLabelText(/recording date/i), {
+      target: { value: '2023-06-22' },
+    });
+    expect(importBtn).toBeEnabled();
   });
 });
 

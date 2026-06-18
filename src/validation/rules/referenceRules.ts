@@ -15,6 +15,36 @@ import { optoFieldsPresence } from '../../domain/optoCompleteness';
 import { duplicateTaskEpochs } from '../taskEpochs';
 
 /**
+ * Collect the task epochs a day defines. The app preserves the decoded epoch values here rather
+ * than coercing them; schema/type validation owns malformed values, and the legacy false-positive
+ * fix below must not broaden scalar matching semantics.
+ */
+function collectTaskEpochSet(tasks: unknown): Set<unknown> {
+  const taskEpochSet = new Set<unknown>();
+  (Array.isArray(tasks) ? tasks : []).forEach((task) => {
+    const epochs =
+      task !== null && typeof task === 'object'
+        ? (task as { task_epochs?: unknown }).task_epochs
+        : undefined;
+    (Array.isArray(epochs) ? epochs : []).forEach((epoch: unknown) => {
+      if (epoch !== undefined && epoch !== null) taskEpochSet.add(epoch);
+    });
+  });
+  return taskEpochSet;
+}
+
+/**
+ * A file/video reference is canonical scalar in the schema, but legacy YAMLs often carry a
+ * one-item `task_epochs` list. Validate each referenced value so `[2]` is not false-flagged while
+ * `[9]` still reports the genuinely orphaned epoch.
+ */
+function referencedEpochValues(value: unknown): unknown[] {
+  if (Array.isArray(value)) return value.filter((epoch) => epoch !== undefined && epoch !== null && epoch !== '');
+  if (value === undefined || value === null || value === '') return [];
+  return [value];
+}
+
+/**
  * Rules 1 / 2: tasks / associated video files reference cameras but the cameras table is absent.
  *
  * @param model - The form data to validate.
@@ -170,17 +200,13 @@ export function taskEpochReferences(model: ValidationModel): ValidationIssue[] {
   }
 
   if (Array.isArray(model.associated_video_files) && model.associated_video_files.length > 0) {
-    const taskEpochSet = new Set();
-    (Array.isArray(model.tasks) ? model.tasks : []).forEach((task) => {
-      (Array.isArray(task?.task_epochs) ? task.task_epochs : []).forEach((e: unknown) => {
-        if (e !== undefined && e !== null) taskEpochSet.add(e);
-      });
-    });
+    const taskEpochSet = collectTaskEpochSet(model.tasks);
     model.associated_video_files.forEach((video, vi) => {
-      const epoch = video?.task_epochs;
+      const epochs = referencedEpochValues(video?.task_epochs);
       // Blank/empty task_epochs is an incomplete row; schema required/type owns it.
-      if (epoch === undefined || epoch === null || epoch === '') return;
-      if (!taskEpochSet.has(epoch)) {
+      if (epochs.length === 0) return;
+      epochs.forEach((epoch) => {
+        if (taskEpochSet.has(epoch)) return;
         issues.push({
           path: `associated_video_files[${vi}].task_epochs`,
           field: 'task_epochs',
@@ -194,7 +220,7 @@ export function taskEpochReferences(model: ValidationModel): ValidationIssue[] {
             `${epoch}, which no task defines. Spyglass silently drops videos without a ` +
             `matching task epoch — point it at an existing epoch.`,
         });
-      }
+      });
     });
   }
 
@@ -203,16 +229,12 @@ export function taskEpochReferences(model: ValidationModel): ValidationIssue[] {
   // here so the user can repair them instead of losing the value (Load-Time Orphan
   // Visibility Contract).
   if (Array.isArray(model.associated_files) && model.associated_files.length > 0) {
-    const taskEpochSet = new Set();
-    (Array.isArray(model.tasks) ? model.tasks : []).forEach((task) => {
-      (Array.isArray(task?.task_epochs) ? task.task_epochs : []).forEach((e: unknown) => {
-        if (e !== undefined && e !== null) taskEpochSet.add(e);
-      });
-    });
+    const taskEpochSet = collectTaskEpochSet(model.tasks);
     model.associated_files.forEach((file, fi) => {
-      const epoch = file?.task_epochs;
-      if (epoch === undefined || epoch === null || epoch === '') return; // schema owns empty
-      if (!taskEpochSet.has(epoch)) {
+      const epochs = referencedEpochValues(file?.task_epochs);
+      if (epochs.length === 0) return; // schema owns empty
+      epochs.forEach((epoch) => {
+        if (taskEpochSet.has(epoch)) return;
         issues.push({
           path: `associated_files[${fi}].task_epochs`,
           field: 'task_epochs',
@@ -225,7 +247,7 @@ export function taskEpochReferences(model: ValidationModel): ValidationIssue[] {
             `Associated file ${fi + 1}${file.name ? ` ("${file.name}")` : ''} references task ` +
             `epoch ${epoch}, which no task defines. Point it at an existing epoch or remove it.`,
         });
-      }
+      });
     });
   }
 

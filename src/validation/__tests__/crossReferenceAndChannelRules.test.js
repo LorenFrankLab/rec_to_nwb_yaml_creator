@@ -483,6 +483,26 @@ describe('task/video dependency + camera refs', () => {
     expect(orphan.severity).toBe('error');
   });
 
+  it('accepts a legacy one-item video task_epochs list when it matches a task epoch', () => {
+    const issues = rulesValidation({
+      cameras: [{ id: 0, camera_name: 'c' }],
+      tasks: [{ task_name: 'a', task_description: 'd', camera_id: [0], task_epochs: [2] }],
+      associated_video_files: [{ name: 'v', camera_id: 0, task_epochs: [2] }],
+    });
+    expect(codes(issues)).not.toContain('orphaned_video');
+  });
+
+  it('flags only the orphaned entries from a legacy video task_epochs list', () => {
+    const issues = rulesValidation({
+      cameras: [{ id: 0, camera_name: 'c' }],
+      tasks: [{ task_name: 'a', task_description: 'd', camera_id: [0], task_epochs: [2] }],
+      associated_video_files: [{ name: 'v', camera_id: 0, task_epochs: [2, 9] }],
+    });
+    const orphans = issues.filter((i) => i.code === 'orphaned_video');
+    expect(orphans).toHaveLength(1);
+    expect(orphans[0].message).toContain('9');
+  });
+
   it('errors on an orphaned associated_file (task_epochs matches no task)', () => {
     const issues = rulesValidation({
       tasks: [{ task_name: 'a', task_description: 'd', task_epochs: [2] }],
@@ -492,6 +512,23 @@ describe('task/video dependency + camera refs', () => {
     expect(orphan).toBeDefined();
     expect(orphan.severity).toBe('error');
     expect(orphan.message).toContain('9');
+  });
+
+  it('accepts a legacy one-item associated_file task_epochs list when it matches a task epoch', () => {
+    expect(codes(rulesValidation({
+      tasks: [{ task_name: 'a', task_description: 'd', task_epochs: [2] }],
+      associated_files: [{ name: 'f.dat', task_epochs: [2] }],
+    }))).not.toContain('orphaned_file');
+  });
+
+  it('flags only the orphaned entries from a legacy associated_file task_epochs list', () => {
+    const issues = rulesValidation({
+      tasks: [{ task_name: 'a', task_description: 'd', task_epochs: [2] }],
+      associated_files: [{ name: 'f.dat', task_epochs: [2, 9] }],
+    });
+    const orphans = issues.filter((i) => i.code === 'orphaned_file');
+    expect(orphans).toHaveLength(1);
+    expect(orphans[0].message).toContain('9');
   });
 
   it('passes an associated_file with a matching task epoch', () => {

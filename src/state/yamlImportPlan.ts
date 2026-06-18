@@ -79,9 +79,12 @@ interface ResolvedAnimalFacts {
  *
  *  - PRIMARY: the `{mmddYYYY}_{subject}_metadata.yml` filename convention (the exact
  *    inverse of {@link module:io/yaml.formatDeterministicFilename}). e.g.
- *    `06222023_remy_metadata.yml` → `2023-06-22`.
+ *    `06222023_remy_metadata.yml` → `2023-06-22`; and the common legacy
+ *    `{YYYYMMDD}_{subject}.yml` convention, e.g. `20231108_bs28.yml` → `2023-11-08`.
  *  - FALLBACK: a `session_id` of the form `{anything}_{YYYYMMDD}`, e.g. `remy_20230622`
  *    → `2023-06-22`.
+ *  - IMPORT-REPAIR FALLBACK: `__importRepair.recording_date`, written only by the
+ *    Import & Repair manual date row.
  *
  * Returns `null` when neither yields a VALID calendar date (the caller treats a dateless
  * file as unimportable with a clear reason). Shape-safe: never throws on a non-object
@@ -103,6 +106,13 @@ export function extractRecordingDate(
       const iso = toIsoDate(yyyy, mm, dd);
       if (iso) return iso;
     }
+
+    const ymdMatch = sourceName.match(/^(\d{4})(\d{2})(\d{2})_.+\.ya?ml$/i);
+    if (ymdMatch) {
+      const [, yyyy, mm, dd] = ymdMatch;
+      const iso = toIsoDate(yyyy, mm, dd);
+      if (iso) return iso;
+    }
   }
 
   // FALLBACK: session_id of the form {anything}_{YYYYMMDD}.
@@ -110,6 +120,19 @@ export function extractRecordingDate(
     flatModel !== null && typeof flatModel === 'object' ? flatModel.session_id : undefined;
   if (typeof sessionId === 'string') {
     const match = sessionId.match(/_(\d{4})(\d{2})(\d{2})$/);
+    if (match) {
+      const [, yyyy, mm, dd] = match;
+      const iso = toIsoDate(yyyy, mm, dd);
+      if (iso) return iso;
+    }
+  }
+
+  const manualDate =
+    flatModel !== null && typeof flatModel === 'object'
+      ? flatModel.__importRepair?.recording_date
+      : undefined;
+  if (typeof manualDate === 'string') {
+    const match = manualDate.match(/^(\d{4})-(\d{2})-(\d{2})(?:T.*)?$/);
     if (match) {
       const [, yyyy, mm, dd] = match;
       const iso = toIsoDate(yyyy, mm, dd);
