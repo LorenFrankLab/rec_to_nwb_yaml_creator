@@ -34,7 +34,7 @@ describe('Day editor repair-action navigation (integration)', () => {
     const user = userEvent.setup();
     const { animal, day } = buildRealisticWorkspace();
     // A blank session description is an export-blocking Daily Setup error whose field has a focusable
-    // anchor. It surfaces in the always-visible readiness bar (no Validation step to navigate to).
+    // anchor. The readiness bar is quiet on Daily Setup, then appears on work sections.
     day.session.session_description = '';
     useDayIdFromUrl.mockReturnValue(day.id);
 
@@ -44,6 +44,7 @@ describe('Day editor repair-action navigation (integration)', () => {
       </StoreProvider>
     );
 
+    await user.click(screen.getByRole('button', { name: /^Tasks & Files\b/i }));
     // The readiness bar lists the blocking issue with a "Fix" action.
     const bar = screen.getByRole('alert');
     await user.click(within(bar).getByRole('button'));
@@ -71,6 +72,7 @@ describe('Day editor repair-action navigation (integration)', () => {
       </StoreProvider>
     );
 
+    await user.click(screen.getByRole('button', { name: /^Tasks & Files\b/i }));
     // The empty-location error is one of potentially several animal-surface blockers in the
     // readiness bar; any of them hands off to the same Animal Editor route.
     const bar = screen.getByRole('alert');
@@ -96,6 +98,7 @@ describe('Day editor repair-action navigation (integration)', () => {
       </StoreProvider>
     );
 
+    await user.click(screen.getByRole('button', { name: /^Tasks & Files\b/i }));
     const bar = screen.getByRole('alert');
     const [animalFix] = within(bar).getAllByRole('button');
     await user.click(animalFix);

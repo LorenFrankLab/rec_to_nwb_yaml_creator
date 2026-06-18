@@ -438,13 +438,87 @@
   text-align: center;
 }
 
-/* Drill-in editor. */
-.drillIn {
-  background: var(--color-grey-50, #fafbfc);
+.masterDetail {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 390px);
+  gap: var(--spacing-md, 16px);
+  align-items: start;
 }
 
-.drillInInner {
-  padding: var(--spacing-md, 14px) var(--spacing-md, 18px);
+.masterOnly {
+  display: block;
+}
+
+.tablePane {
+  min-width: 0;
+  overflow-x: auto;
+}
+
+.activeRow td {
+  background: var(--color-primary-light, #e3f2fd);
+}
+
+.optoReadout {
+  color: var(--color-grey-700, #444);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.detailsPanel {
+  position: sticky;
+  top: var(--spacing-md, 16px);
+  border: 1px solid var(--color-grey-200, #e6e6e6);
+  border-radius: var(--radius-md, 8px);
+  background: var(--color-white, #fff);
+  box-shadow: var(--shadow-sm, 0 2px 8px rgba(0, 0, 0, 0.08));
+  overflow: hidden;
+}
+
+.detailsPanelHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--spacing-sm, 8px);
+  padding: var(--spacing-md, 14px);
+  border-bottom: 1px solid var(--color-grey-200, #e6e6e6);
+}
+
+.detailsPanelTitle {
+  margin: 0;
+  font-size: var(--font-size-lg, 1.125rem);
+  line-height: 1.25;
+}
+
+.detailsPanelMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: var(--spacing-xs, 6px);
+}
+
+.panelCloseButton {
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm, 4px);
+  background: transparent;
+  color: var(--color-grey-600, #555);
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--font-size-xs, 0.75rem);
+  min-height: 28px;
+  padding: 3px 7px;
+}
+
+.panelCloseButton:hover,
+.panelCloseButton:focus-visible {
+  border-color: var(--color-grey-300, #ccc);
+  background: var(--color-grey-100, #f2f2f2);
+  color: var(--color-primary, #2b6cb0);
+}
+
+.detailsPanelBody {
+  display: grid;
+  gap: var(--spacing-md, 16px);
+  padding: var(--spacing-md, 14px);
 }
 
 .group {
@@ -456,11 +530,15 @@
 }
 
 .groupHeading {
-  font-size: var(--font-size-xs, 0.75rem);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--color-grey-500, #777);
+  font-size: var(--font-size-sm, 0.875rem);
+  color: var(--color-grey-800, #333);
+  font-weight: 700;
   margin: 0 0 var(--spacing-sm, 8px);
+}
+
+.groupNote {
+  color: var(--color-grey-600, #555);
+  font-size: var(--font-size-xs, 0.75rem);
 }
 
 .taskEditorHeader {
@@ -536,6 +614,18 @@
   padding: 0;
 }
 
+.panelGroupHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-sm, 8px);
+  padding: var(--spacing-sm, 12px) var(--spacing-sm, 12px) 0;
+}
+
+.panelGroupHeader .groupHeading {
+  margin-bottom: 0;
+}
+
 .generatedSummary {
   display: flex;
   align-items: center;
@@ -576,7 +666,7 @@
 }
 
 .generatedContent {
-  padding: 0 var(--spacing-sm, 12px) var(--spacing-sm, 12px);
+  padding: var(--spacing-sm, 12px);
 }
 
 .genNote {
@@ -591,6 +681,17 @@
   gap: 8px 14px;
   align-items: center;
   margin-bottom: 8px;
+}
+
+.videoEditorRow {
+  display: block;
+  margin-bottom: var(--spacing-xs, 6px);
+}
+
+.panelActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-xs, 6px);
 }
 
 .fieldLabel {
@@ -638,6 +739,14 @@
 @media (max-width: 768px) {
   .workspaceHeader {
     flex-direction: column;
+  }
+
+  .masterDetail {
+    grid-template-columns: 1fr;
+  }
+
+  .detailsPanel {
+    position: static;
   }
 
   .templateMenu {

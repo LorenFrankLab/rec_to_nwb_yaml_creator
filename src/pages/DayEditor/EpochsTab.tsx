@@ -122,7 +122,7 @@ function taskInstanceEpochs(instances: TaskInstance[]): Set<number> {
 /**
  * EpochsTab — the epoch grid (Phase 4), the day editor's spine. A pure-view-model-driven table with
  * one row per epoch (Task/status + Camera(s) + Statescript-naming + Video-presence + Opto)
- * and a per-epoch drill-in (Epoch task / Files for this epoch / Optogenetics). Every edit maps to an
+ * and a per-epoch details panel (Epoch task / Files for this epoch / Optogenetics). Every edit maps to an
  * {@link updateDay} patch over the day's EXISTING arrays via the pure {@link buildEpochGrid} join +
  * {@link module:domain/epochOperations} transforms — storage/export are unchanged. Replaces the
  * `TasksEpochsStep` bridge.
@@ -138,14 +138,13 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
   const cameras = getAnimalCameras(animal);
   const unresolvedTaskCatalogDivergence = view.derived && view.divergences.length > 0;
 
-  const [expanded, setExpanded] = useState<Set<number>>(new Set());
+  const [activeEpoch, setActiveEpoch] = useState<number | null>(null);
   const [pendingOrphan, setPendingOrphan] = useState<PendingOrphan | null>(null);
   const [quickAddEpoch, setQuickAddEpoch] = useState<number | null>(null);
   const [quickAddError, setQuickAddError] = useState<string | null>(null);
   const [menuEpoch, setMenuEpoch] = useState<number | null>(null);
   const [templateOpen, setTemplateOpen] = useState(false);
   const [epochFilter, setEpochFilter] = useState<EpochFilter>('all');
-  const [forcedFileEditors, setForcedFileEditors] = useState<Set<number>>(new Set());
   const [pendingFileFocus, setPendingFileFocus] = useState<PendingFileFocus | null>(null);
   // Epochs whose statescript/video name is being manually overridden (UI mode; GeneratedValue's
   // `derived` flag is consumer-driven). A name only becomes stored-manual once the user types.
@@ -156,18 +155,18 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
   // Alt+N (the stepper "add" intent) opens the template menu — the grid's primary add affordance.
   useStepperShortcut(useCallback((action) => { if (action === 'add') setTemplateOpen(true); }, []));
 
-  // Repair landing: expand the targeted epoch (the frame's focus effect then focuses the control).
+  // Repair landing: open the targeted epoch panel (the frame's focus effect then focuses the control).
   useEffect(() => {
     const epoch = epochFromFocusPath(focusRequest?.fieldPath);
     if (epoch != null) {
-      setExpanded((prev) => (prev.has(epoch) ? prev : new Set(prev).add(epoch)));
+      setActiveEpoch(epoch);
       return;
     }
 
     const fileIndex = associatedFileIndexFromFocusPath(focusRequest?.fieldPath);
     if (fileIndex != null) {
       const row = grid.rows.find((candidate) => candidate.statescript?.index === fileIndex);
-      if (row) setExpanded((prev) => (prev.has(row.epoch) ? prev : new Set(prev).add(row.epoch)));
+      if (row) setActiveEpoch(row.epoch);
     }
   }, [focusRequest, grid.rows]);
 
@@ -201,21 +200,17 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
   }, [day, onFieldUpdate, statePatch]);
 
   const toggle = useCallback((epoch: number) => {
-    setExpanded((prev) => {
-      const next = new Set(prev);
-      if (next.has(epoch)) next.delete(epoch);
-      else {
-        next.add(epoch);
-        clearDeferredEpoch(epoch);
-      }
-      return next;
-    });
-  }, [clearDeferredEpoch]);
+    if (activeEpoch === epoch) {
+      setActiveEpoch(null);
+      return;
+    }
+    clearDeferredEpoch(epoch);
+    setActiveEpoch(epoch);
+  }, [activeEpoch, clearDeferredEpoch]);
 
   const openFileEditor = useCallback((epoch: number, target: FileFocusTarget) => {
     setEpochFilter('all');
-    setExpanded((prev) => new Set(prev).add(epoch));
-    setForcedFileEditors((prev) => new Set(prev).add(epoch));
+    setActiveEpoch(epoch);
     setPendingFileFocus((prev) => ({
       epoch,
       target,
@@ -517,7 +512,6 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
   };
 
   const hasOpto = grid.isOpto;
-  const colCount = hasOpto ? 7 : 5;
   const epochCount = grid.rows.length;
   const missingVideoCount = grid.rows.filter((row) => row.status === 'needs_video').length;
   const missingStatescriptCount = grid.rows.filter((row) => row.statescript == null).length;
@@ -539,6 +533,9 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
     if (epochFilter === 'custom-filenames') return hasCustomFilename(row);
     return true;
   });
+  const activeRow = activeEpoch == null
+    ? null
+    : grid.rows.find((row) => row.epoch === activeEpoch) ?? null;
   const filterButtonClass = (filter: EpochFilter, tone?: string) =>
     [
       styles.summaryChip,
@@ -743,97 +740,115 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
           No epochs match this filter.
         </div>
       ) : (
-        <table className={styles.table}>
-          <thead>
-            <tr>
-              <th scope="col" className={styles.numCell}>#</th>
-              <th scope="col">Task</th>
-              <th scope="col">Camera(s)</th>
-              <th scope="col">Statescript</th>
-              <th scope="col">Video(s)</th>
-              {hasOpto && <th scope="col">Opto (mW)</th>}
-              {hasOpto && <th scope="col">Pulse (ms)</th>}
-              <th scope="col" className={styles.menuCell}><span className="sr-only">Actions</span></th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredRows.map((row) => {
-              const isOpen = expanded.has(row.epoch);
-              const drillInId = `epoch-${row.epoch}-details`;
-              return (
-                <EpochRowBlock
-                  key={row.epoch}
-                  row={row}
-                  isOpen={isOpen}
-                  drillInId={drillInId}
-                  hasOpto={hasOpto}
-                  colCount={colCount}
-                  cameras={cameras}
-                  taskTypes={view.taskTypes}
-                  grid={grid}
-                  menuOpen={menuEpoch === row.epoch}
-                  filesOpen={forcedFileEditors.has(row.epoch)}
-                  fileFocus={pendingFileFocus?.epoch === row.epoch ? pendingFileFocus : null}
-                  manualStatescript={manualStatescript.has(row.epoch)}
-                  manualVideoKeys={manualVideo}
-                  onToggle={() => toggle(row.epoch)}
-                  onOpenMenu={(e) => {
-                    e.stopPropagation();
-                    setMenuEpoch((cur) => (cur === row.epoch ? null : row.epoch));
-                  }}
-                  onFilesOpenChange={(open) => {
-                    setForcedFileEditors((prev) => {
-                      const next = new Set(prev);
-                      if (open) next.add(row.epoch);
-                      else next.delete(row.epoch);
-                      return next;
-                    });
-                  }}
-                  onReassignTask={(taskTypeId) => reassignTask(row.epoch, taskTypeId)}
-                  onNewTaskType={() => {
-                    setQuickAddError(null);
-                    setQuickAddEpoch(row.epoch);
-                  }}
-                  onOpto={(field, value) => setOpto(row, field, value)}
-                  onInsertAfter={() => onInsertAfter(row.epoch)}
-                  onDuplicate={() => onDuplicate(row.epoch)}
-                  onMoveUp={() => onMove(row.epoch, 'up')}
-                  onMoveDown={() => onMove(row.epoch, 'down')}
-                  onDelete={() => onDelete(row.epoch)}
-                  statescriptDerivedName={statescriptDerivedName(row)}
-                  onStatescriptOverride={() => setStatescriptManual(row.epoch, true)}
-                  onStatescriptRevert={() => {
-                    setStatescriptManual(row.epoch, false);
-                    writeStatescriptPath(row, deriveStatescriptPath(grid.dataFolder, statescriptDerivedName(row)));
-                  }}
-                  onStatescriptChange={(path) => writeStatescriptPath(row, path)}
-                  onAddStatescript={() => {
-                    openFileEditor(row.epoch, 'statescript');
-                    addStatescript(row);
-                  }}
-                  onAddVideo={() => {
-                    openFileEditor(row.epoch, 'video');
-                    addVideo(row);
-                  }}
-                  onMarkNoVideo={() => setVideoless(row.epoch, true)}
-                  onUndoNoVideo={() => setVideoless(row.epoch, false)}
-                  onRemoveVideo={removeVideo}
-                  onVideoOverride={(key) => setManualVideo((p) => new Set(p).add(key))}
-                  onVideoRevert={(key, videoIndex) => {
-                    setManualVideo((p) => {
-                      const n = new Set(p);
-                      n.delete(key);
-                      return n;
-                    });
-                    const vi = row.videos.findIndex((v) => v.index === videoIndex);
-                    writeVideoName(videoIndex, deriveVideoName({ date: grid.date, subjectId: grid.subjectId, epoch: row.epoch, tag: row.tag, index: vi + 1 }));
-                  }}
-                  onVideoNameChange={writeVideoName}
-                />
-              );
-            })}
-          </tbody>
-        </table>
+        <div className={activeRow ? styles.masterDetail : styles.masterOnly}>
+          <div className={styles.tablePane}>
+            <table className={styles.table}>
+              <thead>
+                <tr>
+                  <th scope="col" className={styles.numCell}>#</th>
+                  <th scope="col">Task</th>
+                  <th scope="col">Camera(s)</th>
+                  <th scope="col">Statescript</th>
+                  <th scope="col">Video(s)</th>
+                  {hasOpto && <th scope="col">Opto</th>}
+                  <th scope="col" className={styles.menuCell}><span className="sr-only">Actions</span></th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredRows.map((row) => (
+                  <EpochRowBlock
+                    key={row.epoch}
+                    row={row}
+                    isActive={activeEpoch === row.epoch}
+                    panelId="epoch-details-panel"
+                    hasOpto={hasOpto}
+                    cameras={cameras}
+                    menuOpen={menuEpoch === row.epoch}
+                    onToggle={() => toggle(row.epoch)}
+                    onOpenMenu={(e) => {
+                      e.stopPropagation();
+                      setMenuEpoch((cur) => (cur === row.epoch ? null : row.epoch));
+                    }}
+                    onInsertAfter={() => onInsertAfter(row.epoch)}
+                    onDuplicate={() => onDuplicate(row.epoch)}
+                    onMoveUp={() => onMove(row.epoch, 'up')}
+                    onMoveDown={() => onMove(row.epoch, 'down')}
+                    onDelete={() => onDelete(row.epoch)}
+                    onAddStatescript={() => {
+                      openFileEditor(row.epoch, 'statescript');
+                      addStatescript(row);
+                    }}
+                    onAddVideo={() => {
+                      openFileEditor(row.epoch, 'video');
+                      addVideo(row);
+                    }}
+                    onMarkNoVideo={() => setVideoless(row.epoch, true)}
+                  />
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {activeRow && (
+            <EpochDetailsPanel
+              row={activeRow}
+              panelId="epoch-details-panel"
+              hasOpto={hasOpto}
+              cameras={cameras}
+              taskTypes={view.taskTypes}
+              grid={grid}
+              fileFocus={pendingFileFocus?.epoch === activeRow.epoch ? pendingFileFocus : null}
+              manualStatescript={manualStatescript.has(activeRow.epoch)}
+              manualVideoKeys={manualVideo}
+              onClose={() => setActiveEpoch(null)}
+              onReassignTask={(taskTypeId) => reassignTask(activeRow.epoch, taskTypeId)}
+              onNewTaskType={() => {
+                setQuickAddError(null);
+                setQuickAddEpoch(activeRow.epoch);
+              }}
+              onOpto={(field, value) => setOpto(activeRow, field, value)}
+              onInsertAfter={() => onInsertAfter(activeRow.epoch)}
+              onDuplicate={() => onDuplicate(activeRow.epoch)}
+              onMoveUp={() => onMove(activeRow.epoch, 'up')}
+              onMoveDown={() => onMove(activeRow.epoch, 'down')}
+              onDelete={() => onDelete(activeRow.epoch)}
+              statescriptDerivedName={statescriptDerivedName(activeRow)}
+              onStatescriptOverride={() => setStatescriptManual(activeRow.epoch, true)}
+              onStatescriptRevert={() => {
+                setStatescriptManual(activeRow.epoch, false);
+                writeStatescriptPath(activeRow, deriveStatescriptPath(grid.dataFolder, statescriptDerivedName(activeRow)));
+              }}
+              onStatescriptChange={(path) => writeStatescriptPath(activeRow, path)}
+              onAddStatescript={() => {
+                openFileEditor(activeRow.epoch, 'statescript');
+                addStatescript(activeRow);
+              }}
+              onAddVideo={() => {
+                openFileEditor(activeRow.epoch, 'video');
+                addVideo(activeRow);
+              }}
+              onMarkNoVideo={() => setVideoless(activeRow.epoch, true)}
+              onUndoNoVideo={() => setVideoless(activeRow.epoch, false)}
+              onRemoveVideo={removeVideo}
+              onVideoOverride={(key) => setManualVideo((p) => new Set(p).add(key))}
+              onVideoRevert={(key, videoIndex) => {
+                setManualVideo((p) => {
+                  const n = new Set(p);
+                  n.delete(key);
+                  return n;
+                });
+                const vi = activeRow.videos.findIndex((v) => v.index === videoIndex);
+                writeVideoName(videoIndex, deriveVideoName({
+                  date: grid.date,
+                  subjectId: grid.subjectId,
+                  epoch: activeRow.epoch,
+                  tag: activeRow.tag,
+                  index: vi + 1,
+                }));
+              }}
+              onVideoNameChange={writeVideoName}
+            />
+          )}
+        </div>
       )}
 
       {quickAddEpoch !== null && (
@@ -933,24 +948,38 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
   }
 }
 
-/** Props for one epoch row + its drill-in. */
+/** Props for one epoch overview row. */
 interface EpochRowProps {
   row: EpochGridRow;
-  isOpen: boolean;
-  drillInId: string;
+  isActive: boolean;
+  panelId: string;
   hasOpto: boolean;
-  colCount: number;
+  cameras: Camera[];
+  menuOpen: boolean;
+  onToggle: () => void;
+  onOpenMenu: (e: React.MouseEvent) => void;
+  onInsertAfter: () => void;
+  onDuplicate: () => void;
+  onMoveUp: () => void;
+  onMoveDown: () => void;
+  onDelete: () => void;
+  onAddStatescript: () => void;
+  onAddVideo: () => void;
+  onMarkNoVideo: () => void;
+}
+
+/** Props for the focused epoch details panel. */
+interface EpochDetailsPanelProps {
+  row: EpochGridRow;
+  panelId: string;
+  hasOpto: boolean;
   cameras: Camera[];
   taskTypes: TaskType[];
   grid: ReturnType<typeof buildEpochGrid>;
-  menuOpen: boolean;
-  filesOpen: boolean;
   fileFocus: PendingFileFocus | null;
   manualStatescript: boolean;
   manualVideoKeys: Set<string>;
-  onToggle: () => void;
-  onOpenMenu: (e: React.MouseEvent) => void;
-  onFilesOpenChange: (open: boolean) => void;
+  onClose: () => void;
   onReassignTask: (taskTypeId: string) => void;
   onNewTaskType: () => void;
   onOpto: (field: 'power_in_mW' | 'pulseLength', value: string) => void;
@@ -980,13 +1009,121 @@ const STATESCRIPT_LABEL: Record<EpochGridRow['statescriptNaming'], string> = {
   none: '—',
 };
 
-/** One epoch row (collapsed cells = STATE, not names) + its focused drill-in groups. */
+/** One epoch row: scan-friendly state, quick missing-file fixes, and structural actions. */
 function EpochRowBlock(p: EpochRowProps) {
-  const { row, isOpen, drillInId, hasOpto, colCount, cameras, taskTypes, grid } = p;
+  const { row, isActive, panelId, hasOpto, cameras } = p;
   const videoLabel =
     row.videoPresence === 'absent' ? 'No video' : row.videoPresence === 'missing' ? 'Missing' : `${row.videos.length} video`;
   const videoClass =
     row.videoPresence === 'absent' ? styles.vidNone : row.videoPresence === 'missing' ? styles.vidMissing : styles.vidPresent;
+  const optoLabel = row.opto?.entry.power_in_mW != null && row.opto.entry.power_in_mW !== ''
+    ? `${row.opto.entry.power_in_mW} mW`
+    : '—';
+
+  return (
+    <tr className={isActive ? styles.activeRow : undefined}>
+      <td className={styles.numCell}>{row.epoch}</td>
+      <td className={styles.taskCell}>
+        <div className={styles.taskCellStack}>
+          <div className={styles.taskDisclosureRow}>
+            <div className={styles.taskIdentity}>
+              <span className={styles.taskName}>{row.taskName || <em>(no task)</em>}</span>
+              <span className={styles.taskMeta}>
+                <span className={styles.tag}>tag {row.tag}</span>
+                <EpochStatusPill status={row.status} />
+                {row.duplicate && (
+                  <span className={styles.duplicateBadge} title="This epoch is claimed by more than one task">
+                    duplicate
+                  </span>
+                )}
+              </span>
+            </div>
+            {/* The task disclosure opens the editor; the trailing menu is reserved for row
+                structure actions such as insert, move, duplicate, and delete. */}
+            <button
+              type="button"
+              className={styles.taskDisclosureButton}
+              aria-expanded={isActive}
+              aria-controls={panelId}
+              aria-label={`${isActive ? 'Hide' : 'Show'} epoch ${row.epoch} details`}
+              onClick={p.onToggle}
+            >
+              <span>{isActive ? 'Hide' : 'Details'}</span>
+              <span className={styles.editChevron} aria-hidden="true">{isActive ? '▴' : '▾'}</span>
+            </button>
+          </div>
+        </div>
+      </td>
+      <td>
+        {row.cameras.length === 0
+          ? <span className={styles.vidNone}>—</span>
+          : row.cameras.map((id) => <span key={String(id)} className={styles.cam}>{cameraName(cameras, id)}</span>)}
+      </td>
+      <td>
+        <span className={styles.cellStack}>
+          <span className={`${styles.fstate} ${row.statescriptNaming === 'manual' ? styles.fstateManual : row.statescriptNaming === 'generated' ? styles.fstateGenerated : styles.fstateNone}`}>
+            {STATESCRIPT_LABEL[row.statescriptNaming]}
+          </span>
+          {!row.statescript && (
+            <button
+              type="button"
+              className={styles.inlineAction}
+              aria-label={`Add statescript for epoch ${row.epoch}`}
+              onClick={p.onAddStatescript}
+            >
+              Add
+            </button>
+          )}
+        </span>
+      </td>
+      <td>
+        <span className={styles.cellStack}>
+          <span className={videoClass}>{videoLabel}</span>
+          {row.videoPresence === 'missing' && (
+            <span className={styles.inlineActions}>
+              <button
+                type="button"
+                className={styles.inlineAction}
+                aria-label={`Add video for epoch ${row.epoch}`}
+                onClick={p.onAddVideo}
+              >
+                Add
+              </button>
+              <button
+                type="button"
+                className={styles.inlineAction}
+                aria-label={`Mark epoch ${row.epoch} as no video`}
+                onClick={p.onMarkNoVideo}
+              >
+                No video
+              </button>
+            </span>
+          )}
+        </span>
+      </td>
+      {hasOpto && <td><span className={styles.optoReadout}>{optoLabel}</span></td>}
+      <td className={styles.menuCell}>
+        <button type="button" className={styles.menuButton} aria-haspopup="menu" aria-expanded={p.menuOpen} aria-label={`More actions for epoch ${row.epoch}`} onClick={p.onOpenMenu}>
+          ⋯
+        </button>
+        {p.menuOpen && (
+          <div className={styles.menu} role="menu" style={{ right: 0 }} onClick={(e) => e.stopPropagation()}>
+            <button type="button" role="menuitem" className={styles.menuItem} onClick={p.onInsertAfter}>Insert epoch after</button>
+            <button type="button" role="menuitem" className={styles.menuItem} onClick={p.onDuplicate}>Duplicate epoch</button>
+            <button type="button" role="menuitem" className={styles.menuItem} onClick={p.onMoveUp}>Move up</button>
+            <button type="button" role="menuitem" className={styles.menuItem} onClick={p.onMoveDown}>Move down</button>
+            <div className={styles.menuSep} />
+            <button type="button" role="menuitem" className={`${styles.menuItem} ${styles.danger}`} onClick={p.onDelete}>Delete epoch</button>
+          </div>
+        )}
+      </td>
+    </tr>
+  );
+}
+
+/** Focused editor panel for the currently selected epoch. */
+function EpochDetailsPanel(p: EpochDetailsPanelProps) {
+  const { row, panelId, hasOpto, cameras, taskTypes, grid } = p;
   const ownerTypeId = row.taskTypeId ?? '';
   const hasManualVideo = row.videos.some((v) => p.manualVideoKeys.has(`e${row.epoch}-v${v.index}`));
   const generatedFilesNeedReview =
@@ -994,10 +1131,9 @@ function EpochRowBlock(p: EpochRowProps) {
     row.statescriptNaming === 'manual' ||
     row.videoPresence !== 'present' ||
     hasManualVideo;
-  const filesOpen = p.filesOpen || generatedFilesNeedReview;
 
   useEffect(() => {
-    if (!isOpen || !p.fileFocus || p.fileFocus.epoch !== row.epoch) return undefined;
+    if (!p.fileFocus || p.fileFocus.epoch !== row.epoch) return undefined;
     const handle = window.setTimeout(() => {
       const target = document.querySelector<HTMLElement>(
         `[data-field-path="epoch-${row.epoch}-${p.fileFocus?.target}"]`
@@ -1008,307 +1144,206 @@ function EpochRowBlock(p: EpochRowProps) {
       (focusable ?? target)?.focus();
     }, 0);
     return () => window.clearTimeout(handle);
-  }, [isOpen, p.fileFocus, row.epoch]);
+  }, [p.fileFocus, row.epoch]);
 
   return (
-    <>
-      <tr>
-        <td className={styles.numCell}>{row.epoch}</td>
-        <td className={styles.taskCell}>
-          <div className={styles.taskCellStack}>
-            <div className={styles.taskDisclosureRow}>
-              <div className={styles.taskIdentity}>
-                <span className={styles.taskName}>{row.taskName || <em>(no task)</em>}</span>
-                <span className={styles.taskMeta}>
-                  <span className={styles.tag}>tag {row.tag}</span>
-                  <EpochStatusPill status={row.status} />
-                  {row.duplicate && (
-                    <span className={styles.duplicateBadge} title="This epoch is claimed by more than one task">
-                      duplicate
-                    </span>
-                  )}
-                </span>
-              </div>
-              {/* The task disclosure opens the editor; the trailing menu is reserved for row
-                  structure actions such as insert, move, duplicate, and delete. */}
-              <button
-                type="button"
-                className={styles.taskDisclosureButton}
-                aria-expanded={isOpen}
-                aria-controls={drillInId}
-                aria-label={`${isOpen ? 'Hide' : 'Show'} epoch ${row.epoch} details`}
-                onClick={p.onToggle}
+    <aside id={panelId} className={styles.detailsPanel} aria-labelledby={`${panelId}-heading`}>
+      <div className={styles.detailsPanelHeader}>
+        <div>
+          <h2 id={`${panelId}-heading`} className={styles.detailsPanelTitle}>
+            Epoch {row.epoch}: {row.taskName || '(no task)'}
+          </h2>
+          <div className={styles.detailsPanelMeta}>
+            <span className={styles.tag}>tag {row.tag}</span>
+            <EpochStatusPill status={row.status} />
+          </div>
+        </div>
+        <button type="button" className={styles.panelCloseButton} onClick={p.onClose}>
+          Close
+        </button>
+      </div>
+
+      <div className={styles.detailsPanelBody}>
+        <section className={styles.group} aria-labelledby={`epoch-${row.epoch}-task-heading`}>
+          <div className={styles.taskEditorHeader}>
+            <h3 id={`epoch-${row.epoch}-task-heading`} className={styles.groupHeading}>Task</h3>
+            <span className={styles.groupNote}>What did the animal do?</span>
+          </div>
+          <div className={styles.taskEditorGrid}>
+            <label className={styles.stackedField}>
+              <span className={styles.fieldLabel}>Task type</span>
+              <select
+                aria-label={`Epoch ${row.epoch} task`}
+                value={ownerTypeId}
+                onChange={(e) => p.onReassignTask(e.target.value)}
               >
-                <span>{isOpen ? 'Hide' : 'Details'}</span>
-                <span className={styles.editChevron} aria-hidden="true">{isOpen ? '▴' : '▾'}</span>
-              </button>
+                {taskTypes.length === 0 && <option value="">(no task types)</option>}
+                {taskTypes.map((t) => (
+                  <option key={t.id} value={t.id}>{t.task_name || t.id}</option>
+                ))}
+              </select>
+            </label>
+            <button type="button" className="button-small" onClick={p.onNewTaskType}>
+              + new task type
+            </button>
+          </div>
+          <dl className={styles.taskContextGrid}>
+            <div>
+              <dt>Environment</dt>
+              <dd>{row.taskEnvironment || '—'}</dd>
+            </div>
+            <div>
+              <dt>Cameras</dt>
+              <dd>
+                {row.cameras.length === 0
+                  ? <span className={styles.derivedNote}>none</span>
+                  : row.cameras.map((id) => <span key={String(id)} className={styles.cam}>{cameraName(cameras, id)}</span>)}
+              </dd>
+            </div>
+          </dl>
+        </section>
+
+        <section
+          className={`${styles.group} ${styles.genPanel}`}
+          aria-labelledby={`epoch-${row.epoch}-files-heading`}
+        >
+          <div className={styles.panelGroupHeader}>
+            <h3 id={`epoch-${row.epoch}-files-heading`} className={styles.groupHeading}>Files for this epoch</h3>
+            <span className={styles.generatedStatus}>
+              {generatedFilesNeedReview ? 'needs review' : 'generated'}
+            </span>
+          </div>
+          <div className={styles.generatedContent}>
+            <div className={styles.fieldRow}>
+              <span className={styles.fieldLabel}>File tag</span>
+              <span>
+                <code className={styles.mono}>{row.tag}</code>
+                <span className={styles.derivedNote}> used in generated statescript and video names</span>
+              </span>
+            </div>
+            <div className={styles.fieldRow}>
+              <span className={styles.fieldLabel}>Data folder</span>
+              <span className={styles.mono}>{grid.dataFolder || <span className={styles.derivedNote}>not set - add it in Daily Setup</span>}</span>
+            </div>
+            <div className={styles.fieldRow} data-field-path={`epoch-${row.epoch}-statescript`} tabIndex={-1}>
+              <span className={styles.fieldLabel}>Statescript</span>
+              <span
+                data-field-path={
+                  row.statescript ? `associated_files[${row.statescript.index}].path` : undefined
+                }
+                tabIndex={row.statescript ? -1 : undefined}
+              >
+                {row.statescript ? (
+                  <GeneratedValue
+                    value={p.manualStatescript || row.statescriptNaming === 'manual' ? row.statescript.entry.path ?? '' : p.statescriptDerivedName}
+                    derived={row.statescriptNaming === 'generated' && !p.manualStatescript}
+                    overrideLabel="Override name"
+                    ariaLabel={`Epoch ${row.epoch} statescript path`}
+                    onOverride={p.onStatescriptOverride}
+                    onRevert={p.onStatescriptRevert}
+                    onChange={p.onStatescriptChange}
+                  />
+                ) : (
+                  <>
+                    <span className={styles.derivedNote}>No statescript file linked. Generated name: </span>
+                    <code className={styles.mono}>{p.statescriptDerivedName}</code>
+                    <button type="button" className="button-small" onClick={p.onAddStatescript}>+ Add statescript</button>
+                  </>
+                )}
+              </span>
+            </div>
+            <div className={styles.fieldRow} data-field-path={`epoch-${row.epoch}-video`} tabIndex={-1}>
+              <span className={styles.fieldLabel}>Video</span>
+              <span>
+                {row.videoPresence === 'present' && (
+                  <>
+                    {row.videos.map((v, vi) => {
+                      const key = `e${row.epoch}-v${v.index}`;
+                      // Generated only when the STORED name matches what derivation would produce
+                      // (so an imported/manual name like `run_video` reads `manual`), unless the user
+                      // has clicked Rename this session (an explicit override on a derived name).
+                      const isDerived =
+                        isDerivedVideo(v.entry, {
+                          date: grid.date,
+                          subjectId: grid.subjectId,
+                          epoch: row.epoch,
+                          tag: row.tag,
+                          index: vi + 1,
+                        }) && !p.manualVideoKeys.has(key);
+                      return (
+                        <span key={v.index} className={styles.videoEditorRow}>
+                          <GeneratedValue
+                            value={v.entry.name ?? ''}
+                            derived={isDerived}
+                            overrideLabel="Rename"
+                            ariaLabel={`Epoch ${row.epoch} video ${vi + 1} name`}
+                            onOverride={() => p.onVideoOverride(key)}
+                            onRevert={() => p.onVideoRevert(key, v.index)}
+                            onChange={(name) => p.onVideoNameChange(v.index, name)}
+                          />
+                          <span className={styles.derivedNote}> · {cameraName(cameras, v.entry.camera_id)}</span>
+                          <button type="button" className="button-small" onClick={() => p.onRemoveVideo(v.index)} aria-label={`Remove video ${vi + 1}`}>Remove</button>
+                        </span>
+                      );
+                    })}
+                    <button type="button" className="button-small" onClick={p.onAddVideo}>+ Add another video</button>
+                  </>
+                )}
+                {row.videoPresence === 'missing' && (
+                  <>
+                    <span className={styles.vidMissing}>No video file linked</span>
+                    <span className={styles.derivedNote}> - add the file, or mark it as no-video. </span>
+                    <button type="button" className="button-small" onClick={p.onAddVideo}>+ Add video</button>
+                    <button type="button" className="button-small" onClick={p.onMarkNoVideo}>Mark "no video"</button>
+                  </>
+                )}
+                {row.videoPresence === 'absent' && (
+                  <>
+                    <span className={styles.vidNone}>No video recorded - fine for this epoch (export stays valid). </span>
+                    <button type="button" className="button-small" onClick={p.onAddVideo}>+ Add video</button>
+                    <button type="button" className="button-small" onClick={p.onUndoNoVideo}>Undo "no video"</button>
+                  </>
+                )}
+              </span>
             </div>
           </div>
-        </td>
-        <td>
-          {row.cameras.length === 0
-            ? <span className={styles.vidNone}>—</span>
-            : row.cameras.map((id) => <span key={String(id)} className={styles.cam}>{cameraName(cameras, id)}</span>)}
-        </td>
-        <td>
-          <span className={styles.cellStack}>
-            <span className={`${styles.fstate} ${row.statescriptNaming === 'manual' ? styles.fstateManual : row.statescriptNaming === 'generated' ? styles.fstateGenerated : styles.fstateNone}`}>
-              {STATESCRIPT_LABEL[row.statescriptNaming]}
-            </span>
-            {!row.statescript && (
-              <button
-                type="button"
-                className={styles.inlineAction}
-                aria-label={`Add statescript for epoch ${row.epoch}`}
-                onClick={p.onAddStatescript}
-              >
-                Add
-              </button>
-            )}
-          </span>
-        </td>
-        <td>
-          <span className={styles.cellStack}>
-            <span className={videoClass}>{videoLabel}</span>
-            {row.videoPresence === 'missing' && (
-              <span className={styles.inlineActions}>
-                <button
-                  type="button"
-                  className={styles.inlineAction}
-                  aria-label={`Add video for epoch ${row.epoch}`}
-                  onClick={p.onAddVideo}
-                >
-                  Add
-                </button>
-                <button
-                  type="button"
-                  className={styles.inlineAction}
-                  aria-label={`Mark epoch ${row.epoch} as no video`}
-                  onClick={p.onMarkNoVideo}
-                >
-                  No video
-                </button>
+        </section>
+
+        {hasOpto && (
+          <section className={styles.group} aria-labelledby={`epoch-${row.epoch}-opto-heading`}>
+            <div className={styles.taskEditorHeader}>
+              <h3 id={`epoch-${row.epoch}-opto-heading`} className={styles.groupHeading}>Optogenetics</h3>
+              <span className={styles.groupNote}>Day-specific FsGUI values.</span>
+            </div>
+            <div className={styles.fieldRow}>
+              <span className={styles.fieldLabel}>Power</span>
+              <span>
+                <input className={styles.optoInput} type="number" aria-label={`Epoch ${row.epoch} power`} defaultValue={row.opto?.entry.power_in_mW ?? ''} onBlur={(e) => p.onOpto('power_in_mW', e.target.value)} /> mW
               </span>
-            )}
-          </span>
-        </td>
-        {hasOpto && (
-          <td>
-            <input
-              className={styles.optoInput}
-              type="number"
-              aria-label={`Epoch ${row.epoch} opto power (mW)`}
-              defaultValue={row.opto?.entry.power_in_mW ?? ''}
-              onBlur={(e) => p.onOpto('power_in_mW', e.target.value)}
-            />
-          </td>
-        )}
-        {hasOpto && (
-          <td>
-            <input
-              className={styles.optoInput}
-              type="number"
-              aria-label={`Epoch ${row.epoch} opto pulse (ms)`}
-              defaultValue={row.opto?.entry.pulseLength ?? ''}
-              onBlur={(e) => p.onOpto('pulseLength', e.target.value)}
-            />
-          </td>
-        )}
-        <td className={styles.menuCell}>
-          <button type="button" className={styles.menuButton} aria-haspopup="menu" aria-expanded={p.menuOpen} aria-label={`More actions for epoch ${row.epoch}`} onClick={p.onOpenMenu}>
-            ⋯
-          </button>
-          {p.menuOpen && (
-            <div className={styles.menu} role="menu" style={{ right: 0 }} onClick={(e) => e.stopPropagation()}>
-              <button type="button" role="menuitem" className={styles.menuItem} onClick={p.onInsertAfter}>Insert epoch after</button>
-              <button type="button" role="menuitem" className={styles.menuItem} onClick={p.onDuplicate}>Duplicate epoch</button>
-              <button type="button" role="menuitem" className={styles.menuItem} onClick={p.onMoveUp}>Move up</button>
-              <button type="button" role="menuitem" className={styles.menuItem} onClick={p.onMoveDown}>Move down</button>
-              <div className={styles.menuSep} />
-              <button type="button" role="menuitem" className={`${styles.menuItem} ${styles.danger}`} onClick={p.onDelete}>Delete epoch</button>
             </div>
-          )}
-        </td>
-      </tr>
-      {isOpen && (
-        <tr className={styles.drillIn}>
-          <td colSpan={colCount + 1}>
-            <div className={styles.drillInInner} id={drillInId}>
-              <div className={styles.group}>
-                <div className={styles.taskEditorHeader}>
-                  <h3 className={styles.groupHeading}>Epoch task</h3>
-                  <span className={styles.taskEditorMeta}>
-                    <span className={styles.tag}>tag {row.tag}</span>
-                    <EpochStatusPill status={row.status} />
-                  </span>
-                </div>
-                <div className={styles.taskEditorGrid}>
-                  <label className={styles.stackedField}>
-                    <span className={styles.fieldLabel}>Task type</span>
-                    <select
-                      aria-label={`Epoch ${row.epoch} task`}
-                      value={ownerTypeId}
-                      onChange={(e) => p.onReassignTask(e.target.value)}
-                    >
-                      {taskTypes.length === 0 && <option value="">(no task types)</option>}
-                      {taskTypes.map((t) => (
-                        <option key={t.id} value={t.id}>{t.task_name || t.id}</option>
-                      ))}
-                    </select>
-                  </label>
-                  <button type="button" className="button-small" onClick={p.onNewTaskType}>
-                    + new task type
-                  </button>
-                </div>
-                <dl className={styles.taskContextGrid}>
-                  <div>
-                    <dt>Environment</dt>
-                    <dd>{row.taskEnvironment || '—'}</dd>
-                  </div>
-                  <div>
-                    <dt>Cameras</dt>
-                    <dd>
-                      {row.cameras.length === 0
-                        ? <span className={styles.derivedNote}>none</span>
-                        : row.cameras.map((id) => <span key={String(id)} className={styles.cam}>{cameraName(cameras, id)}</span>)}
-                    </dd>
-                  </div>
-                </dl>
-              </div>
-
-              <details
-                className={`${styles.group} ${styles.genPanel} ${styles.generatedDetails}`}
-                open={filesOpen}
-                onToggle={(event) => p.onFilesOpenChange(event.currentTarget.open)}
-              >
-                <summary className={styles.generatedSummary}>
-                  <span>Files for this epoch</span>
-                  <span className={styles.generatedStatus}>
-                    {generatedFilesNeedReview ? 'needs review' : 'generated'}
-                  </span>
-                </summary>
-                <div className={styles.generatedContent}>
-                  <div className={styles.fieldRow}>
-                    <span className={styles.fieldLabel}>File tag</span>
-                    <span>
-                      <code className={styles.mono}>{row.tag}</code>
-                      <span className={styles.derivedNote}> used in generated statescript and video names</span>
-                    </span>
-                  </div>
-                  <div className={styles.fieldRow}>
-                    <span className={styles.fieldLabel}>Data folder</span>
-                    <span className={styles.mono}>{grid.dataFolder || <span className={styles.derivedNote}>not set — add it in Daily Setup</span>}</span>
-                  </div>
-                  <div className={styles.fieldRow} data-field-path={`epoch-${row.epoch}-statescript`} tabIndex={-1}>
-                    <span className={styles.fieldLabel}>Statescript</span>
-                    <span
-                      data-field-path={
-                        row.statescript ? `associated_files[${row.statescript.index}].path` : undefined
-                      }
-                      tabIndex={row.statescript ? -1 : undefined}
-                    >
-                    {row.statescript ? (
-                      <GeneratedValue
-                        value={p.manualStatescript || row.statescriptNaming === 'manual' ? row.statescript.entry.path ?? '' : p.statescriptDerivedName}
-                        derived={row.statescriptNaming === 'generated' && !p.manualStatescript}
-                        overrideLabel="Override name"
-                        ariaLabel={`Epoch ${row.epoch} statescript path`}
-                        onOverride={p.onStatescriptOverride}
-                        onRevert={p.onStatescriptRevert}
-                        onChange={p.onStatescriptChange}
-                      />
-                    ) : (
-                      <>
-                        <span className={styles.derivedNote}>No statescript file linked. Generated name: </span>
-                        <code className={styles.mono}>{p.statescriptDerivedName}</code>
-                        <button type="button" className="button-small" onClick={p.onAddStatescript}>+ Add statescript</button>
-                      </>
-                    )}
-                    </span>
-                  </div>
-                  <div className={styles.fieldRow} data-field-path={`epoch-${row.epoch}-video`} tabIndex={-1}>
-                    <span className={styles.fieldLabel}>Video</span>
-                    <span>
-                    {row.videoPresence === 'present' && (
-                      <>
-                        {row.videos.map((v, vi) => {
-                          const key = `e${row.epoch}-v${v.index}`;
-                          // Generated only when the STORED name matches what derivation would produce
-                          // (so an imported/manual name like `run_video` reads `manual`), unless the user
-                          // has clicked Rename this session (an explicit override on a derived name).
-                          const isDerived =
-                            isDerivedVideo(v.entry, {
-                              date: grid.date,
-                              subjectId: grid.subjectId,
-                              epoch: row.epoch,
-                              tag: row.tag,
-                              index: vi + 1,
-                            }) && !p.manualVideoKeys.has(key);
-                          return (
-                            <span key={v.index} style={{ display: 'block', marginBottom: 4 }}>
-                              <GeneratedValue
-                                value={v.entry.name ?? ''}
-                                derived={isDerived}
-                                overrideLabel="Rename"
-                                ariaLabel={`Epoch ${row.epoch} video ${vi + 1} name`}
-                                onOverride={() => p.onVideoOverride(key)}
-                                onRevert={() => p.onVideoRevert(key, v.index)}
-                                onChange={(name) => p.onVideoNameChange(v.index, name)}
-                              />
-                              <span className={styles.derivedNote}> · {cameraName(cameras, v.entry.camera_id)}</span>
-                              <button type="button" className="button-small" onClick={() => p.onRemoveVideo(v.index)} aria-label={`Remove video ${vi + 1}`}>Remove</button>
-                            </span>
-                          );
-                        })}
-                        <button type="button" className="button-small" onClick={p.onAddVideo}>+ Add another video</button>
-                      </>
-                    )}
-                    {row.videoPresence === 'missing' && (
-                      <>
-                        <span className={styles.vidMissing}>No video file linked</span>
-                        <span className={styles.derivedNote}> — add the file, or mark it as no-video. </span>
-                        <button type="button" className="button-small" onClick={p.onAddVideo}>+ Add video</button>
-                        <button type="button" className="button-small" onClick={p.onMarkNoVideo}>Mark “no video”</button>
-                      </>
-                    )}
-                    {row.videoPresence === 'absent' && (
-                      <>
-                        <span className={styles.vidNone}>No video recorded — fine for this epoch (export stays valid). </span>
-                        <button type="button" className="button-small" onClick={p.onAddVideo}>+ Add video</button>
-                        <button type="button" className="button-small" onClick={p.onUndoNoVideo}>Undo “no video”</button>
-                      </>
-                    )}
-                    </span>
-                  </div>
-                </div>
-              </details>
-
-              {/* Optogenetics */}
-              {hasOpto && (
-                <div className={styles.group}>
-                  <h3 className={styles.groupHeading}>Optogenetics</h3>
-                  <div className={styles.fieldRow}>
-                    <span className={styles.fieldLabel}>Power</span>
-                    <span>
-                      <input className={styles.optoInput} type="number" aria-label={`Epoch ${row.epoch} power`} defaultValue={row.opto?.entry.power_in_mW ?? ''} onBlur={(e) => p.onOpto('power_in_mW', e.target.value)} /> mW
-                    </span>
-                  </div>
-                  <div className={styles.fieldRow}>
-                    <span className={styles.fieldLabel}>Pulse</span>
-                    <span>
-                      <input className={styles.optoInput} type="number" aria-label={`Epoch ${row.epoch} pulse`} defaultValue={row.opto?.entry.pulseLength ?? ''} onBlur={(e) => p.onOpto('pulseLength', e.target.value)} /> ms
-                    </span>
-                  </div>
-                  <div className={styles.fieldRow}>
-                    <span className={styles.fieldLabel}>Protocol</span>
-                    <span className={styles.derivedNote}>The laser DIO + FsGUI file are set in Tasks & Files.</span>
-                  </div>
-                </div>
-              )}
+            <div className={styles.fieldRow}>
+              <span className={styles.fieldLabel}>Pulse</span>
+              <span>
+                <input className={styles.optoInput} type="number" aria-label={`Epoch ${row.epoch} pulse`} defaultValue={row.opto?.entry.pulseLength ?? ''} onBlur={(e) => p.onOpto('pulseLength', e.target.value)} /> ms
+              </span>
             </div>
-          </td>
-        </tr>
-      )}
-    </>
+          </section>
+        )}
+
+        <section className={styles.group} aria-labelledby={`epoch-${row.epoch}-more-heading`}>
+          <div className={styles.taskEditorHeader}>
+            <h3 id={`epoch-${row.epoch}-more-heading`} className={styles.groupHeading}>More actions</h3>
+            <span className={styles.groupNote}>Structural changes for this epoch.</span>
+          </div>
+          <div className={styles.panelActions}>
+            <button type="button" className="button-small" onClick={p.onInsertAfter}>Insert after</button>
+            <button type="button" className="button-small" onClick={p.onDuplicate}>Duplicate</button>
+            <button type="button" className="button-small" onClick={p.onMoveUp}>Move up</button>
+            <button type="button" className="button-small" onClick={p.onMoveDown}>Move down</button>
+            <button type="button" className="button-small" onClick={p.onDelete}>Delete</button>
+          </div>
+        </section>
+      </div>
+    </aside>
   );
 }

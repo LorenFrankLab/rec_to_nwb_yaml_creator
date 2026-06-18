@@ -136,7 +136,7 @@ describe('EpochsTab — grid render + collapsed state cells', () => {
     expect(edit).toHaveTextContent(/details/i);
     expect(edit).not.toHaveTextContent(/tag/i);
     expect(edit).toHaveAttribute('aria-expanded', 'false');
-    expect(edit).toHaveAttribute('aria-controls', 'epoch-1-details');
+    expect(edit).toHaveAttribute('aria-controls', 'epoch-details-panel');
     expect(screen.getAllByText('Sleep')).not.toHaveLength(0);
     expect(screen.getByRole('button', { name: /Show epoch 2 details/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Show epoch 3 details/i })).toBeInTheDocument();
@@ -171,13 +171,20 @@ describe('EpochsTab — grid render + collapsed state cells', () => {
     expect(screen.queryByText('run_video')).not.toBeInTheDocument();
   });
 
-  it('expands the drill-in when the task disclosure is clicked', async () => {
+  it('opens one details panel when the task disclosure is clicked', async () => {
     const user = userEvent.setup();
     render(<EpochsTab {...makeBundle()} />);
     const edit = screen.getByRole('button', { name: /Show epoch 1 details/i });
     await user.click(edit);
     expect(edit).toHaveAttribute('aria-expanded', 'true');
-    expect(screen.getByRole('heading', { name: /Epoch task/i })).toBeInTheDocument();
+    expect(screen.getByRole('complementary', { name: /Epoch 1: Sleep/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /^Task$/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /Files for this epoch/i })).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /Show epoch 2 details/i }));
+    expect(screen.getByRole('button', { name: /Show epoch 1 details/i })).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.getByRole('button', { name: /Hide epoch 2 details/i })).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByRole('complementary', { name: /Epoch 2: Run/i })).toBeInTheDocument();
   });
 
   it('opens the owning epoch for a statescript associated_files repair focus path', async () => {
@@ -231,7 +238,8 @@ describe('EpochsTab — write-back patches', () => {
     const user = userEvent.setup();
     const bundle = makeBundle();
     render(<EpochsTab {...bundle} />);
-    const input = screen.getByRole('spinbutton', { name: /Epoch 1 opto power/i });
+    await user.click(screen.getByRole('button', { name: /Show epoch 1 details/i }));
+    const input = screen.getByRole('spinbutton', { name: /Epoch 1 power/i });
     await user.type(input, '5');
     input.blur();
     const patch = lastPatch(bundle.onFieldUpdate, 'fs_gui_yamls');
