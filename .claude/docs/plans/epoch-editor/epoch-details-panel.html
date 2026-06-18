@@ -1,0 +1,1086 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Epoch Details Panel Mock</title>
+<style>
+  :root {
+    --bg: #f4f6f8;
+    --panel: #fff;
+    --ink: #171b1f;
+    --muted: #65707a;
+    --faint: #98a1aa;
+    --line: #e2e7ec;
+    --line-soft: #eef1f4;
+    --accent: #2f6fae;
+    --accent-dark: #255b91;
+    --accent-soft: #edf5fc;
+    --ok: #1f7f4c;
+    --ok-soft: #eaf6ee;
+    --warn: #a86600;
+    --warn-soft: #fff4dc;
+    --bad: #b73434;
+    --bad-soft: #fae9e9;
+    --purple: #7a3ea8;
+    --purple-soft: #f3edfa;
+    --shadow: 0 14px 36px rgba(22, 28, 35, 0.12);
+    --radius: 8px;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font: 14px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+
+  button,
+  input,
+  select {
+    font: inherit;
+  }
+
+  .topbar {
+    height: 48px;
+    padding: 0 28px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    border-bottom: 1px solid var(--line);
+    background: var(--panel);
+  }
+
+  .mark {
+    width: 24px;
+    height: 24px;
+    border-radius: 6px;
+    background: linear-gradient(135deg, var(--accent), #5b9bd6);
+  }
+
+  .crumb {
+    color: var(--muted);
+    font-size: 13px;
+  }
+
+  .crumb strong {
+    color: var(--ink);
+    font-weight: 650;
+  }
+
+  .page {
+    max-width: 1380px;
+    margin: 22px auto 40px;
+    padding: 0 28px;
+  }
+
+  .header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 20px;
+    margin-bottom: 18px;
+  }
+
+  h1,
+  h2,
+  h3,
+  p {
+    margin: 0;
+  }
+
+  h1 {
+    font-size: 24px;
+    line-height: 1.2;
+  }
+
+  .subtitle {
+    margin-top: 8px;
+    color: var(--muted);
+    font-size: 13px;
+  }
+
+  .headerActions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    white-space: nowrap;
+  }
+
+  .saved {
+    color: var(--ok);
+    font-size: 13px;
+    font-weight: 600;
+  }
+
+  .button {
+    min-height: 34px;
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    background: var(--panel);
+    color: var(--ink);
+    padding: 6px 12px;
+    cursor: pointer;
+  }
+
+  .button:hover,
+  .button:focus-visible {
+    border-color: var(--accent);
+    color: var(--accent);
+    outline: none;
+  }
+
+  .button.primary {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+  }
+
+  .button.primary:hover,
+  .button.primary:focus-visible {
+    background: var(--accent-dark);
+    color: #fff;
+  }
+
+  .button.small {
+    min-height: 28px;
+    padding: 4px 9px;
+    font-size: 12px;
+  }
+
+  .button.ghost {
+    border-color: transparent;
+    background: transparent;
+    color: var(--muted);
+  }
+
+  .button.ghost:hover,
+  .button.ghost:focus-visible {
+    border-color: var(--line);
+    background: #f7f9fb;
+    color: var(--accent);
+  }
+
+  .tabs {
+    display: flex;
+    gap: 4px;
+    border-bottom: 1px solid var(--line);
+    margin-bottom: 18px;
+  }
+
+  .tab {
+    padding: 10px 14px;
+    color: var(--muted);
+    border-bottom: 2px solid transparent;
+    font-size: 13px;
+  }
+
+  .tab.active {
+    color: var(--ink);
+    border-bottom-color: var(--accent);
+    font-weight: 650;
+  }
+
+  .layout {
+    display: grid;
+    grid-template-columns: minmax(680px, 1fr) 420px;
+    gap: 18px;
+    align-items: start;
+  }
+
+  .workspace,
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+
+  .workspaceHeader {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 16px 18px 13px;
+    border-bottom: 1px solid var(--line-soft);
+  }
+
+  .workspaceHeader h2 {
+    font-size: 18px;
+    line-height: 1.25;
+  }
+
+  .intro {
+    margin-top: 4px;
+    color: var(--muted);
+    font-size: 13px;
+  }
+
+  .toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    padding: 12px 18px;
+    border-bottom: 1px solid var(--line-soft);
+  }
+
+  .toolbarGroup {
+    display: grid;
+    gap: 5px;
+  }
+
+  .toolbarLabel {
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 700;
+  }
+
+  .chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .chip {
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: #f9fafb;
+    color: #3d454d;
+    padding: 3px 9px;
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  .chip.warn {
+    background: var(--warn-soft);
+    border-color: #eed59e;
+    color: var(--warn);
+  }
+
+  .chip.bad {
+    background: var(--bad-soft);
+    border-color: #ecc0c0;
+    color: var(--bad);
+  }
+
+  .chip.ok {
+    background: var(--ok-soft);
+    border-color: #c8e5d3;
+    color: var(--ok);
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  th,
+  td {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--line-soft);
+    text-align: left;
+    vertical-align: middle;
+  }
+
+  th {
+    color: var(--faint);
+    font-size: 11px;
+    font-weight: 700;
+  }
+
+  tbody tr {
+    background: var(--panel);
+  }
+
+  tbody tr:hover {
+    background: #fbfcfd;
+  }
+
+  tbody tr.selected {
+    background: var(--accent-soft);
+  }
+
+  tbody tr.selected td:first-child {
+    box-shadow: inset 3px 0 0 var(--accent);
+  }
+
+  .num {
+    width: 44px;
+    color: var(--faint);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .taskCell {
+    min-width: 210px;
+  }
+
+  .taskStack {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .taskName {
+    display: block;
+    font-weight: 650;
+  }
+
+  .metaLine {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    margin-top: 4px;
+  }
+
+  .tag {
+    display: inline-flex;
+    min-height: 20px;
+    align-items: center;
+    border: 1px solid var(--line);
+    border-radius: 5px;
+    background: #f4f6f8;
+    color: var(--muted);
+    padding: 1px 6px;
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .status {
+    display: inline-flex;
+    min-height: 20px;
+    align-items: center;
+    border-radius: 999px;
+    padding: 1px 8px;
+    font-size: 12px;
+    font-weight: 700;
+  }
+
+  .status.ok {
+    background: var(--ok-soft);
+    color: var(--ok);
+  }
+
+  .status.warn {
+    background: var(--warn-soft);
+    color: var(--warn);
+  }
+
+  .status.bad {
+    background: var(--bad-soft);
+    color: var(--bad);
+  }
+
+  .stateCell {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .fileState {
+    border-radius: 999px;
+    padding: 2px 8px;
+    font-size: 12px;
+    font-weight: 700;
+  }
+
+  .fileState.generated {
+    background: var(--ok-soft);
+    color: var(--ok);
+  }
+
+  .fileState.manual {
+    background: var(--warn-soft);
+    color: var(--warn);
+  }
+
+  .fileState.missing {
+    background: var(--bad-soft);
+    color: var(--bad);
+  }
+
+  .fileState.absent {
+    background: #f3f5f7;
+    color: var(--muted);
+  }
+
+  .detailsButton {
+    min-width: 84px;
+  }
+
+  .moreButton {
+    width: 32px;
+    height: 32px;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 18px;
+  }
+
+  .moreButton:hover,
+  .moreButton:focus-visible {
+    border-color: var(--line);
+    background: #f7f9fb;
+    color: var(--accent);
+    outline: none;
+  }
+
+  .panel {
+    position: sticky;
+    top: 18px;
+    box-shadow: var(--shadow);
+  }
+
+  .panelHeader {
+    padding: 16px 18px;
+    border-bottom: 1px solid var(--line-soft);
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .panelTitle {
+    font-size: 18px;
+    line-height: 1.25;
+  }
+
+  .panelSub {
+    margin-top: 6px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .panelBody {
+    padding: 16px 18px 18px;
+    display: grid;
+    gap: 18px;
+  }
+
+  .section {
+    display: grid;
+    gap: 10px;
+    padding-top: 14px;
+    border-top: 1px solid var(--line-soft);
+  }
+
+  .section:first-child {
+    padding-top: 0;
+    border-top: 0;
+  }
+
+  .section.flash {
+    animation: ring 1.5s ease-out 1;
+    border-radius: 8px;
+  }
+
+  @keyframes ring {
+    0% {
+      box-shadow: 0 0 0 3px rgba(47, 111, 174, 0.32);
+      background: #f6fbff;
+    }
+    100% {
+      box-shadow: 0 0 0 3px rgba(47, 111, 174, 0);
+      background: transparent;
+    }
+  }
+
+  .sectionHeader {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .sectionHeader h3 {
+    font-size: 13px;
+  }
+
+  .sectionNote {
+    color: var(--muted);
+    font-size: 12px;
+  }
+
+  .field {
+    display: grid;
+    gap: 5px;
+  }
+
+  .field label {
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 700;
+  }
+
+  .fieldRow {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+  }
+
+  select,
+  input[type="text"],
+  input[type="number"] {
+    min-height: 34px;
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    background: var(--panel);
+    padding: 6px 9px;
+  }
+
+  select {
+    min-width: 210px;
+  }
+
+  .pathValue {
+    flex: 1;
+    min-width: 0;
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    background: #f7f9fb;
+    color: #3c454e;
+    padding: 6px 9px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 12px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .context {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .contextItem {
+    border: 1px solid var(--line-soft);
+    border-radius: 7px;
+    padding: 8px 9px;
+    background: #fbfcfd;
+  }
+
+  .contextItem dt {
+    margin-bottom: 2px;
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 700;
+  }
+
+  .contextItem dd {
+    margin: 0;
+    color: #3c454e;
+    font-size: 13px;
+  }
+
+  .fileRow {
+    display: grid;
+    gap: 7px;
+    border: 1px solid var(--line-soft);
+    border-radius: 7px;
+    padding: 10px;
+    background: #fbfcfd;
+  }
+
+  .fileRowTop {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+  }
+
+  .fileRowTitle {
+    font-weight: 700;
+  }
+
+  .fileActions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+  }
+
+  .optoGrid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  .moreActions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+  }
+
+  .quiet {
+    color: var(--muted);
+  }
+
+  .help {
+    border-top: 1px solid var(--line-soft);
+    padding: 12px 18px;
+    background: #fbfcfd;
+    color: var(--muted);
+    font-size: 12px;
+  }
+
+  @media (max-width: 1050px) {
+    .layout {
+      grid-template-columns: 1fr;
+    }
+
+    .panel {
+      position: static;
+    }
+  }
+
+  @media (max-width: 760px) {
+    .page {
+      padding: 0 14px;
+      margin-top: 14px;
+    }
+
+    .topbar {
+      padding: 0 14px;
+    }
+
+    .header,
+    .workspaceHeader {
+      flex-direction: column;
+    }
+
+    .headerActions {
+      width: 100%;
+      justify-content: flex-start;
+      flex-wrap: wrap;
+    }
+
+    table {
+      min-width: 780px;
+    }
+
+    .tableScroll {
+      overflow-x: auto;
+    }
+  }
+</style>
+</head>
+<body>
+  <div class="topbar">
+    <span class="mark" aria-hidden="true"></span>
+    <div class="crumb">Animals / Laurent / <strong>2026-06-17</strong></div>
+  </div>
+
+  <main class="page">
+    <header class="header">
+      <div>
+        <h1>2026-06-17</h1>
+        <p class="subtitle">Tasks &amp; Files mock: overview table plus focused epoch editor panel.</p>
+      </div>
+      <div class="headerActions">
+        <span class="saved">Saved</span>
+        <button class="button">Copy YAML</button>
+        <button class="button primary">Export</button>
+      </div>
+    </header>
+
+    <nav class="tabs" aria-label="Day editor sections">
+      <span class="tab">Daily Setup</span>
+      <span class="tab active">Tasks &amp; Files</span>
+      <span class="tab">Failed Channels</span>
+      <span class="tab">DIO Wiring</span>
+      <span class="tab">Fix &amp; Export</span>
+    </nav>
+
+    <div class="layout">
+      <section class="workspace" aria-labelledby="epochs-heading">
+        <div class="workspaceHeader">
+          <div>
+            <h2 id="epochs-heading">Epochs</h2>
+            <p class="intro">Scan the recording day here. Open an epoch only when you need to change its task or files.</p>
+          </div>
+          <button class="button">Templates</button>
+        </div>
+
+        <div class="toolbar">
+          <div class="toolbarGroup">
+            <span class="toolbarLabel">Show</span>
+            <div class="chips" aria-label="Epoch filters">
+              <span class="chip">5 epochs</span>
+              <span class="chip bad">2 files needed</span>
+              <span class="chip warn">1 custom filename</span>
+            </div>
+          </div>
+          <div class="toolbarGroup">
+            <span class="toolbarLabel">Generate missing</span>
+            <div class="chips" aria-label="Bulk file generation">
+              <button class="button small">Statescripts (2)</button>
+              <button class="button small">Videos (1)</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="tableScroll">
+          <table>
+            <thead>
+              <tr>
+                <th class="num">#</th>
+                <th>Task</th>
+                <th>Camera</th>
+                <th>Statescript</th>
+                <th>Video</th>
+                <th>Opto</th>
+                <th aria-label="Actions"></th>
+              </tr>
+            </thead>
+            <tbody id="epochRows"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <aside class="panel" aria-labelledby="panel-title">
+        <div class="panelHeader">
+          <div>
+            <h2 class="panelTitle" id="panel-title">Epoch 1: Sleep</h2>
+            <div class="panelSub" id="panel-sub"></div>
+          </div>
+          <button class="button ghost small" type="button" id="closePanel">Close</button>
+        </div>
+
+        <div class="panelBody">
+          <section class="section" id="section-task" aria-labelledby="task-heading">
+            <div class="sectionHeader">
+              <h3 id="task-heading">Task</h3>
+              <span class="sectionNote">What did the animal do?</span>
+            </div>
+            <div class="field">
+              <label for="taskType">Task type</label>
+              <div class="fieldRow">
+                <select id="taskType">
+                  <option>Sleep</option>
+                  <option>W-track</option>
+                  <option>Linear track</option>
+                  <option>Open field</option>
+                </select>
+                <button class="button small">New task type</button>
+              </div>
+            </div>
+            <dl class="context">
+              <div class="contextItem">
+                <dt>Derived tag</dt>
+                <dd id="panel-tag">s1</dd>
+              </div>
+              <div class="contextItem">
+                <dt>Expected camera</dt>
+                <dd id="panel-camera">none</dd>
+              </div>
+              <div class="contextItem">
+                <dt>Environment</dt>
+                <dd id="panel-environment">home cage</dd>
+              </div>
+              <div class="contextItem">
+                <dt>Task source</dt>
+                <dd>animal catalog</dd>
+              </div>
+            </dl>
+          </section>
+
+          <section class="section" id="section-files" aria-labelledby="files-heading">
+            <div class="sectionHeader">
+              <h3 id="files-heading">Files for this epoch</h3>
+              <span class="sectionNote">Expected day-to-day fixes live here.</span>
+            </div>
+            <div class="fileRow" id="statescript-row">
+              <div class="fileRowTop">
+                <span class="fileRowTitle">Statescript</span>
+                <span class="fileState generated" id="panel-statescript-state">Generated</span>
+              </div>
+              <div class="fieldRow">
+                <span class="pathValue" id="panel-statescript-path">20260617_laurent_01_s1.stateScriptLog</span>
+              </div>
+              <div class="fileActions" id="statescript-actions"></div>
+            </div>
+            <div class="fileRow" id="video-row">
+              <div class="fileRowTop">
+                <span class="fileRowTitle">Video</span>
+                <span class="fileState missing" id="panel-video-state">Missing</span>
+              </div>
+              <div class="fieldRow">
+                <span class="pathValue" id="panel-video-path">Expected: 20260617_laurent_01_s1.1.h264</span>
+              </div>
+              <div class="fileActions" id="video-actions"></div>
+            </div>
+          </section>
+
+          <section class="section" id="section-opto" aria-labelledby="opto-heading">
+            <div class="sectionHeader">
+              <h3 id="opto-heading">Optogenetics</h3>
+              <span class="sectionNote">Only shown because this animal uses opto.</span>
+            </div>
+            <div class="optoGrid">
+              <div class="field">
+                <label for="power">Power, mW</label>
+                <input id="power" type="number" value="6">
+              </div>
+              <div class="field">
+                <label for="pulse">Pulse, ms</label>
+                <input id="pulse" type="number" value="10">
+              </div>
+            </div>
+          </section>
+
+          <section class="section" id="section-more" aria-labelledby="more-heading">
+            <div class="sectionHeader">
+              <h3 id="more-heading">More actions</h3>
+              <span class="sectionNote">Structural changes, kept away from daily file fixes.</span>
+            </div>
+            <div class="moreActions">
+              <button class="button small">Insert after</button>
+              <button class="button small">Duplicate</button>
+              <button class="button small">Move up</button>
+              <button class="button small">Move down</button>
+              <button class="button small">Delete</button>
+            </div>
+          </section>
+        </div>
+
+        <div class="help">
+          In this pattern, the table is for recognition and scanning. The panel is where editing happens,
+          so task assignment, generated filenames, video state, and opto fields do not compete inside a table row.
+        </div>
+      </aside>
+    </div>
+  </main>
+
+<script>
+const epochs = [
+  {
+    number: 1,
+    task: "Sleep",
+    tag: "s1",
+    camera: "none",
+    environment: "home cage",
+    status: "Needs video",
+    statusTone: "bad",
+    statescript: "generated",
+    statescriptLabel: "Generated",
+    statescriptPath: "20260617_laurent_01_s1.stateScriptLog",
+    video: "missing",
+    videoLabel: "Missing",
+    videoPath: "Expected: 20260617_laurent_01_s1.1.h264",
+    optoPower: "6",
+    optoPulse: "10"
+  },
+  {
+    number: 2,
+    task: "W-track",
+    tag: "w1",
+    camera: "FrontCam",
+    environment: "W-track room",
+    status: "Ready",
+    statusTone: "ok",
+    statescript: "generated",
+    statescriptLabel: "Generated",
+    statescriptPath: "20260617_laurent_02_w1.stateScriptLog",
+    video: "generated",
+    videoLabel: "1 video",
+    videoPath: "20260617_laurent_02_w1.1.h264",
+    optoPower: "8",
+    optoPulse: "10"
+  },
+  {
+    number: 3,
+    task: "Sleep",
+    tag: "s2",
+    camera: "none",
+    environment: "home cage",
+    status: "Ready",
+    statusTone: "ok",
+    statescript: "generated",
+    statescriptLabel: "Generated",
+    statescriptPath: "20260617_laurent_03_s2.stateScriptLog",
+    video: "absent",
+    videoLabel: "No video",
+    videoPath: "Declared no video for this sleep epoch",
+    optoPower: "6",
+    optoPulse: "10"
+  },
+  {
+    number: 4,
+    task: "Linear track",
+    tag: "l1",
+    camera: "FrontCam",
+    environment: "linear track",
+    status: "Needs files",
+    statusTone: "bad",
+    statescript: "missing",
+    statescriptLabel: "Missing",
+    statescriptPath: "Expected: 20260617_laurent_04_l1.stateScriptLog",
+    video: "generated",
+    videoLabel: "1 video",
+    videoPath: "20260617_laurent_04_l1.1.h264",
+    optoPower: "8",
+    optoPulse: "10"
+  },
+  {
+    number: 5,
+    task: "Sleep",
+    tag: "s3",
+    camera: "none",
+    environment: "home cage",
+    status: "Review",
+    statusTone: "warn",
+    statescript: "manual",
+    statescriptLabel: "Manual",
+    statescriptPath: "/mnt/data/custom_sleep_5.stateScriptLog",
+    video: "absent",
+    videoLabel: "No video",
+    videoPath: "Declared no video for this sleep epoch",
+    optoPower: "6",
+    optoPulse: "10"
+  }
+];
+
+let selectedEpoch = epochs[0];
+
+const rowsEl = document.getElementById("epochRows");
+const panelTitle = document.getElementById("panel-title");
+const panelSub = document.getElementById("panel-sub");
+const taskType = document.getElementById("taskType");
+const panelTag = document.getElementById("panel-tag");
+const panelCamera = document.getElementById("panel-camera");
+const panelEnvironment = document.getElementById("panel-environment");
+const panelStatescriptState = document.getElementById("panel-statescript-state");
+const panelStatescriptPath = document.getElementById("panel-statescript-path");
+const statescriptActions = document.getElementById("statescript-actions");
+const panelVideoState = document.getElementById("panel-video-state");
+const panelVideoPath = document.getElementById("panel-video-path");
+const videoActions = document.getElementById("video-actions");
+const power = document.getElementById("power");
+const pulse = document.getElementById("pulse");
+
+function stateClass(state) {
+  if (state === "missing") return "fileState missing";
+  if (state === "manual") return "fileState manual";
+  if (state === "absent") return "fileState absent";
+  return "fileState generated";
+}
+
+function statusClass(tone) {
+  return "status " + tone;
+}
+
+function renderRows() {
+  rowsEl.innerHTML = "";
+  epochs.forEach((epoch) => {
+    const tr = document.createElement("tr");
+    if (epoch.number === selectedEpoch.number) tr.className = "selected";
+    tr.innerHTML = `
+      <td class="num">${epoch.number}</td>
+      <td class="taskCell">
+        <div class="taskStack">
+          <div>
+            <span class="taskName">${epoch.task}</span>
+            <span class="metaLine">
+              <span class="tag">tag ${epoch.tag}</span>
+              <span class="${statusClass(epoch.statusTone)}">${epoch.status}</span>
+            </span>
+          </div>
+          <button class="button small detailsButton" data-action="details" data-epoch="${epoch.number}">Details</button>
+        </div>
+      </td>
+      <td>${epoch.camera}</td>
+      <td>
+        <span class="stateCell">
+          <span class="${stateClass(epoch.statescript)}">${epoch.statescriptLabel}</span>
+          ${epoch.statescript === "missing" ? `<button class="button small" data-action="statescript" data-epoch="${epoch.number}">Add</button>` : ""}
+        </span>
+      </td>
+      <td>
+        <span class="stateCell">
+          <span class="${stateClass(epoch.video)}">${epoch.videoLabel}</span>
+          ${epoch.video === "missing" ? `<button class="button small" data-action="video" data-epoch="${epoch.number}">Add</button><button class="button ghost small" data-action="video" data-epoch="${epoch.number}">No video</button>` : ""}
+        </span>
+      </td>
+      <td>${epoch.optoPower} mW</td>
+      <td><button class="moreButton" aria-label="More actions for epoch ${epoch.number}">...</button></td>
+    `;
+    rowsEl.appendChild(tr);
+  });
+}
+
+function renderPanel(focus) {
+  panelTitle.textContent = `Epoch ${selectedEpoch.number}: ${selectedEpoch.task}`;
+  panelSub.innerHTML = `
+    <span class="tag">tag ${selectedEpoch.tag}</span>
+    <span class="${statusClass(selectedEpoch.statusTone)}">${selectedEpoch.status}</span>
+  `;
+  taskType.value = selectedEpoch.task;
+  panelTag.textContent = selectedEpoch.tag;
+  panelCamera.textContent = selectedEpoch.camera;
+  panelEnvironment.textContent = selectedEpoch.environment;
+  panelStatescriptState.className = stateClass(selectedEpoch.statescript);
+  panelStatescriptState.textContent = selectedEpoch.statescriptLabel;
+  panelStatescriptPath.textContent = selectedEpoch.statescriptPath;
+  panelVideoState.className = stateClass(selectedEpoch.video);
+  panelVideoState.textContent = selectedEpoch.videoLabel;
+  panelVideoPath.textContent = selectedEpoch.videoPath;
+  power.value = selectedEpoch.optoPower;
+  pulse.value = selectedEpoch.optoPulse;
+
+  statescriptActions.innerHTML = selectedEpoch.statescript === "missing"
+    ? `<button class="button small primary">Add expected statescript</button><button class="button small">Enter manually</button>`
+    : `<button class="button small">Rename</button><button class="button ghost small">Use generated</button>`;
+
+  videoActions.innerHTML = selectedEpoch.video === "missing"
+    ? `<button class="button small primary">Add expected video</button><button class="button small">Enter manually</button><button class="button ghost small">Mark no video</button>`
+    : selectedEpoch.video === "absent"
+      ? `<button class="button small">Add video after all</button>`
+      : `<button class="button small">Rename</button><button class="button ghost small">Use generated</button><button class="button ghost small">Mark no video</button>`;
+
+  if (focus) flashSection(focus);
+}
+
+function flashSection(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.classList.remove("flash");
+  void el.offsetWidth;
+  el.classList.add("flash");
+  el.scrollIntoView({ block: "nearest", behavior: "smooth" });
+}
+
+function selectEpoch(number, focus) {
+  selectedEpoch = epochs.find((epoch) => epoch.number === number) || epochs[0];
+  renderRows();
+  renderPanel(focus);
+}
+
+rowsEl.addEventListener("click", (event) => {
+  const button = event.target.closest("button[data-action]");
+  if (!button) return;
+  const epoch = Number(button.dataset.epoch);
+  const action = button.dataset.action;
+  if (action === "statescript") selectEpoch(epoch, "section-files");
+  else if (action === "video") selectEpoch(epoch, "section-files");
+  else selectEpoch(epoch, "section-task");
+});
+
+document.getElementById("closePanel").addEventListener("click", () => {
+  flashSection("epochs-heading");
+});
+
+renderRows();
+renderPanel();
+</script>
+</body>
+</html>
