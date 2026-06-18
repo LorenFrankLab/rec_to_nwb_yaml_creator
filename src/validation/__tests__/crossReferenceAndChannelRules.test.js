@@ -561,6 +561,82 @@ describe('task/video dependency + camera refs', () => {
     }))).not.toContain('orphaned_file');
   });
 
+  it('errors on duplicate associated_files names', () => {
+    const issues = rulesValidation({
+      tasks: [{ task_name: 'a', task_description: 'd', task_epochs: [2, 3] }],
+      associated_files: [
+        { name: 'statescript_r1', description: 'Statescript Log', path: '/data/run2.stateScriptLog', task_epochs: 2 },
+        { name: 'statescript_r1', description: 'Statescript Log', path: '/data/run3.stateScriptLog', task_epochs: 3 },
+      ],
+    });
+    const duplicate = issues.find((i) => i.code === 'duplicate_associated_file_name');
+    expect(duplicate).toBeDefined();
+    expect(duplicate.severity).toBe('error');
+    expect(duplicate.path).toBe('associated_files[1].name');
+  });
+
+  it('errors on duplicate associated_files paths', () => {
+    const issues = rulesValidation({
+      tasks: [{ task_name: 'a', task_description: 'd', task_epochs: [2, 3] }],
+      associated_files: [
+        { name: 'statescript_r1', description: 'Statescript Log', path: '/data/run2.stateScriptLog', task_epochs: 2 },
+        { name: 'statescript_r2', description: 'Statescript Log', path: '/data/run2.stateScriptLog', task_epochs: 3 },
+      ],
+    });
+    const duplicate = issues.find((i) => i.code === 'duplicate_associated_file_path');
+    expect(duplicate).toBeDefined();
+    expect(duplicate.severity).toBe('error');
+    expect(duplicate.path).toBe('associated_files[1].path');
+  });
+
+  it('warns when a statescript log description misses the Spyglass keyword', () => {
+    const issues = rulesValidation({
+      tasks: [{ task_name: 'a', task_description: 'd', task_epochs: [5] }],
+      associated_files: [
+        { name: 'statescript_r5', description: 'state sciript log run 5', path: '/data/run5.stateScriptLog', task_epochs: 5 },
+      ],
+    });
+    const warning = issues.find((i) => i.code === 'statescript_description_keyword');
+    expect(warning).toBeDefined();
+    expect(warning.severity).toBe('warning');
+    expect(warning.message).toContain('state_script');
+  });
+
+  it('accepts statescript descriptions that match the Spyglass keyword gate', () => {
+    const issues = rulesValidation({
+      tasks: [{ task_name: 'a', task_description: 'd', task_epochs: [5] }],
+      associated_files: [
+        { name: 'statescript_r5', description: 'state script log run 5', path: '/data/run5.stateScriptLog', task_epochs: 5 },
+      ],
+    });
+    expect(codes(issues)).not.toContain('statescript_description_keyword');
+  });
+
+  it('warns on associated_files paths that are bare, relative, or directory-shaped', () => {
+    const issues = rulesValidation({
+      tasks: [{ task_name: 'a', task_description: 'd', task_epochs: [1, 2, 3] }],
+      associated_files: [
+        { name: 'bare', description: 'Statescript Log', path: 'run1.stateScriptLog', task_epochs: 1 },
+        { name: 'relative', description: 'Statescript Log', path: 'data/run2.stateScriptLog', task_epochs: 2 },
+        { name: 'directory', description: 'Statescript Log', path: '/data/run3/', task_epochs: 3 },
+      ],
+    });
+    const warnings = issues.filter((i) => i.code === 'associated_file_path_shape');
+    expect(warnings).toHaveLength(3);
+    expect(warnings.every((issue) => issue.severity === 'warning')).toBe(true);
+  });
+
+  it('accepts an absolute associated_files path with a filename', () => {
+    const issues = rulesValidation({
+      tasks: [{ task_name: 'a', task_description: 'd', task_epochs: [5] }],
+      associated_files: [
+        { name: 'statescript_r5', description: 'stateScriptLog epoch r5', path: '/abs/path/run5.stateScriptLog', task_epochs: 5 },
+      ],
+    });
+    expect(codes(issues)).not.toContain('associated_file_path_shape');
+    expect(codes(issues)).not.toContain('statescript_description_keyword');
+  });
+
   it('passes a video with a matching task epoch and valid scalar camera_id', () => {
     const issues = rulesValidation({
       cameras: [{ id: 0, camera_name: 'c' }],

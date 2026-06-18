@@ -11,6 +11,7 @@
  * These tests pin the anchors to the EXACT path strings the validation issues emit
  * (read-only from rulesValidation.js):
  *   - orphaned_file                 → `associated_files[${i}].task_epochs`
+ *   - associated file integrity     → `associated_files[${i}].name` / `.description` / `.path`
  *   - bad_channel_out_of_range /    → `ntrode_electrode_group_channel_map[${ntrode_id}]`
  *     multishank_bad_channels_ignored
  */
@@ -45,6 +46,30 @@ describe('AssociatedFilesEditor — orphaned_file repair-focus anchor', () => {
     // The anchor must be the epoch SELECT (the control to repair).
     expect(anchor0.tagName).toBe('SELECT');
     expect(anchor1.tagName).toBe('SELECT');
+  });
+
+  it('puts row-field anchors on name, description, and path controls', () => {
+    render(
+      <AssociatedFilesEditor
+        files={[
+          { name: 'a', description: 'state sciript log', path: 'run1.stateScriptLog', task_epochs: 1 },
+          { name: 'b', description: 'Statescript Log', path: '/data/run3.stateScriptLog', task_epochs: 3 },
+        ]}
+        tasks={tasks}
+        onChange={() => {}}
+      />
+    );
+
+    const name = document.querySelector('[data-field-path="associated_files[0].name"]');
+    const description = document.querySelector('[data-field-path="associated_files[0].description"]');
+    const path = document.querySelector('[data-field-path="associated_files[0].path"]');
+
+    expect(name).toBeInTheDocument();
+    expect(description).toBeInTheDocument();
+    expect(path).toBeInTheDocument();
+    expect(name.tagName).toBe('INPUT');
+    expect(description.tagName).toBe('INPUT');
+    expect(path.tagName).toBe('INPUT');
   });
 });
 

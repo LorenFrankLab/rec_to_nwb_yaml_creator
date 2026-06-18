@@ -92,7 +92,7 @@ ntrode_electrode_group_channel_map:
 associated_files:
   - name: probe_adjustment_log
     description: Daily probe depth adjustments
-    path: /data/beans/probe_logs/
+    path: /data/beans/probe_logs/probe_adjustments.txt
     task_epochs: 1
 
 associated_video_files:

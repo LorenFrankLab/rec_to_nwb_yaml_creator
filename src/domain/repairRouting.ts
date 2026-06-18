@@ -189,6 +189,10 @@ export const SURFACE_BY_CODE: Record<string, RepairSurface> = {
   duplicate_task_epoch: 'day',
   orphaned_video: 'day',
   orphaned_file: 'day',
+  duplicate_associated_file_name: 'day',
+  duplicate_associated_file_path: 'day',
+  statescript_description_keyword: 'day',
+  associated_file_path_shape: 'day',
   // Phase 4: the video-declaration readiness rule — a task epoch with no video and no "no video"
   // declaration. Day-owned, repaired in the Epochs tab (the epoch drill-in's video control).
   epoch_video_undeclared: 'day',

@@ -44,6 +44,78 @@ function referencedEpochValues(value: unknown): unknown[] {
   return [value];
 }
 
+const STATESCRIPT_DESCRIPTION_KEYWORDS = ['statescript', 'state_script', 'state script'];
+
+function nonBlankString(value: unknown): string | null {
+  return typeof value === 'string' && value.trim() !== '' ? value.trim() : null;
+}
+
+function hasStatescriptKeyword(value: unknown): boolean {
+  const text = nonBlankString(value)?.toLowerCase();
+  return text ? STATESCRIPT_DESCRIPTION_KEYWORDS.some((keyword) => text.includes(keyword)) : false;
+}
+
+function hasStatescriptLogExtension(value: unknown): boolean {
+  const text = nonBlankString(value)?.toLowerCase();
+  return text ? text.endsWith('.statescriptlog') : false;
+}
+
+function isStatescriptLikeFile(file: unknown): boolean {
+  if (!file || typeof file !== 'object') return false;
+  const row = file as Record<string, unknown>;
+  return (
+    hasStatescriptLogExtension(row.path) ||
+    hasStatescriptLogExtension(row.name) ||
+    hasStatescriptKeyword(row.name)
+  );
+}
+
+function hasAbsoluteFilePathShape(path: string): boolean {
+  const value = path.trim();
+  if (value === '' || /[\\/]$/.test(value)) return false;
+  return value.startsWith('/') || /^[A-Za-z]:[\\/]/.test(value) || /^\\\\[^\\]+\\[^\\]+/.test(value);
+}
+
+function reportDuplicateAssociatedFileValue(
+  issues: ValidationIssue[],
+  field: 'name' | 'path',
+  code: 'duplicate_associated_file_name' | 'duplicate_associated_file_path',
+  files: unknown[]
+): void {
+  const seen = new Map<string, number>();
+  const reported = new Set<string>();
+
+  files.forEach((file, index) => {
+    const row = file && typeof file === 'object' ? file as Record<string, unknown> : null;
+    const value = nonBlankString(row?.[field]);
+    if (!value) return;
+
+    const firstIndex = seen.get(value);
+    if (firstIndex === undefined) {
+      seen.set(value, index);
+      return;
+    }
+    if (reported.has(value)) return;
+    reported.add(value);
+
+    issues.push({
+      path: `associated_files[${index}].${field}`,
+      field,
+      step: 'epochs',
+      actionLabel: field === 'name' ? 'Rename associated file' : 'Fix associated file path',
+      code,
+      repairSurface: 'day',
+      severity: 'error',
+      message:
+        field === 'name'
+          ? `Associated files ${firstIndex + 1} and ${index + 1} both use name "${value}". ` +
+            'Associated file names must be unique; duplicate names hard-fail NWB conversion.'
+          : `Associated files ${firstIndex + 1} and ${index + 1} both point at path "${value}". ` +
+            'Each associated file row must point at its own raw file so epochs do not use the wrong log.',
+    });
+  });
+}
+
 /**
  * Rules 1 / 2: tasks / associated video files reference cameras but the cameras table is absent.
  *
@@ -250,6 +322,74 @@ export function taskEpochReferences(model: ValidationModel): ValidationIssue[] {
       });
     });
   }
+
+  return issues;
+}
+
+/**
+ * Rule 15b: `associated_files` entry internals — unique names/paths, statescript
+ * description keyword, and path shape. Epoch-reference consistency is owned by
+ * {@link taskEpochReferences}; this catches converter hard-fails and silent empty-content drops.
+ *
+ * @param model - The form data to validate.
+ * @returns Validation issues.
+ */
+export function associatedFileIntegrity(model: ValidationModel): ValidationIssue[] {
+  const issues: ValidationIssue[] = [];
+  if (!Array.isArray(model.associated_files) || model.associated_files.length === 0) return issues;
+
+  reportDuplicateAssociatedFileValue(
+    issues,
+    'name',
+    'duplicate_associated_file_name',
+    model.associated_files
+  );
+  reportDuplicateAssociatedFileValue(
+    issues,
+    'path',
+    'duplicate_associated_file_path',
+    model.associated_files
+  );
+
+  model.associated_files.forEach((file, index) => {
+    if (!file || typeof file !== 'object') return;
+    const row = file as Record<string, unknown>;
+    const fileName = nonBlankString(row.name);
+    const label = fileName ? `Associated file "${fileName}"` : `Associated file ${index + 1}`;
+
+    const path = nonBlankString(row.path);
+    if (path && !hasAbsoluteFilePathShape(path)) {
+      issues.push({
+        path: `associated_files[${index}].path`,
+        field: 'path',
+        step: 'epochs',
+        actionLabel: 'Review associated file path',
+        code: 'associated_file_path_shape',
+        repairSurface: 'day',
+        severity: 'warning',
+        message:
+          `${label} path "${path}" is not shaped like an absolute file path. ` +
+          'Use the full file path, not a bare filename, relative path, or directory path, ' +
+          'so the converter can read the raw log content.',
+      });
+    }
+
+    if (isStatescriptLikeFile(row) && !hasStatescriptKeyword(row.description)) {
+      issues.push({
+        path: `associated_files[${index}].description`,
+        field: 'description',
+        step: 'epochs',
+        actionLabel: 'Review statescript description',
+        code: 'statescript_description_keyword',
+        repairSurface: 'day',
+        severity: 'warning',
+        message:
+          `${label} looks like a statescript log, but its description does not contain ` +
+          '"statescript", "state_script", or "state script". Spyglass uses that keyword ' +
+          'to create StateScriptFile rows.',
+      });
+    }
+  });
 
   return issues;
 }

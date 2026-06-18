@@ -249,7 +249,14 @@ describe('ownershipForIssue — pattern refinement', () => {
   });
 
   it('orphaned video/file references are day facts', () => {
-    for (const code of ['orphaned_video', 'orphaned_file']) {
+    for (const code of [
+      'orphaned_video',
+      'orphaned_file',
+      'duplicate_associated_file_name',
+      'duplicate_associated_file_path',
+      'statescript_description_keyword',
+      'associated_file_path_shape',
+    ]) {
       expect(ownershipForIssue({ code }).pattern, code).toBe(OWNERSHIP_PATTERN.DAY_FACT);
     }
   });

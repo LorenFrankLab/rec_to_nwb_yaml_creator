@@ -24,6 +24,7 @@ import {
   missingCameraRules,
   danglingCameraReferences,
   taskEpochReferences,
+  associatedFileIntegrity,
   fsGuiReferences,
   cameraIdUniqueness,
 } from './rules/referenceRules';
@@ -87,6 +88,7 @@ export const rulesValidation = (model: ValidationModel): ValidationIssue[] => {
     ...consistentProbeCatalog(model),             // 20
     ...uniqueBehavioralEventNames(model),         // 14
     ...taskEpochReferences(model),                // 15
+    ...associatedFileIntegrity(model),            // 15b
     ...fsGuiReferences(model),                    // 15c
     ...identityDivergences(model),                // 16
     ...danglingElectrodeGroupRefs(model),         // 10

@@ -13,6 +13,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   experimenter names may not decompose in Spyglass, subject genotype appears to contain strain text,
   `subject_id` is still a template placeholder, or electrode-group locations look like typos of a
   known/nearby location. The supported-probe list in `CLAUDE.md` now matches the 12-entry catalog.
+- **Associated-file integrity checks.** Validation now catches duplicate `associated_files` names or
+  paths before NWB conversion hard-fails or links an epoch to the wrong raw log, and warns when
+  statescript descriptions miss Spyglass's keyword gate or paths look like relative, bare, or
+  directory-shaped values that would produce empty log content.
 - **Camera calibration and identity guardrails.** New camera entries prefill the common Allied Vision
   / Manta G-158C / Theia SL183M hardware values, offer recurring camera-name suggestions, and still
   require explicit meters-per-pixel calibration. Validation now blocks missing/zero/nonpositive

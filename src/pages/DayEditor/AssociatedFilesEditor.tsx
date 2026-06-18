@@ -57,10 +57,10 @@ interface AssociatedFilesEditorProps {
  * visible "Missing epoch N" unselectable option (never a blank select) and is
  * flagged with `role="alert"`, so the user can re-point it before the day is clean.
  *
- * REPAIR-FOCUS ANCHOR: each row's epoch `<select>` carries `data-field-path` set to
- * `associated_files[<index>].task_epochs`, the exact path the `orphaned_file`
- * validation issue emits. The Day Editor stepper's focus search uses this to land a
- * repair click on the offending row's epoch control instead of the broad step.
+   * REPAIR-FOCUS ANCHOR: each row control carries `data-field-path` set to the exact
+   * validation path (`associated_files[<index>].name` / `description` / `path` /
+   * `task_epochs`). The Day Editor stepper's focus search uses this to land a repair
+   * click on the offending row control instead of the broad step.
  *
  * Persisted through `onChange(nextArray)` (the step routes that to
  * `onFieldUpdate('associated_files', nextArray)`).
@@ -118,10 +118,11 @@ export default function AssociatedFilesEditor({ files = [], tasks = [], onChange
               <li key={index} className="associated-file-row">
                 <div className="form-group">
                   <label htmlFor={`${baseId}-name-${index}`}>File name (required)</label>
-                  <input
-                    id={`${baseId}-name-${index}`}
-                    type="text"
-                    value={file.name || ''}
+	                  <input
+	                    id={`${baseId}-name-${index}`}
+	                    type="text"
+	                    data-field-path={`associated_files[${index}].name`}
+	                    value={file.name || ''}
                     placeholder="e.g., 20210606_J16_01_stateScriptLog"
                     required
                     aria-required="true"
@@ -131,10 +132,11 @@ export default function AssociatedFilesEditor({ files = [], tasks = [], onChange
 
                 <div className="form-group">
                   <label htmlFor={`${baseId}-description-${index}`}>Description</label>
-                  <input
-                    id={`${baseId}-description-${index}`}
-                    type="text"
-                    value={file.description || ''}
+	                  <input
+	                    id={`${baseId}-description-${index}`}
+	                    type="text"
+	                    data-field-path={`associated_files[${index}].description`}
+	                    value={file.description || ''}
                     placeholder="optional"
                     onChange={(e) => updateRow(index, 'description', e.target.value)}
                   />
@@ -142,10 +144,11 @@ export default function AssociatedFilesEditor({ files = [], tasks = [], onChange
 
                 <div className="form-group">
                   <label htmlFor={`${baseId}-path-${index}`}>Path</label>
-                  <input
-                    id={`${baseId}-path-${index}`}
-                    type="text"
-                    value={file.path || ''}
+	                  <input
+	                    id={`${baseId}-path-${index}`}
+	                    type="text"
+	                    data-field-path={`associated_files[${index}].path`}
+	                    value={file.path || ''}
                     placeholder="optional"
                     onChange={(e) => updateRow(index, 'path', e.target.value)}
                   />
@@ -219,4 +222,3 @@ export default function AssociatedFilesEditor({ files = [], tasks = [], onChange
     </section>
   );
 }
-
