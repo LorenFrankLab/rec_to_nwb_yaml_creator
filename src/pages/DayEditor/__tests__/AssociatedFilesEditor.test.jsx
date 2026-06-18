@@ -21,7 +21,7 @@ describe('AssociatedFilesEditor', () => {
       <AssociatedFilesEditor files={[]} tasks={tasks} onChange={onChange} />
     );
 
-    await user.click(screen.getByRole('button', { name: /add file/i }));
+    await user.click(screen.getByRole('button', { name: /custom file/i }));
     // Re-render with the appended empty row so the controlled inputs exist.
     rerender(
       <AssociatedFilesEditor
@@ -39,6 +39,95 @@ describe('AssociatedFilesEditor', () => {
     const lastCall = onChange.mock.calls.at(-1)[0];
     expect(lastCall[0].task_epochs).toBe(3);
     expect(typeof lastCall[0].task_epochs).toBe('number');
+  });
+
+  it('prefills corpus-backed supplemental file presets', async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    const { rerender } = render(
+      <AssociatedFilesEditor files={[]} tasks={tasks} onChange={onChange} />
+    );
+
+    await user.click(screen.getByRole('button', { name: /psychopy stim script/i }));
+    expect(onChange).toHaveBeenLastCalledWith([
+      {
+        name: 'stim1',
+        description: 'Psychopy stim generation script for stim 1',
+        path: '',
+        task_epochs: '',
+      },
+    ]);
+
+    rerender(
+      <AssociatedFilesEditor
+        files={[
+          {
+            name: 'stim1',
+            description: 'Psychopy stim generation script for stim 1',
+            path: '',
+            task_epochs: '',
+          },
+        ]}
+        tasks={tasks}
+        onChange={onChange}
+      />
+    );
+
+    await user.click(screen.getByRole('button', { name: /psychopy stim script/i }));
+    expect(onChange).toHaveBeenLastCalledWith([
+      {
+        name: 'stim1',
+        description: 'Psychopy stim generation script for stim 1',
+        path: '',
+        task_epochs: '',
+      },
+      {
+        name: 'stim2',
+        description: 'Psychopy stim generation script for stim 2',
+        path: '',
+        task_epochs: '',
+      },
+    ]);
+  });
+
+  it.each([
+    [
+      /realtime output/i,
+      {
+        name: 'realtime_output_r1',
+        description: 'realtime_decoding_outputfile',
+        path: '',
+        task_epochs: '',
+      },
+    ],
+    [
+      /behavior timeline/i,
+      {
+        name: 'Behavior timeline',
+        description: 'Behavior timeline',
+        path: '',
+        task_epochs: '',
+      },
+    ],
+    [
+      /fsgui log/i,
+      {
+        name: 'fsgui_log',
+        description: 'FSGUI log',
+        path: '',
+        task_epochs: '',
+      },
+    ],
+  ])('prefills the %s supplemental preset', async (buttonName, expectedRow) => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(
+      <AssociatedFilesEditor files={[]} tasks={tasks} onChange={onChange} />
+    );
+
+    await user.click(screen.getByRole('button', { name: buttonName }));
+
+    expect(onChange).toHaveBeenLastCalledWith([expectedRow]);
   });
 
   it('offers a scalar <select> for the epoch (no manual numeric entry)', () => {

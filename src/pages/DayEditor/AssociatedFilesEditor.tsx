@@ -11,6 +11,16 @@ interface FileRow {
   task_epochs?: number | string;
 }
 
+type SupplementalFilePreset = 'custom' | 'psychopy' | 'realtime' | 'behaviorTimeline' | 'fsgui';
+
+const SUPPLEMENTAL_FILE_PRESETS: Array<{ key: SupplementalFilePreset; label: string }> = [
+  { key: 'psychopy', label: 'Psychopy stim script' },
+  { key: 'realtime', label: 'Realtime output' },
+  { key: 'behaviorTimeline', label: 'Behavior timeline' },
+  { key: 'fsgui', label: 'FSGUI log' },
+  { key: 'custom', label: 'Custom file' },
+];
+
 /**
  * Collect the day's valid task-epoch numbers (sorted, de-duplicated).
  *
@@ -31,6 +41,55 @@ function collectValidEpochs(tasks: unknown): number[] {
     });
   });
   return [...seen].sort((a, b) => a - b);
+}
+
+function getNextPresetNumber(files: FileRow[], pattern: RegExp): number {
+  const used = files
+    .map((file) => file.name || '')
+    .map((name) => name.match(pattern)?.[1])
+    .map((value) => Number(value))
+    .filter((value) => Number.isInteger(value) && value > 0);
+  return used.length === 0 ? 1 : Math.max(...used) + 1;
+}
+
+function createPresetRow(preset: SupplementalFilePreset, files: FileRow[]): FileRow {
+  switch (preset) {
+    case 'psychopy': {
+      const stimNumber = getNextPresetNumber(files, /^stim(\d+)$/i);
+      return {
+        name: `stim${stimNumber}`,
+        description: `Psychopy stim generation script for stim ${stimNumber}`,
+        path: '',
+        task_epochs: '',
+      };
+    }
+    case 'realtime': {
+      const runNumber = getNextPresetNumber(files, /^realtime_output_r(\d+)$/i);
+      return {
+        name: `realtime_output_r${runNumber}`,
+        description: 'realtime_decoding_outputfile',
+        path: '',
+        task_epochs: '',
+      };
+    }
+    case 'behaviorTimeline':
+      return {
+        name: 'Behavior timeline',
+        description: 'Behavior timeline',
+        path: '',
+        task_epochs: '',
+      };
+    case 'fsgui':
+      return {
+        name: 'fsgui_log',
+        description: 'FSGUI log',
+        path: '',
+        task_epochs: '',
+      };
+    case 'custom':
+    default:
+      return { name: '', description: '', path: '', task_epochs: '' };
+  }
 }
 
 interface AssociatedFilesEditorProps {
@@ -80,10 +139,10 @@ export default function AssociatedFilesEditor({ files = [], tasks = [], onChange
   }
 
   /**
-   * Append an empty file row.
+   * Append a supplemental file row, optionally seeded from corpus-backed presets.
    */
-  function addRow() {
-    onChange([...fileList, { name: '', description: '', path: '', task_epochs: '' }]);
+  function addRow(preset: SupplementalFilePreset) {
+    onChange([...fileList, createPresetRow(preset, fileList)]);
   }
 
   /**
@@ -96,14 +155,14 @@ export default function AssociatedFilesEditor({ files = [], tasks = [], onChange
   return (
     <section className="associated-files-editor" aria-labelledby={`${baseId}-heading`}>
       <div className="associated-files-header">
-        <h3 id={`${baseId}-heading`}>Associated file rows</h3>
+        <h3 id={`${baseId}-heading`}>Supplemental file rows</h3>
         <p className="associated-files-hint">
-          Link each file to one of this day&apos;s task epochs.
+          Optional files outside generated statescripts and videos.
         </p>
       </div>
 
       {fileList.length === 0 ? (
-        <p className="associated-files-empty">No associated files yet.</p>
+        <p className="associated-files-empty">No supplemental files yet.</p>
       ) : (
         <ul className="associated-files-rows">
           {fileList.map((file, index) => {
@@ -116,12 +175,12 @@ export default function AssociatedFilesEditor({ files = [], tasks = [], onChange
               <li key={index} className="associated-file-row">
                 <div className="form-group">
                   <label htmlFor={`${baseId}-name-${index}`}>File name (required)</label>
-	                  <input
-	                    id={`${baseId}-name-${index}`}
-	                    type="text"
-	                    data-field-path={`associated_files[${index}].name`}
-	                    value={file.name || ''}
-                    placeholder="e.g., 20210606_J16_01_stateScriptLog"
+                  <input
+                    id={`${baseId}-name-${index}`}
+                    type="text"
+                    data-field-path={`associated_files[${index}].name`}
+                    value={file.name || ''}
+                    placeholder="e.g., stim1 or realtime_output_r1"
                     required
                     aria-required="true"
                     onChange={(e) => updateRow(index, 'name', e.target.value)}
@@ -130,11 +189,11 @@ export default function AssociatedFilesEditor({ files = [], tasks = [], onChange
 
                 <div className="form-group">
                   <label htmlFor={`${baseId}-description-${index}`}>Description</label>
-	                  <input
-	                    id={`${baseId}-description-${index}`}
-	                    type="text"
-	                    data-field-path={`associated_files[${index}].description`}
-	                    value={file.description || ''}
+                  <input
+                    id={`${baseId}-description-${index}`}
+                    type="text"
+                    data-field-path={`associated_files[${index}].description`}
+                    value={file.description || ''}
                     placeholder="optional"
                     onChange={(e) => updateRow(index, 'description', e.target.value)}
                   />
@@ -142,11 +201,11 @@ export default function AssociatedFilesEditor({ files = [], tasks = [], onChange
 
                 <div className="form-group">
                   <label htmlFor={`${baseId}-path-${index}`}>Path</label>
-	                  <input
-	                    id={`${baseId}-path-${index}`}
-	                    type="text"
-	                    data-field-path={`associated_files[${index}].path`}
-	                    value={file.path || ''}
+                  <input
+                    id={`${baseId}-path-${index}`}
+                    type="text"
+                    data-field-path={`associated_files[${index}].path`}
+                    value={file.path || ''}
                     placeholder="optional"
                     onChange={(e) => updateRow(index, 'path', e.target.value)}
                   />
@@ -210,13 +269,19 @@ export default function AssociatedFilesEditor({ files = [], tasks = [], onChange
         </ul>
       )}
 
-      <button
-        type="button"
-        className="button-secondary add-file-button"
-        onClick={addRow}
-      >
-        + Add file
-      </button>
+      <div className="associated-file-presets" aria-label="Add supplemental file">
+        {SUPPLEMENTAL_FILE_PRESETS.map((preset) => (
+          <Button
+            key={preset.key}
+            variant="secondary"
+            size="small"
+            onClick={() => addRow(preset.key)}
+            aria-label={`Add ${preset.label}`}
+          >
+            {preset.label}
+          </Button>
+        ))}
+      </div>
     </section>
   );
 }

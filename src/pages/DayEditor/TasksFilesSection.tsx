@@ -39,7 +39,7 @@ export default function TasksFilesSection(props: TasksFilesSectionProps) {
           Epochs
         </button>
         <button type="button" onClick={() => scrollToSection('other-associated-files')}>
-          Other files <span>{files.length}</span>
+          Supplemental files <span>{files.length}</span>
         </button>
       </nav>
 
@@ -53,9 +53,9 @@ export default function TasksFilesSection(props: TasksFilesSectionProps) {
       >
         <div className="supplemental-files-header">
           <div>
-            <h2 id="supplemental-files-heading">Other associated files</h2>
+            <h2 id="supplemental-files-heading">Supplemental files</h2>
             <p>
-              Files outside the epoch statescript and video rows, such as realtime output or stimulus scripts.
+              Rare day-specific extras outside generated statescripts and videos, such as realtime output or stimulus scripts.
             </p>
           </div>
           <span className="supplemental-files-badge">
