@@ -42,6 +42,18 @@ describe('OptogeneticsStep', () => {
     expect(screen.getByLabelText(/optogenetic stimulation software/i)).toHaveValue('fsgui');
   });
 
+  it('uses a Watts-scale source-power placeholder that names the milliwatt equivalent', async () => {
+    const user = userEvent.setup();
+    render(<Harness />);
+
+    await user.click(screen.getByRole('checkbox', { name: /has optogenetics/i }));
+
+    expect(screen.getByLabelText(/source power/i)).toHaveAttribute(
+      'placeholder',
+      'e.g. 0.01 (= 10 mW)'
+    );
+  });
+
   it('stays incomplete when sections are only named (required fields still blank)', async () => {
     const user = userEvent.setup();
     render(<Harness />);

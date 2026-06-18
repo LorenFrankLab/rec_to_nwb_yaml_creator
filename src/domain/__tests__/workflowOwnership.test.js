@@ -209,7 +209,12 @@ describe('ownershipForIssue — pattern refinement', () => {
   });
 
   it('data-acq and opto setup codes are shared animal setup', () => {
-    for (const code of ['divergent_data_acq_identity', 'partial_configuration', 'multiple_excitation_sources']) {
+    for (const code of [
+      'divergent_data_acq_identity',
+      'partial_configuration',
+      'multiple_excitation_sources',
+      'opto_power_watts_suspicious',
+    ]) {
       expect(ownershipForIssue({ code }).pattern, code).toBe(OWNERSHIP_PATTERN.ANIMAL_SETUP);
     }
   });

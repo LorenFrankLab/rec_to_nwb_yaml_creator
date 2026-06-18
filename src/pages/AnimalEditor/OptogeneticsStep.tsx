@@ -53,7 +53,7 @@ const EXCITATION_FIELDS: OptoFieldDef[] = [
   { name: 'model_name', label: 'Hardware model name', type: 'datalist', options: optoExcitationModelNames() },
   { name: 'description', label: 'Description', type: 'text' },
   { name: 'wavelength_in_nm', label: 'Wavelength (nm)', type: 'number', placeholder: 'e.g. 473' },
-  { name: 'power_in_W', label: 'Source power (W)', type: 'number', placeholder: 'e.g. 10' },
+  { name: 'power_in_W', label: 'Source power (W)', type: 'number', placeholder: 'e.g. 0.01 (= 10 mW)' },
   { name: 'intensity_in_W_per_m2', label: 'Intensity (W/m²)', type: 'number', placeholder: 'e.g. 1.0' },
 ];
 

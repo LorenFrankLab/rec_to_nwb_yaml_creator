@@ -11,8 +11,24 @@ import type { ValidationIssue, ValidationModel } from '../issueTypes';
 
 import { optoFieldsPresence } from '../../domain/optoCompleteness';
 
+const OPTO_POWER_WARNING_THRESHOLD_W = 1;
+const TYPICAL_OPTO_POWER_W = 0.02;
+
+function finiteNumber(value: unknown): number | null {
+  if (typeof value === 'number') return Number.isFinite(value) ? value : null;
+  if (typeof value === 'string' && value.trim() !== '') {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+  return null;
+}
+
+function formatMagnitude(value: number): string {
+  return Number(value.toPrecision(6)).toString();
+}
+
 /**
- * Rules 3 / 3c / 3b: optogenetics completeness, coordinate references, and single excitation source.
+ * Rules 3 / 3c / 3b: optogenetics completeness, coordinate references, source power, and single excitation source.
  *
  * @param model - The form data to validate.
  * @returns Validation issues.
@@ -52,6 +68,30 @@ export function optogeneticsRules(model: ValidationModel): ValidationIssue[] {
         `optical_fiber${hasOpticalFiber ? ' ✓' : ' ✗'}, ` +
         `virus_injection${hasVirusInjection ? ' ✓' : ' ✗'}, ` +
         `optogenetic_stimulation_software${hasOptoSoftware ? ' ✓' : ' ✗'}`
+    });
+  }
+
+  // Phase 9: `power_in_W` is written verbatim to NWB. Corpus review found milliwatt device
+  // ratings (e.g. 200 mW) commonly entered into the Watts field as `200`, so warn-to-confirm above
+  // the plausible optogenetics range without blocking genuine high-power sources.
+  if (optoFieldsPresent > 0 && Array.isArray(model.opto_excitation_source)) {
+    model.opto_excitation_source.forEach((source, i) => {
+      const powerInW = finiteNumber(source?.power_in_W);
+      if (powerInW == null || powerInW <= OPTO_POWER_WARNING_THRESHOLD_W) return;
+      const typicalFactor = formatMagnitude(powerInW / TYPICAL_OPTO_POWER_W);
+      const milliwattAlternative = formatMagnitude(powerInW / 1000);
+      issues.push({
+        path: `opto_excitation_source[${i}].power_in_W`,
+        field: 'power_in_W',
+        code: 'opto_power_watts_suspicious',
+        repairSurface: 'animal',
+        severity: 'warning',
+        actionLabel: 'Review source power',
+        message:
+          `power_in_W: ${formatMagnitude(powerInW)} is ~${typicalFactor}x a typical ` +
+          `optogenetic source (2-50 mW). If you meant milliwatts, enter ` +
+          `${milliwattAlternative}. Confirm Watts to keep.`,
+      });
     });
   }
 

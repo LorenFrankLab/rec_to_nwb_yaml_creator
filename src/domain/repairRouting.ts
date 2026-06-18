@@ -214,6 +214,7 @@ export const SURFACE_BY_CODE: Record<string, RepairSurface> = {
   // sets repairSurface:'animal' explicitly; this keeps the authoritative table in sync).
   partial_configuration: 'animal',
   multiple_excitation_sources: 'animal',
+  opto_power_watts_suspicious: 'animal',
   // Optical-fiber / virus-injection coordinate reference, required by trodes_to_nwb and
   // collected only in the Animal Editor Optogenetics step (explicit repairSurface:'animal').
   missing_opto_reference: 'animal',

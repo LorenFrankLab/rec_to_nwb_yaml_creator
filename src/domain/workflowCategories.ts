@@ -103,6 +103,7 @@ export const CATEGORY_BY_CODE: Readonly<Record<string, WorkflowCategory>> = Obje
   duplicate_task_type_name: WORKFLOW_CATEGORY.ANIMAL_SETUP,
   partial_configuration: WORKFLOW_CATEGORY.ANIMAL_SETUP,
   multiple_excitation_sources: WORKFLOW_CATEGORY.ANIMAL_SETUP,
+  opto_power_watts_suspicious: WORKFLOW_CATEGORY.ANIMAL_SETUP,
   // Optical-fiber / virus-injection coordinate reference is part of the animal's opto setup.
   missing_opto_reference: WORKFLOW_CATEGORY.ANIMAL_SETUP,
   // Subject identity is part of the animal's shared setup and is edited from the animal profile.

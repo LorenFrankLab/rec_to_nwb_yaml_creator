@@ -41,4 +41,53 @@ describe('validation rules and the export gate', () => {
     merged.electrode_groups[firstCA1].location = 'ca1';
     expect(computeStepStatus(day, merged).export).toBe('valid');
   });
+
+  it('a suspicious optogenetics source power warning-severity does NOT block export', () => {
+    const { animal, day } = buildRealisticWorkspace();
+    animal.optogenetics = {
+      opto_excitation_source: [{
+        name: 'Omicron LuxX+ Blue',
+        model_name: 'Omicron LuxX+ 488-100',
+        description: 'Laser for optogenetic stimulation',
+        wavelength_in_nm: 488,
+        power_in_W: 200,
+        intensity_in_W_per_m2: 10000000000,
+      }],
+      optical_fiber: [{
+        name: 'Fiber 1',
+        hardware_name: 'demo fiber device',
+        implanted_fiber_description: 'optogenetic fiber in CA1',
+        hemisphere: 'right',
+        location: 'CA1',
+        ap_in_mm: 0,
+        ml_in_mm: 0,
+        dv_in_mm: 0,
+        roll_in_deg: 0,
+        pitch_in_deg: 0,
+        yaw_in_deg: 0,
+        reference: 'Bregma at the cortical surface',
+      }],
+      virus_injection: [{
+        name: 'Injection 1',
+        description: 'Viral injection for optogenetic stimulation',
+        virus_name: 'demo_virus_1',
+        volume_in_uL: 0.45,
+        volume_in_ul: 100,
+        titer_in_vg_per_ml: 1000000000,
+        location: 'CA1',
+        hemisphere: 'right',
+        ap_in_mm: 0,
+        ml_in_mm: 0,
+        dv_in_mm: 0,
+        roll_in_deg: 0,
+        pitch_in_deg: 0,
+        yaw_in_deg: 0,
+        reference: 'Bregma at the cortical surface',
+      }],
+      optogenetic_stimulation_software: 'fsgui',
+    };
+    const merged = mergeDayMetadata(animal, day);
+
+    expect(computeStepStatus(day, merged).export).toBe('valid');
+  });
 });

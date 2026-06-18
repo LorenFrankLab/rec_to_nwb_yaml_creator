@@ -225,6 +225,13 @@ describe('rulesValidation()', () => {
   });
 
   describe('Rule 3: Optogenetics All-or-Nothing', () => {
+    const completeOptoModel = (powerInW) => createTestYaml({
+      opto_excitation_source: [{ name: 'LED', power_in_W: powerInW }],
+      optical_fiber: [{ name: 'F', reference: 'Bregma' }],
+      virus_injection: [{ name: 'V', reference: 'Bregma' }],
+      optogenetic_stimulation_software: 'fsgui',
+    });
+
     it('should detect partial configuration: only opto_excitation_source', () => {
       const model = {
         ...createTestYaml(),
@@ -316,6 +323,49 @@ describe('rulesValidation()', () => {
       const issues = rulesValidation(model);
 
       expect(issues.some(i => i.code === 'partial_configuration')).toBe(false);
+    });
+
+    it('warns when power_in_W looks like a milliwatt rating typed into Watts', () => {
+      const issues = rulesValidation(completeOptoModel(200));
+      const warning = issues.find(i => i.code === 'opto_power_watts_suspicious');
+
+      expect(warning).toMatchObject({
+        path: 'opto_excitation_source[0].power_in_W',
+        field: 'power_in_W',
+        repairSurface: 'animal',
+        severity: 'warning',
+        actionLabel: 'Review source power',
+      });
+      expect(warning.message).toContain('power_in_W: 200');
+      expect(warning.message).toContain('2-50 mW');
+      expect(warning.message).toContain('0.2');
+      expect(warning.message).toContain('Confirm Watts to keep');
+      expect(issues.filter(i => i.severity === 'error')).toEqual([]);
+    });
+
+    it('does not warn for in-range optogenetic source power values', () => {
+      for (const power of [0.05, 0.077]) {
+        const issues = rulesValidation(completeOptoModel(power));
+        expect(issues.some(i => i.code === 'opto_power_watts_suspicious')).toBe(false);
+      }
+    });
+
+    it('does not warn when optogenetics is absent or only empty scaffolding arrays exist', () => {
+      const absent = rulesValidation(createTestYaml({
+        opto_excitation_source: undefined,
+        optical_fiber: undefined,
+        virus_injection: undefined,
+        optogenetic_stimulation_software: '',
+      }));
+      const scaffolding = rulesValidation(createTestYaml({
+        opto_excitation_source: [],
+        optical_fiber: [],
+        virus_injection: [],
+        optogenetic_stimulation_software: '',
+      }));
+
+      expect(absent.some(i => i.code === 'opto_power_watts_suspicious')).toBe(false);
+      expect(scaffolding.some(i => i.code === 'opto_power_watts_suspicious')).toBe(false);
     });
 
     it('should error when the three sections are present but software is missing', () => {

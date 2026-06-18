@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Optogenetics source-power sanity check.** `opto_excitation_source.power_in_W` now emits a
+  confirmable warning when a milliwatt-scale device rating appears to have been entered into the
+  Watts field, and the source-power placeholder now shows the mW equivalent for a Watts value.
 - **Day Editor IA realignment.** The daily editor now matches the finalized mock: a grouped vertical
   rail (SESSION / RECORDING / FINISH), five single-column sections, Files & Weight split out from
   Overview, DIO folded into the recording section, and Validation & Export as one finish panel.
