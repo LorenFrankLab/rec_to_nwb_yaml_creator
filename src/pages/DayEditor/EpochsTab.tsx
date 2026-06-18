@@ -817,9 +817,6 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
                 setQuickAddEpoch(activeRow.epoch);
               }}
               onOpto={(field, value) => setOpto(activeRow, field, value)}
-              onMoveUp={() => onMove(activeRow.epoch, 'up')}
-              onMoveDown={() => onMove(activeRow.epoch, 'down')}
-              onDelete={() => onDelete(activeRow.epoch)}
               statescriptDerivedName={statescriptDerivedName(activeRow)}
               onStatescriptOverride={() => setStatescriptManual(activeRow.epoch, true)}
               onStatescriptRevert={() => {
@@ -1001,9 +998,6 @@ interface EpochDetailsPanelProps {
   onReassignTask: (taskTypeId: string) => void;
   onNewTaskType: () => void;
   onOpto: (field: 'power_in_mW' | 'pulseLength', value: string) => void;
-  onMoveUp: () => void;
-  onMoveDown: () => void;
-  onDelete: () => void;
   statescriptDerivedName: string;
   onStatescriptOverride: () => void;
   onStatescriptRevert: () => void;
@@ -1103,17 +1097,50 @@ function EpochRowBlock(p: EpochRowProps) {
       </td>
       {hasOpto && <td><span className={styles.optoReadout}>{optoLabel}</span></td>}
       <td className={styles.menuCell}>
-        <button type="button" className={styles.menuButton} aria-haspopup="menu" aria-expanded={p.menuOpen} aria-label={`More actions for epoch ${row.epoch}`} onClick={p.onOpenMenu}>
-          ⋯
-        </button>
+        <div className={styles.rowActionGroup} role="group" aria-label={`Epoch ${row.epoch} structure actions`}>
+          <button
+            type="button"
+            className={styles.rowIconButton}
+            aria-label={`Move epoch ${row.epoch} up`}
+            title="Move up"
+            onClick={p.onMoveUp}
+          >
+            <FontAwesomeIcon icon={faArrowUp} aria-hidden="true" />
+          </button>
+          <button
+            type="button"
+            className={styles.rowIconButton}
+            aria-label={`Move epoch ${row.epoch} down`}
+            title="Move down"
+            onClick={p.onMoveDown}
+          >
+            <FontAwesomeIcon icon={faArrowDown} aria-hidden="true" />
+          </button>
+          <button
+            type="button"
+            className={`${styles.rowIconButton} ${styles.rowDangerButton}`}
+            aria-label={`Delete epoch ${row.epoch}`}
+            title="Delete"
+            onClick={p.onDelete}
+          >
+            <FontAwesomeIcon icon={faTrash} aria-hidden="true" />
+          </button>
+          <button
+            type="button"
+            className={styles.menuButton}
+            aria-haspopup="menu"
+            aria-expanded={p.menuOpen}
+            aria-label={`More actions for epoch ${row.epoch}`}
+            title="More actions"
+            onClick={p.onOpenMenu}
+          >
+            ⋯
+          </button>
+        </div>
         {p.menuOpen && (
           <div className={styles.menu} role="menu" style={{ right: 0 }} onClick={(e) => e.stopPropagation()}>
             <button type="button" role="menuitem" className={styles.menuItem} onClick={p.onInsertAfter}>Insert epoch after</button>
             <button type="button" role="menuitem" className={styles.menuItem} onClick={p.onDuplicate}>Duplicate epoch</button>
-            <button type="button" role="menuitem" className={styles.menuItem} onClick={p.onMoveUp}>Move up</button>
-            <button type="button" role="menuitem" className={styles.menuItem} onClick={p.onMoveDown}>Move down</button>
-            <div className={styles.menuSep} />
-            <button type="button" role="menuitem" className={`${styles.menuItem} ${styles.danger}`} onClick={p.onDelete}>Delete epoch</button>
           </div>
         )}
       </td>
@@ -1398,35 +1425,6 @@ function EpochDetailsPanel(p: EpochDetailsPanelProps) {
           </section>
         )}
 
-        <div className={styles.structureToolbar} aria-label={`Epoch ${row.epoch} structure actions`}>
-          <button
-            type="button"
-            className={styles.structureIconButton}
-            aria-label={`Move epoch ${row.epoch} up`}
-            title="Move up"
-            onClick={p.onMoveUp}
-          >
-            <FontAwesomeIcon icon={faArrowUp} aria-hidden="true" />
-          </button>
-          <button
-            type="button"
-            className={styles.structureIconButton}
-            aria-label={`Move epoch ${row.epoch} down`}
-            title="Move down"
-            onClick={p.onMoveDown}
-          >
-            <FontAwesomeIcon icon={faArrowDown} aria-hidden="true" />
-          </button>
-          <button
-            type="button"
-            className={`${styles.structureIconButton} ${styles.structureDangerButton}`}
-            aria-label={`Delete epoch ${row.epoch}`}
-            title="Delete"
-            onClick={p.onDelete}
-          >
-            <FontAwesomeIcon icon={faTrash} aria-hidden="true" />
-          </button>
-        </div>
       </div>
     </aside>
   );
