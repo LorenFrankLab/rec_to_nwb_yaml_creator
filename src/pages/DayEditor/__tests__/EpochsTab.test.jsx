@@ -181,6 +181,10 @@ describe('EpochsTab — grid render + collapsed state cells', () => {
     expect(screen.getByRole('complementary', { name: /Epoch 1: Sleep/i })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: /^Task$/i })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: /Files for this epoch/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Move epoch 1 up/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Move epoch 1 down/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Delete epoch 1/i })).toBeInTheDocument();
+    expect(screen.queryByText(/Epoch structure actions/i)).not.toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: /Show epoch 2 details/i }));
     expect(screen.getByRole('button', { name: /Show epoch 1 details/i })).toHaveAttribute('aria-expanded', 'false');
@@ -456,7 +460,7 @@ describe('EpochsTab — renumber moves bound refs in lockstep (no silent misasso
     await user.click(screen.getByRole('button', { name: /Show epoch 2 details/i }));
     expect(screen.getByRole('complementary', { name: /Epoch 2: Run/i })).toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: /^Move up$/i }));
+    await user.click(screen.getByRole('button', { name: /Move epoch 2 up/i }));
 
     expect(screen.getByRole('button', { name: /Hide epoch 1 details/i })).toBeInTheDocument();
     expect(screen.getByRole('complementary', { name: /Epoch 1: Run/i })).toBeInTheDocument();

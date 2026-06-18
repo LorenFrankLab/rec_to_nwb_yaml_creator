@@ -827,65 +827,46 @@
   margin-bottom: var(--spacing-xs, 6px);
 }
 
-.panelActions {
+.structureToolbar {
   display: flex;
-  flex-wrap: wrap;
+  justify-content: flex-end;
   gap: var(--spacing-xs, 6px);
-  margin-top: var(--spacing-sm, 8px);
-}
-
-.structureDetails {
-  border: 0;
   border-top: 1px solid var(--color-grey-200, #e6e6e6);
-  border-radius: 0;
-  padding: var(--spacing-sm, 10px) 0 0;
+  padding-top: var(--spacing-sm, 10px);
 }
 
-.structureDetails summary {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--spacing-sm, 8px);
+.structureIconButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border: 1px solid var(--color-grey-300, #d0d0d0);
+  border-radius: var(--radius-sm, 4px);
+  background: var(--color-white, #fff);
   color: var(--color-grey-700, #444);
   cursor: pointer;
-  font-size: var(--font-size-sm, 0.875rem);
-  font-weight: 700;
-  list-style: none;
-  margin: 0;
-  padding: 0;
+  font: inherit;
+  line-height: 1;
 }
 
-.structureDetails summary::-webkit-details-marker {
-  display: none;
+.structureIconButton:hover,
+.structureIconButton:focus-visible {
+  border-color: var(--color-primary, #2166ac);
+  background: var(--color-primary-50, #eef6ff);
+  color: var(--color-primary, #2166ac);
+  outline: none;
 }
 
-.structureDetails summary::before {
-  content: "▸";
-  color: var(--color-grey-500, #777);
-  flex: none;
+.structureDangerButton {
+  color: var(--color-error, #b3261e);
 }
 
-.structureDetails[open] summary::before {
-  content: "▾";
-}
-
-.structureDetails[open] summary {
-  border-bottom: 0;
-  margin-bottom: 0;
-}
-
-.structureDetails summary span:first-child {
-  flex: none;
-}
-
-.structureDetails summary span:last-child {
-  color: var(--color-grey-500, #777);
-  font-size: var(--font-size-xs, 0.75rem);
-  font-weight: 500;
-  overflow: hidden;
-  text-align: right;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.structureDangerButton:hover,
+.structureDangerButton:focus-visible {
+  border-color: var(--color-error, #b3261e);
+  background: var(--color-error-50, #fff2f0);
+  color: var(--color-error, #b3261e);
 }
 
 .fieldLabel {

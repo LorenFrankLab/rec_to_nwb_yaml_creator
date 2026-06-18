@@ -1,4 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faArrowDown, faArrowUp, faTrash } from '@fortawesome/free-solid-svg-icons';
 import { ConfirmDialog } from '../../components/Modal';
 import { useUndoToast } from '../../components/ui/UndoToast';
 import { EpochStatusPill } from '../../components/ui/StatusPill';
@@ -815,8 +817,6 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
                 setQuickAddEpoch(activeRow.epoch);
               }}
               onOpto={(field, value) => setOpto(activeRow, field, value)}
-              onInsertAfter={() => onInsertAfter(activeRow.epoch)}
-              onDuplicate={() => onDuplicate(activeRow.epoch)}
               onMoveUp={() => onMove(activeRow.epoch, 'up')}
               onMoveDown={() => onMove(activeRow.epoch, 'down')}
               onDelete={() => onDelete(activeRow.epoch)}
@@ -1001,8 +1001,6 @@ interface EpochDetailsPanelProps {
   onReassignTask: (taskTypeId: string) => void;
   onNewTaskType: () => void;
   onOpto: (field: 'power_in_mW' | 'pulseLength', value: string) => void;
-  onInsertAfter: () => void;
-  onDuplicate: () => void;
   onMoveUp: () => void;
   onMoveDown: () => void;
   onDelete: () => void;
@@ -1400,19 +1398,35 @@ function EpochDetailsPanel(p: EpochDetailsPanelProps) {
           </section>
         )}
 
-        <details className={styles.structureDetails}>
-          <summary>
-            <span>Epoch structure actions</span>
-            <span>Insert, duplicate, move, or delete this epoch.</span>
-          </summary>
-          <div className={styles.panelActions}>
-            <button type="button" className="button-small" onClick={p.onInsertAfter}>Insert after</button>
-            <button type="button" className="button-small" onClick={p.onDuplicate}>Duplicate</button>
-            <button type="button" className="button-small" onClick={p.onMoveUp}>Move up</button>
-            <button type="button" className="button-small" onClick={p.onMoveDown}>Move down</button>
-            <button type="button" className="button-small" onClick={p.onDelete}>Delete</button>
-          </div>
-        </details>
+        <div className={styles.structureToolbar} aria-label={`Epoch ${row.epoch} structure actions`}>
+          <button
+            type="button"
+            className={styles.structureIconButton}
+            aria-label={`Move epoch ${row.epoch} up`}
+            title="Move up"
+            onClick={p.onMoveUp}
+          >
+            <FontAwesomeIcon icon={faArrowUp} aria-hidden="true" />
+          </button>
+          <button
+            type="button"
+            className={styles.structureIconButton}
+            aria-label={`Move epoch ${row.epoch} down`}
+            title="Move down"
+            onClick={p.onMoveDown}
+          >
+            <FontAwesomeIcon icon={faArrowDown} aria-hidden="true" />
+          </button>
+          <button
+            type="button"
+            className={`${styles.structureIconButton} ${styles.structureDangerButton}`}
+            aria-label={`Delete epoch ${row.epoch}`}
+            title="Delete"
+            onClick={p.onDelete}
+          >
+            <FontAwesomeIcon icon={faTrash} aria-hidden="true" />
+          </button>
+        </div>
       </div>
     </aside>
   );
