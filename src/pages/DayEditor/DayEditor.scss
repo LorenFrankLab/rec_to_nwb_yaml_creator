@@ -581,7 +581,7 @@
   margin-bottom: var(--spacing-md);
 }
 
-.tasks-files-subnav a {
+.tasks-files-subnav button {
   display: inline-flex;
   align-items: center;
   gap: var(--spacing-xs);
@@ -591,13 +591,14 @@
   border-radius: 4px;
   background-color: var(--color-white);
   color: var(--color-grey-700);
+  cursor: pointer;
+  font-family: inherit;
   font-size: var(--font-size-sm);
   font-weight: 600;
-  text-decoration: none;
 }
 
-.tasks-files-subnav a:hover,
-.tasks-files-subnav a:focus-visible {
+.tasks-files-subnav button:hover,
+.tasks-files-subnav button:focus-visible {
   border-color: var(--color-primary);
   color: var(--color-primary);
 }

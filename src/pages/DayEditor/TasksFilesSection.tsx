@@ -26,14 +26,21 @@ export default function TasksFilesSection(props: TasksFilesSectionProps) {
   const focusRequest = props.focusRequest ?? null;
   const tasks = Array.isArray(mergedDay?.tasks) ? (mergedDay.tasks as Task[]) : [];
   const files = getDayAssociatedFiles(day);
+  const scrollToSection = (id: string) => {
+    const section = document.getElementById(id);
+    section?.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
+    section?.focus({ preventScroll: true });
+  };
 
   return (
     <div className="tasks-files-step">
       <nav className="tasks-files-subnav" aria-label="Tasks and files sections">
-        <a href="#epochs-workspace">Epochs</a>
-        <a href="#other-associated-files">
+        <button type="button" onClick={() => scrollToSection('epochs-workspace')}>
+          Epochs
+        </button>
+        <button type="button" onClick={() => scrollToSection('other-associated-files')}>
           Other files <span>{files.length}</span>
-        </a>
+        </button>
       </nav>
 
       <EpochsTab {...props} focusRequest={focusRequest} />
@@ -42,6 +49,7 @@ export default function TasksFilesSection(props: TasksFilesSectionProps) {
         id="other-associated-files"
         className="day-editor-section supplemental-files-section"
         aria-labelledby="supplemental-files-heading"
+        tabIndex={-1}
       >
         <div className="supplemental-files-header">
           <div>

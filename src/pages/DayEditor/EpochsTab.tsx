@@ -527,7 +527,7 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
       .join(' ');
 
   return (
-    <div id="epochs-workspace" className={`day-editor-section ${styles.root}`}>
+    <div id="epochs-workspace" className={`day-editor-section ${styles.root}`} tabIndex={-1}>
       <div className={styles.workspaceHeader}>
         <div>
           <h2>Epochs</h2>

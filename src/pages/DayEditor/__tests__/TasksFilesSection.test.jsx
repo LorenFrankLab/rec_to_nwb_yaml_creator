@@ -36,16 +36,20 @@ function renderSection(focusRequest = null) {
 }
 
 describe('TasksFilesSection', () => {
-  it('keeps supplemental files visible below the epoch workspace by default', () => {
+  it('keeps supplemental files visible below the epoch workspace by default', async () => {
+    const user = userEvent.setup();
     renderSection();
 
-    expect(screen.getByRole('link', { name: /^epochs$/i })).toHaveAttribute('href', '#epochs-workspace');
-    expect(screen.getByRole('link', { name: /other files 1/i })).toHaveAttribute(
-      'href',
-      '#other-associated-files'
-    );
+    window.location.hash = '#/day/r-2023-06-22';
+    await user.click(screen.getByRole('button', { name: /other files 1/i }));
+    expect(window.location.hash).toBe('#/day/r-2023-06-22');
+
+    await user.click(screen.getByRole('button', { name: /^epochs$/i }));
+    expect(window.location.hash).toBe('#/day/r-2023-06-22');
+
     const section = screen.getByRole('heading', { name: /other associated files/i }).closest('section');
     expect(section).toBeInTheDocument();
+    expect(section).toHaveAttribute('tabindex', '-1');
     expect(section).toHaveTextContent(/1 file/i);
     expect(screen.getByRole('button', { name: /add file/i })).toBeInTheDocument();
   });
