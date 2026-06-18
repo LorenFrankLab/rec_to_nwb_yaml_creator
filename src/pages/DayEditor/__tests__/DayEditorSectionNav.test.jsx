@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import DayEditorSectionNav from '../DayEditorSectionNav';
 
 describe('DayEditorSectionNav', () => {
-  // The nav renders the five Phase 15 sections grouped under the vertical rail headings.
+  // The nav renders the six focused Day Editor sections grouped under the vertical rail headings.
   const STATUS_LABEL = {
     valid: 'Complete',
     incomplete: 'Incomplete',
@@ -19,25 +19,26 @@ describe('DayEditorSectionNav', () => {
     active,
     ...(issueCount ? { issueCount } : {}),
   });
-  const makeGroups = ({ active = 'overview', validationStatus = 'incomplete', validationCount } = {}) => [
+  const makeGroups = ({ active = 'daily', validationStatus = 'incomplete', validationCount } = {}) => [
     {
-      label: 'SESSION',
+      label: 'DAY',
       steps: [
-        step('overview', 'Overview', 'valid', active === 'overview'),
-        step('files', 'Files & Weight', 'valid', active === 'files'),
+        step('daily', 'Daily Setup', 'valid', active === 'daily'),
+        step('tasks', 'Tasks & Files', 'incomplete', active === 'tasks'),
       ],
     },
     {
       label: 'RECORDING',
       steps: [
-        step('devices', 'Devices & Failed Channels', 'incomplete', active === 'devices'),
-        step('epochs', 'Tasks & Epochs', 'incomplete', active === 'epochs'),
+        step('recording', 'Recording Setup', 'valid', active === 'recording'),
+        step('channels', 'Failed Channels', 'valid', active === 'channels'),
+        step('dio', 'DIO Wiring', 'incomplete', active === 'dio'),
       ],
     },
     {
       label: 'FINISH',
       steps: [
-        step('finish', 'Validation & Export', validationStatus, active === 'finish', validationCount),
+        step('export', 'Fix & Export', validationStatus, active === 'export', validationCount),
       ],
     },
   ];
@@ -48,10 +49,10 @@ describe('DayEditorSectionNav', () => {
     expect(nav).toBeInTheDocument();
   });
 
-  it('renders all five sections as buttons (not links)', () => {
+  it('renders all six sections as buttons (not links)', () => {
     render(<DayEditorSectionNav groups={makeGroups()} onNavigate={vi.fn()} />);
     const buttons = screen.getAllByRole('button');
-    expect(buttons).toHaveLength(5);
+    expect(buttons).toHaveLength(6);
     expect(screen.queryAllByRole('link')).toHaveLength(0);
   });
 
@@ -60,35 +61,33 @@ describe('DayEditorSectionNav', () => {
     const icons = Array.from(
       container.querySelectorAll('.section-nav-status-icon')
     ).map((el) => el.textContent);
-    expect(icons).toEqual(['✓', '✓', '⚠', '⚠', '⚠']);
+    expect(icons).toEqual(['✓', '⚠', '✓', '✓', '⚠', '⚠']);
   });
 
   it('marks the active section with aria-current="page"', () => {
-    render(<DayEditorSectionNav groups={makeGroups({ active: 'devices' })} onNavigate={vi.fn()} />);
-    const devices = screen.getByRole('button', { name: /Devices & Failed Channels/i });
-    expect(devices).toHaveAttribute('aria-current', 'page');
-    expect(devices).toHaveAttribute('tabindex', '0');
-    expect(screen.getByRole('button', { name: /^Overview/i })).not.toHaveAttribute('aria-current');
-    expect(screen.getByRole('button', { name: /^Overview/i })).toHaveAttribute('tabindex', '-1');
+    render(<DayEditorSectionNav groups={makeGroups({ active: 'recording' })} onNavigate={vi.fn()} />);
+    const recording = screen.getByRole('button', { name: /Recording Setup/i });
+    expect(recording).toHaveAttribute('aria-current', 'page');
+    expect(recording).toHaveAttribute('tabindex', '0');
+    expect(screen.getByRole('button', { name: /^Daily Setup/i })).not.toHaveAttribute('aria-current');
+    expect(screen.getByRole('button', { name: /^Daily Setup/i })).toHaveAttribute('tabindex', '-1');
   });
 
-  it('calls onNavigate for ANY section clicked — including Validation & Export (no gating)', async () => {
+  it('calls onNavigate for ANY section clicked — including Fix & Export (no gating)', async () => {
     const user = userEvent.setup();
     const onNavigate = vi.fn();
     render(<DayEditorSectionNav groups={makeGroups()} onNavigate={onNavigate} />);
-    const exportButton = screen.getByRole('button', { name: /^Validation & Export/i });
+    const exportButton = screen.getByRole('button', { name: /^Fix & Export/i });
     expect(exportButton).not.toHaveAttribute('aria-disabled', 'true');
     await user.click(exportButton);
-    expect(onNavigate).toHaveBeenCalledWith('finish');
+    expect(onNavigate).toHaveBeenCalledWith('export');
   });
 
   it('folds the status into each accessible name', () => {
     render(<DayEditorSectionNav groups={makeGroups()} onNavigate={vi.fn()} />);
-    expect(screen.getByRole('button', { name: /Overview.*Complete/i })).toBeInTheDocument();
-    expect(
-      screen.getByRole('button', { name: /Devices & Failed Channels.*Incomplete/i })
-    ).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Validation & Export.*Incomplete/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Daily Setup.*Complete/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Tasks & Files.*Incomplete/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Fix & Export.*Incomplete/i })).toBeInTheDocument();
   });
 
   it('shows the to-fix count on the Validation item when provided', () => {
@@ -96,7 +95,7 @@ describe('DayEditorSectionNav', () => {
       <DayEditorSectionNav groups={makeGroups({ validationCount: 3 })} onNavigate={vi.fn()} />
     );
     expect(
-      screen.getByRole('button', { name: /Validation & Export.*3 to fix/i })
+      screen.getByRole('button', { name: /Fix & Export.*3 to fix/i })
     ).toBeInTheDocument();
   });
 

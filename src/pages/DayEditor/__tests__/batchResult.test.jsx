@@ -15,7 +15,7 @@ vi.mock('../../../io/yaml', async (importOriginal) => {
 
 /**
  * A `remy` animal with TWO days: a valid (video-complete) day, and an error day whose only problem is a
- * whitespace-only session_description (a day-owned schema error → routes to Overview). The error is
+ * whitespace-only session_description (a day-owned schema error → routes to Daily Setup). The error is
  * day-level (on `day.session`) so it does not also break the valid day.
  */
 function buildTwoDayAnimal() {
@@ -87,9 +87,9 @@ describe('ExportPreview — "Export all days" batch', () => {
     await user.click(screen.getByRole('button', { name: /export all 2 days/i }));
 
     const result = await screen.findByRole('status', { name: /batch export result/i });
-    // The skipped day's link resolves through repairRouting to the issue's OWNER (Overview), carrying
+    // The skipped day's link resolves through repairRouting to the issue's OWNER (Daily Setup), carrying
     // the field as a ?field= deep-link — not a bare "open this day" link.
-    const fix = within(result).getByRole('link', { name: /fix in overview/i });
+    const fix = within(result).getByRole('link', { name: /fix in daily setup/i });
     expect(fix.getAttribute('href')).toMatch(new RegExp(`^#/day/${errorDay.id}\\?field=`));
   });
 });

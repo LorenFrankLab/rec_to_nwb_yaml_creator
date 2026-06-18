@@ -196,76 +196,76 @@ describe('DayEditorFrame', () => {
   });
 
   // ── Grouped vertical rail ──
-  it('renders the grouped vertical rail with the five mock sections', () => {
+  it('renders the grouped vertical rail with the six focused sections', () => {
     renderFrame();
     const nav = screen.getByRole('navigation', { name: /day editor sections/i });
-    expect(within(nav).getByText('SESSION')).toBeInTheDocument();
+    expect(within(nav).getByText('DAY')).toBeInTheDocument();
     expect(within(nav).getByText('RECORDING')).toBeInTheDocument();
     expect(within(nav).getByText('FINISH')).toBeInTheDocument();
-    expect(within(nav).getByRole('button', { name: /^Overview/ })).toBeInTheDocument();
-    expect(within(nav).getByRole('button', { name: /^Files & Weight/ })).toBeInTheDocument();
-    expect(within(nav).getByRole('button', { name: /^Devices & Failed Channels/ })).toBeInTheDocument();
-    expect(within(nav).getByRole('button', { name: /^Tasks & Epochs/ })).toBeInTheDocument();
-    expect(within(nav).getByRole('button', { name: /^Validation & Export/ })).toBeInTheDocument();
-    expect(within(nav).queryByRole('button', { name: /^DIO/ })).not.toBeInTheDocument();
+    expect(within(nav).getByRole('button', { name: /^Daily Setup/ })).toBeInTheDocument();
+    expect(within(nav).getByRole('button', { name: /^Tasks & Files/ })).toBeInTheDocument();
+    expect(within(nav).getByRole('button', { name: /^Recording Setup/ })).toBeInTheDocument();
+    expect(within(nav).getByRole('button', { name: /^Failed Channels/ })).toBeInTheDocument();
+    expect(within(nav).getByRole('button', { name: /^DIO Wiring/ })).toBeInTheDocument();
+    expect(within(nav).getByRole('button', { name: /^Fix & Export/ })).toBeInTheDocument();
   });
 
   it('folds each tab status label into the accessible name', () => {
     renderFrame();
     const nav = screen.getByRole('navigation', { name: /day editor sections/i });
-    expect(within(nav).getByRole('button', { name: /Overview.*Has errors/i })).toBeInTheDocument();
-    expect(within(nav).getByRole('button', { name: /Tasks & Epochs.*Incomplete/i })).toBeInTheDocument();
+    expect(within(nav).getByRole('button', { name: /Daily Setup.*Has errors/i })).toBeInTheDocument();
+    expect(within(nav).getByRole('button', { name: /Tasks & Files.*Incomplete/i })).toBeInTheDocument();
   });
 
-  it('opens on Overview and freely navigates to any section on click', async () => {
+  it('opens on Daily Setup and freely navigates to any section on click', async () => {
     const user = userEvent.setup();
     renderFrame();
-    expect(screen.getByRole('button', { name: /^Overview/ })).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByRole('button', { name: /^Daily Setup/ })).toHaveAttribute('aria-current', 'page');
 
-    await user.click(screen.getByRole('button', { name: /^Devices & Failed Channels/ }));
-    expect(screen.getByRole('heading', { level: 2, name: /Devices & Failed Channels/i })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { level: 2, name: /behavioral events/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /^Devices & Failed Channels/ })).toHaveAttribute('aria-current', 'page');
+    await user.click(screen.getByRole('button', { name: /^Recording Setup/ }));
+    expect(screen.getByRole('heading', { level: 2, name: /Recording Setup/i })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { level: 2, name: /behavioral events/i })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^Recording Setup/ })).toHaveAttribute('aria-current', 'page');
 
-    await user.click(screen.getByRole('button', { name: /^Tasks & Epochs/ }));
-    expect(screen.getByRole('button', { name: /^Tasks & Epochs/ })).toHaveAttribute('aria-current', 'page');
+    await user.click(screen.getByRole('button', { name: /^Tasks & Files/ }));
+    expect(screen.getByRole('button', { name: /^Tasks & Files/ })).toHaveAttribute('aria-current', 'page');
 
-    await user.click(screen.getByRole('button', { name: /^Files & Weight/ }));
-    expect(screen.getByRole('heading', { level: 2, name: /Files & Weight/i })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /^Failed Channels/ }));
+    expect(screen.getByRole('heading', { level: 2, name: /Failed Channels/i })).toBeInTheDocument();
   });
 
   it('steps tabs with the Alt+→ / Alt+← keyboard shortcuts', () => {
     renderFrame();
-    act(() => emitStepperShortcut('next')); // overview → files
-    expect(screen.getByRole('button', { name: /^Files & Weight/ })).toHaveAttribute('aria-current', 'page');
-    act(() => emitStepperShortcut('next')); // → devices
-    expect(screen.getByRole('button', { name: /^Devices & Failed Channels/ })).toHaveAttribute('aria-current', 'page');
-    act(() => emitStepperShortcut('prev')); // → files
-    expect(screen.getByRole('button', { name: /^Files & Weight/ })).toHaveAttribute('aria-current', 'page');
+    act(() => emitStepperShortcut('next')); // daily → tasks
+    expect(screen.getByRole('button', { name: /^Tasks & Files/ })).toHaveAttribute('aria-current', 'page');
+    act(() => emitStepperShortcut('next')); // → recording
+    expect(screen.getByRole('button', { name: /^Recording Setup/ })).toHaveAttribute('aria-current', 'page');
+    act(() => emitStepperShortcut('prev')); // → tasks
+    expect(screen.getByRole('button', { name: /^Tasks & Files/ })).toHaveAttribute('aria-current', 'page');
   });
 
   it('CLAMPS the Alt+ tab stepping at both ends (does not wrap)', () => {
     renderFrame();
-    expect(screen.getByRole('button', { name: /^Overview/ })).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByRole('button', { name: /^Daily Setup/ })).toHaveAttribute('aria-current', 'page');
     act(() => emitStepperShortcut('prev'));
-    expect(screen.getByRole('button', { name: /^Overview/ })).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByRole('button', { name: /^Daily Setup/ })).toHaveAttribute('aria-current', 'page');
 
     // Step to the last section, then Alt+→ stays there.
-    for (let i = 0; i < 5; i += 1) act(() => emitStepperShortcut('next'));
-    expect(screen.getByRole('button', { name: /^Validation & Export/ })).toHaveAttribute('aria-current', 'page');
+    for (let i = 0; i < 6; i += 1) act(() => emitStepperShortcut('next'));
+    expect(screen.getByRole('button', { name: /^Fix & Export/ })).toHaveAttribute('aria-current', 'page');
     act(() => emitStepperShortcut('next'));
-    expect(screen.getByRole('button', { name: /^Validation & Export/ })).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByRole('button', { name: /^Fix & Export/ })).toHaveAttribute('aria-current', 'page');
   });
 
   it('routes to the owning tab when arriving with a ?field= repair deep-link', async () => {
     // A cross-day batch "Fix in …" link lands on #/day/:id?field=<field>; behavioral events now
-    // fold into the recording section.
+    // route to the focused DIO Wiring section.
     const originalHash = window.location.hash;
     window.location.hash = '#/day/remy-2023-06-22?field=behavioral_events';
     try {
       renderFrame();
       await waitFor(() =>
-        expect(screen.getByRole('button', { name: /^Devices & Failed Channels/ })).toHaveAttribute('aria-current', 'page')
+        expect(screen.getByRole('button', { name: /^DIO Wiring/ })).toHaveAttribute('aria-current', 'page')
       );
     } finally {
       window.location.hash = originalHash;
@@ -280,7 +280,7 @@ describe('DayEditorFrame', () => {
     window.location.hash = '#/day/remy-2023-06-22';
     try {
       renderFrame();
-      expect(screen.getByRole('button', { name: /^Overview/ })).toHaveAttribute('aria-current', 'page');
+      expect(screen.getByRole('button', { name: /^Daily Setup/ })).toHaveAttribute('aria-current', 'page');
 
       await act(async () => {
         window.location.hash = '#/day/remy-2023-06-22?step=behavioral&field=behavioral_events';
@@ -288,7 +288,7 @@ describe('DayEditorFrame', () => {
       });
 
       await waitFor(() =>
-        expect(screen.getByRole('button', { name: /^Devices & Failed Channels/ })).toHaveAttribute('aria-current', 'page')
+        expect(screen.getByRole('button', { name: /^DIO Wiring/ })).toHaveAttribute('aria-current', 'page')
       );
     } finally {
       window.location.hash = originalHash;
@@ -297,13 +297,13 @@ describe('DayEditorFrame', () => {
 
   it('prefers an explicit ?step= over field-name inference when routing a deep-link', async () => {
     // unpinned_configuration routes to step `devices` but focuses `configurationVersion` — a field that
-    // alone infers the `validation` catch-all. The explicit step must win → Devices section.
+    // belongs to the focused Recording Setup section.
     const originalHash = window.location.hash;
     window.location.hash = '#/day/remy-2023-06-22?field=configurationVersion&step=devices';
     try {
       renderFrame();
       await waitFor(() =>
-        expect(screen.getByRole('button', { name: /^Devices & Failed Channels/ })).toHaveAttribute('aria-current', 'page')
+        expect(screen.getByRole('button', { name: /^Recording Setup/ })).toHaveAttribute('aria-current', 'page')
       );
     } finally {
       window.location.hash = originalHash;
@@ -315,7 +315,7 @@ describe('DayEditorFrame', () => {
     renderFrame();
     const main = document.getElementById('main-content');
     expect(main).not.toHaveFocus(); // initial mount does not steal focus
-    await user.click(screen.getByRole('button', { name: /^Devices & Failed Channels/ }));
+    await user.click(screen.getByRole('button', { name: /^Recording Setup/ }));
     expect(main).toHaveFocus();
   });
 
@@ -324,7 +324,7 @@ describe('DayEditorFrame', () => {
     const user = userEvent.setup();
     renderFrame();
     await user.click(screen.getByRole('button', { name: /^Export$/ }));
-    expect(screen.getByRole('heading', { name: /Export — 2023-06-22/ })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /Fix & Export — 2023-06-22/ })).toBeInTheDocument();
     // The mock animal's species "Rat" is not DANDI-valid → the export gate blocks the download.
     expect(screen.getByRole('button', { name: /^Download$/ })).toBeDisabled();
   });

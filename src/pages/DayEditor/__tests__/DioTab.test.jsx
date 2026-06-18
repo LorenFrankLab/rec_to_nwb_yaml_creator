@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import DioTab from '../DioTab';
 
 /**
- * DioTab is the Day Editor's DIO subsection inside Devices & Failed Channels. It opens on a
+ * DioTab is the Day Editor's DIO Wiring section. It opens on a
  * read-only carry-forward SUMMARY of the named Din/Dout channels and reveals the full ECU channel
  * editor only when the user clicks
  * "Edit · rewired the rig". The grid editing itself is covered at the BehavioralEventsDisplay level;
@@ -18,8 +18,11 @@ describe('DioTab', () => {
 
   it('opens an empty day straight in the editor (so the first naming / bootstrap is immediate)', () => {
     render(<DioTab day={{ behavioral_events: [] }} onFieldUpdate={vi.fn()} />);
-    // The editor grid is shown (the "Edit" reveal is skipped for an empty day).
-    expect(screen.getByLabelText('Event for Din1')).toBeInTheDocument();
+    // Empty days skip the summary and open on the focused used-lines editor.
+    expect(screen.getByRole('heading', { level: 4, name: /named dio lines/i })).toBeInTheDocument();
+    expect(screen.getByLabelText('New DIO event name')).toBeInTheDocument();
+    expect(screen.getByText(/advanced: show all ECU lines/i)).toBeInTheDocument();
+    expect(screen.queryByLabelText('Event for Din1')).not.toBeInTheDocument();
   });
 
   it('opens a day with named events on the read-only carry-forward summary by default', () => {
@@ -55,9 +58,10 @@ describe('DioTab', () => {
     // Now the editable grid is visible (the existing channel pre-filled).
     expect(screen.getByLabelText('Event for Dout7')).toHaveValue('Pump1');
 
-    // Naming a channel writes the next events array back through onFieldUpdate('behavioral_events').
-    await user.click(screen.getByLabelText('Event for Din1'));
+    // Adding a used line writes the next events array back through onFieldUpdate('behavioral_events').
+    await user.click(screen.getByLabelText('New DIO event name'));
     await user.click(screen.getByRole('option', { name: 'Poke' }));
+    await user.click(screen.getByRole('button', { name: /add line/i }));
     expect(onFieldUpdate).toHaveBeenLastCalledWith('behavioral_events', [
       { description: 'Dout7', name: 'Pump1' },
       { description: 'Din1', name: 'Poke1' },

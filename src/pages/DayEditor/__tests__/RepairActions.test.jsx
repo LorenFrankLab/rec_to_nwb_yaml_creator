@@ -49,7 +49,7 @@ describe('RepairActions', () => {
       />
     );
 
-    const button = screen.getByRole('button', { name: /fix in overview/i });
+    const button = screen.getByRole('button', { name: /fix in daily setup/i });
     await user.click(button);
     expect(onNavigate).toHaveBeenCalledWith('overview', 'session_description');
   });
@@ -73,7 +73,7 @@ describe('RepairActions', () => {
         onNavigate={onNavigate}
       />
     );
-    await user.click(screen.getByRole('button', { name: /fix in devices & failed channels/i }));
+    await user.click(screen.getByRole('button', { name: /fix in recording setup/i }));
     expect(onNavigate).toHaveBeenCalledWith('devices', 'deviceOverrides.electrode_groups');
   });
 
@@ -115,7 +115,7 @@ describe('RepairActions', () => {
     expect(onNavigate).toHaveBeenCalledWith('animal', 'electrode_groups[0].targeted_x');
   });
 
-  it('routes a day-surface device override (bad_channel_out_of_range) to the Devices step', async () => {
+  it('routes a day-surface bad-channel issue to the Failed Channels section via the Devices substrate', async () => {
     const user = userEvent.setup();
     const onNavigate = vi.fn();
     render(
@@ -132,14 +132,14 @@ describe('RepairActions', () => {
       />
     );
 
-    await user.click(screen.getByRole('button', { name: /fix in devices/i }));
+    await user.click(screen.getByRole('button', { name: /fix in failed channels/i }));
     expect(onNavigate).toHaveBeenCalledWith('devices', 'ntrode_electrode_group_channel_map[0]');
   });
 
   it('collapses duplicate repair buttons for issues that share one underlying fix', () => {
     // A shadowed day geometry override produces both a retagged base schema error and a
     // shadowed_geometry_override — both routing to the same remove-override control. Render
-    // both messages, but only ONE "Fix in Devices & Failed Channels" button.
+    // both messages, but only ONE "Fix in Recording Setup" button.
     const issues = [
       { code: 'required', path: 'electrode_groups[0].location', focusPath: 'deviceOverrides.electrode_groups', ownerSurface: 'day', step: 'devices', message: 'electrode group location is required' },
       { code: 'shadowed_geometry_override', path: 'deviceOverrides.electrode_groups', focusPath: 'deviceOverrides.electrode_groups', ownerSurface: 'day', step: 'devices', message: 'this day overrides the saved geometry' },
@@ -147,7 +147,7 @@ describe('RepairActions', () => {
     render(<RepairActions issues={issues.map(vm)} onNavigate={vi.fn()} />);
     expect(screen.getByText(/location is required/i)).toBeInTheDocument();
     expect(screen.getByText(/overrides the saved geometry/i)).toBeInTheDocument();
-    expect(screen.getAllByRole('button', { name: /fix in devices & failed channels/i })).toHaveLength(1);
+    expect(screen.getAllByRole('button', { name: /fix in recording setup/i })).toHaveLength(1);
   });
 
   it('executes a repairCommand (not navigate) when an issue carries one and onRepair is provided', async () => {

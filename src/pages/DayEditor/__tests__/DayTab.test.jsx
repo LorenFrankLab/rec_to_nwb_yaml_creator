@@ -2,6 +2,9 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import DayTab from '../DayTab';
+import { mergeDayMetadata } from '../../../state/workspaceUtils';
+import { encodeYaml } from '../../../io/yaml';
+import { buildRealisticWorkspace } from '../../../__tests__/fixtures/workspaceBuilders';
 
 describe('DayTab', () => {
   const mockAnimal = {
@@ -45,7 +48,7 @@ describe('DayTab', () => {
         <DayTab animal={corruptAnimal} day={corruptDay} mergedDay={{}} onFieldUpdate={vi.fn()} />
       )
     ).not.toThrow();
-    expect(screen.getByRole('heading', { name: /overview/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /daily setup/i })).toBeInTheDocument();
     expect(errorSpy).not.toHaveBeenCalled();
     errorSpy.mockRestore();
   });
@@ -57,7 +60,7 @@ describe('DayTab', () => {
         <DayTab animal={mockAnimal} day={mockDay} mergedDay={null} onFieldUpdate={vi.fn()} />
       )
     ).not.toThrow();
-    expect(screen.getByRole('heading', { name: /overview/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /daily setup/i })).toBeInTheDocument();
     expect(errorSpy).not.toHaveBeenCalled();
     errorSpy.mockRestore();
   });
@@ -81,7 +84,7 @@ describe('DayTab', () => {
     );
   });
 
-  it('displays editable session fields and the derived session ID', () => {
+  it('displays editable daily setup fields before collapsed read-only context', () => {
     render(
       <DayTab
         animal={mockAnimal}
@@ -91,10 +94,103 @@ describe('DayTab', () => {
       />
     );
 
-    expect(screen.getByDisplayValue('remy_20230622')).toBeInTheDocument();
-    expect(screen.getByText(/Auto-generated from animal ID and date/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Data folder/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Recording-day weight/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/Session Description/i)).toBeRequired();
     expect(screen.getByLabelText(/Experiment Description/i)).toBeRequired();
+
+    const dataFolder = screen.getByLabelText(/Data folder/i);
+    const weight = screen.getByLabelText(/Recording-day weight/i);
+    const sessionDescription = screen.getByLabelText(/Session Description/i);
+    const experimentDescription = screen.getByLabelText(/Experiment Description/i);
+    const keywords = screen.getByRole('textbox', { name: /keywords/i });
+    const context = screen.getByText(/session identity and animal context/i);
+    const sessionId = screen.getByDisplayValue('remy_20230622');
+
+    expect(dataFolder.compareDocumentPosition(weight) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(weight.compareDocumentPosition(sessionDescription) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(sessionDescription.compareDocumentPosition(experimentDescription) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(experimentDescription.compareDocumentPosition(keywords) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(keywords.compareDocumentPosition(context) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(context.closest('details')).not.toHaveAttribute('open');
+    expect(sessionId).not.toBeVisible();
+  });
+
+  it('writes day.dataFolder via onFieldUpdate on blur', async () => {
+    const user = userEvent.setup();
+    const onFieldUpdate = vi.fn();
+    render(
+      <DayTab
+        animal={mockAnimal}
+        day={mockDay}
+        mergedDay={mockMergedDay}
+        onFieldUpdate={onFieldUpdate}
+      />
+    );
+
+    const folder = screen.getByLabelText(/data folder/i);
+    await user.type(folder, '/stelmo/remy/20230622/');
+    await user.tab();
+
+    expect(onFieldUpdate).toHaveBeenCalledWith('dataFolder', '/stelmo/remy/20230622/');
+  });
+
+  it('pre-fills the data folder from the stored day value', () => {
+    render(
+      <DayTab
+        animal={mockAnimal}
+        day={{ ...mockDay, dataFolder: '/stelmo/remy/' }}
+        mergedDay={mockMergedDay}
+        onFieldUpdate={vi.fn()}
+      />
+    );
+
+    expect(screen.getByLabelText(/data folder/i)).toHaveValue('/stelmo/remy/');
+  });
+
+  it('writes the recording-day weight to session.weight', async () => {
+    const user = userEvent.setup();
+    const onFieldUpdate = vi.fn();
+    render(
+      <DayTab
+        animal={mockAnimal}
+        day={mockDay}
+        mergedDay={mockMergedDay}
+        onFieldUpdate={onFieldUpdate}
+      />
+    );
+
+    const weight = screen.getByLabelText(/recording-day weight/i);
+    await user.type(weight, '450');
+    await user.tab();
+
+    expect(onFieldUpdate).toHaveBeenCalledWith('session.weight', 450);
+  });
+
+  it('identifies the animal baseline as a fallback when no day weight is set', () => {
+    const animalWithWeight = { ...mockAnimal, subject: { ...mockAnimal.subject, weight: 450 } };
+    const dayNoWeight = { ...mockDay, session: { ...mockDay.session, weight: undefined } };
+    render(
+      <DayTab
+        animal={animalWithWeight}
+        day={dayNoWeight}
+        mergedDay={mockMergedDay}
+        onFieldUpdate={vi.fn()}
+      />
+    );
+
+    expect(screen.getByLabelText(/recording-day weight/i)).toHaveValue(null);
+    expect(
+      screen.getByText(/animal baseline \(450 g\) will be exported as a fallback/i)
+    ).toBeInTheDocument();
+  });
+
+  // The merge must never read `dataFolder`, so the exported YAML is byte-identical with and without it.
+  it('keeps dataFolder off-export', () => {
+    const { animal, day } = buildRealisticWorkspace();
+    const withoutFolder = encodeYaml(mergeDayMetadata(animal, day));
+    const withFolder = encodeYaml(mergeDayMetadata(animal, { ...day, dataFolder: '/stelmo/remy/20230622/' }));
+    expect(withFolder).toBe(withoutFolder);
   });
 
   it('adds a keyword and updates the day keywords field', async () => {
@@ -171,7 +267,7 @@ describe('DayTab', () => {
     }
   });
 
-  it('shows inherited subject/team facts as read-only with an animal setup link', () => {
+  it('shows inherited subject/team facts as collapsed read-only context with an animal setup link', () => {
     render(
       <DayTab
         animal={mockAnimal}
@@ -181,7 +277,7 @@ describe('DayTab', () => {
       />
     );
 
-    expect(screen.getByRole('heading', { name: /subject \+ team inherited from the animal/i })).toBeInTheDocument();
+    expect(screen.getByText(/session identity and animal context/i)).toBeInTheDocument();
     expect(screen.getByDisplayValue('Rat')).toBeDisabled();
     expect(screen.getByDisplayValue('Long Evans')).toBeDisabled();
     expect(screen.getByDisplayValue('2023-01-01')).toBeDisabled();

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import FailedChannelsTab from '../FailedChannelsTab';
+import FailedChannelsTab, { RecordingSetupSection, FailedChannelsSection } from '../FailedChannelsTab';
 
 describe('FailedChannelsTab', () => {
   const ELECTRODE_GROUPS = [
@@ -80,6 +80,17 @@ describe('FailedChannelsTab', () => {
   beforeEach(() => {
     mockOnFieldUpdate = vi.fn();
   });
+
+  const clickGroupSummary = async (user, labelPattern) => {
+    const label = screen.getAllByText(labelPattern).find((node) => node.closest('summary'));
+    expect(label).toBeTruthy();
+    await user.click(label.closest('summary'));
+  };
+
+  const openOtherGroups = async (user) => {
+    const summary = screen.queryByText(/other groups/i)?.closest('summary');
+    if (summary) await user.click(summary);
+  };
 
   it('per-day recording-system selector writes day.data_acq_device_name (2+ systems)', async () => {
     const user = userEvent.setup();
@@ -245,6 +256,44 @@ describe('FailedChannelsTab', () => {
     expect(screen.getByRole('heading', { name: /devices & failed channels/i })).toBeInTheDocument();
   });
 
+  it('renders Recording Setup without failed-channel accordions or DIO wiring', () => {
+    render(
+      <RecordingSetupSection
+        animal={mockAnimal}
+        day={mockDay}
+        mergedDay={mockMergedDay}
+        onFieldUpdate={mockOnFieldUpdate}
+      />
+    );
+
+    expect(screen.getByRole('heading', { level: 2, name: /recording setup/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /recording system/i })).toBeInTheDocument();
+    expect(screen.getByText(/day-only technical overrides/i)).toBeInTheDocument();
+    expect(screen.queryByText(/electrode group 0/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/mark failed channels/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/behavioral events/i)).not.toBeInTheDocument();
+  });
+
+  it('renders Failed Channels without recording setup, cameras, technical fields, config version, or DIO', () => {
+    render(
+      <FailedChannelsSection
+        animal={mockAnimal}
+        day={mockDay}
+        mergedDay={mockMergedDay}
+        onFieldUpdate={mockOnFieldUpdate}
+      />
+    );
+
+    expect(screen.getByRole('heading', { level: 2, name: /failed channels/i })).toBeInTheDocument();
+    expect(screen.getByText(/mark failed channels for this recording day/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/electrode group 1: PFC/i).length).toBeGreaterThan(0);
+    expect(screen.queryByRole('heading', { name: /recording system/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: /technical parameters/i })).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/recording system used this day/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/this day uses animal electrode configuration/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/behavioral events/i)).not.toBeInTheDocument();
+  });
+
   it('renders with integer IDs without PropType warnings', () => {
     const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     render(
@@ -340,7 +389,7 @@ describe('FailedChannelsTab', () => {
       />
     );
 
-    expect(screen.getByText(/2 failed channels/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/2 failed channels/i).length).toBeGreaterThan(0);
   });
 
   it('expands electrode group when clicked', async () => {
@@ -355,9 +404,7 @@ describe('FailedChannelsTab', () => {
       />
     );
 
-    // Get the first occurrence (summary element)
-    const group0Summaries = screen.getAllByText(/electrode group 0: CA1/i);
-    await user.click(group0Summaries[0]);
+    await clickGroupSummary(user, /electrode group 1: PFC/i);
 
     // Content should now be visible - check for text that should appear
     const shankTexts = screen.getAllByText(/this tetrode_12\.5 has 1 shank/i);
@@ -378,22 +425,21 @@ describe('FailedChannelsTab', () => {
       />
     );
 
-    const group0Summaries = screen.getAllByText(/electrode group 0: CA1/i);
-    await user.click(group0Summaries[0]);
+    await clickGroupSummary(user, /electrode group 1: PFC/i);
 
     // Device config is inside a nested collapsible section, need to expand it too
     const viewConfigButtons = screen.getAllByText(/view device configuration/i);
-    await user.click(viewConfigButtons[0]); // Click the first one (for group 0)
+    await user.click(viewConfigButtons[0]); // Click the first visible group.
 
     const deviceTypes = screen.getAllByText('tetrode_12.5');
     expect(deviceTypes[0]).toBeVisible();
-    expect(screen.getByText(/\(2\.6, -3\.8, 1\.5\) mm/)).toBeVisible();
+    expect(screen.getByText(/\(1, 2, 2\.5\) mm/)).toBeVisible();
   });
 
   it('calls onFieldUpdate when bad channels are changed', async () => {
     const user = userEvent.setup();
 
-    render(
+    const { container } = render(
       <FailedChannelsTab
         animal={mockAnimal}
         day={mockDay}
@@ -402,13 +448,13 @@ describe('FailedChannelsTab', () => {
       />
     );
 
-    // Expand group 0
-    const group0Summaries = screen.getAllByText(/electrode group 0: CA1/i);
-    await user.click(group0Summaries[0]);
+    // Clean groups are tucked under "Other groups"; open it before editing group 0.
+    await openOtherGroups(user);
+    await clickGroupSummary(user, /electrode group 0: CA1/i);
 
-    // Check channel 1 as failed (use getAllByLabelText since multiple groups may be open)
-    const channel1Checkboxes = screen.getAllByLabelText(/channel 1/i);
-    await user.click(channel1Checkboxes[0]); // Click the first one (group 0, ntrode 0)
+    const channel1 = container.querySelector('#channel-0-1');
+    expect(channel1).not.toBeNull();
+    await user.click(channel1);
 
     expect(mockOnFieldUpdate).toHaveBeenCalledWith('deviceOverrides.bad_channels.0', [1]);
   });
@@ -444,10 +490,9 @@ describe('FailedChannelsTab', () => {
       />
     );
 
-    expect(screen.getByText(/1 failed channel/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/1 failed channel/i).length).toBeGreaterThan(0);
 
-    const group0Summaries = screen.getAllByText(/electrode group 0: CA1/i);
-    await user.click(group0Summaries[0]);
+    await clickGroupSummary(user, /electrode group 0: CA1/i);
 
     expect(screen.getAllByLabelText(/channel 1/i)[0]).toBeChecked();
     await user.click(screen.getAllByLabelText(/channel 2/i)[0]);
@@ -476,7 +521,7 @@ describe('FailedChannelsTab', () => {
 
     // Expand electrode group 1 (PFC, ntrode 1) to reveal its failed-channel checkboxes, then target
     // ntrode 1's channel 1 by id (group 0 is expanded too, so the "Channel 1" label is ambiguous).
-    await user.click(screen.getAllByText(/electrode group 1: PFC/i)[0]);
+    await clickGroupSummary(user, /electrode group 1: PFC/i);
     const channel1 = container.querySelector('#channel-1-1');
     expect(channel1).toBeChecked();
 
@@ -569,8 +614,7 @@ describe('FailedChannelsTab', () => {
       />
     );
 
-    const group0Summaries = screen.getAllByText(/electrode group 0: CA1/i);
-    await user.click(group0Summaries[0]);
+    await clickGroupSummary(user, /electrode group 0: CA1/i);
 
     expect(screen.getByText(/invalid channels: 9/i)).toBeInTheDocument();
   });
@@ -606,12 +650,10 @@ describe('FailedChannelsTab', () => {
       />
     );
 
-    // Expand both groups
-    const group0Summaries = screen.getAllByText(/electrode group 0: CA1/i);
-    const group1Summaries = screen.getAllByText(/electrode group 1: PFC/i);
-
-    await user.click(group0Summaries[0]);
-    await user.click(group1Summaries[0]);
+    // Expand the visible issue group and a clean group from "Other groups".
+    await clickGroupSummary(user, /electrode group 1: PFC/i);
+    await openOtherGroups(user);
+    await clickGroupSummary(user, /electrode group 0: CA1/i);
 
     // Both should be visible - check for text in each group's expanded content
     const shankTexts = screen.getAllByText(/this tetrode_12\.5 has 1 shank/i);
@@ -631,8 +673,7 @@ describe('FailedChannelsTab', () => {
       />
     );
 
-    const group0Summaries = screen.getAllByText(/electrode group 0: CA1/i);
-    await user.click(group0Summaries[0]);
+    await clickGroupSummary(user, /electrode group 1: PFC/i);
 
     const shankTexts = screen.getAllByText(/this tetrode_12\.5 has 1 shank/i);
     expect(shankTexts[0]).toBeVisible();

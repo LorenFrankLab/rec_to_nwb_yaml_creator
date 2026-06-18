@@ -57,7 +57,7 @@ describe('firstBlockingRepairLink', () => {
     const link = firstBlockingRepairLink(workspace, animalKey, dayId);
 
     expect(link).not.toBeNull();
-    expect(link!.label).toBe('Fix in Files & Weight');
+    expect(link!.label).toBe('Fix in Daily Setup');
     // The day route carries the field as a ?field= deep-link (useDayIdFromUrl strips it from the id),
     // so the cross-day link lands on the owning section/field — not the default Overview section.
     expect(link!.href).toMatch(/^#\/day\/remy-2023-06-22\?field=/);
@@ -82,7 +82,7 @@ describe('firstBlockingRepairLink', () => {
     const link = firstBlockingRepairLink(workspace, animalKey, dayId);
 
     expect(link).not.toBeNull();
-    expect(link!.label).toBe('Fix in Devices & Failed Channels');
+    expect(link!.label).toBe('Fix in Recording Setup');
     expect(link!.href).toContain('step=devices');
     expect(link!.href).toContain('field=configurationVersion');
   });
@@ -142,7 +142,7 @@ describe('exportAllDays', () => {
 
   it('links a day skipped for a blocking ERROR to its issue via the field-level repair route', () => {
     // totoro's only day has a whitespace session_description (a real schema error) → skipped, and its
-    // skip link is the field-level repair route (named issue + "Fix in Overview"), not a bare day link.
+    // skip link is the field-level repair route (named issue + "Fix in Daily Setup"), not a bare day link.
     const { workspace, ids } = makeSummaryWorkspace();
     const result = exportAllDays(workspace, 'totoro', { actions: { updateDay: vi.fn() }, strict: true });
 
@@ -150,7 +150,7 @@ describe('exportAllDays', () => {
     expect(result.skipped).toHaveLength(1);
     const skip = result.skipped[0];
     expect(skip.dayId).toBe(ids.errorDayId);
-    expect(skip.fixLabel).toBe('Fix in Overview');
+    expect(skip.fixLabel).toBe('Fix in Daily Setup');
     // Field-level: the day link carries the blocking field as a ?field= deep-link.
     expect(skip.fixHref).toMatch(new RegExp(`^#/day/${ids.errorDayId}\\?field=`));
     // The message names the specific blocking issue (not a generic "has errors").

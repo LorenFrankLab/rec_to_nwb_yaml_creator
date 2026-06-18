@@ -800,42 +800,45 @@ describe('buildDayEditorViewModel — day chips', () => {
 });
 
 describe('buildDayEditorViewModel — grouped section rail model', () => {
-  it('exposes exactly the five mock sections in order', () => {
+  it('exposes exactly the six focused sections in order', () => {
     const { animal, day } = loadRealistic();
     const vm = buildDayEditorViewModel(wrap(animal, day), day.id);
-    expect(vm.tabs.map((t) => t.key)).toEqual(['overview', 'files', 'devices', 'epochs', 'finish']);
+    expect(vm.tabs.map((t) => t.key)).toEqual(['daily', 'tasks', 'recording', 'channels', 'dio', 'export']);
     expect(vm.tabs.map((t) => t.label)).toEqual([
-      'Overview',
-      'Files & Weight',
-      'Devices & Failed Channels',
-      'Tasks & Epochs',
-      'Validation & Export',
+      'Daily Setup',
+      'Tasks & Files',
+      'Recording Setup',
+      'Failed Channels',
+      'DIO Wiring',
+      'Fix & Export',
     ]);
-    expect(vm.sectionGroups.map((group) => group.label)).toEqual(['SESSION', 'RECORDING', 'FINISH']);
+    expect(vm.sectionGroups.map((group) => group.label)).toEqual(['DAY', 'RECORDING', 'FINISH']);
   });
 
-  it('marks the requested section active (default is Overview)', () => {
+  it('marks the requested section active (default is Daily Setup)', () => {
     const { animal, day } = loadRealistic();
     const ws = wrap(animal, day);
-    expect(buildDayEditorViewModel(ws, day.id).tabs.find((t) => t.active)?.key).toBe('overview');
+    expect(buildDayEditorViewModel(ws, day.id).tabs.find((t) => t.active)?.key).toBe('daily');
     expect(
-      buildDayEditorViewModel(ws, day.id, 'devices').tabs.find((t) => t.active)?.key
-    ).toBe('devices');
+      buildDayEditorViewModel(ws, day.id, 'recording').tabs.find((t) => t.active)?.key
+    ).toBe('recording');
   });
 
-  it('rolls the recording section status up from devices and behavioral events', () => {
+  it('rolls focused section statuses from the legacy validation substrate', () => {
     const { animal, day } = loadRealistic();
     const ws = wrap(animal, day);
     const animalDays = getAnimalDays(ws, animal.id) as unknown as Day[];
     const stepStatus = expectedStepStatus(animal, day, animalDays as unknown as Idable[]);
     const vm = buildDayEditorViewModel(ws, day.id);
     const byKey = Object.fromEntries(vm.tabs.map((t) => [t.key, t.status]));
-    expect(byKey.overview).toBe(stepStatus.overview);
-    expect(byKey.epochs).toBe(stepStatus.epochs);
-    expect(byKey.devices).toBe(
-      [stepStatus.devices, stepStatus.behavioral].includes('error')
+    expect(byKey.daily).toBe(stepStatus.overview);
+    expect(byKey.tasks).toBe(stepStatus.epochs);
+    expect(byKey.recording).toBe(stepStatus.devices);
+    expect(byKey.dio).toBe(stepStatus.behavioral);
+    expect(byKey.export).toBe(
+      [stepStatus.validation, stepStatus.export].includes('error')
         ? 'error'
-        : [stepStatus.devices, stepStatus.behavioral].includes('incomplete')
+        : [stepStatus.validation, stepStatus.export].includes('incomplete')
           ? 'incomplete'
           : 'valid'
     );

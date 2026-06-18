@@ -5,18 +5,12 @@ import userEvent from '@testing-library/user-event';
 import BehavioralEventsDisplay from '../BehavioralEventsDisplay';
 
 /**
- * The day owns its behavioral (DIO) events, presented as the ECU's hardware channel grid: every
- * digital channel (Din1–32 inputs, Dout1–32 outputs) is a row, and the user names the channels their
- * rig uses. A named channel is a real event; a blank channel is unused and is not exported. Names
- * must be unique. An imported non-standard channel is preserved in an "Other" group.
- */
-
-/**
  * Controlled harness: BehavioralEventsDisplay is controlled (the parent owns the day events). This
- * threads each update back into the prop (as TasksEpochsStep does) and forwards to the spy.
- * @param {object} props
- * @param {Array} props.initialDayEvents - Starting day events.
- * @param {Function} props.spy - Spy invoked with each next day-events array.
+ * threads each update back into the prop (as the Day Editor does) and forwards to the spy.
+ *
+ * @param {object} root0 - Harness props.
+ * @param {Array} root0.initialDayEvents - Starting day behavioral events.
+ * @param {Function} root0.spy - Spy invoked with each updated behavioral-events array.
  * @returns {JSX.Element}
  */
 function ControlledHarness({ initialDayEvents, spy }) {
@@ -32,20 +26,66 @@ function ControlledHarness({ initialDayEvents, spy }) {
   );
 }
 
-describe('BehavioralEventsDisplay — channel grid', () => {
-  it('renders all 32 Din inputs and 32 Dout outputs as rows', () => {
+/**
+ * Opens the advanced full ECU grid.
+ *
+ * @param {ReturnType<typeof userEvent.setup>} user - Testing Library user-event instance.
+ * @returns {Promise<void>}
+ */
+async function openAdvancedGrid(user) {
+  await user.click(screen.getByText(/advanced: show all ECU lines/i));
+}
+
+/**
+ * Fills the compact "Add DIO line" controls.
+ *
+ * @param {ReturnType<typeof userEvent.setup>} user - Testing Library user-event instance.
+ * @param {object} options - New-line values.
+ * @param {string} [options.type='Din'] - DIO line type.
+ * @param {number} [options.index=1] - DIO line index.
+ * @param {string} [options.typedName] - Free-typed event name.
+ * @param {string} [options.option] - Suggested event name to pick.
+ * @returns {Promise<void>}
+ */
+async function setNewLine(user, { type = 'Din', index = 1, typedName, option }) {
+  await user.selectOptions(screen.getByLabelText('Type'), type);
+  const indexField = screen.getByLabelText('Index');
+  await user.clear(indexField);
+  await user.type(indexField, String(index));
+
+  const nameField = screen.getByLabelText('New DIO event name');
+  await user.clear(nameField);
+  if (option) {
+    await user.click(nameField);
+    await user.click(screen.getByRole('option', { name: option }));
+  } else {
+    await user.type(nameField, typedName);
+  }
+}
+
+describe('BehavioralEventsDisplay - focused named-lines editor', () => {
+  it('starts on named DIO lines and keeps the full ECU grid behind Advanced', async () => {
+    const user = userEvent.setup();
     render(<BehavioralEventsDisplay dayEvents={[]} onDayEventsChange={vi.fn()} />);
+
+    expect(screen.getByRole('heading', { level: 4, name: /named dio lines/i })).toBeInTheDocument();
+    expect(screen.getByLabelText('New DIO event name')).toBeInTheDocument();
+    expect(screen.queryByRole('table', { name: /inputs \(din\)/i })).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Advanced event for Din1')).not.toBeInTheDocument();
+
+    await openAdvancedGrid(user);
+
     expect(screen.getByRole('table', { name: /inputs \(din\)/i })).toBeInTheDocument();
     expect(screen.getByRole('table', { name: /outputs \(dout\)/i })).toBeInTheDocument();
-    // First and last channel of each direction exist; 33 does not (the ECU has 32).
-    expect(screen.getByLabelText('Event for Din1')).toBeInTheDocument();
-    expect(screen.getByLabelText('Event for Din32')).toBeInTheDocument();
-    expect(screen.getByLabelText('Event for Dout1')).toBeInTheDocument();
-    expect(screen.getByLabelText('Event for Dout32')).toBeInTheDocument();
-    expect(screen.queryByLabelText('Event for Din33')).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Advanced event for Din1')).toBeInTheDocument();
+    expect(screen.getByLabelText('Advanced event for Din32')).toBeInTheDocument();
+    expect(screen.getByLabelText('Advanced event for Dout1')).toBeInTheDocument();
+    expect(screen.getByLabelText('Advanced event for Dout32')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Advanced event for Din33')).not.toBeInTheDocument();
   });
 
-  it('overlays existing events onto their channels (blank channels stay empty)', () => {
+  it('overlays existing events onto named rows and the advanced grid', async () => {
+    const user = userEvent.setup();
     render(
       <BehavioralEventsDisplay
         dayEvents={[
@@ -55,21 +95,30 @@ describe('BehavioralEventsDisplay — channel grid', () => {
         onDayEventsChange={vi.fn()}
       />
     );
+
     expect(screen.getByLabelText('Event for Din1')).toHaveValue('Poke1');
     expect(screen.getByLabelText('Event for Dout7')).toHaveValue('Pump1');
-    expect(screen.getByLabelText('Event for Din2')).toHaveValue(''); // unused channel
+    expect(screen.queryByLabelText('Event for Din2')).not.toBeInTheDocument();
+
+    await openAdvancedGrid(user);
+
+    expect(screen.getByLabelText('Advanced event for Din2')).toHaveValue('');
+    expect(screen.getByLabelText('Advanced event for Dout7')).toHaveValue('Pump1');
   });
 
-  it('names a channel by typing, writing {description, name} through onDayEventsChange', async () => {
+  it('adds a used line from the compact controls', async () => {
     const user = userEvent.setup();
     const spy = vi.fn();
     render(<ControlledHarness initialDayEvents={[]} spy={spy} />);
 
-    await user.type(screen.getByLabelText('Event for Din3'), 'beam');
+    await setNewLine(user, { index: 3, typedName: 'beam' });
+    await user.click(screen.getByRole('button', { name: /add line/i }));
+
     expect(spy).toHaveBeenLastCalledWith([{ description: 'Din3', name: 'beam' }]);
+    expect(screen.getByLabelText('Event for Din3')).toHaveValue('beam');
   });
 
-  it('removes a channel from the set when its name is blanked (unused → not exported)', async () => {
+  it('removes a named channel when its name is blanked', async () => {
     const user = userEvent.setup();
     const spy = vi.fn();
     render(
@@ -77,11 +126,12 @@ describe('BehavioralEventsDisplay — channel grid', () => {
     );
 
     await user.clear(screen.getByLabelText('Event for Din1'));
+
     expect(spy).toHaveBeenLastCalledWith([]);
-    expect(screen.getByLabelText('Event for Din1')).toHaveValue('');
+    expect(screen.queryByLabelText('Event for Din1')).not.toBeInTheDocument();
   });
 
-  it('flags a duplicate name across two channels (Spyglass DIOEvents PK collision)', () => {
+  it('flags a duplicate name across two named channels', () => {
     render(
       <BehavioralEventsDisplay
         dayEvents={[
@@ -91,8 +141,9 @@ describe('BehavioralEventsDisplay — channel grid', () => {
         onDayEventsChange={vi.fn()}
       />
     );
-    const alerts = screen.getAllByText(/used by more than one channel/i);
-    expect(alerts).toHaveLength(2);
+
+    const namedTable = screen.getByRole('table', { name: /named dio lines/i });
+    expect(within(namedTable).getAllByText(/used by more than one channel/i)).toHaveLength(2);
     expect(screen.getByLabelText('Event for Din1')).toHaveAttribute('aria-invalid', 'true');
   });
 
@@ -111,9 +162,7 @@ describe('BehavioralEventsDisplay — channel grid', () => {
     );
   });
 
-  it('does NOT flag a duplicate channel when the colliding partner is a blank/unused channel (matches the export gate)', () => {
-    // A blank-named channel is excluded from export, so two events on Din1 where one is blank is NOT
-    // a real duplicate — the inline banner must agree with the export gate and stay silent.
+  it('does NOT flag a duplicate channel when the colliding partner is blank', () => {
     render(
       <BehavioralEventsDisplay
         dayEvents={[
@@ -126,7 +175,7 @@ describe('BehavioralEventsDisplay — channel grid', () => {
     expect(screen.queryByText(/more than one event/i)).not.toBeInTheDocument();
   });
 
-  it('does NOT flag descriptions that differ only by trailing whitespace (matches the export gate)', () => {
+  it('does NOT flag descriptions that differ only by trailing whitespace', () => {
     render(
       <BehavioralEventsDisplay
         dayEvents={[{ name: 'a', description: 'nose poke' }, { name: 'b', description: 'nose poke ' }]}
@@ -136,7 +185,7 @@ describe('BehavioralEventsDisplay — channel grid', () => {
     expect(screen.queryByText(/more than one event/i)).not.toBeInTheDocument();
   });
 
-  it('preserves an imported non-standard channel in an "Other" group', () => {
+  it('preserves an imported non-standard channel in an Other group', () => {
     render(
       <BehavioralEventsDisplay
         dayEvents={[{ description: 'Accel5', name: 'imu' }]}
@@ -148,10 +197,11 @@ describe('BehavioralEventsDisplay — channel grid', () => {
     expect(screen.getByLabelText('Event for Accel5')).toHaveValue('imu');
   });
 
-  it('shows a direction legend (Din = inputs, Dout = outputs), not emoji-only', () => {
+  it('shows a direction legend (Din = inputs, Dout = outputs), not symbol-only', () => {
     render(<BehavioralEventsDisplay dayEvents={[]} onDayEventsChange={vi.fn()} />);
-    expect(screen.getByText(/din\b.*input|input.*\bdin\b/i)).toBeInTheDocument();
-    expect(screen.getByText(/dout\b.*output|output.*\bdout\b/i)).toBeInTheDocument();
+    const legend = document.querySelector('#dio-direction-legend');
+    expect(legend).toHaveTextContent(/din\b.*input|input.*\bdin\b/i);
+    expect(legend).toHaveTextContent(/dout\b.*output|output.*\bdout\b/i);
   });
 
   it('tolerates a non-array dayEvents without crashing', () => {
@@ -160,9 +210,8 @@ describe('BehavioralEventsDisplay — channel grid', () => {
     ).not.toThrow();
   });
 
-  it('tolerates a corrupt non-string event name without crashing (renders it as unused)', () => {
-    // Persisted/carried-forward corruption could carry a numeric name; the editor must survive it
-    // (the export filter drops a non-string name, so the channel reads as unused here).
+  it('tolerates corrupt non-string event names without crashing', async () => {
+    const user = userEvent.setup();
     expect(() =>
       render(
         <BehavioralEventsDisplay
@@ -174,17 +223,24 @@ describe('BehavioralEventsDisplay — channel grid', () => {
         />
       )
     ).not.toThrow();
-    expect(screen.getByLabelText('Event for Din1')).toHaveValue('');
+
+    expect(screen.queryByLabelText('Event for Din1')).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Event for Accel9')).toHaveValue('');
+
+    await openAdvancedGrid(user);
+    expect(screen.getByLabelText('Advanced event for Din1')).toHaveValue('');
   });
 });
 
-describe('BehavioralEventsDisplay — per-label auto-numbering (onSelect)', () => {
+describe('BehavioralEventsDisplay - per-label auto-numbering', () => {
   it('picking a known name into a pokeless set auto-numbers it to Poke1', async () => {
     const user = userEvent.setup();
     render(<ControlledHarness initialDayEvents={[]} spy={vi.fn()} />);
 
-    await user.click(screen.getByLabelText('Event for Din1'));
-    await user.click(screen.getByRole('option', { name: 'Poke' }));
+    await setNewLine(user, { option: 'Poke' });
+
+    expect(screen.getByLabelText('New DIO event name')).toHaveValue('Poke1');
+    await user.click(screen.getByRole('button', { name: /add line/i }));
     expect(screen.getByLabelText('Event for Din1')).toHaveValue('Poke1');
   });
 
@@ -194,62 +250,64 @@ describe('BehavioralEventsDisplay — per-label auto-numbering (onSelect)', () =
       <ControlledHarness initialDayEvents={[{ description: 'Din1', name: 'Poke1' }]} spy={vi.fn()} />
     );
 
-    await user.click(screen.getByLabelText('Event for Din2'));
-    await user.click(screen.getByRole('option', { name: 'Poke' }));
+    await setNewLine(user, { index: 2, option: 'Poke' });
+
+    expect(screen.getByLabelText('New DIO event name')).toHaveValue('Poke2');
+    await user.click(screen.getByRole('button', { name: /add line/i }));
     expect(screen.getByLabelText('Event for Din2')).toHaveValue('Poke2');
   });
 
-  it('derives the number from the label, not the channel (Pump on Dout7 → Pump1)', async () => {
+  it('derives the number from the label, not the channel (Pump on Dout7 -> Pump1)', async () => {
     const user = userEvent.setup();
     render(<ControlledHarness initialDayEvents={[]} spy={vi.fn()} />);
 
-    await user.click(screen.getByLabelText('Event for Dout7'));
-    await user.click(screen.getByRole('option', { name: 'Pump' }));
+    await setNewLine(user, { type: 'Dout', index: 7, option: 'Pump' });
+
+    expect(screen.getByLabelText('New DIO event name')).toHaveValue('Pump1');
+    await user.click(screen.getByRole('button', { name: /add line/i }));
     expect(screen.getByLabelText('Event for Dout7')).toHaveValue('Pump1');
   });
 
-  it('suggests only INPUT events on a Din channel and only OUTPUT events on a Dout channel', async () => {
+  it('suggests only input events for Din and only output events for Dout', async () => {
     const user = userEvent.setup();
     render(<ControlledHarness initialDayEvents={[]} spy={vi.fn()} />);
 
-    // A Din (input) channel offers Poke / Run_Camera_Ticks, never Light / Pump.
-    await user.click(screen.getByLabelText('Event for Din1'));
+    const nameField = screen.getByLabelText('New DIO event name');
+    await user.click(nameField);
     expect(screen.getByRole('option', { name: 'Poke' })).toBeInTheDocument();
     expect(screen.getByRole('option', { name: 'Run_Camera_Ticks' })).toBeInTheDocument();
     expect(screen.queryByRole('option', { name: 'Light' })).not.toBeInTheDocument();
     expect(screen.queryByRole('option', { name: 'Pump' })).not.toBeInTheDocument();
 
-    // A Dout (output) channel offers Light / Pump, never Poke.
-    await user.click(screen.getByLabelText('Event for Dout1'));
+    await user.keyboard('{Escape}');
+    await user.selectOptions(screen.getByLabelText('Type'), 'Dout');
+    await user.click(nameField);
     expect(screen.getByRole('option', { name: 'Light' })).toBeInTheDocument();
     expect(screen.getByRole('option', { name: 'Pump' })).toBeInTheDocument();
     expect(screen.queryByRole('option', { name: 'Poke' })).not.toBeInTheDocument();
   });
 
-  it('keeps a typed name verbatim — typing never auto-numbers', async () => {
+  it('keeps a typed name verbatim; typing never auto-numbers', async () => {
     const user = userEvent.setup();
     render(<ControlledHarness initialDayEvents={[]} spy={vi.fn()} />);
 
-    await user.type(screen.getByLabelText('Event for Din1'), 'Poke');
-    // A free-typed "Poke" stays "Poke" — not promoted to "Poke1" (that only happens on a pick).
-    expect(screen.getByLabelText('Event for Din1')).toHaveValue('Poke');
+    await user.type(screen.getByLabelText('New DIO event name'), 'Poke');
+    expect(screen.getByLabelText('New DIO event name')).toHaveValue('Poke');
   });
 
-  it('re-picking the same label on a channel excludes itself (Poke on a Poke1 channel stays Poke1)', async () => {
+  it('re-picking the same label on a named channel excludes itself', async () => {
     const user = userEvent.setup();
     render(
       <ControlledHarness initialDayEvents={[{ description: 'Din1', name: 'Poke1' }]} spy={vi.fn()} />
     );
 
-    // Self-exclusion: the channel's own existing instance is not counted, so it re-stamps Poke1
-    // rather than jumping to Poke2.
     await user.click(screen.getByLabelText('Event for Din1'));
     await user.click(screen.getByRole('option', { name: 'Poke' }));
     expect(screen.getByLabelText('Event for Din1')).toHaveValue('Poke1');
   });
 });
 
-describe('BehavioralEventsDisplay — copy from another animal (empty-day bootstrap)', () => {
+describe('BehavioralEventsDisplay - copy from another animal', () => {
   const sources = [
     {
       id: 'remy',
@@ -262,22 +320,21 @@ describe('BehavioralEventsDisplay — copy from another animal (empty-day bootst
     },
   ];
 
-  it('offers a "Copy from <animal>" CTA when the day is empty and sources exist', () => {
+  it('offers a Copy from <animal> CTA when the day is empty and sources exist', () => {
     render(
       <BehavioralEventsDisplay dayEvents={[]} onDayEventsChange={vi.fn()} copyableSources={sources} />
     );
     expect(screen.getByRole('button', { name: /copy from remy/i })).toBeInTheDocument();
   });
 
-  it('copying seeds the day with a DEEP CLONE of the source events (source stays untouched)', async () => {
+  it('copying seeds the day with a deep clone of the source events', async () => {
     const user = userEvent.setup();
     const spy = vi.fn();
     render(
       <BehavioralEventsDisplay dayEvents={[]} onDayEventsChange={spy} copyableSources={sources} />
     );
     await user.click(screen.getByRole('button', { name: /copy from remy/i }));
-    expect(spy).toHaveBeenCalledWith(sources[0].events); // deep-equal
-    // A clone, not the same references — editing the new day can't mutate the source.
+    expect(spy).toHaveBeenCalledWith(sources[0].events);
     expect(spy.mock.calls[0][0]).not.toBe(sources[0].events);
     expect(spy.mock.calls[0][0][0]).not.toBe(sources[0].events[0]);
   });
@@ -301,8 +358,8 @@ describe('BehavioralEventsDisplay — copy from another animal (empty-day bootst
   });
 });
 
-describe('BehavioralEventsDisplay — off-list nudge respects numbered variants', () => {
-  it('does NOT nudge an auto-numbered name like "Poke1" as non-standard', () => {
+describe('BehavioralEventsDisplay - off-list nudge', () => {
+  it('does NOT nudge an auto-numbered name like Poke1 as non-standard', () => {
     render(
       <BehavioralEventsDisplay
         dayEvents={[{ description: 'Din1', name: 'Poke1' }]}
@@ -312,7 +369,7 @@ describe('BehavioralEventsDisplay — off-list nudge respects numbered variants'
     expect(screen.queryByText(/not a standard event name/i)).not.toBeInTheDocument();
   });
 
-  it('still nudges a free-typed off-list name like "beam_break"', () => {
+  it('still nudges a free-typed off-list name like beam_break', () => {
     render(
       <BehavioralEventsDisplay
         dayEvents={[{ description: 'Din1', name: 'beam_break' }]}

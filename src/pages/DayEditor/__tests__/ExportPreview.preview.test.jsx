@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import ExportPreview from '../ExportPreview';
 import { encodeYaml, formatDeterministicFilename } from '../../../io/yaml';
 import { mergeDayMetadata } from '../../../state/workspaceUtils';
@@ -31,13 +32,21 @@ function renderPreview(animal, day) {
 }
 
 describe('ExportPreview — YAML preview is the real export bytes', () => {
-  it('renders the preview body as encodeYaml(mergeDayMetadata(animal, day)) verbatim', () => {
+  it('keeps the YAML preview collapsed by default and renders real bytes when opened', async () => {
+    const user = userEvent.setup();
     const { animal, day } = buildRealisticWorkspace();
     renderPreview(animal, day);
 
     const expected = encodeYaml(mergeDayMetadata(animal, day));
+    const details = screen.getByText(/view yaml/i).closest('details');
     const preview = screen.getByLabelText(/yaml preview/i);
-    // The preview is the EXACT bytes — never a hand-built approximation.
+    expect(details).not.toHaveAttribute('open');
+    expect(preview).not.toBeVisible();
+
+    await user.click(screen.getByText(/view yaml/i));
+    await waitFor(() => expect(details).toHaveAttribute('open'));
+    expect(preview).toBeVisible();
+    // The opened preview is the EXACT bytes — never a hand-built approximation.
     expect(preview.textContent).toBe(expected);
   });
 

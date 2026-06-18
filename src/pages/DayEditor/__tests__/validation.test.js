@@ -27,7 +27,7 @@ describe('stepIdForIssue', () => {
     expect(stepIdForIssue({ path: 'tasks[0].task_name' })).toBe('epochs');
   });
 
-  it('routes behavioral-event issues to the behavioral step (folded into Devices & Failed Channels)', () => {
+  it('routes behavioral-event issues to the behavioral step (presented as DIO Wiring)', () => {
     expect(stepIdForIssue({ path: 'behavioral_events[0].name' })).toBe('behavioral');
     expect(stepIdForIssue({ instancePath: '/behavioral_events/0/name' })).toBe('behavioral');
     expect(

@@ -1,8 +1,8 @@
 /**
- * Guard: the Tasks & Epochs surface uses plain text + tokens, never decorative emoji or
+ * Guard: the Tasks & Files epoch surface uses plain text + tokens, never decorative emoji or
  * status-by-glyph. Per the UX rubric, decoration is extraneous cognitive load and a glyph-only
  * status is perceptually dishonest (color/shape without text). This scans the source of the
- * Tasks & Epochs components for emoji / pictographic / dingbat glyphs (🧩 📹 🔒 ✓ ⚠ ❌ …) and
+ * Tasks & Files components for emoji / pictographic / dingbat glyphs (🧩 📹 🔒 ✓ ⚠ ❌ …) and
  * fails if any remain. Typographic punctuation (em/en dashes, curly quotes, ·) is allowed.
  */
 import { describe, it, expect } from 'vitest';
@@ -25,7 +25,7 @@ const GUARDED_FILES = [
 // excludes general punctuation (—, –, ·, curly quotes) and geometric shapes used as plain markers.
 const EMOJI_RE = /[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}\u{FE0F}]/u;
 
-describe('Tasks & Epochs surface contains no decorative emoji or glyph-only status', () => {
+describe('Tasks & Files surface contains no decorative emoji or glyph-only status', () => {
   it.each(GUARDED_FILES)('%s has no emoji/glyph characters', (file) => {
     const text = readFileSync(path.join(dayEditor, file), 'utf8');
     const offenders = text

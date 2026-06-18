@@ -1,5 +1,5 @@
 /**
- * Shared fixtures for the Tasks & Epochs step tests.
+ * Shared fixtures for the Tasks & Files / epoch-grid tests.
  *
  * Synthesizes an animal that owns two cameras and two behavioral events, plus a
  * day belonging to it with one task that references one of those cameras and has
