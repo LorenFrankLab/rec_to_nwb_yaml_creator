@@ -510,7 +510,7 @@ describe('EpochsTab — video 3-state', () => {
     const bundle = makeBundle();
     render(<EpochsTab {...bundle} />);
     await user.click(screen.getByRole('button', { name: /Show epoch 1 details/i }));
-    await user.click(screen.getByRole('button', { name: /Mark .no video./i }));
+    await user.click(screen.getByRole('button', { name: /^Mark no video$/i }));
     expect(lastPatch(bundle.onFieldUpdate, 'state')).toEqual({
       validationDeferred: false,
       videolessEpochs: [1],
@@ -522,10 +522,28 @@ describe('EpochsTab — video 3-state', () => {
     const bundle = makeBundle();
     render(<EpochsTab {...bundle} />);
     await user.click(screen.getByRole('button', { name: /Show epoch 1 details/i }));
-    await user.click(screen.getByRole('button', { name: /^\+ Add video$/i }));
+    await user.click(screen.getByRole('button', { name: /^Add expected video$/i }));
     const patch = lastPatch(bundle.onFieldUpdate, 'associated_video_files');
     // Derived name for epoch 1 (Sleep, tag s1) in the day's data folder convention.
     expect(patch).toContainEqual({ name: '20230622_r_01_s1.1.h264', camera_id: 0, task_epochs: 1 });
+  });
+
+  it('manual video entry creates the expected row and focuses the editable name', async () => {
+    const user = userEvent.setup();
+    const bundle = makeBundle();
+    render(<StatefulEpochsTab bundle={bundle} />);
+
+    await user.click(screen.getByRole('button', { name: /Show epoch 1 details/i }));
+    await user.click(screen.getByRole('button', { name: /Enter video manually for epoch 1/i }));
+
+    expect(lastPatch(bundle.onFieldUpdate, 'associated_video_files')).toContainEqual({
+      name: '20230622_r_01_s1.1.h264',
+      camera_id: 0,
+      task_epochs: 1,
+    });
+    const input = await screen.findByRole('textbox', { name: /Epoch 1 video 1 name/i });
+    expect(input).toHaveValue('20230622_r_01_s1.1.h264');
+    await waitFor(() => expect(input).toHaveFocus());
   });
 
   it('generates all missing expected videos and offers Undo', async () => {
@@ -592,7 +610,7 @@ describe('EpochsTab — statescript naming', () => {
     const bundle = makeBundle();
     render(<EpochsTab {...bundle} />);
     await user.click(screen.getByRole('button', { name: /Show epoch 1 details/i }));
-    await user.click(screen.getByRole('button', { name: /^\+ Add statescript$/i }));
+    await user.click(screen.getByRole('button', { name: /^Add expected statescript$/i }));
     expect(lastPatch(bundle.onFieldUpdate, 'associated_files')).toEqual([
       {
         name: '20230622_r_01_s1.stateScriptLog',
@@ -601,6 +619,27 @@ describe('EpochsTab — statescript naming', () => {
         task_epochs: 1,
       },
     ]);
+  });
+
+  it('manual statescript entry creates the expected row and focuses the editable path', async () => {
+    const user = userEvent.setup();
+    const bundle = makeBundle();
+    render(<StatefulEpochsTab bundle={bundle} />);
+
+    await user.click(screen.getByRole('button', { name: /Show epoch 1 details/i }));
+    await user.click(screen.getByRole('button', { name: /Enter statescript manually for epoch 1/i }));
+
+    expect(lastPatch(bundle.onFieldUpdate, 'associated_files')).toEqual([
+      {
+        name: '20230622_r_01_s1.stateScriptLog',
+        description: '',
+        path: '/data/r/20230622/20230622_r_01_s1.stateScriptLog',
+        task_epochs: 1,
+      },
+    ]);
+    const input = await screen.findByRole('textbox', { name: /Epoch 1 statescript path/i });
+    expect(input).toHaveValue('/data/r/20230622/20230622_r_01_s1.stateScriptLog');
+    await waitFor(() => expect(input).toHaveFocus());
   });
 
   it('generates all missing statescripts and offers Undo', async () => {

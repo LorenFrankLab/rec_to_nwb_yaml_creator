@@ -492,7 +492,7 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
     onFieldUpdate('state', statePatchWithVideoless(next));
   };
   const addVideo = (row: EpochGridRow) => {
-    if (unresolvedTaskCatalogDivergence) return;
+    if (unresolvedTaskCatalogDivergence) return null;
     clearDeferredEpoch(row.epoch);
     const videos = getDayAssociatedVideos(day);
     const index = videos.filter((v) => Number(v.task_epochs) === row.epoch).length + 1;
@@ -500,6 +500,7 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
     const camId = (row.cameras[0] as number) ?? (cameras[0]?.id as number) ?? 0;
     onFieldUpdate('associated_video_files', [...videos, { name, camera_id: camId, task_epochs: row.epoch }]);
     setVideoless(row.epoch, false);
+    return videos.length;
   };
   const removeVideo = (videoIndex: number) => {
     if (unresolvedTaskCatalogDivergence) return;
@@ -840,9 +841,21 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
                 openFileEditor(activeRow.epoch, 'statescript');
                 addStatescript(activeRow);
               }}
+              onAddManualStatescript={() => {
+                setStatescriptManual(activeRow.epoch, true);
+                openFileEditor(activeRow.epoch, 'statescript');
+                addStatescript(activeRow);
+              }}
               onAddVideo={() => {
                 openFileEditor(activeRow.epoch, 'video');
                 addVideo(activeRow);
+              }}
+              onAddManualVideo={() => {
+                openFileEditor(activeRow.epoch, 'video');
+                const videoIndex = addVideo(activeRow);
+                if (videoIndex != null) {
+                  setManualVideo((prev) => new Set(prev).add(`e${activeRow.epoch}-v${videoIndex}`));
+                }
               }}
               onMarkNoVideo={() => setVideoless(activeRow.epoch, true)}
               onUndoNoVideo={() => setVideoless(activeRow.epoch, false)}
@@ -1011,7 +1024,9 @@ interface EpochDetailsPanelProps {
   onStatescriptRevert: () => void;
   onStatescriptChange: (path: string) => void;
   onAddStatescript: () => void;
+  onAddManualStatescript: () => void;
   onAddVideo: () => void;
+  onAddManualVideo: () => void;
   onMarkNoVideo: () => void;
   onUndoNoVideo: () => void;
   onRemoveVideo: (videoIndex: number) => void;
@@ -1149,6 +1164,39 @@ function EpochDetailsPanel(p: EpochDetailsPanelProps) {
     row.statescriptNaming === 'manual' ||
     row.videoPresence !== 'present' ||
     hasManualVideo;
+  const expectedStatescriptPath = grid.dataFolder
+    ? deriveStatescriptPath(grid.dataFolder, p.statescriptDerivedName)
+    : p.statescriptDerivedName;
+  const expectedVideoName = deriveVideoName({
+    date: grid.date,
+    subjectId: grid.subjectId,
+    epoch: row.epoch,
+    tag: row.tag,
+    index: row.videos.length + 1,
+  });
+  const statescriptStateLabel = row.statescript ? STATESCRIPT_LABEL[row.statescriptNaming] : 'Missing';
+  const statescriptStateClass =
+    row.statescriptNaming === 'generated'
+      ? styles.fileStateGenerated
+      : row.statescriptNaming === 'manual'
+        ? styles.fileStateManual
+        : styles.fileStateMissing;
+  const videoStateLabel =
+    row.videoPresence === 'absent'
+      ? 'No video'
+      : row.videoPresence === 'missing'
+        ? 'Missing'
+        : hasManualVideo
+          ? 'Manual'
+          : `${row.videos.length} ${row.videos.length === 1 ? 'video' : 'videos'}`;
+  const videoStateClass =
+    row.videoPresence === 'absent'
+      ? styles.fileStateAbsent
+      : row.videoPresence === 'missing'
+        ? styles.fileStateMissing
+        : hasManualVideo
+          ? styles.fileStateManual
+          : styles.fileStateGenerated;
 
   useEffect(() => {
     if (!p.fileFocus || p.fileFocus.epoch !== row.epoch) return undefined;
@@ -1207,11 +1255,19 @@ function EpochDetailsPanel(p: EpochDetailsPanelProps) {
           </div>
           <dl className={styles.taskContextGrid}>
             <div>
+              <dt>Derived tag</dt>
+              <dd><code className={styles.mono}>{row.tag}</code></dd>
+            </div>
+            <div>
+              <dt>Task source</dt>
+              <dd>{row.taskTypeId ? 'animal catalog' : 'day task'}</dd>
+            </div>
+            <div>
               <dt>Environment</dt>
               <dd>{row.taskEnvironment || '—'}</dd>
             </div>
             <div>
-              <dt>Cameras</dt>
+              <dt>Expected cameras</dt>
               <dd>
                 {row.cameras.length === 0
                   ? <span className={styles.derivedNote}>none</span>
@@ -1232,97 +1288,124 @@ function EpochDetailsPanel(p: EpochDetailsPanelProps) {
             </span>
           </div>
           <div className={styles.generatedContent}>
-            <div className={styles.fieldRow}>
-              <span className={styles.fieldLabel}>File tag</span>
-              <span>
-                <code className={styles.mono}>{row.tag}</code>
-                <span className={styles.derivedNote}> used in generated statescript and video names</span>
-              </span>
-            </div>
-            <div className={styles.fieldRow}>
-              <span className={styles.fieldLabel}>Data folder</span>
-              <span className={styles.mono}>{grid.dataFolder || <span className={styles.derivedNote}>not set - add it in Daily Setup</span>}</span>
-            </div>
-            <div className={styles.fieldRow} data-field-path={`epoch-${row.epoch}-statescript`} tabIndex={-1}>
-              <span className={styles.fieldLabel}>Statescript</span>
-              <span
-                data-field-path={
-                  row.statescript ? `associated_files[${row.statescript.index}].path` : undefined
-                }
-                tabIndex={row.statescript ? -1 : undefined}
-              >
-                {row.statescript ? (
-                  <GeneratedValue
-                    value={p.manualStatescript || row.statescriptNaming === 'manual' ? row.statescript.entry.path ?? '' : p.statescriptDerivedName}
-                    derived={row.statescriptNaming === 'generated' && !p.manualStatescript}
-                    overrideLabel="Override name"
-                    ariaLabel={`Epoch ${row.epoch} statescript path`}
-                    onOverride={p.onStatescriptOverride}
-                    onRevert={p.onStatescriptRevert}
-                    onChange={p.onStatescriptChange}
-                  />
-                ) : (
-                  <>
-                    <span className={styles.derivedNote}>No statescript file linked. Generated name: </span>
-                    <code className={styles.mono}>{p.statescriptDerivedName}</code>
-                    <button type="button" className="button-small" onClick={p.onAddStatescript}>+ Add statescript</button>
-                  </>
-                )}
-              </span>
-            </div>
-            <div className={styles.fieldRow} data-field-path={`epoch-${row.epoch}-video`} tabIndex={-1}>
-              <span className={styles.fieldLabel}>Video</span>
-              <span>
-                {row.videoPresence === 'present' && (
-                  <>
-                    {row.videos.map((v, vi) => {
-                      const key = `e${row.epoch}-v${v.index}`;
-                      // Generated only when the STORED name matches what derivation would produce
-                      // (so an imported/manual name like `run_video` reads `manual`), unless the user
-                      // has clicked Rename this session (an explicit override on a derived name).
-                      const isDerived =
-                        isDerivedVideo(v.entry, {
-                          date: grid.date,
-                          subjectId: grid.subjectId,
-                          epoch: row.epoch,
-                          tag: row.tag,
-                          index: vi + 1,
-                        }) && !p.manualVideoKeys.has(key);
-                      return (
-                        <span key={v.index} className={styles.videoEditorRow}>
-                          <GeneratedValue
-                            value={v.entry.name ?? ''}
-                            derived={isDerived}
-                            overrideLabel="Rename"
-                            ariaLabel={`Epoch ${row.epoch} video ${vi + 1} name`}
-                            onOverride={() => p.onVideoOverride(key)}
-                            onRevert={() => p.onVideoRevert(key, v.index)}
-                            onChange={(name) => p.onVideoNameChange(v.index, name)}
-                          />
-                          <span className={styles.derivedNote}> · {cameraName(cameras, v.entry.camera_id)}</span>
-                          <button type="button" className="button-small" onClick={() => p.onRemoveVideo(v.index)} aria-label={`Remove video ${vi + 1}`}>Remove</button>
-                        </span>
-                      );
-                    })}
-                    <button type="button" className="button-small" onClick={p.onAddVideo}>+ Add another video</button>
-                  </>
-                )}
-                {row.videoPresence === 'missing' && (
-                  <>
-                    <span className={styles.vidMissing}>No video file linked</span>
-                    <span className={styles.derivedNote}> - add the file, or mark it as no-video. </span>
-                    <button type="button" className="button-small" onClick={p.onAddVideo}>+ Add video</button>
-                    <button type="button" className="button-small" onClick={p.onMarkNoVideo}>Mark "no video"</button>
-                  </>
-                )}
-                {row.videoPresence === 'absent' && (
-                  <>
-                    <span className={styles.vidNone}>No video recorded - fine for this epoch (export stays valid). </span>
-                    <button type="button" className="button-small" onClick={p.onAddVideo}>+ Add video</button>
-                    <button type="button" className="button-small" onClick={p.onUndoNoVideo}>Undo "no video"</button>
-                  </>
-                )}
-              </span>
+            <div className={styles.fileCards}>
+              <div className={styles.fileCard} data-field-path={`epoch-${row.epoch}-statescript`} tabIndex={-1}>
+                <div className={styles.fileCardTop}>
+                  <span className={styles.fileCardTitle}>Statescript</span>
+                  <span className={`${styles.fileState} ${statescriptStateClass}`}>{statescriptStateLabel}</span>
+                </div>
+                <div
+                  className={styles.fileCardBody}
+                  data-field-path={
+                    row.statescript ? `associated_files[${row.statescript.index}].path` : undefined
+                  }
+                  tabIndex={row.statescript ? -1 : undefined}
+                >
+                  {row.statescript ? (
+                    <GeneratedValue
+                      value={p.manualStatescript || row.statescriptNaming === 'manual' ? row.statescript.entry.path ?? '' : p.statescriptDerivedName}
+                      derived={row.statescriptNaming === 'generated' && !p.manualStatescript}
+                      overrideLabel="Override name"
+                      ariaLabel={`Epoch ${row.epoch} statescript path`}
+                      onOverride={p.onStatescriptOverride}
+                      onRevert={p.onStatescriptRevert}
+                      onChange={p.onStatescriptChange}
+                    />
+                  ) : (
+                    <>
+                      <code className={styles.pathValue}>Expected: {expectedStatescriptPath}</code>
+                      <div className={styles.fileActions}>
+                        <button type="button" className={styles.filePrimaryAction} onClick={p.onAddStatescript}>
+                          Add expected statescript
+                        </button>
+                        <button
+                          type="button"
+                          className={styles.fileAction}
+                          aria-label={`Enter statescript manually for epoch ${row.epoch}`}
+                          onClick={p.onAddManualStatescript}
+                        >
+                          Enter manually
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              <div className={styles.fileCard} data-field-path={`epoch-${row.epoch}-video`} tabIndex={-1}>
+                <div className={styles.fileCardTop}>
+                  <span className={styles.fileCardTitle}>Video</span>
+                  <span className={`${styles.fileState} ${videoStateClass}`}>{videoStateLabel}</span>
+                </div>
+                <div className={styles.fileCardBody}>
+                  {row.videoPresence === 'present' && (
+                    <>
+                      {row.videos.map((v, vi) => {
+                        const key = `e${row.epoch}-v${v.index}`;
+                        // Generated only when the STORED name matches what derivation would produce
+                        // (so an imported/manual name like `run_video` reads `manual`), unless the user
+                        // has clicked Rename this session (an explicit override on a derived name).
+                        const isDerived =
+                          isDerivedVideo(v.entry, {
+                            date: grid.date,
+                            subjectId: grid.subjectId,
+                            epoch: row.epoch,
+                            tag: row.tag,
+                            index: vi + 1,
+                          }) && !p.manualVideoKeys.has(key);
+                        return (
+                          <span key={v.index} className={styles.videoEditorRow}>
+                            <GeneratedValue
+                              value={v.entry.name ?? ''}
+                              derived={isDerived}
+                              overrideLabel="Rename"
+                              ariaLabel={`Epoch ${row.epoch} video ${vi + 1} name`}
+                              onOverride={() => p.onVideoOverride(key)}
+                              onRevert={() => p.onVideoRevert(key, v.index)}
+                              onChange={(name) => p.onVideoNameChange(v.index, name)}
+                            />
+                            <span className={styles.derivedNote}> · {cameraName(cameras, v.entry.camera_id)}</span>
+                            <button type="button" className={styles.fileAction} onClick={() => p.onRemoveVideo(v.index)} aria-label={`Remove video ${vi + 1}`}>Remove</button>
+                          </span>
+                        );
+                      })}
+                      <div className={styles.fileActions}>
+                        <button type="button" className={styles.fileAction} onClick={p.onAddVideo}>Add another video</button>
+                      </div>
+                    </>
+                  )}
+                  {row.videoPresence === 'missing' && (
+                    <>
+                      <code className={styles.pathValue}>Expected: {expectedVideoName}</code>
+                      <div className={styles.fileActions}>
+                        <button type="button" className={styles.filePrimaryAction} onClick={p.onAddVideo}>
+                          Add expected video
+                        </button>
+                        <button
+                          type="button"
+                          className={styles.fileAction}
+                          aria-label={`Enter video manually for epoch ${row.epoch}`}
+                          onClick={p.onAddManualVideo}
+                        >
+                          Enter manually
+                        </button>
+                        <button type="button" className={styles.fileGhostAction} onClick={p.onMarkNoVideo}>
+                          Mark no video
+                        </button>
+                      </div>
+                    </>
+                  )}
+                  {row.videoPresence === 'absent' && (
+                    <>
+                      <span className={styles.pathValue}>Declared no video for this epoch</span>
+                      <div className={styles.fileActions}>
+                        <button type="button" className={styles.fileAction} onClick={p.onAddVideo}>Add video after all</button>
+                        <button type="button" className={styles.fileGhostAction} onClick={p.onUndoNoVideo}>Undo no video</button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
         </section>

@@ -458,6 +458,10 @@
   background: var(--color-primary-light, #e3f2fd);
 }
 
+.activeRow td:first-child {
+  box-shadow: inset 3px 0 0 var(--color-primary, #2b6cb0);
+}
+
 .optoReadout {
   color: var(--color-grey-700, #444);
   font-variant-numeric: tabular-nums;
@@ -669,6 +673,132 @@
   padding: var(--spacing-sm, 12px);
 }
 
+.fileCards {
+  display: grid;
+  gap: var(--spacing-sm, 10px);
+}
+
+.fileCard {
+  display: grid;
+  gap: var(--spacing-sm, 8px);
+  border: 1px solid var(--color-grey-200, #e6e6e6);
+  border-radius: var(--radius-sm, 6px);
+  background: var(--color-white, #fff);
+  padding: var(--spacing-sm, 10px);
+}
+
+.fileCardTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-sm, 8px);
+}
+
+.fileCardTitle {
+  color: var(--color-grey-800, #222);
+  font-weight: 700;
+}
+
+.fileCardBody {
+  display: grid;
+  gap: var(--spacing-sm, 8px);
+}
+
+.fileState {
+  display: inline-flex;
+  align-items: center;
+  min-height: 20px;
+  border-radius: var(--radius-sm, 4px);
+  padding: 1px 7px;
+  font-size: var(--font-size-xs, 0.7rem);
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.fileStateGenerated {
+  background: var(--color-success-light, #eaf6ee);
+  color: var(--color-success, #1f7f4c);
+}
+
+.fileStateManual {
+  background: var(--color-warning-light, #fff3e0);
+  color: var(--color-warning, #bf360c);
+}
+
+.fileStateMissing {
+  background: var(--color-error-light, #fdecea);
+  color: var(--color-error, #c0392b);
+}
+
+.fileStateAbsent {
+  background: var(--color-grey-100, #f2f2f2);
+  color: var(--color-grey-600, #555);
+}
+
+.pathValue {
+  display: block;
+  min-width: 0;
+  border: 1px solid var(--color-grey-200, #e6e6e6);
+  border-radius: var(--radius-sm, 4px);
+  background: var(--color-grey-50, #fafbfc);
+  color: var(--color-grey-700, #445);
+  font-family: var(--font-mono, monospace);
+  font-size: var(--font-size-xs, 0.75rem);
+  overflow: hidden;
+  padding: 6px 8px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fileActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-xs, 6px);
+}
+
+.fileAction,
+.filePrimaryAction,
+.fileGhostAction {
+  min-height: 28px;
+  border: 1px solid var(--color-grey-300, #ccc);
+  border-radius: var(--radius-sm, 4px);
+  background: var(--color-white, #fff);
+  color: var(--color-primary, #2b6cb0);
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--font-size-xs, 0.75rem);
+  font-weight: 600;
+  padding: 3px 8px;
+}
+
+.filePrimaryAction {
+  border-color: var(--color-primary, #2b6cb0);
+  background: var(--color-primary, #2b6cb0);
+  color: var(--color-white, #fff);
+}
+
+.fileGhostAction {
+  border-color: transparent;
+  background: transparent;
+  color: var(--color-grey-600, #555);
+}
+
+.fileAction:hover,
+.fileAction:focus-visible,
+.fileGhostAction:hover,
+.fileGhostAction:focus-visible {
+  border-color: var(--color-primary, #2b6cb0);
+  background: var(--color-primary-light, #e3f2fd);
+  color: var(--color-primary, #2b6cb0);
+}
+
+.filePrimaryAction:hover,
+.filePrimaryAction:focus-visible {
+  border-color: var(--color-primary, #2b6cb0);
+  background: var(--color-primary-hover, #1976d2);
+  color: var(--color-white, #fff);
+}
+
 .genNote {
   font-size: var(--font-size-xs, 0.75rem);
   color: var(--color-grey-600, #555);
@@ -684,7 +814,10 @@
 }
 
 .videoEditorRow {
-  display: block;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spacing-xs, 6px);
   margin-bottom: var(--spacing-xs, 6px);
 }
 
