@@ -109,7 +109,7 @@ function taskInstanceEpochs(instances: TaskInstance[]): Set<number> {
 
 /**
  * EpochsTab — the epoch grid (Phase 4), the day editor's spine. A pure-view-model-driven table with
- * one row per epoch (Edit + Task/status + Camera(s) + Statescript-naming + Video-presence + Opto)
+ * one row per epoch (Task/status + Camera(s) + Statescript-naming + Video-presence + Opto)
  * and a per-epoch drill-in (Epoch task / Files for this epoch / Optogenetics). Every edit maps to an
  * {@link updateDay} patch over the day's EXISTING arrays via the pure {@link buildEpochGrid} join +
  * {@link module:domain/epochOperations} transforms — storage/export are unchanged. Replaces the
@@ -496,7 +496,7 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
   };
 
   const hasOpto = grid.isOpto;
-  const colCount = hasOpto ? 8 : 6;
+  const colCount = hasOpto ? 7 : 5;
   const epochCount = grid.rows.length;
   const missingVideoCount = grid.rows.filter((row) => row.status === 'needs_video').length;
   const missingStatescriptCount = grid.rows.filter((row) => row.statescript == null).length;
@@ -668,7 +668,6 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
         <table className={styles.table}>
           <thead>
             <tr>
-              <th scope="col" className={styles.caretCell}>Edit</th>
               <th scope="col" className={styles.numCell}>#</th>
               <th scope="col">Task</th>
               <th scope="col">Camera(s)</th>
@@ -936,33 +935,21 @@ function EpochRowBlock(p: EpochRowProps) {
   return (
     <>
       <tr>
-        <td className={styles.caretCell}>
-          <button
-            type="button"
-            className={styles.editButton}
-            aria-expanded={isOpen}
-            aria-controls={drillInId}
-            aria-label={`${isOpen ? 'Hide' : 'Edit'} epoch ${row.epoch} details`}
-            onClick={p.onToggle}
-          >
-            <span className={styles.editChevron} aria-hidden="true">{isOpen ? '▾' : '▸'}</span>
-            <span>{isOpen ? 'Hide' : 'Edit'}</span>
-          </button>
-        </td>
         <td className={styles.numCell}>{row.epoch}</td>
         <td className={styles.taskCell}>
           <div className={styles.taskCellStack}>
-            {/* A real button so the larger task target is keyboard-operable; its accessible name is the
-                task label (distinct from the row's "Edit epoch N details"), and it shares the
-                disclosure semantics (aria-expanded/-controls) with the caret. */}
+            {/* The task cell is the row's single edit/disclosure affordance. The trailing menu is
+                reserved for structural row actions such as move/delete. */}
             <button
               type="button"
               className={styles.taskCellButton}
               aria-expanded={isOpen}
               aria-controls={drillInId}
+              aria-label={`${isOpen ? 'Hide' : 'Edit'} epoch ${row.epoch} details`}
               onClick={p.onToggle}
             >
-              {row.taskName || <em>(no task)</em>}
+              <span className={styles.editChevron} aria-hidden="true">{isOpen ? '▾' : '▸'}</span>
+              <span>{row.taskName || <em>(no task)</em>}</span>
             </button>
             <span className={styles.taskMeta}>
               <span className={styles.tag}>tag {row.tag}</span>
@@ -1045,7 +1032,7 @@ function EpochRowBlock(p: EpochRowProps) {
           </td>
         )}
         <td className={styles.menuCell}>
-          <button type="button" className={styles.menuButton} aria-haspopup="menu" aria-expanded={p.menuOpen} aria-label={`Epoch ${row.epoch} actions`} onClick={p.onOpenMenu}>
+          <button type="button" className={styles.menuButton} aria-haspopup="menu" aria-expanded={p.menuOpen} aria-label={`More actions for epoch ${row.epoch}`} onClick={p.onOpenMenu}>
             ⋯
           </button>
           {p.menuOpen && (

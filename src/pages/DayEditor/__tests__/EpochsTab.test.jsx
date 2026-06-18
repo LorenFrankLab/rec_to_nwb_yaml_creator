@@ -2,7 +2,7 @@
  * Component tests for the Phase-4 Epochs grid (EpochsTab).
  *
  * The grid is a thin renderer over the TDD'd pure layers (buildEpochGrid / epochOperations /
- * fileNaming); these tests pin the WIRING: collapsed file-state cells, the edit button, write-back
+ * fileNaming); these tests pin the WIRING: collapsed file-state cells, the task disclosure, write-back
  * patches (each edit → the expected updateDay patch over the existing arrays), the video 3-state +
  * its off-export videolessEpochs writer, confirm-before-orphan (never auto-scrubbing), and a11y.
  */
@@ -122,7 +122,7 @@ function lastPatch(onFieldUpdate, field) {
 }
 
 describe('EpochsTab — grid render + collapsed state cells', () => {
-  it('renders one row per epoch with a focusable edit <button aria-expanded>', () => {
+  it('renders one row per epoch with a task disclosure <button aria-expanded>', () => {
     render(<EpochsTab {...makeBundle()} />);
     expect(screen.getByLabelText(/epoch status summary/i)).toHaveTextContent(/3 epochs/i);
     expect(screen.getByLabelText(/epoch status summary/i)).toHaveTextContent(/2 videos needed/i);
@@ -165,7 +165,7 @@ describe('EpochsTab — grid render + collapsed state cells', () => {
     expect(screen.queryByText('run_video')).not.toBeInTheDocument();
   });
 
-  it('expands the drill-in when the edit button is clicked', async () => {
+  it('expands the drill-in when the task disclosure is clicked', async () => {
     const user = userEvent.setup();
     render(<EpochsTab {...makeBundle()} />);
     const edit = screen.getByRole('button', { name: /Edit epoch 1 details/i });
@@ -179,7 +179,7 @@ describe('EpochsTab — no-epochs onboarding empty state (Phase 8)', () => {
   it('renders the EmptyState onboarding card with an add-epoch CTA when there are no epochs', () => {
     render(<EpochsTab {...makeBundle({ taskInstances: [] })} />);
     expect(screen.getByRole('heading', { name: /no epochs yet/i })).toBeInTheDocument();
-    // No epoch rows are rendered (no edit buttons).
+    // No epoch rows are rendered (no task disclosure buttons).
     expect(screen.queryByRole('button', { name: /Edit epoch/i })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: /add an epoch/i })).toBeInTheDocument();
   });
@@ -225,7 +225,7 @@ describe('EpochsTab — write-back patches', () => {
     const user = userEvent.setup();
     const bundle = makeBundle();
     render(<EpochsTab {...bundle} />);
-    await user.click(screen.getByRole('button', { name: /Epoch 1 actions/i }));
+    await user.click(screen.getByRole('button', { name: /More actions for epoch 1/i }));
     await user.click(screen.getByRole('menuitem', { name: /Delete epoch/i }));
     expect(lastPatch(bundle.onFieldUpdate, 'taskInstances')).toEqual([
       { taskTypeId: 'tasktype-0', task_epochs: [3] },
@@ -239,7 +239,7 @@ describe('EpochsTab — write-back patches', () => {
     const user = userEvent.setup();
     const bundle = makeBundle({ state: { draft: true, videolessEpochs: [1, 3] } });
     render(<EpochsTab {...bundle} />);
-    await user.click(screen.getByRole('button', { name: /Epoch 1 actions/i }));
+    await user.click(screen.getByRole('button', { name: /More actions for epoch 1/i }));
     await user.click(screen.getByRole('menuitem', { name: /Delete epoch/i }));
 
     expect(lastPatch(bundle.onFieldUpdate, 'taskInstances')).toEqual([
@@ -279,7 +279,7 @@ describe('EpochsTab — task-catalog collision review', () => {
     expect(review).toHaveTextContent(/Day-specific run definition/);
     expect(review).toHaveTextContent(/Catalog run definition/);
 
-    await user.click(screen.getByRole('button', { name: /Epoch 1 actions/i }));
+    await user.click(screen.getByRole('button', { name: /More actions for epoch 1/i }));
     await user.click(screen.getByRole('menuitem', { name: /Duplicate epoch/i }));
 
     expect(lastPatch(bundle.onFieldUpdate, 'taskInstances')).toBeUndefined();
@@ -337,7 +337,7 @@ describe('EpochsTab — confirm-before-orphan (never auto-scrub)', () => {
     const bundle = makeBundle();
     render(<EpochsTab {...bundle} />);
     // Epoch 2 owns the only video; deleting it would orphan that video.
-    await user.click(screen.getByRole('button', { name: /Epoch 2 actions/i }));
+    await user.click(screen.getByRole('button', { name: /More actions for epoch 2/i }));
     await user.click(screen.getByRole('menuitem', { name: /Delete epoch/i }));
     expect(screen.getByText(/Repair affected files\?/i)).toBeInTheDocument();
     // Nothing written yet (no auto-scrub).
@@ -350,7 +350,7 @@ describe('EpochsTab — confirm-before-orphan (never auto-scrub)', () => {
     const user = userEvent.setup();
     const bundle = makeBundle();
     render(<EpochsTab {...bundle} />);
-    await user.click(screen.getByRole('button', { name: /Epoch 2 actions/i }));
+    await user.click(screen.getByRole('button', { name: /More actions for epoch 2/i }));
     await user.click(screen.getByRole('menuitem', { name: /Delete epoch/i }));
     await user.click(screen.getByRole('button', { name: /Clear references/i }));
     expect(lastPatch(bundle.onFieldUpdate, 'taskInstances')).toEqual([
@@ -365,7 +365,7 @@ describe('EpochsTab — confirm-before-orphan (never auto-scrub)', () => {
     const user = userEvent.setup();
     const bundle = makeBundle({ state: { draft: true, videolessEpochs: [2, 3] } });
     render(<EpochsTab {...bundle} />);
-    await user.click(screen.getByRole('button', { name: /Epoch 2 actions/i }));
+    await user.click(screen.getByRole('button', { name: /More actions for epoch 2/i }));
     await user.click(screen.getByRole('menuitem', { name: /Delete epoch/i }));
 
     expect(screen.getByText(/Repair affected files\?/i)).toBeInTheDocument();
@@ -401,7 +401,7 @@ describe('EpochsTab — renumber moves bound refs in lockstep (no silent misasso
     const bundle = makeBundle();
     render(<EpochsTab {...bundle} />);
     // Epoch 2 (Run) owns the video. Move it up → swap 1↔2.
-    await user.click(screen.getByRole('button', { name: /Epoch 2 actions/i }));
+    await user.click(screen.getByRole('button', { name: /More actions for epoch 2/i }));
     await user.click(screen.getByRole('menuitem', { name: /Move up/i }));
     // No orphan confirm — the ref follows.
     expect(screen.queryByText(/Repair affected files\?/i)).not.toBeInTheDocument();
@@ -419,7 +419,7 @@ describe('EpochsTab — renumber moves bound refs in lockstep (no silent misasso
     const user = userEvent.setup();
     const bundle = makeBundle({ state: { draft: true, videolessEpochs: [1, 3, 9] } });
     render(<EpochsTab {...bundle} />);
-    await user.click(screen.getByRole('button', { name: /Epoch 1 actions/i }));
+    await user.click(screen.getByRole('button', { name: /More actions for epoch 1/i }));
     await user.click(screen.getByRole('menuitem', { name: /Insert epoch after/i }));
 
     expect(lastPatch(bundle.onFieldUpdate, 'taskInstances')).toEqual([

@@ -141,7 +141,6 @@
   white-space: nowrap;
 }
 
-.caretCell,
 .menuCell {
   width: 64px;
 }
@@ -156,31 +155,9 @@
   font-variant-numeric: tabular-nums;
 }
 
-.editButton {
-  border: 1px solid var(--color-grey-300, #ccc);
-  background: var(--color-white, #fff);
-  border-radius: var(--radius-sm, 4px);
-  min-width: 58px;
-  min-height: 28px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  padding: 3px 8px;
-  cursor: pointer;
-  color: var(--color-grey-600, #555);
-  font-size: var(--font-size-xs, 0.75rem);
-  font-weight: 600;
-  line-height: 1;
-}
-
-.editButton:hover {
-  border-color: var(--color-primary, #2b6cb0);
-  color: var(--color-primary, #2b6cb0);
-}
-
 .editChevron {
   font-size: var(--font-size-sm, 0.875rem);
+  color: var(--color-grey-500, #777);
 }
 
 .taskCellButton {
