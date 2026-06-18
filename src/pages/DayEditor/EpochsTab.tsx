@@ -59,6 +59,13 @@ interface PendingOrphan extends OrphanedReferences {
 }
 
 type EpochFilter = 'all' | 'needs-video' | 'missing-statescript' | 'custom-filenames';
+type FileFocusTarget = 'statescript' | 'video';
+
+interface PendingFileFocus {
+  epoch: number;
+  target: FileFocusTarget;
+  token: number;
+}
 
 /** Parse an `epoch-<n>-video` repair focus path → the epoch number (or null). */
 function epochFromFocusPath(fieldPath: string | undefined): number | null {
@@ -126,6 +133,8 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
   const [menuEpoch, setMenuEpoch] = useState<number | null>(null);
   const [templateOpen, setTemplateOpen] = useState(false);
   const [epochFilter, setEpochFilter] = useState<EpochFilter>('all');
+  const [forcedFileEditors, setForcedFileEditors] = useState<Set<number>>(new Set());
+  const [pendingFileFocus, setPendingFileFocus] = useState<PendingFileFocus | null>(null);
   // Epochs whose statescript/video name is being manually overridden (UI mode; GeneratedValue's
   // `derived` flag is consumer-driven). A name only becomes stored-manual once the user types.
   const [manualStatescript, setManualStatescript] = useState<Set<number>>(new Set());
@@ -181,6 +190,17 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
       return next;
     });
   }, [clearDeferredEpoch]);
+
+  const openFileEditor = useCallback((epoch: number, target: FileFocusTarget) => {
+    setEpochFilter('all');
+    setExpanded((prev) => new Set(prev).add(epoch));
+    setForcedFileEditors((prev) => new Set(prev).add(epoch));
+    setPendingFileFocus((prev) => ({
+      epoch,
+      target,
+      token: (prev?.token ?? 0) + 1,
+    }));
+  }, []);
 
   /**
    * Persist a next instance array (and an optionally-extended catalog), retiring inline `day.tasks`
@@ -675,12 +695,22 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
                   taskTypes={view.taskTypes}
                   grid={grid}
                   menuOpen={menuEpoch === row.epoch}
+                  filesOpen={forcedFileEditors.has(row.epoch)}
+                  fileFocus={pendingFileFocus?.epoch === row.epoch ? pendingFileFocus : null}
                   manualStatescript={manualStatescript.has(row.epoch)}
                   manualVideoKeys={manualVideo}
                   onToggle={() => toggle(row.epoch)}
                   onOpenMenu={(e) => {
                     e.stopPropagation();
                     setMenuEpoch((cur) => (cur === row.epoch ? null : row.epoch));
+                  }}
+                  onFilesOpenChange={(open) => {
+                    setForcedFileEditors((prev) => {
+                      const next = new Set(prev);
+                      if (open) next.add(row.epoch);
+                      else next.delete(row.epoch);
+                      return next;
+                    });
                   }}
                   onReassignTask={(taskTypeId) => reassignTask(row.epoch, taskTypeId)}
                   onNewTaskType={() => {
@@ -700,8 +730,14 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
                     writeStatescriptPath(row, deriveStatescriptPath(grid.dataFolder, statescriptDerivedName(row)));
                   }}
                   onStatescriptChange={(path) => writeStatescriptPath(row, path)}
-                  onAddStatescript={() => addStatescript(row)}
-                  onAddVideo={() => addVideo(row)}
+                  onAddStatescript={() => {
+                    openFileEditor(row.epoch, 'statescript');
+                    addStatescript(row);
+                  }}
+                  onAddVideo={() => {
+                    openFileEditor(row.epoch, 'video');
+                    addVideo(row);
+                  }}
                   onMarkNoVideo={() => setVideoless(row.epoch, true)}
                   onUndoNoVideo={() => setVideoless(row.epoch, false)}
                   onRemoveVideo={removeVideo}
@@ -831,10 +867,13 @@ interface EpochRowProps {
   taskTypes: TaskType[];
   grid: ReturnType<typeof buildEpochGrid>;
   menuOpen: boolean;
+  filesOpen: boolean;
+  fileFocus: PendingFileFocus | null;
   manualStatescript: boolean;
   manualVideoKeys: Set<string>;
   onToggle: () => void;
   onOpenMenu: (e: React.MouseEvent) => void;
+  onFilesOpenChange: (open: boolean) => void;
   onReassignTask: (taskTypeId: string) => void;
   onNewTaskType: () => void;
   onOpto: (field: 'power_in_mW' | 'pulseLength', value: string) => void;
@@ -878,6 +917,21 @@ function EpochRowBlock(p: EpochRowProps) {
     row.statescriptNaming === 'manual' ||
     row.videoPresence !== 'present' ||
     hasManualVideo;
+  const filesOpen = p.filesOpen || generatedFilesNeedReview;
+
+  useEffect(() => {
+    if (!isOpen || !p.fileFocus || p.fileFocus.epoch !== row.epoch) return undefined;
+    const handle = window.setTimeout(() => {
+      const target = document.querySelector<HTMLElement>(
+        `[data-field-path="epoch-${row.epoch}-${p.fileFocus?.target}"]`
+      );
+      const focusable = target?.querySelector<HTMLElement>(
+        'input, button, select, textarea, [tabindex]:not([tabindex="-1"])'
+      );
+      (focusable ?? target)?.focus();
+    }, 0);
+    return () => window.clearTimeout(handle);
+  }, [isOpen, p.fileFocus, row.epoch]);
 
   return (
     <>
@@ -1011,10 +1065,16 @@ function EpochRowBlock(p: EpochRowProps) {
           <td colSpan={colCount + 1}>
             <div className={styles.drillInInner} id={drillInId}>
               <div className={styles.group}>
-                <h3 className={styles.groupHeading}>Epoch task</h3>
-                <div className={styles.fieldRow}>
-                  <span className={styles.fieldLabel}>Task</span>
-                  <span className={styles.inlineControls}>
+                <div className={styles.taskEditorHeader}>
+                  <h3 className={styles.groupHeading}>Epoch task</h3>
+                  <span className={styles.taskEditorMeta}>
+                    <span className={styles.tag}>tag {row.tag}</span>
+                    <EpochStatusPill status={row.status} />
+                  </span>
+                </div>
+                <div className={styles.taskEditorGrid}>
+                  <label className={styles.stackedField}>
+                    <span className={styles.fieldLabel}>Task type</span>
                     <select
                       aria-label={`Epoch ${row.epoch} task`}
                       value={ownerTypeId}
@@ -1025,29 +1085,31 @@ function EpochRowBlock(p: EpochRowProps) {
                         <option key={t.id} value={t.id}>{t.task_name || t.id}</option>
                       ))}
                     </select>
-                    <button type="button" className="button-small" onClick={p.onNewTaskType}>+ new task type</button>
-                  </span>
+                  </label>
+                  <button type="button" className="button-small" onClick={p.onNewTaskType}>
+                    + new task type
+                  </button>
                 </div>
-                <details className={styles.contextDetails}>
-                  <summary>Task type context</summary>
-                  <div className={styles.fieldRow}>
-                    <span className={styles.fieldLabel}>Environment</span>
-                    <span className={styles.derivedNote}>{row.taskEnvironment || '—'}</span>
+                <dl className={styles.taskContextGrid}>
+                  <div>
+                    <dt>Environment</dt>
+                    <dd>{row.taskEnvironment || '—'}</dd>
                   </div>
-                  <div className={styles.fieldRow}>
-                    <span className={styles.fieldLabel}>Cameras</span>
-                    <span>
+                  <div>
+                    <dt>Cameras</dt>
+                    <dd>
                       {row.cameras.length === 0
                         ? <span className={styles.derivedNote}>none</span>
                         : row.cameras.map((id) => <span key={String(id)} className={styles.cam}>{cameraName(cameras, id)}</span>)}
-                    </span>
+                    </dd>
                   </div>
-                </details>
+                </dl>
               </div>
 
               <details
                 className={`${styles.group} ${styles.genPanel} ${styles.generatedDetails}`}
-                open={generatedFilesNeedReview}
+                open={filesOpen}
+                onToggle={(event) => p.onFilesOpenChange(event.currentTarget.open)}
               >
                 <summary className={styles.generatedSummary}>
                   <span>Files for this epoch</span>
@@ -1067,7 +1129,7 @@ function EpochRowBlock(p: EpochRowProps) {
                     <span className={styles.fieldLabel}>Data folder</span>
                     <span className={styles.mono}>{grid.dataFolder || <span className={styles.derivedNote}>not set — add it in Daily Setup</span>}</span>
                   </div>
-                  <div className={styles.fieldRow}>
+                  <div className={styles.fieldRow} data-field-path={`epoch-${row.epoch}-statescript`} tabIndex={-1}>
                     <span className={styles.fieldLabel}>Statescript</span>
                     <span>
                     {row.statescript ? (

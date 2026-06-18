@@ -414,6 +414,72 @@
   margin: 0 0 var(--spacing-sm, 8px);
 }
 
+.taskEditorHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--spacing-sm, 8px);
+  margin-bottom: var(--spacing-sm, 8px);
+}
+
+.taskEditorHeader .groupHeading {
+  margin-bottom: 0;
+}
+
+.taskEditorMeta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.taskEditorGrid {
+  display: grid;
+  grid-template-columns: minmax(220px, 360px) max-content;
+  gap: var(--spacing-sm, 8px);
+  align-items: end;
+  margin-bottom: var(--spacing-sm, 10px);
+}
+
+.stackedField {
+  display: grid;
+  gap: 4px;
+}
+
+.stackedField select {
+  min-height: 36px;
+  width: 100%;
+}
+
+.taskContextGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--spacing-sm, 8px);
+  margin: 0;
+}
+
+.taskContextGrid div {
+  min-width: 0;
+  padding: var(--spacing-sm, 8px);
+  border: 1px solid var(--color-grey-200, #e6e6e6);
+  border-radius: var(--radius-sm, 4px);
+  background: var(--color-white, #fff);
+}
+
+.taskContextGrid dt {
+  color: var(--color-grey-500, #777);
+  font-size: var(--font-size-xs, 0.75rem);
+  font-weight: 600;
+  margin-bottom: 3px;
+}
+
+.taskContextGrid dd {
+  color: var(--color-grey-700, #444);
+  font-size: var(--font-size-sm, 0.875rem);
+  margin: 0;
+}
+
 .genPanel {
   background: #f3f8ff;
   border: 1px solid #dceafe;
@@ -527,5 +593,18 @@
 
   .templateMenu {
     width: 100%;
+  }
+
+  .taskEditorHeader {
+    flex-direction: column;
+  }
+
+  .taskEditorMeta {
+    justify-content: flex-start;
+  }
+
+  .taskEditorGrid,
+  .taskContextGrid {
+    grid-template-columns: 1fr;
   }
 }

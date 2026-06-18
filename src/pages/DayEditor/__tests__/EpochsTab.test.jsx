@@ -6,8 +6,9 @@
  * patches (each edit → the expected updateDay patch over the existing arrays), the video 3-state +
  * its off-export videolessEpochs writer, confirm-before-orphan (never auto-scrubbing), and a11y.
  */
+import { useState } from 'react';
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { axe } from 'jest-axe';
 import EpochsTab from '../EpochsTab';
@@ -60,6 +61,22 @@ function makeBundle(overrides = {}, animalOverrides = {}) {
     actions: { updateAnimal },
     animalKey: 'r',
   };
+}
+
+/**
+ * Stateful wrapper for tests that need the day patch to be applied and rendered back into EpochsTab.
+ *
+ * @param {{ bundle: ReturnType<typeof makeBundle> }} props - Test bundle to render.
+ * @returns {JSX.Element} The stateful EpochsTab.
+ */
+function StatefulEpochsTab({ bundle }) {
+  const [day, setDay] = useState(bundle.day);
+  const onFieldUpdate = (field, value) => {
+    bundle.onFieldUpdate(field, value);
+    setDay((prev) => ({ ...prev, [field]: value }));
+  };
+
+  return <EpochsTab {...bundle} day={day} animalDays={[day]} onFieldUpdate={onFieldUpdate} />;
 }
 
 /** A legacy inline day whose `Run` task collides with the animal's existing `Run` task type. */
@@ -448,7 +465,7 @@ describe('EpochsTab — video 3-state', () => {
   it('offers missing-video fixes from collapsed rows', async () => {
     const user = userEvent.setup();
     const bundle = makeBundle();
-    render(<EpochsTab {...bundle} />);
+    render(<StatefulEpochsTab bundle={bundle} />);
 
     await user.click(screen.getByRole('button', { name: /Add video for epoch 1/i }));
 
@@ -457,6 +474,21 @@ describe('EpochsTab — video 3-state', () => {
       camera_id: 0,
       task_epochs: 1,
     });
+    expect(screen.getByRole('button', { name: /Hide epoch 1 details/i })).toBeInTheDocument();
+    expect(screen.getByText('20230622_r_01_s1.1.h264')).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByRole('button', { name: /Rename/i })).toHaveFocus());
+  });
+
+  it('keeps a repaired video row visible when adding from the needs-video filter', async () => {
+    const user = userEvent.setup();
+    const bundle = makeBundle();
+    render(<StatefulEpochsTab bundle={bundle} />);
+
+    await user.click(screen.getByRole('button', { name: /2 videos needed/i }));
+    await user.click(screen.getByRole('button', { name: /Add video for epoch 1/i }));
+
+    expect(screen.getByRole('button', { name: /3 epochs/i })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: /Hide epoch 1 details/i })).toBeInTheDocument();
   });
 
   it('a declared-videoless epoch reads "absent" and never blocks (toggling never changes export shape)', () => {
@@ -488,7 +520,7 @@ describe('EpochsTab — statescript naming', () => {
   it('offers missing-statescript fixes from collapsed rows', async () => {
     const user = userEvent.setup();
     const bundle = makeBundle();
-    render(<EpochsTab {...bundle} />);
+    render(<StatefulEpochsTab bundle={bundle} />);
 
     await user.click(screen.getByRole('button', { name: /Add statescript for epoch 1/i }));
 
@@ -500,6 +532,9 @@ describe('EpochsTab — statescript naming', () => {
         task_epochs: 1,
       },
     ]);
+    expect(screen.getByRole('button', { name: /Hide epoch 1 details/i })).toBeInTheDocument();
+    expect(screen.getByText('20230622_r_01_s1.stateScriptLog')).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByRole('button', { name: /Override name/i })).toHaveFocus());
   });
 });
 
