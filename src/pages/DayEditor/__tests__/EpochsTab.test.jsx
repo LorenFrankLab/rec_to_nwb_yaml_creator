@@ -193,6 +193,19 @@ describe('EpochsTab — grid render + collapsed state cells', () => {
     expect(screen.getByRole('complementary', { name: /Epoch 2: Run/i })).toBeInTheDocument();
   });
 
+  it('closes the details drawer with Escape', async () => {
+    const user = userEvent.setup();
+    render(<EpochsTab {...makeBundle()} />);
+
+    await user.click(screen.getByRole('button', { name: /Show epoch 1 details/i }));
+    expect(screen.getByRole('complementary', { name: /Epoch 1: Sleep/i })).toBeInTheDocument();
+
+    await user.keyboard('{Escape}');
+
+    expect(screen.queryByRole('complementary', { name: /Epoch 1: Sleep/i })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Show epoch 1 details/i })).toHaveAttribute('aria-expanded', 'false');
+  });
+
   it('closes the details panel when a filter hides the selected epoch', async () => {
     const user = userEvent.setup();
     render(<EpochsTab {...makeBundle()} />);

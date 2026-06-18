@@ -551,6 +551,14 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
   const activeRow = activeEpoch == null
     ? null
     : grid.rows.find((row) => row.epoch === activeEpoch) ?? null;
+  useEffect(() => {
+    if (!activeRow) return undefined;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setActiveEpoch(null);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [activeRow]);
   const changeFilter = (filter: EpochFilter) => {
     setEpochFilter(filter);
     if (activeEpoch == null) return;
@@ -761,7 +769,7 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
           No epochs match this filter.
         </div>
       ) : (
-        <div className={activeRow ? styles.masterDetail : styles.masterOnly}>
+        <>
           <div className={styles.tablePane}>
             <table className={styles.table}>
               <thead>
@@ -866,7 +874,7 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
               onVideoNameChange={writeVideoName}
             />
           )}
-        </div>
+        </>
       )}
 
       {quickAddEpoch !== null && (
