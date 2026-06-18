@@ -896,7 +896,7 @@ function EpochRowBlock(p: EpochRowProps) {
           </button>
         </td>
         <td className={styles.numCell}>{row.epoch}</td>
-        <td>
+        <td className={styles.taskCell}>
           <div className={styles.taskCellStack}>
             {/* A real button so the larger task target is keyboard-operable; its accessible name is the
                 task label (distinct from the row's "Edit epoch N details"), and it shares the
@@ -908,9 +908,10 @@ function EpochRowBlock(p: EpochRowProps) {
               aria-controls={drillInId}
               onClick={p.onToggle}
             >
-              {row.taskName || <em>(no task)</em>} <span className={styles.tag}>file tag {row.tag}</span>
+              {row.taskName || <em>(no task)</em>}
             </button>
             <span className={styles.taskMeta}>
+              <span className={styles.tag}>tag {row.tag}</span>
               <EpochStatusPill status={row.status} />
               {row.duplicate && (
                 <span className={styles.duplicateBadge} title="This epoch is claimed by more than one task">
@@ -989,7 +990,7 @@ function EpochRowBlock(p: EpochRowProps) {
             />
           </td>
         )}
-        <td className={styles.menuCell} style={{ position: 'relative' }}>
+        <td className={styles.menuCell}>
           <button type="button" className={styles.menuButton} aria-haspopup="menu" aria-expanded={p.menuOpen} aria-label={`Epoch ${row.epoch} actions`} onClick={p.onOpenMenu}>
             ⋯
           </button>

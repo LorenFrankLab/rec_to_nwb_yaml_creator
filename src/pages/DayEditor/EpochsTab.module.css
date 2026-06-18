@@ -146,6 +146,11 @@
   width: 64px;
 }
 
+.menuCell {
+  position: relative;
+  text-align: center;
+}
+
 .numCell {
   width: 36px;
   font-variant-numeric: tabular-nums;
@@ -197,9 +202,13 @@
   color: var(--color-primary, #2b6cb0);
 }
 
+.taskCell {
+  min-width: 160px;
+}
+
 .taskCellStack {
   display: grid;
-  gap: 4px;
+  gap: 6px;
   align-items: start;
 }
 
@@ -303,13 +312,27 @@
 }
 
 .menuButton {
-  border: 1px solid var(--color-grey-300, #ccc);
-  background: var(--color-white, #fff);
+  border: 1px solid transparent;
+  background: transparent;
   border-radius: var(--radius-sm, 4px);
-  width: 30px;
-  height: 26px;
+  width: 32px;
+  height: 32px;
   cursor: pointer;
   color: var(--color-grey-600, #555);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  margin: 0 auto;
+  font-size: var(--font-size-lg, 1.125rem);
+}
+
+.menuButton:hover,
+.menuButton:focus-visible,
+.menuButton[aria-expanded="true"] {
+  border-color: var(--color-grey-300, #ccc);
+  background: var(--color-grey-100, #f2f2f2);
+  color: var(--color-primary, #2b6cb0);
 }
 
 .menu {
