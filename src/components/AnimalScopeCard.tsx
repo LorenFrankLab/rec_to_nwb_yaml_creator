@@ -28,29 +28,36 @@ export interface AnimalScopeCardProps {
  * animal setup. It only renders a summary it is handed; it computes nothing.
  */
 const AnimalScopeCard = ({ summary, editHref }: AnimalScopeCardProps) => (
-  <aside className={styles.card} aria-label="Animal setup (shared by every day)">
-    <dl className={styles.lines}>
-      <div className={styles.line}>
-        <dt className={styles.label}>Animal</dt>
-        <dd className={styles.value}>{summary.identity}</dd>
-      </div>
-      <div className={styles.line}>
-        <dt className={styles.label}>Probes</dt>
-        <dd className={styles.value}>{summary.probes}</dd>
-      </div>
-      <div className={styles.line}>
-        <dt className={styles.label}>Configuration</dt>
-        <dd className={styles.value}>{summary.config}</dd>
-      </div>
-      <div className={styles.line}>
-        <dt className={styles.label}>Team</dt>
-        <dd className={styles.value}>{summary.team}</dd>
-      </div>
-    </dl>
-    <a className={styles.editLink} href={editHref}>
-      Edit animal setup
-    </a>
-  </aside>
+  <details className={styles.card}>
+    <summary className={styles.summary}>
+      <span className={styles.summaryLabel}>Animal context</span>
+      <span className={styles.summaryValue}>{summary.identity}</span>
+      <span className={styles.summaryMeta}>Config {summary.config}</span>
+    </summary>
+    <aside className={styles.content} aria-label="Animal setup (shared by every day)">
+      <dl className={styles.lines}>
+        <div className={styles.line}>
+          <dt className={styles.label}>Animal</dt>
+          <dd className={styles.value}>{summary.identity}</dd>
+        </div>
+        <div className={styles.line}>
+          <dt className={styles.label}>Probes</dt>
+          <dd className={styles.value}>{summary.probes}</dd>
+        </div>
+        <div className={styles.line}>
+          <dt className={styles.label}>Configuration</dt>
+          <dd className={styles.value}>{summary.config}</dd>
+        </div>
+        <div className={styles.line}>
+          <dt className={styles.label}>Team</dt>
+          <dd className={styles.value}>{summary.team}</dd>
+        </div>
+      </dl>
+      <a className={styles.editLink} href={editHref}>
+        Edit animal setup
+      </a>
+    </aside>
+  </details>
 );
 
 export default AnimalScopeCard;

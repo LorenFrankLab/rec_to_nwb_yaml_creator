@@ -53,6 +53,7 @@ export default function ExportPreview(props: ExportPreviewProps) {
   // distinct from the gate's blocked state (which prevents the attempt entirely).
   const [actionError, setActionError] = useState<string | null>(null);
   const [batchResult, setBatchResult] = useState<ExportAllResult | null>(null);
+  const [previewOpen, setPreviewOpen] = useState(false);
 
   // Merge once: the preview body, the filename, and the merge-error state all derive from this single
   // merged object (the same bytes the download/copy emit), never duplicate component state.
@@ -141,13 +142,34 @@ export default function ExportPreview(props: ExportPreviewProps) {
   return (
     <div className={styles.surface}>
       <header className={styles.header}>
-        <h2 className={styles.title}>Export — {(day as { date?: string }).date}</h2>
+        <h2 className={styles.title}>Fix &amp; Export — {(day as { date?: string }).date}</h2>
         <p className={styles.lede}>
-          Review the file this day will write, then download it next to your <code>.rec</code> files.
+          Fix blocking issues, then download the YAML next to your <code>.rec</code> files.
         </p>
       </header>
 
-      {/* Readiness gate — issue-driven. Quiet when clean; loud + field-linked when blocking. */}
+      {!blocked && (
+        <div className={styles.actions}>
+          <button
+            type="button"
+            className="button-primary"
+            onClick={handleDownload}
+            title={`Download ${fileName}`}
+          >
+            Download
+          </button>
+          <button
+            type="button"
+            className="button-secondary"
+            onClick={handleCopy}
+            title="Both Download and Copy produce the file"
+          >
+            Copy
+          </button>
+        </div>
+      )}
+
+      {/* Readiness gate — issue-driven. Loud + field-linked when blocking; compact when clean. */}
       {blocked ? (
         <div className={styles.blocked} role="alert">
           <p className={styles.blockedHeading}>{exportGate?.message ?? 'Export is blocked.'}</p>
@@ -191,39 +213,45 @@ export default function ExportPreview(props: ExportPreviewProps) {
         </div>
       )}
 
-      {/* The file this day will write: its deterministic name + the REAL export bytes (read-only). */}
-      {!mergeError && (
-        <div className={styles.filecard}>
-          <div className={styles.filebar}>
-            <span className={styles.fname}>{fileName}</span>
-            <span className={styles.fmeta}>one file · this recording day</span>
-          </div>
-          <pre className={styles.code} aria-label="YAML preview">
-            {yaml}
-          </pre>
+      {blocked && (
+        <div className={styles.actions}>
+          <button
+            type="button"
+            className="button-primary"
+            onClick={handleDownload}
+            disabled={blocked}
+            title={blocked ? disabledReason : `Download ${fileName}`}
+          >
+            Download
+          </button>
+          <button
+            type="button"
+            className="button-secondary"
+            onClick={handleCopy}
+            disabled={blocked}
+            title={blocked ? disabledReason : 'Both Download and Copy produce the file'}
+          >
+            Copy
+          </button>
         </div>
       )}
 
-      <div className={styles.actions}>
-        <button
-          type="button"
-          className="button-primary"
-          onClick={handleDownload}
-          disabled={blocked}
-          title={blocked ? disabledReason : `Download ${fileName}`}
+      {/* The file this day will write: deterministic name + REAL export bytes, disclosed on demand. */}
+      {!mergeError && (
+        <details
+          className={styles.filecard}
+          open={previewOpen}
+          onToggle={(event) => setPreviewOpen((event.currentTarget as HTMLDetailsElement).open)}
         >
-          Download
-        </button>
-        <button
-          type="button"
-          className="button-secondary"
-          onClick={handleCopy}
-          disabled={blocked}
-          title={blocked ? disabledReason : 'Both Download and Copy produce the file'}
-        >
-          Copy
-        </button>
-      </div>
+          <summary className={styles.filebar}>
+            <span className={styles.fname}>{fileName}</span>
+            <span className={styles.fmeta}>{previewOpen ? 'Hide YAML' : 'View YAML'} · one file</span>
+          </summary>
+          <pre className={styles.code} aria-label="YAML preview">
+            {yaml}
+          </pre>
+        </details>
+      )}
 
       {actionError && (
         <div className={styles.actionError} role="alert">

@@ -17,10 +17,12 @@ interface DayTechnicalSectionProps {
    * The link is omitted when absent.
    */
   animalKey?: string;
+  /** Render without the outer card wrapper when nested inside a disclosure. */
+  embedded?: boolean;
 }
 
 /**
- * DayTechnicalSection - per-day technical parameters (Day Editor / Overview).
+ * DayTechnicalSection - per-day technical parameters (Day Editor / Recording Setup).
  *
  * Mixes two ownership kinds that both live on `day.technical` (Phase 8.7 Task 4):
  *  - `raw_data_to_volts` / `times_period_multiplier` are recording-system DEFAULTS copied into the
@@ -34,7 +36,13 @@ interface DayTechnicalSectionProps {
  * blank so the export omits it (the schema rejects a present-but-empty `units`) rather
  * than emitting invalid empty strings.
  */
-export default function DayTechnicalSection({ technical = {}, onFieldUpdate, recordingSystemDefaults = undefined, animalKey = undefined }: DayTechnicalSectionProps) {
+export default function DayTechnicalSection({
+  technical = {},
+  onFieldUpdate,
+  recordingSystemDefaults = undefined,
+  animalKey = undefined,
+  embedded = false,
+}: DayTechnicalSectionProps) {
   const [local, setLocal] = useState({
     default_header_file_path: technical?.default_header_file_path || '',
     analog: technical?.units?.analog || '',
@@ -80,8 +88,8 @@ export default function DayTechnicalSection({ technical = {}, onFieldUpdate, rec
     onFieldUpdate('technical.units', { analog, behavioral_events: behavioralEvents });
   };
 
-  return (
-    <section className="day-editor-section day-technical-section">
+  const content = (
+    <>
       <h3>Technical parameters</h3>
 
       {/* Recording-system rig constants — effective, READ-ONLY values for this day (copied
@@ -115,6 +123,7 @@ export default function DayTechnicalSection({ technical = {}, onFieldUpdate, rec
           <input
             id="default-header-file-path"
             type="text"
+            data-field-path="technical.default_header_file_path"
             value={local.default_header_file_path}
             onChange={(e) => change('default_header_file_path', e.target.value)}
             onBlur={commitHeader}
@@ -131,6 +140,7 @@ export default function DayTechnicalSection({ technical = {}, onFieldUpdate, rec
           <input
             id="units-analog"
             type="text"
+            data-field-path="technical.units.analog"
             value={local.analog}
             onChange={(e) => change('analog', e.target.value)}
             onBlur={commitUnits}
@@ -143,6 +153,7 @@ export default function DayTechnicalSection({ technical = {}, onFieldUpdate, rec
           <input
             id="units-behavioral-events"
             type="text"
+            data-field-path="technical.units.behavioral_events"
             value={local.behavioral_events}
             onChange={(e) => change('behavioral_events', e.target.value)}
             onBlur={commitUnits}
@@ -158,6 +169,16 @@ export default function DayTechnicalSection({ technical = {}, onFieldUpdate, rec
           )}
         </div>
       </div>
+    </>
+  );
+
+  if (embedded) {
+    return <div className="day-technical-section day-technical-section-embedded">{content}</div>;
+  }
+
+  return (
+    <section className="day-editor-section day-technical-section">
+      {content}
     </section>
   );
 }

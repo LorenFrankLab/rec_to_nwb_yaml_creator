@@ -57,6 +57,57 @@
     margin-bottom: var(--spacing-md, 1rem);
   }
 
+  .dio-named-lines {
+    margin-bottom: var(--spacing-lg, 1.5rem);
+  }
+
+  .dio-named-lines-table {
+    margin-bottom: var(--spacing-md, 1rem);
+  }
+
+  .dio-add-line {
+    display: grid;
+    grid-template-columns: minmax(84px, max-content) minmax(84px, max-content) minmax(220px, 1fr) auto;
+    gap: var(--spacing-sm, 0.5rem);
+    align-items: end;
+    padding: var(--spacing-sm, 0.75rem);
+    border: 1px solid var(--color-grey-200, #e5e7eb);
+    border-radius: var(--radius-md, 8px);
+    background: var(--color-grey-100, #f8fafc);
+
+    label {
+      display: grid;
+      gap: 0.25rem;
+      font-size: var(--font-size-sm, 0.875rem);
+      color: var(--color-grey-700, #374151);
+    }
+
+    input,
+    select {
+      min-height: 2.25rem;
+    }
+  }
+
+  .dio-advanced-grid {
+    border: 1px solid var(--color-grey-200, #e5e7eb);
+    border-radius: var(--radius-md, 8px);
+    margin-bottom: var(--spacing-lg, 1.5rem);
+
+    > summary {
+      min-height: 2.5rem;
+      display: flex;
+      align-items: center;
+      padding: 0 var(--spacing-md, 1rem);
+      cursor: pointer;
+      color: var(--color-grey-700, #374151);
+      font-weight: 600;
+    }
+
+    .dio-grid-columns {
+      padding: var(--spacing-md, 1rem);
+    }
+  }
+
   // Inputs (Din) and Outputs (Dout) side by side — two columns of 32 channels rather than 64
   // stacked rows. `min-width: 0` lets the flex children shrink (their tables are width:100%), and
   // the columns stack on a narrow viewport.
@@ -107,6 +158,12 @@
     // Dim the channel id of an unused (unnamed) row so the named rows stand out in the long grid.
     .dio-row-unused td[data-label='DIO channel'] {
       color: var(--color-grey-500, #9e9e9e);
+    }
+  }
+
+  @media (max-width: 700px) {
+    .dio-add-line {
+      grid-template-columns: 1fr;
     }
   }
 }

@@ -263,7 +263,50 @@
   background: #f3f8ff;
   border: 1px solid #dceafe;
   border-radius: var(--radius-md, 8px);
-  padding: var(--spacing-sm, 12px);
+  padding: 0;
+}
+
+.generatedSummary {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm, 8px);
+  min-height: 2.4rem;
+  padding: 0 var(--spacing-sm, 12px);
+  cursor: pointer;
+  list-style: none;
+  font-size: var(--font-size-xs, 0.75rem);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-grey-500, #777);
+  font-weight: 600;
+}
+
+.generatedSummary::-webkit-details-marker {
+  display: none;
+}
+
+.generatedSummary::before {
+  content: '▸';
+  color: var(--color-grey-500, #777);
+}
+
+.generatedDetails[open] .generatedSummary::before {
+  content: '▾';
+}
+
+.generatedStatus {
+  margin-left: auto;
+  padding: 1px 7px;
+  border-radius: var(--radius-sm, 4px);
+  background: var(--color-white, #fff);
+  color: var(--color-grey-600, #555);
+  font-size: var(--font-size-xs, 0.7rem);
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.generatedContent {
+  padding: 0 var(--spacing-sm, 12px) var(--spacing-sm, 12px);
 }
 
 .genNote {

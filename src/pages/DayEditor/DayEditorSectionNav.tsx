@@ -26,8 +26,8 @@ interface DayEditorSectionNavProps {
  * There is no nav-level gating: EVERY section (including Export) is freely reachable. The
  * export gate survives as a blocked DOWNLOAD ACTION inside the export-preview surface (which
  * gates on the authoritative `vm.export`), not as a nav lock. Each item renders the view-model's
- * step status as a glyph (✓ valid / ⚠ incomplete / ✗ error / ○ pending), so a blocked
- * Export remains visible (its ✗/⚠ glyph) while staying clickable.
+ * step status as visible text plus a small decorative marker, so status is not encoded by glyph or
+ * color alone.
  */
 export default function DayEditorSectionNav({ groups, onNavigate }: DayEditorSectionNavProps) {
   return (
@@ -55,8 +55,11 @@ export default function DayEditorSectionNav({ groups, onNavigate }: DayEditorSec
                 {countLabel && (
                   <span className="section-nav-count" aria-hidden="true">{countLabel}</span>
                 )}
-                <span className="section-nav-status-icon" aria-hidden="true">
-                  {getStatusIcon(step.status)}
+                <span className="section-nav-status">
+                  <span className="section-nav-status-icon" aria-hidden="true">
+                    {getStatusIcon(step.status)}
+                  </span>
+                  <span className="section-nav-status-text">{step.statusLabel}</span>
                 </span>
               </button>
             );

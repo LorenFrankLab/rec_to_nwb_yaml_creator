@@ -1,10 +1,9 @@
 /**
  * Day Editor View — recording-session metadata editor (`#/day/:id`).
  *
- * Renders the sectioned {@link DayEditorFrame} (Overview / Files & Weight /
- * Devices & Failed Channels / Tasks & Epochs / Validation & Export). This replaced the legacy
- * multi-step `DayEditorStepper` in the epoch-editor redesign; the per-section content now lives in
- * the frame.
+ * Renders the sectioned {@link DayEditorFrame} (Daily Setup / Tasks & Files /
+ * Recording Setup / Failed Channels / DIO Wiring / Fix & Export). This replaced the legacy
+ * multi-step `DayEditorStepper`; the per-section content now lives in the frame.
  */
 
 import DayEditorFrame from './DayEditorFrame';

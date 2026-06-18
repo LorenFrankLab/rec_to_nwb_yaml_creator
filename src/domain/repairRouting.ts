@@ -115,22 +115,56 @@ export function stepIdForIssue(issue: RepairableIssue): RoutableStep {
  * substrate; the labels name the Phase 15 sections users can actually navigate to.
  */
 export const STEP_LABELS: Record<string, string> = {
-  overview: 'Overview',
-  devices: 'Devices & Failed Channels',
-  epochs: 'Tasks & Epochs',
-  behavioral: 'Devices & Failed Channels',
-  validation: 'Validation & Export',
-  export: 'Validation & Export',
+  overview: 'Daily Setup',
+  devices: 'Recording Setup',
+  epochs: 'Tasks & Files',
+  behavioral: 'DIO Wiring',
+  validation: 'Fix & Export',
+  export: 'Fix & Export',
 };
 
-/** Whether a day-owned issue is fixed in the Files & Weight section. */
-function isFilesWeightPath(path: string): boolean {
+/** Section-label override for day-owned paths split out from their legacy validation step. */
+function sectionLabelForDayPath(path: string): string | null {
   const normalized = path.replace(/^\//, '').replace(/\//g, '.');
-  return (
+  if (
     normalized.startsWith('associated_files') ||
+    normalized.startsWith('associated_video_files') ||
+    normalized.includes('fs_gui') ||
+    normalized.includes('task') ||
+    normalized.includes('epoch')
+  ) {
+    return 'Tasks & Files';
+  }
+  if (normalized.includes('behavioral_events') || normalized.includes('dio_output_name')) {
+    return 'DIO Wiring';
+  }
+  if (
+    normalized.includes('ntrode_electrode_group_channel_map') ||
+    normalized.includes('bad_channels') ||
+    normalized.includes('deviceOverrides.bad_channels')
+  ) {
+    return 'Failed Channels';
+  }
+  if (
+    normalized.includes('data_acq') ||
+    normalized.includes('cameras_used') ||
+    normalized.includes('technical') ||
+    normalized.includes('configurationVersion') ||
+    normalized.includes('deviceOverrides')
+  ) {
+    return 'Recording Setup';
+  }
+  if (
     normalized.includes('subject.weight') ||
-    normalized.includes('session.weight')
-  );
+    normalized.includes('session.weight') ||
+    normalized.includes('session') ||
+    normalized.includes('experiment_description') ||
+    normalized.includes('keywords') ||
+    normalized.includes('dataFolder')
+  ) {
+    return 'Daily Setup';
+  }
+  return null;
 }
 
 /**
@@ -417,6 +451,6 @@ export function repairTargetForIssue(
   // Day surface: route to the owning Day-Editor step while labeling the visible Phase 15 section.
   const step = stepIdForIssue(issue);
   const focusPath = issue.focusPath || issue.path || issue.instancePath || '';
-  const stepLabel = isFilesWeightPath(focusPath) ? 'Files & Weight' : (STEP_LABELS[step] || step);
+  const stepLabel = sectionLabelForDayPath(focusPath) ?? (STEP_LABELS[step] || step);
   return { surface: 'day', step, label: `Fix in ${stepLabel}` };
 }

@@ -481,7 +481,7 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
       <p className={styles.intro}>
         Each row is one <strong>epoch</strong> — a numbered recording block belonging to a task. Open a
         row to set its task, generated files, and (for opto animals) its stimulation. File names derive
-        from <code>{'{date}_{animal}_{epoch}_{tag}'}</code>; you set the data folder in Files & Weight.
+        from <code>{'{date}_{animal}_{epoch}_{tag}'}</code>; you set the data folder in Daily Setup.
       </p>
 
       {unresolvedTaskCatalogDivergence && (
@@ -793,6 +793,13 @@ function EpochRowBlock(p: EpochRowProps) {
   const videoClass =
     row.videoPresence === 'absent' ? styles.vidNone : row.videoPresence === 'missing' ? styles.vidMissing : styles.vidPresent;
   const ownerTypeId = row.taskTypeId ?? '';
+  const hasManualVideo = row.videos.some((v) => p.manualVideoKeys.has(`e${row.epoch}-v${v.index}`));
+  const generatedFilesNeedReview =
+    !grid.dataFolder ||
+    !row.statescript ||
+    row.statescriptNaming === 'manual' ||
+    row.videoPresence !== 'present' ||
+    hasManualVideo;
 
   return (
     <>
@@ -914,15 +921,23 @@ function EpochRowBlock(p: EpochRowProps) {
                 </div>
               </div>
 
-              {/* Generated files */}
-              <div className={`${styles.group} ${styles.genPanel}`}>
-                <h3 className={styles.groupHeading}>Generated files</h3>
-                <p className={styles.genNote}>
-                  File <strong>names</strong> derive from <code>{'{date}_{animal}_{epoch}_{tag}'}</code>. You set <strong>where the files live</strong> — the day&apos;s data folder, in Files & Weight. Override a name only for exceptions.
-                </p>
+              <details
+                className={`${styles.group} ${styles.genPanel} ${styles.generatedDetails}`}
+                open={generatedFilesNeedReview}
+              >
+                <summary className={styles.generatedSummary}>
+                  <span>Generated files</span>
+                  <span className={styles.generatedStatus}>
+                    {generatedFilesNeedReview ? 'needs review' : 'generated'}
+                  </span>
+                </summary>
+                <div className={styles.generatedContent}>
+                  <p className={styles.genNote}>
+                    File <strong>names</strong> derive from <code>{'{date}_{animal}_{epoch}_{tag}'}</code>. You set <strong>where the files live</strong> — the day&apos;s data folder, in Daily Setup. Override a name only for exceptions.
+                  </p>
                 <div className={styles.fieldRow}>
                   <span className={styles.fieldLabel}>Data folder</span>
-                  <span className={styles.mono}>{grid.dataFolder || <span className={styles.derivedNote}>not set — add it in Files & Weight</span>}</span>
+                  <span className={styles.mono}>{grid.dataFolder || <span className={styles.derivedNote}>not set — add it in Daily Setup</span>}</span>
                 </div>
                 <div className={styles.fieldRow}>
                   <span className={styles.fieldLabel}>Statescript</span>
@@ -1000,7 +1015,8 @@ function EpochRowBlock(p: EpochRowProps) {
                     )}
                   </span>
                 </div>
-              </div>
+                </div>
+              </details>
 
               {/* Optogenetics */}
               {hasOpto && (
@@ -1020,7 +1036,7 @@ function EpochRowBlock(p: EpochRowProps) {
                   </div>
                   <div className={styles.fieldRow}>
                     <span className={styles.fieldLabel}>Protocol</span>
-                    <span className={styles.derivedNote}>The laser DIO + FsGUI file are set in Tasks & Epochs.</span>
+                    <span className={styles.derivedNote}>The laser DIO + FsGUI file are set in Tasks & Files.</span>
                   </div>
                 </div>
               )}

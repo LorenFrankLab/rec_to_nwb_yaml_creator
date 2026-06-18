@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import {
   duplicateBehavioralEventDescriptions,
   duplicateBehavioralEventNames,
@@ -53,6 +54,12 @@ const GROUPS: Array<{ type: 'Din' | 'Dout'; heading: string; blurb: string }> = 
 const channelsFor = (type: string): string[] =>
   Array.from({ length: ECU_DIGITAL_CHANNELS }, (_, i) => `${type}${i + 1}`);
 
+function channelSortKey(description: string): number {
+  const match = description.match(/^(Din|Dout)(\d+)$/);
+  if (!match) return Number.MAX_SAFE_INTEGER;
+  return (match[1] === 'Din' ? 0 : 1000) + Number(match[2]);
+}
+
 /**
  * Sanitize a channel id for use in an element id.
  */
@@ -62,14 +69,18 @@ const channelId = (description: string): string => String(description).replace(/
  * BehavioralEventsDisplay — the per-day behavioral-events (DIO) editor, presented as the ECU's
  * hardware channel grid.
  *
- * Every digital channel (Din1–32 inputs, Dout1–32 outputs) is a row; the user types the event NAME
- * for the channels their rig uses and leaves the rest blank. A named channel is a real event
- * (`day.behavioral_events`); a blank channel is unused and is NOT written to the exported YAML.
+ * The default editor shows only the named lines this rig uses plus an add-line control. The full
+ * Din1–32 / Dout1–32 grid stays available as an advanced view. A named channel is a real event
+ * (`day.behavioral_events`); an unnamed channel is unused and is NOT written to the exported YAML.
  * Event names must be unique (a duplicate collides on the Spyglass DIOEvents primary key). A new day
  * carries the previous day's names forward; this editor edits them in place. An imported event whose
  * channel isn't a standard Din/Dout line is preserved in an "Other" group rather than dropped.
  */
 export default function BehavioralEventsDisplay({ dayEvents = [], onDayEventsChange, copyableSources = [] }: BehavioralEventsDisplayProps) {
+  const [newLineType, setNewLineType] = useState<'Din' | 'Dout'>('Din');
+  const [newLineIndex, setNewLineIndex] = useState(1);
+  const [newLineName, setNewLineName] = useState('');
+  const [advancedOpen, setAdvancedOpen] = useState(false);
   // Tolerate corrupt persisted state: a non-array events list (`{}`) must not crash.
   const dayItems = Array.isArray(dayEvents) ? dayEvents : [];
 
@@ -98,6 +109,16 @@ export default function BehavioralEventsDisplay({ dayEvents = [], onDayEventsCha
   const otherEvents = dayItems.filter(
     (e) => !(e && typeof e.description === 'string' && gridDescriptions.has(e.description))
   );
+  const namedStandardEvents = dayItems
+    .filter(
+      (e) =>
+        e &&
+        typeof e.description === 'string' &&
+        gridDescriptions.has(e.description) &&
+        typeof e.name === 'string' &&
+        e.name.trim() !== ''
+    )
+    .sort((a, b) => channelSortKey(a.description as string) - channelSortKey(b.description as string));
 
   /**
    * Set the event name for a channel (blank removes it from the set).
@@ -115,19 +136,39 @@ export default function BehavioralEventsDisplay({ dayEvents = [], onDayEventsCha
     nameChannel(description, `${label}${nextInstanceNumber(label, others)}`);
   }
 
+  function addNamedLine() {
+    const index = Math.max(1, Math.min(ECU_DIGITAL_CHANNELS, Number(newLineIndex) || 1));
+    const name = newLineName.trim();
+    if (!name) return;
+    nameChannel(`${newLineType}${index}`, name);
+    setNewLineName('');
+  }
+
+  function selectNewLineName(label: string) {
+    const index = Math.max(1, Math.min(ECU_DIGITAL_CHANNELS, Number(newLineIndex) || 1));
+    const description = `${newLineType}${index}`;
+    const others = dayItems.filter((e) => e?.description !== description);
+    setNewLineName(`${label}${nextInstanceNumber(label, others)}`);
+  }
+
   /**
    * Render the editable Event-name cell for one channel. `rawName` is the current event name
    * ('' when unused), coerced if persisted corruption left a non-string here. `direction` is the
    * channel's direction (so the field suggests only inputs on Din / outputs on Dout); omit for "Other".
    */
-  function renderNameField(description: string, rawName: unknown, direction?: 'Din' | 'Dout') {
+  function renderNameField(
+    description: string,
+    rawName: unknown,
+    direction?: 'Din' | 'Dout',
+    labelPrefix = 'Event for'
+  ) {
     const name = typeof rawName === 'string' ? rawName : '';
     const isDuplicate = name.trim() !== '' && duplicateNames.has(name);
     const errorId = `dio-dup-name-${channelId(description)}`;
     return (
       <>
         <SuggestionCombobox
-          aria-label={`Event for ${description}`}
+          aria-label={`${labelPrefix} ${description}`}
           value={name}
           onChange={(value) => nameChannel(description, value)}
           onSelect={(label) => selectName(description, label)}
@@ -181,7 +222,9 @@ export default function BehavioralEventsDisplay({ dayEvents = [], onDayEventsCha
                   className={name.trim() !== '' ? 'dio-row-named' : 'dio-row-unused'}
                 >
                   <td data-label="DIO channel">{description}</td>
-                  <td data-label="Event name">{renderNameField(description, rawName, group.type)}</td>
+                  <td data-label="Event name">
+                    {renderNameField(description, rawName, group.type, 'Advanced event for')}
+                  </td>
                 </tr>
               );
             })}
@@ -196,10 +239,9 @@ export default function BehavioralEventsDisplay({ dayEvents = [], onDayEventsCha
       <header className="section-header">
         <h3>Behavioral events — how your hardware maps to the SpikeGadgets ECU</h3>
         <p>
-          Every digital channel on the ECU is listed below. Type the event name for the channels
-          your rig uses on this day; leave the rest blank — blank channels aren&apos;t written to the
-          file. The name you enter becomes the DIO event&apos;s name in the NWB file. A new day
-          carries the previous day&apos;s names forward, so edit only if you rewired the rig.
+          Name only the DIO lines this rig uses on this day. Unnamed ECU channels aren&apos;t written to
+          the file. A new day carries the previous day&apos;s names forward, so edit only if you rewired
+          the rig.
         </p>
       </header>
 
@@ -247,9 +289,86 @@ export default function BehavioralEventsDisplay({ dayEvents = [], onDayEventsCha
         </div>
       )}
 
-      {/* Inputs and Outputs sit side by side: two columns of 32 channels rather than 64 stacked
-          rows. They stack on a narrow viewport (see SCSS). */}
-      <div className="dio-grid-columns">{GROUPS.map(renderGroup)}</div>
+      <section className="dio-named-lines" aria-labelledby="dio-named-lines-heading">
+        <header className="section-header">
+          <h4 id="dio-named-lines-heading">Named DIO lines</h4>
+          <p>Edit the lines this rig actually uses. Leave every other ECU channel unnamed.</p>
+        </header>
+
+        {namedStandardEvents.length === 0 ? (
+          <p className="field-help-text">No named DIO lines yet.</p>
+        ) : (
+          <table className="dio-wiring-table dio-named-lines-table" aria-label="Named DIO lines">
+            <thead>
+              <tr>
+                <th scope="col">DIO channel</th>
+                <th scope="col">Event name</th>
+              </tr>
+            </thead>
+            <tbody>
+              {namedStandardEvents.map((event) => {
+                const description = event.description as string;
+                return (
+                  <tr key={description} className="dio-row-named">
+                    <td data-label="DIO channel">{description}</td>
+                    <td data-label="Event name">
+                      {renderNameField(
+                        description,
+                        event.name,
+                        description.startsWith('Din') ? 'Din' : 'Dout'
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        )}
+
+        <div className="dio-add-line" aria-label="Add DIO line">
+          <label>
+            Type
+            <select value={newLineType} onChange={(e) => setNewLineType(e.target.value as 'Din' | 'Dout')}>
+              <option value="Din">Din</option>
+              <option value="Dout">Dout</option>
+            </select>
+          </label>
+          <label>
+            Index
+            <input
+              type="number"
+              min="1"
+              max={ECU_DIGITAL_CHANNELS}
+              value={newLineIndex}
+              onChange={(e) => setNewLineIndex(Number(e.target.value))}
+            />
+          </label>
+          <label>
+            Event name
+            <SuggestionCombobox
+              aria-label="New DIO event name"
+              value={newLineName}
+              onChange={setNewLineName}
+              onSelect={selectNewLineName}
+              suggestions={behavioralEventsNames(newLineType)}
+              acceptsValue={isStandardEventName}
+              placeholder="e.g. Poke1"
+              warnOffList
+              offListMessage="Not a standard event name. Pick a suggestion for consistency, or keep a custom name."
+            />
+          </label>
+          <button type="button" className="button-secondary" onClick={addNamedLine} disabled={!newLineName.trim()}>
+            Add line
+          </button>
+        </div>
+      </section>
+
+      <details className="dio-advanced-grid" onToggle={(event) => setAdvancedOpen(event.currentTarget.open)}>
+        <summary>Advanced: show all ECU lines</summary>
+        {/* Inputs and Outputs sit side by side: two columns of 32 channels rather than 64 stacked
+            rows. They stack on a narrow viewport (see SCSS). */}
+        {advancedOpen && <div className="dio-grid-columns">{GROUPS.map(renderGroup)}</div>}
+      </details>
 
       {otherEvents.length > 0 && (
         <div className="dio-direction-group">
@@ -288,4 +407,3 @@ export default function BehavioralEventsDisplay({ dayEvents = [], onDayEventsCha
     </div>
   );
 }
-

@@ -1,13 +1,62 @@
 /** AnimalScopeCard styles (CSS Module). Quiet read-only scope-boundary card; tokens only. */
 
 .card {
+  border: 1px solid var(--color-grey-200);
+  border-radius: var(--radius-md);
+  background-color: var(--color-white);
+}
+
+.summary {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  min-height: 2.25rem;
+  padding: 0 var(--spacing-md);
+  cursor: pointer;
+  color: var(--color-grey-700);
+  list-style: none;
+}
+
+.summary::-webkit-details-marker {
+  display: none;
+}
+
+.summary::before {
+  content: '▸';
+  color: var(--color-grey-500);
+  font-size: var(--font-size-xs);
+}
+
+.card[open] .summary::before {
+  content: '▾';
+}
+
+.summaryLabel {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+}
+
+.summaryValue,
+.summaryMeta {
+  min-width: 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-grey-600);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.summaryValue {
+  color: var(--color-grey-900);
+}
+
+.content {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: var(--spacing-md);
   padding: var(--spacing-md);
-  border: 1px solid var(--color-grey-200);
-  border-radius: var(--radius-md);
+  border-top: 1px solid var(--color-grey-200);
   background-color: var(--color-grey-100);
 }
 

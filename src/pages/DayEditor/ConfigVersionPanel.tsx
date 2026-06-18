@@ -3,7 +3,7 @@ import ReconfigWizard from './ReconfigWizard';
 import { getConfigHistory } from '../../state/workspaceSelectors';
 import type { Animal, Day } from '../../state/workspaceTypes';
 
-/** The precomputed configuration-version context the Devices step passes in. */
+/** The precomputed configuration-version context the Recording Setup section passes in. */
 interface ReconfigContext {
   version: number;
   snapshot?: { description?: string; date?: string } | null;
@@ -38,7 +38,7 @@ interface ConfigVersionPanelProps {
 }
 
 /**
- * Configuration-version indicator + reconfiguration entry point for the Devices step. Names the
+ * Configuration-version indicator + reconfiguration entry point for Recording Setup. Names the
  * version this day is pinned to (latest/historical), how many days it applies to, the unpinned-day
  * repair control (pin to an existing version), and the "Hardware changed starting this day…" wizard.
  * Extracted verbatim from `pages/DayEditor/DevicesStep.jsx` (Phase 9c-3) with no behavior change — it
@@ -83,7 +83,7 @@ export default function ConfigVersionPanel({ reconfig, day, animal, ownerKey, on
               </span>
               {/* Repairable: assign an existing configuration version to this day. The
                   data-field-path is on the focusable <select> (not the wrapper) so the export
-                  gate's "Fix in Devices & Failed Channels" repair-focus moves keyboard/SR focus here. */}
+                  gate's "Fix in Recording Setup" repair-focus moves keyboard/SR focus here. */}
               <div className="config-version-pin">
                 <label htmlFor="pin-config-version">Pin this day to:</label>
                 <select

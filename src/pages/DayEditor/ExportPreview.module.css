@@ -75,6 +75,16 @@
   gap: var(--spacing-md, 1rem);
   padding: var(--spacing-sm, 0.5rem) var(--spacing-md, 1rem);
   border-bottom: 1px solid var(--color-grey-100, #f5f5f5);
+  cursor: pointer;
+  list-style: none;
+}
+
+.filebar::-webkit-details-marker {
+  display: none;
+}
+
+.filecard:not([open]) .filebar {
+  border-bottom: 0;
 }
 
 .fname {

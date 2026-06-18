@@ -30,9 +30,8 @@ import { DayEditorProvider } from './DayEditorContext';
 import type { DayEditorBundle } from './DayEditorContext';
 import SaveIndicator from './SaveIndicator';
 import DayTab from './DayTab';
-import DayFilesWeightSection from './DayFilesWeightSection';
-import FailedChannelsTab from './FailedChannelsTab';
-import EpochsTab from './EpochsTab';
+import { RecordingSetupSection, FailedChannelsSection } from './FailedChannelsTab';
+import TasksFilesSection from './TasksFilesSection';
 import DioTab from './DioTab';
 import ExportPreview from './ExportPreview';
 import DayEditorSectionNav from './DayEditorSectionNav';
@@ -46,31 +45,65 @@ interface FocusRequest {
   token: number;
 }
 
-/** The frame's main-content modes: one of the five IA sections. */
+/** The frame's main-content modes: one of the six IA sections. */
 type FrameMode = DayTabKey;
 
-/** The five sections' fixed order (drives the Alt+←/→ cycle). */
-const TAB_ORDER: DayTabKey[] = ['overview', 'files', 'devices', 'epochs', 'finish'];
+/** The six sections' fixed order (drives the Alt+←/→ cycle). */
+const TAB_ORDER: DayTabKey[] = ['daily', 'tasks', 'recording', 'channels', 'dio', 'export'];
 
 /**
  * An underlying step key → the tab that folds it, for routing a repair (which targets the old step
- * keys) to its Phase 15 section. Behavioral/DIO folds into RECORDING, and validation/export fold
- * into the finish panel.
+ * keys) to its focused Day Editor section. Field-specific routing below refines split legacy steps
+ * such as `devices`, which now spans Recording Setup and Failed Channels.
  */
 const TAB_FOR_STEP: Record<string, DayTabKey | null> = {
-  overview: 'overview',
-  devices: 'devices',
-  epochs: 'epochs',
-  behavioral: 'devices',
-  validation: 'finish',
-  export: 'finish',
+  overview: 'daily',
+  devices: 'recording',
+  epochs: 'tasks',
+  behavioral: 'dio',
+  validation: 'export',
+  export: 'export',
 };
 
 /** Presentation-only repair routing for fields that moved to new Phase 15 sections. */
 function sectionForRepair(step: string | null | undefined, focusPath?: string): DayTabKey | null {
-  const path = focusPath ?? '';
-  if (path.startsWith('associated_files')) return 'files';
-  if (path === 'subject.weight' || path === 'session.weight') return 'files';
+  const path = String(focusPath ?? '').replace(/^\//, '').replace(/\//g, '.');
+  if (
+    path.startsWith('associated_files') ||
+    path.startsWith('associated_video_files') ||
+    path.includes('fs_gui') ||
+    path.includes('task') ||
+    path.includes('epoch')
+  ) {
+    return 'tasks';
+  }
+  if (path.includes('behavioral_events') || path.includes('dio_output_name')) return 'dio';
+  if (
+    path.includes('ntrode_electrode_group_channel_map') ||
+    path.includes('bad_channels') ||
+    path.includes('deviceOverrides.bad_channels')
+  ) {
+    return 'channels';
+  }
+  if (
+    path.includes('data_acq') ||
+    path.includes('cameras_used') ||
+    path.includes('technical') ||
+    path.includes('configurationVersion') ||
+    path.includes('deviceOverrides')
+  ) {
+    return 'recording';
+  }
+  if (
+    path === 'subject.weight' ||
+    path === 'session.weight' ||
+    path.includes('session') ||
+    path.includes('experiment_description') ||
+    path.includes('keywords') ||
+    path.includes('dataFolder')
+  ) {
+    return 'daily';
+  }
   return TAB_FOR_STEP[step ?? ''] ?? null;
 }
 
@@ -94,15 +127,15 @@ function toScopeSummary(summary: ReturnType<typeof buildAnimalViewModel>['summar
 }
 
 /**
- * DayEditorFrame — the day editor's chrome (replaces the former DayEditorStepper's 6-section nav).
+ * DayEditorFrame — the day editor's chrome and six-section navigation.
  *
  * The header carries the Workspace › Animal › Day breadcrumb, the date title, the day chips
  * (configuration version · opto · "carried from <date>" · the lifecycle StatusPill), the autosave
  * indicator, the read-only {@link AnimalScopeCard} (the animal-static scope boundary), and the
  * issue-driven {@link ReadinessBar} (fed the authoritative `validateDay` issues — never a local
- * check). The body is a grouped vertical rail — SESSION / RECORDING / FINISH — with free navigation
+ * check). The body is a grouped vertical rail — DAY / RECORDING / FINISH — with free navigation
  * and Alt+←/→; the panels read their data through {@link DayEditorProvider} (NOT props), so the
- * provider must wrap them. A header **Export** action opens the Validation & Export section (the
+ * provider must wrap them. A header **Export** action opens the Fix & Export section (the
  * issue-gated download/copy + the YAML preview + the batch "export all days").
  *
  * Behavior reused from the former stepper: owner resolution, the merge, the field/subject writers,
@@ -115,7 +148,7 @@ function toScopeSummary(summary: ReturnType<typeof buildAnimalViewModel>['summar
 export default function DayEditorFrame() {
   const { model, actions, selectors, persistence } = useStoreContext();
   const dayId = useDayIdFromUrl();
-  const [mode, setMode] = useState<FrameMode>('overview');
+  const [mode, setMode] = useState<FrameMode>('daily');
 
   const day = model.workspace?.days?.[dayId as string];
   const { ownerKey, animal } = resolveDayOwner(model.workspace, dayId);
@@ -285,7 +318,7 @@ export default function DayEditorFrame() {
     if (tab) goToTab(tab, focusPathForSection(field ?? undefined));
   }, [dayId, day, animal, repairQuery, goToTab]);
 
-  // Alt+←/→ steps through the five sections and CLAMPS at the ends (it does not wrap), matching the
+  // Alt+←/→ steps through the six sections and CLAMPS at the ends (it does not wrap), matching the
   // former stepper's section pager.
   const stepTab = useCallback((direction: 'next' | 'prev') => {
     setMode((cur) => {
@@ -402,8 +435,8 @@ export default function DayEditorFrame() {
             <button
               type="button"
               className="button-secondary"
-              onClick={() => setMode('finish')}
-              aria-pressed={mode === 'finish'}
+              onClick={() => setMode('export')}
+              aria-pressed={mode === 'export'}
             >
               Export
             </button>
@@ -426,11 +459,13 @@ export default function DayEditorFrame() {
           />
         </div>
 
-        {scopeSummary && (
+        {scopeSummary && mode !== 'export' && (
           <AnimalScopeCard summary={scopeSummary} editHref={`#/animal/${ownerKey}/days`} />
         )}
 
-        <ReadinessBar issues={readinessIssues} onFix={handleFix} canFix={canFixIssue} />
+        {mode !== 'export' && (
+          <ReadinessBar issues={readinessIssues} onFix={handleFix} canFix={canFixIssue} />
+        )}
       </div>
 
       <div className="day-editor-body">
@@ -444,7 +479,7 @@ export default function DayEditorFrame() {
           tabIndex={-1}
         >
           <DayEditorProvider value={dayEditorContextValue}>
-            {mode === 'overview' && (
+            {mode === 'daily' && (
               <DayTab
                 {...dayEditorContextValue}
                 // DayTab's onRepair is typed `(issue: unknown)`; it forwards the RawCorruptionBanner's
@@ -454,26 +489,33 @@ export default function DayEditorFrame() {
                 overviewFields={vm.overview.fields}
               />
             )}
-            {mode === 'files' && (
-              <DayFilesWeightSection
+            {mode === 'tasks' && (
+              <TasksFilesSection {...dayEditorContextValue} focusRequest={focusRequest} />
+            )}
+            {mode === 'recording' && (
+              <RecordingSetupSection
                 {...dayEditorContextValue}
-                overviewFields={vm.overview.fields}
+                badChannelMarks={vm.badChannels.marks}
+                focusRequest={focusRequest}
               />
             )}
-            {mode === 'epochs' && <EpochsTab {...dayEditorContextValue} focusRequest={focusRequest} />}
-            {mode === 'devices' && (
-              <>
-                <FailedChannelsTab {...dayEditorContextValue} badChannelMarks={vm.badChannels.marks} />
-                <section className="day-editor-section recording-dio-section">
-                  <DioTab
-                    {...dayEditorContextValue}
-                    copyableDioSources={dioCopyableSources}
-                    carriedFrom={chips.carriedFrom}
-                  />
-                </section>
-              </>
+            {mode === 'channels' && (
+              <FailedChannelsSection
+                {...dayEditorContextValue}
+                badChannelMarks={vm.badChannels.marks}
+                focusRequest={focusRequest}
+              />
             )}
-            {mode === 'finish' && (
+            {mode === 'dio' && (
+              <section className="day-editor-section recording-dio-section">
+                <DioTab
+                  {...dayEditorContextValue}
+                  copyableDioSources={dioCopyableSources}
+                  carriedFrom={chips.carriedFrom}
+                />
+              </section>
+            )}
+            {mode === 'export' && (
               <ExportPreview
                 {...dayEditorContextValue}
                 workspace={model.workspace}

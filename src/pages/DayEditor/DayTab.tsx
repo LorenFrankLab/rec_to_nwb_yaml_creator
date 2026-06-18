@@ -8,7 +8,6 @@ import { RAW_DAY_ARRAY_FIELDS } from '../../validation/rawShape';
 import {
   getDaySession,
   getDayKeywords,
-  getDayFsGuiYamls,
   getAnimalSubject,
   getAnimalExperimenters,
   getExperimenterNames,
@@ -35,19 +34,20 @@ interface DayTabProps extends DayEditorBundle {
 const OVERVIEW_STEP_COLLECTIONS = RAW_DAY_ARRAY_FIELDS.filter((f) => f.repairStep === 'overview');
 
 /**
- * DayTab — the day editor's Overview section (folded from the former OverviewStep).
+ * DayTab — the day editor's Daily Setup section (folded from the former Overview + files/weight
+ * surfaces).
  *
- * Day-specific overview metadata: the derived session id, session/experiment descriptions,
- * keywords, an opto-protocol summary for opto animals, and a read-only inherited animal profile
- * summary (subject identity + experimenters).
+ * Day-specific setup metadata: the off-export data folder, recording-day weight,
+ * session/experiment descriptions, and keywords. The derived session id and inherited animal facts
+ * are still available, but collapsed into context so the first screen stays focused on what changed
+ * for this recording day.
  *
  * The Workspace › Animal › Day breadcrumb now lives in the frame header (DayEditorFrame), not here,
  * so a single breadcrumb is shared across all sections.
  *
  * UX Philosophy:
- * - Show what matters: animal ID + date for context (in the frame header)
- * - Edit what's unique: session-specific metadata
- * - Show inherited subject/team facts read-only, with animal-wide edits kept on AnimalView
+ * - Show what matters: the fields a user most often changes for this recording day
+ * - Keep inherited subject/team facts read-only, with animal-wide edits kept on AnimalView
  */
 export default function DayTab(props: DayTabProps) {
   // The shared day bundle comes from DayEditorContext in the Day Editor (an isolated render
@@ -68,9 +68,6 @@ export default function DayTab(props: DayTabProps) {
   const experimenters = getAnimalExperimenters(animal);
   const experimenterNames = getExperimenterNames(animal);
   const keywords = getDayKeywords(day);
-  // This day's FSGui opto-protocol files (read-only summary in the opto card; editing is per-epoch
-  // in the Epochs tab). Shape-safe: returns [] for a missing/corrupt collection.
-  const dayFsGui = getDayFsGuiYamls(day);
   const dayDateKey = String(day.date ?? '').replace(/-/g, '');
 
   // Phase 3-e: the Overview field view-model, keyed by field path. The DayEditorFrame passes
@@ -158,19 +155,63 @@ export default function DayTab(props: DayTabProps) {
         {errorCount > 0 && `${errorCount} validation ${errorCount === 1 ? 'error' : 'errors'}`}
       </div>
 
-      {/* Overview metadata (day-specific editable fields) */}
+      {/* Daily setup metadata (day-specific editable fields) */}
       <section className="day-editor-section">
-        <h2>Overview</h2>
+        <h2>Daily Setup</h2>
 
         <div className="form-grid">
-          <ReadOnlyField
-            label="Session ID"
-            value={overviewField('session.session_id')?.value ?? session.session_id}
-            helpText={
-              overviewField('session.session_id')?.helpText
-              ?? `Auto-generated from animal ID and date: ${ownerKey}_${dayDateKey}`
-            }
-          />
+          <div className="form-field">
+            <label htmlFor="day-data-folder">Data folder</label>
+            <input
+              id="day-data-folder"
+              type="text"
+              name="dataFolder"
+              data-field-path="dataFolder"
+              key={`day-data-folder-${day.dataFolder ?? ''}`}
+              defaultValue={day.dataFolder ?? ''}
+              placeholder="e.g. /stelmo/denisse/Laurent/20260514/"
+              aria-describedby="day-data-folder-help"
+              onBlur={(e) => onFieldUpdate('dataFolder', e.target.value)}
+            />
+            <span id="day-data-folder-help" className="field-help-text">
+              Where this day&apos;s files live. Epoch file names derive inside it and the value is
+              carried forward to the next day.
+            </span>
+          </div>
+
+          <div className="form-field">
+            <label htmlFor="session-weight">Recording-day weight (grams)</label>
+            <input
+              id="session-weight"
+              type="number"
+              min="0"
+              step="any"
+              name="session.weight"
+              data-field-path="session.weight"
+              key={`session-weight-${session.weight ?? ''}`}
+              defaultValue={session.weight ?? ''}
+              aria-describedby="session-weight-help"
+              placeholder={
+                overviewField('session.weight')?.fallbackValue
+                ?? (typeof subject.weight === 'number'
+                  ? `${subject.weight} (animal baseline)`
+                  : 'e.g. 450')
+              }
+              onBlur={(e) => {
+                const value = e.target.valueAsNumber;
+                onFieldUpdate('session.weight', Number.isFinite(value) ? value : undefined);
+              }}
+            />
+            <span id="session-weight-help" className="field-help-text">
+              {overviewField('session.weight')?.helpText
+                ?? (session.weight !== undefined
+                  ? 'Weight recorded for this session — the value exported for this day.'
+                  : typeof subject.weight === 'number'
+                    ? `No weight set for this day — the animal baseline (${subject.weight} g) will be `
+                      + `exported as a fallback. Enter this session's weight to set it for this day.`
+                    : 'Enter the weight recorded for this session (exported for this day).')}
+            </span>
+          </div>
 
           <div className="form-field">
             <label htmlFor="session-description" className="required">
@@ -233,46 +274,28 @@ export default function DayTab(props: DayTabProps) {
         </div>
       </section>
 
-      {/* Optogenetics — this day's protocol. Shown only for opto animals (the animal owns the opto
-          HARDWARE; this card frames the day's protocol). Read-only summary: the per-epoch laser
-          power (mW) / pulse length (ms) and the FSGui protocol assignment are authored per epoch in
-          the Epochs tab (and reach the export through `fs_gui_yamls`), so this card surfaces the
-          day's current FSGui protocol files and points there — it never re-edits the exported data. */}
-      {animal?.optogenetics != null && (
-        <section className="day-editor-section day-opto-protocol">
-          <h2>Optogenetics — this day&apos;s protocol</h2>
-          {dayFsGui.length > 0 ? (
-            <ul className="day-opto-protocol-files">
-              {dayFsGui.map((fsgui, i) => (
-                <li key={`${fsgui?.name ?? 'fsgui'}-${i}`}>
-                  <span className="day-opto-protocol-name">{fsgui?.name || '(unnamed protocol)'}</span>
-                  {Array.isArray(fsgui?.epochs) && fsgui.epochs.length > 0 && (
-                    <span className="day-opto-protocol-epoch">
-                      {' '}· epoch{fsgui.epochs.length > 1 ? 's' : ''} {fsgui.epochs.join(', ')}
-                    </span>
-                  )}
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="field-help-text">No optogenetics protocol is assigned to this day yet.</p>
-          )}
-          <p className="field-help-text">
-            Per-epoch laser power (mW), pulse length (ms), and the FSGui protocol file are set per
-            epoch in the <strong>Epochs</strong> tab.
-          </p>
-        </section>
-      )}
+      <details className="day-editor-section inherited-metadata-section">
+        <summary className="inherited-metadata-toggle">
+          <span className="toggle-icon" aria-hidden="true">▶</span>
+          Session identity and animal context
+          <span className="inherited-metadata-badge">read-only</span>
+        </summary>
+        <div className="inherited-metadata-content">
+          <div className="inherited-notice">
+            Subject facts and experimenter metadata are animal-wide. They are shown here for review
+            and edited from the animal profile.
+            <a href={`#/animal/${ownerKey}/days?field=subject.species`}>Edit animal setup</a>
+          </div>
 
-      <section className="day-editor-section inherited-metadata-section">
-        <h2>Subject + team inherited from the animal</h2>
-        <div className="inherited-notice">
-          Subject facts and experimenter metadata are animal-wide. They are shown here for review
-          and edited from the animal profile.
-          <a href={`#/animal/${ownerKey}/days?field=subject.species`}>Edit animal setup</a>
-        </div>
-
-        <div className="form-grid read-only-summary-grid">
+          <div className="form-grid read-only-summary-grid">
+          <ReadOnlyField
+            label="Session ID"
+            value={overviewField('session.session_id')?.value ?? session.session_id}
+            helpText={
+              overviewField('session.session_id')?.helpText
+              ?? `Auto-generated from animal ID and date: ${ownerKey}_${dayDateKey}`
+            }
+          />
           <ReadOnlyField
             label="Subject ID"
             value={overviewField('subject.subject_id')?.value ?? subject.subject_id}
@@ -309,8 +332,9 @@ export default function DayTab(props: DayTabProps) {
             label="Institution"
             value={overviewField('experimenters.institution')?.value ?? experimenters.institution}
           />
+          </div>
         </div>
-      </section>
+      </details>
     </div>
   );
 }

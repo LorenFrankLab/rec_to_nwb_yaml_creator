@@ -25,7 +25,7 @@ interface DioTabProps extends DayEditorBundle {
 }
 
 // The day-owned collections whose corrupt-shape reset control belongs on this subsection (one source
-// of truth: the field's repairStep). So the corruption badges Devices & Failed Channels AND can be
+// of truth: the field's repairStep). So the corruption badges DIO Wiring AND can be
 // reset here — the badge is never a dead-end in a different section.
 const BEHAVIORAL_STEP_COLLECTIONS = RAW_DAY_ARRAY_FIELDS.filter((f) => f.repairStep === 'behavioral');
 
@@ -45,7 +45,7 @@ function parseChannel(description: unknown): { dir: 'Din' | 'Dout' | 'Other'; in
 }
 
 /**
- * DioTab — the day editor's DIO / behavioral-events subsection inside Devices & Failed Channels.
+ * DioTab — the day editor's DIO Wiring section.
  *
  * Behavioral (DIO) events carry forward day to day and rarely change, so the subsection opens on a
  * read-only **carry-forward summary** (the named Din/Dout channels in two columns, "carried from

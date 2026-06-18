@@ -87,8 +87,8 @@ import type {
   WorkflowSeverity,
 } from './types';
 
-/** The five day-editor section keys, in display order. */
-export type DayTabKey = 'overview' | 'files' | 'devices' | 'epochs' | 'finish';
+/** The six user-facing day-editor section keys, in display order. */
+export type DayTabKey = 'daily' | 'tasks' | 'recording' | 'channels' | 'dio' | 'export';
 
 /**
  * One section of the day-editor frame. Its `status` rolls up from the underlying step(s) the
@@ -97,7 +97,7 @@ export type DayTabKey = 'overview' | 'files' | 'devices' | 'epochs' | 'finish';
 export interface DayTabViewModel {
   /** Section key (the frame's local nav state). */
   key: DayTabKey;
-  /** Section label (e.g. 'Devices & Failed Channels'). */
+  /** Section label (e.g. 'Recording Setup'). */
   label: string;
   /** Rolled-up status of the step this tab folds. */
   status: StepStatus;
@@ -168,10 +168,10 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 // ──────────────────────────────────────────────────────────────────────────────────────────
-// Shared structure: the underlying step order + labels. The frame renders a five-section grouped
+// Shared structure: the underlying step order + labels. The frame renders a six-section grouped
 // rail over these six steps, but the step statuses still drive the export gate, repair routing, and
 // the section-status rollup — so this order is retained as the validation/gate substrate.
-// Behavioral is still its own step; Phase 15 only folds its surface into RECORDING.
+// Behavioral is still its own step; the focused Day Editor maps it to the DIO Wiring section.
 // ──────────────────────────────────────────────────────────────────────────────────────────
 
 /** The underlying step order + labels (the validation/export-gate substrate the tabs roll up from). */
@@ -185,7 +185,7 @@ const STEP_ORDER: ReadonlyArray<{ key: string; label: string }> = [
 ];
 
 /** The default active section the editor opens on. */
-const DEFAULT_STEP = 'overview';
+const DEFAULT_STEP = 'daily';
 
 /** The accessible status label per step status — rendered verbatim by DayEditorSectionNav (it reads `step.statusLabel`). */
 const STEP_STATUS_LABEL: Record<StepStatus, string> = {
@@ -195,22 +195,32 @@ const STEP_STATUS_LABEL: Record<StepStatus, string> = {
   pending: 'Not started',
 };
 
-/** The five section rows rendered by the grouped vertical rail. */
+/** The six section rows rendered by the grouped vertical rail. */
 const TAB_ORDER: ReadonlyArray<{ key: DayTabKey; label: string; steps: string[] }> = [
-  { key: 'overview', label: 'Overview', steps: ['overview'] },
-  { key: 'files', label: 'Files & Weight', steps: ['overview'] },
-  { key: 'devices', label: 'Devices & Failed Channels', steps: ['devices', 'behavioral'] },
-  { key: 'epochs', label: 'Tasks & Epochs', steps: ['epochs'] },
-  { key: 'finish', label: 'Validation & Export', steps: ['validation', 'export'] },
+  { key: 'daily', label: 'Daily Setup', steps: ['overview'] },
+  { key: 'tasks', label: 'Tasks & Files', steps: ['epochs'] },
+  { key: 'recording', label: 'Recording Setup', steps: ['devices'] },
+  { key: 'channels', label: 'Failed Channels', steps: ['devices'] },
+  { key: 'dio', label: 'DIO Wiring', steps: ['behavioral'] },
+  { key: 'export', label: 'Fix & Export', steps: ['validation', 'export'] },
 ];
 
 /** The valid section keys (the frame's nav allow-list), derived from the section order. */
 const TAB_KEYS: ReadonlySet<string> = new Set(TAB_ORDER.map((t) => t.key));
 
-/** Underlying step key → the section that folds it (for resolving repair routing to the rail). */
-const TAB_FOR_STEP: Record<string, DayTabKey> = Object.fromEntries(
-  TAB_ORDER.flatMap((t) => t.steps.map((step): [string, DayTabKey] => [step, t.key]))
-);
+/**
+ * Underlying step key → the default user-facing section that folds it. Some legacy step ids now
+ * split across several sections (`devices` → Recording Setup / Failed Channels), so exact field
+ * routing lives in DayEditorFrame; this map is only the no-field fallback.
+ */
+const TAB_FOR_STEP: Record<string, DayTabKey> = {
+  overview: 'daily',
+  devices: 'recording',
+  epochs: 'tasks',
+  behavioral: 'dio',
+  validation: 'export',
+  export: 'export',
+};
 
 /**
  * Resolve the active section from the `active` argument, which may be a section key (the frame's nav
@@ -218,7 +228,13 @@ const TAB_FOR_STEP: Record<string, DayTabKey> = Object.fromEntries(
  */
 function resolveActiveTab(active: string): DayTabKey {
   if (TAB_KEYS.has(active)) return active as DayTabKey;
-  return TAB_FOR_STEP[active] ?? 'overview';
+  return TAB_FOR_STEP[active] ?? 'daily';
+}
+
+function resolveActiveUnderlyingStep(active: string): string {
+  if (STEP_ORDER.some((step) => step.key === active)) return active;
+  const tab = resolveActiveTab(active);
+  return TAB_ORDER.find((entry) => entry.key === tab)?.steps[0] ?? 'overview';
 }
 
 /**
@@ -239,15 +255,108 @@ function hasErrorIssue(issues: RepairableIssue[], matcher: (issue: RepairableIss
   return issues.some((issue) => issue.severity === 'error' && matcher(issue));
 }
 
-function isFilesWeightIssue(issue: RepairableIssue): boolean {
-  const path = issuePath(issue);
+function sectionIssuePath(issue: RepairableIssue): string {
+  return issuePath(issue).replace(/^\//, '').replace(/\//g, '.');
+}
+
+const CHANNEL_ISSUE_CODES = new Set([
+  'bad_channel_out_of_range',
+  'multishank_bad_channels_ignored',
+  'bad_channel_unfailed_without_ack',
+  'bad_channels_on_override_row_ignored',
+  'stale_bad_channel_override',
+  'malformed_bad_channel_override',
+]);
+
+const DIO_ISSUE_CODES = new Set([
+  'duplicate_behavioral_event_name',
+  'duplicate_behavioral_event_description',
+  'dangling_dio_output',
+]);
+
+function isDailySetupIssue(issue: RepairableIssue): boolean {
+  const path = sectionIssuePath(issue);
   return (
-    path.includes('associated_files') ||
+    path.includes('session') ||
+    path.includes('experiment_description') ||
+    path.includes('keywords') ||
     path === 'subject.weight' ||
     path === 'session.weight' ||
+    issue.field === 'session' ||
+    issue.code === 'malformed_day_session'
+  );
+}
+
+function isTasksFilesIssue(issue: RepairableIssue): boolean {
+  const path = sectionIssuePath(issue);
+  return (
+    path.includes('associated_files') ||
+    path.includes('associated_video_files') ||
+    path.includes('task') ||
+    path.includes('epoch') ||
+    path.includes('fs_gui') ||
     issue.code === 'orphaned_file' ||
+    issue.code === 'orphaned_video' ||
+    issue.code === 'missing_camera' ||
+    issue.code === 'dangling_camera_ref' ||
+    issue.code === 'epoch_video_undeclared' ||
+    issue.code === 'duplicate_associated_file_name' ||
+    issue.code === 'duplicate_associated_file_path' ||
+    issue.code === 'associated_file_path_shape' ||
+    issue.code === 'statescript_description_keyword' ||
+    issue.code === 'orphaned_fs_gui_epoch' ||
+    issue.code === 'dangling_task_type_ref' ||
+    issue.code === 'task_camera_not_used' ||
+    issue.code === 'task_definition_reconciled' ||
+    issue.code === 'divergent_task_identity' ||
     (issue.code === 'malformed_day_collection' && issue.field === 'associated_files')
   );
+}
+
+function isChannelIssue(issue: RepairableIssue): boolean {
+  const path = sectionIssuePath(issue);
+  return (
+    CHANNEL_ISSUE_CODES.has(issue.code ?? '') ||
+    path.includes('ntrode_electrode_group_channel_map') ||
+    path.includes('bad_channels') ||
+    path.includes('deviceOverrides.bad_channels')
+  );
+}
+
+function isDioIssue(issue: RepairableIssue): boolean {
+  const path = sectionIssuePath(issue);
+  return (
+    DIO_ISSUE_CODES.has(issue.code ?? '') ||
+    path.includes('behavioral_events') ||
+    path.includes('dio_output_name')
+  );
+}
+
+function isRecordingSetupIssue(issue: RepairableIssue): boolean {
+  if (isDailySetupIssue(issue) || isTasksFilesIssue(issue) || isChannelIssue(issue) || isDioIssue(issue)) {
+    return false;
+  }
+  const path = sectionIssuePath(issue);
+  return (
+    path.includes('data_acq') ||
+    path.includes('cameras_used') ||
+    path.includes('technical') ||
+    path.includes('configurationVersion') ||
+    path.includes('deviceOverrides') ||
+    issue.code === 'dangling_data_acq_ref' ||
+    issue.code === 'unpinned_configuration' ||
+    issue.code === 'malformed_device_override' ||
+    issue.code === 'shadowed_geometry_override'
+  );
+}
+
+function splitSectionStatus(
+  fallback: StepStatus,
+  issues: RepairableIssue[],
+  matcher: (issue: RepairableIssue) => boolean
+): StepStatus {
+  if (hasErrorIssue(issues, matcher)) return 'error';
+  return fallback === 'error' ? 'valid' : fallback;
 }
 
 function buildSectionItems(
@@ -257,22 +366,35 @@ function buildSectionItems(
   issues: RepairableIssue[] = []
 ): StepViewModel[] {
   const activeTab = resolveActiveTab(activeStep);
-  const filesStatus: StepStatus = hasErrorIssue(issues, isFilesWeightIssue) ? 'error' : 'valid';
   const specs: Array<{ key: DayTabKey; label: string; status: StepStatus; issueCount?: number }> = [
-    { key: 'overview', label: 'Overview', status: stepStatus.overview ?? 'incomplete' },
-    { key: 'files', label: 'Files & Weight', status: filesStatus },
     {
-      key: 'devices',
-      label: 'Devices & Failed Channels',
-      status: rollupStepStatus([
-        stepStatus.devices ?? 'incomplete',
-        stepStatus.behavioral ?? 'incomplete',
-      ]),
+      key: 'daily',
+      label: 'Daily Setup',
+      status: splitSectionStatus(stepStatus.overview ?? 'incomplete', issues, isDailySetupIssue),
     },
-    { key: 'epochs', label: 'Tasks & Epochs', status: stepStatus.epochs ?? 'incomplete' },
     {
-      key: 'finish',
-      label: 'Validation & Export',
+      key: 'tasks',
+      label: 'Tasks & Files',
+      status: splitSectionStatus(stepStatus.epochs ?? 'incomplete', issues, isTasksFilesIssue),
+    },
+    {
+      key: 'recording',
+      label: 'Recording Setup',
+      status: splitSectionStatus(stepStatus.devices ?? 'incomplete', issues, isRecordingSetupIssue),
+    },
+    {
+      key: 'channels',
+      label: 'Failed Channels',
+      status: splitSectionStatus('valid', issues, isChannelIssue),
+    },
+    {
+      key: 'dio',
+      label: 'DIO Wiring',
+      status: splitSectionStatus(stepStatus.behavioral ?? 'incomplete', issues, isDioIssue),
+    },
+    {
+      key: 'export',
+      label: 'Fix & Export',
       status: rollupStepStatus([
         stepStatus.validation ?? 'incomplete',
         stepStatus.export ?? 'incomplete',
@@ -291,7 +413,7 @@ function buildSectionItems(
 }
 
 /**
- * Build the flat five-section model, each section's status rolled up from the step(s) it folds.
+ * Build the flat six-section model, each section's status rolled up from the step(s) it folds.
  */
 function buildTabs(
   stepStatus: Record<string, StepStatus>,
@@ -317,9 +439,16 @@ function buildSectionGroups(
   const sections = buildSectionItems(stepStatus, toFixCount, activeStep, issues);
   const byKey = Object.fromEntries(sections.map((section) => [section.key, section]));
   return [
-    { label: 'SESSION', steps: [byKey.overview as StepViewModel, byKey.files as StepViewModel] },
-    { label: 'RECORDING', steps: [byKey.devices as StepViewModel, byKey.epochs as StepViewModel] },
-    { label: 'FINISH', steps: [byKey.finish as StepViewModel] },
+    { label: 'DAY', steps: [byKey.daily as StepViewModel, byKey.tasks as StepViewModel] },
+    {
+      label: 'RECORDING',
+      steps: [
+        byKey.recording as StepViewModel,
+        byKey.channels as StepViewModel,
+        byKey.dio as StepViewModel,
+      ],
+    },
+    { label: 'FINISH', steps: [byKey.export as StepViewModel] },
   ];
 }
 
@@ -373,6 +502,7 @@ function buildSteps(
   toFixCount: number,
   activeStep: string
 ): StepViewModel[] {
+  const activeUnderlyingStep = resolveActiveUnderlyingStep(activeStep);
   return STEP_ORDER.map(({ key, label }) => {
     const status = stepStatus[key] ?? 'incomplete';
     const step: StepViewModel = {
@@ -380,7 +510,7 @@ function buildSteps(
       label,
       status,
       statusLabel: STEP_STATUS_LABEL[status],
-      active: key === activeStep,
+      active: key === activeUnderlyingStep,
     };
     // The Validation step shows its blocking-issue count (the same validator the export block uses),
     // and only when there is at least one — mirroring the nav's "N to fix" affordance.

@@ -35,17 +35,55 @@ interface IssueGroup {
 function sectionForIssue(issue: RepairableIssue): { key: string; label: string } {
   const target = repairTargetForIssue(issue);
   if (target.surface === 'animal') return { key: 'animal', label: 'Animal setup' };
+  const path = String(issue.focusPath || issue.path || issue.instancePath || '').replace(/^\//, '').replace(/\//g, '.');
+  if (
+    path.startsWith('associated_files') ||
+    path.startsWith('associated_video_files') ||
+    path.includes('fs_gui') ||
+    path.includes('task') ||
+    path.includes('epoch')
+  ) {
+    return { key: 'tasks', label: 'Tasks & Files' };
+  }
+  if (path.includes('behavioral_events') || path.includes('dio_output_name')) {
+    return { key: 'dio', label: 'DIO Wiring' };
+  }
+  if (
+    path.includes('ntrode_electrode_group_channel_map') ||
+    path.includes('bad_channels') ||
+    path.includes('deviceOverrides.bad_channels')
+  ) {
+    return { key: 'channels', label: 'Failed Channels' };
+  }
+  if (
+    path.includes('data_acq') ||
+    path.includes('cameras_used') ||
+    path.includes('technical') ||
+    path.includes('configurationVersion') ||
+    path.includes('deviceOverrides')
+  ) {
+    return { key: 'recording', label: 'Recording Setup' };
+  }
+  if (
+    path.includes('session') ||
+    path.includes('subject.weight') ||
+    path.includes('experiment_description') ||
+    path.includes('keywords') ||
+    path.includes('dataFolder')
+  ) {
+    return { key: 'daily', label: 'Daily Setup' };
+  }
   switch (target.step) {
     case 'epochs':
-      return { key: 'epochs', label: 'Epochs' };
+      return { key: 'tasks', label: 'Tasks & Files' };
     case 'devices':
-      return { key: 'channels', label: 'Failed channels' };
+      return { key: 'recording', label: 'Recording Setup' };
     case 'behavioral':
-      return { key: 'dio', label: 'DIO' };
+      return { key: 'dio', label: 'DIO Wiring' };
     case 'overview':
     case 'validation':
     default:
-      return { key: 'day', label: 'Day' };
+      return { key: 'daily', label: 'Daily Setup' };
   }
 }
 

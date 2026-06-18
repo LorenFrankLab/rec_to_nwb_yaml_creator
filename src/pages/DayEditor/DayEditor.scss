@@ -163,6 +163,16 @@
   color: var(--color-grey-600);
 }
 
+.day-editor-body .section-nav-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  flex: none;
+  font-size: 0.7rem;
+  color: var(--color-grey-600);
+  white-space: nowrap;
+}
+
 .day-editor-body .section-nav-status-icon {
   flex: none;
   font-size: 1rem;
@@ -516,6 +526,67 @@
   color: var(--color-grey-900);
 }
 
+.recording-setup-step {
+  max-width: 860px;
+}
+
+.recording-primary-grid {
+  display: grid;
+  gap: var(--spacing-lg);
+}
+
+.secondary-disclosure {
+  padding: 0;
+  overflow: hidden;
+}
+
+.secondary-disclosure-summary {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  min-height: 3rem;
+  padding: 0 var(--spacing-lg);
+  cursor: pointer;
+  list-style: none;
+  color: var(--color-grey-800);
+  font-weight: 600;
+}
+
+.secondary-disclosure-summary::-webkit-details-marker {
+  display: none;
+}
+
+.secondary-disclosure-summary::before {
+  content: '▸';
+  color: var(--color-grey-500);
+  font-size: var(--font-size-sm);
+}
+
+.secondary-disclosure[open] .secondary-disclosure-summary::before {
+  content: '▾';
+}
+
+.secondary-disclosure-badge {
+  margin-left: auto;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--color-grey-100);
+  color: var(--color-grey-600);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.secondary-disclosure-content {
+  padding: 0 var(--spacing-lg) var(--spacing-lg);
+  border-top: 1px solid var(--color-grey-200);
+}
+
+.day-technical-section-embedded {
+  padding-top: var(--spacing-lg);
+}
+
 /* Cameras-used checklist (per-day camera selection) */
 .cameras-used-section {
   margin-top: var(--spacing-lg);
@@ -551,6 +622,47 @@
 /* Electrode Groups Section */
 .electrode-groups-section {
   margin-top: var(--spacing-lg);
+}
+
+.failed-channels-overview {
+  display: flex;
+  align-items: baseline;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm) var(--spacing-md);
+  margin-bottom: var(--spacing-md);
+  border: 1px solid var(--color-grey-200);
+  border-radius: 4px;
+  background: var(--color-grey-100);
+  color: var(--color-grey-700);
+  font-size: var(--font-size-sm);
+}
+
+.failed-channels-overview strong {
+  color: var(--color-grey-900);
+}
+
+.clean-electrode-groups {
+  border: 1px solid var(--color-grey-200);
+  border-radius: 4px;
+  background: var(--color-white);
+}
+
+.clean-electrode-groups-summary {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-md);
+  cursor: pointer;
+  list-style: none;
+  font-weight: 500;
+}
+
+.clean-electrode-groups-summary::-webkit-details-marker {
+  display: none;
+}
+
+.clean-electrode-groups-content {
+  padding: 0 var(--spacing-md) var(--spacing-md);
 }
 
 .electrode-group-details {

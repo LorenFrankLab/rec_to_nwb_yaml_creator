@@ -22,12 +22,12 @@ import type { Day } from '../../state/workspaceTypes';
 import './DayEditor.scss';
 
 /**
- * FailedChannelsTab — the day editor's Devices & Failed Channels section.
+ * FailedChannelsTab — shared renderer behind the Recording Setup and Failed Channels sections.
  *
- * Displays inherited electrode group configuration from animal level and allows editing of
- * day-specific bad channels — the only device configuration that changes day-to-day as hardware
- * channels fail over time. Also hosts the per-day recording-system picker and cameras-used checklist
- * (day-session setup that travels with this tab).
+ * Displays per-day recording setup, inherited electrode group context, and day-specific bad-channel
+ * marking. The redesigned Day Editor uses the focused `RecordingSetupSection` and
+ * `FailedChannelsSection` exports; the default combined surface is retained for isolated legacy
+ * renders.
  *
  * The view sections are focused siblings with no behavior change —
  * `CamerasUsedSection` (the 8C cameras-used checklist), `OverrideCleanupSection` (the
@@ -46,6 +46,10 @@ interface FailedChannelsTabProps extends DayEditorBundle {
    * same state from the monotonicity domain.
    */
   badChannelMarks?: BadChannelMarkViewModel[];
+  /** Focused surface to render; default keeps the pre-redesign combined Devices surface. */
+  surface?: 'full' | 'recording' | 'channels';
+  /** Repair-focus request; used to open collapsed recording setup subsections. */
+  focusRequest?: { fieldPath?: string; token?: number } | null;
 }
 
 export default function FailedChannelsTab(props: FailedChannelsTabProps) {
@@ -58,7 +62,7 @@ export default function FailedChannelsTab(props: FailedChannelsTabProps) {
     animalDays = undefined,
     actions = undefined,
   } = useDayEditorContext(props);
-  const { badChannelMarks } = props;
+  const { badChannelMarks, surface = 'full', focusRequest = null } = props;
   // The store OWNER KEY (resolved by DayEditorFrame). Used for animal-editor links and the
   // reconfiguration write so a stale/missing `animal.id` record field can't misroute them; falls
   // back to `animal.id` for isolated renders that don't pass it.
@@ -99,6 +103,14 @@ export default function FailedChannelsTab(props: FailedChannelsTabProps) {
   const camerasUsedSection = (
     <CamerasUsedSection animal={animal} day={day} mergedDay={mergedDay} onFieldUpdate={onFieldUpdate} />
   );
+
+  const focusPath = String(focusRequest?.fieldPath ?? '');
+  const technical = day.technical ?? {};
+  const hasTechnicalOverrides =
+    !!technical.default_header_file_path ||
+    !!technical.units?.analog ||
+    !!technical.units?.behavioral_events;
+  const technicalOpen = hasTechnicalOverrides || focusPath.startsWith('technical.');
 
   // Configuration-version legibility (only when wired with store actions + the
   // animal's days, i.e. inside the real Day Editor — not in isolated unit renders).
@@ -291,10 +303,10 @@ export default function FailedChannelsTab(props: FailedChannelsTabProps) {
   // Config-error state: resolveDayConfig threw (the animal's device configuration is
   // missing or corrupt). Fail closed with a single, truthful, Animal-Editor-pointing
   // repair instead of crashing the step.
-  if (configError) {
+  if (configError && surface === 'channels') {
     return (
-      <div className="devices-step">
-        <h2>Devices &amp; Failed Channels</h2>
+      <div className="devices-step failed-channels-step">
+        <h2>Failed Channels</h2>
         <div className="error-state-inline" role="alert">
           <p>
             This animal&apos;s device configuration is missing or corrupt, so devices
@@ -308,21 +320,142 @@ export default function FailedChannelsTab(props: FailedChannelsTabProps) {
     );
   }
 
+  const recordingSetup = (includeOverrideCleanup = true) => (
+    <>
+      <section className="day-editor-section recording-primary-section">
+        <h2>Recording Setup</h2>
+        <div className="recording-primary-grid">
+          {recordingSystemPicker}
+          {camerasUsedSection}
+        </div>
+      </section>
+
+      <details className="day-editor-section secondary-disclosure" open={technicalOpen}>
+        <summary className="secondary-disclosure-summary">
+          <span>Day-only technical overrides</span>
+          <span className="secondary-disclosure-badge">
+            {hasTechnicalOverrides ? 'set' : 'optional'}
+          </span>
+        </summary>
+        <div className="secondary-disclosure-content">
+          <DayTechnicalSection
+            technical={day.technical}
+            onFieldUpdate={onFieldUpdate}
+            recordingSystemDefaults={animal?.technicalDefaults}
+            animalKey={ownerKey}
+            embedded
+          />
+        </div>
+      </details>
+
+      <details
+        className="day-editor-section secondary-disclosure"
+        open={!!configError || day.configurationVersion == null || focusPath.includes('configurationVersion')}
+      >
+        <summary className="secondary-disclosure-summary">
+          <span>Hardware configuration</span>
+          <span className="secondary-disclosure-badge">
+            {configError ? 'needs setup' : `v${effectiveConfig.configurationVersion ?? '—'}`}
+          </span>
+        </summary>
+        <div className="secondary-disclosure-content">
+          {configError ? (
+            <div className="error-state-inline" role="alert">
+              <p>
+                This animal&apos;s device configuration is missing or corrupt, so configuration version
+                details can&apos;t be shown for this day.
+              </p>
+              <a href={`#/animal/${ownerKey}/electrode-groups?field=electrode_groups`} className="button-primary">
+                Configure devices in Animal Setup
+              </a>
+            </div>
+          ) : (
+            <>
+              <div className="inherited-notice">
+                This day uses animal electrode configuration v{effectiveConfig.configurationVersion ?? '—'}.
+                <a href={`#/animal/${ownerKey}/electrode-groups?field=electrode_groups`}>
+                  Edit shared animal electrode setup
+                </a>
+              </div>
+
+              {reconfig && (
+                <ConfigVersionPanel
+                  reconfig={reconfig}
+                  day={day}
+                  animal={animal}
+                  ownerKey={ownerKey}
+                  onFieldUpdate={onFieldUpdate}
+                  actions={actions as unknown as ReconfigActions}
+                />
+              )}
+            </>
+          )}
+        </div>
+      </details>
+
+      {includeOverrideCleanup && overrideCleanupSection}
+    </>
+  );
+
+  const failedChannels = (includeOverrideCleanup = true) => (
+    <>
+      {includeOverrideCleanup && overrideCleanupSection}
+
+      <p className="field-help-text devices-failed-channels-intro">
+        Mark failed channels for this recording day. These marks apply to this day only, not to
+        all recordings on this configuration.
+      </p>
+
+      <ElectrodeGroupsAccordion
+        electrodeGroups={electrodeGroups}
+        ntrodeChannelMap={ntrodeChannelMap}
+        badChannels={badChannels}
+        ownerKey={ownerKey}
+        onBadChannelsUpdate={handleBadChannelsUpdate}
+        onBadChannelsBatchUpdate={handleBadChannelsBatchUpdate}
+        priorBadByNtrode={priorBadByNtrode}
+        onAcknowledgeRemoval={handleAcknowledgeRemoval}
+        errors={errors}
+        warnings={warnings}
+      />
+    </>
+  );
+
+  if (surface === 'recording') {
+    return (
+      <div className="devices-step recording-setup-step">
+        {recordingSetup()}
+      </div>
+    );
+  }
+
   // Empty state: No electrode groups. The override cleanup section still renders so a
   // malformed-override repair is reachable even with no groups configured.
   if (electrodeGroups.length === 0) {
+    if (surface === 'channels') {
+      return (
+        <div className="devices-step failed-channels-step">
+          <h2>Failed Channels</h2>
+          {overrideCleanupSection}
+          <div className="empty-state">
+            <p>No electrodes are set up for {ownerKey} yet.</p>
+            <p className="empty-state-hint">
+              Failed-channel editing appears here after the animal has electrode groups.
+            </p>
+            <p className="empty-state-hint">
+              <a href={`#/animal/${ownerKey}/electrode-groups?field=electrode_groups`}>
+                Edit animal setup
+              </a>
+            </p>
+          </div>
+        </div>
+      );
+    }
+
     return (
-      <div className="devices-step">
+        <div className="devices-step">
         <h2>Devices &amp; Failed Channels</h2>
-        {recordingSystemPicker}
-        {camerasUsedSection}
-        <DayTechnicalSection
-          technical={day.technical}
-          onFieldUpdate={onFieldUpdate}
-          recordingSystemDefaults={animal?.technicalDefaults}
-          animalKey={ownerKey}
-        />
-        {overrideCleanupSection}
+        {recordingSetup()}
         <div className="empty-state">
           <p>No electrodes are set up for {ownerKey} yet.</p>
           <p className="empty-state-hint">
@@ -339,64 +472,32 @@ export default function FailedChannelsTab(props: FailedChannelsTabProps) {
     );
   }
 
+  if (surface === 'channels') {
+    return (
+      <div className="devices-step failed-channels-step">
+        <h2>Failed Channels</h2>
+        {failedChannels()}
+      </div>
+    );
+  }
+
   return (
     <div className="devices-step">
       <h2>Devices &amp; Failed Channels</h2>
 
-      {recordingSystemPicker}
+      {recordingSetup()}
 
-      {camerasUsedSection}
-
-      <DayTechnicalSection
-        technical={day.technical}
-        onFieldUpdate={onFieldUpdate}
-        recordingSystemDefaults={animal?.technicalDefaults}
-        animalKey={ownerKey}
-      />
-
-      {/* This day's relationship to shared animal setup: it USES an animal configuration
-          version; probe geometry is edited in the shared animal setup, not here. */}
-      <div className="inherited-notice">
-        This day uses animal electrode configuration v{effectiveConfig.configurationVersion ?? '—'}.
-        <a href={`#/animal/${ownerKey}/electrode-groups?field=electrode_groups`}>Edit shared animal electrode setup</a>
-      </div>
-
-      {/* Configuration-version indicator + reconfiguration entry point. */}
-      {reconfig && (
-        <ConfigVersionPanel
-          reconfig={reconfig}
-          day={day}
-          animal={animal}
-          ownerKey={ownerKey}
-          onFieldUpdate={onFieldUpdate}
-          // `actions` is the loose bundle store-action bag; the reconfig panel needs the
-          // `createConfigurationSnapshotAndApplyForward` action it always carries here.
-          actions={actions as unknown as ReconfigActions}
-        />
-      )}
-
-      {/* Malformed / stale / shadowing override repair controls (see overrideCleanupSection). */}
-      {overrideCleanupSection}
-
-      {/* Failed channels are day-specific: marks here apply to THIS recording day only. */}
-      <p className="field-help-text devices-failed-channels-intro">
-        Mark failed channels for this recording day. These marks apply to this day only, not to
-        all recordings on this configuration.
-      </p>
-
-      {/* Electrode groups (accordion) */}
-      <ElectrodeGroupsAccordion
-        electrodeGroups={electrodeGroups}
-        ntrodeChannelMap={ntrodeChannelMap}
-        badChannels={badChannels}
-        ownerKey={ownerKey}
-        onBadChannelsUpdate={handleBadChannelsUpdate}
-        onBadChannelsBatchUpdate={handleBadChannelsBatchUpdate}
-        priorBadByNtrode={priorBadByNtrode}
-        onAcknowledgeRemoval={handleAcknowledgeRemoval}
-        errors={errors}
-        warnings={warnings}
-      />
+      {failedChannels(false)}
     </div>
   );
+}
+
+/** Focused Recording Setup section for the redesigned Day Editor. */
+export function RecordingSetupSection(props: Omit<FailedChannelsTabProps, 'surface'>) {
+  return <FailedChannelsTab {...props} surface="recording" />;
+}
+
+/** Focused Failed Channels section for the redesigned Day Editor. */
+export function FailedChannelsSection(props: Omit<FailedChannelsTabProps, 'surface'>) {
+  return <FailedChannelsTab {...props} surface="channels" />;
 }

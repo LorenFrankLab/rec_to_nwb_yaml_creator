@@ -26,6 +26,14 @@ interface ElectrodeGroupsAccordionProps {
   warnings: Record<string, string>;
 }
 
+interface GroupRow {
+  group: ElectrodeGroup;
+  ntrodes: NtrodeMap[];
+  statusBadge: { text: string; ariaLabel: string; className: string };
+  status: { status: string; badChannelCount: number; allBad: boolean };
+  hasIssue: boolean;
+}
+
 /**
  * The per-electrode-group accordion of failed-channel editors. One collapsible `<details>` per
  * electrode group, with a health status badge, the editable {@link BadChannelsEditor} (prioritized
@@ -88,7 +96,7 @@ export default function ElectrodeGroupsAccordion({
 
     if (allBad) {
       return {
-        text: '⚠ All channels failed - Group inactive',
+        text: 'All channels failed - Group inactive',
         ariaLabel: 'Status: All channels failed - Group inactive',
         className: 'status-error',
       };
@@ -96,24 +104,38 @@ export default function ElectrodeGroupsAccordion({
 
     if (badChannelCount > 0) {
       return {
-        text: `⚠ ${badChannelCount} failed ${badChannelCount === 1 ? 'channel' : 'channels'}`,
+        text: `${badChannelCount} failed ${badChannelCount === 1 ? 'channel' : 'channels'}`,
         ariaLabel: `Status: ${badChannelCount} failed ${badChannelCount === 1 ? 'channel' : 'channels'}`,
         className: 'status-warning',
       };
     }
 
     return {
-      text: '✓ All channels OK',
+      text: 'All channels OK',
       ariaLabel: 'Status: All channels OK',
       className: 'status-clean',
     };
   }, [getGroupStatus]);
 
-  return (
-    <section className="electrode-groups-section" aria-label="Electrode Groups">
-      {electrodeGroups.map((group) => {
-        const ntrodes = getNtrodesForGroup(group.id);
-        const statusBadge = getStatusBadge(group.id);
+  const rows: GroupRow[] = electrodeGroups.map((group) => {
+    const ntrodes = getNtrodesForGroup(group.id);
+    const statusBadge = getStatusBadge(group.id);
+    const status = getGroupStatus(group.id);
+    const hasValidationIssue = ntrodes.some((ntrode) => errors[String(ntrode.ntrode_id)] || warnings[String(ntrode.ntrode_id)]);
+    return {
+      group,
+      ntrodes,
+      statusBadge,
+      status,
+      hasIssue: ntrodes.length === 0 || status.badChannelCount > 0 || status.allBad || hasValidationIssue,
+    };
+  });
+  const priorityRows = rows.filter((row) => row.hasIssue);
+  const cleanRows = rows.filter((row) => !row.hasIssue);
+  const totalBadChannels = rows.reduce((sum, row) => sum + row.status.badChannelCount, 0);
+  const activeGroupCount = rows.filter((row) => row.status.badChannelCount > 0).length;
+
+  const renderRow = ({ group, ntrodes, statusBadge }: GroupRow) => {
         const ntrodeCount = ntrodes.length;
 
         // Check if this group has missing ntrode maps (data corruption)
@@ -155,11 +177,7 @@ export default function ElectrodeGroupsAccordion({
                 role="status"
                 aria-label={statusBadge.ariaLabel}
               >
-                <span aria-hidden="true">
-                  {statusBadge.text.split(' ')[0]}
-                </span>
-                {' '}
-                {statusBadge.text.split(' ').slice(1).join(' ')}
+                {statusBadge.text}
               </span>
             </summary>
 
@@ -197,8 +215,43 @@ export default function ElectrodeGroupsAccordion({
             </div>
           </details>
         );
-      })}
+  };
+
+  return (
+    <section className="electrode-groups-section" aria-label="Electrode Groups">
+      <div className="failed-channels-overview" role="status">
+        <strong>
+          {totalBadChannels === 0
+            ? 'No failed channels marked'
+            : `${totalBadChannels} failed ${totalBadChannels === 1 ? 'channel' : 'channels'}`}
+        </strong>
+        <span>
+          {activeGroupCount === 0
+            ? 'All electrode groups are currently clean.'
+            : `${activeGroupCount} ${activeGroupCount === 1 ? 'group has' : 'groups have'} failed channels.`}
+        </span>
+      </div>
+
+      {priorityRows.map(renderRow)}
+
+      {cleanRows.length > 0 && (
+        <details className="clean-electrode-groups">
+          <summary className="clean-electrode-groups-summary">
+            <span className="toggle-icon" aria-hidden="true">▶</span>
+            Other groups
+            <span
+              className="status-badge status-clean"
+              role="status"
+              aria-label={`Status: ${cleanRows.length} clean ${cleanRows.length === 1 ? 'group' : 'groups'}`}
+            >
+              {cleanRows.length} clean {cleanRows.length === 1 ? 'group' : 'groups'}
+            </span>
+          </summary>
+          <div className="clean-electrode-groups-content">
+            {cleanRows.map(renderRow)}
+          </div>
+        </details>
+      )}
     </section>
   );
 }
-
