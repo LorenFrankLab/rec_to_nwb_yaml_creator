@@ -130,8 +130,11 @@ describe('EpochsTab — grid render + collapsed state cells', () => {
     expect(screen.getByLabelText(/epoch status summary/i)).toHaveTextContent(/1 custom filename/i);
     const edit = screen.getByRole('button', { name: /Edit epoch 1 details/i });
     expect(edit.tagName).toBe('BUTTON');
+    expect(edit).toHaveTextContent(/edit/i);
+    expect(edit).not.toHaveTextContent(/tag/i);
     expect(edit).toHaveAttribute('aria-expanded', 'false');
     expect(edit).toHaveAttribute('aria-controls', 'epoch-1-details');
+    expect(screen.getAllByText('Sleep')).not.toHaveLength(0);
     expect(screen.getByRole('button', { name: /Edit epoch 2 details/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Edit epoch 3 details/i })).toBeInTheDocument();
   });

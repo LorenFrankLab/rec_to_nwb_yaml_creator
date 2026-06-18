@@ -169,37 +169,74 @@
 }
 
 .editChevron {
-  font-size: var(--font-size-sm, 0.875rem);
-  color: var(--color-grey-500, #777);
-}
-
-.taskCellButton {
-  background: none;
-  border: 0;
-  padding: 0;
-  margin: 0;
   display: inline-flex;
   align-items: center;
-  flex-wrap: wrap;
-  gap: 6px;
+  justify-content: center;
+  width: 1em;
+  font-size: var(--font-size-sm, 0.875rem);
+  color: currentColor;
+}
+
+.taskDisclosureButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-width: 68px;
+  min-height: 28px;
+  padding: 3px 8px;
+  border: 1px solid var(--color-grey-300, #ccc);
+  border-radius: var(--radius-sm, 4px);
+  background: var(--color-white, #fff);
+  color: var(--color-primary, #2b6cb0);
   font: inherit;
-  color: inherit;
-  text-align: left;
+  font-size: var(--font-size-xs, 0.75rem);
+  font-weight: 700;
+  line-height: 1;
   cursor: pointer;
 }
 
-.taskCellButton:hover {
-  color: var(--color-primary, #2b6cb0);
+.taskDisclosureButton:hover,
+.taskDisclosureButton:focus-visible {
+  border-color: var(--color-primary, #2b6cb0);
+  background: var(--color-primary-light, #e3f2fd);
+}
+
+.taskDisclosureButton[aria-expanded="true"] {
+  border-color: var(--color-primary, #2b6cb0);
+  background: var(--color-primary-light, #e3f2fd);
 }
 
 .taskCell {
-  min-width: 160px;
+  min-width: 220px;
 }
 
 .taskCellStack {
   display: grid;
   gap: 6px;
   align-items: start;
+}
+
+.taskDisclosureRow {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 8px;
+  align-items: start;
+}
+
+.taskIdentity {
+  display: grid;
+  min-width: 0;
+  gap: 4px;
+}
+
+.taskName {
+  display: block;
+  min-width: 0;
+  color: var(--color-grey-900, #222);
+  font-weight: 600;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
 }
 
 .taskMeta {

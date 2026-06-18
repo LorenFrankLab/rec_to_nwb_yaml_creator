@@ -989,28 +989,33 @@ function EpochRowBlock(p: EpochRowProps) {
         <td className={styles.numCell}>{row.epoch}</td>
         <td className={styles.taskCell}>
           <div className={styles.taskCellStack}>
-            {/* The task cell is the row's single edit/disclosure affordance. The trailing menu is
-                reserved for structural row actions such as move/delete. */}
-            <button
-              type="button"
-              className={styles.taskCellButton}
-              aria-expanded={isOpen}
-              aria-controls={drillInId}
-              aria-label={`${isOpen ? 'Hide' : 'Edit'} epoch ${row.epoch} details`}
-              onClick={p.onToggle}
-            >
-              <span className={styles.editChevron} aria-hidden="true">{isOpen ? '▾' : '▸'}</span>
-              <span>{row.taskName || <em>(no task)</em>}</span>
-            </button>
-            <span className={styles.taskMeta}>
-              <span className={styles.tag}>tag {row.tag}</span>
-              <EpochStatusPill status={row.status} />
-              {row.duplicate && (
-                <span className={styles.duplicateBadge} title="This epoch is claimed by more than one task">
-                  duplicate
+            <div className={styles.taskDisclosureRow}>
+              {/* The task disclosure is visually separate from row metadata; the trailing menu is
+                  reserved for structural row actions such as move/delete. */}
+              <button
+                type="button"
+                className={styles.taskDisclosureButton}
+                aria-expanded={isOpen}
+                aria-controls={drillInId}
+                aria-label={`${isOpen ? 'Hide' : 'Edit'} epoch ${row.epoch} details`}
+                onClick={p.onToggle}
+              >
+                <span className={styles.editChevron} aria-hidden="true">{isOpen ? '▾' : '▸'}</span>
+                <span>{isOpen ? 'Close' : 'Edit'}</span>
+              </button>
+              <div className={styles.taskIdentity}>
+                <span className={styles.taskName}>{row.taskName || <em>(no task)</em>}</span>
+                <span className={styles.taskMeta}>
+                  <span className={styles.tag}>tag {row.tag}</span>
+                  <EpochStatusPill status={row.status} />
+                  {row.duplicate && (
+                    <span className={styles.duplicateBadge} title="This epoch is claimed by more than one task">
+                      duplicate
+                    </span>
+                  )}
                 </span>
-              )}
-            </span>
+              </div>
+            </div>
           </div>
         </td>
         <td>
