@@ -11,9 +11,12 @@ if the executor's checkout differs.
 
 ## 1. `.trodesconf` XML structure (trodes)
 
-Sample files: `trodes/Resources/SampleWorkspaces/*.trodesconf` (e.g.
-`128_Tetrodes_ECU_Sensors.trodesconf`, `128_Tetrodes_NoECU_Sensors_PTPcamera.trodesconf`) — copy 2–3 as
-Phase 1 fixtures.
+Sample files (Phase 1 fixtures): `trodes/Resources/SampleWorkspaces/*.trodesconf`
+(`128_Tetrodes_ECU_Sensors.trodesconf`, `128_Tetrodes_NoECU_Sensors_PTPcamera.trodesconf`,
+`BlankWorkspace.trodesconf` — the last has `Controller_Din*` with **no `input` attr**) **and**
+`trodes_to_nwb/src/trodes_to_nwb/tests/test_data/reconfig_probeDevice.trodesconf` (`ECU_Din*`/`ECU_Dout*`
++ a real probe layout). Together they cover the `Din*`/`ECU_*`/`MCU_*`/`Controller_*` id + direction
+variants the parser and `reconcileDioId` must handle.
 
 Relevant elements (verified against `128_Tetrodes_ECU_Sensors.trodesconf`):
 

@@ -27,8 +27,12 @@ is its sole producer.
 - **ntrodes:** select every `<SpikeNTrode>` (in document order); for each, read `id` (Number),
   `refNTrodeID`/`refChan` (Number, optional — `refNTrodeID <= 0` ⇒ omit), and its nested
   `<SpikeChannel>` elements → `channelCount = count`, `hwChans = [Number(hwChan)…]` in order.
-- **dio:** select `<Channel dataType="digital">`; for each → `{ id, direction: input==="1" ? 'in' :
-  'out' }`. Preserve board-native ids verbatim (`Din1`, `MCU_Din3`, `Dout2`). De-duplicate by `id`.
+- **dio:** select `<Channel dataType="digital">`; resolve `direction` by the stricter rule in
+  [shared-contracts §1](shared-contracts.md#1-parsedtrodesconfig) — explicit `input="1"`⇒`in` /
+  `output="1"`⇒`out`; else id token (`…Din…`⇒`in`, `…Dout…`⇒`out`); else `'unknown'`. **Do NOT treat a
+  missing `input` as output** — `BlankWorkspace.trodesconf` has `Controller_Din*` with no `input` attr.
+  Preserve board-native ids **verbatim** (`Din1`, `MCU_Din3`, `Controller_Din1`, `Dout2`). De-duplicate
+  by `id`.
 - **header metadata:** read `numChannels` + `samplingRate` from `<HardwareConfiguration>` (or
   `<GlobalOptions>` in older configs — check both) as Numbers; absent → omit. (`numChannels` powers the
   Phase 2 integrity check; `samplingRate` is provenance only.)
@@ -48,14 +52,14 @@ is its sole producer.
   [Phase 2](phase-2-plan.md).
 - `device_type`/geometry inference, the count↔device_type check, the diff — Phase 2.
 - Reading the config out of a `.rec` binary — out of scope ([overview Non-Goals](overview.md#non-goals)).
-- Any UI / file upload — [Phase 4](phase-4-ui.md).
+- Any UI / file upload — [Phase 5](phase-5-ui.md).
 
 ## Validation slice
 
 | Test | Asserts |
 | --- | --- |
 | `trodesconfParse` — real tetrode config | `128_Tetrodes_ECU_Sensors.trodesconf` → 32 ntrodes, each `channelCount === 4`, `hwChans` length 4; `ntrodes[0].id === 1`. |
-| `trodesconfParse` — DIO inventory | the ECU config yields `Din*`/`Dout*` entries with correct `direction`; the MCU sample yields `MCU_Din*`; de-duped. |
+| `trodesconfParse` — DIO inventory | ECU config → `Din*`/`Dout*` with correct `direction`; MCU sample → `MCU_Din*`; `BlankWorkspace`'s `Controller_Din*` (no `input` attr) → `direction:'in'` via the id token (NOT `'out'`); ids kept verbatim; de-duped. |
 | `trodesconfParse` — refs | an ntrode with `refNTrodeID="1" refChan="1"` parses both; `refNTrodeID="0"` ⇒ omitted. |
 | `trodesconfParse` — malformed/empty | `''`, `'<not-xml'`, and `'<Configuration/>'` return `{ok:false}` / `{ok:true, ntrodes:[], dio:[]}` respectively; never throws. |
 | `trodesconfParse` — multi-shank counts | a probe config with N-channel ntrodes reports the real per-ntrode counts (not assumed 4). |
@@ -63,9 +67,12 @@ is its sole producer.
 
 ## Fixtures
 
-Copy 2–3 real `.trodesconf` files from `trodes/Resources/SampleWorkspaces/` into the test fixtures dir
-(tetrode + ECU, an MCU-only, and a non-tetrode/probe config if available). Add a hand-written malformed
-snippet inline. No real-data slice beyond the committed configs (they are the real data).
+Copy real `.trodesconf` files into the test fixtures dir, spanning the board/id variants so the DIO
+direction + id rules are exercised: from `trodes/Resources/SampleWorkspaces/` a tetrode+ECU config, an
+MCU-only config, `BlankWorkspace.trodesconf` (`Controller_Din*`, **no `input` attr**), and a
+multi-shank/probe config; **and** from `trodes_to_nwb/src/trodes_to_nwb/tests/test_data/` (e.g.
+`reconfig_probeDevice.trodesconf`) for `ECU_Din*`/`ECU_Dout*` + a real probe layout. Add a hand-written
+malformed snippet inline. The committed configs are the real data (no separate real-data slice).
 
 ## Review
 
