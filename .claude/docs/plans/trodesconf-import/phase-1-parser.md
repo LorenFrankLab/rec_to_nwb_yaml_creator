@@ -27,12 +27,13 @@ is its sole producer.
 - **ntrodes:** select every `<SpikeNTrode>` (in document order); for each, read `id` (Number),
   `refNTrodeID`/`refChan` (Number, optional — `refNTrodeID <= 0` ⇒ omit), and its nested
   `<SpikeChannel>` elements → `channelCount = count`, `hwChans = [Number(hwChan)…]` in order.
-- **dio:** select `<Channel dataType="digital">`; resolve `direction` by the stricter rule in
-  [shared-contracts §1](shared-contracts.md#1-parsedtrodesconfig) — explicit `input="1"`⇒`in` /
-  `output="1"`⇒`out`; else id token (`…Din…`⇒`in`, `…Dout…`⇒`out`); else `'unknown'`. **Do NOT treat a
-  missing `input` as output** — `BlankWorkspace.trodesconf` has `Controller_Din*` with no `input` attr.
-  Preserve board-native ids **verbatim** (`Din1`, `MCU_Din3`, `Controller_Din1`, `Dout2`). De-duplicate
-  by `id`.
+- **dio:** select `<Channel dataType="digital">`; resolve `direction` **exactly per**
+  [shared-contracts §1](shared-contracts.md#1-parsedtrodesconfig): if an `input` attr is present,
+  `input="1"`⇒`in`, **`input="0"` (or any non-`1`)⇒`out`** (matching `convert_dios.py`); **else** (no
+  `input` attr — e.g. `BlankWorkspace.trodesconf`'s `Controller_Din*`) by id token **after stripping a
+  leading `ECU_`/`MCU_`/`Controller_` prefix**: `…Din…`⇒`in`, `…Dout…`⇒`out`; else `'unknown'`. **Never
+  treat a missing `input` as output.** Preserve board-native ids **verbatim** (`Din1`, `ECU_Din1`,
+  `ECU_Dout1`, `MCU_Din3`, `Controller_Din1`, `Dout2`). De-duplicate by `id`.
 - **header metadata:** read `numChannels` + `samplingRate` from `<HardwareConfiguration>` (or
   `<GlobalOptions>` in older configs — check both) as Numbers; absent → omit. (`numChannels` powers the
   Phase 2 integrity check; `samplingRate` is provenance only.)
@@ -80,5 +81,6 @@ Dispatch `code-reviewer` against the diff. Confirm:
 - Parser is total (the malformed/empty/sparse tests prove no throw escapes).
 - Output matches [`ParsedTrodesConfig`](shared-contracts.md#1-parsedtrodesconfig) exactly; `hwChans`/refs
   are parsed but documented as reference-only.
-- Board variants (`Din*` vs `MCU_Din*`) both handled.
+- Direction matches §1 (`input="0"`⇒out; missing `input`⇒id-token); all id variants handled (`Din*`,
+  `ECU_Din*`/`ECU_Dout*`, `MCU_Din*`, `Controller_Din*`), kept verbatim.
 - No app-type coupling; no plan/phase references in code or test names.

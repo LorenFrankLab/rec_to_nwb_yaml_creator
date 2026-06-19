@@ -135,6 +135,7 @@ export interface TrodesconfImportPlan {
     message: string;
   }>;
   isFirstConfig: boolean;
+  sourceName: string;             // carried from ParsedTrodesConfig.sourceName — used for the snapshot description + trodesImport.sourceName
 }
 ```
 - `ntrodeShells` carry **`ntrode_id` verbatim** ([§3](#3-invariant)) with `map: {}`. Expected channel
