@@ -215,9 +215,10 @@ This application is the **entry point** for the neuroscience data conversion pip
   `0..3`, not `4..7`), and multi-shank probes partition `0..N-1` across shanks — they are **not** global
   hardware channels. `bad_channels` are probe-local indices; out-of-range is silently ignored downstream.
 - **DANDI rejects free-text `species`** — it must be a Latin binomial (`Rattus norvegicus`) or NCBI Taxon URI.
-- **Researching trodes_to_nwb / spyglass:** the local `~/Documents/GitHub/{trodes_to_nwb,spyglass}` checkouts
-  are **not readable from the agent sandbox** (EPERM) — read them from GitHub (`raw.githubusercontent.com` /
-  the contents API) instead.
+- **Researching trodes / trodes_to_nwb / spyglass:** the local `~/Documents/GitHub/{trodes,trodes_to_nwb,spyglass}`
+  checkouts **are readable from the agent sandbox** — read them directly (verified 2026-06-19). (A prior
+  note claiming EPERM was stale.) Fall back to GitHub (`raw.githubusercontent.com` / the contents API)
+  only if a given clone is missing.
 
 ### YAML File Consumption Workflow
 
