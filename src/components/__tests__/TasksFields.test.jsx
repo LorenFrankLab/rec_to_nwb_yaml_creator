@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { screen } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
 import { renderWithProviders } from '../../__tests__/helpers/test-utils';
 import TasksFields from '../TasksFields';
 
@@ -55,6 +55,10 @@ describe('TasksFields', () => {
     expect(screen.getByDisplayValue('linear track')).toBeInTheDocument();
     expect(screen.getByDisplayValue('Running back and forth')).toBeInTheDocument();
     expect(screen.getByDisplayValue('track box')).toBeInTheDocument();
+    // The camera_id multi-select must reflect the stored selection.
+    const cameraGroup = screen.getByRole('group', { name: /Camera Id/i });
+    expect(within(cameraGroup).getByLabelText('1')).toBeChecked();
+    expect(within(cameraGroup).getByLabelText('2')).not.toBeChecked();
   });
 
   it('renders multiple task items', () => {

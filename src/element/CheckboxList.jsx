@@ -40,13 +40,13 @@ const CheckboxListComponent = (prop) => {
 
   const onChecked = (e) => {
     const { target } = e;
-    const value = parseInt(target.value, 10);
+    const parsedValue = parseInt(target.value, 10);
     // const values = Array.from(
     //   target.parentElement.querySelectorAll('input[type="checkbox"]:checked')
     // ).map((a) => parseInt(a.value, 10));
 
     const { nameValue, keyValue, index } = metaData;
-    updateFormArray(nameValue, value, keyValue, index, e.target.checked);
+    updateFormArray(nameValue, parsedValue, keyValue, index, e.target.checked);
   };
 
   return (

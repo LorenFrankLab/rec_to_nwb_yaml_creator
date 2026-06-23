@@ -76,7 +76,9 @@ const SelectInputPairElement = (prop) => {
   // Seed the select/input from the value actually stored in form state.
   // `value` is the canonical prop; some call sites still pass `defaultValue`,
   // so accept either. (Without this the field ignored the stored value and
-  // always rendered the "Din/1" default.)
+  // always rendered the "Din/1" default.) Note: unlike CheckboxList/RadioList,
+  // the inner select/input below remain uncontrolled (defaultValue=), so this
+  // only seeds them at mount; a later value change is reflected on remount.
   const seedValue = value !== undefined ? value : defaultValue;
 
   const selectRef = useRef(null);

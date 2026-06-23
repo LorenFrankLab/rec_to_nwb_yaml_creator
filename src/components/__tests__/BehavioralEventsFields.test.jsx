@@ -38,9 +38,11 @@ describe('BehavioralEventsFields', () => {
       ],
     };
     renderWithProviders(<BehavioralEventsFields />, { initialState: state });
-    // Note: SelectInputPairElement uses defaultValue (uncontrolled), not value
-    // So we only test DataListElement which does use value
     expect(screen.getByDisplayValue('light1')).toBeInTheDocument();
+    // The description SelectInputPairElement seeds its select/input from the
+    // stored value ('Din01' -> type 'Din', index 1).
+    expect(screen.getByDisplayValue('Din')).toBeInTheDocument();
+    expect(screen.getByRole('spinbutton')).toHaveValue(1);
   });
 
   it('renders multiple behavioral event items', () => {
@@ -57,7 +59,8 @@ describe('BehavioralEventsFields', () => {
       ],
     };
     renderWithProviders(<BehavioralEventsFields />, { initialState: state });
-    // Test names only (description uses uncontrolled SelectInputPairElement)
+    // Names assert per-item; the description field is covered by the
+    // single-item test above (two SelectInputPairs would be ambiguous here).
     expect(screen.getByDisplayValue('light1')).toBeInTheDocument();
     expect(screen.getByDisplayValue('light2')).toBeInTheDocument();
   });
