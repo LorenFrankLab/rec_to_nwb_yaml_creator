@@ -72,6 +72,21 @@ describe('SelectInputPairElement', () => {
     });
   });
 
+  describe('Controlled value (reflects stored state)', () => {
+    it('seeds the select and input from the value prop', () => {
+      render(
+        <SelectInputPairElement
+          {...defaultProps}
+          defaultValue=""
+          value="Dout5"
+        />
+      );
+
+      expect(screen.getByRole('combobox')).toHaveValue('Dout');
+      expect(screen.getByRole('spinbutton')).toHaveValue(5);
+    });
+  });
+
   describe('Default Value Splitting', () => {
     it('splits defaultValue "Din1" into text="Din" and number=1', () => {
       render(<SelectInputPairElement {...defaultProps} defaultValue="Din1" />);
