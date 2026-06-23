@@ -168,3 +168,38 @@ jobs:
           name: build
           path: build/
           retention-days: 7
+
+  deploy:
+    name: Deploy to GitHub Pages
+    runs-on: ubuntu-latest
+    # Gate on a green build (which itself `needs: test`, so lint + tests passed)
+    # AND the e2e suite, so the live app is never republished from a red commit.
+    # `integration` (schema-sync vs trodes_to_nwb main) is intentionally NOT a
+    # gate: it can fail because the upstream repo changed, which must not block
+    # shipping an unrelated fix.
+    needs: [build, e2e]
+    # Only on a real push/merge to main — never on PRs (which would publish
+    # unmerged code). PRs to main still run test/build/e2e, just no deploy.
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    permissions:
+      contents: write  # required to push the built site to the gh-pages branch
+    concurrency:
+      group: deploy-gh-pages
+      cancel-in-progress: false  # let an in-flight deploy finish; queue the next
+    steps:
+      - name: Download production build
+        # Reuse the exact bundle the `build` job compiled and uploaded, so what
+        # ships is byte-identical to what passed CI (no second, unverified build).
+        uses: actions/download-artifact@v4
+        with:
+          name: build
+          path: build
+
+      - name: Publish to gh-pages branch
+        # GitHub Pages serves this repo from the gh-pages branch ("Deploy from a
+        # branch"), matching the manual `npm run deploy` (gh-pages -d build). This
+        # pushes the downloaded build/ there; Pages then redeploys automatically.
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./build
