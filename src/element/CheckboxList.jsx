@@ -22,6 +22,7 @@ const CheckboxListComponent = (prop) => {
     dataItems,
     objectKind,
     placeholder,
+    value,
     defaultValue,
     updateFormArray,
     metaData,
@@ -29,6 +30,13 @@ const CheckboxListComponent = (prop) => {
   } = prop;
 
   const id = useStableId(providedId, 'checkbox-list');
+
+  // Controlled selection: render the values actually stored in form state so
+  // the checkboxes always mirror it. Otherwise the DOM and the exported data
+  // can silently diverge (boxes show one thing, the YAML exports another).
+  // `value` is the canonical prop; some call sites still pass the selected
+  // array as `defaultValue`, so accept either.
+  const selectedValues = value !== undefined ? value : defaultValue;
 
   const onChecked = (e) => {
     const { target } = e;
@@ -61,8 +69,8 @@ const CheckboxListComponent = (prop) => {
                     id={`${id}-${dataItemIndex}`}
                     name={`${name}-${id}`}
                     value={dataItem}
-                    defaultChecked={defaultValue.includes(stringToInteger(dataItem))}
-                    onClick={onChecked}
+                    checked={selectedValues.includes(stringToInteger(dataItem))}
+                    onChange={onChecked}
                     required={required && dataItemIndex === 0 ? true : undefined}
                   />
                   <label htmlFor={`${id}-${dataItemIndex}`}> {dataItem}</label>
@@ -83,6 +91,7 @@ const CheckboxListComponent = (prop) => {
 
 CheckboxListComponent.propTypes = {
   title: PropTypes.string.isRequired,
+  value: PropTypes.instanceOf(Array),
   defaultValue: PropTypes.instanceOf(Array),
   dataItems: PropTypes.arrayOf(PropTypes.oneOfType([PropTypes.string, PropTypes.number])),
   id: PropTypes.string,
@@ -97,6 +106,7 @@ CheckboxListComponent.propTypes = {
 
 CheckboxListComponent.defaultProps = {
   id: undefined,
+  value: undefined,
   defaultValue: [],
   dataItems: [],
   placeholder: '',
@@ -107,8 +117,15 @@ CheckboxListComponent.defaultProps = {
 };
 
 const arePropsEqual = (prevProps, nextProps) => {
+  // Compare the effective selection (controlled `value`, else `defaultValue`)
+  // by reference so a state change always triggers a re-render — otherwise the
+  // controlled checkboxes could freeze out of sync with form state.
+  const prevSelected =
+    prevProps.value !== undefined ? prevProps.value : prevProps.defaultValue;
+  const nextSelected =
+    nextProps.value !== undefined ? nextProps.value : nextProps.defaultValue;
   return (
-    prevProps.defaultValue === nextProps.defaultValue &&
+    prevSelected === nextSelected &&
     prevProps.dataItems === nextProps.dataItems &&
     prevProps.name === nextProps.name &&
     prevProps.required === nextProps.required
