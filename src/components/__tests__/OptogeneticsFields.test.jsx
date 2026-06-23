@@ -221,6 +221,39 @@ describe('OptogeneticsFields', () => {
       expect(screen.getByDisplayValue('ChR2 injection')).toBeInTheDocument();
       expect(screen.getByDisplayValue('0.5')).toBeInTheDocument();
     });
+
+    it('reflects the stored hemisphere for a virus injection', () => {
+      const state = {
+        ...initialState,
+        virus_injection: [
+          {
+            name: '',
+            description: '',
+            virus_name: '',
+            volume_in_ul: '',
+            titer_in_vg_per_ml: '',
+            hemisphere: 'right',
+            location: '',
+            ap_in_mm: '',
+            ml_in_mm: '',
+            dv_in_mm: '',
+            roll_in_deg: '',
+            pitch_in_deg: '',
+            yaw_in_deg: '',
+          },
+        ],
+      };
+
+      const { container } = renderWithProviders(<OptogeneticsFields />, {
+        initialState: state,
+      });
+
+      // The radio must reflect the stored value, not a hardcoded default.
+      const left = container.querySelector('#virus_injection-hemisphere-0-0');
+      const right = container.querySelector('#virus_injection-hemisphere-0-1');
+      expect(right).toBeChecked();
+      expect(left).not.toBeChecked();
+    });
   });
 
   describe('Edge Cases', () => {

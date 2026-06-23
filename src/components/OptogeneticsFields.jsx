@@ -462,7 +462,7 @@ export default function OptogeneticsFields() {
                 name="hemisphere"
                 title="Hemisphere"
                 objectKind="text"
-                defaultValue={"left"}
+                value={item.hemisphere}
                 placeholder="Hemisphere of the injection"
                 dataItems={['left', 'right']}
                 updateFormData={updateFormData}
