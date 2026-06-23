@@ -23,6 +23,7 @@ const RadioList = (prop) => {
     dataItems,
     objectKind,
     placeholder,
+    value,
     defaultValue,
     updateFormData,
     metaData,
@@ -31,6 +32,13 @@ const RadioList = (prop) => {
   } = prop;
 
   const id = useStableId(providedId, 'radio-list');
+
+  // Controlled selection: render the value actually stored in form state so the
+  // radios always mirror it (otherwise the DOM and the stored/exported data can
+  // silently diverge). `value` is the canonical prop; some call sites still pass
+  // the selection as `defaultValue`, so accept either. Compare as strings so a
+  // numeric stored value (e.g. camera_id) matches its string dataItem option.
+  const selectedValue = value !== undefined ? value : defaultValue;
 
   const onChecked = (e) => {
     const { target } = e;
@@ -65,8 +73,8 @@ const RadioList = (prop) => {
                     id={`${id}-${dataItemIndex}`}
                     name={`${name}-${id}`}
                     value={dataItem}
-                    defaultChecked={defaultValue === dataItem}
-                    onClick={onChecked}
+                    checked={String(selectedValue) === String(dataItem)}
+                    onChange={onChecked}
                     required={required || undefined}
                   />
                   <label htmlFor={`${id}-${dataItemIndex}`}> {dataItem}</label>
@@ -87,6 +95,7 @@ const RadioList = (prop) => {
 
 RadioList.propTypes = {
   title: PropTypes.string.isRequired,
+  value: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
   defaultValue: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
   dataItems: PropTypes.arrayOf(PropTypes.oneOfType([PropTypes.string, PropTypes.number])),
   id: PropTypes.string,
@@ -101,6 +110,7 @@ RadioList.propTypes = {
 
 RadioList.defaultProps = {
   id: undefined,
+  value: undefined,
   defaultValue: '',
   dataItems: [],
   placeholder: '',

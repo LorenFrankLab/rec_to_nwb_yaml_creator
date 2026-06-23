@@ -300,6 +300,40 @@ describe('RadioList Component', () => {
     });
   });
 
+  describe('Controlled selection (value prop)', () => {
+    it('checks the radio matching the value prop (stored state)', () => {
+      render(
+        <RadioList
+          {...defaultProps}
+          type="text"
+          dataItems={['RightWell_Poke', 'Laser', 'Maze_Camera']}
+          value="Laser"
+        />
+      );
+
+      expect(screen.getByLabelText('RightWell_Poke')).not.toBeChecked();
+      expect(screen.getByLabelText('Laser')).toBeChecked();
+      expect(screen.getByLabelText('Maze_Camera')).not.toBeChecked();
+    });
+
+    it('matches a numeric value against string dataItems (e.g. camera id)', () => {
+      // camera_id is stored as a number while dataItems come from the catalog
+      // as strings; the selection must still resolve.
+      render(
+        <RadioList
+          {...defaultProps}
+          type="number"
+          dataItems={['1', '2', '3']}
+          value={2}
+        />
+      );
+
+      expect(screen.getByLabelText('1')).not.toBeChecked();
+      expect(screen.getByLabelText('2')).toBeChecked();
+      expect(screen.getByLabelText('3')).not.toBeChecked();
+    });
+  });
+
   describe('User Interactions', () => {
     it('should call updateFormData when radio is clicked', async () => {
       const user = userEvent.setup();
@@ -413,7 +447,7 @@ describe('RadioList Component', () => {
       );
     });
 
-    it('should handle clicking already-checked radio', async () => {
+    it('does not re-fire when re-selecting the already-selected radio', async () => {
       const user = userEvent.setup();
       const mockUpdate = vi.fn();
 
@@ -431,8 +465,10 @@ describe('RadioList Component', () => {
 
       await user.click(radio);
 
-      // Still calls updateFormData (radio behavior)
-      expect(mockUpdate).toHaveBeenCalledTimes(1);
+      // Controlled radio: clicking the already-selected option is not a state
+      // change, so it correctly does not re-write identical form state.
+      expect(mockUpdate).not.toHaveBeenCalled();
+      expect(radio).toBeChecked();
     });
 
     it('should handle multiple radio clicks (only last one checked)', async () => {
