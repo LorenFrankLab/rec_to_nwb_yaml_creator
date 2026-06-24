@@ -300,6 +300,31 @@ describe('RadioList Component', () => {
     });
   });
 
+  describe('Controlled Selection (reflects state changes)', () => {
+    it('updates the checked radio when the selection changes on re-render', () => {
+      // Regression: an uncontrolled `defaultChecked` freezes the DOM at its
+      // initial state and silently diverges from the stored value. The radio
+      // must mirror the prop.
+      const { rerender } = render(
+        <RadioList {...defaultProps} dataItems={['0', '1', '2']} defaultValue="" />
+      );
+      expect(screen.getByLabelText('1')).not.toBeChecked();
+
+      rerender(
+        <RadioList {...defaultProps} dataItems={['0', '1', '2']} defaultValue="1" />
+      );
+      expect(screen.getByLabelText('1')).toBeChecked();
+    });
+
+    it('accepts the canonical `value` prop and matches a numeric selection to string options', () => {
+      render(
+        <RadioList {...defaultProps} dataItems={['0', '1', '2']} value={1} />
+      );
+      expect(screen.getByLabelText('0')).not.toBeChecked();
+      expect(screen.getByLabelText('1')).toBeChecked();
+    });
+  });
+
   describe('User Interactions', () => {
     it('should call updateFormData when radio is clicked', async () => {
       const user = userEvent.setup();
@@ -413,7 +438,7 @@ describe('RadioList Component', () => {
       );
     });
 
-    it('should handle clicking already-checked radio', async () => {
+    it('does not re-fire updateFormData when the already-checked radio is clicked', async () => {
       const user = userEvent.setup();
       const mockUpdate = vi.fn();
 
@@ -431,8 +456,12 @@ describe('RadioList Component', () => {
 
       await user.click(radio);
 
-      // Still calls updateFormData (radio behavior)
-      expect(mockUpdate).toHaveBeenCalledTimes(1);
+      // Now that the radio is controlled, onChange fires only when the selection
+      // actually changes; clicking the already-selected option is a no-op (the
+      // stored value already matches). Previously the component used onClick,
+      // which re-fired updateFormData redundantly with the same value.
+      expect(mockUpdate).not.toHaveBeenCalled();
+      expect(radio).toBeChecked();
     });
 
     it('should handle multiple radio clicks (only last one checked)', async () => {

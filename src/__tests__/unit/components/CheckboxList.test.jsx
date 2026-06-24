@@ -264,6 +264,43 @@ describe('CheckboxList Component', () => {
     });
   });
 
+  describe('Controlled Selection (reflects state changes)', () => {
+    it('updates checked state when the selection changes on re-render', () => {
+      // Regression: with an uncontrolled `defaultChecked`, the DOM freezes at
+      // its initial state and silently diverges from the stored/exported value
+      // (the fsgui epoch-accumulation bug). The checkbox must mirror the prop.
+      const { rerender } = render(
+        <CheckboxList {...defaultProps} dataItems={['0', '1', '2']} defaultValue={[]} />
+      );
+      expect(screen.getByLabelText('1')).not.toBeChecked();
+
+      rerender(
+        <CheckboxList {...defaultProps} dataItems={['0', '1', '2']} defaultValue={[1]} />
+      );
+      expect(screen.getByLabelText('1')).toBeChecked();
+    });
+
+    it('clears a checkbox when it is removed from the selection on re-render', () => {
+      const { rerender } = render(
+        <CheckboxList {...defaultProps} dataItems={['0', '1', '2']} defaultValue={[1]} />
+      );
+      expect(screen.getByLabelText('1')).toBeChecked();
+
+      rerender(
+        <CheckboxList {...defaultProps} dataItems={['0', '1', '2']} defaultValue={[]} />
+      );
+      expect(screen.getByLabelText('1')).not.toBeChecked();
+    });
+
+    it('accepts the canonical `value` prop for the selection', () => {
+      render(
+        <CheckboxList {...defaultProps} dataItems={['0', '1', '2']} value={[2]} />
+      );
+      expect(screen.getByLabelText('0')).not.toBeChecked();
+      expect(screen.getByLabelText('2')).toBeChecked();
+    });
+  });
+
   describe('User Interactions', () => {
     it('should call updateFormArray when checkbox is clicked', async () => {
       const user = userEvent.setup();
