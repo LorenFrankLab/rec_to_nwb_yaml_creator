@@ -37,6 +37,7 @@ describe('rulesValidation()', () => {
 
     it('should return empty array when all optogenetics fields present', () => {
       const model = createTestYaml({
+        optogenetic_stimulation_software: 'fsgui',
         opto_excitation_source: [{ opto_excitation_source_name: 'LED' }],
         optical_fiber: [{ fiber_model_number: 'FiberX' }],
         virus_injection: [{ virus_name: 'AAV' }]
@@ -595,5 +596,34 @@ describe('rulesValidation() - unknown camera references', () => {
     const model = createTestYaml({ tasks: [{ task_name: 'Run', camera_id: [0] }] });
     const codes = rulesValidation(model).map((i) => i.code);
     expect(codes).toEqual(['missing_camera']);
+  });
+});
+
+describe('rulesValidation() - optogenetic_stimulation_software', () => {
+  const fullOpto = {
+    opto_excitation_source: [{ name: 'LED' }],
+    optical_fiber: [{ name: 'fiber' }],
+    virus_injection: [{ virus_name: 'v' }],
+  };
+
+  it('requires the software name when optogenetics sections are present', () => {
+    const model = createTestYaml({ ...fullOpto, optogenetic_stimulation_software: '' });
+    expect(rulesValidation(model)).toEqual([
+      expect.objectContaining({
+        path: 'optogenetic_stimulation_software',
+        code: 'missing_stimulation_software',
+        severity: 'error',
+      }),
+    ]);
+  });
+
+  it('accepts a non-empty software name with optogenetics present', () => {
+    const model = createTestYaml({ ...fullOpto, optogenetic_stimulation_software: 'fsgui' });
+    expect(rulesValidation(model)).toEqual([]);
+  });
+
+  it('does not require the software name when no optogenetics is configured', () => {
+    const model = createTestYaml({ optogenetic_stimulation_software: '' });
+    expect(rulesValidation(model)).toEqual([]);
   });
 });

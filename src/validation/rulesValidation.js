@@ -13,6 +13,7 @@
  * 3. Optogenetics configuration must be complete (all or none of the 3 fields)
  * 4. Ntrode channel mappings must have unique physical channels (no duplicates)
  * 5. Every camera_id reference must match a defined camera id
+ * 6. optogenetic_stimulation_software is required when optogenetics is configured
  *
  * @param {object} model - The form data to validate
  * @returns {Issue[]} Array of validation issues with format:
@@ -85,6 +86,23 @@ export const rulesValidation = (model) => {
         `optical_fiber${hasOpticalFiber ? ' ✓' : ' ✗'}, ` +
         `virus_injection${hasVirusInjection ? ' ✓' : ' ✗'}`
     });
+  }
+
+  // Rule 3b: optogenetics needs the stimulation software name
+  // trodes_to_nwb silently skips ALL optogenetics metadata when this string is
+  // empty, so an omission here would drop the sections above from the NWB file.
+  if (optoFieldsPresent === 3) {
+    const software = model.optogenetic_stimulation_software;
+    if (typeof software !== 'string' || software.trim() === '') {
+      issues.push({
+        path: 'optogenetic_stimulation_software',
+        code: 'missing_stimulation_software',
+        severity: 'error',
+        message:
+          'Optogenetic Stimulation Software is required when optogenetics ' +
+          'sections are filled in (e.g. "fsgui").',
+      });
+    }
   }
 
   // Rule 4: No duplicate channel mappings in ntrode_electrode_group_channel_map

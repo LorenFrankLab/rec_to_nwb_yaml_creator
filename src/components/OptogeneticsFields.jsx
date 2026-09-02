@@ -818,9 +818,8 @@ export default function OptogeneticsFields() {
       type="text"
       name="optogenetic_stimulation_software"
       title="Optogenetic Stimulation Software"
-      value={formData.opto_software}
-      onChange={handleChange('opto_software')}
-      defaultValue="fsgui"
+      value={formData.optogenetic_stimulation_software}
+      onChange={handleChange('optogenetic_stimulation_software')}
       placeholder="Software used for optogenetic stimulation"
       onBlur={(e) => onBlur(e)}
       validation={{ type: 'required' }}

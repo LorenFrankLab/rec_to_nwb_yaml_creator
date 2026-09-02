@@ -104,6 +104,7 @@ describe('BUG #6: Empty String Validation for Missing Pattern Fields', () => {
       const yaml = {
         ...loadFixture('valid', 'minimal-valid.yml'),
         // NOTE: If ANY optogenetics field is present, ALL must be present
+        optogenetic_stimulation_software: 'fsgui',
         virus_injection: [
           {
             name: 'Test Virus',
