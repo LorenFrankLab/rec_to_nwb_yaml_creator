@@ -37,7 +37,7 @@ describe('ChannelMap', () => {
     onBlur: vi.fn(),
     onMapInput: vi.fn(),
     updateFormArray: vi.fn(),
-    metaData: { index: 0 },
+    nTrodeIndices: [5, 6],
   };
 
   beforeEach(() => {
@@ -226,12 +226,29 @@ describe('ChannelMap', () => {
       expect(screen.getByText('Bad Channels')).toBeInTheDocument();
     });
 
-    it('passes correct metaData to CheckboxList', () => {
-      render(<ChannelMap {...defaultProps} metaData={{ index: 3 }} />);
+    it('writes a bad channel to the ntrode at its flat-array index', async () => {
+      const user = userEvent.setup();
+      const updateFormArray = vi.fn();
+      render(
+        <ChannelMap
+          {...defaultProps}
+          nTrodeItems={multiShankData}
+          nTrodeIndices={[5, 6]}
+          updateFormArray={updateFormArray}
+        />
+      );
 
-      // MetaData includes nameValue, index, keyValue
-      // Verified by rendering without errors
-      expect(screen.getByText('Bad Channels')).toBeInTheDocument();
+      const shank2 = screen.getByText('Shank #2').closest('fieldset');
+      const badChannels = within(shank2).getByText('Bad Channels').closest('fieldset');
+      await user.click(within(badChannels).getByLabelText('3'));
+
+      expect(updateFormArray).toHaveBeenCalledWith(
+        'bad_channels',
+        3,
+        'ntrode_electrode_group_channel_map',
+        6,
+        true
+      );
     });
 
     it('renders with pre-selected bad channels', () => {
@@ -384,9 +401,8 @@ describe('ChannelMap', () => {
       expect(screen.getByText('Shank #1')).toBeInTheDocument();
     });
 
-    it('accepts metaData prop (object)', () => {
-      const metaData = { index: 2, foo: 'bar' };
-      render(<ChannelMap {...defaultProps} metaData={metaData} />);
+    it('accepts nTrodeIndices prop (array of numbers)', () => {
+      render(<ChannelMap {...defaultProps} nTrodeIndices={[2]} />);
       expect(screen.getByText('Shank #1')).toBeInTheDocument();
     });
   });
@@ -456,8 +472,10 @@ describe('ChannelMap', () => {
       const ntrodeInputs = screen.getAllByPlaceholderText('Ntrode Id');
       const ids = ntrodeInputs.map((input) => input.id);
 
-      expect(ids[0]).toMatch(/ntrode_electrode_group_channel_map-ntrode_id-0/);
-      expect(ids[1]).toMatch(/ntrode_electrode_group_channel_map-ntrode_id-1/);
+      // ids are keyed by each ntrode's index in the flat channel-map array
+      // (nTrodeIndices), so they stay unique across electrode groups
+      expect(ids[0]).toMatch(/ntrode_electrode_group_channel_map-ntrode_id-5$/);
+      expect(ids[1]).toMatch(/ntrode_electrode_group_channel_map-ntrode_id-6$/);
     });
 
     it('generates unique bad channels IDs', () => {
