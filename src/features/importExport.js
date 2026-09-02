@@ -9,6 +9,7 @@
 
 import YAML from 'yaml';
 import { validate } from '../validation';
+import { removeStaleCameraReferences } from '../utils/cameraReferences';
 import {
   encodeYaml,
   downloadYamlFile,
@@ -104,6 +105,11 @@ export async function importFiles(file, options = {}) {
       if (onProgress) {
         onProgress({ stage: 'validating', progress: 50 });
       }
+
+      // Files written before stale camera references were cleaned up may
+      // reference cameras that no longer exist; drop those references rather
+      // than excluding the whole section on validation.
+      jsonFileContent = removeStaleCameraReferences(jsonFileContent);
 
       // Validate YAML content
       const issues = validate(jsonFileContent);

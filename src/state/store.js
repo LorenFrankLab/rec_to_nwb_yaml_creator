@@ -3,6 +3,7 @@ import { useArrayManagement } from '../hooks/useArrayManagement';
 import { useFormUpdates } from '../hooks/useFormUpdates';
 import { useElectrodeGroups } from '../hooks/useElectrodeGroups';
 import { defaultYMLValues } from '../valueList';
+import { removeStaleCameraReferences } from '../utils/cameraReferences';
 
 /**
  * Lightweight store facade that provides unified access to form state, actions, and selectors.
@@ -116,6 +117,22 @@ export function useStore(initialState = null) {
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formData.tasks]); // Cleanup only needed when tasks change; callback form guarantees latest state access
+
+  /**
+   * Critical data integrity: Clean up orphaned camera_id references
+   *
+   * When a camera is removed or its id is changed, camera_id references in
+   * tasks, associated_video_files, and fs_gui_yamls become invalid. The form
+   * only renders checkboxes for cameras that exist, so such references are
+   * invisible to the user and would be exported silently. Drop them whenever
+   * the cameras list changes (including on import).
+   *
+   * removeStaleCameraReferences returns the same object when nothing is
+   * stale, so React bails out of the update and no re-render loop occurs.
+   */
+  useEffect(() => {
+    setFormData((currentFormData) => removeStaleCameraReferences(currentFormData));
+  }, [formData.cameras]);
 
   /**
    * Selectors provide computed/derived data from the state.

@@ -528,3 +528,72 @@ describe('rulesValidation()', () => {
     });
   });
 });
+
+describe('rulesValidation() - unknown camera references', () => {
+  const cameras = [{ id: 4, meters_per_pixel: 0.001, camera_name: 'cam4' }];
+
+  it('reports a task camera_id that is not in cameras', () => {
+    const model = createTestYaml({
+      cameras,
+      tasks: [{ task_name: 'Run', camera_id: [0, 4, 7] }],
+    });
+    const issues = rulesValidation(model);
+    expect(issues).toEqual([
+      expect.objectContaining({
+        path: 'tasks[0].camera_id',
+        code: 'unknown_camera',
+        severity: 'error',
+      }),
+    ]);
+    expect(issues[0].message).toContain('0');
+    expect(issues[0].message).toContain('7');
+    expect(issues[0].message).not.toContain('4');
+  });
+
+  it('reports an associated_video_files camera_id that is not in cameras', () => {
+    const model = createTestYaml({
+      cameras,
+      associated_video_files: [{ name: 'v.mp4', camera_id: 7, task_epochs: 1 }],
+    });
+    const issues = rulesValidation(model);
+    expect(issues).toEqual([
+      expect.objectContaining({ path: 'associated_video_files[0].camera_id', code: 'unknown_camera' }),
+    ]);
+  });
+
+  it('reports an fs_gui_yamls camera_id that is not in cameras', () => {
+    const model = createTestYaml({
+      cameras,
+      fs_gui_yamls: [{ name: 'f.yaml', epochs: [1], camera_id: [7] }],
+    });
+    const issues = rulesValidation(model);
+    expect(issues).toEqual([
+      expect.objectContaining({ path: 'fs_gui_yamls[0].camera_id', code: 'unknown_camera' }),
+    ]);
+  });
+
+  it('returns no issue when every reference exists', () => {
+    const model = createTestYaml({
+      cameras,
+      tasks: [{ task_name: 'Run', camera_id: [4] }],
+      associated_video_files: [{ name: 'v.mp4', camera_id: 4, task_epochs: 1 }],
+      fs_gui_yamls: [{ name: 'f.yaml', epochs: [1], camera_id: [4] }],
+    });
+    expect(rulesValidation(model)).toEqual([]);
+  });
+
+  it('ignores unset video camera_id and tasks with no camera', () => {
+    const model = createTestYaml({
+      cameras,
+      tasks: [{ task_name: 'Sleep', camera_id: [] }],
+      associated_video_files: [{ name: 'v.mp4', camera_id: '', task_epochs: 1 }],
+    });
+    expect(rulesValidation(model)).toEqual([]);
+  });
+
+  it('does not duplicate the existing missing_camera rule when cameras is undefined', () => {
+    const model = createTestYaml({ tasks: [{ task_name: 'Run', camera_id: [0] }] });
+    const codes = rulesValidation(model).map((i) => i.code);
+    expect(codes).toEqual(['missing_camera']);
+  });
+});

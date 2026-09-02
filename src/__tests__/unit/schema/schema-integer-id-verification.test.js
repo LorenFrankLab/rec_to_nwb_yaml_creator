@@ -273,7 +273,7 @@ describe('BUG #8 Verification: Integer ID Enforcement', () => {
       // This test documents actual behavior
       if (!isValid) {
         const typeError = issues.find(issue =>
-          issue.instancePath.includes('camera_id')
+          issue.instancePath?.includes('camera_id')
         );
         expect(typeError).toBeDefined();
       }

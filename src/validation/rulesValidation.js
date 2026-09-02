@@ -12,6 +12,7 @@
  * 2. Associated video files with camera_ids require cameras to be defined
  * 3. Optogenetics configuration must be complete (all or none of the 3 fields)
  * 4. Ntrode channel mappings must have unique physical channels (no duplicates)
+ * 5. Every camera_id reference must match a defined camera id
  *
  * @param {object} model - The form data to validate
  * @returns {Issue[]} Array of validation issues with format:
@@ -22,6 +23,8 @@
  *     message: string     // User-friendly message
  *   }
  */
+import { getDefinedCameraIds } from '../utils/cameraReferences';
+
 export const rulesValidation = (model) => {
   // Handle null/undefined model gracefully
   if (!model || typeof model !== 'object') {
@@ -111,6 +114,41 @@ export const rulesValidation = (model) => {
               `to multiple logical channels.`
           });
         }
+      }
+    });
+  }
+
+  // Rule 5: camera_id references must point at a defined camera
+  // Stale references (camera removed or renumbered) are invisible in the form,
+  // so they are reported here to keep them out of the exported YAML.
+  if (Array.isArray(model.cameras)) {
+    const definedIds = new Set(getDefinedCameraIds(model.cameras));
+    const unknownIds = (ids) =>
+      ids.filter((id) => !definedIds.has(parseInt(id, 10)));
+    const report = (path, ids) => {
+      issues.push({
+        path,
+        code: 'unknown_camera',
+        severity: 'error',
+        message:
+          `${path} references camera id(s) ${ids.join(', ')} that are not ` +
+          `defined in cameras. Remove the reference or add the camera.`,
+      });
+    };
+
+    ['tasks', 'fs_gui_yamls'].forEach((key) => {
+      (model[key] || []).forEach((item, index) => {
+        if (!Array.isArray(item?.camera_id)) return;
+        const unknown = unknownIds(item.camera_id);
+        if (unknown.length > 0) report(`${key}[${index}].camera_id`, unknown);
+      });
+    });
+
+    (model.associated_video_files || []).forEach((video, index) => {
+      const id = video?.camera_id;
+      if (id === '' || id === undefined || id === null) return;
+      if (!definedIds.has(parseInt(id, 10))) {
+        report(`associated_video_files[${index}].camera_id`, [id]);
       }
     });
   }
