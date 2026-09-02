@@ -933,7 +933,8 @@ export const optoExcitationModelNames = () => {
   return [
     ...[
       '',
-      'Lux+ 638-200',
+      'LuxX+ 638-200',
+      'Omicron LuxX+ 488-100',
     ],
   ];
 };
@@ -1054,7 +1055,7 @@ export const arrayDefaultValues = {
     reference : 'Bregma at the cortical surface',
     virus_name: '',
     titer_in_vg_per_ml : 1e12,
-    volume_in_uL : 0.45,
+    volume_in_ul : 0.45,
   },
 
   fs_gui_yamls: {
@@ -1067,7 +1068,7 @@ export const arrayDefaultValues = {
     nPulses: 0,
     sequencePeriod: 0,
     nOutputTrains: 0,
-    train_interval: 0,
+    trainInterval: 0,
   },
 
   optogenetic_stimulation_software: "fsgui",

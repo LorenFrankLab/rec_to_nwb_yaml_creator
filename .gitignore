@@ -130,3 +130,6 @@ docs/_build/
 
 # Git worktrees (isolated workspaces)
 .worktrees/
+
+# Playwright MCP session artifacts
+.playwright-mcp/

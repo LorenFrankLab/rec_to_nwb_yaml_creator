@@ -9,6 +9,8 @@
 
 import YAML from 'yaml';
 import { validate } from '../validation';
+import { removeStaleCameraReferences } from '../utils/cameraReferences';
+import { withLegacyConverterKeys } from '../io/legacyCompat';
 import {
   encodeYaml,
   downloadYamlFile,
@@ -104,6 +106,11 @@ export async function importFiles(file, options = {}) {
       if (onProgress) {
         onProgress({ stage: 'validating', progress: 50 });
       }
+
+      // Files written before stale camera references were cleaned up may
+      // reference cameras that no longer exist; drop those references rather
+      // than excluding the whole section on validation.
+      jsonFileContent = removeStaleCameraReferences(jsonFileContent);
 
       // Validate YAML content
       const issues = validate(jsonFileContent);
@@ -260,7 +267,9 @@ export function exportAll(model, options = {}) {
       onProgress({ stage: 'encoding', progress: 50 });
     }
 
-    const yAMLForm = encodeYaml(form);
+    // Duplicate keys released trodes_to_nwb versions still read; validation
+    // above ran on the canonical model.
+    const yAMLForm = encodeYaml(withLegacyConverterKeys(form));
     const fileName = formatDeterministicFilename(form);
 
     if (onProgress) {

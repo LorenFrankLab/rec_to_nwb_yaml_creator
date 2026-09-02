@@ -414,3 +414,33 @@ describe('schemaValidation()', () => {
     });
   });
 });
+
+describe('schemaValidation() - nested required field paths', () => {
+  it('prefixes a missing nested property with its parent path', () => {
+    const model = createTestYaml({
+      subject: { description: 'rat', genotype: 'WT', sex: 'M', species: 'Rat', subject_id: 'r1', date_of_birth: '2026-01-05T00:00:00.000Z' },
+    });
+    const issues = schemaValidation(model);
+    expect(issues).toContainEqual(expect.objectContaining({
+      path: 'subject.weight',
+      code: 'required',
+    }));
+  });
+
+  it('prefixes a missing array item property with its indexed parent path', () => {
+    const model = createTestYaml({
+      cameras: [{ meters_per_pixel: 0.001, manufacturer: 'm', model: 'm', lens: 'l', camera_name: 'c' }],
+    });
+    const issues = schemaValidation(model);
+    expect(issues).toContainEqual(expect.objectContaining({
+      path: 'cameras[0].id',
+      code: 'required',
+    }));
+  });
+
+  it('keeps top-level missing properties unprefixed', () => {
+    const model = { ...createTestYaml(), lab: undefined };
+    const issues = schemaValidation(model);
+    expect(issues).toContainEqual(expect.objectContaining({ path: 'lab', code: 'required' }));
+  });
+});

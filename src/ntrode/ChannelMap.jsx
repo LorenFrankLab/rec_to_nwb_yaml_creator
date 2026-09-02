@@ -10,12 +10,21 @@ import InfoIcon from './../element/InfoIcon';
  * Generates a custom element for ntrode_electrode_group_channel_map's map
  *
  * @param {Object} prop Custom element's properties
+ * @param {Object[]} prop.nTrodeItems Ntrodes belonging to this electrode group
+ * @param {number[]} prop.nTrodeIndices Index of each of those ntrodes in the
+ *   flat ntrode_electrode_group_channel_map array (same order as nTrodeItems)
  *
  * @returns Virtual DOM of the map for ntrode_electrode_group_channel_map
  */
 const ChannelMap = (prop) => {
-  const { nTrodeItems, onBlur, onMapInput, electrodeGroupId, updateFormArray, metaData } =
-    prop;
+  const {
+    nTrodeItems,
+    nTrodeIndices,
+    onBlur,
+    onMapInput,
+    electrodeGroupId,
+    updateFormArray,
+  } = prop;
 
   const getOptions = (options, mapValue, mapValues) => {
     const items = [...new Set([
@@ -32,6 +41,7 @@ const ChannelMap = (prop) => {
       <div className="item1"> </div>
       <div className="item2">
         {nTrodeItems.map((item, index) => {
+          const flatIndex = nTrodeIndices[index];
           const mapKeys = Object.keys(item.map).map((i) => parseInt(i, 10));
           const mapValues = Object.values(item.map).filter((i) => isNumeric(i));
           const options = [...mapKeys];
@@ -46,7 +56,7 @@ const ChannelMap = (prop) => {
                 <legend>Shank #{index + 1}</legend>
                 <div className="form-container">
                   <InputElement
-                    id={`ntrode_electrode_group_channel_map-ntrode_id-${index}`}
+                    id={`ntrode_electrode_group_channel_map-ntrode_id-${flatIndex}`}
                     type="number"
                     name="ntrode_id"
                     title="Ntrode Id"
@@ -58,7 +68,7 @@ const ChannelMap = (prop) => {
                     onBlur={onBlur}
                   />
                   <CheckboxList
-                    id={`ntrode_electrode_group_channel_map-bad_channels-${index}`}
+                    id={`ntrode_electrode_group_channel_map-bad_channels-${flatIndex}`}
                     type="number"
                     name="bad_channels"
                     title="Bad Channels"
@@ -68,7 +78,8 @@ const ChannelMap = (prop) => {
                     updateFormArray={updateFormArray}
                     metaData={{
                       nameValue: 'bad_channels',
-                      index: metaData.index,
+                      // position of this ntrode in the flat channel-map array
+                      index: flatIndex,
                       keyValue: 'ntrode_electrode_group_channel_map',
                     }}
                     onChange={updateFormArray}
@@ -136,10 +147,10 @@ const ChannelMap = (prop) => {
 ChannelMap.propTypes = {
   electrodeGroupId: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
   nTrodeItems: PropTypes.arrayOf(PropTypes.object),
+  nTrodeIndices: PropTypes.arrayOf(PropTypes.number).isRequired,
   onBlur: PropTypes.func,
   updateFormArray: PropTypes.func,
   onMapInput: PropTypes.func,
-  metaData: PropTypes.instanceOf(Object),
 };
 
 export default ChannelMap;

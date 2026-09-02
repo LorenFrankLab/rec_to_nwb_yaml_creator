@@ -1,8 +1,9 @@
-import { useState, useMemo, useEffect, useRef } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useArrayManagement } from '../hooks/useArrayManagement';
 import { useFormUpdates } from '../hooks/useFormUpdates';
 import { useElectrodeGroups } from '../hooks/useElectrodeGroups';
 import { defaultYMLValues } from '../valueList';
+import { removeStaleCameraReferences } from '../utils/cameraReferences';
 
 /**
  * Lightweight store facade that provides unified access to form state, actions, and selectors.
@@ -48,46 +49,57 @@ export function useStore(initialState = null) {
   /**
    * Critical data integrity: Clean up orphaned task epochs
    *
-   * When tasks are deleted, any task_epochs references in associated_files or
-   * associated_video_files become invalid. This useEffect automatically clears
-   * these orphaned references to prevent YAML export corruption.
+   * When tasks are deleted, references in associated_files,
+   * associated_video_files, and fs_gui_yamls become invalid. This useEffect
+   * automatically clears these orphaned references to prevent YAML export
+   * corruption.
    *
    * Migrated from App.js (lines 274-315) during StoreContext refactor.
    *
-   * IMPORTANT: Uses a ref to track the last set of valid epochs to avoid infinite
-   * loops. Only runs cleanup when the valid epochs actually change (when tasks change).
+   * IMPORTANT: no loop guard is needed because the update below returns the
+   * current state object unchanged when there is nothing to clean, so React
+   * bails out of the render. An earlier version skipped the check whenever the
+   * set of valid epochs was unchanged, which let an orphan survive in a file
+   * loaded on top of one that defined the same epochs.
    */
-  const lastValidEpochsRef = useRef('[]');
-
   useEffect(() => {
     // Get currently valid task epochs from all tasks
-    const validTaskEpochs = (formData.tasks || [])
-      .flatMap((task) => task.task_epochs || [])
-      .filter(Boolean); // Remove empty/null values
-
-    // Serialize for comparison
-    const validEpochsStr = JSON.stringify([...validTaskEpochs].sort());
-
-    // Only proceed if the set of valid epochs has changed
-    if (validEpochsStr === lastValidEpochsRef.current) {
-      return;
-    }
-
-    // Update ref to mark this epoch set as processed
-    // Do this BEFORE the setFormData callback to prevent duplicate cleanup attempts
-    lastValidEpochsRef.current = validEpochsStr;
+    const validTaskEpochs = (Array.isArray(formData.tasks) ? formData.tasks : [])
+      .flatMap((task) => task?.task_epochs || [])
+      .filter((epoch) => epoch !== '' && epoch !== undefined && epoch !== null);
+    const isSet = (epoch) => epoch !== '' && epoch !== undefined && epoch !== null;
+    const isStale = (epoch) => isSet(epoch) && !validTaskEpochs.includes(epoch);
 
     // Use callback form to get latest state at update time
     setFormData((currentFormData) => {
       // Check if any cleanup is needed
-      const hasOrphanedEpochsInFiles = (currentFormData.associated_files || []).some(
-        (file) => file.task_epochs && !validTaskEpochs.includes(file.task_epochs)
+      const hasOrphanedEpochsInFiles = (
+        Array.isArray(currentFormData.associated_files)
+          ? currentFormData.associated_files
+          : []
+      ).some(
+        (file) => isStale(file?.task_epochs)
       );
-      const hasOrphanedEpochsInVideos = (currentFormData.associated_video_files || []).some(
-        (file) => file.task_epochs && !validTaskEpochs.includes(file.task_epochs)
+      const hasOrphanedEpochsInVideos = (
+        Array.isArray(currentFormData.associated_video_files)
+          ? currentFormData.associated_video_files
+          : []
+      ).some(
+        (file) => isStale(file?.task_epochs)
+      );
+      const hasOrphanedEpochsInFsGui = (
+        Array.isArray(currentFormData.fs_gui_yamls)
+          ? currentFormData.fs_gui_yamls
+          : []
+      ).some(
+        (item) => Array.isArray(item?.epochs) && item.epochs.some(isStale)
       );
 
-      if (!hasOrphanedEpochsInFiles && !hasOrphanedEpochsInVideos) {
+      if (
+        !hasOrphanedEpochsInFiles &&
+        !hasOrphanedEpochsInVideos &&
+        !hasOrphanedEpochsInFsGui
+      ) {
         return currentFormData; // No changes needed
       }
 
@@ -95,19 +107,28 @@ export function useStore(initialState = null) {
       const updated = structuredClone(currentFormData);
 
       // Clean up associated_files
-      if (updated.associated_files) {
+      if (Array.isArray(updated.associated_files)) {
         updated.associated_files.forEach((file) => {
-          if (file.task_epochs && !validTaskEpochs.includes(file.task_epochs)) {
+          if (isStale(file?.task_epochs)) {
             file.task_epochs = '';
           }
         });
       }
 
       // Clean up associated_video_files
-      if (updated.associated_video_files) {
+      if (Array.isArray(updated.associated_video_files)) {
         updated.associated_video_files.forEach((file) => {
-          if (file.task_epochs && !validTaskEpochs.includes(file.task_epochs)) {
+          if (isStale(file?.task_epochs)) {
             file.task_epochs = '';
+          }
+        });
+      }
+
+      // Clean up fs_gui_yamls, whose epochs field is multi-valued
+      if (Array.isArray(updated.fs_gui_yamls)) {
+        updated.fs_gui_yamls.forEach((item) => {
+          if (Array.isArray(item?.epochs)) {
+            item.epochs = item.epochs.filter((epoch) => !isStale(epoch));
           }
         });
       }
@@ -116,6 +137,22 @@ export function useStore(initialState = null) {
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formData.tasks]); // Cleanup only needed when tasks change; callback form guarantees latest state access
+
+  /**
+   * Critical data integrity: Clean up orphaned camera_id references
+   *
+   * When a camera is removed or its id is changed, camera_id references in
+   * tasks, associated_video_files, and fs_gui_yamls become invalid. The form
+   * only renders checkboxes for cameras that exist, so such references are
+   * invisible to the user and would be exported silently. Drop them whenever
+   * the cameras list changes (including on import).
+   *
+   * removeStaleCameraReferences returns the same object when nothing is
+   * stale, so React bails out of the update and no re-render loop occurs.
+   */
+  useEffect(() => {
+    setFormData((currentFormData) => removeStaleCameraReferences(currentFormData));
+  }, [formData.cameras]);
 
   /**
    * Selectors provide computed/derived data from the state.
