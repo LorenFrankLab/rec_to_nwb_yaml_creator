@@ -69,6 +69,16 @@ const withoutVideos = yamlWithStaleCamera.replace(
   'associated_video_files: []\nunits:'
 );
 
+const withMalformedCameras = withoutVideos.replace(
+  /cameras:[\s\S]*?tasks:/,
+  'cameras:\n  id: 4\ntasks:'
+);
+
+const withMalformedTasks = withoutVideos.replace(
+  /tasks:[\s\S]*?associated_video_files:/,
+  'tasks:\n  camera_id: [4]\nassociated_video_files:'
+);
+
 describe('importFiles - stale camera references', () => {
   it('imports tasks with stale camera ids removed instead of excluding the section', async () => {
     const file = new File([withoutVideos], 'test.yml', { type: 'text/yaml' });
@@ -104,5 +114,18 @@ describe('importFiles - nested required field', () => {
     expect(result.success).toBe(true);
     expect(result.importSummary.excludedFields.map((f) => f.field)).toContain('cameras');
     expect(result.formData.cameras).toEqual([]);
+  });
+});
+
+describe('importFiles - schema-invalid camera section shapes', () => {
+  it.each([
+    ['cameras', withMalformedCameras],
+    ['tasks', withMalformedTasks],
+  ])('returns validation exclusions when %s is not an array', async (section, yaml) => {
+    const file = new File([yaml], 'test.yml', { type: 'text/yaml' });
+    const result = await importFiles(file);
+
+    expect(result.success).toBe(true);
+    expect(result.importSummary.excludedFields.map((field) => field.field)).toContain(section);
   });
 });

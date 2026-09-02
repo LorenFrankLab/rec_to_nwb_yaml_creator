@@ -21,7 +21,7 @@
  * @returns {number[]}
  */
 export const getDefinedCameraIds = (cameras) =>
-  (cameras || [])
+  (Array.isArray(cameras) ? cameras : [])
     .map((camera) => parseInt(camera?.id, 10))
     .filter((id) => !Number.isNaN(id));
 
@@ -39,16 +39,28 @@ const SINGLE_CAMERA_SECTIONS = ['associated_video_files', 'fs_gui_yamls'];
  * @returns {object} The same object, or a cleaned structuredClone
  */
 export const removeStaleCameraReferences = (form) => {
+  if (!form || typeof form !== 'object') {
+    return form;
+  }
+
+  // This helper also runs on parsed YAML before schema validation. If the
+  // cameras section has the wrong shape, preserve the document so AJV can
+  // report that error instead of guessing which references are stale.
+  if (form.cameras !== undefined && !Array.isArray(form.cameras)) {
+    return form;
+  }
+
   const valid = new Set(getDefinedCameraIds(form?.cameras));
   const isStale = (value) => !valid.has(toInt(value));
 
   const isSet = (value) => value !== '' && value !== undefined && value !== null;
+  const arraySection = (key) => (Array.isArray(form[key]) ? form[key] : []);
 
-  const staleInArrays = (form?.tasks || []).some(
+  const staleInArrays = arraySection('tasks').some(
     (task) => Array.isArray(task?.camera_id) && task.camera_id.some(isStale)
   );
   const staleInScalars = SINGLE_CAMERA_SECTIONS.some((key) =>
-    (form?.[key] || []).some(
+    arraySection(key).some(
       (item) => isSet(item?.camera_id) && isStale(item.camera_id)
     )
   );
@@ -58,13 +70,13 @@ export const removeStaleCameraReferences = (form) => {
   }
 
   const updated = structuredClone(form);
-  (updated.tasks || []).forEach((task) => {
+  (Array.isArray(updated.tasks) ? updated.tasks : []).forEach((task) => {
     if (Array.isArray(task?.camera_id)) {
       task.camera_id = task.camera_id.filter((id) => !isStale(id));
     }
   });
   SINGLE_CAMERA_SECTIONS.forEach((key) => {
-    (updated[key] || []).forEach((item) => {
+    (Array.isArray(updated[key]) ? updated[key] : []).forEach((item) => {
       if (isSet(item?.camera_id) && isStale(item.camera_id)) {
         item.camera_id = '';
       }

@@ -1,8 +1,8 @@
 /**
  * Tests for reconciling camera_id references against the cameras list.
  *
- * tasks[].camera_id and fs_gui_yamls[].camera_id are integer arrays;
- * associated_video_files[].camera_id is a single integer ('' when unset).
+ * tasks[].camera_id is an integer array; associated_video_files[].camera_id
+ * and fs_gui_yamls[].camera_id are single integers ('' when unset).
  * References to cameras that no longer exist must be removed, because the
  * UI only renders checkboxes/radios for existing cameras and cannot show them.
  */
@@ -28,6 +28,10 @@ describe('getDefinedCameraIds', () => {
 
   it('returns an empty list when cameras is missing', () => {
     expect(getDefinedCameraIds(undefined)).toEqual([]);
+  });
+
+  it('returns an empty list when cameras has a schema-invalid shape', () => {
+    expect(getDefinedCameraIds({ id: 4 })).toEqual([]);
   });
 });
 
@@ -82,6 +86,24 @@ describe('removeStaleCameraReferences', () => {
 
   it('tolerates missing sections', () => {
     const model = { cameras: [{ id: 1 }] };
+    expect(removeStaleCameraReferences(model)).toBe(model);
+  });
+
+  it('preserves a schema-invalid cameras section for validation', () => {
+    const model = {
+      cameras: { id: 1 },
+      tasks: [{ camera_id: [1] }],
+    };
+    expect(removeStaleCameraReferences(model)).toBe(model);
+  });
+
+  it('ignores schema-invalid reference section shapes', () => {
+    const model = {
+      cameras: [{ id: 1 }],
+      tasks: { camera_id: [1] },
+      associated_video_files: { camera_id: 1 },
+      fs_gui_yamls: { camera_id: 1 },
+    };
     expect(removeStaleCameraReferences(model)).toBe(model);
   });
 });

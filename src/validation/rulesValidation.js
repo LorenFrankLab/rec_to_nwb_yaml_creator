@@ -36,9 +36,9 @@ export const rulesValidation = (model) => {
 
   // Rule 1: Tasks with camera_ids require cameras to be defined
   // Only trigger if tasks have non-empty camera_id arrays
-  if (!model.cameras && model.tasks?.length > 0) {
+  if (!model.cameras && Array.isArray(model.tasks) && model.tasks.length > 0) {
     const tasksWithCameras = model.tasks.some(task =>
-      task.camera_id && Array.isArray(task.camera_id) && task.camera_id.length > 0
+      task?.camera_id && Array.isArray(task.camera_id) && task.camera_id.length > 0
     );
 
     if (tasksWithCameras) {
@@ -64,7 +64,7 @@ export const rulesValidation = (model) => {
       ['associated_video_files', 'Associated video files'],
       ['fs_gui_yamls', 'Fs-gui YAML entries'],
     ].forEach(([key, label]) => {
-      if ((model[key] || []).some(hasCameraId)) {
+      if (Array.isArray(model[key]) && model[key].some(hasCameraId)) {
         issues.push({
           path: key,
           code: 'missing_camera',
@@ -162,7 +162,7 @@ export const rulesValidation = (model) => {
     };
 
     // tasks[].camera_id is an integer array
-    (model.tasks || []).forEach((task, index) => {
+    (Array.isArray(model.tasks) ? model.tasks : []).forEach((task, index) => {
       if (!Array.isArray(task?.camera_id)) return;
       const unknown = unknownIds(task.camera_id);
       if (unknown.length > 0) report(`tasks[${index}].camera_id`, unknown);
@@ -171,7 +171,7 @@ export const rulesValidation = (model) => {
     // associated_video_files[].camera_id and fs_gui_yamls[].camera_id are
     // single integers ('' when unset)
     ['associated_video_files', 'fs_gui_yamls'].forEach((key) => {
-      (model[key] || []).forEach((item, index) => {
+      (Array.isArray(model[key]) ? model[key] : []).forEach((item, index) => {
         const id = item?.camera_id;
         if (id === '' || id === undefined || id === null) return;
         if (!definedIds.has(parseInt(id, 10))) {

@@ -28,6 +28,7 @@ const fileWithEpochs = (taskEpochs, fileEpoch) => ({
     { name: 'log.stateScriptLog', description: 'd', path: '/p', task_epochs: fileEpoch },
   ],
   associated_video_files: [{ name: 'v.mp4', camera_id: '', task_epochs: fileEpoch }],
+  fs_gui_yamls: [{ name: 'f.yaml', epochs: [fileEpoch], camera_id: '' }],
 });
 
 describe('Store - task epoch cleanup with an unchanged epoch set', () => {
@@ -38,6 +39,7 @@ describe('Store - task epoch cleanup with an unchanged epoch set', () => {
       result.current.actions.setFormData(fileWithEpochs([1, 2], 2));
     });
     expect(result.current.model.associated_files[0].task_epochs).toBe(2);
+    expect(result.current.model.fs_gui_yamls[0].epochs).toEqual([2]);
 
     // Second file: same task epochs, but the associated files point at epoch 99
     await act(async () => {
@@ -46,6 +48,7 @@ describe('Store - task epoch cleanup with an unchanged epoch set', () => {
 
     expect(result.current.model.associated_files[0].task_epochs).toBe('');
     expect(result.current.model.associated_video_files[0].task_epochs).toBe('');
+    expect(result.current.model.fs_gui_yamls[0].epochs).toEqual([]);
   });
 
   it('clears an orphan present in the very first state loaded', async () => {
@@ -54,5 +57,19 @@ describe('Store - task epoch cleanup with an unchanged epoch set', () => {
       result.current.actions.setFormData(fileWithEpochs([1, 2], 99));
     });
     expect(result.current.model.associated_files[0].task_epochs).toBe('');
+    expect(result.current.model.fs_gui_yamls[0].epochs).toEqual([]);
+  });
+
+  it('removes only stale fs-gui epochs and preserves zero-valued epochs', async () => {
+    const { result } = renderHook(() => useStore());
+    const state = fileWithEpochs([0, 1], 0);
+    state.fs_gui_yamls[0].epochs = [0, 1, 99];
+
+    await act(async () => {
+      result.current.actions.setFormData(state);
+    });
+
+    expect(result.current.model.associated_files[0].task_epochs).toBe(0);
+    expect(result.current.model.fs_gui_yamls[0].epochs).toEqual([0, 1]);
   });
 });

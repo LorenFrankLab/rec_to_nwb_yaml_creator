@@ -49,9 +49,10 @@ export function useStore(initialState = null) {
   /**
    * Critical data integrity: Clean up orphaned task epochs
    *
-   * When tasks are deleted, any task_epochs references in associated_files or
-   * associated_video_files become invalid. This useEffect automatically clears
-   * these orphaned references to prevent YAML export corruption.
+   * When tasks are deleted, references in associated_files,
+   * associated_video_files, and fs_gui_yamls become invalid. This useEffect
+   * automatically clears these orphaned references to prevent YAML export
+   * corruption.
    *
    * Migrated from App.js (lines 274-315) during StoreContext refactor.
    *
@@ -63,21 +64,42 @@ export function useStore(initialState = null) {
    */
   useEffect(() => {
     // Get currently valid task epochs from all tasks
-    const validTaskEpochs = (formData.tasks || [])
-      .flatMap((task) => task.task_epochs || [])
-      .filter(Boolean); // Remove empty/null values
+    const validTaskEpochs = (Array.isArray(formData.tasks) ? formData.tasks : [])
+      .flatMap((task) => task?.task_epochs || [])
+      .filter((epoch) => epoch !== '' && epoch !== undefined && epoch !== null);
+    const isSet = (epoch) => epoch !== '' && epoch !== undefined && epoch !== null;
+    const isStale = (epoch) => isSet(epoch) && !validTaskEpochs.includes(epoch);
 
     // Use callback form to get latest state at update time
     setFormData((currentFormData) => {
       // Check if any cleanup is needed
-      const hasOrphanedEpochsInFiles = (currentFormData.associated_files || []).some(
-        (file) => file.task_epochs && !validTaskEpochs.includes(file.task_epochs)
+      const hasOrphanedEpochsInFiles = (
+        Array.isArray(currentFormData.associated_files)
+          ? currentFormData.associated_files
+          : []
+      ).some(
+        (file) => isStale(file?.task_epochs)
       );
-      const hasOrphanedEpochsInVideos = (currentFormData.associated_video_files || []).some(
-        (file) => file.task_epochs && !validTaskEpochs.includes(file.task_epochs)
+      const hasOrphanedEpochsInVideos = (
+        Array.isArray(currentFormData.associated_video_files)
+          ? currentFormData.associated_video_files
+          : []
+      ).some(
+        (file) => isStale(file?.task_epochs)
+      );
+      const hasOrphanedEpochsInFsGui = (
+        Array.isArray(currentFormData.fs_gui_yamls)
+          ? currentFormData.fs_gui_yamls
+          : []
+      ).some(
+        (item) => Array.isArray(item?.epochs) && item.epochs.some(isStale)
       );
 
-      if (!hasOrphanedEpochsInFiles && !hasOrphanedEpochsInVideos) {
+      if (
+        !hasOrphanedEpochsInFiles &&
+        !hasOrphanedEpochsInVideos &&
+        !hasOrphanedEpochsInFsGui
+      ) {
         return currentFormData; // No changes needed
       }
 
@@ -85,19 +107,28 @@ export function useStore(initialState = null) {
       const updated = structuredClone(currentFormData);
 
       // Clean up associated_files
-      if (updated.associated_files) {
+      if (Array.isArray(updated.associated_files)) {
         updated.associated_files.forEach((file) => {
-          if (file.task_epochs && !validTaskEpochs.includes(file.task_epochs)) {
+          if (isStale(file?.task_epochs)) {
             file.task_epochs = '';
           }
         });
       }
 
       // Clean up associated_video_files
-      if (updated.associated_video_files) {
+      if (Array.isArray(updated.associated_video_files)) {
         updated.associated_video_files.forEach((file) => {
-          if (file.task_epochs && !validTaskEpochs.includes(file.task_epochs)) {
+          if (isStale(file?.task_epochs)) {
             file.task_epochs = '';
+          }
+        });
+      }
+
+      // Clean up fs_gui_yamls, whose epochs field is multi-valued
+      if (Array.isArray(updated.fs_gui_yamls)) {
+        updated.fs_gui_yamls.forEach((item) => {
+          if (Array.isArray(item?.epochs)) {
+            item.epochs = item.epochs.filter((epoch) => !isStale(epoch));
           }
         });
       }

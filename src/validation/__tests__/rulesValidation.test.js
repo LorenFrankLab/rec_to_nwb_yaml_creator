@@ -624,6 +624,29 @@ describe('rulesValidation() - unknown camera references', () => {
     const codes = rulesValidation(model).map((i) => i.code);
     expect(codes).toEqual(['missing_camera']);
   });
+
+  it('leaves schema-invalid camera section shapes to schema validation', () => {
+    const model = createTestYaml({
+      cameras,
+      tasks: { camera_id: [4] },
+      associated_video_files: { camera_id: 4 },
+      fs_gui_yamls: { camera_id: 4 },
+    });
+
+    expect(() => rulesValidation(model)).not.toThrow();
+    expect(rulesValidation(model)).toEqual([]);
+  });
+
+  it('does not inspect schema-invalid scalar-reference sections without cameras', () => {
+    const model = createTestYaml({
+      cameras: undefined,
+      tasks: [null],
+      associated_video_files: { camera_id: 4 },
+      fs_gui_yamls: { camera_id: 4 },
+    });
+
+    expect(() => rulesValidation(model)).not.toThrow();
+  });
 });
 
 describe('rulesValidation() - optogenetic_stimulation_software', () => {
