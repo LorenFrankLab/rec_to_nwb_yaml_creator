@@ -1055,7 +1055,7 @@ export const arrayDefaultValues = {
     reference : 'Bregma at the cortical surface',
     virus_name: '',
     titer_in_vg_per_ml : 1e12,
-    volume_in_uL : 0.45,
+    volume_in_ul : 0.45,
   },
 
   fs_gui_yamls: {
