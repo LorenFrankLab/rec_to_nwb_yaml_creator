@@ -40,7 +40,7 @@ describe('removeStaleCameraReferences', () => {
       { name: 'b.mp4', camera_id: 7 },
       { name: 'c.mp4', camera_id: '' },
     ],
-    fs_gui_yamls: [{ name: 'x.yaml', camera_id: [7] }, { name: 'y.yaml' }],
+    fs_gui_yamls: [{ name: 'x.yaml', camera_id: 7 }, { name: 'y.yaml', camera_id: 4 }, { name: 'z.yaml' }],
   };
 
   it('drops task camera ids that no longer exist and keeps valid ones', () => {
@@ -53,10 +53,9 @@ describe('removeStaleCameraReferences', () => {
     expect(result.associated_video_files.map((v) => v.camera_id)).toEqual([4, '', '']);
   });
 
-  it('drops fs_gui_yamls camera ids that no longer exist', () => {
+  it('clears an fs_gui_yamls camera_id (single value) that no longer exists', () => {
     const result = removeStaleCameraReferences(base);
-    expect(result.fs_gui_yamls[0].camera_id).toEqual([]);
-    expect(result.fs_gui_yamls[1]).toEqual({ name: 'y.yaml' });
+    expect(result.fs_gui_yamls.map((f) => f.camera_id)).toEqual(['', 4, undefined]);
   });
 
   it('drops every reference when the cameras list is emptied', () => {
@@ -76,7 +75,7 @@ describe('removeStaleCameraReferences', () => {
       cameras: [{ id: 4 }],
       tasks: [{ camera_id: [4] }],
       associated_video_files: [{ camera_id: 4 }, { camera_id: '' }],
-      fs_gui_yamls: [{ camera_id: [4] }],
+      fs_gui_yamls: [{ camera_id: 4 }, { camera_id: '' }],
     };
     expect(removeStaleCameraReferences(clean)).toBe(clean);
   });

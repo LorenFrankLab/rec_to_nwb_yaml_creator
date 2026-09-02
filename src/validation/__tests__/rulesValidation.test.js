@@ -565,7 +565,7 @@ describe('rulesValidation() - unknown camera references', () => {
   it('reports an fs_gui_yamls camera_id that is not in cameras', () => {
     const model = createTestYaml({
       cameras,
-      fs_gui_yamls: [{ name: 'f.yaml', epochs: [1], camera_id: [7] }],
+      fs_gui_yamls: [{ name: 'f.yaml', epochs: [1], camera_id: 7 }],
     });
     const issues = rulesValidation(model);
     expect(issues).toEqual([
@@ -578,7 +578,7 @@ describe('rulesValidation() - unknown camera references', () => {
       cameras,
       tasks: [{ task_name: 'Run', camera_id: [4] }],
       associated_video_files: [{ name: 'v.mp4', camera_id: 4, task_epochs: 1 }],
-      fs_gui_yamls: [{ name: 'f.yaml', epochs: [1], camera_id: [4] }],
+      fs_gui_yamls: [{ name: 'f.yaml', epochs: [1], camera_id: 4 }],
     });
     expect(rulesValidation(model)).toEqual([]);
   });

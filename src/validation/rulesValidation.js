@@ -154,20 +154,23 @@ export const rulesValidation = (model) => {
       });
     };
 
-    ['tasks', 'fs_gui_yamls'].forEach((key) => {
-      (model[key] || []).forEach((item, index) => {
-        if (!Array.isArray(item?.camera_id)) return;
-        const unknown = unknownIds(item.camera_id);
-        if (unknown.length > 0) report(`${key}[${index}].camera_id`, unknown);
-      });
+    // tasks[].camera_id is an integer array
+    (model.tasks || []).forEach((task, index) => {
+      if (!Array.isArray(task?.camera_id)) return;
+      const unknown = unknownIds(task.camera_id);
+      if (unknown.length > 0) report(`tasks[${index}].camera_id`, unknown);
     });
 
-    (model.associated_video_files || []).forEach((video, index) => {
-      const id = video?.camera_id;
-      if (id === '' || id === undefined || id === null) return;
-      if (!definedIds.has(parseInt(id, 10))) {
-        report(`associated_video_files[${index}].camera_id`, [id]);
-      }
+    // associated_video_files[].camera_id and fs_gui_yamls[].camera_id are
+    // single integers ('' when unset)
+    ['associated_video_files', 'fs_gui_yamls'].forEach((key) => {
+      (model[key] || []).forEach((item, index) => {
+        const id = item?.camera_id;
+        if (id === '' || id === undefined || id === null) return;
+        if (!definedIds.has(parseInt(id, 10))) {
+          report(`${key}[${index}].camera_id`, [id]);
+        }
+      });
     });
   }
 

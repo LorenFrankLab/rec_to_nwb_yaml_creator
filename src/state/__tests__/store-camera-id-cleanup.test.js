@@ -29,7 +29,7 @@ const stateWith = (cameras, overrides = {}) => ({
     },
   ],
   associated_video_files: [{ name: 'v.mp4', camera_id: 0, task_epochs: 2 }],
-  fs_gui_yamls: [{ name: 'f.yaml', epochs: [2], camera_id: [0, 4] }],
+  fs_gui_yamls: [{ name: 'f.yaml', epochs: [2], camera_id: 0 }],
   ...overrides,
 });
 
@@ -67,12 +67,12 @@ describe('Store - camera_id cleanup', () => {
     expect(result.current.model.associated_video_files[0].camera_id).toBe('');
   });
 
-  it('drops fs_gui_yamls camera ids when that camera is removed', async () => {
+  it('clears fs_gui_yamls camera_id when that camera is removed', async () => {
     const { result } = await setup(stateWith([{ id: 0 }, { id: 4 }]));
     await act(async () => {
       result.current.actions.updateFormData('cameras', [{ id: 4 }]);
     });
-    expect(result.current.model.fs_gui_yamls[0].camera_id).toEqual([4]);
+    expect(result.current.model.fs_gui_yamls[0].camera_id).toBe('');
   });
 
   it('drops references when the last camera is removed', async () => {
@@ -93,7 +93,7 @@ describe('Store - camera_id cleanup', () => {
     const { result } = await setup(stateWith([{ id: 0 }, { id: 4 }]));
     expect(result.current.model.tasks[0].camera_id).toEqual([0, 4]);
     expect(result.current.model.associated_video_files[0].camera_id).toBe(0);
-    expect(result.current.model.fs_gui_yamls[0].camera_id).toEqual([0, 4]);
+    expect(result.current.model.fs_gui_yamls[0].camera_id).toBe(0);
   });
 });
 
