@@ -93,3 +93,16 @@ describe('importFiles - stale camera references', () => {
     expect(result.formData.associated_video_files).toEqual([]);
   });
 });
+
+describe('importFiles - nested required field', () => {
+  it('excludes the cameras section (not a phantom "id" field) when a camera lacks its id', async () => {
+    const yaml = withoutVideos.replace('  - id: 4\n    meters_per_pixel', '  - meters_per_pixel');
+    expect(yaml).not.toContain('id: 4');
+    const file = new File([yaml], 'test.yml', { type: 'text/yaml' });
+    const result = await importFiles(file);
+
+    expect(result.success).toBe(true);
+    expect(result.importSummary.excludedFields.map((f) => f.field)).toContain('cameras');
+    expect(result.formData.cameras).toEqual([]);
+  });
+});
