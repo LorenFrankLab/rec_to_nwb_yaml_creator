@@ -933,7 +933,8 @@ export const optoExcitationModelNames = () => {
   return [
     ...[
       '',
-      'Lux+ 638-200',
+      'LuxX+ 638-200',
+      'Omicron LuxX+ 488-100',
     ],
   ];
 };
