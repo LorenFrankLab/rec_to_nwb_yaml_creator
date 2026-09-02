@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useArrayManagement } from '../hooks/useArrayManagement';
 import { useFormUpdates } from '../hooks/useFormUpdates';
 import { useElectrodeGroups } from '../hooks/useElectrodeGroups';
@@ -55,28 +55,17 @@ export function useStore(initialState = null) {
    *
    * Migrated from App.js (lines 274-315) during StoreContext refactor.
    *
-   * IMPORTANT: Uses a ref to track the last set of valid epochs to avoid infinite
-   * loops. Only runs cleanup when the valid epochs actually change (when tasks change).
+   * IMPORTANT: no loop guard is needed because the update below returns the
+   * current state object unchanged when there is nothing to clean, so React
+   * bails out of the render. An earlier version skipped the check whenever the
+   * set of valid epochs was unchanged, which let an orphan survive in a file
+   * loaded on top of one that defined the same epochs.
    */
-  const lastValidEpochsRef = useRef('[]');
-
   useEffect(() => {
     // Get currently valid task epochs from all tasks
     const validTaskEpochs = (formData.tasks || [])
       .flatMap((task) => task.task_epochs || [])
       .filter(Boolean); // Remove empty/null values
-
-    // Serialize for comparison
-    const validEpochsStr = JSON.stringify([...validTaskEpochs].sort());
-
-    // Only proceed if the set of valid epochs has changed
-    if (validEpochsStr === lastValidEpochsRef.current) {
-      return;
-    }
-
-    // Update ref to mark this epoch set as processed
-    // Do this BEFORE the setFormData callback to prevent duplicate cleanup attempts
-    lastValidEpochsRef.current = validEpochsStr;
 
     // Use callback form to get latest state at update time
     setFormData((currentFormData) => {
