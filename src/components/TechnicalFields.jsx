@@ -27,7 +27,7 @@ function TechnicalFields() {
           placeholder="Times Period Multiplier"
           step="any"
           required
-          value={formData?.times_period_multiplier || ''}
+          value={formData?.times_period_multiplier ?? ''}
           onChange={handleChange('times_period_multiplier')}
           onBlur={(e) => onBlur(e)}
           validation={{ type: 'required' }}
@@ -42,7 +42,7 @@ function TechnicalFields() {
           placeholder="Scalar to multiply each element in data to convert it to the specified 'unit'. If the data are stored in acquisition system units or other units that require a conversion to be interpretable, multiply the data by 'conversion' to convert the data to the specified 'unit'."
           step="any"
           required
-          value={formData?.raw_data_to_volts || ''}
+          value={formData?.raw_data_to_volts ?? ''}
           onChange={handleChange('raw_data_to_volts')}
           onBlur={(e) => onBlur(e)}
           validation={{ type: 'required' }}
