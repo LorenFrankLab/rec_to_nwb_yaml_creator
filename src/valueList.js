@@ -1068,7 +1068,7 @@ export const arrayDefaultValues = {
     nPulses: 0,
     sequencePeriod: 0,
     nOutputTrains: 0,
-    train_interval: 0,
+    trainInterval: 0,
   },
 
   optogenetic_stimulation_software: "fsgui",

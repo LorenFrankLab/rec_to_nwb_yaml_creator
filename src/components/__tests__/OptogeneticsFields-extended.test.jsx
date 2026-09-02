@@ -222,7 +222,7 @@ describe('OptogeneticsFields - Extended Coverage', () => {
       await user.type(nOutputTrainsField, '20');
       expect(nOutputTrainsField).toHaveValue(20);
 
-      // Test train_interval - pure numeric
+      // Test trainInterval - pure numeric
       const trainIntervalField = screen.getByLabelText(/Train Interval/i);
       await user.clear(trainIntervalField);
       await user.type(trainIntervalField, '1000');
