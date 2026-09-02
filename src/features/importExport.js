@@ -10,6 +10,7 @@
 import YAML from 'yaml';
 import { validate } from '../validation';
 import { removeStaleCameraReferences } from '../utils/cameraReferences';
+import { withLegacyConverterKeys } from '../io/legacyCompat';
 import {
   encodeYaml,
   downloadYamlFile,
@@ -266,7 +267,9 @@ export function exportAll(model, options = {}) {
       onProgress({ stage: 'encoding', progress: 50 });
     }
 
-    const yAMLForm = encodeYaml(form);
+    // Duplicate keys released trodes_to_nwb versions still read; validation
+    // above ran on the canonical model.
+    const yAMLForm = encodeYaml(withLegacyConverterKeys(form));
     const fileName = formatDeterministicFilename(form);
 
     if (onProgress) {
