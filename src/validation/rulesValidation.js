@@ -9,7 +9,7 @@
  *
  * Rules enforced:
  * 1. Tasks with camera_ids require cameras to be defined
- * 2. Associated video files with camera_ids require cameras to be defined
+ * 2. Single-valued camera_id references require cameras to be defined
  * 3. Optogenetics configuration must be complete (all or none of the 3 fields)
  * 4. Ntrode channel mappings must have unique physical channels (no duplicates)
  * 5. Every camera_id reference must match a defined camera id
@@ -51,21 +51,28 @@ export const rulesValidation = (model) => {
     }
   }
 
-  // Rule 2: Associated video files with camera_ids require cameras
-  // Only trigger if video files have non-empty camera_id arrays
-  if (!model.cameras && model.associated_video_files?.length > 0) {
-    const videosWithCameras = model.associated_video_files.some(video =>
-      video.camera_id && Array.isArray(video.camera_id) && video.camera_id.length > 0
-    );
+  // Rule 2: Single-valued camera references require cameras
+  // associated_video_files[].camera_id and fs_gui_yamls[].camera_id are
+  // scalar integers, including 0, so test explicitly for an unset value.
+  if (!model.cameras) {
+    const hasCameraId = (item) =>
+      item?.camera_id !== '' &&
+      item?.camera_id !== undefined &&
+      item?.camera_id !== null;
 
-    if (videosWithCameras) {
-      issues.push({
-        path: 'associated_video_files',
-        code: 'missing_camera',
-        severity: 'error',
-        message: 'Associated video files have camera_ids, but no cameras are defined'
-      });
-    }
+    [
+      ['associated_video_files', 'Associated video files'],
+      ['fs_gui_yamls', 'Fs-gui YAML entries'],
+    ].forEach(([key, label]) => {
+      if ((model[key] || []).some(hasCameraId)) {
+        issues.push({
+          path: key,
+          code: 'missing_camera',
+          severity: 'error',
+          message: `${label} have camera_ids, but no cameras are defined`,
+        });
+      }
+    });
   }
 
   // Rule 3: Optogenetics all-or-nothing configuration

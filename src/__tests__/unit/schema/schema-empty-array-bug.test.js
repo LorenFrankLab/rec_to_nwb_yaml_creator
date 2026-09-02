@@ -40,12 +40,22 @@ function loadFixture(category, filename) {
   return YAML.parse(content);
 }
 
+const camera0 = {
+  id: 0,
+  meters_per_pixel: 0.001,
+  manufacturer: 'Test Manufacturer',
+  model: 'Test Model',
+  lens: 'Test Lens',
+  camera_name: 'Camera 0',
+};
+
 describe('Empty Array Validation (P2)', () => {
   describe('fs_gui_yamls[].epochs empty array bug', () => {
     it('should REJECT fs_gui_yamls with empty epochs array', () => {
       // ARRANGE: Create YAML with fs_gui_yaml containing empty epochs
       const yaml = {
         ...loadFixture('valid', 'minimal-valid.yml'),
+        cameras: [camera0],
         fs_gui_yamls: [
           {
             name: 'test.yaml',
@@ -74,6 +84,7 @@ describe('Empty Array Validation (P2)', () => {
       // ARRANGE: Valid fs_gui_yaml with one epoch
       const yaml = {
         ...loadFixture('valid', 'minimal-valid.yml'),
+        cameras: [camera0],
         fs_gui_yamls: [
           {
             name: 'test.yaml',
@@ -98,6 +109,7 @@ describe('Empty Array Validation (P2)', () => {
       // ARRANGE: Valid fs_gui_yaml with multiple epochs
       const yaml = {
         ...loadFixture('valid', 'minimal-valid.yml'),
+        cameras: [camera0],
         fs_gui_yamls: [
           {
             name: 'test.yaml',

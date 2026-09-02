@@ -185,11 +185,11 @@ describe('rulesValidation()', () => {
     });
   });
 
-  describe('Rule 2: Associated Video Files Require Cameras', () => {
+  describe('Rule 2: Single-valued Camera References Require Cameras', () => {
     it('should detect associated_video_files without cameras defined', () => {
       const model = {
         ...createTestYaml(),
-        associated_video_files: [{ camera_id: [0], task_epochs: [1] }], // Fixed: camera_id should be array
+        associated_video_files: [{ camera_id: 0, task_epochs: 1 }],
         cameras: undefined
       };
       const issues = rulesValidation(model);
@@ -204,12 +204,39 @@ describe('rulesValidation()', () => {
 
     it('should not error when associated_video_files exist with cameras', () => {
       const model = createTestYaml({
-        associated_video_files: [{ camera_id: [0], task_epochs: [1] }], // Fixed: camera_id should be array
+        associated_video_files: [{ camera_id: 0, task_epochs: 1 }],
         cameras: [{ id: 0, meters_per_pixel: 0.001, camera_name: 'cam1' }]
       });
       const issues = rulesValidation(model);
 
       expect(issues.some(i => i.code === 'missing_camera' && i.path === 'associated_video_files')).toBe(false);
+    });
+
+    it('should detect fs_gui_yamls without cameras defined', () => {
+      const model = {
+        ...createTestYaml(),
+        fs_gui_yamls: [{ camera_id: 0 }],
+        cameras: undefined,
+      };
+      const issues = rulesValidation(model);
+
+      expect(issues).toContainEqual(expect.objectContaining({
+        path: 'fs_gui_yamls',
+        code: 'missing_camera',
+        severity: 'error',
+        message: expect.stringContaining('camera'),
+      }));
+    });
+
+    it('should ignore unset scalar camera ids when cameras are not defined', () => {
+      const model = {
+        ...createTestYaml(),
+        associated_video_files: [{ camera_id: '' }],
+        fs_gui_yamls: [{ camera_id: null }, {}],
+        cameras: undefined,
+      };
+
+      expect(rulesValidation(model)).toEqual([]);
     });
 
     it('should not error when no associated_video_files exist', () => {
