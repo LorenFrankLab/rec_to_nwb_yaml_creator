@@ -138,6 +138,7 @@
    (the multi-select + bulk bar make a tabular layout the right shape). */
 .dayTable {
   width: 100%;
+
   /* Fixed layout pins the table to its container width so a long status sentence / session
      description can't force a column (and the page) wider than the viewport — the status pill wraps
      and the description truncates within their cells instead. (auto layout grew the table to its
@@ -206,6 +207,7 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+
   /* Truncate to the (fixed-layout) date cell's width rather than a fixed 26rem, so a long
      description never widens the column past the viewport. */
   max-width: 100%;
@@ -385,18 +387,6 @@
     min-height: 44px;
   }
 
-  /* The first-run setup card's row is a 4-column grid on desktop; stack it so the action link and
-     state don't squeeze into one-word columns at phone width. */
-  .setupCardItem {
-    grid-template-columns: 1fr;
-    gap: 0.25rem;
-    align-items: start;
-  }
-
-  .setupCardItemAction {
-    justify-self: start;
-  }
-
   /* Compact the table padding at phone width so the date / status / actions columns still fit. */
   .dayTable th,
   .dayTable td {
@@ -546,6 +536,22 @@
 .setupCardItemAction:hover {
   background-color: var(--color-primary);
   color: var(--color-white);
+}
+
+/* Keep this override after the base setup-card declarations. The earlier phone layout block also
+   owns the day header/table, but these two declarations used to be overridden by the desktop rules
+   below it in the cascade, pushing actions 82px beyond a 390px viewport. */
+@media (max-width: 640px) {
+  .setupCardItem {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.25rem;
+    align-items: start;
+  }
+
+  .setupCardItemAction {
+    justify-self: start;
+    min-height: 44px;
+  }
 }
 
 /* Existing-data review state — recovered/imported data is not silently trusted.
