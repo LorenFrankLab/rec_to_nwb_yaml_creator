@@ -78,6 +78,17 @@ const importYaml = async (page, fixturePath, settleMs = 500) => {
   await page.waitForTimeout(settleMs);
 };
 
+// The pinned upstream trodes_to_nwb sample ships `subject_id: "54321"`, which the app flags as a
+// template placeholder (`placeholder_subject_id`) and refuses to export. That is correct behavior,
+// so the export smoke tests below upload the fixture BYTE FOR BYTE and then correct that one field
+// in the form, exactly as a user would, rather than uploading a doctored copy of the fixture.
+const setRealSubjectId = async (page, subjectId = 'sample-rat') => {
+  const subjectIdInput = page.locator('#subject-subjectId');
+  await expect(subjectIdInput).toBeVisible({ timeout: 5000 });
+  await subjectIdInput.fill(subjectId);
+  await subjectIdInput.blur();
+};
+
 const openLegacySection = async (page, label) => {
   const link = page.locator(`a:has-text("${label}")`).first();
   await expect(link).toBeVisible({ timeout: 5000 });
@@ -88,6 +99,14 @@ const openLegacySection = async (page, label) => {
 const exportYaml = async (page) => {
   const downloadButton = page.locator('button:has-text("Download"), button:has-text("Generate")').first();
   await expect(downloadButton).toBeVisible({ timeout: 5000 });
+  const invalidFields = await page.locator('input:invalid, select:invalid, textarea:invalid').evaluateAll((fields) =>
+    fields.map((field) => ({
+      name: field.getAttribute('name'),
+      id: field.id,
+      value: 'value' in field ? field.value : null,
+    })),
+  );
+  expect(invalidFields, 'the imported YAML should satisfy legacy form validation').toEqual([]);
   return await waitForDownload(page, async () => {
     await downloadButton.click();
     await page.waitForTimeout(500);
@@ -155,8 +174,7 @@ test.describe('BASELINE: Import/Export Workflow', () => {
     await page.goto('/');
     await expect(page.locator('input:not([type="file"]), textarea, select').first()).toBeVisible({ timeout: 10000 });
 
-    // Import the canonical sample metadata from trodes_to_nwb repository
-    // This file is tested against the Python backend and guaranteed to have all required fields
+    // Import the canonical sample metadata from trodes_to_nwb repository, byte for byte.
     // Source: https://github.com/LorenFrankLab/trodes_to_nwb/blob/main/src/trodes_to_nwb/tests/test_data/20230622_sample_metadata.yml
     const fixturePath = getFixturePath('20230622_sample_metadata.yml');
     await importYaml(page, fixturePath);
@@ -168,6 +186,8 @@ test.describe('BASELINE: Import/Export Workflow', () => {
     const sessionIdInput = page.locator('input[name*="session_id"]').first();
     await expect(sessionIdInput).toBeVisible({ timeout: 5000 });
     await expect(sessionIdInput).toHaveValue('12345'); // session_id from sample file
+
+    await setRealSubjectId(page);
 
     // Export the imported data
     const download = await exportYaml(page);
@@ -196,6 +216,8 @@ test.describe('BASELINE: Import/Export Workflow', () => {
 
     // Dismiss success modal
     await dismissAlertModal(page);
+
+    await setRealSubjectId(page);
 
     // Modify a field
     const sessionIdInput = page.locator('input[name*="session_id"]').first();
@@ -252,6 +274,8 @@ test.describe('BASELINE: Import/Export Workflow', () => {
 
     // Dismiss success modal
     await dismissAlertModal(page);
+
+    await setRealSubjectId(page);
 
     // Try to export
     const download = await exportYaml(page);

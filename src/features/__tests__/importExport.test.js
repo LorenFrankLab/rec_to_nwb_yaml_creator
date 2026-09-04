@@ -197,6 +197,72 @@ institution: Test University
     });
 
     describe('Partial Import with Validation Errors', () => {
+      it('imports a section whose only issues are warnings', async () => {
+        // ARRANGE — a warning is advisory: the value is kept and flagged, never discarded.
+        const yamlContent = `
+lab: Test Lab
+subject:
+  subject_id: "54321"
+  species: Rattus norvegicus
+  sex: M
+`;
+        const file = new File([yamlContent], 'test.yml', { type: 'text/yaml' });
+
+        validate.mockReturnValue([
+          {
+            path: 'subject.subject_id',
+            code: 'placeholder_subject_id',
+            severity: 'warning',
+            message: 'Subject ID "54321" looks like a template placeholder.',
+          },
+        ]);
+
+        // ACT
+        const result = await importFiles(file);
+
+        // ASSERT
+        expect(result.success).toBe(true);
+        expect(result.formData.subject.subject_id).toBe('54321');
+        expect(result.importSummary.importedFields).toContain('subject');
+        expect(result.importSummary.excludedFields).toEqual([]);
+        expect(result.importSummary.hasExclusions).toBe(false);
+      });
+
+      it('still excludes a section that has an error alongside a warning', async () => {
+        // ARRANGE
+        const yamlContent = `
+lab: Test Lab
+subject:
+  subject_id: "54321"
+  species: rat
+`;
+        const file = new File([yamlContent], 'test.yml', { type: 'text/yaml' });
+
+        validate.mockReturnValue([
+          {
+            path: 'subject.subject_id',
+            code: 'placeholder_subject_id',
+            severity: 'warning',
+            message: 'Subject ID "54321" looks like a template placeholder.',
+          },
+          {
+            path: 'subject.species',
+            code: 'invalid_species',
+            severity: 'error',
+            message: 'Species "rat" is not DANDI-valid.',
+          },
+        ]);
+
+        // ACT
+        const result = await importFiles(file);
+
+        // ASSERT
+        expect(result.importSummary.excludedFields).toHaveLength(1);
+        expect(result.importSummary.excludedFields[0].field).toBe('subject');
+        expect(result.importSummary.excludedFields[0].reason).toContain('not DANDI-valid');
+        expect(result.formData.subject).toEqual(emptyFormData.subject);
+      });
+
       it('excludes fields with validation errors and imports valid fields', async () => {
         // ARRANGE
         const yamlContent = `

@@ -39,7 +39,8 @@ function topLevelFieldFromPath(issuePath) {
  *
  * Parses YAML content, validates against schema and rules, and prepares
  * form data with appropriate defaults. Handles partial imports when some
- * fields have validation errors.
+ * fields have validation ERRORS; warning-severity issues never exclude a
+ * section — the value is imported so the user can see and fix it in the form.
  *
  * @param {File} file - File object to import
  * @param {object} [options] - Optional configuration
@@ -145,8 +146,11 @@ export async function importFiles(file, options = {}) {
         onProgress({ stage: 'validating', progress: 50 });
       }
 
-      // Validate YAML content
-      const issues = validate(jsonFileContent);
+      // Validate YAML content. Only ERRORS exclude a section: a warning is advisory (a
+      // placeholder subject id, a non-absolute associated-file path) and the value must survive
+      // the import so the user can see and fix it in the form. Excluding on a warning silently
+      // discards a whole section of a scientifically valid file.
+      const issues = validate(jsonFileContent).filter(issue => issue.severity !== 'warning');
 
       if (issues.length === 0) {
         // No validation errors - ensure relevant keys exist and load all data
