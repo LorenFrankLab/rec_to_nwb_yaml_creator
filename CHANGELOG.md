@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Import & Repair takes a whole history, not one file.** Every selected metadata YAML gets its own
+  repair plan; the ready ones are then reconciled together so recording days group by animal and
+  configuration changes are inferred across dates, with nothing written until the batch preview is
+  confirmed. The screen reports only what actually happened: unreadable files are named on both the
+  repair and result screens (including when exactly one file decodes), a single import the executor
+  rejected shows the failure and no animal link, and a batch "replace" links to the id the animal was
+  recreated under rather than the deleted one. Catalog entries brought into an existing animal are
+  deduped by the identity keys the executor checks (camera `id`/`camera_name`, device `name`), so two
+  day files carrying the same camera recalibrated between them no longer fail the whole animal at
+  commit. A repair input that has not been answered renders empty instead of being seeded with the
+  value validation rejected, which had made unanswered rows look answered while the gate still
+  counted them unresolved.
+
 - **Controlled-vocabulary nudges.** Validation now warns, without blocking export, when
   experimenter names may not decompose in Spyglass, subject genotype appears to contain strain text,
   `subject_id` is still a template placeholder, or electrode-group locations look like typos of a
@@ -222,6 +235,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     zero console errors served exactly as GitHub Pages does, and e2e (104).
 
 ### Fixed
+
+- **A warning no longer discards a whole section on legacy import.** `importFiles` excluded any
+  top-level section carrying ANY validation issue, warnings included, so importing the pinned
+  upstream trodes_to_nwb sample silently dropped its entire `subject` block — description, genotype,
+  sex, species, `subject_id`, `date_of_birth`, weight — because `subject_id: "54321"` is flagged as a
+  template placeholder. Warnings are advisory: the value now survives the import so it can be seen
+  and fixed in the form. Only errors exclude a section.
+
+- **Epoch details are a real modal dialog.** The epoch details panel covers the editor beneath it
+  (full-screen on a phone) but did not behave as modal, so keyboard focus walked through it into the
+  controls hidden behind it. It now announces itself as a dialog, moves focus inside, contains Tab,
+  closes on Escape, locks body scroll, and restores focus to the disclosure that opened it; opening
+  the new-task-type form closes the drawer so only one modal surface is live at a time. Epoch rows
+  also collapse to labelled cards at phone width, and the animal setup card's phone layout is no
+  longer overridden by the desktop rules that follow it in the cascade.
 
 - **Generated videos can no longer reference a camera that does not exist.** "Generate missing →
   Videos (N)" derived its camera from a fallback that returned id `0` when the animal defined no
