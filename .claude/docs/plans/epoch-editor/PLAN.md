@@ -1,6 +1,13 @@
 # Epoch-editor redesign — implementation plan
 
-**Status:** Not started.
+**Status:** COMPLETE — Phases 0–8 built, reviewed, and merged into `modern` over 2026-06-16 →
+2026-06-17 (`2e5745ea` shared primitives → `2c0a4ec0` "redesign complete (Phase 8)"), including the
+per-phase code-review fix commits. Phase 8 retired the legacy `DayEditorStepper`; the shipped surfaces
+are recorded in the CHANGELOG `[Unreleased]` section.
+
+**Follow-on:** post-merge refinement of the resulting Tasks & Files surface (2026-06-18) exposed
+mis-signalling this plan did not cover; those fixes are planned separately in
+[../tasks-files-ux-fixes/PLAN.md](../tasks-files-ux-fixes/PLAN.md) (not started).
 
 Ship the reviewed day/animal redesign into the live `modern` app, screen by screen, as a presentation
 reshape over the existing workspace substrate (state, export merge, validation gate, view-model layer all

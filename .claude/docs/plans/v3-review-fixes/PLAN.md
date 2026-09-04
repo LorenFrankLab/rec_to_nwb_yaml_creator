@@ -1,6 +1,10 @@
 # v3 Review Fixes Implementation Plan
 
-**Status:** Not started.
+**Status:** COMPLETE — all 15 phases merged into `modern` on 2026-06-17, one commit per phase:
+P1 `6902c383` · P2 `ec47721c` · P3 `f5ae30b6` · P4 `1ddfca48` · P5 `5d2f886a` · P6 `54e71cef` ·
+P7 `79a1d241` · P8 `3fc26312` · P9 `c04e9ee5` · P10 `5d35dc1f` · P11 `d13addd0` · P12 `d844ddea` ·
+P13 `08358675` · P14 `9fa101ef` · P15 `aba3bd0b`. The deferred non-blocking follow-ups listed in
+[overview.md](overview.md) remain open.
 
 A comprehensive multi-agent review of the `modern` branch (the full v3 rewrite, vs `main`) surfaced no
 unprotected export-corruption bug, but did find a set of real release-blocking issues: a few

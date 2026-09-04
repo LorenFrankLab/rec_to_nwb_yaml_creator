@@ -1,7 +1,9 @@
 # Design-Feedback Remediation Implementation Plan
 
-**Status:** Phases 1–7, 8A-1–8A-3, 8B, and 8C complete (merged into `modern`); Phases 9, 10, 10B not
-started. Phases 11–12 are intentionally reserved for selective user testing + the default-entry
+**Status:** Phases 1–7, 8A-1–8A-3, 8B, 8C, and 9 (9a validation split, 9b build gate, 9c UI
+decomposition) complete (merged into `modern`); Phases 10 and 10B not started — `appliedToDays` is
+still a persisted field (`src/state/workspaceTypes.ts:313`), which is exactly Phase 10's shape change.
+Phases 11–12 are intentionally reserved for selective user testing + the default-entry
 cutover decision and are not Claude-Code implementation phases in this plan.
 
 This plan turns six pieces of user design feedback plus a re-evaluated backlog into shippable work:
