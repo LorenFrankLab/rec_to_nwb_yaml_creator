@@ -223,6 +223,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Generated videos can no longer reference a camera that does not exist.** "Generate missing →
+  Videos (N)" derived its camera from a fallback that returned id `0` when the animal defined no
+  cameras, minting `associated_video_files[].camera_id: 0` — a dangling reference in exported
+  metadata that no camera backed. Generation is now answered only from cameras the animal actually
+  defines: an animal with no cameras generates nothing, and an epoch whose declared cameras have all
+  been deleted also generates nothing rather than silently reattributing its video to a different,
+  still-existing camera. An epoch that declares no cameras of its own still falls back to the
+  animal's first camera, unchanged. Exported YAML for existing valid data is byte-identical.
+
 - **Legacy YAML import robustness.** Import & Repair now accepts corpus-style metadata files with
   list-typed `associated_files.task_epochs` / `associated_video_files.task_epochs` when the list has
   one epoch, normalizing them to the scalar export form and no longer false-flagging them as

@@ -81,6 +81,96 @@ describe('epoch generated file helpers', () => {
     ]);
   });
 
+  describe('never generates a video for a camera that does not exist', () => {
+    // A generated video's camera_id is exported as associated_video_files[].camera_id.
+    // Emitting an id no camera defines writes a dangling reference into the NWB
+    // metadata, so these rows must generate nothing and let the user add the camera.
+
+    it('generates nothing when the animal has no cameras at all', () => {
+      // Every row falls back to the animal's first camera; there isn't one.
+      const noCameras: Camera[] = [];
+
+      expect(countMissingGeneratedVideos(grid, noCameras)).toBe(0);
+      expect(addMissingGeneratedVideos(grid, [], noCameras)).toEqual([]);
+    });
+
+    it('leaves existing videos untouched when the animal has no cameras', () => {
+      const current = [{ name: 'manual_video.h264', camera_id: 1, task_epochs: 2 }];
+
+      expect(addMissingGeneratedVideos(grid, current, [])).toBe(current);
+    });
+
+    it('skips a row whose declared camera was deleted', () => {
+      // Row declares camera 7; the animal only defines 0 and 1 (e.g. camera 7 was
+      // removed after the epoch was configured).
+      const staleGrid = {
+        ...grid,
+        rows: [
+          {
+            epoch: 4,
+            tag: 'r2',
+            cameras: [7],
+            statescript: null,
+            videos: [],
+            videoPresence: 'missing' as const,
+          },
+        ],
+      };
+
+      expect(countMissingGeneratedVideos(staleGrid, cameras)).toBe(0);
+      expect(addMissingGeneratedVideos(staleGrid, [], cameras)).toEqual([]);
+    });
+
+    it('generates only the declared cameras that still exist', () => {
+      const mixedGrid = {
+        ...grid,
+        rows: [
+          {
+            epoch: 5,
+            tag: 'r3',
+            cameras: [1, 7],
+            statescript: null,
+            videos: [],
+            videoPresence: 'missing' as const,
+          },
+        ],
+      };
+
+      expect(addMissingGeneratedVideos(mixedGrid, [], cameras)).toEqual([
+        {
+          name: '20230622_remy_05_r3.1.h264',
+          camera_id: 1,
+          task_epochs: 5,
+        },
+      ]);
+    });
+
+    it('still falls back to the first camera when the row declares none', () => {
+      // Regression guard: the fallback is correct behavior whenever a camera exists.
+      const undeclaredGrid = {
+        ...grid,
+        rows: [
+          {
+            epoch: 6,
+            tag: 'r4',
+            cameras: [],
+            statescript: null,
+            videos: [],
+            videoPresence: 'missing' as const,
+          },
+        ],
+      };
+
+      expect(addMissingGeneratedVideos(undeclaredGrid, [], cameras)).toEqual([
+        {
+          name: '20230622_remy_06_r4.1.h264',
+          camera_id: 0,
+          task_epochs: 6,
+        },
+      ]);
+    });
+  });
+
   it('preserves existing arrays by appending without overwriting', () => {
     const current = [{ name: 'manual_video.h264', camera_id: 1, task_epochs: 2 }];
 
