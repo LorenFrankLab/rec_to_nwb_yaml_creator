@@ -63,6 +63,14 @@ interface FileEntry {
   configuration: Record<string, any>;
 }
 
+/** Files grouped under the first-seen spelling of a case-insensitive subject id. */
+interface SubjectBatch {
+  /** First-seen subject-id spelling; this becomes the planned animal id. */
+  subjectId: string;
+  /** Files belonging to that normalized identity. */
+  entries: FileEntry[];
+}
+
 /** A subject's resolved animal-level facts (latest-date-wins) plus surfaced divergences. */
 interface ResolvedAnimalFacts {
   subject: any;
@@ -518,8 +526,8 @@ export function planImport(
 ): ImportPlan {
   const files = Array.isArray(decodedFiles) ? decodedFiles : [];
   const unimportable: Array<{ sourceName: string; reason: string }> = [];
-  /** subjectId → date-ordered file entries */
-  const bySubject = new Map<string, FileEntry[]>();
+  /** normalized subjectId → first-seen display id + date-ordered file entries */
+  const bySubject = new Map<string, SubjectBatch>();
   /**
    * `${subjectId} ${date}` → the sourceName of the FIRST (input/source order) file that
    * claimed that (subject, date). Used to dedup intra-plan duplicates so `planImport` never
@@ -592,19 +600,16 @@ export function planImport(
     // two days with the same id. Keep the FIRST (input/source order); send the rest to
     // unimportable naming the collision.
     //
-    // NB: this intra-batch grouping (here and the `bySubject` keying below) compares the RAW
-    // subjectId — unlike the existing-animal match (`findExistingAnimalId`), which is normalized. A
-    // multi-file batch carrying both `Remy` and `remy` would therefore plan two separate animals.
-    // This is currently unreachable: the sole caller imports ONE file at a time (Import & Repair,
-    // post-Phase-7), so a batch never holds two subject ids. If a multi-file import path returns,
-    // normalize the grouping key here (trim+lower-case, first-seen raw id wins) to keep the
-    // no-fragmentation guarantee the normalized matcher provides.
-    const dayKey = `${subjectId} ${date}`;
+    // Batch identity is case-insensitive, matching the existing-workspace lookup. The first-seen
+    // spelling wins for display/store identity, so `Remy` + `remy` cannot fragment into two animals.
+    const subjectKey = subjectId.toLowerCase();
+    const displaySubjectId = bySubject.get(subjectKey)?.subjectId ?? subjectId;
+    const dayKey = `${subjectKey} ${date}`;
     const keptSourceName = keptByDayKey.get(dayKey);
     if (keptSourceName !== undefined) {
       unimportable.push({
         sourceName,
-        reason: `Duplicate recording date ${date} for subject "${subjectId}" (already provided by ${keptSourceName}).`,
+        reason: `Duplicate recording date ${date} for subject "${displaySubjectId}" (already provided by ${keptSourceName}).`,
       });
       continue;
     }
@@ -617,13 +622,15 @@ export function planImport(
       dayFacts: decomposed.dayFacts,
       configuration: decomposed.configuration,
     };
-    if (!bySubject.has(subjectId)) bySubject.set(subjectId, []);
-    bySubject.get(subjectId)!.push(entry);
+    if (!bySubject.has(subjectKey)) {
+      bySubject.set(subjectKey, { subjectId, entries: [] });
+    }
+    bySubject.get(subjectKey)!.entries.push(entry);
   }
 
   const animals: ImportPlanAnimal[] = [];
   let dayCount = 0;
-  for (const [subjectId, rawEntries] of bySubject) {
+  for (const { subjectId, entries: rawEntries } of bySubject.values()) {
     // Date order (stable): the version-1 = earliest config and first-seen camera ordering
     // both depend on a deterministic earliest-first sort.
     const entries = [...rawEntries].sort((a, b) => a.date.localeCompare(b.date));
@@ -644,7 +651,10 @@ export function planImport(
       // its resolution is unused (`null`, not a dead 'add' literal). The executor/dialog
       // read this field only when `conflict === 'exists'`.
       defaultResolution: existingAnimalId ? 'add' : null,
-      subject: facts.subject,
+      // Grouping is case-insensitive and the first-seen spelling is authoritative. Keep the
+      // subject payload in lockstep with the animal/store id even when a later file uses `remy`
+      // after the first file used `Remy`.
+      subject: { ...facts.subject, subject_id: subjectId },
       experimenters: facts.experimenters,
       optogenetics: facts.optogenetics,
       devices: facts.devices,

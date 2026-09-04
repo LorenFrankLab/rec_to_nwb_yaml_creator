@@ -92,12 +92,13 @@ function existingCatalogGapYaml() {
 /**
  * Render the screen against an initial workspace.
  * @param {object} [animals] - Initial workspace.animals.
+ * @param {object} [days] - Initial workspace.days.
  * @returns {object} The render result.
  */
-function renderScreen(animals = {}) {
+function renderScreen(animals = {}, days = {}) {
   captured = null;
   return render(
-    <StoreProvider initialState={{ workspace: { animals, days: {}, settings: {} } }}>
+    <StoreProvider initialState={{ workspace: { animals, days, settings: {} } }}>
       <ImportRepair />
       <StoreProbe />
     </StoreProvider>
@@ -180,6 +181,38 @@ describe('ImportRepair — flagging + suggested fixes', () => {
 });
 
 describe('ImportRepair — commit', () => {
+  it('groups multiple ready day files into one animal before committing', async () => {
+    const user = userEvent.setup();
+    renderScreen();
+
+    const secondDayYaml = cleanYaml.replaceAll('20230622', '20230623');
+    await user.upload(screen.getByLabelText(/choose a metadata yaml file/i), [
+      makeFile('06222023_remy_metadata.yml', cleanYaml),
+      makeFile('06232023_remy_metadata.yml', secondDayYaml),
+    ]);
+
+    const reviewButton = await screen.findByRole('button', {
+      name: /review 2 ready files/i,
+    });
+    expect(screen.getByText('2 ready')).toBeInTheDocument();
+    await user.click(reviewButton);
+
+    expect(
+      screen.getByRole('region', { name: /batch import summary/i })
+    ).toHaveTextContent(/2 recording days → 1 animal/i);
+    expect(screen.getByRole('heading', { name: 'remy' })).toBeInTheDocument();
+    expect(screen.getByText(/1 hardware configuration/i)).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /confirm import/i }));
+
+    await screen.findByRole('heading', { name: /import complete/i });
+    expect(Object.keys(captured.animals)).toEqual(['remy']);
+    expect(Object.keys(captured.days).sort()).toEqual([
+      'remy-2023-06-22',
+      'remy-2023-06-23',
+    ]);
+  });
+
   it('creates a new animal and shows a success link once every fix is accepted', async () => {
     const user = userEvent.setup();
     renderScreen();
@@ -286,5 +319,263 @@ describe('ImportRepair — commit', () => {
       'ImportedRig',
     ]);
     expect(Object.keys(captured.days)).toEqual(['remy-2023-06-22']);
+  });
+
+  it('does not merge catalog entries from a duplicate-date file excluded at batch preview', async () => {
+    const user = userEvent.setup();
+    renderScreen({
+      remy: {
+        id: 'remy',
+        subject: { subject_id: 'remy' },
+        days: [],
+        cameras: [{ id: 0, camera_name: 'existing_cam' }],
+        devices: {
+          data_acq_device: [
+            { name: 'ExistingRig', system: 'MCU', amplifier: 'Intan', adc_circuit: 'Intan' },
+          ],
+          device: { name: ['Trodes'] },
+          electrode_groups: [],
+          ntrode_electrode_group_channel_map: [],
+        },
+        configurationHistory: [
+          {
+            version: 1,
+            devices: { electrode_groups: [], ntrode_electrode_group_channel_map: [] },
+            appliedToDays: [],
+          },
+        ],
+      },
+    });
+
+    const duplicateModel = decodeYaml(existingCatalogGapYaml());
+    duplicateModel.cameras[0] = {
+      ...duplicateModel.cameras[0],
+      id: 4,
+      camera_name: 'excluded_camera',
+    };
+    duplicateModel.data_acq_device[0] = {
+      ...duplicateModel.data_acq_device[0],
+      name: 'ExcludedRig',
+    };
+    duplicateModel.tasks[0].camera_id = [4];
+    duplicateModel.associated_video_files[0].camera_id = 4;
+
+    await user.upload(screen.getByLabelText(/choose a metadata yaml file/i), [
+      makeFile('06222023_remy_metadata.yml', existingCatalogGapYaml()),
+      makeFile('20230622_remy_duplicate.yml', encodeYaml(duplicateModel)),
+    ]);
+
+    await user.click(await screen.findByRole('button', { name: /Accept Camera 3/i }));
+    await user.click(screen.getByRole('button', { name: /Accept Recording system/i }));
+    await user.selectOptions(screen.getByLabelText('Review file'), '1');
+    await user.click(screen.getByRole('button', { name: /Accept Camera 4/i }));
+    await user.click(screen.getByRole('button', { name: /Accept Recording system/i }));
+
+    await user.click(screen.getByRole('button', { name: /Review 2 ready files/i }));
+    expect(screen.getByRole('region', { name: /batch import summary/i })).toHaveTextContent(
+      /1 recording day → 1 animal/i
+    );
+    await user.click(screen.getByRole('button', { name: /confirm import/i }));
+
+    await screen.findByRole('heading', { name: /import complete/i });
+    expect(captured.animals.remy.cameras.map((camera) => camera.id)).toEqual([0, 3]);
+    expect(captured.animals.remy.devices.data_acq_device.map((device) => device.name)).toEqual([
+      'ExistingRig',
+      'ImportedRig',
+    ]);
+  });
+});
+
+describe('ImportRepair — honest reporting of files that never made it', () => {
+  it('names every unreadable file even when exactly one file decodes', async () => {
+    const user = userEvent.setup();
+    renderScreen();
+
+    await user.upload(screen.getByLabelText(/choose a metadata yaml file/i), [
+      makeFile('06222023_remy_metadata.yml', cleanYaml),
+      makeFile('broken-a.yml', 'not: [valid'),
+      makeFile('broken-b.yml', 'also: [broken'),
+    ]);
+
+    // Only one file decoded, so the screen runs its single-file flow — the two unreadable files
+    // must still be named, not silently dropped.
+    await screen.findByText(/will create a new animal/i);
+    const unreadable = screen.getByRole('region', { name: /could not be read/i });
+    expect(within(unreadable).getByText(/broken-a\.yml/)).toBeInTheDocument();
+    expect(within(unreadable).getByText(/broken-b\.yml/)).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /import as new animal/i }));
+
+    // …and they are still named on the result screen, so "success" never overstates what happened.
+    const notImported = await screen.findByRole('region', { name: /not imported/i });
+    expect(within(notImported).getByText(/broken-a\.yml/)).toBeInTheDocument();
+    expect(within(notImported).getByText(/broken-b\.yml/)).toBeInTheDocument();
+  });
+
+  it('does not link to an animal when the single-file import failed', async () => {
+    const user = userEvent.setup();
+    // The day this file imports already exists, so the executor pre-flight fails the animal.
+    renderScreen(
+      {
+        remy: {
+          id: 'remy',
+          subject: { subject_id: 'remy' },
+          days: ['remy-2023-06-22'],
+          cameras: decodeYaml(cleanYaml).cameras,
+          devices: {
+            data_acq_device: [
+              { name: 'SpikeGadgets', system: 'SpikeGadgets', amplifier: 'Intan', adc_circuit: 'Intan' },
+            ],
+            device: { name: ['Trodes'] },
+            electrode_groups: [],
+            ntrode_electrode_group_channel_map: [],
+          },
+          configurationHistory: [
+            {
+              version: 1,
+              devices: { electrode_groups: [], ntrode_electrode_group_channel_map: [] },
+              appliedToDays: [],
+            },
+          ],
+        },
+      },
+      { 'remy-2023-06-22': { id: 'remy-2023-06-22', animalId: 'remy', date: '2023-06-22' } }
+    );
+
+    await user.upload(
+      screen.getByLabelText(/choose a metadata yaml file/i),
+      makeFile('06222023_remy_metadata.yml', cleanYaml)
+    );
+    await screen.findByText(/already exists/i);
+    await user.click(screen.getByRole('button', { name: /add recording day/i }));
+
+    await screen.findByRole('heading', { name: /import failed/i });
+    expect(screen.queryByRole('link', { name: /^remy$/i })).not.toBeInTheDocument();
+  });
+
+  it('links a replaced animal to the id it was recreated under', async () => {
+    const user = userEvent.setup();
+    // The existing animal is a case variant of the imported subject_id, so `replace` deletes
+    // "Remy" and recreates the animal under "remy".
+    renderScreen({
+      Remy: {
+        id: 'Remy',
+        subject: { subject_id: 'Remy' },
+        days: [],
+        cameras: decodeYaml(cleanYaml).cameras,
+        devices: {
+          data_acq_device: [
+            { name: 'SpikeGadgets', system: 'SpikeGadgets', amplifier: 'Intan', adc_circuit: 'Intan' },
+          ],
+          device: { name: ['Trodes'] },
+          electrode_groups: [],
+          ntrode_electrode_group_channel_map: [],
+        },
+        configurationHistory: [
+          {
+            version: 1,
+            devices: { electrode_groups: [], ntrode_electrode_group_channel_map: [] },
+            appliedToDays: [],
+          },
+        ],
+      },
+    });
+
+    const secondDayYaml = cleanYaml.replaceAll('20230622', '20230623');
+    await user.upload(screen.getByLabelText(/choose a metadata yaml file/i), [
+      makeFile('06222023_remy_metadata.yml', cleanYaml),
+      makeFile('06232023_remy_metadata.yml', secondDayYaml),
+    ]);
+
+    await user.click(await screen.findByRole('button', { name: /review 2 ready files/i }));
+    await user.click(screen.getByRole('radio', { name: /replace the existing animal/i }));
+    await user.click(screen.getByRole('button', { name: /confirm import/i }));
+
+    await screen.findByRole('heading', { name: /import complete/i });
+    expect(Object.keys(captured.animals)).toEqual(['remy']);
+    const success = screen.getByRole('region', { name: /import complete/i });
+    expect(within(success).getByRole('link', { name: 'remy' })).toHaveAttribute(
+      'href',
+      '#/animal/remy/days'
+    );
+  });
+});
+
+describe('ImportRepair — repair rows and catalog additions', () => {
+  it('brings a catalog entry once when two day files carry the same id with drifting fields', async () => {
+    const user = userEvent.setup();
+    renderScreen({
+      remy: {
+        id: 'remy',
+        subject: { subject_id: 'remy' },
+        days: [],
+        cameras: [{ id: 0, camera_name: 'existing_cam' }],
+        devices: {
+          data_acq_device: [
+            { name: 'ExistingRig', system: 'MCU', amplifier: 'Intan', adc_circuit: 'Intan' },
+          ],
+          device: { name: ['Trodes'] },
+          electrode_groups: [],
+          ntrode_electrode_group_channel_map: [],
+        },
+        configurationHistory: [
+          {
+            version: 1,
+            devices: { electrode_groups: [], ntrode_electrode_group_channel_map: [] },
+            appliedToDays: [],
+          },
+        ],
+      },
+    });
+
+    // Two recording days that bring the SAME camera id / name, recalibrated between them.
+    const firstDay = decodeYaml(existingCatalogGapYaml());
+    const secondDay = structuredClone(firstDay);
+    secondDay.cameras[0].meters_per_pixel = 0.002;
+    secondDay.session_id = 'remy_20230623';
+
+    await user.upload(screen.getByLabelText(/choose a metadata yaml file/i), [
+      makeFile('06222023_remy_metadata.yml', encodeYaml(firstDay)),
+      makeFile('06232023_remy_metadata.yml', encodeYaml(secondDay)),
+    ]);
+
+    await screen.findByRole('heading', { name: /needs attention/i });
+    for (const index of ['0', '1']) {
+      await user.selectOptions(screen.getByLabelText('Review file'), index);
+      await user.click(screen.getByRole('button', { name: /Accept Camera 3/i }));
+      await user.click(screen.getByRole('button', { name: /Accept Recording system/i }));
+    }
+
+    await user.click(screen.getByRole('button', { name: /review 2 ready files/i }));
+    await user.click(screen.getByRole('button', { name: /confirm import/i }));
+
+    await screen.findByRole('heading', { name: /import complete/i });
+    // The animal gains ONE camera 3 — not two rows that collide at commit time.
+    expect(captured.animals.remy.cameras.map((camera) => camera.id)).toEqual([0, 3]);
+    expect(captured.animals.remy.devices.data_acq_device.map((device) => device.name)).toEqual([
+      'ExistingRig',
+      'ImportedRig',
+    ]);
+    expect(Object.keys(captured.days).sort()).toEqual(['remy-2023-06-22', 'remy-2023-06-23']);
+  });
+
+  it('leaves a required-input row empty rather than pre-filling the rejected value', async () => {
+    const user = userEvent.setup();
+    renderScreen();
+
+    // A species the suggestion table cannot map, so the row is a free-text input: the value the
+    // validator rejected must not be offered back as the answer.
+    const model = decodeYaml(cleanYaml);
+    model.subject.species = 'unidentified rodent';
+    await user.upload(
+      screen.getByLabelText(/choose a metadata yaml file/i),
+      makeFile('06222023_remy_metadata.yml', encodeYaml(model))
+    );
+
+    await screen.findByRole('heading', { name: /needs attention/i });
+    const speciesInput = screen.getByLabelText(/subject — species/i);
+    expect(speciesInput).toHaveValue('');
+    // The empty row and the gate agree: the file is not importable yet.
+    expect(screen.getByRole('button', { name: /import as new animal/i })).toBeDisabled();
   });
 });

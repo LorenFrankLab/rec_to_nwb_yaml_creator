@@ -117,6 +117,8 @@ export interface RepairItem {
   path: string;
   /** Short human label for the field. */
   label: string;
+  /** Human context identifying the containing task, camera, file, probe, etc. */
+  context?: string;
   /** The validator code (or shim id) that produced this item — the item's provenance. */
   code: string;
   /** The section grouping. */
@@ -141,6 +143,10 @@ export interface RepairItem {
 export interface RepairBlocker {
   /** The error's path. */
   path: string;
+  /** Human field label derived from the path. */
+  label?: string;
+  /** Human context identifying the containing collection row. */
+  context?: string;
   /** The validator code. */
   code: string;
   /** The validator's message. */
@@ -237,6 +243,66 @@ function getAtPath(model: unknown, p: string): unknown {
     cursor = (cursor as Record<PathSegment, unknown>)[seg];
   }
   return cursor;
+}
+
+/**
+ * Name the collection row that owns a repair path so repeated fields are distinguishable.
+ * For example, `tasks[1].task_environment` becomes `Task 2 — W-track` instead of another
+ * anonymous "Task environment" input.
+ */
+function repairContext(p: string, model: unknown): string | undefined {
+  const segments = parsePath(p);
+  if (segments.length === 0 || typeof segments[0] !== 'string') return undefined;
+
+  if (segments[0] === 'subject') return 'Subject';
+
+  const index = typeof segments[1] === 'number' ? segments[1] : null;
+  if (index === null) return undefined;
+  const row = getAtPath(model, `${segments[0]}[${index}]`);
+  const record = isRecord(row) ? row : {};
+  const suffix = (value: unknown) => {
+    const text = String(value ?? '').trim();
+    return text === '' ? '' : ` — ${text}`;
+  };
+  const identity = (value: unknown) => {
+    const text = String(value ?? '').trim();
+    return text === '' ? String(index + 1) : text;
+  };
+
+  switch (segments[0]) {
+    case 'tasks':
+      return `Task ${index + 1}${suffix(record.task_name)}`;
+    case 'cameras':
+      return `Camera ${identity(record.id)}${suffix(record.camera_name)}`;
+    case 'electrode_groups':
+      return `Electrode group ${identity(record.id)}${suffix(record.location)}`;
+    case 'ntrode_electrode_group_channel_map':
+      return `Ntrode ${identity(record.ntrode_id)}${suffix(
+        record.electrode_group_id === undefined
+          ? undefined
+          : `electrode group ${String(record.electrode_group_id)}`
+      )}`;
+    case 'associated_files':
+      return `Associated file ${index + 1}${suffix(record.name)}`;
+    case 'associated_video_files':
+      return `Video file ${index + 1}${suffix(record.name)}`;
+    case 'behavioral_events':
+      return `Behavioral event ${index + 1}${suffix(record.name)}`;
+    case 'virus_injection':
+      return `Virus injection ${index + 1}${suffix(record.location)}`;
+    case 'optogenetic_stimulation':
+      return `Optogenetic stimulation ${index + 1}`;
+    case 'opto_excitation_source':
+      return `Optical source ${index + 1}${suffix(record.name)}`;
+    case 'optical_fiber':
+      return `Optical fiber ${index + 1}${suffix(record.name)}`;
+    case 'fs_gui_yamls':
+      return `FSGUI file ${index + 1}${suffix(record.name)}`;
+    case 'data_acq_device':
+      return `Recording system ${index + 1}${suffix(record.name)}`;
+    default:
+      return `${leafLabel(segments[0])} ${index + 1}`;
+  }
 }
 
 /**
@@ -886,6 +952,26 @@ function buildValidationItems(model: ValidationModel): {
       continue;
     }
 
+    // Duplicate associated-file identities are scalar fields and can be corrected safely in this
+    // screen. Sending users to a text editor for these was especially disruptive for the supplied
+    // trodes_to_nwb sample, whose placeholder paths intentionally collide.
+    if (
+      (code === 'duplicate_associated_file_name' || code === 'duplicate_associated_file_path') &&
+      (path.endsWith('.name') || path.endsWith('.path'))
+    ) {
+      items.push({
+        path,
+        label: path.endsWith('.name') ? 'Associated file name' : 'Associated file path',
+        code,
+        group: 'attention',
+        kind: 'input',
+        was,
+        why: message,
+        inputType: 'text',
+      });
+      continue;
+    }
+
     // subject.subject_id is the animal's IDENTITY — the store key, the hash route, and the input to
     // the new-vs-existing decision (computed once from the file). It isn't meaningfully editable in
     // this screen (the create wizard likewise locks it; a slashed id is already a fix-in-file
@@ -1154,12 +1240,21 @@ export function buildImportRepairPlan(
     decision,
     workspace
   );
-  const allItems = [...items, ...shimItems, ...importOnlyItems, ...existingAnimalCatalogItems];
+  const allItems = [...items, ...shimItems, ...importOnlyItems, ...existingAnimalCatalogItems]
+    .map((item) => ({
+      ...item,
+      context: item.context ?? repairContext(item.path, normalized),
+    }));
+  const contextualBlockers = blockers.map((blocker) => ({
+    ...blocker,
+    label: blocker.label ?? leafLabel(blocker.path),
+    context: blocker.context ?? repairContext(blocker.path, normalized),
+  }));
 
   return {
     sourceName,
     items: allItems,
-    blockers,
+    blockers: contextualBlockers,
     benign,
     decision,
     hasErrors: allItems.length > 0 || blockers.length > 0,

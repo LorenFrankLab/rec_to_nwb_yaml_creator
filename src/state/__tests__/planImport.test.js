@@ -69,6 +69,24 @@ describe('planImport — grouping by subject', () => {
     const totoro = plan.animals.find((a) => a.subjectId === 'totoro');
     expect(totoro.days.map((d) => d.date)).toEqual(['2024-01-15']);
   });
+
+  it('groups case variants under the first-seen subject id', () => {
+    const files = [
+      makeFile({ subjectId: 'Remy', date: '2023-06-22' }),
+      makeFile({ subjectId: 'remy', date: '2023-06-23' }),
+    ];
+
+    const plan = planImport(files, createDefaultWorkspace());
+
+    expect(plan.unimportable).toEqual([]);
+    expect(plan.summary).toEqual({ fileCount: 2, animalCount: 1, dayCount: 2 });
+    expect(plan.animals[0].subjectId).toBe('Remy');
+    expect(plan.animals[0].subject.subject_id).toBe('Remy');
+    expect(plan.animals[0].days.map((day) => day.date)).toEqual([
+      '2023-06-22',
+      '2023-06-23',
+    ]);
+  });
 });
 
 describe('planImport — configuration versions', () => {

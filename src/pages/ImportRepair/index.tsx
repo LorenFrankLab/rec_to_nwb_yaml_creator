@@ -1,20 +1,14 @@
 /**
- * Import & Repair screen (`#/import`).
+ * Import & Repair (`#/import`).
  *
- * A teaching-validation import: pick ONE metadata YAML, see every field that won't validate flagged
- * with a suggested fix drawn from the SAME validator the export gate uses, accept/edit each one, then
- * commit. It owns no import or validation logic of its own — it renders the pure spine
- * ({@link module:state/importRepair}) and commits through the EXISTING import path
- * ({@link module:state/yamlImportPlan} + {@link module:state/yamlImportApply}), so there is exactly
- * one importer and one validator. Nothing is written until the user confirms, and nothing is
- * silently dropped: unmappable values surface as user-input rows, required-but-missing blocks, and
- * the benign (format-only) normalizations the commit applies are listed.
- *
- * @module pages/ImportRepair
+ * A multi-file, teaching-validation workflow on top of the shared repair planner, batch reconciler,
+ * and executor. Files are repaired independently, then every ready file is reconciled together so
+ * recording days group by animal and configuration changes are inferred across dates. Nothing is
+ * written until the user confirms the final batch preview.
  */
 
 import { useMemo, useRef, useState } from 'react';
-import type { ChangeEvent } from 'react';
+import type { ChangeEvent, DragEvent as ReactDragEvent, ReactNode } from 'react';
 import { useStoreContext } from '../../state/StoreContext';
 import { parseImportFiles } from '../../features/importYaml';
 import {
@@ -25,27 +19,55 @@ import {
 } from '../../state/importRepair';
 import type { ImportRepairPlan, RepairItem } from '../../state/importRepair';
 import { planImport } from '../../state/yamlImportPlan';
+import type { ImportPlan, ImportPlanAnimal } from '../../state/yamlImportPlan';
 import { applyImportPlan } from '../../state/yamlImportApply';
 import Button from '../../components/ui/Button';
 import styles from './ImportRepair.module.css';
 
-/** The committed import outcome shown on the success screen. */
-interface ImportResult {
-  /** 'new' when a new animal was created; 'add' when a day was added to an existing animal. */
-  kind: 'new' | 'add';
-  /** The animal id to link to. */
-  animalId: string;
-  /** A failure reason when the commit could not write (defensive; should not happen post-gate). */
-  failure?: string;
+interface DecodedImportFile {
+  sourceName: string;
+  flatModel: object;
 }
 
-/**
- * Whether a value resolves a repair item (a non-empty string / a finite number / a non-empty list).
- * Necessary (not sufficient) for import — pairs with the planImport gate (see the gate comment).
- *
- * @param value - The current resolution value.
- * @returns True when the item is considered resolved.
- */
+interface RepairFile {
+  key: string;
+  decoded: DecodedImportFile;
+  plan: ImportRepairPlan;
+  resolutions: Record<string, unknown>;
+}
+
+interface FileAssessment {
+  file: RepairFile;
+  repaired: object;
+  importPlan: ImportPlan;
+  ready: boolean;
+  reason: string | null;
+  unresolvedCount: number;
+}
+
+interface ExcludedFile {
+  sourceName: string;
+  reason: string;
+}
+
+interface BatchPreview {
+  plan: ImportPlan;
+  excluded: ExcludedFile[];
+  catalogAdditions: Record<string, { cameras?: unknown[]; data_acq_device?: unknown[] }>;
+}
+
+interface ImportResult {
+  mode: 'single' | 'batch';
+  kind?: 'new' | 'add';
+  animalIds: string[];
+  /** Files that never reached the executor (unreadable, unrepaired, or rejected by the planner). */
+  excluded: ExcludedFile[];
+  summary: ReturnType<typeof applyImportPlan>;
+}
+
+type ConflictResolution = 'add' | 'skip' | 'replace';
+
+/** Whether a user-provided value resolves a repair item. */
 function isResolvedValue(value: unknown): boolean {
   if (value === undefined || value === null) return false;
   if (typeof value === 'string') return value.trim() !== '';
@@ -54,351 +76,760 @@ function isResolvedValue(value: unknown): boolean {
   return true;
 }
 
-/** Render a value for the "was → suggested" display (arrays join, others stringify). */
+/** Render a source/suggested value without losing list values. */
 function display(value: unknown): string {
-  if (Array.isArray(value)) return value.map((v) => String(v)).join(', ');
+  if (Array.isArray(value)) return value.map((item) => String(item)).join(', ');
   return String(value);
 }
 
+/** A stable, unique key for two selected files that happen to share a basename. */
+function fileKey(file: DecodedImportFile, index: number): string {
+  return `${index}:${file.sourceName}`;
+}
+
+/** Assess one repaired file through the exact same importer used at commit time. */
+function assessFile(
+  file: RepairFile,
+  workspace: { animals?: unknown }
+): FileAssessment {
+  const repaired = applyImportRepairs(file.decoded.flatModel, file.resolutions);
+  const importPlan = planImport(
+    [{ sourceName: file.decoded.sourceName, flatModel: repaired }],
+    workspace
+  );
+  const unresolvedCount = file.plan.items.filter(
+    (item) => !isResolvedValue(file.resolutions[item.path])
+  ).length;
+  const catalogBlocker = existingAnimalCatalogResolutionBlocker(
+    file.plan,
+    file.resolutions
+  );
+
+  const reason =
+    file.plan.decision.kind === 'blocked'
+      ? file.plan.decision.reason
+      : file.plan.blockers.length > 0
+        ? `${file.plan.blockers.length} field${file.plan.blockers.length === 1 ? '' : 's'} still need source-file editing.`
+        : unresolvedCount > 0
+          ? `${unresolvedCount} flagged field${unresolvedCount === 1 ? '' : 's'} still need a response.`
+          : catalogBlocker
+            ? catalogBlocker
+            : importPlan.animals.length !== 1
+              ? importPlan.unimportable[0]?.reason ?? 'The repaired file cannot be imported yet.'
+              : null;
+
+  return { file, repaired, importPlan, ready: reason === null, reason, unresolvedCount };
+}
+
 /**
- * The Import & Repair screen.
+ * Identity keys a catalog row would collide on inside the executor's pre-flight: cameras clash on
+ * `id` OR `camera_name`, recording systems on `name`. Comparing whole rows is not enough — two day
+ * files that carry the same camera recalibrated between them differ in a dependent field, and
+ * merging both would fail the whole animal at commit.
+ *
+ * @param catalog - Which catalog the entry belongs to.
+ * @param entry - The catalog row.
+ * @returns The identity keys this row occupies.
  */
+function catalogIdentityKeys(catalog: 'cameras' | 'data_acq_device', entry: unknown): string[] {
+  if (!entry || typeof entry !== 'object') return [];
+  const row = entry as Record<string, unknown>;
+  const keys = catalog === 'cameras' ? ['id', 'camera_name'] : ['name'];
+  return keys
+    .filter((key) => row[key] !== undefined && row[key] !== null && row[key] !== '')
+    .map((key) => `${key}:${String(row[key])}`);
+}
+
+/**
+ * Merge per-file catalog additions, keeping the first row accepted for each catalog identity.
+ * First-seen wins, matching how `planImport` unions animal-level catalogs across a batch.
+ */
+function collectBatchCatalogAdditions(
+  assessments: FileAssessment[],
+  includedSourceNames: string[]
+): BatchPreview['catalogAdditions'] {
+  const merged: BatchPreview['catalogAdditions'] = {};
+  // `planImport` can reject an otherwise-ready file (most commonly a duplicate animal/date).
+  // Consume the kept source names as a multiset in input order so catalog rows from a rejected
+  // file can never leak into an existing animal. A multiset also handles two selected files with
+  // the same basename without mistaking both for the one retained day.
+  const remainingSources = new Map<string, number>();
+  for (const sourceName of includedSourceNames) {
+    remainingSources.set(sourceName, (remainingSources.get(sourceName) ?? 0) + 1);
+  }
+  for (const assessment of assessments) {
+    if (!assessment.ready) continue;
+    const sourceName = assessment.file.decoded.sourceName;
+    const remaining = remainingSources.get(sourceName) ?? 0;
+    if (remaining === 0) continue;
+    remainingSources.set(sourceName, remaining - 1);
+    const additions = collectExistingAnimalCatalogAdditions(
+      assessment.file.plan,
+      assessment.file.resolutions
+    );
+    for (const [animalId, next] of Object.entries(additions)) {
+      const target = merged[animalId] ?? {};
+      for (const catalog of ['cameras', 'data_acq_device'] as const) {
+        for (const entry of next[catalog] ?? []) {
+          const rows = target[catalog] ?? [];
+          const identity = catalogIdentityKeys(catalog, entry);
+          const alreadyMerged = rows.some((existing) =>
+            catalogIdentityKeys(catalog, existing).some((key) => identity.includes(key))
+          );
+          if (!alreadyMerged) target[catalog] = [...rows, structuredClone(entry)];
+        }
+      }
+      merged[animalId] = target;
+    }
+  }
+  return merged;
+}
+
+/** Human status shown in the batch file selector. */
+function assessmentLabel(assessment: FileAssessment): string {
+  if (assessment.ready) return 'Ready';
+  if (assessment.file.plan.blockers.length > 0) return 'Source edit needed';
+  return 'Needs repair';
+}
+
+/** The Import & Repair screen. */
 export default function ImportRepair() {
   const { model, actions } = useStoreContext();
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const [phase, setPhase] = useState<'pick' | 'repair' | 'result'>('pick');
-  const [decoded, setDecoded] = useState<{ sourceName: string; flatModel: object } | null>(null);
-  const [plan, setPlan] = useState<ImportRepairPlan | null>(null);
-  const [parseError, setParseError] = useState<string | null>(null);
-  // Accepted suggestions + user-entered inputs, keyed by repair-item path.
-  const [resolutions, setResolutions] = useState<Record<string, unknown>>({});
+  const [phase, setPhase] = useState<'pick' | 'repair' | 'preview' | 'result'>('pick');
+  const [files, setFiles] = useState<RepairFile[]>([]);
+  const [parseFailures, setParseFailures] = useState<ExcludedFile[]>([]);
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [pickError, setPickError] = useState<string | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [preview, setPreview] = useState<BatchPreview | null>(null);
+  const [conflictResolutions, setConflictResolutions] = useState<
+    Record<string, ConflictResolution>
+  >({});
   const [result, setResult] = useState<ImportResult | null>(null);
 
-  /** Read + decode the chosen file, build the repair plan, and advance to the repair view. */
-  const handleFile = async (file: File | { name: string; text: () => Promise<string> } | undefined) => {
-    if (!file) return;
-    setParseError(null);
-    const { decodedFiles, parseFailures } = await parseImportFiles([file as File]);
-    if (parseFailures.length > 0 || decodedFiles.length === 0) {
-      setParseError(parseFailures[0]?.reason ?? 'The file could not be read.');
+  const assessments = useMemo(
+    () => files.map((file) => assessFile(file, model.workspace)),
+    [files, model.workspace]
+  );
+  const activeAssessment = assessments[activeIndex] ?? null;
+  const readyAssessments = assessments.filter((assessment) => assessment.ready);
+
+  /** Decode all selected files and build an independent repair plan for each one. */
+  const handleFiles = async (
+    selected: File[] | FileList | Array<{ name: string; text: () => Promise<string> }> | null
+  ) => {
+    const list = Array.from(selected ?? []);
+    if (list.length === 0) return;
+    setPickError(null);
+    const parsed = await parseImportFiles(list as File[]);
+    const nextFiles = parsed.decodedFiles.map((decoded, index) => ({
+      key: fileKey(decoded, index),
+      decoded,
+      plan: buildImportRepairPlan(decoded.flatModel, decoded.sourceName, model.workspace),
+      resolutions: {},
+    }));
+    setParseFailures(parsed.parseFailures);
+    if (nextFiles.length === 0) {
+      setPickError(
+        parsed.parseFailures.length === 1
+          ? parsed.parseFailures[0].reason
+          : `None of the ${list.length} selected files could be read.`
+      );
       return;
     }
-    const entry = decodedFiles[0];
-    setDecoded(entry);
-    setPlan(buildImportRepairPlan(entry.flatModel, entry.sourceName, model.workspace));
-    setResolutions({});
+    setFiles(nextFiles);
+    const firstNeedingWork = nextFiles.findIndex(
+      (file) => file.plan.items.length > 0 || file.plan.blockers.length > 0
+    );
+    setActiveIndex(firstNeedingWork >= 0 ? firstNeedingWork : 0);
+    setPreview(null);
+    setConflictResolutions({});
+    setResult(null);
     setPhase('repair');
   };
 
-  /** File-input change handler; clears the value so re-picking the same file re-fires. */
-  const onInputChange = async (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    e.target.value = '';
-    await handleFile(file);
+  const onInputChange = async (event: ChangeEvent<HTMLInputElement>) => {
+    const selected = Array.from(event.target.files ?? []);
+    event.target.value = '';
+    await handleFiles(selected);
   };
 
-  /** Reset to the picker (choose a different file). Writes nothing. */
+  const onDrop = async (event: ReactDragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    setIsDragging(false);
+    await handleFiles(event.dataTransfer.files);
+  };
+
   const reset = () => {
     setPhase('pick');
-    setDecoded(null);
-    setPlan(null);
-    setResolutions({});
+    setFiles([]);
+    setParseFailures([]);
+    setActiveIndex(0);
+    setPickError(null);
+    setPreview(null);
+    setConflictResolutions({});
     setResult(null);
   };
 
-  /** Set the resolution for a path (date inputs are normalized to an ISO datetime). */
   const setResolution = (path: string, value: unknown) => {
-    setResolutions((prev) => ({ ...prev, [path]: value }));
+    const key = activeAssessment?.file.key;
+    if (!key) return;
+    setFiles((current) =>
+      current.map((file) =>
+        file.key === key
+          ? { ...file, resolutions: { ...file.resolutions, [path]: value } }
+          : file
+      )
+    );
   };
 
-  // The TRUE import gate, in two parts so the button only enables when the import will actually
-  // succeed (no "enable, then Import failed"):
-  //   1. Every surfaced item is resolved. A non-empty check alone is NOT sufficient (a text value
-  //      typed for a field the schema needs as an array wouldn't validate), so it pairs with (2);
-  //      but it IS necessary, because the volume-shim conflict is a real ambiguity the user must
-  //      reconcile yet is NOT a validator error — without this check it could commit unreconciled.
-  //   2. The repaired model survives the SAME pure importer the commit runs (`planImport`). That
-  //      subsumes the full validator (via `decomposeYaml`) AND the importer-only preconditions a
-  //      validator can't see — a derivable recording date and a route-safe subject_id.
-  const repaired = useMemo(
-    () => (decoded ? applyImportRepairs(decoded.flatModel, resolutions) : null),
-    [decoded, resolutions]
-  );
-  const importPlan = useMemo(
-    () =>
-      repaired && decoded
-        ? planImport([{ sourceName: decoded.sourceName, flatModel: repaired }], model.workspace)
-        : null,
-    [repaired, decoded, model.workspace]
-  );
-  const itemsResolved = !!plan && plan.items.every((item) => isResolvedValue(resolutions[item.path]));
-  const catalogResolutionBlocker =
-    plan !== null ? existingAnimalCatalogResolutionBlocker(plan, resolutions) : null;
+  const acceptSuggestions = (scope: 'active' | 'all') => {
+    const activeKey = activeAssessment?.file.key;
+    setFiles((current) =>
+      current.map((file) => {
+        if (scope === 'active' && file.key !== activeKey) return file;
+        const suggested = Object.fromEntries(
+          file.plan.items
+            .filter((item) => item.kind === 'suggestion')
+            .map((item) => [item.path, item.suggested])
+        );
+        return {
+          ...file,
+          resolutions: { ...file.resolutions, ...suggested },
+        };
+      })
+    );
+  };
 
-  // The single reason the import is blocked (null = ready), most-actionable first. Drives both the
-  // button's disabled state and the hint, so they never disagree.
-  const importBlockReason: string | null = !plan
-    ? 'Choose a file.'
-    : plan.decision.kind === 'blocked'
-      ? plan.decision.reason
-      : plan.blockers.length > 0
-        ? `Fix ${plan.blockers.length} field${plan.blockers.length === 1 ? '' : 's'} in the file, then re-import.`
-        : !itemsResolved
-          ? 'Accept or fill every flagged field to import.'
-          : catalogResolutionBlocker
-            ? catalogResolutionBlocker
-            : !importPlan || importPlan.animals.length !== 1
-              ? importPlan?.unimportable[0]?.reason ?? 'The repaired file cannot be imported yet.'
-              : null;
-  const canImport = importBlockReason === null;
-
-  /** Apply the accepted fixes, commit through the existing import path, and show the result. */
-  const handleImport = () => {
-    if (!plan || !decoded || !canImport || !repaired || !importPlan) return;
-    if (importPlan.animals.length === 0) {
-      // Defensive: the gate should prevent this; surface the reason rather than fail silently.
-      setResult({
-        kind: 'new',
-        animalId: '',
-        failure: importPlan.unimportable[0]?.reason ?? 'The repaired file could not be imported.',
-      });
-      setPhase('result');
-      return;
-    }
-    const isExisting = plan.decision.kind === 'existing';
-    const subjectId = plan.decision.kind === 'blocked' ? '' : plan.decision.subjectId;
-    const summary = applyImportPlan(importPlan, actions, {
+  /** Preserve the fast one-file flow while still committing through the shared executor. */
+  const handleSingleImport = () => {
+    const assessment = assessments[0];
+    if (!assessment?.ready) return;
+    const repairPlan = assessment.file.plan;
+    const isExisting = repairPlan.decision.kind === 'existing';
+    const subjectId =
+      repairPlan.decision.kind === 'blocked' ? '' : repairPlan.decision.subjectId;
+    const summary = applyImportPlan(assessment.importPlan, actions, {
       workspace: model.workspace,
       resolutions: isExisting ? { [subjectId]: 'add' } : {},
-      catalogAdditions: collectExistingAnimalCatalogAdditions(plan, resolutions),
+      catalogAdditions: collectExistingAnimalCatalogAdditions(
+        repairPlan,
+        assessment.file.resolutions
+      ),
     });
-    const failure = summary.failed[0]?.reason;
-    const animalId = isExisting
-      ? (plan.decision.kind === 'existing' ? plan.decision.existingAnimalId : '')
-      : summary.createdAnimals[0] ?? subjectId;
-    setResult({ kind: isExisting ? 'add' : 'new', animalId, failure });
+    // `failed` means the executor pre-flight rejected the animal and wrote nothing, so there is
+    // no animal to link to — `subjectId` would point at a page that may not exist.
+    const animalId =
+      summary.failed.length > 0
+        ? ''
+        : isExisting
+          ? repairPlan.decision.kind === 'existing'
+            ? repairPlan.decision.existingAnimalId
+            : ''
+          : summary.createdAnimals[0] ?? subjectId;
+    setResult({
+      mode: 'single',
+      kind: isExisting ? 'add' : 'new',
+      animalIds: animalId ? [animalId] : [],
+      // Only one file decoded, so everything else the user picked was unreadable.
+      excluded: parseFailures,
+      summary,
+    });
+    setPhase('result');
+  };
+
+  /** Freeze a final batch plan from every currently-ready file. */
+  const openBatchPreview = () => {
+    const ready = assessments.filter((assessment) => assessment.ready);
+    if (ready.length === 0) return;
+    const batchPlan = planImport(
+      ready.map((assessment) => ({
+        sourceName: assessment.file.decoded.sourceName,
+        flatModel: assessment.repaired,
+      })),
+      model.workspace
+    );
+    const excluded: ExcludedFile[] = [
+      ...parseFailures,
+      ...assessments
+        .filter((assessment) => !assessment.ready)
+        .map((assessment) => ({
+          sourceName: assessment.file.decoded.sourceName,
+          reason: assessment.reason ?? 'This file is not ready.',
+        })),
+      ...batchPlan.unimportable,
+    ];
+    const seeded: Record<string, ConflictResolution> = {};
+    for (const animal of batchPlan.animals) {
+      if (animal.conflict === 'exists') seeded[animal.subjectId] = 'add';
+    }
+    setPreview({
+      plan: batchPlan,
+      excluded,
+      catalogAdditions: collectBatchCatalogAdditions(
+        ready,
+        batchPlan.animals.flatMap(({ days }) => days.map((day) => day.sourceName))
+      ),
+    });
+    setConflictResolutions(seeded);
+    setPhase('preview');
+  };
+
+  const confirmBatch = () => {
+    if (!preview || preview.plan.animals.length === 0) return;
+    const summary = applyImportPlan(preview.plan, actions, {
+      workspace: model.workspace,
+      resolutions: conflictResolutions,
+      catalogAdditions: preview.catalogAdditions,
+    });
+    const failedIds = new Set(summary.failed.map((failure) => failure.subjectId));
+    const animalIds = preview.plan.animals
+      .filter((animal) => conflictResolutions[animal.subjectId] !== 'skip')
+      .filter((animal) => !failedIds.has(animal.subjectId))
+      .map((animal) =>
+        // `replace` deletes `existingAnimalId` and recreates the animal under `subjectId`, so a
+        // case-variant match (`Remy` vs `remy`) leaves the existing id pointing at nothing.
+        conflictResolutions[animal.subjectId] === 'replace'
+          ? animal.subjectId
+          : animal.existingAnimalId ?? animal.subjectId
+      );
+    setResult({ mode: 'batch', animalIds, excluded: preview.excluded, summary });
     setPhase('result');
   };
 
   if (phase === 'pick') {
     return (
-      <main id="main-content" tabIndex={-1} role="main" aria-labelledby="import-heading">
-        <div className={styles.screen}>
-          <nav className={styles.crumb} aria-label="Breadcrumb">
-            <a href="#/workspace">Animals</a> › Import
-          </nav>
-          <h1 id="import-heading" className={styles.heading}>Import metadata YAML</h1>
-          <p className={styles.lede}>
-            We read the file, map its fields, and flag anything that won&apos;t validate — with a
-            suggested fix. Nothing is changed until you import; you accept or edit each one.
-          </p>
-          {parseError && (
-            <p className={styles.parseError} role="alert">{parseError}</p>
-          )}
-          <div className={styles.card}>
-            <label className={styles.fileLabel} htmlFor="import-repair-file">
-              Choose a metadata YAML file
-            </label>
-            <input
-              id="import-repair-file"
-              ref={inputRef}
-              className={styles.fileInput}
-              type="file"
-              accept=".yml,.yaml"
-              aria-label="Choose a metadata YAML file"
-              onChange={onInputChange}
-            />
-          </div>
+      <PageFrame heading="Import metadata YAML">
+        <p className={styles.lede}>
+          Select one recording day or a whole history. Files are grouped by animal and date so
+          configuration changes can be reconstructed before anything is written.
+        </p>
+        {pickError && <p className={styles.parseError} role="alert">{pickError}</p>}
+        <div
+          className={`${styles.dropZone} ${isDragging ? styles.dropZoneActive : ''}`}
+          onDragOver={(event) => {
+            event.preventDefault();
+            setIsDragging(true);
+          }}
+          onDragLeave={() => setIsDragging(false)}
+          onDrop={onDrop}
+        >
+          <p className={styles.dropTitle}>Drop metadata YAML files here</p>
+          <p className={styles.dropHelp}>or choose one or more files from your computer</p>
+          <label className={styles.fileLabel} htmlFor="import-repair-file">
+            Choose metadata YAML files
+          </label>
+          <input
+            id="import-repair-file"
+            ref={inputRef}
+            className={styles.fileInput}
+            type="file"
+            multiple
+            accept=".yml,.yaml"
+            aria-label="Choose a metadata YAML file or files"
+            onChange={onInputChange}
+          />
         </div>
-      </main>
+      </PageFrame>
     );
   }
 
   if (phase === 'result' && result) {
-    const link = result.animalId ? `#/animal/${result.animalId}/days` : null;
+    const failure = result.summary.failed[0]?.reason;
+    const singleHeading = failure
+      ? 'Import failed'
+      : result.kind === 'new'
+        ? 'New animal created'
+        : 'Recording day added';
     return (
-      <main id="main-content" tabIndex={-1} role="main" aria-labelledby="import-result-heading">
-        <section className={styles.screen} aria-label="Import complete">
-          <h1 id="import-result-heading" className={styles.heading}>
-            {result.failure ? 'Import failed' : result.kind === 'new' ? 'New animal created' : 'Recording day added'}
-          </h1>
-          {result.failure ? (
-            <p className={styles.parseError} role="alert">{result.failure}</p>
-          ) : (
-            <p className={styles.lede}>
-              {result.kind === 'new'
-                ? 'The animal and its first recording day were created.'
-                : 'The recording day was added to the existing animal.'}{' '}
-              {link && (
-                <a className={styles.resultLink} href={link}>
-                  {result.animalId}
-                </a>
-              )}
-            </p>
-          )}
-          <div className={styles.actions}>
-            <Button variant="secondary" onClick={reset}>
-              Import another file
-            </Button>
-          </div>
-        </section>
-      </main>
-    );
-  }
-
-  // phase === 'repair'
-  if (!plan || !decoded) return null;
-  const attention = plan.items.filter((i) => i.group === 'attention');
-  const required = plan.items.filter((i) => i.group === 'required');
-  const subjectId = plan.decision.kind === 'blocked' ? '' : plan.decision.subjectId;
-  const importLabel = plan.decision.kind === 'existing' ? 'Add recording day' : 'Import as new animal';
-
-  return (
-    <main id="main-content" tabIndex={-1} role="main" aria-labelledby="import-heading">
-      <div className={styles.screen}>
-        <nav className={styles.crumb} aria-label="Breadcrumb">
-          <a href="#/workspace">Animals</a> › Import
-        </nav>
-        <h1 id="import-heading" className={styles.heading}>Import metadata YAML</h1>
-
-        <div className={styles.card}>
-          <div className={styles.fileRow}>
-            <span className={styles.fileName}>{decoded.sourceName}</span>
-            <button type="button" className={styles.changeFile} onClick={reset}>
-              Choose a different file
-            </button>
-          </div>
-          <p className={styles.decision} role="status">
-            {plan.decision.kind === 'existing'
-              ? `An animal named “${subjectId}” already exists — these records will be added to it as a recording day.`
-              : plan.decision.kind === 'new'
-                ? `This file will create a new animal: “${subjectId}”.`
-                : plan.decision.reason}
+      <PageFrame heading={result.mode === 'single' ? singleHeading : 'Import complete'} result>
+        {failure && result.mode === 'single' ? (
+          <p className={styles.parseError} role="alert">{failure}</p>
+        ) : (
+          <p className={styles.lede}>
+            Imported {result.summary.createdDays.length} recording day
+            {result.summary.createdDays.length === 1 ? '' : 's'} across {result.animalIds.length}{' '}
+            animal{result.animalIds.length === 1 ? '' : 's'}.
           </p>
-        </div>
-
-        {attention.length > 0 && (
-          <section className={styles.section} aria-label="Needs attention">
-            <h2 className={styles.sectionHeading}>Needs attention</h2>
-            {attention.map((item) => (
-              <RepairRow
-                key={item.path}
-                item={item}
-                value={resolutions[item.path]}
-                accepted={item.path in resolutions}
-                onAccept={() => setResolution(item.path, item.suggested)}
-                onInput={(v) => setResolution(item.path, v)}
-              />
-            ))}
-          </section>
         )}
-
-        {required.length > 0 && (
-          <section className={styles.section} aria-label="Required, but missing">
-            <h2 className={styles.sectionHeading}>Required, but missing</h2>
-            {required.map((item) => (
-              <RepairRow
-                key={item.path}
-                item={item}
-                value={resolutions[item.path]}
-                accepted={false}
-                onAccept={() => undefined}
-                onInput={(v) => setResolution(item.path, v)}
-              />
+        {result.animalIds.length > 0 && (
+          <ul className={styles.resultList} aria-label="Imported animals">
+            {result.animalIds.map((animalId) => (
+              <li key={animalId}>
+                <a className={styles.resultLink} href={`#/animal/${animalId}/days`}>
+                  {animalId}
+                </a>
+              </li>
             ))}
-          </section>
+          </ul>
         )}
-
-        {plan.blockers.length > 0 && (
-          <section className={styles.section} aria-label="Fix in the file">
-            <h2 className={styles.sectionHeading}>Fix in the file, then re-import</h2>
+        {result.summary.failed.length > 0 && result.mode === 'batch' && (
+          <section className={styles.section} aria-label="Import failures">
+            <h2 className={styles.sectionHeading}>Could not import</h2>
             <ul className={styles.blockerList}>
-              {plan.blockers.map((b) => (
-                <li key={`${b.path}-${b.code}`} role="alert">
-                  <strong>{b.path}:</strong> {b.why}
+              {result.summary.failed.map((item) => (
+                <li key={item.subjectId} role="alert">
+                  <strong>{item.subjectId}:</strong> {item.reason}
                 </li>
               ))}
             </ul>
           </section>
         )}
-
-        {plan.benign.length > 0 && (
-          <section className={styles.benign} aria-label="Auto-normalized on import">
-            <p className={styles.benignTitle}>Auto-normalized on import (format only, no data change):</p>
-            <ul>
-              {plan.benign.map((b) => (
-                <li key={`${b.path}-${b.label}`}>{b.detail}</li>
+        {result.excluded.length > 0 && (
+          <section className={styles.section} aria-label="Files not imported">
+            <h2 className={styles.sectionHeading}>
+              Not imported ({result.excluded.length} file
+              {result.excluded.length === 1 ? '' : 's'})
+            </h2>
+            <ul className={styles.blockerList}>
+              {result.excluded.map((entry, index) => (
+                <li key={`${entry.sourceName}-${index}`} role="alert">
+                  <strong>{entry.sourceName}:</strong> {entry.reason}
+                </li>
               ))}
             </ul>
-            <p className={styles.benignNote}>
-              Nothing that can&apos;t be mapped is silently dropped — anything unmappable stays
-              flagged above.
-            </p>
           </section>
+        )}
+        <div className={styles.actions}>
+          <Button variant="secondary" onClick={reset}>Import more files</Button>
+        </div>
+      </PageFrame>
+    );
+  }
+
+  if (phase === 'preview' && preview) {
+    return (
+      <PageFrame heading="Review batch import">
+        <section className={styles.batchSummary} aria-label="Batch import summary">
+          <strong>
+            {preview.plan.summary.dayCount} recording day
+            {preview.plan.summary.dayCount === 1 ? '' : 's'} →{' '}
+            {preview.plan.summary.animalCount} animal
+            {preview.plan.summary.animalCount === 1 ? '' : 's'}
+          </strong>
+          <span>
+            {preview.excluded.length === 0
+              ? 'Every selected file is included.'
+              : `${preview.excluded.length} file${preview.excluded.length === 1 ? '' : 's'} will not be imported.`}
+          </span>
+        </section>
+
+        <div className={styles.animalCards}>
+          {preview.plan.animals.map((animal) => (
+            <AnimalPreviewCard
+              key={animal.subjectId}
+              animal={animal}
+              resolution={conflictResolutions[animal.subjectId]}
+              onResolution={(resolution) =>
+                setConflictResolutions((current) => ({
+                  ...current,
+                  [animal.subjectId]: resolution,
+                }))
+              }
+            />
+          ))}
+        </div>
+
+        {preview.excluded.length > 0 && (
+          <details className={styles.excludedFiles}>
+            <summary>Files not included ({preview.excluded.length})</summary>
+            <ul>
+              {preview.excluded.map((entry, index) => (
+                <li key={`${entry.sourceName}-${index}`}>
+                  <strong>{entry.sourceName}</strong>
+                  <span>{entry.reason}</span>
+                </li>
+              ))}
+            </ul>
+          </details>
         )}
 
         <div className={styles.actions}>
-          <Button disabled={!canImport} onClick={handleImport}>
-            {importLabel}
+          <Button variant="secondary" onClick={() => setPhase('repair')}>Back to repairs</Button>
+          <Button disabled={preview.plan.animals.length === 0} onClick={confirmBatch}>
+            Confirm import
           </Button>
-          {!canImport && importBlockReason && (
-            <span className={styles.blockerHint} role="status">
-              {importBlockReason}
-            </span>
-          )}
           <span className={styles.spacer} />
           <a className={styles.cancelLink} href="#/workspace">Cancel</a>
         </div>
+      </PageFrame>
+    );
+  }
+
+  if (!activeAssessment) return null;
+  const current = activeAssessment.file;
+  const plan = current.plan;
+  const attention = plan.items.filter((item) => item.group === 'attention');
+  const required = plan.items.filter((item) => item.group === 'required');
+  const subjectId = plan.decision.kind === 'blocked' ? '' : plan.decision.subjectId;
+  const singleImportLabel =
+    plan.decision.kind === 'existing' ? 'Add recording day' : 'Import as new animal';
+  const activeSuggestionCount = attention.filter(
+    (item) => item.kind === 'suggestion' && !(item.path in current.resolutions)
+  ).length;
+  const allSuggestionCount = files.reduce(
+    (count, file) =>
+      count +
+      file.plan.items.filter(
+        (item) => item.kind === 'suggestion' && !(item.path in file.resolutions)
+      ).length,
+    0
+  );
+  const outstandingCount = assessments.filter((assessment) => !assessment.ready).length;
+
+  return (
+    <PageFrame heading="Import metadata YAML">
+      {parseFailures.length > 0 && (
+        <section className={styles.section} aria-label="Files that could not be read">
+          <h2 className={styles.sectionHeading}>
+            {parseFailures.length} file{parseFailures.length === 1 ? '' : 's'} could not be read
+          </h2>
+          <ul className={styles.blockerList}>
+            {parseFailures.map((entry, index) => (
+              <li key={`${entry.sourceName}-${index}`} role="alert">
+                <strong>{entry.sourceName}:</strong> {entry.reason}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+      {files.length > 1 && (
+        <section className={styles.batchToolbar} aria-label="Import batch status">
+          <div className={styles.batchCounts}>
+            <strong>{files.length + parseFailures.length} selected</strong>
+            <span className={styles.readyCount}>{readyAssessments.length} ready</span>
+            <span>{outstandingCount} need repair</span>
+            {parseFailures.length > 0 && <span>{parseFailures.length} unreadable</span>}
+          </div>
+          <div className={styles.batchControls}>
+            <label htmlFor="import-file-review">Review file</label>
+            <select
+              id="import-file-review"
+              value={activeIndex}
+              onChange={(event) => setActiveIndex(Number(event.target.value))}
+            >
+              {assessments.map((assessment, index) => (
+                <option key={assessment.file.key} value={index}>
+                  {assessmentLabel(assessment)} — {assessment.file.decoded.sourceName}
+                </option>
+              ))}
+            </select>
+            {allSuggestionCount > 0 && (
+              <Button size="small" variant="secondary" onClick={() => acceptSuggestions('all')}>
+                Apply all safe suggestions ({allSuggestionCount})
+              </Button>
+            )}
+          </div>
+        </section>
+      )}
+
+      <div className={styles.card}>
+        <div className={styles.fileRow}>
+          <span className={styles.fileName}>{current.decoded.sourceName}</span>
+          <span className={`${styles.fileStatus} ${activeAssessment.ready ? styles.fileReady : ''}`}>
+            {assessmentLabel(activeAssessment)}
+          </span>
+          <button type="button" className={styles.changeFile} onClick={reset}>
+            Choose different files
+          </button>
+        </div>
+        <p className={styles.decision} role="status">
+          {plan.decision.kind === 'existing'
+            ? `Animal “${subjectId}” already exists. Ready files for it will be reconciled together before its recording days are added.`
+            : plan.decision.kind === 'new'
+              ? files.length === 1
+                ? `This file will create a new animal: “${subjectId}”.`
+                : `This file belongs to animal “${subjectId}”. Other selected dates for the same animal will be grouped with it.`
+              : plan.decision.reason}
+        </p>
       </div>
+
+      {activeAssessment.ready && plan.items.length === 0 && (
+        <p className={styles.readyNotice} role="status">No repairs needed. This file is ready.</p>
+      )}
+
+      {attention.length > 0 && (
+        <section className={styles.section} aria-label="Needs attention">
+          <div className={styles.sectionHeader}>
+            <h2 className={styles.sectionHeading}>Needs attention</h2>
+            {activeSuggestionCount > 0 && (
+              <Button size="small" variant="secondary" onClick={() => acceptSuggestions('active')}>
+                Apply safe suggestions ({activeSuggestionCount})
+              </Button>
+            )}
+          </div>
+          {attention.map((item) => (
+            <RepairRow
+              key={item.path}
+              item={item}
+              value={current.resolutions[item.path]}
+              accepted={item.path in current.resolutions}
+              onAccept={() => setResolution(item.path, item.suggested)}
+              onInput={(value) => setResolution(item.path, value)}
+            />
+          ))}
+        </section>
+      )}
+
+      {required.length > 0 && (
+        <section className={styles.section} aria-label="Required, but missing">
+          <h2 className={styles.sectionHeading}>Required, but missing</h2>
+          {required.map((item) => (
+            <RepairRow
+              key={item.path}
+              item={item}
+              value={current.resolutions[item.path]}
+              accepted={false}
+              onAccept={() => undefined}
+              onInput={(value) => setResolution(item.path, value)}
+            />
+          ))}
+        </section>
+      )}
+
+      {plan.blockers.length > 0 && (
+        <section className={styles.section} aria-label="Needs source-file editing">
+          <h2 className={styles.sectionHeading}>Needs source-file editing</h2>
+          <p className={styles.sectionIntro}>
+            These structures cannot be changed safely with a single value. This file stays out of
+            the batch; other ready files can still be imported.
+          </p>
+          <ul className={styles.blockerList}>
+            {plan.blockers.map((blocker) => (
+              <li key={`${blocker.path}-${blocker.code}`} role="alert">
+                <strong>
+                  {blocker.context ? `${blocker.context}: ` : ''}{blocker.label}
+                </strong>{' '}
+                {blocker.why}
+                <details className={styles.technicalPath}>
+                  <summary>Technical field path</summary>
+                  <code>{blocker.path}</code>
+                </details>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {plan.benign.length > 0 && (
+        <details className={styles.benign}>
+          <summary>
+            Auto-normalized on import ({plan.benign.length} format-only change
+            {plan.benign.length === 1 ? '' : 's'})
+          </summary>
+          <ul>
+            {plan.benign.map((item) => (
+              <li key={`${item.path}-${item.label}`}>{item.detail}</li>
+            ))}
+          </ul>
+          <p className={styles.benignNote}>
+            No values are silently dropped; anything unmappable remains flagged above.
+          </p>
+        </details>
+      )}
+
+      <div className={styles.actions}>
+        {files.length === 1 ? (
+          <>
+            <Button disabled={!activeAssessment.ready} onClick={handleSingleImport}>
+              {singleImportLabel}
+            </Button>
+            {!activeAssessment.ready && activeAssessment.reason && (
+              <span className={styles.blockerHint} role="status">
+                {activeAssessment.reason}
+              </span>
+            )}
+          </>
+        ) : (
+          <>
+            <Button disabled={readyAssessments.length === 0} onClick={openBatchPreview}>
+              Review {readyAssessments.length} ready file
+              {readyAssessments.length === 1 ? '' : 's'}
+            </Button>
+            {outstandingCount + parseFailures.length > 0 && (
+              <span className={styles.blockerHint} role="status">
+                {outstandingCount + parseFailures.length} file
+                {outstandingCount + parseFailures.length === 1 ? '' : 's'} will stay out until repaired.
+              </span>
+            )}
+          </>
+        )}
+        <span className={styles.spacer} />
+        <a className={styles.cancelLink} href="#/workspace">Cancel</a>
+      </div>
+    </PageFrame>
+  );
+}
+
+interface PageFrameProps {
+  heading: string;
+  result?: boolean;
+  children: ReactNode;
+}
+
+/** Shared page shell for every phase. */
+function PageFrame({ heading, result = false, children }: PageFrameProps) {
+  const headingId = result ? 'import-result-heading' : 'import-heading';
+  return (
+    <main id="main-content" tabIndex={-1} role="main" aria-labelledby={headingId}>
+      <section className={styles.screen} aria-label={result ? 'Import complete' : undefined}>
+        {!result && (
+          <nav className={styles.crumb} aria-label="Breadcrumb">
+            <a href="#/workspace">Animals</a> › Import
+          </nav>
+        )}
+        <h1 id={headingId} className={styles.heading}>{heading}</h1>
+        {children}
+      </section>
     </main>
   );
 }
 
-/** Props for a single repair row. */
 interface RepairRowProps {
-  /** The repair item. */
   item: RepairItem;
-  /** The current resolution value for this item. */
   value: unknown;
-  /** Whether a suggestion has been accepted (or any value set). */
   accepted: boolean;
-  /** Accept the suggested value. */
   onAccept: () => void;
-  /** Set a user-entered value. */
   onInput: (value: unknown) => void;
 }
 
-/**
- * One repair row: a suggestion (was → suggested, with Accept) or a user-input field.
- *
- * @param props - The row props.
- * @param props.item - The repair item.
- * @param props.value - The current resolution value.
- * @param props.accepted - Whether a value has been set for this item.
- * @param props.onAccept - Accept the suggested value.
- * @param props.onInput - Set a user-entered value.
- * @returns The rendered row.
- */
+/** One suggestion/choice/input row, labelled with its containing record context. */
 function RepairRow({ item, value, accepted, onAccept, onInput }: RepairRowProps) {
   const dateValue = item.inputType === 'date' ? String(value ?? '').slice(0, 10) : '';
   const suggestionAccepted = accepted && value === item.suggested;
+  // An untouched row renders EMPTY, never seeded with `item.was`: `was` is the value the validator
+  // rejected, and pre-filling it makes an unanswered row look answered while the export gate still
+  // counts it unresolved (and a non-numeric `was` in a number input renders blank anyway).
   const inputValue =
-    item.kind === 'choice' && value === item.suggested
+    value === undefined || value === null || (item.kind === 'choice' && value === item.suggested)
       ? ''
-      : value === undefined || value === null
-        ? ''
-        : String(value);
+      : String(value);
+  const accessibleLabel = [
+    item.context,
+    item.label,
+    item.mapInputLabel && item.mapInputLabel !== item.label
+      ? item.mapInputLabel
+      : undefined,
+  ]
+    .filter(Boolean)
+    .join(' — ');
 
   return (
     <div className={styles.row}>
       <div className={styles.rowBody}>
+        {item.context && <div className={styles.rowContext}>{item.context}</div>}
         <div className={styles.rowLabel}>{item.label}</div>
         {item.kind === 'suggestion' || item.kind === 'choice' ? (
           <div className={styles.rowDetail}>
             <span className={styles.was}>{display(item.was)}</span>
             <span aria-hidden="true"> → </span>
             <span className={styles.now}>{display(item.suggested)}</span>
+          </div>
+        ) : item.was !== undefined && item.was !== null && item.was !== '' ? (
+          <div className={styles.rowDetail}>
+            <span className={styles.was}>{display(item.was)}</span>
           </div>
         ) : null}
         <div className={styles.rowWhy}>{item.why}</div>
@@ -408,36 +839,100 @@ function RepairRow({ item, value, accepted, onAccept, onInput }: RepairRowProps)
           <Button
             variant={suggestionAccepted ? 'secondary' : 'primary'}
             size="small"
-            aria-label={`Accept ${item.label}`}
+            aria-label={`Accept ${accessibleLabel}`}
             aria-pressed={suggestionAccepted}
             onClick={onAccept}
           >
             {suggestionAccepted ? 'Accepted ✓' : 'Accept'}
           </Button>
         )}
-        {(item.kind === 'input' || item.kind === 'choice' || accepted) && item.inputType === 'date' && (
-          <input
-            type="date"
-            aria-label={item.label}
-            value={dateValue}
-            onChange={(e) => onInput(e.target.value ? `${e.target.value}T00:00:00` : '')}
-          />
-        )}
+        {(item.kind === 'input' || item.kind === 'choice' || accepted) &&
+          item.inputType === 'date' && (
+            <input
+              type="date"
+              aria-label={accessibleLabel}
+              value={dateValue}
+              onChange={(event) =>
+                onInput(event.target.value ? `${event.target.value}T00:00:00` : '')
+              }
+            />
+          )}
         {(item.kind === 'input' || item.kind === 'choice') && item.inputType !== 'date' && (
           <input
             type={item.inputType === 'number' ? 'number' : 'text'}
-            aria-label={item.mapInputLabel ?? item.label}
+            aria-label={accessibleLabel}
             value={inputValue}
-            onChange={(e) =>
+            onChange={(event) =>
               onInput(
-                item.inputType === 'number' && e.target.value !== ''
-                  ? Number(e.target.value)
-                  : e.target.value
+                item.inputType === 'number' && event.target.value !== ''
+                  ? Number(event.target.value)
+                  : event.target.value
               )
             }
           />
         )}
       </div>
     </div>
+  );
+}
+
+interface AnimalPreviewCardProps {
+  animal: ImportPlanAnimal;
+  resolution?: ConflictResolution;
+  onResolution: (resolution: ConflictResolution) => void;
+}
+
+/** One animal in the final, read-only batch preview. */
+function AnimalPreviewCard({ animal, resolution, onResolution }: AnimalPreviewCardProps) {
+  return (
+    <section className={styles.animalCard} aria-labelledby={`preview-animal-${animal.subjectId}`}>
+      <h2 id={`preview-animal-${animal.subjectId}`}>{animal.subjectId}</h2>
+      <p>
+        {animal.days.length} recording day{animal.days.length === 1 ? '' : 's'} ·{' '}
+        {animal.configVersions.length} hardware configuration
+        {animal.configVersions.length === 1 ? '' : 's'}
+      </p>
+      {animal.configVersions.length > 0 && (
+        <ul className={styles.configList}>
+          {animal.configVersions.map((configuration) => (
+            <li key={configuration.version}>
+              Configuration {configuration.version}, from {configuration.date} —{' '}
+              {configuration.dayDates.length} day
+              {configuration.dayDates.length === 1 ? '' : 's'}
+            </li>
+          ))}
+        </ul>
+      )}
+      {animal.divergences.length > 0 && (
+        <div className={styles.divergences} role="status">
+          <strong>Differences to review</strong>
+          <ul>
+            {animal.divergences.map((divergence, index) => (
+              <li key={`${divergence.field}-${index}`}>{divergence.detail}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+      {animal.conflict === 'exists' && (
+        <fieldset className={styles.resolution}>
+          <legend>“{animal.subjectId}” already exists. What should happen?</legend>
+          {[
+            ['add', 'Add these days to the existing animal'],
+            ['skip', 'Skip this animal'],
+            ['replace', 'Replace the existing animal and its days'],
+          ].map(([value, label]) => (
+            <label key={value}>
+              <input
+                type="radio"
+                name={`resolution-${animal.subjectId}`}
+                checked={(resolution ?? 'add') === value}
+                onChange={() => onResolution(value as ConflictResolution)}
+              />
+              {label}
+            </label>
+          ))}
+        </fieldset>
+      )}
+    </section>
   );
 }

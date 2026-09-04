@@ -265,7 +265,7 @@ test.describe('Workspace persistence & recovery', () => {
       '',
     ].join('\n');
 
-    await page.getByLabel('Choose a metadata YAML file').setInputFiles({
+    await page.getByLabel(/Choose a metadata YAML file/i).setInputFiles({
       name: '06222023_badrat_metadata.yml',
       mimeType: 'text/yaml',
       buffer: Buffer.from(damagedYaml),
@@ -323,7 +323,7 @@ test.describe('Workspace persistence & recovery', () => {
       '',
     ].join('\n');
 
-    await page.getByLabel('Choose a metadata YAML file').setInputFiles({
+    await page.getByLabel(/Choose a metadata YAML file/i).setInputFiles({
       name: '06222023_pickerrat_metadata.yml',
       mimeType: 'text/yaml',
       buffer: Buffer.from(validYaml),
@@ -334,5 +334,67 @@ test.describe('Workspace persistence & recovery', () => {
     await expect(page.getByText('06222023_pickerrat_metadata.yml')).toBeVisible();
     await expect(page.getByText(/will create a new animal/i)).toBeVisible();
     await expect(page.getByRole('button', { name: /import as new animal/i })).toBeEnabled();
+  });
+
+  test('multiple ready YAMLs are reviewed and committed as one animal history', async ({ page }) => {
+    await resetWorkspace(page);
+    await page.getByRole('button', { name: /import yaml/i }).first().click();
+
+    const firstDayYaml = [
+      'experimenter_name:',
+      '  - Doe, Jane',
+      'lab: Frank',
+      'institution: University of California, San Francisco',
+      'experiment_description: Multi-file import fixture',
+      'session_description: First recording day',
+      'session_id: batchrat_20230622',
+      'subject:',
+      '  description: Subject',
+      '  genotype: Wild Type',
+      '  species: Rattus norvegicus',
+      '  sex: M',
+      '  subject_id: batchrat',
+      '  weight: 400',
+      '  date_of_birth: 2023-01-10T00:00:00',
+      '  age: P164',
+      'data_acq_device:',
+      '  - name: SpikeGadgets',
+      '    system: SpikeGadgets',
+      '    amplifier: Intan',
+      '    adc_circuit: Intan',
+      'times_period_multiplier: 1.5',
+      'raw_data_to_volts: 0.195',
+      '',
+    ].join('\n');
+    const secondDayYaml = firstDayYaml
+      .replace('First recording day', 'Second recording day')
+      .replaceAll('20230622', '20230623');
+
+    await page.getByLabel(/Choose a metadata YAML file/i).setInputFiles([
+      {
+        name: '06222023_batchrat_metadata.yml',
+        mimeType: 'text/yaml',
+        buffer: Buffer.from(firstDayYaml),
+      },
+      {
+        name: '06232023_batchrat_metadata.yml',
+        mimeType: 'text/yaml',
+        buffer: Buffer.from(secondDayYaml),
+      },
+    ]);
+
+    await expect(page.getByRole('region', { name: 'Import batch status' })).toContainText('2 ready');
+    await page.getByRole('button', { name: 'Review 2 ready files' }).click();
+    await expect(page.getByRole('region', { name: 'Batch import summary' })).toContainText(
+      '2 recording days → 1 animal',
+    );
+    await expect(page.getByRole('heading', { name: 'batchrat' })).toBeVisible();
+
+    await page.getByRole('button', { name: 'Confirm import' }).click();
+    await expect(page.getByRole('heading', { name: 'Import complete' })).toBeVisible();
+    await expect(page.getByText(/Imported 2 recording days across 1 animal/)).toBeVisible();
+    await page.getByRole('link', { name: 'batchrat' }).click();
+    await expect(page.getByText('2023-06-22').first()).toBeVisible();
+    await expect(page.getByText('2023-06-23').first()).toBeVisible();
   });
 });

@@ -101,6 +101,7 @@ describe('buildImportRepairPlan — flags each non-conforming field from the sha
     expect(loc!.kind).toBe('input');
     expect(loc!.suggested).toBeUndefined();
     expect(loc!.group).toBe('attention');
+    expect(loc!.context).toBe('Electrode group 0');
   });
 
   it('surfaces camera placeholder names and nonpositive calibration as repair rows', () => {
@@ -125,6 +126,7 @@ describe('buildImportRepairPlan — flags each non-conforming field from the sha
       kind: 'input',
       inputType: 'text',
       was: 'XXX',
+      context: 'Camera 0 — XXX',
     });
     expect(mpp).toMatchObject({
       code: 'camera_meters_per_pixel_nonpositive',
@@ -132,6 +134,28 @@ describe('buildImportRepairPlan — flags each non-conforming field from the sha
       inputType: 'number',
       was: 0,
     });
+  });
+
+  it('identifies repeated rows and lets duplicate associated-file values be edited inline', () => {
+    const model = loadCleanExport();
+    const files = model.associated_files as Array<Record<string, unknown>>;
+    files[1].name = files[0].name;
+    files[1].path = files[0].path;
+
+    const plan = buildImportRepairPlan(model, '06222023_remy_metadata.yml', { animals: {} });
+    expect(itemAt(plan.items, 'associated_files[1].name')).toMatchObject({
+      code: 'duplicate_associated_file_name',
+      kind: 'input',
+      context: 'Associated file 2 — probe_adjustment_log',
+    });
+    expect(itemAt(plan.items, 'associated_files[1].path')).toMatchObject({
+      code: 'duplicate_associated_file_path',
+      kind: 'input',
+      context: 'Associated file 2 — probe_adjustment_log',
+    });
+    expect(
+      plan.blockers.some((blocker) => blocker.path.startsWith('associated_files[1]'))
+    ).toBe(false);
   });
 
   it('blocks on a required-but-missing date_of_birth', () => {
