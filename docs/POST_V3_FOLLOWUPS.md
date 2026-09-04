@@ -9,26 +9,26 @@ are done. File/line references below point at the live source.
 ## Tech-debt / UX niceties
 
 1. **Make `ConfigurationSnapshot.appliedToDays` a derived value.** Today it is a denormalized cache kept
-   in sync by `applyConfigurationForward` ([src/state/useWorkspace.js](../src/state/useWorkspace.js));
-   the trustworthy view already exists as `reconcileAppliedToDays` ([src/state/configDiff.js](../src/state/configDiff.js)),
+   in sync by `applyConfigurationForward` ([src/state/useWorkspace.ts](../src/state/useWorkspace.ts));
+   the trustworthy view already exists as `reconcileAppliedToDays` ([src/state/configDiff.ts](../src/state/configDiff.ts)),
    and `updateDay({ configurationVersion })` bypasses the stored lists. Dropping the stored field and
    always deriving it removes the partition-maintenance burden. A data-model change — behavior-preserving
    but touches persisted shape, so coordinate with the persistence-migration item (#6).
 
-2. **Reconfig wizard UX for long studies.** In [ReconfigWizard.jsx](../src/pages/DayEditor/ReconfigWizard.jsx),
+2. **Reconfig wizard UX for long studies.** In [ReconfigWizard.jsx](../src/pages/DayEditor/ReconfigWizard.tsx),
    add select-all / deselect-all controls and relative or human-readable day labels for animals with
    60–200+ days, plus an explicit success confirmation after apply-forward.
 
 3. **`Alt+←` / `Alt+→` shortcut chord vs. browser Back/Forward** on Windows/Linux. The handler
-   `preventDefault`s ([src/hooks/useGlobalShortcuts.js](../src/hooks/useGlobalShortcuts.js)), so
+   `preventDefault`s ([src/hooks/useGlobalShortcuts.ts](../src/hooks/useGlobalShortcuts.ts)), so
    in-app it drives the stepper instead of navigating history. Consider `Alt+PageUp/PageDown` or
    `Alt+Shift+Arrow`, or add a platform note in the shortcuts help. Revisit with user feedback rather
    than pre-emptively.
 
 4. **Persisted-"Validated" indicator** in the Validation Summary table — ✅ **Resolved in Phase 8A-1.**
-   The Validation Summary per-day chip ([src/pages/ValidationSummary/index.jsx](../src/pages/ValidationSummary/index.jsx))
+   The Validation Summary per-day chip ([src/pages/ValidationSummary/index.tsx](../src/pages/ValidationSummary/index.tsx))
    now consumes `day.state.validated`/`exported` via the shared day-lifecycle vocabulary
-   ([src/domain/dayLifecycle.js](../src/domain/dayLifecycle.js)): a live-valid day reads
+   ([src/domain/dayLifecycle.ts](../src/domain/dayLifecycle.ts)): a live-valid day reads
    **Ready to export** (passing now, unsaved), **Validated** (saved), or **Exported** — visually
    distinct words/colors, not a bare "Valid". The same vocabulary now drives the Animal Days rows,
    Day Validation, and Day Export, with a shared collapsible legend, so the persisted vs live
@@ -45,15 +45,15 @@ focus-trapped modal raises the stakes of keyboard/AT gaps in the enclosed conten
 out of scope for the cleanup pass and are tracked here.
 
 7. ~~**CalendarDay grid is keyboard-unreachable when viewing a non-current month.**~~ **RESOLVED
-   (Phase 8A-2).** [CalendarGrid.jsx](../src/components/CalendarDayCreator/CalendarGrid.jsx) now uses
+   (Phase 8A-2).** [CalendarGrid.jsx](../src/components/CalendarDayCreator/CalendarGrid.tsx) now uses
    a roving tabindex: exactly one cell is in the tab order, defaulting to the first selectable day of
    the displayed month when today is absent, and the arrow keys move focus cell-to-cell.
-   [CalendarDay.jsx](../src/components/CalendarDayCreator/CalendarDay.jsx) takes `isActive` for the
+   [CalendarDay.jsx](../src/components/CalendarDayCreator/CalendarDay.tsx) takes `isActive` for the
    roving target; existing-recording cells are `aria-disabled` (focusable for continuous navigation)
    rather than a real `disabled` button removed from the grid.
 
 8. ~~**CalendarGrid presents all 42 day cells as a single `role="row"`.**~~ **RESOLVED (Phase 8A-2).**
-   [CalendarGrid.jsx](../src/components/CalendarDayCreator/CalendarGrid.jsx) now renders one
+   [CalendarGrid.jsx](../src/components/CalendarDayCreator/CalendarGrid.tsx) now renders one
    `role="row"` per week (six rows of seven cells), so AT grid-navigation announces weeks × days.
 
 9. ~~**ChannelMapEditor empty-state instruction is a dead end.**~~ **RESOLVED** — the manual
@@ -69,7 +69,7 @@ out of scope for the cleanup pass and are tracked here.
     tick (the only caller, the reconfig wizard) they agree, but two adds in the same tick would both
     return the same number while assigning sequential ones. Not reachable today; revisit if another
     caller batches snapshot creation. See
-    [useWorkspace.js](../src/state/useWorkspace.js) `addConfigurationSnapshot`.
+    [useWorkspace.js](../src/state/useWorkspace.ts) `addConfigurationSnapshot`.
 
 ## Release-gated
 
@@ -90,9 +90,9 @@ fix commit** and may still be open — verify against current code before action
 F-10 / F-11 / T8-2 / mobile-overflow items were closed there and are NOT repeated here):
 
 - ~~**Human-readable `device_type` summaries (polish).**~~ **RESOLVED (Phase 8A-2)** for the
-  workspace electrode-group editor: `deviceTypeLabel` ([valueList.js](../src/valueList.js)) renders a
+  workspace electrode-group editor: `deviceTypeLabel` ([valueList.js](../src/valueList.ts)) renders a
   human summary (e.g. `128c-4s8mm6cm-20um-40um-sl` → "128-ch, 4-shank, 8 mm (20/40 µm)") as the
-  option text in [ElectrodeGroupModal.jsx](../src/pages/AnimalEditor/ElectrodeGroupModal.jsx), while
+  option text in [ElectrodeGroupModal.jsx](../src/pages/AnimalEditor/ElectrodeGroupModal.tsx), while
   the option **value** stays the exact probe ID (selector-stable for trodes_to_nwb). The frozen
   legacy form ([ElectrodeGroupFields.jsx](../src/components/ElectrodeGroupFields.jsx)) still shows
   the raw IDs and was intentionally left untouched (default-entry gate).

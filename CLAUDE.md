@@ -434,11 +434,29 @@ lane) are the recommended additions — see the v3 plan's Phase 9 (`.claude/docs
 The `modern` branch is mid-migration to a multi-page **workspace** model while the legacy single-page form
 is retained as a frozen safety net. Don't mix them (`workspace.*` vs `formData.*`):
 
-- **Legacy** — one flat `formData` object in [App.js](src/App.js) (described below). Frozen safety net.
+- **Legacy** — one flat `formData` object, rendered by
+  [src/pages/LegacyFormView.jsx](src/pages/LegacyFormView.jsx) over
+  [src/state/useLegacyForm.js](src/state/useLegacyForm.js) (the original `src/App.js` is gone).
+  Frozen safety net — **and still the default route**
+  ([src/layouts/AppLayout.tsx](src/layouts/AppLayout.tsx)), so it is what a user sees on load until
+  the cutover happens. Frozen does not mean unreachable: correctness bugs here still reach users.
 - **Workspace (v3 — where active work happens)** — an animal / day / configuration model in
-  [src/state/useWorkspace.js](src/state/useWorkspace.js); export flows through `mergeDayMetadata`
-  ([src/state/workspaceUtils.js](src/state/workspaceUtils.js)) → `encodeYaml`. The phased plans and their
-  shared contracts live in [.claude/docs/plans/](.claude/docs/plans/).
+  [src/state/useWorkspace.ts](src/state/useWorkspace.ts); export flows through `mergeDayMetadata`
+  ([src/state/workspaceUtils.ts](src/state/workspaceUtils.ts)) → `encodeYaml`. The phased plans and their
+  shared contracts live in [.claude/docs/plans/](.claude/docs/plans/) — start at
+  [.claude/docs/plans/README.md](.claude/docs/plans/README.md) for the status roster.
+
+### Plan status discipline
+
+Plans in `.claude/docs/plans/` are written for a fresh session with no context, so a stale
+`**Status:**` header actively causes re-planning or re-execution of finished work (an audit on
+2026-09-04 found three of nine headers wrong, two claiming "Not started" for fully shipped plans).
+
+- **Land the Status update in the same commit as the phase**, never as a follow-up.
+- **Cite commits or branches, not adjectives** — a reader must be able to verify in seconds.
+- **Update [.claude/docs/plans/README.md](.claude/docs/plans/README.md)** in that same commit.
+- **When a header and git history disagree, git wins.** Verify with
+  `git merge-base --is-ancestor <phase-branch> modern`.
 
   **Bad channels are day-owned in the workspace model.** The animal-level Channel Maps tab is
   wiring/mapping only; a channel is *marked failed per recording day* in the Day Editor ("Failed
@@ -450,11 +468,11 @@ is retained as a frozen safety net. Don't mix them (`workspace.*` vs `formData.*
   (`bad_channel_unfailed_without_ack`). The export merge reads bad channels from the day override ONLY —
   the **exported YAML shape is unchanged** (`bad_channels` still on the ntrode rows); only the app's
   internal ownership moved from the config snapshot down to the day. See
-  [src/domain/badChannelMonotonicity.js](src/domain/badChannelMonotonicity.js).
+  [src/domain/badChannelMonotonicity.ts](src/domain/badChannelMonotonicity.ts).
 
 ### State Management
 
-The application uses React hooks (`useState`, `useEffect`) for state management with a single centralized form state object (`formData`) in [App.js](src/App.js). State updates flow through wrapper functions:
+The application uses React hooks (`useState`, `useEffect`) for state management with a single centralized form state object (`formData`) in [src/state/useLegacyForm.js](src/state/useLegacyForm.js) (extracted from the original `src/App.js`, which no longer exists). State updates flow through wrapper functions:
 
 - `updateFormData()` - Updates single fields (simple key-value or nested object/array items)
 - `updateFormArray()` - Updates array fields with checkbox-style multi-selection
@@ -463,7 +481,7 @@ The application uses React hooks (`useState`, `useEffect`) for state management 
 
 ### Form Data Structure
 
-The form state mirrors the NWB YAML schema structure defined in [nwb_schema.json](src/nwb_schema.json). Default values are centralized in [valueList.js](src/valueList.js):
+The form state mirrors the NWB YAML schema structure defined in [nwb_schema.json](src/nwb_schema.json). Default values are centralized in [valueList.js](src/valueList.ts):
 
 - `defaultYMLValues` - Initial form state with sensible defaults
 - `emptyFormData` - Empty state used for form reset
@@ -483,7 +501,7 @@ Complex array sections (electrode_groups, cameras, tasks, etc.) support dynamic 
 The most complex architectural component is the relationship between electrode groups and ntrode channel maps:
 
 1. When a user selects a `device_type` for an electrode group, `nTrodeMapSelected()` auto-generates appropriate ntrode channel map entries
-2. Device types are defined in [src/ntrode/deviceTypes.js](src/ntrode/deviceTypes.js), which maps probe types to channel configurations
+2. Device types are defined in [src/ntrode/deviceTypes.ts](src/ntrode/deviceTypes.ts), which maps probe types to channel configurations
 3. Each ntrode has a `map` object defining channel index mappings (e.g., `{0: 0, 1: 1, 2: 2, 3: 3}`)
 4. `ChannelMap.jsx` component renders the UI for editing these mappings
 5. When electrode groups are duplicated/removed, associated ntrode maps are automatically managed
@@ -551,8 +569,8 @@ The application includes comprehensive optogenetics configuration:
 ### Persistence & schema migration
 
 The workspace slice is persisted to localStorage as `{ schemaVersion, workspace }`
-([src/state/persistence.js](src/state/persistence.js)). Old blobs are upgraded **forward** by an
-ordered registry of pure migrators in [src/state/workspaceMigrations.js](src/state/workspaceMigrations.js)
+([src/state/persistence.ts](src/state/persistence.ts)). Old blobs are upgraded **forward** by an
+ordered registry of pure migrators in [src/state/workspaceMigrations.ts](src/state/workspaceMigrations.ts)
 (`migrators[n]: vN → vN+1`, applied by `migrateWorkspace` before device-normalize / shape-ensure),
 not discarded. `MIGRATABLE_SCHEMA_VERSIONS` is **derived** from the registry — never hand-edited.
 
@@ -577,9 +595,9 @@ total and non-destructive (a field one can't map forward is preserved or surface
 
 When adding a new probe/device type to support:
 
-1. **Add to valueList.js**: Add the device type string to `deviceTypes()` function in [valueList.js](src/valueList.js)
+1. **Add to valueList.js**: Add the device type string to `deviceTypes()` function in [valueList.js](src/valueList.ts)
 
-2. **Add to deviceTypes.js**: Add channel mapping logic in [src/ntrode/deviceTypes.js](src/ntrode/deviceTypes.js):
+2. **Add to deviceTypes.js**: Add channel mapping logic in [src/ntrode/deviceTypes.ts](src/ntrode/deviceTypes.ts):
    - `deviceTypeMap()` - Define the channel array (e.g., `[0,1,2,3]` for tetrode)
    - `getShankCount()` - Define number of shanks for the device
 
