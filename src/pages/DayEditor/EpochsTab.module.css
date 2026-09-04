@@ -194,7 +194,7 @@
   justify-content: center;
   width: 1em;
   font-size: var(--font-size-xs, 0.75rem);
-  color: currentColor;
+  color: currentcolor;
 }
 
 .taskDisclosureButton {
@@ -285,6 +285,10 @@
   padding: 1px 6px;
   margin-right: 4px;
   font-size: var(--font-size-xs, 0.75rem);
+}
+
+.mobileCellLabel {
+  display: none;
 }
 
 .vidPresent {
@@ -510,6 +514,7 @@
 }
 
 .detailsPanel {
+  box-sizing: border-box;
   position: fixed;
   top: var(--spacing-md, 16px);
   right: var(--spacing-md, 16px);
@@ -521,8 +526,15 @@
   border: 1px solid var(--color-grey-200, #e6e6e6);
   border-radius: var(--radius-md, 8px);
   background: var(--color-white, #fff);
-  box-shadow: var(--shadow-modal, 0 18px 48px rgba(0, 0, 0, 0.18));
+  box-shadow: var(--shadow-modal, 0 18px 48px rgb(0 0 0 / 18%));
   overflow: hidden;
+}
+
+.detailsBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: calc(var(--z-overlay, 100) - 1);
+  background: rgb(0 0 0 / 28%);
 }
 
 .detailsPanelHeader {
@@ -923,6 +935,87 @@
     bottom: 0;
     width: 100vw;
     border-radius: 0;
+  }
+
+  /* A dense six-column epoch table cannot remain legible at phone width. Each row becomes a
+     self-contained card, keeping the task, generated-file state, camera assignment, and structural
+     actions readable without horizontal scrolling or overlapping controls. */
+  .tablePane {
+    overflow-x: visible;
+  }
+
+  .table,
+  .table tbody {
+    display: block;
+    width: 100%;
+  }
+
+  .table thead {
+    display: none;
+  }
+
+  .table tr {
+    display: grid;
+    grid-template-columns: 2rem minmax(0, 1fr);
+    gap: 8px 10px;
+    padding: 12px;
+    margin-bottom: 10px;
+    border: 1px solid var(--color-grey-200, #e6e6e6);
+    border-radius: var(--radius-md, 8px);
+    background: var(--color-white, #fff);
+  }
+
+  .table td {
+    min-width: 0;
+    padding: 0;
+    border: 0;
+  }
+
+  .numCell {
+    grid-column: 1;
+    grid-row: 1;
+    width: auto;
+    padding-top: 5px;
+    font-weight: 700;
+  }
+
+  .taskCell {
+    grid-column: 2;
+    grid-row: 1;
+    width: auto;
+    min-width: 0;
+  }
+
+  .fileSummaryCell,
+  .cameraCell,
+  .optoCell,
+  .menuCell {
+    grid-column: 1 / -1;
+    width: auto;
+  }
+
+  .mobileCellLabel {
+    display: inline-block;
+    min-width: 5.5rem;
+    margin-right: 6px;
+    color: var(--color-grey-600, #555);
+    font-size: var(--font-size-xs, 0.75rem);
+    font-weight: 600;
+  }
+
+  .menuCell {
+    justify-self: stretch;
+  }
+
+  .rowActionGroup {
+    justify-content: flex-end;
+  }
+
+  .taskDisclosureButton,
+  .rowIconButton,
+  .rowActionGroup .menuButton {
+    min-width: 44px;
+    min-height: 44px;
   }
 
   .templateMenu {

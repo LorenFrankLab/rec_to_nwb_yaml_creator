@@ -64,7 +64,7 @@ test.describe('Mistake-prevention UX on high-risk edit surfaces', () => {
     await expect(dialog).toBeVisible();
 
     // Rename it to the OTHER camera's name (side_camera) — same name, different calibration/lens.
-    const nameInput = dialog.getByRole('textbox', { name: 'Camera Name' });
+    const nameInput = dialog.getByRole('combobox', { name: 'Camera Name' });
     await nameInput.fill('side_camera');
     await dialog.getByRole('button', { name: 'Save camera configuration' }).click();
 
@@ -194,18 +194,20 @@ test.describe('Mistake-prevention UX on high-risk edit surfaces', () => {
     // In the epoch grid, epochs ARE the rows (never free-typed) and a video inherits its task's
     // camera (defined once on the animal catalog) — so the normal path cannot persist a stale camera
     // or epoch id. The seeded day records video on epochs 2 and 4 (W-track); expand epoch 2.
-    await page.getByRole('button', { name: /Edit epoch 2 details/i }).click();
+    await page.getByRole('button', { name: /Show epoch 2 details/i }).click();
 
     // The task picker is a CONTROLLED combobox of the animal's task types — no free-text task name,
     // and no free-typed epoch number anywhere on the row.
     await expect(page.getByRole('combobox', { name: /Epoch 2 task/i })).toBeVisible();
     await expect(page.getByRole('textbox', { name: /^task name$/i })).toHaveCount(0);
 
-    // The epoch's video is bound to a KNOWN camera shown BY NAME (a derived value), never a free-text
-    // camera id — and there is no Camera / Task-epoch combobox to type a stale id on the video itself.
-    await expect(page.getByText('side_camera', { exact: false }).first()).toBeVisible();
-    await expect(page.getByRole('combobox', { name: 'Camera' })).toHaveCount(0);
-    await expect(page.getByRole('combobox', { name: 'Task epoch' })).toHaveCount(0);
+    // The epoch's video is bound to a KNOWN camera shown BY NAME, and its epoch is the enclosing
+    // record. The video surface therefore exposes neither reference as a free-typed input. (The
+    // separate supplemental-files section has its own controlled Task epoch selects.)
+    const epochFiles = page.getByRole('region', { name: 'Files for this epoch' });
+    await expect(epochFiles.getByText('side_camera', { exact: false }).first()).toBeVisible();
+    await expect(epochFiles.getByRole('combobox', { name: 'Camera' })).toHaveCount(0);
+    await expect(epochFiles.getByRole('combobox', { name: 'Task epoch' })).toHaveCount(0);
   });
 
   test('task-name divergence is structurally prevented: the day picks a type, and a duplicate name is blocked at the catalog', async ({
@@ -220,7 +222,7 @@ test.describe('Mistake-prevention UX on high-risk edit surfaces', () => {
     await expect(page.getByRole('heading', { level: 2, name: 'Epochs' })).toBeVisible();
 
     // Expand an epoch to reach its task picker — a controlled combobox, no free-text task name.
-    await page.getByRole('button', { name: /Edit epoch 2 details/i }).click();
+    await page.getByRole('button', { name: /Show epoch 2 details/i }).click();
     await expect(page.getByRole('combobox', { name: /Epoch 2 task/i })).toBeVisible();
     await expect(page.getByRole('textbox', { name: /^task name$/i })).toHaveCount(0);
 
@@ -261,10 +263,10 @@ test.describe('Mistake-prevention UX on high-risk edit surfaces', () => {
     // the VALUE of the channel's field (Din1 under Inputs, Dout7 under Outputs). `exact` so
     // "Event for Din1" doesn't also match "Event for Din10…19".
     await expect(
-      page.getByRole('table', { name: /inputs \(din\)/i }).getByLabel('Event for Din1', { exact: true }),
+      page.getByRole('table', { name: /named DIO lines/i }).getByLabel('Event for Din1', { exact: true }),
     ).toHaveValue('Poke1');
     await expect(
-      page.getByRole('table', { name: /outputs \(dout\)/i }).getByLabel('Event for Dout7', { exact: true }),
+      page.getByRole('table', { name: /named DIO lines/i }).getByLabel('Event for Dout7', { exact: true }),
     ).toHaveValue('Pump1');
 
     // The retired animal-level library surfaces are gone.
@@ -285,6 +287,7 @@ test.describe('Mistake-prevention UX on high-risk edit surfaces', () => {
 
     // Recording Setup hosts the Technical parameters block.
     await page.getByRole('button', { name: /^Recording Setup\b/ }).click();
+    await page.locator('summary').filter({ hasText: /Day-only technical overrides/i }).click();
     await expect(page.getByText('Technical parameters', { exact: true })).toBeVisible();
     await expect(page.getByText('Raw data to volts', { exact: true })).toBeVisible();
 

@@ -178,7 +178,7 @@ describe('EpochsTab — grid render + collapsed state cells', () => {
     const edit = screen.getByRole('button', { name: /Show epoch 1 details/i });
     await user.click(edit);
     expect(edit).toHaveAttribute('aria-expanded', 'true');
-    expect(screen.getByRole('complementary', { name: /Epoch 1: Sleep/i })).toBeInTheDocument();
+    expect(screen.getByRole('dialog', { name: /Epoch 1: Sleep/i })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: /^Task$/i })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: /Files for this epoch/i })).toBeInTheDocument();
     const rowActions = within(edit.closest('tr'));
@@ -190,20 +190,23 @@ describe('EpochsTab — grid render + collapsed state cells', () => {
     await user.click(screen.getByRole('button', { name: /Show epoch 2 details/i }));
     expect(screen.getByRole('button', { name: /Show epoch 1 details/i })).toHaveAttribute('aria-expanded', 'false');
     expect(screen.getByRole('button', { name: /Hide epoch 2 details/i })).toHaveAttribute('aria-expanded', 'true');
-    expect(screen.getByRole('complementary', { name: /Epoch 2: Run/i })).toBeInTheDocument();
+    expect(screen.getByRole('dialog', { name: /Epoch 2: Run/i })).toBeInTheDocument();
   });
 
   it('closes the details drawer with Escape', async () => {
     const user = userEvent.setup();
     render(<EpochsTab {...makeBundle()} />);
 
-    await user.click(screen.getByRole('button', { name: /Show epoch 1 details/i }));
-    expect(screen.getByRole('complementary', { name: /Epoch 1: Sleep/i })).toBeInTheDocument();
+    const opener = screen.getByRole('button', { name: /Show epoch 1 details/i });
+    await user.click(opener);
+    expect(screen.getByRole('dialog', { name: /Epoch 1: Sleep/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Close epoch 1 details/i })).toHaveFocus();
 
     await user.keyboard('{Escape}');
 
-    expect(screen.queryByRole('complementary', { name: /Epoch 1: Sleep/i })).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Show epoch 1 details/i })).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByRole('dialog', { name: /Epoch 1: Sleep/i })).not.toBeInTheDocument();
+    expect(opener).toHaveAttribute('aria-expanded', 'false');
+    expect(opener).toHaveFocus();
   });
 
   it('closes the details panel when a filter hides the selected epoch', async () => {
@@ -211,11 +214,11 @@ describe('EpochsTab — grid render + collapsed state cells', () => {
     render(<EpochsTab {...makeBundle()} />);
 
     await user.click(screen.getByRole('button', { name: /Show epoch 1 details/i }));
-    expect(screen.getByRole('complementary', { name: /Epoch 1: Sleep/i })).toBeInTheDocument();
+    expect(screen.getByRole('dialog', { name: /Epoch 1: Sleep/i })).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: /1 custom filename/i }));
 
-    expect(screen.queryByRole('complementary')).not.toBeInTheDocument();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Show epoch 1 details/i })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Show epoch 2 details/i })).toBeInTheDocument();
   });
@@ -467,13 +470,13 @@ describe('EpochsTab — renumber moves bound refs in lockstep (no silent misasso
     render(<StatefulEpochsTab bundle={bundle} />);
 
     await user.click(screen.getByRole('button', { name: /Show epoch 2 details/i }));
-    expect(screen.getByRole('complementary', { name: /Epoch 2: Run/i })).toBeInTheDocument();
+    expect(screen.getByRole('dialog', { name: /Epoch 2: Run/i })).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: /Move epoch 2 up/i }));
 
     expect(screen.getByRole('button', { name: /Hide epoch 1 details/i })).toBeInTheDocument();
-    expect(screen.getByRole('complementary', { name: /Epoch 1: Run/i })).toBeInTheDocument();
-    expect(screen.queryByRole('complementary', { name: /Epoch 2: Sleep/i })).not.toBeInTheDocument();
+    expect(screen.getByRole('dialog', { name: /Epoch 1: Run/i })).toBeInTheDocument();
+    expect(screen.queryByRole('dialog', { name: /Epoch 2: Sleep/i })).not.toBeInTheDocument();
   });
 
   it('Move up swaps the epoch numbers AND remaps the bound video to follow its task (no confirm)', async () => {

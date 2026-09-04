@@ -189,6 +189,37 @@ test.describe('Responsive + a11y smoke — a setup modal traps and restores focu
   }
 });
 
+test.describe('Responsive + a11y smoke — epoch cards and details on a narrow phone', () => {
+  test('epoch rows fit as cards and the details dialog traps and restores focus', async ({ page }) => {
+    const viewport = { name: 'narrow 390×844', width: 390, height: 844 };
+    await page.setViewportSize({ width: viewport.width, height: viewport.height });
+    await resetWorkspace(page);
+    await seedAndOpen(page, buildConfiguredWorkspaceBlob(), `/#/day/${DAY_ID}`);
+    await page.getByRole('button', { name: /^Tasks & Files\b/i }).click();
+
+    const opener = page.getByRole('button', { name: 'Show epoch 1 details' });
+    const epochRow = page.getByRole('row').filter({ has: opener });
+    await expectWithinViewportHorizontally(epochRow, viewport, 'Epoch card');
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth),
+      'the epoch-card view should not introduce horizontal page scrolling',
+    ).toBe(true);
+
+    await opener.click();
+    const dialog = page.getByRole('dialog', { name: /Epoch 1:/i });
+    await expectWithinViewportHorizontally(dialog, viewport, 'Epoch details dialog');
+    expect(await activeElementIsInside(page, dialog), 'focus should enter epoch details').toBe(true);
+    for (let i = 0; i < 8; i += 1) {
+      await page.keyboard.press('Tab');
+      expect(await activeElementIsInside(page, dialog), `focus should stay trapped after Tab #${i + 1}`).toBe(true);
+    }
+
+    await page.keyboard.press('Escape');
+    await expect(dialog).toBeHidden();
+    await expect(opener).toBeFocused();
+  });
+});
+
 test.describe('Responsive + a11y smoke — validation summary reachable at both viewports', () => {
   /**
    * Seed the realistic workspace with ONE shared-setup field invalid: camera 0's `meters_per_pixel`
@@ -273,6 +304,7 @@ test.describe('Responsive + a11y smoke — Export reachable at both viewports', 
       await expect(page.getByRole('heading', { level: 2, name: 'Export — 2023-06-22' })).toBeVisible();
 
       // --- The YAML preview (the read-only confidence check before download) is visible + in-viewport. ---
+      await page.locator('summary').filter({ hasText: /View YAML/ }).click();
       const preview = page.getByLabel('YAML preview');
       await expectWithinViewportHorizontally(preview, viewport, 'YAML preview');
 

@@ -440,7 +440,10 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
     setQuickAddEpoch(null);
     setQuickAddError(null);
     if (epoch == null) commit(addEpochToTask(view.taskInstances, newId), nextTypes);
-    else commit(setEpochTask(view.taskInstances, epoch, newId), nextTypes);
+    else {
+      commit(setEpochTask(view.taskInstances, epoch, newId), nextTypes);
+      setActiveEpoch(epoch);
+    }
   };
 
   // ── Opto (fs_gui) per-epoch power / pulse ──
@@ -551,14 +554,6 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
   const activeRow = activeEpoch == null
     ? null
     : grid.rows.find((row) => row.epoch === activeEpoch) ?? null;
-  useEffect(() => {
-    if (!activeRow) return undefined;
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setActiveEpoch(null);
-    };
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [activeRow]);
   const changeFilter = (filter: EpochFilter) => {
     setEpochFilter(filter);
     if (activeEpoch == null) return;
@@ -823,6 +818,10 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
               onNewTaskType={() => {
                 setQuickAddError(null);
                 setQuickAddEpoch(activeRow.epoch);
+                // The task-type form is itself modal. Close this drawer while it is open so there
+                // is only one focus trap / aria-modal surface at a time; restore the epoch when the
+                // form closes or saves.
+                setActiveEpoch(null);
               }}
               onOpto={(field, value) => setOpto(activeRow, field, value)}
               statescriptDerivedName={statescriptDerivedName(activeRow)}
@@ -885,8 +884,10 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
           nameError={quickAddError}
           onSave={saveNewType}
           onCancel={() => {
+            const epoch = quickAddEpoch;
             setQuickAddEpoch(null);
             setQuickAddError(null);
+            if (epoch !== null) setActiveEpoch(epoch);
           }}
         />
       )}
@@ -1098,12 +1099,18 @@ function EpochRowBlock(p: EpochRowProps) {
           </span>
         </span>
       </td>
-      <td>
+      <td className={styles.cameraCell}>
+        <span className={styles.mobileCellLabel}>Camera(s)</span>
         {row.cameras.length === 0
           ? <span className={styles.vidNone}>—</span>
           : row.cameras.map((id) => <span key={String(id)} className={styles.cam}>{cameraName(cameras, id)}</span>)}
       </td>
-      {hasOpto && <td><span className={styles.optoReadout}>{optoLabel}</span></td>}
+      {hasOpto && (
+        <td className={styles.optoCell}>
+          <span className={styles.mobileCellLabel}>Opto</span>
+          <span className={styles.optoReadout}>{optoLabel}</span>
+        </td>
+      )}
       <td className={styles.menuCell}>
         <div className={styles.rowActionGroup} role="group" aria-label={`Epoch ${row.epoch} structure actions`}>
           <button
@@ -1159,6 +1166,9 @@ function EpochRowBlock(p: EpochRowProps) {
 /** Focused editor panel for the currently selected epoch. */
 function EpochDetailsPanel(p: EpochDetailsPanelProps) {
   const { row, panelId, hasOpto, cameras, taskTypes, grid } = p;
+  const panelRef = useRef<HTMLDivElement | null>(null);
+  const closeRef = useRef(p.onClose);
+  closeRef.current = p.onClose;
   const ownerTypeId = row.taskTypeId ?? '';
   const hasManualVideo = row.videos.some((v) => p.manualVideoKeys.has(`e${row.epoch}-v${v.index}`));
   const generatedFilesNeedReview =
@@ -1200,6 +1210,57 @@ function EpochDetailsPanel(p: EpochDetailsPanelProps) {
           ? styles.fileStateManual
           : styles.fileStateGenerated;
 
+  // This surface covers the underlying editor (full-screen on phones), so it behaves as a modal
+  // drawer: announce it as a dialog, move focus inside, contain Tab, close on Escape, and restore
+  // focus to the disclosure that opened it. Without this, keyboard focus walked through controls
+  // hidden behind the drawer.
+  useEffect(() => {
+    const opener = document.querySelector<HTMLElement>(
+      `[aria-controls="${panelId}"][aria-expanded="true"]`
+    );
+    const panel = panelRef.current;
+    const focusableSelector =
+      'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), ' +
+      'textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+    const focusHandle = window.setTimeout(() => {
+      panel?.querySelector<HTMLElement>('[data-initial-focus]')?.focus();
+    }, 0);
+    const previousBodyOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        closeRef.current();
+        return;
+      }
+      if (event.key !== 'Tab' || !panelRef.current) return;
+      const focusable = Array.from(
+        panelRef.current.querySelectorAll<HTMLElement>(focusableSelector)
+      ).filter((element) => !element.hasAttribute('hidden'));
+      if (focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (!panelRef.current.contains(document.activeElement)) {
+        event.preventDefault();
+        first.focus();
+      } else if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      window.clearTimeout(focusHandle);
+      document.removeEventListener('keydown', onKeyDown);
+      document.body.style.overflow = previousBodyOverflow;
+      opener?.focus?.();
+    };
+  }, [panelId, row.epoch]);
+
   useEffect(() => {
     if (!p.fileFocus || p.fileFocus.epoch !== row.epoch) return undefined;
     const handle = window.setTimeout(() => {
@@ -1215,7 +1276,16 @@ function EpochDetailsPanel(p: EpochDetailsPanelProps) {
   }, [p.fileFocus, row.epoch]);
 
   return (
-    <aside id={panelId} className={styles.detailsPanel} aria-labelledby={`${panelId}-heading`}>
+    <>
+      <div className={styles.detailsBackdrop} aria-hidden="true" onClick={p.onClose} />
+      <div
+        ref={panelRef}
+        id={panelId}
+        className={styles.detailsPanel}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={`${panelId}-heading`}
+      >
       <div className={styles.detailsPanelHeader}>
         <div>
           <h2 id={`${panelId}-heading`} className={styles.detailsPanelTitle}>
@@ -1226,7 +1296,13 @@ function EpochDetailsPanel(p: EpochDetailsPanelProps) {
             <EpochStatusPill status={row.status} />
           </div>
         </div>
-        <button type="button" className={styles.panelCloseButton} onClick={p.onClose}>
+        <button
+          type="button"
+          className={styles.panelCloseButton}
+          data-initial-focus
+          aria-label={`Close epoch ${row.epoch} details`}
+          onClick={p.onClose}
+        >
           Close
         </button>
       </div>
@@ -1434,6 +1510,7 @@ function EpochDetailsPanel(p: EpochDetailsPanelProps) {
         )}
 
       </div>
-    </aside>
+      </div>
+    </>
   );
 }

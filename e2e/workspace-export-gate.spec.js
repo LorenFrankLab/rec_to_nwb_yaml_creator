@@ -84,9 +84,11 @@ test.describe('Fail-closed export gate + repair navigation', () => {
   }) => {
     await openInvalidDayExportStep(page);
 
-    // The header readiness bar advertises the block (the issue-driven surface that replaced the old
-    // Export-nav status glyph).
-    await expect(page.getByRole('alert').filter({ hasText: /block(s)? export/i })).toBeVisible();
+    // The section rail advertises that this day still has errors even while the export surface is
+    // open, so the state remains visible without duplicating another alert above the preview.
+    await expect(
+      page.getByRole('button', { name: /^Fix & Export — Has errors/i }),
+    ).toBeVisible();
 
     // The Download control is GATED — assert the disabled state, not merely a missing button.
     const download = page.getByRole('button', { name: 'Download' });
@@ -97,7 +99,7 @@ test.describe('Fail-closed export gate + repair navigation', () => {
     // text so it is not confused with the header readiness bar's alert.)
     const blocked = page.getByRole('alert').filter({ hasText: /Resolve \d+ validation error/ });
     await expect(blocked).toBeVisible();
-    await expect(blocked.getByText(/Resolve 1 validation error before exporting/)).toBeVisible();
+    await expect(blocked.getByText(/Resolve \d+ validation errors? before exporting/)).toBeVisible();
     // The repair action deep-links to the EDITABLE owner of the fix (cameras are animal-owned).
     await expect(
       blocked.getByRole('button', { name: 'Fix in Animal Setup → Cameras' }),

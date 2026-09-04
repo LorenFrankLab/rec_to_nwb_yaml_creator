@@ -233,19 +233,22 @@ test.describe('Optogenetics export gating and the two-layer opto model', () => {
     await page.getByRole('button', { name: /^Tasks & Files\b/ }).click();
     await expect(page.getByRole('heading', { level: 2, name: 'Epochs' })).toBeVisible();
 
-    // The opto columns render ONLY for an implanted animal (the two-layer model's day layer).
-    await expect(page.getByRole('columnheader', { name: /Opto \(mW\)/ })).toBeVisible();
-    await expect(page.getByRole('columnheader', { name: /Pulse \(ms\)/ })).toBeVisible();
+    // The compact grid signals opto only for an implanted animal; its numeric controls live in the
+    // selected epoch's details drawer so the table remains readable on narrow screens.
+    await expect(page.getByRole('columnheader', { name: 'Opto' })).toBeVisible();
 
-    // Per-epoch power is a CONTROLLED numeric input (spinbutton), one per epoch row — not a free-text
-    // protocol field. Set power on epoch 2 only; epoch 4 stays empty (a subset, not day-wide).
-    const power2 = page.getByRole('spinbutton', { name: /Epoch 2 opto power/i });
-    const power4 = page.getByRole('spinbutton', { name: /Epoch 4 opto power/i });
+    // Per-epoch power is a CONTROLLED numeric input in each selected epoch drawer — not a free-text
+    // protocol field. Set power on epoch 2 only, then inspect epoch 4 to prove it stays empty.
+    await page.getByRole('button', { name: /Show epoch 2 details/i }).click();
+    const power2 = page.getByRole('spinbutton', { name: /Epoch 2 power/i });
     await expect(power2).toBeVisible();
-    await expect(power4).toBeVisible();
     await power2.fill('40');
     await power2.blur();
     await expect(power2).toHaveValue('40');
+    await page.keyboard.press('Escape');
+    await page.getByRole('button', { name: /Show epoch 4 details/i }).click();
+    const power4 = page.getByRole('spinbutton', { name: /Epoch 4 power/i });
+    await expect(power4).toBeVisible();
     // Opto is epoch-scoped, not applied to the whole day: epoch 4's power stays empty.
     await expect(power4).toHaveValue('');
   });

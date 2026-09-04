@@ -49,6 +49,7 @@ test.describe('Browser export of a configured recording day', () => {
     await expect(page.getByRole('button', { name: 'Download' })).toBeEnabled();
 
     // ---- The read-only preview IS the real export bytes (encodeYaml(mergeDayMetadata)). ----
+    await page.locator('summary').filter({ hasText: /View YAML/ }).click();
     const preview = page.getByLabel('YAML preview');
     await expect(preview).toBeVisible();
     // Spot-check a corrected high-risk section is present in the preview the user reads before download.

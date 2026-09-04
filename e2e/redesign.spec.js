@@ -63,15 +63,20 @@ test.describe('redesign — core flow', () => {
 
     // Tasks & Files section: drill into an epoch via its edit button (keyboard-operable disclosure button).
     await page.getByRole('button', { name: /^Tasks & Files\b/i }).click();
-    const caret = page.getByRole('button', { name: /Edit epoch .* details/i }).first();
+    const caret = page.getByRole('button', { name: /Show epoch .* details/i }).first();
     await expect(caret).toBeVisible();
     await expect(caret).toHaveAttribute('aria-expanded', 'false');
     await caret.click();
-    await expect(caret).toHaveAttribute('aria-expanded', 'true');
+    const closeDetails = page.getByRole('button', { name: /Hide epoch .* details/i }).first();
+    await expect(closeDetails).toHaveAttribute('aria-expanded', 'true');
+    await expect(page.getByRole('dialog', { name: /Epoch \d+:/i })).toBeVisible();
 
     // Export preview: the YAML preview renders for the configured day.
+    await page.keyboard.press('Escape');
+    await expect(page.getByRole('dialog', { name: /Epoch \d+:/i })).toHaveCount(0);
     await page.getByRole('button', { name: /^Export$/i }).click();
-    await expect(page.getByText(/subject_id/).first()).toBeVisible();
+    await page.locator('summary').filter({ hasText: /View YAML/ }).click();
+    await expect(page.getByLabel('YAML preview')).toContainText(/subject_id/);
   });
 });
 
@@ -208,13 +213,17 @@ test.describe('redesign — keyboard operability', () => {
     await seedAndOpen(page, buildConfiguredWorkspaceBlob(), `/#/day/${DAY_ID}`);
     await page.getByRole('button', { name: /^Tasks & Files\b/i }).click();
 
-    const caret = page.getByRole('button', { name: /Edit epoch .* details/i }).first();
+    const caret = page.getByRole('button', { name: /Show epoch .* details/i }).first();
     await expect(caret).toHaveAttribute('aria-expanded', 'false');
     await caret.focus();
     await expect(caret).toBeFocused();
     // Enter operates the disclosure (a real <button>, not a click-only div).
     await page.keyboard.press('Enter');
-    await expect(caret).toHaveAttribute('aria-expanded', 'true');
+    const closeDetails = page.getByRole('button', { name: /Hide epoch .* details/i }).first();
+    await expect(closeDetails).toHaveAttribute('aria-expanded', 'true');
+    await expect(page.getByRole('dialog', { name: /Epoch \d+:/i })).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(caret).toBeFocused();
   });
 
   test('the failed-channels grid toggles are keyboard-operable checkboxes', async ({ page }) => {
@@ -223,15 +232,20 @@ test.describe('redesign — keyboard operability', () => {
 
     // Each electrode group is a native <details> disclosure (keyboard-operable); its per-channel
     // toggles live inside. Expand a group with all channels OK so every revealed checkbox is enabled.
+    await page.locator('summary').filter({ hasText: /Other groups/ }).click();
     await page.locator('summary').filter({ hasText: /Electrode Group 0/ }).click();
 
     // The per-channel toggles are native checkboxes — focusable + Space-operable by construction.
     const channel = page.getByRole('checkbox', { disabled: false }).first();
     await expect(channel).toBeVisible();
     const before = await channel.isChecked();
+    expect(before).toBe(false);
     await channel.focus();
     await expect(channel).toBeFocused();
     await page.keyboard.press('Space');
-    await expect(channel).toBeChecked({ checked: !before });
+    // Marking the first clean channel failed promotes its whole group out of the collapsed
+    // "Other groups" section, so the original checkbox is intentionally remounted. Assert the
+    // user-visible result of that keyboard action instead of retaining a stale row locator.
+    await expect(page.getByText('3 failed channels', { exact: true })).toBeVisible();
   });
 });
