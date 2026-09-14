@@ -32,6 +32,7 @@ function cameraId(value: unknown): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
+/** The animal's usable camera ids, in declaration order (the first is the fallback). */
 function knownCameraIds(cameras: Camera[]): Set<number> {
   const ids = new Set<number>();
   for (const camera of cameras) {
@@ -42,31 +43,12 @@ function knownCameraIds(cameras: Camera[]): Set<number> {
 }
 
 /**
- * The camera a row is attributed to when it declares none of its own.
- *
- * `null` when the animal defines no usable camera id: there is nothing to
- * attribute a generated video to, and inventing one would export a dangling
- * `associated_video_files[].camera_id`.
- */
-function fallbackCameraId(cameras: Camera[]): number | null {
-  for (const camera of cameras) {
-    const id = cameraId(camera.id);
-    if (id != null) return id;
-  }
-  return null;
-}
-
-/**
  * Camera ids a generated video may be written for. Only ids the animal
  * actually defines: a declared-but-deleted camera and the no-camera fallback
  * both yield nothing, so generation never mints a reference that validation
  * (`dangling_camera_ref`) would then have to block.
  */
-function expectedCameraIds(
-  row: GeneratedFileRow,
-  fallback: number | null,
-  known: Set<number>
-): number[] {
+function expectedCameraIds(row: GeneratedFileRow, known: Set<number>): number[] {
   const declared = row.cameras
     .map((value) => cameraId(value))
     .filter((value): value is number => value != null);
@@ -79,21 +61,35 @@ function expectedCameraIds(
     return [...new Set(declared.filter((value) => known.has(value)))];
   }
 
-  return fallback != null ? [fallback] : [];
+  // A row that declares no camera is attributed to the animal's first usable one.
+  // When the animal defines none there is nothing to attribute to, and inventing an
+  // id would export a dangling `associated_video_files[].camera_id`.
+  const [fallback] = known;
+  return fallback === undefined ? [] : [fallback];
 }
 
-function missingVideoCameraIds(
-  row: GeneratedFileRow,
-  fallback: number | null,
-  known: Set<number>
-): number[] {
+/**
+ * The camera a NEW video for this row is attributed to, or null when there is none: the row's
+ * first surviving declared camera, else the animal's first camera, else nothing. The single
+ * decision behind both the bulk "generate missing videos" and a per-epoch "Add video" — a caller
+ * that gets null must not write a video (inventing an id exports a dangling `camera_id`).
+ *
+ * @param row - The epoch row (its declared cameras).
+ * @param cameras - The animal's camera catalog.
+ * @returns The camera id to attribute a new video to, or null.
+ */
+export function videoCameraIdFor(row: GeneratedFileRow, cameras: Camera[]): number | null {
+  return expectedCameraIds(row, knownCameraIds(cameras))[0] ?? null;
+}
+
+function missingVideoCameraIds(row: GeneratedFileRow, known: Set<number>): number[] {
   if (row.videoPresence === 'absent') return [];
   const existing = new Set(
     row.videos
       .map((video) => cameraId(video.entry.camera_id))
       .filter((value): value is number => value != null)
   );
-  return expectedCameraIds(row, fallback, known).filter((id) => !existing.has(id));
+  return expectedCameraIds(row, known).filter((id) => !existing.has(id));
 }
 
 export function countMissingGeneratedStatescripts(grid: GeneratedFileGrid): number {
@@ -101,12 +97,8 @@ export function countMissingGeneratedStatescripts(grid: GeneratedFileGrid): numb
 }
 
 export function countMissingGeneratedVideos(grid: GeneratedFileGrid, cameras: Camera[]): number {
-  const fallback = fallbackCameraId(cameras);
   const known = knownCameraIds(cameras);
-  return grid.rows.reduce(
-    (count, row) => count + missingVideoCameraIds(row, fallback, known).length,
-    0
-  );
+  return grid.rows.reduce((count, row) => count + missingVideoCameraIds(row, known).length, 0);
 }
 
 export function addMissingGeneratedStatescripts(
@@ -138,12 +130,11 @@ export function addMissingGeneratedVideos(
   currentVideos: AssociatedVideoFile[],
   cameras: Camera[]
 ): AssociatedVideoFile[] {
-  const fallback = fallbackCameraId(cameras);
   const known = knownCameraIds(cameras);
   const additions: AssociatedVideoFile[] = [];
 
   grid.rows.forEach((row) => {
-    const missing = missingVideoCameraIds(row, fallback, known);
+    const missing = missingVideoCameraIds(row, known);
     missing.forEach((id, index) => {
       additions.push({
         name: deriveVideoName({

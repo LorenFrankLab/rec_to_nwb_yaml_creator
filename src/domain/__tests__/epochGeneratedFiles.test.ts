@@ -4,6 +4,7 @@ import {
   addMissingGeneratedVideos,
   countMissingGeneratedStatescripts,
   countMissingGeneratedVideos,
+  videoCameraIdFor,
 } from '../epochGeneratedFiles';
 import type { Camera } from '../../state/workspaceTypes';
 
@@ -187,5 +188,25 @@ describe('epoch generated file helpers', () => {
         task_epochs: 1,
       },
     ]);
+  });
+});
+
+describe('videoCameraIdFor — the single attribution decision for a NEW video', () => {
+  const row = grid.rows[0]; // declares cameras [0, 1]
+  const undeclared = { ...grid.rows[0], cameras: [] };
+
+  it('uses the first surviving declared camera', () => {
+    expect(videoCameraIdFor(row, cameras)).toBe(0);
+    expect(videoCameraIdFor(row, [cameras[1]])).toBe(1);
+  });
+
+  it('returns null when every declared camera has been deleted (never silently re-attributes)', () => {
+    expect(videoCameraIdFor(row, [])).toBeNull();
+    expect(videoCameraIdFor(row, [{ ...cameras[0], id: 7 }])).toBeNull();
+  });
+
+  it('falls back to the animal\'s first camera only for a row that declares none', () => {
+    expect(videoCameraIdFor(undeclared, cameras)).toBe(0);
+    expect(videoCameraIdFor(undeclared, [])).toBeNull();
   });
 });

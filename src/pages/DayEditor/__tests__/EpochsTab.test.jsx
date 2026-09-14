@@ -562,6 +562,36 @@ describe('EpochsTab — video 3-state', () => {
     await waitFor(() => expect(input).toHaveFocus());
   });
 
+  // The per-epoch "Add video" is the sibling of the bulk generator: neither may mint a video for a
+  // camera the animal does not have (the exported `camera_id` would be a dangling reference that
+  // validation then has to block). Epoch 1's Sleep task declares camera 0.
+  it('does not add a video for an epoch whose declared camera the animal no longer has', async () => {
+    const user = userEvent.setup();
+    const bundle = makeBundle({}, { cameras: [{ id: 1, camera_name: 'cam1' }] });
+    render(<StatefulEpochsTab bundle={bundle} />);
+
+    await user.click(screen.getByRole('button', { name: /Show epoch 1 details/i }));
+    await user.click(screen.getByRole('button', { name: /^Add expected video$/i }));
+
+    expect(lastPatch(bundle.onFieldUpdate, 'associated_video_files')).toBeUndefined();
+    expect(screen.getByRole('status')).toHaveTextContent(/camera/i);
+  });
+
+  it('does not add a video when the animal has no cameras to attribute it to', async () => {
+    const user = userEvent.setup();
+    const bundle = makeBundle(
+      { associated_video_files: [] },
+      { cameras: [], taskTypes: [{ id: 'tasktype-0', task_name: 'Sleep', task_description: 'sleep' }] }
+    );
+    render(<StatefulEpochsTab bundle={bundle} />);
+
+    await user.click(screen.getByRole('button', { name: /Show epoch 1 details/i }));
+    await user.click(screen.getByRole('button', { name: /Enter video manually for epoch 1/i }));
+
+    expect(lastPatch(bundle.onFieldUpdate, 'associated_video_files')).toBeUndefined();
+    expect(screen.getByRole('status')).toHaveTextContent(/camera/i);
+  });
+
   it('generates all missing expected videos and offers Undo', async () => {
     const user = userEvent.setup();
     const bundle = makeBundle();

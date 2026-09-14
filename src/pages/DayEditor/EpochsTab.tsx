@@ -42,6 +42,7 @@ import {
   addMissingGeneratedVideos,
   countMissingGeneratedStatescripts,
   countMissingGeneratedVideos,
+  videoCameraIdFor,
 } from '../../domain/epochGeneratedFiles';
 import {
   getAnimalCameras,
@@ -495,7 +496,17 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
     const videos = getDayAssociatedVideos(day);
     const index = videos.filter((v) => Number(v.task_epochs) === row.epoch).length + 1;
     const name = deriveVideoName({ date: grid.date, subjectId: grid.subjectId, epoch: row.epoch, tag: row.tag, index });
-    const camId = (row.cameras[0] as number) ?? (cameras[0]?.id as number) ?? 0;
+    // The same attribution rule as the bulk generator: never mint a video for a camera the animal
+    // does not have (a dangling `camera_id` validation would then have to block).
+    const camId = videoCameraIdFor(row, cameras);
+    if (camId === null) {
+      showToast(
+        row.cameras.length > 0
+          ? `Epoch ${row.epoch}'s camera is no longer in this animal's cameras — fix the task's camera before adding a video.`
+          : 'This animal has no cameras to attribute a video to — add one in Animal Setup first.'
+      );
+      return null;
+    }
     onFieldUpdate('associated_video_files', [...videos, { name, camera_id: camId, task_epochs: row.epoch }]);
     setVideoless(row.epoch, false);
     return videos.length;
