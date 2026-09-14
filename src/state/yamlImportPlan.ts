@@ -56,6 +56,8 @@ export interface ConfigVersion {
 interface FileEntry {
   /** Source filename. */
   sourceName: string;
+  /** Caller-unique identity for this file (defaults to `sourceName`); see {@link ImportPlanDay.sourceKey}. */
+  sourceKey: string;
   /** ISO `YYYY-MM-DD` recording date. */
   date: string;
   /** Animal-owned facts from {@link decomposeYaml}. */
@@ -191,8 +193,14 @@ function toIsoDate(yyyy: string, mm: string, dd: string): string | null {
 export interface ImportPlanDay {
   /** ISO `YYYY-MM-DD` recording date. */
   date: string;
-  /** Source filename. */
+  /** Source filename (display). */
   sourceName: string;
+  /**
+   * The identity the caller gave this file (`sourceKey` on the input), or `sourceName` when it gave
+   * none. Two selected files can share a basename; a caller that must match a planned day back to
+   * the file it came from (e.g. to collect that file's accepted catalog additions) matches on this.
+   */
+  sourceKey: string;
   /** Day session facts (description, id, experiment_description, weight). */
   session: Record<string, any>;
   keywords: any[];
@@ -238,7 +246,7 @@ export interface ImportPlanAnimal {
 /** The full import plan: per-animal plans, the unimportable files, and a summary. */
 export interface ImportPlan {
   animals: ImportPlanAnimal[];
-  unimportable: Array<{ sourceName: string; reason: string }>;
+  unimportable: Array<{ sourceName: string; sourceKey: string; reason: string }>;
   summary: { fileCount: number; animalCount: number; dayCount: number };
 }
 
@@ -511,6 +519,7 @@ function buildPlanDay(
   return {
     date: entry.date,
     sourceName: entry.sourceName,
+    sourceKey: entry.sourceKey,
     session: structuredClone(dayFacts.session),
     keywords: structuredClone(dayFacts.keywords ?? []),
     tasks: structuredClone(dayFacts.tasks ?? []),
@@ -551,7 +560,7 @@ export function planImport(
   existingWorkspace: { animals?: unknown } | null | undefined
 ): ImportPlan {
   const files = Array.isArray(decodedFiles) ? decodedFiles : [];
-  const unimportable: Array<{ sourceName: string; reason: string }> = [];
+  const unimportable: Array<{ sourceName: string; sourceKey: string; reason: string }> = [];
   /** normalized subjectId → first-seen display id + date-ordered file entries */
   const bySubject = new Map<string, SubjectBatch>();
   /**
@@ -564,6 +573,7 @@ export function planImport(
 
   for (const file of files) {
     const sourceName = file?.sourceName;
+    const sourceKey: string = typeof file?.sourceKey === 'string' ? file.sourceKey : sourceName;
     const flatModel = file?.flatModel;
 
     // Per-file resilience: a single pathological file must NOT abort the whole import
@@ -575,6 +585,7 @@ export function planImport(
     } catch (error) {
       unimportable.push({
         sourceName,
+        sourceKey,
         reason: `Could not analyze file: ${(error as Error)?.message ?? String(error)}`,
       });
       continue;
@@ -584,7 +595,7 @@ export function planImport(
       const reason = firstBlocking
         ? `Validation failed: ${firstBlocking.message}`
         : 'File failed schema/business-rule validation and cannot be imported.';
-      unimportable.push({ sourceName, reason });
+      unimportable.push({ sourceName, sourceKey, reason });
       continue;
     }
 
@@ -592,6 +603,7 @@ export function planImport(
     if (date === null) {
       unimportable.push({
         sourceName,
+        sourceKey,
         reason:
           'Could not determine the recording date from the filename ' +
           '({mmddYYYY}_{subject}_metadata.yml) or session_id ({subject}_{YYYYMMDD}).',
@@ -603,6 +615,7 @@ export function planImport(
     if (!subjectId) {
       unimportable.push({
         sourceName,
+        sourceKey,
         reason: 'File has no subject_id; cannot attribute it to an animal.',
       });
       continue;
@@ -616,6 +629,7 @@ export function planImport(
     if (!/^[a-zA-Z0-9_-]+$/.test(subjectId)) {
       unimportable.push({
         sourceName,
+        sourceKey,
         reason:
           `Subject ID "${subjectId}" contains characters that aren't allowed in an animal id ` +
           `(use only letters, numbers, hyphen, or underscore). Rename the subject in the file and re-import.`,
@@ -636,6 +650,7 @@ export function planImport(
     if (keptSourceName !== undefined) {
       unimportable.push({
         sourceName,
+        sourceKey,
         reason: `Duplicate recording date ${date} for subject "${displaySubjectId}" (already provided by ${keptSourceName}).`,
       });
       continue;
@@ -644,6 +659,7 @@ export function planImport(
 
     const entry: FileEntry = {
       sourceName,
+      sourceKey,
       date,
       animalFacts: decomposed.animalFacts,
       dayFacts: decomposed.dayFacts,

@@ -140,31 +140,23 @@ function blockingReason(
 /**
  * Merge the catalog additions of every file the batch plan actually kept.
  *
- * `planImport` can reject an otherwise-ready file (most commonly a duplicate animal/date), so the
- * kept source names are consumed as a MULTISET in input order: catalog rows from a rejected file can
- * never leak into an existing animal, and two selected files sharing a basename are not mistaken for
- * the one retained day. The identity rule itself lives with the executor that enforces it.
+ * `planImport` can reject an otherwise-ready file (most commonly a duplicate animal/date), so only
+ * the files whose day the plan retained contribute — matched by each file's own key, never by
+ * basename: two selected files can share one, and matching on it once let an excluded duplicate
+ * consume the slot of the retained file that followed it. The identity rule for the rows themselves
+ * lives with the executor that enforces it.
  */
 function collectBatchCatalogAdditions(
   assessments: FileAssessment[],
-  includedSourceNames: string[]
+  includedSourceKeys: Set<string>
 ): BatchPreview['catalogAdditions'] {
-  const remainingSources = new Map<string, number>();
-  for (const sourceName of includedSourceNames) {
-    remainingSources.set(sourceName, (remainingSources.get(sourceName) ?? 0) + 1);
-  }
-  const included: Array<Record<string, ExistingAnimalCatalogAdditions>> = [];
-  for (const assessment of assessments) {
-    if (!assessment.ready) continue;
-    const sourceName = assessment.file.decoded.sourceName;
-    const remaining = remainingSources.get(sourceName) ?? 0;
-    if (remaining === 0) continue;
-    remainingSources.set(sourceName, remaining - 1);
-    included.push(
-      collectExistingAnimalCatalogAdditions(assessment.file.plan, assessment.file.resolutions)
-    );
-  }
-  return mergeExistingAnimalCatalogAdditions(included);
+  return mergeExistingAnimalCatalogAdditions(
+    assessments
+      .filter((assessment) => assessment.ready && includedSourceKeys.has(assessment.file.key))
+      .map((assessment) =>
+        collectExistingAnimalCatalogAdditions(assessment.file.plan, assessment.file.resolutions)
+      )
+  );
 }
 
 /** Suggestions in a file the user has neither accepted nor overridden. */
@@ -353,6 +345,9 @@ export default function ImportRepair() {
     const batchPlan = planImport(
       ready.map((assessment) => ({
         sourceName: assessment.file.decoded.sourceName,
+        // The file's own identity, so a planned day can be matched back to it by more than a
+        // basename (two selected files may share one).
+        sourceKey: assessment.file.key,
         flatModel: assessment.repaired,
       })),
       model.workspace
@@ -372,7 +367,7 @@ export default function ImportRepair() {
       excluded,
       catalogAdditions: collectBatchCatalogAdditions(
         ready,
-        batchPlan.animals.flatMap(({ days }) => days.map((day) => day.sourceName))
+        new Set(batchPlan.animals.flatMap(({ days }) => days.map((day) => day.sourceKey)))
       ),
     });
     setConflictResolutions({});

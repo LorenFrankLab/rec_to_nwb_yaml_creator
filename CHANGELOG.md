@@ -264,6 +264,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   file's references are now remapped by camera name onto the combined catalog's ids, a later file's
   new-by-name camera whose id collides with a unioned one is renumbered (and its references follow),
   and the preview's "Differences to review" names every remap.
+- **A duplicate filename can no longer drop a retained file's catalog entries.** Accepted catalog
+  additions were matched back to the retained days by basename; with an excluded duplicate ahead of
+  a retained file of the same name, the duplicate consumed the slot and the retained day's camera was
+  omitted — which the pre-flight then rejected, failing the whole animal. Planned days now carry the
+  file's own identity (`sourceKey`) and additions are matched on it.
 - **"Add video" no longer invents a camera.** The per-epoch Add video / Enter video manually actions
   wrote `camera_id: 0` when the animal had no cameras, and kept a task's original camera id after that
   camera was deleted — a dangling reference validation then had to block. Both now use the same

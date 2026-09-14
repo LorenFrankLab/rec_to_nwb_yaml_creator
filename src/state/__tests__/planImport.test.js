@@ -404,6 +404,24 @@ describe('planImport — intra-plan duplicate (subject, date)', () => {
   });
 });
 
+describe('planImport — sourceKey identity', () => {
+  it('echoes the caller\'s sourceKey on every planned day and unimportable entry, defaulting to sourceName', () => {
+    const kept = makeFile({ subjectId: 'remy', date: '2023-06-22' });
+    const dup = makeFile({ subjectId: 'remy', date: '2023-06-22' });
+    const plan = planImport(
+      [
+        { ...kept, sourceKey: '0:day.yml', sourceName: 'day.yml' },
+        { ...dup, sourceKey: '1:day.yml', sourceName: 'day.yml' },
+        makeFile({ subjectId: 'remy', date: '2023-06-23' }),
+      ],
+      createDefaultWorkspace()
+    );
+    const remy = plan.animals.find((a) => a.subjectId === 'remy');
+    expect(remy.days.map((d) => d.sourceKey)).toEqual(['0:day.yml', '06232023_remy_metadata.yml']);
+    expect(plan.unimportable.map((u) => u.sourceKey)).toEqual(['1:day.yml']);
+  });
+});
+
 describe('planImport — purity', () => {
   it('does not mutate or alias the input decodedFiles or workspace', () => {
     const files = [makeFile({ subjectId: 'remy', date: '2023-06-22' })];

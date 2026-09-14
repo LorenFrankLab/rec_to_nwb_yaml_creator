@@ -384,6 +384,68 @@ describe('ImportRepair — commit', () => {
       'ImportedRig',
     ]);
   });
+  it('keeps a retained file\'s catalog entries when an excluded duplicate shares its filename', async () => {
+    // Order matters: a dated file, then a DATELESS "day.yml" that duplicates its date (excluded at
+    // batch preview), then another "day.yml" for a new date (retained) that brings camera 5. The
+    // retained file must be matched by its own identity, not by the basename the excluded file
+    // also carries — otherwise camera 5 is dropped and the pre-flight rejects the whole animal.
+    const user = userEvent.setup();
+    renderScreen({
+      remy: {
+        id: 'remy',
+        subject: { subject_id: 'remy' },
+        days: [],
+        cameras: [{ id: 0, camera_name: 'existing_cam' }],
+        devices: {
+          data_acq_device: [
+            { name: 'ExistingRig', system: 'MCU', amplifier: 'Intan', adc_circuit: 'Intan' },
+          ],
+          device: { name: ['Trodes'] },
+          electrode_groups: [],
+          ntrode_electrode_group_channel_map: [],
+        },
+        configurationHistory: [
+          {
+            version: 1,
+            devices: { electrode_groups: [], ntrode_electrode_group_channel_map: [] },
+            appliedToDays: [],
+          },
+        ],
+      },
+    });
+
+    const retainedModel = decodeYaml(existingCatalogGapYaml());
+    retainedModel.session_id = 'remy_20230623';
+    retainedModel.cameras[0] = { ...retainedModel.cameras[0], id: 5, camera_name: 'retained_camera' };
+    retainedModel.tasks[0].camera_id = [5];
+    retainedModel.associated_video_files[0].camera_id = 5;
+
+    await user.upload(screen.getByLabelText(/choose a metadata yaml file/i), [
+      makeFile('06222023_remy_metadata.yml', existingCatalogGapYaml()),
+      makeFile('day.yml', existingCatalogGapYaml()),
+      makeFile('day.yml', encodeYaml(retainedModel)),
+    ]);
+
+    await user.click(await screen.findByRole('button', { name: /Accept Camera 3/i }));
+    await user.click(screen.getByRole('button', { name: /Accept Recording system/i }));
+    await user.selectOptions(screen.getByLabelText('Review file'), '1');
+    await user.click(screen.getByRole('button', { name: /Accept Camera 3/i }));
+    await user.click(screen.getByRole('button', { name: /Accept Recording system/i }));
+    await user.selectOptions(screen.getByLabelText('Review file'), '2');
+    await user.click(screen.getByRole('button', { name: /Accept Camera 5/i }));
+    await user.click(screen.getByRole('button', { name: /Accept Recording system/i }));
+
+    await user.click(screen.getByRole('button', { name: /Review 3 ready files/i }));
+    expect(screen.getByRole('region', { name: /batch import summary/i })).toHaveTextContent(
+      /2 recording days → 1 animal/i
+    );
+    await user.click(screen.getByRole('button', { name: /confirm import/i }));
+
+    await screen.findByRole('heading', { name: /import complete/i });
+    expect(screen.queryByRole('heading', { name: /could not import/i })).not.toBeInTheDocument();
+    expect(captured.animals.remy.cameras.map((camera) => camera.id)).toEqual([0, 3, 5]);
+    expect(Object.keys(captured.days)).toHaveLength(2);
+  });
 });
 
 describe('ImportRepair — honest reporting of files that never made it', () => {
