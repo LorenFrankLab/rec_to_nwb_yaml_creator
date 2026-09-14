@@ -6,7 +6,7 @@
  * arrow keys move focus cell-to-cell.
  */
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import type { KeyboardEvent as ReactKeyboardEvent } from 'react';
 import { CalendarDay } from './CalendarDay';
 import styles from './CalendarDayCreator.module.css';
@@ -89,7 +89,18 @@ export function CalendarGrid({
   onDateSelect,
 }: CalendarGridProps) {
   const { year, month } = currentMonth;
-  const days = getCalendarDays(year, month);
+  // Memoized on the displayed month so the roving-focus callbacks below (which depend on
+  // `allDates`) keep a stable identity across the re-renders every arrow key causes.
+  const { days, allDates, monthDates } = useMemo(() => {
+    const cells = getCalendarDays(year, month);
+    return {
+      days: cells,
+      // The full display order (42 cells) and the displayed month's own dates, used for roving focus.
+      allDates: cells.map((d) => d.date),
+      monthDates: cells.filter((d) => d.isCurrentMonth).map((d) => d.date),
+    };
+  }, [year, month]);
+  const existingSet = useMemo(() => new Set(existingDays), [existingDays]);
 
   // Get today's date in local timezone (not UTC)
   const now = new Date();
@@ -104,13 +115,10 @@ export function CalendarGrid({
     year: 'numeric',
   })} calendar`;
 
-  // The full display order (42 cells) and the displayed month's own dates, used for roving focus.
-  const allDates = days.map((d) => d.date);
-  const monthDates = days.filter((d) => d.isCurrentMonth).map((d) => d.date);
   // Default roving-focus target: today when it falls in the displayed month, else the first
   // SELECTABLE (non-existing) day of the month — so Tab always reaches a usable cell even when
   // today is in another month. Fall back to the first cell if every month day is an existing record.
-  const firstSelectable = monthDates.find((d) => !existingDays.includes(d));
+  const firstSelectable = monthDates.find((d) => !existingSet.has(d));
   const defaultActiveDate = monthDates.includes(today)
     ? today
     : firstSelectable ?? monthDates[0] ?? allDates[0];
@@ -232,7 +240,7 @@ export function CalendarGrid({
                   date={date}
                   isCurrentMonth={isCurrentMonth}
                   isSelected={selectedDates.has(date)}
-                  isExisting={existingDays.includes(date)}
+                  isExisting={existingSet.has(date)}
                   isToday={date === today}
                   isActive={isActive}
                   onSelect={onDateSelect}

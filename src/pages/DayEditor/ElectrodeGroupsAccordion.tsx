@@ -1,7 +1,8 @@
-import { useCallback } from 'react';
+import { useMemo } from 'react';
 import ReadOnlyDeviceInfo from './ReadOnlyDeviceInfo';
 import BadChannelsEditor from './BadChannelsEditor';
 import type { ElectrodeGroup, NtrodeMap } from '../../state/workspaceTypes';
+import { pluralize } from '../../utils/pluralize';
 
 interface ElectrodeGroupsAccordionProps {
   /** The day's EFFECTIVE electrode groups (pinned snapshot). */
@@ -54,46 +55,37 @@ export default function ElectrodeGroupsAccordion({
   errors,
   warnings,
 }: ElectrodeGroupsAccordionProps) {
-  /**
-   * Get ntrodes for a specific electrode group.
-   */
-  const getNtrodesForGroup = useCallback((groupId: number) => {
+  // Index the channel map by group ONCE per map change: the row build below is otherwise a full
+  // scan of the map per group (and it re-ran on every failed-channel checkbox toggle).
+  const ntrodesByGroup = useMemo(() => {
+    const byGroup = new Map<number, NtrodeMap[]>();
     // electrode_group_id and group ids are integers end-to-end (schema contract).
-    return ntrodeChannelMap.filter(ntrode => ntrode.electrode_group_id === groupId);
+    for (const ntrode of ntrodeChannelMap) {
+      const list = byGroup.get(ntrode.electrode_group_id) ?? [];
+      list.push(ntrode);
+      byGroup.set(ntrode.electrode_group_id, list);
+    }
+    return byGroup;
   }, [ntrodeChannelMap]);
 
-  /**
-   * Calculate status for an electrode group.
-   */
-  const getGroupStatus = useCallback((groupId: number) => {
-    const ntrodes = getNtrodesForGroup(groupId);
+  /** Failed-channel tally for one group's ntrodes. */
+  const groupStatus = (ntrodes: NtrodeMap[]) => {
     let totalBadChannels = 0;
     let totalChannels = 0;
-
     ntrodes.forEach(ntrode => {
-      const ntrodeId = String(ntrode.ntrode_id);
-      const currentBadChannels = badChannels[ntrodeId] || [];
-      const channelCount = Object.keys(ntrode.map).length;
-
-      totalBadChannels += currentBadChannels.length;
-      totalChannels += channelCount;
+      totalBadChannels += (badChannels[String(ntrode.ntrode_id)] || []).length;
+      totalChannels += Object.keys(ntrode.map).length;
     });
-
     const allBad = totalChannels > 0 && totalBadChannels === totalChannels;
-
     return {
       status: allBad ? 'error' : totalBadChannels > 0 ? 'warning' : 'clean',
       badChannelCount: totalBadChannels,
       allBad,
     };
-  }, [badChannels, getNtrodesForGroup]);
+  };
 
-  /**
-   * Get status badge text and aria-label.
-   */
-  const getStatusBadge = useCallback((groupId: number) => {
-    const { badChannelCount, allBad } = getGroupStatus(groupId);
-
+  /** Status badge text and aria-label for a tallied group. */
+  const statusBadgeFor = ({ badChannelCount, allBad }: ReturnType<typeof groupStatus>) => {
     if (allBad) {
       return {
         text: 'All channels failed - Group inactive',
@@ -101,31 +93,29 @@ export default function ElectrodeGroupsAccordion({
         className: 'status-error',
       };
     }
-
     if (badChannelCount > 0) {
+      const noun = pluralize(badChannelCount, 'channel');
       return {
-        text: `${badChannelCount} failed ${badChannelCount === 1 ? 'channel' : 'channels'}`,
-        ariaLabel: `Status: ${badChannelCount} failed ${badChannelCount === 1 ? 'channel' : 'channels'}`,
+        text: `${badChannelCount} failed ${noun}`,
+        ariaLabel: `Status: ${badChannelCount} failed ${noun}`,
         className: 'status-warning',
       };
     }
-
     return {
       text: 'All channels OK',
       ariaLabel: 'Status: All channels OK',
       className: 'status-clean',
     };
-  }, [getGroupStatus]);
+  };
 
   const rows: GroupRow[] = electrodeGroups.map((group) => {
-    const ntrodes = getNtrodesForGroup(group.id);
-    const statusBadge = getStatusBadge(group.id);
-    const status = getGroupStatus(group.id);
+    const ntrodes = ntrodesByGroup.get(group.id) ?? [];
+    const status = groupStatus(ntrodes);
     const hasValidationIssue = ntrodes.some((ntrode) => errors[String(ntrode.ntrode_id)] || warnings[String(ntrode.ntrode_id)]);
     return {
       group,
       ntrodes,
-      statusBadge,
+      statusBadge: statusBadgeFor(status),
       status,
       hasIssue: ntrodes.length === 0 || status.badChannelCount > 0 || status.allBad || hasValidationIssue,
     };
@@ -186,7 +176,7 @@ export default function ElectrodeGroupsAccordion({
               <div className="electrode-group-header">
                 <h3>Electrode Group {group.id}: {group.location}</h3>
                 <p className="field-help-text">
-                  This {group.device_type} has {ntrodeCount} {ntrodeCount === 1 ? 'shank' : 'shanks'}.
+                  This {group.device_type} has {ntrodeCount} {pluralize(ntrodeCount, 'shank')}.
                   Mark individual channels that have failed on each shank.
                 </p>
               </div>
@@ -223,7 +213,7 @@ export default function ElectrodeGroupsAccordion({
         <strong>
           {totalBadChannels === 0
             ? 'No failed channels marked'
-            : `${totalBadChannels} failed ${totalBadChannels === 1 ? 'channel' : 'channels'}`}
+            : `${totalBadChannels} failed ${pluralize(totalBadChannels, 'channel')}`}
         </strong>
         <span>
           {activeGroupCount === 0
@@ -242,9 +232,9 @@ export default function ElectrodeGroupsAccordion({
             <span
               className="status-badge status-clean"
               role="status"
-              aria-label={`Status: ${cleanRows.length} clean ${cleanRows.length === 1 ? 'group' : 'groups'}`}
+              aria-label={`Status: ${cleanRows.length} clean ${pluralize(cleanRows.length, 'group')}`}
             >
-              {cleanRows.length} clean {cleanRows.length === 1 ? 'group' : 'groups'}
+              {cleanRows.length} clean {pluralize(cleanRows.length, 'group')}
             </span>
           </summary>
           <div className="clean-electrode-groups-content">
