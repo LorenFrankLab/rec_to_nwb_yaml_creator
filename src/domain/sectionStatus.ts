@@ -22,6 +22,7 @@ import { mergeDayMetadata } from '../state/workspaceUtils';
 import { validateDay, repairTargetForIssue, animalSetupTabForFieldPath } from './validation';
 import { optoFieldsPresence } from './optoCompleteness';
 import type { Animal, Day } from '../state/workspaceTypes';
+import { isBlockingIssue } from '../validation/issueTypes';
 
 /** Section status values. `blocking` (Phase 3a.5) is computed separately — see getAnimalBlockingSections. */
 export const SECTION_STATUS: Readonly<Record<string, string>> = {
@@ -146,7 +147,7 @@ export function getAnimalBlockingSections(animal: Animal, days?: Record<string, 
     // below), and the cross-day blocks `animalDays` adds (bad-channel monotonicity) are day-surface,
     // so threading it here would change nothing. Not a missed call site.
     for (const issue of validateDay(day, merged, animal)) {
-      if (issue.severity !== 'error') continue;
+      if (!isBlockingIssue(issue)) continue;
       if (repairTargetForIssue(issue).surface !== 'animal') continue;
       // Attribute via the SAME field input repairTargetForIssue uses for its tab label
       // (`path || instancePath`), so the dot's tab and the repair button's label can never diverge.

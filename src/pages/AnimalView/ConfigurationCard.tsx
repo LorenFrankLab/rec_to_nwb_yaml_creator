@@ -1,6 +1,7 @@
 import type { AnimalConfigCardViewModel } from '../../viewModels/animalViewModel';
 import Button from '../../components/ui/Button';
 import styles from './ConfigurationCard.module.css';
+import { pluralize } from '../../utils/pluralize';
 
 interface ConfigurationCardProps {
   /** The current-configuration card data built by the animal view-model. */
@@ -16,7 +17,7 @@ interface ConfigurationCardProps {
  */
 export default function ConfigurationCard({ card, onNewConfiguration }: ConfigurationCardProps) {
   const since = card.sinceDate ? ` · since ${card.sinceDate}` : '';
-  const dayNoun = card.dayCount === 1 ? 'day' : 'days';
+  const dayNoun = pluralize(card.dayCount, 'day');
   const versionLabel =
     card.version != null
       ? `v${card.version} (current)${since} · ${card.dayCount} ${dayNoun}`

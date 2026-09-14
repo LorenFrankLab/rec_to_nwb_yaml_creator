@@ -15,11 +15,13 @@ import { getConfigHistory, getDataAcqDevices } from '../state/workspaceSelectors
 import { badChannelRegressions } from './badChannelMonotonicity';
 import { geometryDomainOf } from './geometryProvenance';
 import type { RepairableIssue } from './repairRouting';
+import { blockingIssues } from '../validation/issueTypes';
 import {
   isPlainRecord,
   classifyGeometryOverride,
   classifyBadChannelsContainer,
 } from './deviceOverrideMerge';
+import { pluralize } from '../utils/pluralize';
 
 /**
  * The day fields the override / data-acq issue producers READ. Every field is `unknown`: these
@@ -123,7 +125,7 @@ export function dayOverrideIssues(
   //  - present array whose CONTENTS error → honored-but-shadowing the snapshot, errors
   //    mis-route to the Animal Editor → add a day-routed removable escape. A CLEAN valid
   //    array override is NOT flagged (no dead-end to break).
-  const baseErrors = (Array.isArray(baseIssues) ? baseIssues : []).filter((i) => i?.severity === 'error');
+  const baseErrors = blockingIssues(Array.isArray(baseIssues) ? baseIssues : []);
   // A geometry override is "erroring" only when its STRUCTURAL contents err — a day-owned
   // bad-channel overlay error on an ntrode path must NOT blame a clean override.
   // {@link geometryDomainOf} encodes that classification (shared with the provenance re-tag).
@@ -446,7 +448,7 @@ export function badChannelUnfailIssues(
         acks: { [ntrodeId]: channels },
       },
       message:
-        `Channel${channels.length === 1 ? '' : 's'} ${channels.join(', ')} on ntrode ${ntrodeId} ` +
+        `${pluralize(channels.length, 'Channel')} ${channels.join(', ')} on ntrode ${ntrodeId} ` +
         `${channels.length === 1 ? 'was' : 'were'} marked bad on an earlier recording day with the ` +
         `same probe configuration; bad channels are monotonic. Re-mark ${channels.length === 1 ? 'it' : 'them'}, ` +
         `or acknowledge the removal.`,

@@ -22,6 +22,8 @@ import { formatDeterministicFilename } from '../../io/yaml';
 import { exportSelectedDays } from '../AnimalWorkspace/exportSelectedDays';
 import type { ExportDayActions } from '../../domain/exportDay';
 import type { Animal, Day } from '../../state/workspaceTypes';
+import { isRecord } from '../../utils/records';
+import { isBlockingIssue } from '../../validation/issueTypes';
 
 /** A resolved field-level repair link for one day: the blocking issue's message + its owner route. */
 export interface BlockingRepairLink {
@@ -56,11 +58,6 @@ export interface SkippedExportDay {
 export interface ExportAllResult {
   exported: ExportedDay[];
   skipped: SkippedExportDay[];
-}
-
-/** Whether a value is a non-null, non-array object. */
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === 'object' && !Array.isArray(value);
 }
 
 /**
@@ -101,7 +98,7 @@ export function firstBlockingRepairLink(
     merged,
     animal,
     animalDays
-  ).filter((issue) => issue.severity === 'error');
+  ).filter(isBlockingIssue);
   if (errors.length === 0) return null;
 
   const issue: RepairableIssue = errors[0];

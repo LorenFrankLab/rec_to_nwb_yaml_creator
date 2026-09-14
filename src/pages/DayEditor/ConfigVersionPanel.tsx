@@ -2,6 +2,7 @@ import { useState } from 'react';
 import ReconfigWizard from './ReconfigWizard';
 import { getConfigHistory } from '../../state/workspaceSelectors';
 import type { Animal, Day } from '../../state/workspaceTypes';
+import { pluralize } from '../../utils/pluralize';
 
 /** The precomputed configuration-version context the Recording Setup section passes in. */
 interface ReconfigContext {
@@ -72,7 +73,7 @@ export default function ConfigVersionPanel({ reconfig, day, animal, ownerKey, on
               : 'This is a historical configuration. Mark failed channels for this recording day against this pinned snapshot; editing the latest animal setup will not change this day unless you reconfigure.'}
           </span>
           <span className="config-version-applied">
-            Applied to {reconfig.appliedCount} {reconfig.appliedCount === 1 ? 'day' : 'days'}
+            Applied to {reconfig.appliedCount} {pluralize(reconfig.appliedCount, 'day')}
           </span>
           {day.configurationVersion == null && getConfigHistory(animal).length > 1 && (
             <div className="config-version-warning" role="alert">

@@ -15,6 +15,7 @@
  */
 
 import type { Animal, Day } from './workspaceTypes';
+import { isRecord } from '../utils/records';
 
 /** A serializable repair command (persisted/rehydrated, then executed by {@link applyRepairCommand}). */
 export interface RepairCommand {
@@ -90,18 +91,6 @@ const COMMAND_SURFACE: Readonly<Record<string, 'day' | 'animal'>> = Object.freez
   resetDataAcqDevice: 'animal',
   rebuildConfigurationHistory: 'animal',
 });
-
-/**
- * Whether `value` is a plain object record (not null, not an array). Mirrors the shared
- * guard used across validation/selectors — used to read the day's CURRENT `deviceOverrides`
- * tolerantly when a partial-removal command needs to preserve sibling keys.
- *
- * @param value
- * @returns True for a non-null, non-array object.
- */
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === 'object' && !Array.isArray(value);
-}
 
 /**
  * The day's current device-overrides record, guarded to a plain record. A corrupt

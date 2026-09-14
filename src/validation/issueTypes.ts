@@ -13,6 +13,45 @@
 /** Issue severity. Every rule emits one of these. */
 export type RuleSeverity = 'error' | 'warning';
 
+/** The minimum shape the severity predicates read — every issue type in the app satisfies it. */
+export interface SeverityCarrier {
+  severity?: string;
+}
+
+/**
+ * Whether an issue blocks export. Decided HERE, once: only an explicit `'error'` blocks. A warning
+ * is advisory, and so is an issue with no severity at all (permissive sources such as
+ * `RepairableIssue` type it optional) — the export gate fails open on an unlabelled issue rather
+ * than blocking a scientist on a bookkeeping gap. Every gate in the app must call this rather than
+ * compare the string itself, so that policy cannot be re-decided per call site.
+ *
+ * @param issue - Any issue-shaped value.
+ * @returns True when the issue blocks export.
+ */
+export function isBlockingIssue(issue: SeverityCarrier | null | undefined): boolean {
+  return issue?.severity === 'error';
+}
+
+/**
+ * Whether an issue is advisory: surfaced to the user, never blocking export.
+ *
+ * @param issue - Any issue-shaped value.
+ * @returns True for warning-severity issues.
+ */
+export function isAdvisoryIssue(issue: SeverityCarrier | null | undefined): boolean {
+  return issue?.severity === 'warning';
+}
+
+/**
+ * The blocking subset of an issue list.
+ *
+ * @param issues - Issues from any producer.
+ * @returns Only the issues that block export, in their original order.
+ */
+export function blockingIssues<T extends SeverityCarrier>(issues: readonly T[]): T[] {
+  return issues.filter((issue) => isBlockingIssue(issue));
+}
+
 /** The editable owner a rule routes its repair to. */
 export type RuleRepairSurface = 'animal' | 'day' | 'none';
 

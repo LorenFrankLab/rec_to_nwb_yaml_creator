@@ -17,6 +17,7 @@
  */
 
 import type { TaskType, TaskInstance } from './workspaceTypes';
+import { isRecord as isPlainRecord } from '../utils/records';
 
 /** The editable definition fields of a task type (everything except the helper-owned `id`). */
 export interface TaskTypeDefinitionInput {
@@ -33,11 +34,6 @@ export interface TaskTypeDefinitionInput {
 /** Coerce to an array (a non-array degrades to empty), never mutating the input. */
 function asArray<T>(value: unknown): T[] {
   return Array.isArray(value) ? (value as T[]) : [];
-}
-
-/** Whether `value` is a plain object record (not null, not an array). */
-function isPlainRecord(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === 'object' && !Array.isArray(value);
 }
 
 const ID_PATTERN = /^tasktype-(\d+)$/;

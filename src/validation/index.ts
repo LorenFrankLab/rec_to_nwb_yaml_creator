@@ -55,3 +55,4 @@ export function validateField(model: ValidationModel, fieldPath: string): Valida
 
 // Re-export individual validation functions for advanced use cases
 export { schemaValidation, rulesValidation };
+export { isBlockingIssue, isAdvisoryIssue, blockingIssues } from './issueTypes';

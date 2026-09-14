@@ -1,3 +1,5 @@
+
+import { isRecord as isPlainObject } from '../utils/records';
 /* eslint-disable jsdoc/require-jsdoc */
 
 import type {
@@ -16,10 +18,6 @@ const EMPTY_DEVICES = {
   electrode_groups: [],
   ntrode_electrode_group_channel_map: [],
 };
-
-function isPlainObject(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === 'object' && !Array.isArray(value);
-}
 
 export function normalizeIdKey(value: unknown): string {
   // Lossless: an integer / exact integer-string becomes its canonical string form

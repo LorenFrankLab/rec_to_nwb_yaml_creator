@@ -26,6 +26,7 @@
 
 import { validate } from '../validation';
 import type { ValidationModel, ValidationIssue } from '../validation/issueTypes';
+import { blockingIssues } from '../validation/issueTypes';
 
 /**
  * A successful decompose: the layered facts the export merge reads. `animalFacts` / `dayFacts` /
@@ -146,7 +147,7 @@ function decomposeOptogenetics(flatModel: ValidationModel): Record<string, any> 
  */
 export function decomposeYaml(flatModel: ValidationModel): DecomposeResult {
   const issues = validate(flatModel);
-  const errors = issues.filter((issue) => issue.severity === 'error');
+  const errors = blockingIssues(issues);
   if (errors.length > 0) {
     return { ok: false, issues };
   }

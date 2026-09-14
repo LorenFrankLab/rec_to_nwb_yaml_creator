@@ -23,6 +23,7 @@ import type { DayStatus } from '../../domain/dayRecovery';
 import { exportDayFile } from '../../domain/exportDay';
 import type { ExportDayActions } from '../../domain/exportDay';
 import { deriveChip, buildAnimalDaysByKey, isRecord } from '../../viewModels/validationSummaryRows';
+import { isAdvisoryIssue } from '../../validation/issueTypes';
 
 /** One skipped day in the batch result: its identity + why it was not exported + where to fix it. */
 export interface SkippedDay {
@@ -108,7 +109,7 @@ export function exportSelectedDays(
       chip = deriveChip(computeStepStatus(day, merged, animal, animalDays));
       // Outstanding non-blocking warnings (same predicate the Export-Valid-Only preflight uses).
       warningCount = validateDay(day, merged, animal, animalDays).filter(
-        (issue: { severity?: string }) => issue.severity === 'warning'
+        isAdvisoryIssue
       ).length;
     } catch (err) {
       skipped.push({ dayId, date, reason: `Could not be read: ${(err as Error).message}`, href });

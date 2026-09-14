@@ -10,6 +10,7 @@
  */
 
 import type { RepairableIssue } from './repairRouting';
+import { isBlockingIssue } from '../validation/issueTypes';
 
 /** Which day-level geometry collections a day overrides (with an array). */
 export interface GeometryProvenance {
@@ -85,7 +86,7 @@ export function tagBaseOwnershipByProvenance(
 ): RepairableIssue[] {
   if (!prov.electrode_groups && !prov.ntrode) return issues;
   return issues.map((issue) => {
-    if (issue?.severity !== 'error') return issue;
+    if (!isBlockingIssue(issue)) return issue;
     const domain = geometryDomainOf(issue);
     if (domain === 'electrode_groups' && prov.electrode_groups) {
       return { ...issue, ownerSurface: 'day', step: 'devices', focusPath: 'deviceOverrides.electrode_groups' };

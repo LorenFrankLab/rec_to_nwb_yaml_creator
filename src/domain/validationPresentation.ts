@@ -1,14 +1,11 @@
 import type { RepairableIssue } from './repairRouting';
+import { isRecord } from '../utils/records';
+import { isBlockingIssue, blockingIssues } from '../validation/issueTypes';
 
 /** Off-export day-state flags that control when validation results are surfaced. */
 interface PresentationState {
   validationDeferred?: unknown;
   deferredEpochs?: unknown;
-}
-
-/** Whether a value is a non-null, non-array object. */
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === 'object' && !Array.isArray(value);
 }
 
 /** Read the day.state record tolerantly. */
@@ -47,7 +44,7 @@ function epochFromIssue(issue: RepairableIssue): number | null {
 
 /** Whether this error is the missing-video rule for a still-deferred epoch. */
 function isDeferredEpochVideoIssue(issue: RepairableIssue, deferredEpochs: Set<number>): boolean {
-  if (issue.severity !== 'error' || issue.code !== 'epoch_video_undeclared') return false;
+  if (!isBlockingIssue(issue) || issue.code !== 'epoch_video_undeclared') return false;
   const epoch = epochFromIssue(issue);
   return epoch != null && deferredEpochs.has(epoch);
 }
@@ -61,7 +58,7 @@ export function presentValidationIssues(
   day: unknown
 ): RepairableIssue[] {
   if (isDayValidationDeferred(day)) {
-    return issues.filter((issue) => issue.severity !== 'error');
+    return issues.filter((issue) => !isBlockingIssue(issue));
   }
   const deferredEpochs = new Set(getDeferredEpochs(day));
   if (deferredEpochs.size === 0) return issues;
@@ -73,10 +70,7 @@ export function allBlockingIssuesDeferred(
   issues: RepairableIssue[],
   day: unknown
 ): boolean {
-  const rawBlocking = issues.filter((issue) => issue.severity === 'error');
+  const rawBlocking = blockingIssues(issues);
   if (rawBlocking.length === 0) return false;
-  const presentedBlocking = presentValidationIssues(issues, day).filter(
-    (issue) => issue.severity === 'error'
-  );
-  return presentedBlocking.length === 0;
+  return blockingIssues(presentValidationIssues(issues, day)).length === 0;
 }

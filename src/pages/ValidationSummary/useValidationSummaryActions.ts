@@ -29,6 +29,8 @@ import {
   subjectLabel,
 } from '../../viewModels/validationSummaryRows';
 import type { SummaryRow } from '../../viewModels/validationSummaryRows';
+import { isAdvisoryIssue } from '../../validation/issueTypes';
+import { pluralize } from '../../utils/pluralize';
 
 /** A per-day line in one of the assertive batch reports / the validate-errors list. */
 interface ReportItem {
@@ -169,12 +171,12 @@ export function useValidationSummaryActions({ rows, workspace, actions }: Valida
     // read as a bare "Validated 0 days" — that implies "nothing to do" when the truth is
     // "these days were deliberately not validatable from here."
     const skippedNote =
-      skipped > 0 ? ` (${skipped} ${skipped === 1 ? 'day' : 'days'} skipped — not a recording day on this list)` : '';
+      skipped > 0 ? ` (${skipped} ${pluralize(skipped, 'day')} skipped — not a recording day on this list)` : '';
     let body;
     if (failures === 0) {
-      body = `Validated ${total} ${total === 1 ? 'day' : 'days'}`;
+      body = `Validated ${total} ${pluralize(total, 'day')}`;
     } else {
-      body = `Validated ${total - failures} of ${total} ${total === 1 ? 'day' : 'days'} (${failures} failed)`;
+      body = `Validated ${total - failures} of ${total} ${pluralize(total, 'day')} (${failures} failed)`;
     }
     setActionMessage(`${body}${skippedNote}.`);
   };
@@ -218,7 +220,7 @@ export function useValidationSummaryActions({ rows, workspace, actions }: Valida
         const opto = describeDayOptoState(merged).label;
         // Phase 3-6: the day's outstanding non-blocking warnings (same predicate the single-day
         // Export step uses). These don't block the gate; they require explicit acknowledgement.
-        const warnings = validateDay(day, merged, animal, animalDays).filter((i) => i.severity === 'warning');
+        const warnings = validateDay(day, merged, animal, animalDays).filter(isAdvisoryIssue);
         return {
           dayId: day.id as string,
           label: `${subjectLabel(animal)} — ${(day.session as Record<string, unknown> | undefined)?.session_id || day.id}`,
@@ -362,9 +364,9 @@ export function useValidationSummaryActions({ rows, workspace, actions }: Valida
     setStaleReport(stale);
 
     const notExported = rows.length - validRows.length;
-    let message = `Exported ${exported} ${exported === 1 ? 'file' : 'files'}.`;
+    let message = `Exported ${exported} ${pluralize(exported, 'file')}.`;
     if (notExported > 0) {
-      message += ` ${notExported} ${notExported === 1 ? 'day' : 'days'} not exported (not valid, or not in an animal's day list).`;
+      message += ` ${notExported} ${pluralize(notExported, 'day')} not exported (not valid, or not in an animal's day list).`;
     }
     setActionMessage(message);
   };

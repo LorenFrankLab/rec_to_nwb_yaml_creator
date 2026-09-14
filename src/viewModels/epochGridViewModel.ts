@@ -33,6 +33,7 @@ import { resolveTaskInstances } from '../state/taskCatalog';
 import { duplicateTaskEpochs } from '../validation/taskEpochs';
 import { getIndexedStatescriptFiles } from '../domain/associatedFiles';
 import { isDerivedStatescript } from '../domain/fileNaming';
+import { isRecord } from '../utils/records';
 import type {
   AssociatedFile,
   AssociatedVideoFile,
@@ -117,11 +118,6 @@ export interface EpochGrid {
   date: string;
   /** The subject id token used for filename derivation. */
   subjectId: string;
-}
-
-/** Whether `value` is a non-null, non-array object record. */
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === 'object' && !Array.isArray(value);
 }
 
 /** Integer-normalized epochs of a task's `task_epochs` (tolerant; non-integers dropped). */

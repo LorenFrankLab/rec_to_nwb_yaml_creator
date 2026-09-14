@@ -14,21 +14,16 @@
  * that had to be kept in lockstep by hand. Making this module the single owner of the
  * override-merge predicates (`classifyGeometryOverride`, `classifyBadChannelsContainer`) and the
  * resolution (`resolveEffectiveDevices`) makes that lockstep structural: whatever the merge fails
- * open on is exactly what the validator surfaces. (Unrelated `isPlainRecord` uses elsewhere — e.g.
- * `workspaceUtils.js`'s fs_gui/technical paths — keep their own local copy; only the override-merge
- * predicates are centralized here.)
+ * open on is exactly what the validator surfaces. The record guard itself is the app-wide one
+ * (`utils/records`), re-exported here so the merge's consumers keep one import.
  *
- * Pure and dependency-free (snapshot devices are passed in), so it carries no import-cycle or
- * layering risk and is exhaustively unit-testable.
+ * Pure (snapshot devices are passed in), so it carries no import-cycle or layering risk and is
+ * exhaustively unit-testable.
  */
 
-/**
- * Whether `value` is a plain object record (not null, not an array). The shared predicate the
- * merge uses to decide a bad-channels container is an `ntrode_id → list` map vs. a scalar/array.
- */
-export function isPlainRecord(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === 'object' && !Array.isArray(value);
-}
+import { isRecord as isPlainRecord } from '../utils/records';
+
+export { isPlainRecord };
 
 /**
  * Read `value?.[key]` for an `unknown` value without throwing — mirrors the optional-chaining

@@ -1,10 +1,9 @@
 import styles from './BlastRadiusChip.module.css';
+import { pluralize } from '../../utils/pluralize';
 
 export interface BlastRadiusChipProps {
   /** How many recording days this animal-static edit affects. */
   dayCount: number;
-  /** Optional tooltip override; defaults to the re-export warning. */
-  title?: string;
 }
 
 /**
@@ -14,10 +13,9 @@ export interface BlastRadiusChipProps {
  * Cameras, Optogenetics — but not Team (past days keep their recorded experimenters) or additive
  * task-type adds.
  */
-const BlastRadiusChip = ({ dayCount, title }: BlastRadiusChipProps) => {
-  const noun = dayCount === 1 ? 'day' : 'days';
-  const tooltip =
-    title ?? `Shared by all ${dayCount} ${noun} — already-exported days will need re-export.`;
+const BlastRadiusChip = ({ dayCount }: BlastRadiusChipProps) => {
+  const noun = pluralize(dayCount, 'day');
+  const tooltip = `Shared by all ${dayCount} ${noun} — already-exported days will need re-export.`;
   return (
     <span className={styles.chip} title={tooltip}>
       <span className={styles.icon} aria-hidden="true">

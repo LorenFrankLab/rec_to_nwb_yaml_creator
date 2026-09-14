@@ -10,11 +10,7 @@
 
 import { generateDayId } from '../../state/workspaceUtils';
 import type { SessionMetadata } from '../../state/workspaceTypes';
-
-/** Whether a value is a non-null, non-array object. */
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === 'object' && !Array.isArray(value);
-}
+import { isRecord } from '../../utils/records';
 
 /** The store writes the restore replays. */
 export interface RestoreDayActions {

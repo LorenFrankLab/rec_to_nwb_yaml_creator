@@ -33,6 +33,7 @@
  */
 
 import { getAnimalDayIds } from '../state/workspaceSelectors';
+import { isRecord } from '../utils/records';
 
 /**
  * A classified day, as returned by {@link classifyWorkspaceDays} (and, minus `animalKey`/
@@ -53,14 +54,6 @@ export interface DayClassificationRow {
   animalKey?: string | null;
   /** Whether the owning animal exists. (Workspace-wide rows only.) */
   ownerPresent?: boolean;
-}
-
-/**
- * @param value
- * @returns True for a non-null, non-array object.
- */
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === 'object' && !Array.isArray(value);
 }
 
 /**

@@ -14,11 +14,6 @@ describe('BlastRadiusChip (shared-edit blast radius)', () => {
     );
   });
 
-  it('lets the caller override the tooltip text', () => {
-    render(<BlastRadiusChip dayCount={2} title="Custom warning" />);
-    expect(screen.getByText(/affects all 2 days/i)).toHaveAttribute('title', 'Custom warning');
-  });
-
   it('uses singular grammar for a single day', () => {
     render(<BlastRadiusChip dayCount={1} />);
     expect(screen.getByText(/affects all 1 day$/i)).toBeInTheDocument();

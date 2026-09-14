@@ -5,6 +5,7 @@ import { getDayAssociatedFiles } from '../../state/workspaceSelectors';
 import { useDayEditorContext } from './DayEditorContext';
 import type { DayEditorBundle } from './DayEditorContext';
 import type { Task } from '../../state/workspaceTypes';
+import { pluralize } from '../../utils/pluralize';
 
 interface FocusRequest {
   fieldPath: string;
@@ -61,7 +62,7 @@ export default function TasksFilesSection(props: TasksFilesSectionProps) {
             </p>
           </div>
           <span className="supplemental-files-badge">
-            {supplementalFileCount} {supplementalFileCount === 1 ? 'file' : 'files'}
+            {supplementalFileCount} {pluralize(supplementalFileCount, 'file')}
           </span>
         </div>
         <AssociatedFilesEditor

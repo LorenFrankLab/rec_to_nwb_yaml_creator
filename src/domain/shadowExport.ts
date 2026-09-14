@@ -52,12 +52,12 @@ export function checkShadowExport(animal: Animal, day: Day): ShadowExportResult 
 
   // Snapshot the input BEFORE encoding so an in-place mutation is detectable
   // even when it is idempotent (re-encoding alone could not reveal it).
-  const beforeEncode = stableStringify(merged);
+  const beforeEncode = orderSensitiveSnapshot(merged);
 
   // First encode (what we are about to download).
   const yaml = encodeYaml(merged);
 
-  const inputMutated = stableStringify(merged) !== beforeEncode;
+  const inputMutated = orderSensitiveSnapshot(merged) !== beforeEncode;
 
   // Second encode of an independent pristine copy: must reproduce the same bytes.
   const stableYaml = encodeYaml(JSON.parse(beforeEncode));
@@ -67,7 +67,7 @@ export function checkShadowExport(animal: Animal, day: Day): ShadowExportResult 
   }
 
   const diff = inputMutated
-    ? firstLineDiff(beforeEncode, stableStringify(merged))
+    ? firstLineDiff(beforeEncode, orderSensitiveSnapshot(merged))
     : firstLineDiff(yaml, stableYaml);
 
   if (isFeatureEnabled('shadowExportLog')) {
@@ -89,7 +89,7 @@ export function checkShadowExport(animal: Animal, day: Day): ShadowExportResult 
  * @param value - Value to serialize.
  * @returns JSON string snapshot.
  */
-function stableStringify(value: unknown): string {
+function orderSensitiveSnapshot(value: unknown): string {
   return JSON.stringify(value);
 }
 

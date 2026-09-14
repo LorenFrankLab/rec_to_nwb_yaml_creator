@@ -16,6 +16,7 @@ import {
 import { resolveEffectiveDevices } from '../domain/deviceOverrideMerge';
 import { resolveDayCameraUsage } from './cameraUsage';
 import { resolveTaskInstances } from './taskCatalog';
+import { isRecord as isPlainRecord } from '../utils/records';
 import {
   getConfigHistory,
   getDataAcqDevices,
@@ -69,17 +70,6 @@ const VIRUS_INJECTION_ORDER = ['name', 'description', 'hemisphere', 'location', 
 const FS_GUI_YAML_ORDER = ['name', 'epochs', 'power_in_mW', 'dio_output_name', 'camera_id', 'pulseLength'];
 // fs_gui UI-control keys with no schema property; explicitly stripped from exported items.
 const FS_GUI_NON_SCHEMA_KEYS = ['state_script_parameters'];
-
-/**
- * Whether `value` is a plain object record (not null, not an array). Used to guard
- * nested record dereferences in the merge so a malformed import can't crash it.
- *
- * @param value - Candidate record.
- * @returns True for a non-null, non-array object.
- */
-function isPlainRecord(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === 'object' && !Array.isArray(value);
-}
 
 /**
  * Reorder each item of an array to match a key template (lossless). Non-array
@@ -471,7 +461,7 @@ export function mergeDayMetadata(animal: Animal, day: Day): Record<string, unkno
     opto_excitation_source: opto ? reorderItems(opto.opto_excitation_source, OPTO_EXCITATION_SOURCE_ORDER) : [],
     optical_fiber: opto ? reorderItems(opto.optical_fiber, OPTICAL_FIBER_ORDER) : [],
     virus_injection: opto ? emitVirusInjections(opto.virus_injection) : [],
-    fs_gui_yamls: getDayFsGuiYamls(day).length > 0 ? emitFsGuiYamls(getDayFsGuiYamls(day)) : [],
+    fs_gui_yamls: emitFsGuiYamls(getDayFsGuiYamls(day)),
     // Converter gate key (trodes_to_nwb reads this) + schema spelling (`opto_software`),
     // emitted with the same value for an opto session. `opto_software` is deleted below
     // for a no-opto session so non-opto exports stay byte-identical to legacy.

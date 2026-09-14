@@ -26,6 +26,8 @@ import { findIdentityDivergence } from './identityDivergence';
 import type { IdentityRegistryEntry } from './identityDivergence';
 import { getAnimalCameras, getDataAcqDevices } from './workspaceSelectors';
 import type { ValidationModel } from '../validation/issueTypes';
+import { isBlockingIssue } from '../validation/issueTypes';
+import { canonicalJson } from '../utils/canonicalJson';
 
 /** A single surfaced disagreement across a subject's files. */
 export interface Divergence {
@@ -235,27 +237,6 @@ export interface ImportPlan {
 }
 
 /**
- * A stable JSON serialization usable as a deep-equality key for a configuration's
- * `{ electrode_groups, ntrode_electrode_group_channel_map }`. Keys are sorted recursively
- * so two configs that differ only in key insertion order hash to the same string (a config
- * is a value, not an ordered record). Arrays keep their order (electrode order is meaningful).
- *
- * @param value - Any JSON-serializable value.
- * @returns A deterministic serialization.
- */
-function stableStringify(value: unknown): string {
-  if (Array.isArray(value)) {
-    return `[${value.map(stableStringify).join(',')}]`;
-  }
-  if (value !== null && typeof value === 'object') {
-    const record = value as Record<string, unknown>;
-    const keys = Object.keys(record).sort();
-    return `{${keys.map((k) => `${JSON.stringify(k)}:${stableStringify(record[k])}`).join(',')}}`;
-  }
-  return JSON.stringify(value);
-}
-
-/**
  * Find the existing workspace animal whose identity matches `subjectId`, either by the
  * animals-map KEY or by a record's `subject.subject_id`. Returns the matching animal's
  * store key (its `existingAnimalId`), or `null` when none matches.
@@ -296,7 +277,7 @@ const SUBJECT_SCALAR_FIELDS: ReadonlyArray<string> = ['species', 'sex', 'genotyp
 
 /**
  * Resolve a subject's configuration VERSIONS from its date-ordered files: the DISTINCT
- * electrode configurations (deep-equal by {@link stableStringify}), numbered 1..K in date
+ * electrode configurations (deep-equal by {@link canonicalJson}), numbered 1..K in date
  * order (1 = earliest distinct config). Returns the version list plus a per-file version map.
  *
  * @param entries - Date-sorted file entries.
@@ -316,7 +297,7 @@ function resolveConfigVersions(entries: FileEntry[]): {
       ntrode_electrode_group_channel_map:
         entry.configuration.ntrode_electrode_group_channel_map ?? [],
     };
-    const key = stableStringify(devices);
+    const key = canonicalJson(devices);
     let version = keyToVersion.get(key);
     if (version === undefined) {
       version = configVersions.length + 1;
@@ -425,7 +406,7 @@ function resolveAnimalFacts(entries: FileEntry[]): ResolvedAnimalFacts {
   // --- subject scalars: latest-date-wins, flag any difference ---
   const differingSubjectKeys = SUBJECT_SCALAR_FIELDS.filter((field) => {
     const values = new Set(
-      entries.map(({ animalFacts }) => stableStringify(animalFacts.subject?.[field] ?? null))
+      entries.map(({ animalFacts }) => canonicalJson(animalFacts.subject?.[field] ?? null))
     );
     return values.size > 1;
   });
@@ -438,7 +419,7 @@ function resolveAnimalFacts(entries: FileEntry[]): ResolvedAnimalFacts {
 
   // --- experimenters: latest-date-wins, flag differences ---
   const experimenterKeys = new Set(
-    entries.map(({ animalFacts }) => stableStringify(animalFacts.experimenters ?? null))
+    entries.map(({ animalFacts }) => canonicalJson(animalFacts.experimenters ?? null))
   );
   if (experimenterKeys.size > 1) {
     divergences.push({
@@ -449,7 +430,7 @@ function resolveAnimalFacts(entries: FileEntry[]): ResolvedAnimalFacts {
 
   // --- optogenetics: latest-date-wins, flag differences ---
   const optoKeys = new Set(
-    entries.map(({ animalFacts }) => stableStringify(animalFacts.optogenetics ?? null))
+    entries.map(({ animalFacts }) => canonicalJson(animalFacts.optogenetics ?? null))
   );
   if (optoKeys.size > 1) {
     divergences.push({
@@ -554,8 +535,9 @@ export function planImport(
       continue;
     }
     if (!decomposed.ok) {
-      const reason = decomposed.issues?.find((i) => i.severity === 'error')?.message
-        ? `Validation failed: ${decomposed.issues.find((i) => i.severity === 'error')?.message}`
+      const firstBlocking = decomposed.issues?.find(isBlockingIssue);
+      const reason = firstBlocking
+        ? `Validation failed: ${firstBlocking.message}`
         : 'File failed schema/business-rule validation and cannot be imported.';
       unimportable.push({ sourceName, reason });
       continue;

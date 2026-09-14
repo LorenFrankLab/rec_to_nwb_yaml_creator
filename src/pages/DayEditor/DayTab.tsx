@@ -15,6 +15,7 @@ import {
 import { useDayEditorContext } from './DayEditorContext';
 import type { DayEditorBundle } from './DayEditorContext';
 import type { FieldValueViewModel } from '../../viewModels/types';
+import { pluralize } from '../../utils/pluralize';
 
 interface DayTabProps extends DayEditorBundle {
   /** A repair request focusing a field in this section. */
@@ -80,8 +81,6 @@ export default function DayTab(props: DayTabProps) {
   const overviewField = (path: string) => fieldsByPath.get(path);
 
   const [fieldErrors, setFieldErrors] = useState<Record<string, { message: string } | null>>({});
-  // Write-only: blur-time validation toggles this transient state; the value itself is never read.
-  const [, setValidatingField] = useState<string | null>(null);
 
   // Validate field on blur. The session fields are stored nested under `day.session`
   // (the write path, e.g. `session.experiment_description`) but the export emits them
@@ -91,8 +90,6 @@ export default function DayTab(props: DayTabProps) {
   // clone of the merged model at its exported (top-level) path and validate there, so
   // the inline error reflects the current value.
   const handleBlur = useCallback(async (fieldPath: string, value: string) => {
-    setValidatingField(fieldPath);
-
     // 1. Update store (auto-save)
     onFieldUpdate(fieldPath, value);
 
@@ -118,8 +115,6 @@ export default function DayTab(props: DayTabProps) {
         ...prev,
         [fieldPath]: { message: 'Validation failed - please try again' },
       }));
-    } finally {
-      setValidatingField(null);
     }
   }, [mergedDay, onFieldUpdate]);
 
@@ -152,7 +147,7 @@ export default function DayTab(props: DayTabProps) {
         aria-atomic="true"
         className="sr-only"
       >
-        {errorCount > 0 && `${errorCount} validation ${errorCount === 1 ? 'error' : 'errors'}`}
+        {errorCount > 0 && `${errorCount} validation ${pluralize(errorCount, 'error')}`}
       </div>
 
       {/* Daily setup metadata (day-specific editable fields) */}

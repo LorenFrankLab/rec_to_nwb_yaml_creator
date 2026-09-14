@@ -15,6 +15,7 @@ import {
   formatDeterministicFilename
 } from '../io/yaml';
 import { emptyFormData, genderAcronym } from '../valueList';
+import { blockingIssues } from '../validation/issueTypes';
 
 /**
  * Extracts the top-level form field id from a normalized validation path.
@@ -150,7 +151,7 @@ export async function importFiles(file, options = {}) {
       // placeholder subject id, a non-absolute associated-file path) and the value must survive
       // the import so the user can see and fix it in the form. Excluding on a warning silently
       // discards a whole section of a scientifically valid file.
-      const issues = validate(jsonFileContent).filter(issue => issue.severity !== 'warning');
+      const issues = blockingIssues(validate(jsonFileContent));
 
       if (issues.length === 0) {
         // No validation errors - ensure relevant keys exist and load all data

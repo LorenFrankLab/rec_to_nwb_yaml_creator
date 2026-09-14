@@ -20,6 +20,8 @@
  * ends up with a resolved `ownerSurface`/`focusPath`.)
  */
 
+import { isRecord } from '../utils/records';
+
 /** A serializable executable repair command (run by `repairCommands.js` to perform the reset). */
 export interface RepairCommand {
   type: string;
@@ -58,14 +60,6 @@ export interface RawShapeIssue {
   path: string;
   /** Human-readable explanation. */
   message: string;
-}
-
-/**
- * Whether `value` is a plain object record (not null, not an array).
- * @param value
- */
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === 'object' && !Array.isArray(value);
 }
 
 /**

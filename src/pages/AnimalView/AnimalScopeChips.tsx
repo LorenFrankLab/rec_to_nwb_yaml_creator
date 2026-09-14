@@ -1,5 +1,6 @@
 import type { AnimalSummaryViewModel } from '../../viewModels/animalViewModel';
 import styles from './AnimalScopeChips.module.css';
+import { pluralize } from '../../utils/pluralize';
 
 interface AnimalScopeChipsProps {
   /** The animal-static summary built by the animal view-model. */
@@ -19,7 +20,7 @@ export default function AnimalScopeChips({ summary }: AnimalScopeChipsProps) {
   if (summary.species) facts.push(summary.species);
   if (dob) facts.push(`b. ${dob}`);
   if (summary.probeCount > 0) {
-    const noun = summary.probeCount === 1 ? 'probe' : 'probes';
+    const noun = pluralize(summary.probeCount, 'probe');
     facts.push(`${summary.probeCount} ${noun} — ${summary.probeSummary}`);
   }
   if (summary.configVersion != null) facts.push(`Config v${summary.configVersion}`);

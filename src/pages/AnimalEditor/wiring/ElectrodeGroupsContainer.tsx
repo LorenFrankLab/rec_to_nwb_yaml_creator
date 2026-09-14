@@ -30,6 +30,7 @@ import type { CopyPayload } from '../CopyFromAnimalDialog';
 import { useKnownRegions } from './useKnownRegions';
 import { useAnimalAlert } from './useAnimalAlert';
 import { useAnimalFieldUpdate } from './useAnimalFieldUpdate';
+import { pluralize } from '../../../utils/pluralize';
 
 /**
  * Generate the next sequential electrode group ID (max existing + 1). IDs are integers end-to-end;
@@ -266,7 +267,7 @@ export default function ElectrodeGroupsContainer({ animalId, addRef, onPendingEd
 
     const groupCount = electrode_groups.length;
     showAlert(
-      `Successfully copied ${groupCount} electrode ${groupCount === 1 ? 'group' : 'groups'} from ${sourceAnimalName}`,
+      `Successfully copied ${groupCount} electrode ${pluralize(groupCount, 'group')} from ${sourceAnimalName}`,
       'success'
     );
   }

@@ -11,6 +11,7 @@
  */
 import { describeDayOptoState } from './optoStatus';
 import type { ValidationModel } from '../validation/issueTypes';
+import { pluralize } from '../utils/pluralize';
 
 // How many cameras to spell out inline before collapsing the rest into "+K more".
 const MAX_CAMERAS_INLINE = 4;
@@ -35,17 +36,6 @@ interface PreflightRow {
   label: string;
   /** Row value (human-readable). */
   value: string;
-}
-
-/**
- * Pluralize a count noun (no inflection of the count itself).
- *
- * @param count - The quantity.
- * @param noun - The singular noun (e.g. "electrode group").
- * @returns The noun, pluralized when count !== 1.
- */
-function pluralize(count: number, noun: string): string {
-  return count === 1 ? noun : `${noun}s`;
 }
 
 /**
@@ -119,7 +109,7 @@ export function buildPreflightSummary(
 
   const dataAcq = merged.data_acq_device || [];
   const dataAcqValue = dataAcq.length
-    ? `${dataAcq.length} device${dataAcq.length === 1 ? '' : 's'} (${
+    ? `${dataAcq.length} ${pluralize(dataAcq.length, 'device')} (${
         dataAcq.map((d: { name?: string }) => d?.name).filter(Boolean).join(', ') || 'unnamed'
       })`
     : 'None';
@@ -155,7 +145,7 @@ export function buildPreflightSummary(
       label: 'Non-blocking warnings',
       value:
         warningCount > 0
-          ? `${warningCount} warning${warningCount === 1 ? '' : 's'} to review (does not block export)`
+          ? `${warningCount} ${pluralize(warningCount, 'warning')} to review (does not block export)`
           : 'None',
     },
   ];

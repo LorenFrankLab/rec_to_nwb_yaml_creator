@@ -22,11 +22,7 @@
 
 import { deriveAnimalTaskCatalog } from './taskCatalog';
 import type { TaskDefinitionReconciliation } from './workspaceTypes';
-
-/** Whether `value` is a plain object record (not null, not an array). */
-function isPlainRecord(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === 'object' && !Array.isArray(value);
-}
+import { isRecord as isPlainRecord } from '../utils/records';
 
 /** The ordered day ids belonging to an animal: its `days` index, else days matching its `id`. */
 function collectAnimalDayIds(

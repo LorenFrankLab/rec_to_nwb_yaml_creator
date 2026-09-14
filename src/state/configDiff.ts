@@ -17,30 +17,12 @@ import {
   getProbeNtrodeMaps,
 } from './workspaceSelectors';
 import type { ProbeConfigDiff, ElectrodeGroup, NtrodeMap, Day } from './workspaceTypes';
+import { canonicalJson } from '../utils/canonicalJson';
 
 // Re-export so wizard/UI code has a single import surface for config resolution.
 export { resolveDayConfig };
 
-/**
- * Order-independent structural stringify (object keys sorted; array order kept).
- * Used for deep equality of scalar/`map` fields without depending on key order.
- *
- * @param value - Any JSON-serializable value.
- */
-function stableStringify(value: unknown): string {
-  if (Array.isArray(value)) {
-    return `[${value.map(stableStringify).join(',')}]`;
-  }
-  if (value && typeof value === 'object') {
-    return `{${Object.keys(value)
-      .sort()
-      .map((k) => `${JSON.stringify(k)}:${stableStringify((value as Record<string, unknown>)[k])}`)
-      .join(',')}}`;
-  }
-  return JSON.stringify(value) ?? 'null';
-}
-
-const deepEqual = (a: unknown, b: unknown): boolean => stableStringify(a) === stableStringify(b);
+const deepEqual = (a: unknown, b: unknown): boolean => canonicalJson(a) === canonicalJson(b);
 
 /**
  * Set-wise equality (ignores order and duplicates). Used for `bad_channels`.

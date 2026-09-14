@@ -45,6 +45,7 @@ import { ValidationSummary } from '../ValidationSummary';
 import '../../components/ErrorState.css';
 import styles from './AnimalView.module.css';
 import navStyles from './SectionNav.module.css';
+import { pluralize } from '../../utils/pluralize';
 
 /**
  * Animal raw-collection fields whose corruption the AnimalView-level banner owns. These three span
@@ -283,7 +284,7 @@ export function AnimalView({ animalId, tab }: AnimalViewProps) {
   const { exportedDays } = vm.blastRadius;
   const noteEditConsequence = () => {
     if (exportedDays <= 0) return;
-    const noun = exportedDays === 1 ? 'day' : 'days';
+    const noun = pluralize(exportedDays, 'day');
     const verb = exportedDays === 1 ? 'needs' : 'need';
     consequenceToast.show(`Saved · ${exportedDays} already-exported ${noun} now ${verb} re-export`);
   };

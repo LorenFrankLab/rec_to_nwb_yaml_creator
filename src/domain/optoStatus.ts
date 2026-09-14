@@ -9,6 +9,8 @@
  * single source for the honest three-state read, so every summary agrees.
  */
 
+import { pluralize } from '../utils/pluralize';
+
 /**
  * The three day-protocol opto states (the batch-row scan contract's "opto state").
  */
@@ -52,7 +54,7 @@ export function describeDayOptoState(
     ].sort((a, b) => Number(a) - Number(b));
     const label =
       epochs.length > 0
-        ? `Stimulation on epoch${epochs.length === 1 ? '' : 's'} ${epochs.join(', ')}`
+        ? `Stimulation on ${pluralize(epochs.length, 'epoch')} ${epochs.join(', ')}`
         : 'Stimulation this day';
     return { state: OPTO_STATE.STIMULATED, label };
   }

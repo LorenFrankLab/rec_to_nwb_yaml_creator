@@ -17,11 +17,7 @@ import { mergeDayMetadata } from '../state/workspaceUtils';
 import type { Animal, Day } from '../state/workspaceTypes';
 import { checkShadowExport } from './shadowExport';
 import { formatDeterministicFilename, downloadYamlFile } from '../io/yaml';
-
-/** Whether a value is a non-null, non-array object. */
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === 'object' && !Array.isArray(value);
-}
+import { isRecord } from '../utils/records';
 
 /** The store write the export needs (marking the day exported in its lifecycle state). */
 export interface ExportDayActions {

@@ -23,6 +23,8 @@
  * is catalog-shaped. Pure and dependency-free.
  */
 
+import { isRecord as isPlainRecord } from '../utils/records';
+
 /**
  * A validation issue in the shape `rulesValidation.js` emits (kept local — not yet wired live).
  *
@@ -49,11 +51,6 @@ export interface CatalogValidationIssue {
   severity: 'error' | 'warning';
   /** Human-readable explanation. */
   message: string;
-}
-
-/** Whether `value` is a plain object record (not null, not an array). */
-function isPlainRecord(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === 'object' && !Array.isArray(value);
 }
 
 /** A usable task name / dedup key: a non-empty, non-whitespace string. */

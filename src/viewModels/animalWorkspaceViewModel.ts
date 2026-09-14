@@ -51,6 +51,7 @@ import {
 import { DOWNSTREAM_NOT_DELETED_NOTE } from '../domain/animalDeleteCascade';
 import { validateRawAnimal } from '../validation/rawShape';
 import { buildDayRowViewModel } from './dayRowViewModel';
+import { isRecord } from '../utils/records';
 import type {
   DayRowViewModel,
   DayStatus,
@@ -59,6 +60,7 @@ import type {
   WorkflowAction,
   WorkflowCommandId,
 } from './types';
+import { pluralize } from '../utils/pluralize';
 
 /** The per-animal status rollup shown on the Animals home (its own summary over the day set). */
 export interface StatusRollupViewModel {
@@ -182,11 +184,6 @@ function shouldShowSetupCard(
   });
 }
 
-/** Whether a value is a non-null, non-array object. */
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === 'object' && !Array.isArray(value);
-}
-
 /**
  * Humanize the reason half of a "Needs fixing — {reason}" row label — the raw validation reason can
  * expose a schema key. The "Needs fixing" prefix and the non-needs-fixing labels pass through. Mirrors
@@ -204,7 +201,7 @@ function humanizeNeedsFixingLabel(label: string): string {
 
 /** Pluralize 'day' / 'days'. */
 function dayWord(n: number): string {
-  return n === 1 ? 'day' : 'days';
+  return pluralize(n, 'day');
 }
 
 /**
@@ -464,7 +461,7 @@ function buildReview(
   const configCount = getConfigHistory(animal).length;
   const lead =
     `Found ${dayCount} recording ${dayWord(dayCount)} and ${configCount} hardware ` +
-    `${configCount === 1 ? 'configuration' : 'configurations'} for ${animalId}. ` +
+    `${pluralize(configCount, 'configuration')} for ${animalId}. ` +
     (hasCorruption
       ? 'Some saved data is corrupt — resolve it before exporting.'
       : 'Review electrodes and cameras before exporting to confirm they match this animal.');

@@ -16,16 +16,7 @@
  */
 
 import { getDayBadChannelOverrides } from '../state/workspaceSelectors';
-
-/**
- * Whether `value` is a plain object record (not null, not an array).
- *
- * @param value
- * @returns
- */
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === 'object' && !Array.isArray(value);
-}
+import { isRecord } from '../utils/records';
 
 /**
  * A day's off-export acknowledged bad-channel removals (`day.state.badChannelRemovalAcks`),

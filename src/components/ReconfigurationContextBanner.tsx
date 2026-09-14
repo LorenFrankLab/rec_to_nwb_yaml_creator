@@ -1,5 +1,6 @@
 import { getConfigHistory } from '../state/workspaceSelectors';
 import styles from './ReconfigurationContextBanner.module.css';
+import { pluralize } from '../utils/pluralize';
 
 /** The subset of the parsed route context this banner reads (from {@link useReconfigContext}). */
 interface RouteContext {
@@ -49,7 +50,7 @@ export default function ReconfigurationContextBanner({
     ? ` for reconfiguration starting ${sourceDay.date}.`
     : ' after reconfiguration fork.';
   const movedDaysText = routeContext.movedDays != null
-    ? ` Moved ${routeContext.movedDays} ${routeContext.movedDays === 1 ? 'day' : 'days'} to this version.`
+    ? ` Moved ${routeContext.movedDays} ${pluralize(routeContext.movedDays, 'day')} to this version.`
     : '';
 
   return (

@@ -31,6 +31,7 @@ import type {
   WorkflowAction,
 } from './types';
 import { DAY_STATUS, isDayStatus } from '../domain/dayRecovery';
+import { pluralize } from '../utils/pluralize';
 
 /** A ValidationSummary table row: the shared day-row plus the table's per-day scan cells.
  *  (`chipVariant`, the status-chip CSS modifier, is inherited from {@link DayRowViewModel}.) */
@@ -165,7 +166,7 @@ export function buildValidationSummaryViewModel(
 
   const vm: ValidationSummaryViewModel = {
     scope: scoped
-      ? { animalId, subhead: `Showing: ${animalId} — ${rows.length} ${rows.length === 1 ? 'day' : 'days'}` }
+      ? { animalId, subhead: `Showing: ${animalId} — ${rows.length} ${pluralize(rows.length, 'day')}` }
       : {},
     counts,
     days,

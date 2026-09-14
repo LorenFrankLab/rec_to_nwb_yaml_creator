@@ -3,6 +3,7 @@ import type { WorkflowCommand } from '../../viewModels/types';
 import type { DayStatusRowViewModel } from '../../viewModels/validationSummaryViewModel';
 import EffectiveDayReview from './EffectiveDayReview';
 import styles from './ValidationSummary.module.css';
+import { pluralize } from '../../utils/pluralize';
 
 const noop = () => {};
 
@@ -85,7 +86,7 @@ export default function DayStatusTable({
               <>
                 {row.configVersionLabel}
                 {' · '}
-                {row.cameras} {row.cameras === 1 ? 'camera' : 'cameras'}
+                {row.cameras} {pluralize(row.cameras, 'camera')}
                 {row.cameraCalibration && (
                   <span className={styles.scanCameras}>
                     {' ('}
