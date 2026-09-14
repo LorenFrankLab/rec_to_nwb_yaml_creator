@@ -71,3 +71,18 @@
   color: var(--color-grey-400);
   cursor: default;
 }
+
+/* A grouped item: a hairline above it. */
+.separated {
+  margin-top: 0.25rem;
+  padding-top: 0.25rem;
+  border-top: 1px solid var(--color-grey-200);
+}
+
+/* An item's one-line sub-label. */
+.description {
+  display: block;
+  margin-top: 2px;
+  font-size: var(--font-size-xs);
+  color: var(--color-grey-600);
+}

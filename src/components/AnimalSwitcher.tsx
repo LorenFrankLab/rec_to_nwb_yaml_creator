@@ -3,6 +3,8 @@ import type { KeyboardEvent as ReactKeyboardEvent } from 'react';
 import { getPresentDayCount } from '../domain/dayRecovery';
 import OverflowMenu from './OverflowMenu';
 import styles from './AnimalSwitcher.module.css';
+import { usePopupDismissal } from '../hooks/usePopupDismissal';
+import { pluralize } from '../utils/pluralize';
 
 interface AnimalSwitcherProps {
   /** The animal currently being viewed (shown in the trigger, marked `aria-current`). */
@@ -67,18 +69,8 @@ export default function AnimalSwitcher({
     rowRefs.current[idx]?.focus();
   }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Close on an outside click (pointerdown, so it beats row clicks). A click on the trigger is
-  // handled by its own onClick.
-  useEffect(() => {
-    if (!open) return undefined;
-    const onPointerDown = (e: PointerEvent) => {
-      const target = e.target as Node | null;
-      if (popupRef.current?.contains(target) || triggerRef.current?.contains(target)) return;
-      setOpen(false);
-    };
-    document.addEventListener('pointerdown', onPointerDown);
-    return () => document.removeEventListener('pointerdown', onPointerDown);
-  }, [open]);
+  const dismiss = useCallback(() => setOpen(false), []);
+  usePopupDismissal({ open, triggerRef, popupRef, onDismiss: dismiss });
 
   /**
    * Roving + dismissal for the popup. Esc closes (→ trigger); Up/Down move between roving targets.
@@ -166,7 +158,7 @@ export default function AnimalSwitcher({
                   <span className={styles.name}>{animalId}</span>
                 </a>
                 <span className={styles.count} aria-hidden="true">
-                  {count} {count === 1 ? 'day' : 'days'}
+                  {count} {pluralize(count, 'day')}
                 </span>
                 <OverflowMenu
                   label={`${animalId} actions`}

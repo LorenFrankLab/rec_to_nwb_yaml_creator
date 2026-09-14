@@ -1,10 +1,7 @@
-import { useEffect, useRef } from 'react';
+import { useRef } from 'react';
 import type { MouseEvent as ReactMouseEvent, ReactNode } from 'react';
+import { useDialogBehavior } from './useDialogBehavior';
 import styles from './Modal.module.scss';
-
-const FOCUSABLE =
-  'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), ' +
-  'textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 interface ModalProps {
   /** Whether the dialog is shown. */
@@ -52,60 +49,8 @@ const Modal = ({
   children,
 }: ModalProps) => {
   const contentRef = useRef<HTMLDivElement | null>(null);
-  const openerRef = useRef<HTMLElement | null>(null);
 
-  // Capture the opener and restore focus to it on close.
-  useEffect(() => {
-    if (!isOpen) return undefined;
-    openerRef.current = document.activeElement as HTMLElement | null;
-    return () => {
-      if (openerRef.current && typeof openerRef.current.focus === 'function') {
-        openerRef.current.focus();
-      }
-    };
-  }, [isOpen]);
-
-  // ESC close + focus trap (ported from the working CameraModal implementation).
-  useEffect(() => {
-    if (!isOpen) return undefined;
-    const handleKeydown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        onClose();
-        return;
-      }
-      if (e.key === 'Tab' && contentRef.current) {
-        const focusable = contentRef.current.querySelectorAll<HTMLElement>(FOCUSABLE);
-        if (focusable.length === 0) return;
-        const first = focusable[0];
-        const last = focusable[focusable.length - 1];
-        if (e.shiftKey && document.activeElement === first) {
-          e.preventDefault();
-          last.focus();
-        } else if (!e.shiftKey && document.activeElement === last) {
-          e.preventDefault();
-          first.focus();
-        }
-      }
-    };
-    document.addEventListener('keydown', handleKeydown);
-    return () => document.removeEventListener('keydown', handleKeydown);
-  }, [isOpen, onClose]);
-
-  // Auto-focus the first focusable element when opened.
-  useEffect(() => {
-    if (!isOpen || !contentRef.current) return;
-    const focusable = contentRef.current.querySelector<HTMLElement>(FOCUSABLE);
-    if (focusable) focusable.focus();
-  }, [isOpen]);
-
-  // Lock body scroll while open.
-  useEffect(() => {
-    if (isOpen) document.body.style.overflow = 'hidden';
-    else document.body.style.overflow = '';
-    return () => {
-      document.body.style.overflow = '';
-    };
-  }, [isOpen]);
+  useDialogBehavior(contentRef, { isOpen, onClose });
 
   if (!isOpen) return null;
 

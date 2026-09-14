@@ -1,11 +1,13 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faArrowDown, faArrowUp, faTrash } from '@fortawesome/free-solid-svg-icons';
-import { ConfirmDialog } from '../../components/Modal';
+import { ConfirmDialog, useDialogBehavior } from '../../components/Modal';
 import { useUndoToast } from '../../components/ui/UndoToast';
 import { EpochStatusPill } from '../../components/ui/StatusPill';
 import GeneratedValue from '../../components/ui/GeneratedValue';
 import Button from '../../components/ui/Button';
+import OverflowMenu from '../../components/OverflowMenu';
+import type { OverflowMenuHandle } from '../../components/OverflowMenu';
 import EmptyState from '../../components/ui/EmptyState';
 import TaskTypeModal from '../AnimalEditor/TaskTypeModal';
 import { useStepperShortcut } from '../../hooks/stepperShortcuts';
@@ -54,6 +56,7 @@ import { addTaskType, nextTaskTypeId } from '../../state/taskCatalogActions';
 import type { TaskTypeDefinitionInput } from '../../state/taskCatalogActions';
 import type { TaskInstance, TaskType, Camera } from '../../state/workspaceTypes';
 import styles from './EpochsTab.module.css';
+import { pluralize } from '../../utils/pluralize';
 
 /** A repair-routed focus request from the frame (`{ fieldPath, token }`). */
 interface FocusRequest {
@@ -135,8 +138,10 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
   const ownerKey = animalKey ?? (animal as { id?: string })?.id;
   const focusRequest = props.focusRequest ?? null;
 
-  const grid = buildEpochGrid(animal, day);
-  const view = resolveDayCatalogView(animal, day);
+  // Both derivations join the day against the animal's task catalog; memoized so opening a menu,
+  // switching a filter chip or toggling the drawer doesn't redo the join.
+  const grid = useMemo(() => buildEpochGrid(animal, day), [animal, day]);
+  const view = useMemo(() => resolveDayCatalogView(animal, day), [animal, day]);
   const cameras = getAnimalCameras(animal);
   const unresolvedTaskCatalogDivergence = view.derived && view.divergences.length > 0;
 
@@ -144,8 +149,7 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
   const [pendingOrphan, setPendingOrphan] = useState<PendingOrphan | null>(null);
   const [quickAddEpoch, setQuickAddEpoch] = useState<number | null>(null);
   const [quickAddError, setQuickAddError] = useState<string | null>(null);
-  const [menuEpoch, setMenuEpoch] = useState<number | null>(null);
-  const [templateOpen, setTemplateOpen] = useState(false);
+  const templateMenuRef = useRef<OverflowMenuHandle | null>(null);
   const [epochFilter, setEpochFilter] = useState<EpochFilter>('all');
   const [pendingFileFocus, setPendingFileFocus] = useState<PendingFileFocus | null>(null);
   // Epochs whose statescript/video name is being manually overridden (UI mode; GeneratedValue's
@@ -155,7 +159,7 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
   const { show: showToast, node: toastNode } = useUndoToast();
 
   // Alt+N (the stepper "add" intent) opens the template menu — the grid's primary add affordance.
-  useStepperShortcut(useCallback((action) => { if (action === 'add') setTemplateOpen(true); }, []));
+  useStepperShortcut(useCallback((action) => { if (action === 'add') templateMenuRef.current?.open(); }, []));
 
   // Repair landing: open the targeted epoch panel (the frame's focus effect then focuses the control).
   useEffect(() => {
@@ -171,17 +175,6 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
       if (row) setActiveEpoch(row.epoch);
     }
   }, [focusRequest, grid.rows]);
-
-  // Close any open popup menu on an outside click.
-  useEffect(() => {
-    if (menuEpoch == null && !templateOpen) return undefined;
-    const close = () => {
-      setMenuEpoch(null);
-      setTemplateOpen(false);
-    };
-    document.addEventListener('click', close);
-    return () => document.removeEventListener('click', close);
-  }, [menuEpoch, templateOpen]);
 
   const statePatch = useCallback((patch: Record<string, unknown>, sourceDay = day) => {
     const state = (sourceDay as { state?: unknown }).state;
@@ -609,7 +602,7 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
                     aria-pressed={epochFilter === 'all'}
                     onClick={() => changeFilter('all')}
                   >
-                    {epochCount} {epochCount === 1 ? 'epoch' : 'epochs'}
+                    {epochCount} {pluralize(epochCount, 'epoch')}
                   </button>
                   <button
                     type="button"
@@ -620,7 +613,7 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
                     aria-pressed={epochFilter === 'needs-video'}
                     onClick={() => changeFilter('needs-video')}
                   >
-                    {missingVideoCount} {missingVideoCount === 1 ? 'video' : 'videos'} needed
+                    {missingVideoCount} {pluralize(missingVideoCount, 'video')} needed
                   </button>
                   <button
                     type="button"
@@ -631,7 +624,7 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
                     aria-pressed={epochFilter === 'missing-statescript'}
                     onClick={() => changeFilter('missing-statescript')}
                   >
-                    {missingStatescriptCount} {missingStatescriptCount === 1 ? 'statescript' : 'statescripts'} missing
+                    {missingStatescriptCount} {pluralize(missingStatescriptCount, 'statescript')} missing
                   </button>
                   <button
                     type="button"
@@ -642,7 +635,7 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
                     aria-pressed={epochFilter === 'custom-filenames'}
                     onClick={() => changeFilter('custom-filenames')}
                   >
-                    {customFilenameCount} custom {customFilenameCount === 1 ? 'filename' : 'filenames'}
+                    {customFilenameCount} custom {pluralize(customFilenameCount, 'filename')}
                   </button>
                 </div>
               </div>
@@ -677,36 +670,19 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
           )}
         </div>
         <div className={styles.templateMenu}>
-          <Button
-            variant="secondary"
-            aria-haspopup="menu"
-            aria-expanded={templateOpen}
-            onClick={(e) => {
-              e.stopPropagation();
-              setTemplateOpen((o) => !o);
-            }}
-          >
-            Templates ▾
-          </Button>
-          {templateOpen && (
-            <div className={styles.menu} role="menu" onClick={(e) => e.stopPropagation()}>
-              <button type="button" role="menuitem" className={styles.menuItem} onClick={() => applyTemplate('sleep')}>
-                Sleep day<span className={styles.menuSub}>4 sleep epochs</span>
-              </button>
-              <button type="button" role="menuitem" className={styles.menuItem} onClick={() => applyTemplate('wtrack')}>
-                W-track day<span className={styles.menuSub}>sleep / run alternation</span>
-              </button>
-              {priorDayInstances() && (
-                <button type="button" role="menuitem" className={styles.menuItem} onClick={() => applyTemplate('copy')}>
-                  Copy structure from prior day<span className={styles.menuSub}>same epochs; files re-derive</span>
-                </button>
-              )}
-              <div className={styles.menuSep} />
-              <button type="button" role="menuitem" className={styles.menuItem} onClick={() => applyTemplate('blank')}>
-                Blank<span className={styles.menuSub}>add one epoch to start</span>
-              </button>
-            </div>
-          )}
+          <OverflowMenu
+            ref={templateMenuRef}
+            label="Epoch templates"
+            trigger={<>Templates ▾</>}
+            items={[
+              { key: 'sleep', label: 'Sleep day', description: '4 sleep epochs', onSelect: () => applyTemplate('sleep') },
+              { key: 'wtrack', label: 'W-track day', description: 'sleep / run alternation', onSelect: () => applyTemplate('wtrack') },
+              ...(priorDayInstances()
+                ? [{ key: 'copy', label: 'Copy structure from prior day', description: 'same epochs; files re-derive', onSelect: () => applyTemplate('copy') }]
+                : []),
+              { key: 'blank', label: 'Blank', description: 'add one epoch to start', separatorBefore: true, onSelect: () => applyTemplate('blank') },
+            ]}
+          />
         </div>
       </div>
 
@@ -786,12 +762,7 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
                     panelId="epoch-details-panel"
                     hasOpto={hasOpto}
                     cameras={cameras}
-                    menuOpen={menuEpoch === row.epoch}
                     onToggle={() => toggle(row.epoch)}
-                    onOpenMenu={(e) => {
-                      e.stopPropagation();
-                      setMenuEpoch((cur) => (cur === row.epoch ? null : row.epoch));
-                    }}
                     onInsertAfter={() => onInsertAfter(row.epoch)}
                     onDuplicate={() => onDuplicate(row.epoch)}
                     onMoveUp={() => onMove(row.epoch, 'up')}
@@ -932,7 +903,6 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
 
   /** Apply a starter template, writing the corresponding instances (+ minted task types). */
   function applyTemplate(kind: 'sleep' | 'wtrack' | 'copy' | 'blank') {
-    setTemplateOpen(false);
     if (unresolvedTaskCatalogDivergence) return;
     if (kind === 'copy') {
       const prior = priorDayInstances();
@@ -982,9 +952,7 @@ interface EpochRowProps {
   panelId: string;
   hasOpto: boolean;
   cameras: Camera[];
-  menuOpen: boolean;
   onToggle: () => void;
-  onOpenMenu: (e: React.MouseEvent) => void;
   onInsertAfter: () => void;
   onDuplicate: () => void;
   onMoveUp: () => void;
@@ -1038,7 +1006,7 @@ function EpochRowBlock(p: EpochRowProps) {
       ? 'No video'
       : row.videoPresence === 'missing'
         ? 'Missing'
-        : `${row.videos.length} ${row.videos.length === 1 ? 'video' : 'videos'}`;
+        : `${row.videos.length} ${pluralize(row.videos.length, 'video')}`;
   const statescriptLabel = STATESCRIPT_LABEL[row.statescriptNaming];
   const statescriptSummaryClass =
     row.statescriptNaming === 'generated'
@@ -1099,15 +1067,13 @@ function EpochRowBlock(p: EpochRowProps) {
           </span>
         </span>
       </td>
-      <td className={styles.cameraCell}>
-        <span className={styles.mobileCellLabel}>Camera(s)</span>
+      <td className={styles.cameraCell} data-label="Camera(s)">
         {row.cameras.length === 0
           ? <span className={styles.vidNone}>—</span>
           : row.cameras.map((id) => <span key={String(id)} className={styles.cam}>{cameraName(cameras, id)}</span>)}
       </td>
       {hasOpto && (
-        <td className={styles.optoCell}>
-          <span className={styles.mobileCellLabel}>Opto</span>
+        <td className={styles.optoCell} data-label="Opto">
           <span className={styles.optoReadout}>{optoLabel}</span>
         </td>
       )}
@@ -1140,24 +1106,15 @@ function EpochRowBlock(p: EpochRowProps) {
           >
             <FontAwesomeIcon icon={faTrash} aria-hidden="true" />
           </button>
-          <button
-            type="button"
-            className={styles.menuButton}
-            aria-haspopup="menu"
-            aria-expanded={p.menuOpen}
-            aria-label={`More actions for epoch ${row.epoch}`}
-            title="More actions"
-            onClick={p.onOpenMenu}
-          >
-            ⋯
-          </button>
+          <OverflowMenu
+            label={`More actions for epoch ${row.epoch}`}
+            buttonClassName={styles.menuButton}
+            items={[
+              { key: 'insert', label: 'Insert epoch after', onSelect: p.onInsertAfter },
+              { key: 'duplicate', label: 'Duplicate epoch', onSelect: p.onDuplicate },
+            ]}
+          />
         </div>
-        {p.menuOpen && (
-          <div className={styles.menu} role="menu" style={{ right: 0 }} onClick={(e) => e.stopPropagation()}>
-            <button type="button" role="menuitem" className={styles.menuItem} onClick={p.onInsertAfter}>Insert epoch after</button>
-            <button type="button" role="menuitem" className={styles.menuItem} onClick={p.onDuplicate}>Duplicate epoch</button>
-          </div>
-        )}
       </td>
     </tr>
   );
@@ -1167,8 +1124,6 @@ function EpochRowBlock(p: EpochRowProps) {
 function EpochDetailsPanel(p: EpochDetailsPanelProps) {
   const { row, panelId, hasOpto, cameras, taskTypes, grid } = p;
   const panelRef = useRef<HTMLDivElement | null>(null);
-  const closeRef = useRef(p.onClose);
-  closeRef.current = p.onClose;
   const ownerTypeId = row.taskTypeId ?? '';
   const hasManualVideo = row.videos.some((v) => p.manualVideoKeys.has(`e${row.epoch}-v${v.index}`));
   const generatedFilesNeedReview =
@@ -1200,7 +1155,7 @@ function EpochDetailsPanel(p: EpochDetailsPanelProps) {
         ? 'Missing'
         : hasManualVideo
           ? 'Manual'
-          : `${row.videos.length} ${row.videos.length === 1 ? 'video' : 'videos'}`;
+          : `${row.videos.length} ${pluralize(row.videos.length, 'video')}`;
   const videoStateClass =
     row.videoPresence === 'absent'
       ? styles.fileStateAbsent
@@ -1211,55 +1166,10 @@ function EpochDetailsPanel(p: EpochDetailsPanelProps) {
           : styles.fileStateGenerated;
 
   // This surface covers the underlying editor (full-screen on phones), so it behaves as a modal
-  // drawer: announce it as a dialog, move focus inside, contain Tab, close on Escape, and restore
-  // focus to the disclosure that opened it. Without this, keyboard focus walked through controls
-  // hidden behind the drawer.
-  useEffect(() => {
-    const opener = document.querySelector<HTMLElement>(
-      `[aria-controls="${panelId}"][aria-expanded="true"]`
-    );
-    const panel = panelRef.current;
-    const focusableSelector =
-      'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), ' +
-      'textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
-    const focusHandle = window.setTimeout(() => {
-      panel?.querySelector<HTMLElement>('[data-initial-focus]')?.focus();
-    }, 0);
-    const previousBodyOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        event.preventDefault();
-        closeRef.current();
-        return;
-      }
-      if (event.key !== 'Tab' || !panelRef.current) return;
-      const focusable = Array.from(
-        panelRef.current.querySelectorAll<HTMLElement>(focusableSelector)
-      ).filter((element) => !element.hasAttribute('hidden'));
-      if (focusable.length === 0) return;
-      const first = focusable[0];
-      const last = focusable[focusable.length - 1];
-      if (!panelRef.current.contains(document.activeElement)) {
-        event.preventDefault();
-        first.focus();
-      } else if (event.shiftKey && document.activeElement === first) {
-        event.preventDefault();
-        last.focus();
-      } else if (!event.shiftKey && document.activeElement === last) {
-        event.preventDefault();
-        first.focus();
-      }
-    };
-    document.addEventListener('keydown', onKeyDown);
-    return () => {
-      window.clearTimeout(focusHandle);
-      document.removeEventListener('keydown', onKeyDown);
-      document.body.style.overflow = previousBodyOverflow;
-      opener?.focus?.();
-    };
-  }, [panelId, row.epoch]);
+  // drawer: announce it as a dialog, move focus inside (on the Close button, marked
+  // `data-initial-focus`), contain Tab, close on Escape, and restore focus to the disclosure that
+  // opened it. Without this, keyboard focus walked through controls hidden behind the drawer.
+  useDialogBehavior(panelRef, { onClose: p.onClose });
 
   useEffect(() => {
     if (!p.fileFocus || p.fileFocus.epoch !== row.epoch) return undefined;
@@ -1460,9 +1370,9 @@ function EpochDetailsPanel(p: EpochDetailsPanelProps) {
                 ))}
               </select>
             </label>
-            <button type="button" className="button-small" onClick={p.onNewTaskType}>
+            <Button variant="secondary" size="small" onClick={p.onNewTaskType}>
               + new task type
-            </button>
+            </Button>
           </div>
           <dl className={styles.taskContextGrid}>
             <div>

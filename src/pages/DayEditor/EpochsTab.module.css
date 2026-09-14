@@ -287,21 +287,8 @@
   font-size: var(--font-size-xs, 0.75rem);
 }
 
-.mobileCellLabel {
-  display: none;
-}
-
-.vidPresent {
-  color: var(--color-grey-700, #445);
-}
-
 .vidNone {
   color: var(--color-grey-500, #777);
-}
-
-.vidMissing {
-  color: var(--color-error, #c0392b);
-  font-weight: 600;
 }
 
 .fileSummaryCell {
@@ -429,51 +416,6 @@
   color: var(--color-primary, #2b6cb0);
 }
 
-.menu {
-  position: absolute;
-  z-index: var(--z-popover, 40);
-  background: var(--color-white, #fff);
-  border: 1px solid var(--color-grey-300, #ccc);
-  border-radius: var(--radius-md, 8px);
-  box-shadow: var(--shadow-modal);
-  padding: 5px;
-  min-width: 200px;
-}
-
-.menuItem {
-  display: block;
-  width: 100%;
-  text-align: left;
-  padding: 7px 10px;
-  border-radius: var(--radius-sm, 6px);
-  font: inherit;
-  font-size: var(--font-size-sm, 0.8125rem);
-  background: none;
-  border: 0;
-  cursor: pointer;
-  color: var(--color-grey-800, #222);
-}
-
-.menuItem:hover {
-  background: var(--color-grey-100, #eaf1f9);
-}
-
-.menuItem.danger {
-  color: var(--color-error, #c0392b);
-}
-
-.menuSep {
-  height: 1px;
-  background: var(--color-grey-200, #e6e6e6);
-  margin: 4px 0;
-}
-
-.menuSub {
-  display: block;
-  font-size: var(--font-size-xs, 0.6875rem);
-  color: var(--color-grey-500, #999);
-}
-
 .filterEmpty {
   border: 1px dashed var(--color-grey-300, #ccc);
   border-radius: var(--radius-md, 8px);
@@ -519,7 +461,7 @@
   top: var(--spacing-md, 16px);
   right: var(--spacing-md, 16px);
   bottom: var(--spacing-md, 16px);
-  z-index: var(--z-overlay, 100);
+  z-index: var(--z-modal, 1000);
   display: flex;
   flex-direction: column;
   width: min(520px, calc(100vw - 32px));
@@ -533,7 +475,9 @@
 .detailsBackdrop {
   position: fixed;
   inset: 0;
-  z-index: calc(var(--z-overlay, 100) - 1);
+
+  /* Same layer as the panel it backs; the backdrop renders first, so the panel paints over it. */
+  z-index: var(--z-modal, 1000);
   background: rgb(0 0 0 / 28%);
 }
 
@@ -618,14 +562,6 @@
   margin-bottom: 0;
 }
 
-.taskEditorMeta {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 6px;
-}
-
 .taskEditorGrid {
   display: grid;
   grid-template-columns: minmax(220px, 1fr) max-content;
@@ -689,34 +625,6 @@
 
 .panelGroupHeader .groupHeading {
   margin-bottom: 0;
-}
-
-.generatedSummary {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-sm, 8px);
-  min-height: 2.4rem;
-  padding: 0 var(--spacing-sm, 12px);
-  cursor: pointer;
-  list-style: none;
-  font-size: var(--font-size-xs, 0.75rem);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--color-grey-500, #777);
-  font-weight: 600;
-}
-
-.generatedSummary::-webkit-details-marker {
-  display: none;
-}
-
-.generatedSummary::before {
-  content: '▸';
-  color: var(--color-grey-500, #777);
-}
-
-.generatedDetails[open] .generatedSummary::before {
-  content: '▾';
 }
 
 .generatedStatus {
@@ -860,12 +768,6 @@
   color: var(--color-white, #fff);
 }
 
-.genNote {
-  font-size: var(--font-size-xs, 0.75rem);
-  color: var(--color-grey-600, #555);
-  margin: 0 0 var(--spacing-sm, 10px);
-}
-
 .fieldRow {
   display: grid;
   grid-template-columns: 110px 1fr;
@@ -885,27 +787,6 @@
 .fieldLabel {
   font-size: var(--font-size-sm, 0.8125rem);
   color: var(--color-grey-600, #555);
-}
-
-.inlineControls {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--spacing-xs, 6px);
-}
-
-.contextDetails {
-  margin-top: var(--spacing-sm, 8px);
-  padding-top: var(--spacing-sm, 8px);
-  border-top: 1px solid var(--color-grey-200, #e6e6e6);
-}
-
-.contextDetails summary {
-  cursor: pointer;
-  color: var(--color-grey-600, #555);
-  font-size: var(--font-size-sm, 0.8125rem);
-  font-weight: 600;
-  margin-bottom: var(--spacing-xs, 6px);
 }
 
 .derivedNote {
@@ -994,7 +875,11 @@
     width: auto;
   }
 
-  .mobileCellLabel {
+  /* Stacked cells announce their column the way every other table in this folder does: the
+     label rides on `data-label` and only exists at this breakpoint. */
+  .cameraCell::before,
+  .optoCell::before {
+    content: attr(data-label);
     display: inline-block;
     min-width: 5.5rem;
     margin-right: 6px;
@@ -1026,9 +911,6 @@
     flex-direction: column;
   }
 
-  .taskEditorMeta {
-    justify-content: flex-start;
-  }
 
   .taskEditorGrid,
   .taskContextGrid {

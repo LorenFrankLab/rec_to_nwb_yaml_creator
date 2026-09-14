@@ -1,5 +1,7 @@
-import { useCallback, useEffect, useId, useRef, useState } from 'react';
-import type { KeyboardEvent as ReactKeyboardEvent } from 'react';
+import { forwardRef, useCallback, useEffect, useId, useImperativeHandle, useRef, useState } from 'react';
+import type { KeyboardEvent as ReactKeyboardEvent, ReactNode } from 'react';
+import buttonStyles from './ui/Button.module.css';
+import { usePopupDismissal } from '../hooks/usePopupDismissal';
 import styles from './OverflowMenu.module.css';
 
 interface OverflowMenuItem {
@@ -7,6 +9,15 @@ interface OverflowMenuItem {
   label: string;
   onSelect: () => void;
   disabled?: boolean;
+  /** Optional one-line sub-label rendered under the label (e.g. what a template produces). */
+  description?: string;
+  /** Draw a separator above this item (groups a menu without a second component). */
+  separatorBefore?: boolean;
+}
+
+/** Imperative surface for callers that must open the menu without a click (keyboard shortcuts). */
+export interface OverflowMenuHandle {
+  open: () => void;
 }
 
 interface OverflowMenuProps {
@@ -16,6 +27,11 @@ interface OverflowMenuProps {
   items: OverflowMenuItem[];
   /** Extra class on the trigger button. */
   buttonClassName?: string;
+  /**
+   * Visible trigger content. Omitted → the compact ⋮ icon button. Given → a labelled
+   * secondary-style button (the Button primitive's classes, so it matches every other action).
+   */
+  trigger?: ReactNode;
 }
 
 /**
@@ -32,7 +48,10 @@ interface OverflowMenuProps {
  * Shared by every per-object lifecycle affordance (the animal-picker cards and the AnimalView
  * header band) so the menu semantics can't drift between them.
  */
-export default function OverflowMenu({ label, items, buttonClassName }: OverflowMenuProps) {
+const OverflowMenu = forwardRef<OverflowMenuHandle, OverflowMenuProps>(function OverflowMenu(
+  { label, items, buttonClassName, trigger },
+  ref
+) {
   const menuId = useId();
   const [open, setOpen] = useState(false);
   // Index of the item that owns focus while the menu is open (a roving focus target).
@@ -66,34 +85,15 @@ export default function OverflowMenu({ label, items, buttonClassName }: Overflow
     if (returnFocus) triggerRef.current?.focus();
   }, []);
 
+  useImperativeHandle(ref, () => ({ open: () => openMenu('first') }), [openMenu]);
+
   // Move DOM focus to the active item whenever the menu is open and the active index changes.
   useEffect(() => {
     if (open) itemRefs.current[activeIndex]?.focus();
   }, [open, activeIndex]);
 
-  // Close on an outside click (pointerdown so it beats the item click). Scoped to the document
-  // only while open. A click on the trigger is handled by its own onClick, so ignore it here.
-  useEffect(() => {
-    if (!open) return undefined;
-    const onPointerDown = (e: PointerEvent) => {
-      const target = e.target as Node | null;
-      if (menuRef.current?.contains(target) || triggerRef.current?.contains(target)) return;
-      setOpen(false);
-    };
-    document.addEventListener('pointerdown', onPointerDown);
-    return () => document.removeEventListener('pointerdown', onPointerDown);
-  }, [open]);
-
-  // Close on route change (this app is hash-routed). Navigation that does NOT pass through an
-  // outside pointerdown — back/forward, a keyboard-activated link, or programmatic routing — must
-  // still dismiss the menu; otherwise the absolutely-positioned dropdown lingers over the next
-  // view and intercepts its first click (observed in the browser walkthrough).
-  useEffect(() => {
-    if (!open) return undefined;
-    const onHashChange = () => setOpen(false);
-    window.addEventListener('hashchange', onHashChange);
-    return () => window.removeEventListener('hashchange', onHashChange);
-  }, [open]);
+  const dismiss = useCallback(() => setOpen(false), []);
+  usePopupDismissal({ open, triggerRef, popupRef: menuRef, onDismiss: dismiss });
 
   /**
    * Step the active item to the next/previous ENABLED item, wrapping at the ends.
@@ -189,20 +189,24 @@ export default function OverflowMenu({ label, items, buttonClassName }: Overflow
     }
   };
 
+  const triggerClass = trigger
+    ? [buttonStyles.button, buttonStyles.secondary, buttonClassName].filter(Boolean).join(' ')
+    : [styles.trigger, buttonClassName].filter(Boolean).join(' ');
+
   return (
     <div className={styles.menu}>
       <button
         ref={triggerRef}
         type="button"
-        className={`${styles.trigger}${buttonClassName ? ` ${buttonClassName}` : ''}`}
-        aria-label={label}
+        className={triggerClass}
+        aria-label={trigger ? undefined : label}
         aria-haspopup="menu"
         aria-expanded={open}
         aria-controls={open ? menuId : undefined}
         onClick={() => (open ? closeMenu(false) : openMenu('first'))}
         onKeyDown={handleTriggerKeyDown}
       >
-        <span aria-hidden="true">⋮</span>
+        {trigger ?? <span aria-hidden="true">⋮</span>}
       </button>
 
       {open && (
@@ -215,7 +219,7 @@ export default function OverflowMenu({ label, items, buttonClassName }: Overflow
           onKeyDown={handleMenuKeyDown}
         >
           {items.map((item, index) => (
-            <li key={item.key} role="none">
+            <li key={item.key} role="none" className={item.separatorBefore ? styles.separated : undefined}>
               <button
                 type="button"
                 role="menuitem"
@@ -231,6 +235,7 @@ export default function OverflowMenu({ label, items, buttonClassName }: Overflow
                 onClick={() => selectItem(index)}
               >
                 {item.label}
+                {item.description && <span className={styles.description}>{item.description}</span>}
               </button>
             </li>
           ))}
@@ -238,5 +243,7 @@ export default function OverflowMenu({ label, items, buttonClassName }: Overflow
       )}
     </div>
   );
-}
+});
+
+export default OverflowMenu;
 
