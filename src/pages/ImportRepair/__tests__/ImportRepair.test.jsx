@@ -446,6 +446,119 @@ describe('ImportRepair — commit', () => {
     expect(captured.animals.remy.cameras.map((camera) => camera.id)).toEqual([0, 3, 5]);
     expect(Object.keys(captured.days)).toHaveLength(2);
   });
+  it('keeps each day\'s explicit camera mapping when two days map the same source id to different existing cameras', async () => {
+    // Both files reference source camera 3. The user maps day 1's to existing id 0 and day 2's to
+    // existing id 1. Nothing is brought; each committed day keeps the id the user chose.
+    const user = userEvent.setup();
+    renderScreen({
+      remy: {
+        id: 'remy',
+        subject: { subject_id: 'remy' },
+        days: [],
+        cameras: [
+          { id: 0, camera_name: 'overhead_cam' },
+          { id: 1, camera_name: 'side_cam' },
+        ],
+        devices: {
+          data_acq_device: [
+            { name: 'ImportedRig', system: 'MCU', amplifier: 'Intan', adc_circuit: 'Intan' },
+          ],
+          device: { name: ['Trodes'] },
+          electrode_groups: [],
+          ntrode_electrode_group_channel_map: [],
+        },
+        configurationHistory: [
+          {
+            version: 1,
+            devices: { electrode_groups: [], ntrode_electrode_group_channel_map: [] },
+            appliedToDays: [],
+          },
+        ],
+      },
+    });
+
+    const secondModel = decodeYaml(existingCatalogGapYaml());
+    secondModel.session_id = 'remy_20230623';
+
+    await user.upload(screen.getByLabelText(/choose a metadata yaml file/i), [
+      makeFile('06222023_remy_metadata.yml', existingCatalogGapYaml()),
+      makeFile('06232023_remy_metadata.yml', encodeYaml(secondModel)),
+    ]);
+
+    // The map row renders both an Accept button (labelled with the map text) and the number input.
+    const mapInput = () => screen.getByRole('spinbutton', { name: /Map camera 3 to existing camera id/i });
+    await screen.findByRole('spinbutton', { name: /Map camera 3 to existing camera id/i });
+    await user.type(mapInput(), '0');
+    await user.selectOptions(screen.getByLabelText('Review file'), '1');
+    await user.type(mapInput(), '1');
+
+    await user.click(screen.getByRole('button', { name: /Review 2 ready files/i }));
+    await user.click(screen.getByRole('button', { name: /confirm import/i }));
+
+    await screen.findByRole('heading', { name: /import complete/i });
+    expect(screen.queryByRole('heading', { name: /could not import/i })).not.toBeInTheDocument();
+    expect(captured.animals.remy.cameras.map((c) => c.id)).toEqual([0, 1]);
+    expect(captured.days['remy-2023-06-22'].associated_video_files[0].camera_id).toBe(0);
+    expect(captured.days['remy-2023-06-23'].associated_video_files[0].camera_id).toBe(1);
+  });
+
+  it('brings two new cameras that share a source id under distinct ids, and each day keeps its own', async () => {
+    // Day 1 brings camera 3 "arena_side"; day 2 brings a DIFFERENT camera also numbered 3. The
+    // second must land under a fresh id — never id 0, the animal's existing camera — and day 2's
+    // video must point at that fresh id: the additions saved and the references written are one
+    // catalog.
+    const user = userEvent.setup();
+    renderScreen({
+      remy: {
+        id: 'remy',
+        subject: { subject_id: 'remy' },
+        days: [],
+        cameras: [{ id: 0, camera_name: 'existing_cam' }],
+        devices: {
+          data_acq_device: [
+            { name: 'ExistingRig', system: 'MCU', amplifier: 'Intan', adc_circuit: 'Intan' },
+          ],
+          device: { name: ['Trodes'] },
+          electrode_groups: [],
+          ntrode_electrode_group_channel_map: [],
+        },
+        configurationHistory: [
+          {
+            version: 1,
+            devices: { electrode_groups: [], ntrode_electrode_group_channel_map: [] },
+            appliedToDays: [],
+          },
+        ],
+      },
+    });
+
+    const wallModel = decodeYaml(existingCatalogGapYaml());
+    wallModel.session_id = 'remy_20230623';
+    wallModel.cameras[0] = { ...wallModel.cameras[0], camera_name: 'wall_cam' };
+
+    await user.upload(screen.getByLabelText(/choose a metadata yaml file/i), [
+      makeFile('06222023_remy_metadata.yml', existingCatalogGapYaml()),
+      makeFile('06232023_remy_metadata.yml', encodeYaml(wallModel)),
+    ]);
+
+    await user.click(await screen.findByRole('button', { name: /Accept Camera 3/i }));
+    await user.click(screen.getByRole('button', { name: /Accept Recording system/i }));
+    await user.selectOptions(screen.getByLabelText('Review file'), '1');
+    await user.click(screen.getByRole('button', { name: /Accept Camera 3/i }));
+    await user.click(screen.getByRole('button', { name: /Accept Recording system/i }));
+
+    await user.click(screen.getByRole('button', { name: /Review 2 ready files/i }));
+    await user.click(screen.getByRole('button', { name: /confirm import/i }));
+
+    await screen.findByRole('heading', { name: /import complete/i });
+    expect(screen.queryByRole('heading', { name: /could not import/i })).not.toBeInTheDocument();
+    const cameras = captured.animals.remy.cameras;
+    expect(cameras.map((c) => c.camera_name)).toEqual(['existing_cam', 'arena_side', 'wall_cam']);
+    const wall = cameras.find((c) => c.camera_name === 'wall_cam');
+    expect([0, 3]).not.toContain(wall.id);
+    expect(captured.days['remy-2023-06-23'].associated_video_files[0].camera_id).toBe(wall.id);
+    expect(captured.days['remy-2023-06-22'].associated_video_files[0].camera_id).toBe(3);
+  });
 });
 
 describe('ImportRepair — honest reporting of files that never made it', () => {

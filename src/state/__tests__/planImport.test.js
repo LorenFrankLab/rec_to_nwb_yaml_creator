@@ -404,6 +404,81 @@ describe('planImport — intra-plan duplicate (subject, date)', () => {
   });
 });
 
+describe('planImport — camera references against an EXISTING animal', () => {
+  /** A workspace already holding remy with cameras 0 = overhead, 1 = side (the fixture's own). */
+  const existingRemy = () => {
+    const ws = createDefaultWorkspace();
+    const { animal, day } = buildRealisticWorkspace();
+    ws.animals[animal.id] = { ...animal, days: [] };
+    void day;
+    return ws;
+  };
+  /**
+   * Rewrite a file so its ONE camera is `{ id, camera_name }` and every day reference points at it.
+   * @param {number} id - The camera id the file uses.
+   * @param {string} camera_name - The camera's name in the file.
+   * @returns {(animal: object, day: object) => void} The `mutateConfig` callback.
+   */
+  const singleCamera = (id, camera_name) => (animal, day) => {
+    animal.cameras = [{ ...animal.cameras[0], id, camera_name }];
+    day.tasks = day.tasks.map((t) => ({ ...t, camera_id: [id] }));
+    day.associated_video_files = [{ name: `video_${camera_name}`, camera_id: id, task_epochs: 2 }];
+    day.cameras_used = [id];
+  };
+
+  it('keeps an explicitly mapped reference: a row whose id IS an existing camera is that camera, per day', () => {
+    // Import & Repair mapped file 1's camera to existing id 0 and file 2's to existing id 1 (both
+    // rows still carry the file's own name). Each day must keep the id the user chose.
+    const plan = planImport(
+      [
+        makeFile({ subjectId: 'remy', date: '2023-06-22', mutateConfig: singleCamera(0, 'arena_side') }),
+        makeFile({ subjectId: 'remy', date: '2023-06-23', mutateConfig: singleCamera(1, 'arena_side') }),
+      ],
+      existingRemy()
+    );
+    const remy = plan.animals.find((a) => a.subjectId === 'remy');
+    expect(remy.conflict).toBe('exists');
+    expect(remy.days.find((d) => d.date === '2023-06-22').associated_video_files[0].camera_id).toBe(0);
+    expect(remy.days.find((d) => d.date === '2023-06-23').associated_video_files[0].camera_id).toBe(1);
+    expect(remy.catalogAdditions.cameras).toEqual([]);
+    expect(remy.cameras.map((c) => c.id)).toEqual([0, 1]);
+  });
+
+  it('allocates a brought camera an id the existing animal does not use, and the additions carry it', () => {
+    // Two files each BRING a new camera with source id 3: "arena" and "wall". The second must not
+    // become id 0 (the existing overhead camera) — it gets an id free in existing ∪ additions.
+    const plan = planImport(
+      [
+        makeFile({ subjectId: 'remy', date: '2023-06-22', mutateConfig: singleCamera(3, 'arena') }),
+        makeFile({ subjectId: 'remy', date: '2023-06-23', mutateConfig: singleCamera(3, 'wall') }),
+      ],
+      existingRemy()
+    );
+    const remy = plan.animals.find((a) => a.subjectId === 'remy');
+    const additions = remy.catalogAdditions.cameras;
+    expect(additions.map((c) => c.camera_name)).toEqual(['arena', 'wall']);
+    const [arena, wall] = additions;
+    expect(arena.id).toBe(3);
+    expect([0, 1, 3]).not.toContain(wall.id);
+    expect(remy.days.find((d) => d.date === '2023-06-22').associated_video_files[0].camera_id).toBe(3);
+    expect(remy.days.find((d) => d.date === '2023-06-23').associated_video_files[0].camera_id).toBe(wall.id);
+    // The final catalog the executor will hold: existing + additions, no duplicate ids.
+    const ids = remy.cameras.map((c) => c.id);
+    expect(ids).toEqual([0, 1, 3, wall.id]);
+    expect(new Set(ids).size).toBe(ids.length);
+  });
+
+  it('routes a brought camera named like an existing one onto the existing id (no duplicate by name)', () => {
+    const plan = planImport(
+      [makeFile({ subjectId: 'remy', date: '2023-06-22', mutateConfig: singleCamera(5, 'overhead_camera') })],
+      existingRemy()
+    );
+    const remy = plan.animals.find((a) => a.subjectId === 'remy');
+    expect(remy.catalogAdditions.cameras).toEqual([]);
+    expect(remy.days[0].associated_video_files[0].camera_id).toBe(0);
+  });
+});
+
 describe('planImport — sourceKey identity', () => {
   it('echoes the caller\'s sourceKey on every planned day and unimportable entry, defaulting to sourceName', () => {
     const kept = makeFile({ subjectId: 'remy', date: '2023-06-22' });

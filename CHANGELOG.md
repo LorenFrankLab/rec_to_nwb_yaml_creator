@@ -263,7 +263,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   file's day references unchanged — so B's overhead videos exported as side-camera videos. Each
   file's references are now remapped by camera name onto the combined catalog's ids, a later file's
   new-by-name camera whose id collides with a unioned one is renumbered (and its references follow),
-  and the preview's "Differences to review" names every remap.
+  and the preview's "Differences to review" names every remap. Against an **existing** animal the
+  combined catalog is the animal's own plus what the files bring: a file row whose id the animal
+  already has is that camera (an explicit Import & Repair mapping is kept per day, whatever the
+  row's name), a brought camera gets an id free in existing ∪ additions, and the executor adds
+  exactly the rows the plan allocated (`ImportPlanAnimal.catalogAdditions`) — the same catalog the
+  references were remapped against, so a saved reference can never point past what was saved.
 - **A duplicate filename can no longer drop a retained file's catalog entries.** Accepted catalog
   additions were matched back to the retained days by basename; with an excluded duplicate ahead of
   a retained file of the same name, the duplicate consumed the slot and the retained day's camera was

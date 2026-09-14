@@ -56,7 +56,7 @@ interface ImportActions {
 }
 
 /** Options for {@link applyImportPlan}. */
-interface ApplyImportOptions {
+export interface ApplyImportOptions {
   /** The current workspace snapshot for pre-flight (defaults to empty — no pre-flight guarantees). */
   workspace?: ApplyWorkspace;
   /** Per-subject overrides of `defaultResolution` for conflict animals. */

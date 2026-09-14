@@ -16,7 +16,6 @@ import { isValidSpecies } from '../../validation/dandiSubject';
 import {
   buildImportRepairPlan,
   applyImportRepairs,
-  collectExistingAnimalCatalogAdditions,
   existingAnimalCatalogResolutionBlocker,
 } from '../importRepair';
 import type { RepairItem } from '../importRepair';
@@ -530,14 +529,6 @@ describe('existing-animal add catalog refs — surface and resolve before import
     });
     expect(existingAnimalCatalogResolutionBlocker(plan, {})).toMatch(/Resolve Camera 3/);
 
-    const additions = collectExistingAnimalCatalogAdditions(plan, {
-      [camera!.path]: camera!.suggested,
-      [device!.path]: device!.suggested,
-    });
-    expect(additions.remy.cameras).toEqual([expect.objectContaining({ id: 3 })]);
-    expect(additions.remy.data_acq_device).toEqual([
-      expect.objectContaining({ name: 'ImportedRig' }),
-    ]);
     expect(
       existingAnimalCatalogResolutionBlocker(plan, {
         [camera!.path]: camera!.suggested,
@@ -606,7 +597,6 @@ describe('existing-animal add catalog refs — surface and resolve before import
     expect(repaired.cameras[0].id).toBe(0);
     expect(repaired.tasks[0].camera_id).toEqual([0]);
     expect(repaired.associated_video_files[0].camera_id).toBe(0);
-    expect(collectExistingAnimalCatalogAdditions(plan, { [camera!.path]: 0 })).toEqual({});
   });
 
   it('does not surface cross-day camera divergence when identity fields match', () => {
@@ -708,7 +698,6 @@ describe('existing-animal add catalog refs — surface and resolve before import
     expect(camera!.why).toContain('meters_per_pixel');
     expect(existingAnimalCatalogResolutionBlocker(plan, {})).toMatch(/Resolve Camera 0/);
     expect(existingAnimalCatalogResolutionBlocker(plan, { [camera!.path]: 0 })).toBeNull();
-    expect(collectExistingAnimalCatalogAdditions(plan, { [camera!.path]: 0 })).toEqual({});
   });
 
   it('maps a missing recording-system ref to an existing recording-system name', () => {
@@ -750,9 +739,6 @@ describe('existing-animal add catalog refs — surface and resolve before import
       data_acq_device: Array<Record<string, unknown>>;
     };
     expect(repaired.data_acq_device[0].name).toBe('ExistingRig');
-    expect(collectExistingAnimalCatalogAdditions(plan, { [device!.path]: 'ExistingRig' })).toEqual(
-      {}
-    );
   });
 });
 

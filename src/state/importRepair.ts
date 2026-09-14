@@ -25,7 +25,6 @@ import { findIdentityDivergence } from './identityDivergence';
 import { extractRecordingDate, findExistingAnimalId } from './yamlImportPlan';
 import { getAnimalCameras, getDataAcqDevices } from './workspaceSelectors';
 import { inferredCameraRefs } from './cameraUsage';
-import { catalogRowsCollide } from './yamlImportApply';
 import type { IdentityRegistryEntry } from './identityDivergence';
 import type { ValidationModel } from '../validation/issueTypes';
 import { blockingIssues } from '../validation/issueTypes';
@@ -164,14 +163,6 @@ export interface BenignNormalization {
   label: string;
   /** What changed (and that no values were lost). */
   detail: string;
-}
-
-/** A selected catalog merge to apply before adding imported days to an existing animal. */
-export interface ExistingAnimalCatalogAdditions {
-  /** Camera catalog entries to append. */
-  cameras?: unknown[];
-  /** Data-acquisition device entries to append. */
-  data_acq_device?: unknown[];
 }
 
 /** Catalog repair metadata carried by an import-repair row. */
@@ -1279,73 +1270,6 @@ export function existingAnimalCatalogResolutionBlocker(
     }
   }
   return null;
-}
-
-/**
- * Convert accepted "bring catalog entry" repair rows into executor catalog additions.
- *
- * @param plan - The import-repair plan.
- * @param resolutions - Accepted/edited values keyed by repair-item path.
- * @returns Catalog additions keyed by existing animal id.
- */
-export function collectExistingAnimalCatalogAdditions(
-  plan: ImportRepairPlan,
-  resolutions: Record<string, unknown>
-): Record<string, ExistingAnimalCatalogAdditions> {
-  const additions: Record<string, ExistingAnimalCatalogAdditions> = {};
-  for (const item of plan.items) {
-    const action = item.action;
-    if (
-      action?.kind !== 'existing_animal_catalog_ref' ||
-      !action.canBring ||
-      resolutions[item.path] !== item.suggested ||
-      action.sourceEntry === undefined
-    ) {
-      continue;
-    }
-    const target = additions[action.targetAnimalId] ?? {};
-    if (action.catalog === 'cameras') {
-      target.cameras = [...(target.cameras ?? []), structuredClone(action.sourceEntry)];
-    } else {
-      target.data_acq_device = [
-        ...(target.data_acq_device ?? []),
-        structuredClone(action.sourceEntry),
-      ];
-    }
-    additions[action.targetAnimalId] = target;
-  }
-  return additions;
-}
-
-/**
- * Merge per-file catalog additions into one set per existing animal, keeping the FIRST row accepted
- * for each catalog identity (matching how `planImport` unions animal-level catalogs across a batch).
- *
- * Dedup uses the executor's own collision rule (`catalogRowsCollide`), so a merge can never hand the
- * pre-flight two rows it will reject: two day files carrying the same camera recalibrated between
- * them differ in a dependent field, and merging both would fail the whole animal at commit.
- *
- * @param perFile - One `collectExistingAnimalCatalogAdditions` result per included file, in order.
- * @returns Merged catalog additions keyed by existing animal id.
- */
-export function mergeExistingAnimalCatalogAdditions(
-  perFile: Array<Record<string, ExistingAnimalCatalogAdditions>>
-): Record<string, ExistingAnimalCatalogAdditions> {
-  const merged: Record<string, ExistingAnimalCatalogAdditions> = {};
-  for (const additions of perFile) {
-    for (const [animalId, next] of Object.entries(additions)) {
-      const target = merged[animalId] ?? {};
-      for (const catalog of ['cameras', 'data_acq_device'] as const) {
-        for (const entry of next[catalog] ?? []) {
-          const rows = target[catalog] ?? [];
-          if (rows.some((existing) => catalogRowsCollide(catalog, existing, entry))) continue;
-          target[catalog] = [...rows, structuredClone(entry)];
-        }
-      }
-      merged[animalId] = target;
-    }
-  }
-  return merged;
 }
 
 /**

@@ -83,6 +83,8 @@ interface ResolvedAnimalFacts {
    * catalog's id for the camera of the same name. Empty when the file's ids already agree.
    */
   cameraIdRemaps: Array<Map<unknown, unknown>>;
+  /** The rows the files bring that `existing` did not already hold (see `ImportPlanAnimal.catalogAdditions`). */
+  catalogAdditions: { cameras: any[]; data_acq_device: any[] };
   subject: any;
   experimenters: any;
   optogenetics: any;
@@ -234,10 +236,18 @@ export interface ImportPlanAnimal {
   experimenters: any;
   /** Resolved optogenetics (latest-date-wins), or null. */
   optogenetics: any;
-  /** Resolved device catalogs. */
+  /** Resolved device catalogs (for an existing animal: the existing catalog plus the additions). */
   devices: { data_acq_device: any[]; device: any };
-  /** Resolved union camera catalog. */
+  /** Resolved camera catalog (for an existing animal: the existing catalog plus the additions). */
   cameras: any[];
+  /**
+   * The catalog rows the imported files BRING to an existing animal — the cameras / recording
+   * systems in `cameras` / `devices.data_acq_device` that the animal does not already have, with
+   * the ids the plan allocated for them. Empty for a new animal (everything is new; see
+   * `cameras`). This is what the executor must add on `'add'`, and it is the SAME catalog the
+   * days' references were remapped against, so a reference can never point past it.
+   */
+  catalogAdditions: { cameras: any[]; data_acq_device: any[] };
   configVersions: ConfigVersion[];
   days: ImportPlanDay[];
   divergences: Divergence[];
@@ -336,14 +346,20 @@ function resolveConfigVersions(entries: FileEntry[]): {
  * flag for every disagreement (never a silent pick). Resolution policy:
  *  - cameras: UNION by `camera_name` in first-seen (earliest-date) order; same name with
  *    different dependent fields, OR differing camera SETS across files → `cameras` flag.
+ *    Against an EXISTING animal the union is seeded with its catalog: a file row whose id the
+ *    animal already has IS that camera (Import & Repair maps a reference by writing the existing
+ *    id onto the row, whatever the row's name); every other row is a brought camera, unioned by
+ *    name and given an id free in existing ∪ additions. Day references follow (see
+ *    `cameraIdRemaps`), so what the executor saves and what the days point at is one catalog.
  *  - data_acq_device: UNION by `name`; divergent dependent fields → `data_acq_device` flag.
  *  - subject scalars: latest-date-wins; any difference → `subject` flag (lists the keys).
  *  - experimenters / optogenetics / device: latest-date-wins; differences → a flag.
  *
  * @param entries - Date-sorted file entries.
+ * @param existing - The existing animal record when the subject is already in the workspace.
  * @returns The resolved animal-level facts plus the surfaced divergences.
  */
-function resolveAnimalFacts(entries: FileEntry[]): ResolvedAnimalFacts {
+function resolveAnimalFacts(entries: FileEntry[], existing: unknown = null): ResolvedAnimalFacts {
   const divergences: Divergence[] = [];
   const latest = entries[entries.length - 1].animalFacts;
 
@@ -358,11 +374,32 @@ function resolveAnimalFacts(entries: FileEntry[]): ResolvedAnimalFacts {
   const cameraIdRemaps: Array<Map<unknown, unknown>> = [];
   const unionIdByName = new Map<string, unknown>();
   const usedIds = new Set<unknown>();
+  const existingCameraIds = new Set<unknown>();
+  const addedCameras: any[] = [];
   const nextFreeId = (): number => {
     let candidate = 0;
     while (usedIds.has(candidate)) candidate += 1;
     return candidate;
   };
+  // Seed with what the animal already holds: those rows are the catalog the executor keeps, and
+  // a file row that names one of their ids is a reference to it, not a new camera.
+  for (const camera of getAnimalCameras(existing)) {
+    const name = String(camera.camera_name ?? '').trim();
+    cameraRegistry.push({
+      name,
+      fields: {
+        id: camera.id,
+        meters_per_pixel: camera.meters_per_pixel,
+        lens: camera.lens,
+        model: camera.model,
+        manufacturer: camera.manufacturer,
+      },
+    });
+    cameras.push(structuredClone(camera));
+    if (!unionIdByName.has(name)) unionIdByName.set(name, camera.id);
+    usedIds.add(camera.id);
+    existingCameraIds.add(camera.id);
+  }
   for (const entry of entries) {
     const { animalFacts } = entry;
     // Treat imported cameras as loose data: `camera_name` is the identity key here (a string in
@@ -373,6 +410,9 @@ function resolveAnimalFacts(entries: FileEntry[]): ResolvedAnimalFacts {
     const remap = new Map<unknown, unknown>();
     const remapped: string[] = [];
     for (const camera of fileCameras) {
+      // An id the animal already has is a reference to that camera (an explicit Import & Repair
+      // mapping, or a file that already uses the animal's numbering) — never re-identified by name.
+      if (existingCameraIds.has(camera.id)) continue;
       const name = String(camera.camera_name ?? '').trim();
       const candidateFields = {
         id: camera.id,
@@ -398,7 +438,9 @@ function resolveAnimalFacts(entries: FileEntry[]): ResolvedAnimalFacts {
       } else if (!unionIdByName.has(name)) {
         const id = usedIds.has(camera.id) ? nextFreeId() : camera.id;
         cameraRegistry.push({ name: camera.camera_name, fields: { ...candidateFields, id } });
-        cameras.push({ ...structuredClone(camera), id });
+        const row = { ...structuredClone(camera), id };
+        cameras.push(row);
+        addedCameras.push(row);
         unionIdByName.set(name, id);
         usedIds.add(id);
       }
@@ -424,9 +466,18 @@ function resolveAnimalFacts(entries: FileEntry[]): ResolvedAnimalFacts {
     });
   }
 
-  // --- data_acq_device: union by name ---
+  // --- data_acq_device: union by name (seeded with the existing animal's; a file row whose name
+  // the animal already has is that recording system, never a second one) ---
   const dataAcqDevice: any[] = [];
   const dataAcqRegistry: IdentityRegistryEntry[] = [];
+  const addedDevices: any[] = [];
+  for (const device of getDataAcqDevices(existing)) {
+    dataAcqRegistry.push({
+      name: device.name,
+      fields: { system: device.system, amplifier: device.amplifier, adc_circuit: device.adc_circuit },
+    });
+    dataAcqDevice.push(structuredClone(device));
+  }
   for (const { animalFacts } of entries) {
     const fileDevices = getDataAcqDevices(animalFacts);
     for (const device of fileDevices) {
@@ -445,7 +496,9 @@ function resolveAnimalFacts(entries: FileEntry[]): ResolvedAnimalFacts {
       }
       if (!dataAcqRegistry.some((e) => e.name === device.name)) {
         dataAcqRegistry.push({ name: device.name, fields: candidateFields });
-        dataAcqDevice.push(structuredClone(device));
+        const row = structuredClone(device);
+        dataAcqDevice.push(row);
+        addedDevices.push(row);
       }
     }
   }
@@ -496,6 +549,7 @@ function resolveAnimalFacts(entries: FileEntry[]): ResolvedAnimalFacts {
     },
     cameras,
     cameraIdRemaps,
+    catalogAdditions: { cameras: addedCameras, data_acq_device: addedDevices },
     divergences,
   };
 }
@@ -679,8 +733,11 @@ export function planImport(
     const entries = [...rawEntries].sort((a, b) => a.date.localeCompare(b.date));
 
     const { configVersions, versionByDate } = resolveConfigVersions(entries);
-    const facts = resolveAnimalFacts(entries);
     const existingAnimalId = findExistingAnimalId(subjectId, existingWorkspace);
+    const existingAnimal = existingAnimalId
+      ? (existingWorkspace?.animals as Record<string, unknown> | undefined)?.[existingAnimalId] ?? null
+      : null;
+    const facts = resolveAnimalFacts(entries, existingAnimal);
 
     const days = entries.map((entry, index) =>
       buildPlanDay(entry, versionByDate[entry.date], facts.cameraIdRemaps[index])
@@ -704,6 +761,7 @@ export function planImport(
       optogenetics: facts.optogenetics,
       devices: facts.devices,
       cameras: facts.cameras,
+      catalogAdditions: facts.catalogAdditions,
       configVersions,
       days,
       divergences: facts.divergences,

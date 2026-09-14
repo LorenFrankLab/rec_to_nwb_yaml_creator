@@ -14,18 +14,16 @@ import { parseImportFiles } from '../../features/importYaml';
 import {
   buildImportRepairPlan,
   applyImportRepairs,
-  collectExistingAnimalCatalogAdditions,
-  mergeExistingAnimalCatalogAdditions,
   existingAnimalCatalogResolutionBlocker,
 } from '../../state/importRepair';
 import type {
-  ExistingAnimalCatalogAdditions,
   ImportRepairPlan,
   RepairItem,
 } from '../../state/importRepair';
 import { planImport } from '../../state/yamlImportPlan';
 import type { ImportPlan, ImportPlanAnimal } from '../../state/yamlImportPlan';
 import { applyImportPlan } from '../../state/yamlImportApply';
+import type { ApplyImportOptions } from '../../state/yamlImportApply';
 import Button from '../../components/ui/Button';
 import { pluralize } from '../../utils/pluralize';
 import styles from './ImportRepair.module.css';
@@ -60,7 +58,6 @@ interface ExcludedFile {
 interface BatchPreview {
   plan: ImportPlan;
   excluded: ExcludedFile[];
-  catalogAdditions: Record<string, ExistingAnimalCatalogAdditions>;
 }
 
 interface ImportResult {
@@ -138,24 +135,16 @@ function blockingReason(
 }
 
 /**
- * Merge the catalog additions of every file the batch plan actually kept.
- *
- * `planImport` can reject an otherwise-ready file (most commonly a duplicate animal/date), so only
- * the files whose day the plan retained contribute — matched by each file's own key, never by
- * basename: two selected files can share one, and matching on it once let an excluded duplicate
- * consume the slot of the retained file that followed it. The identity rule for the rows themselves
- * lives with the executor that enforces it.
+ * The catalog rows to add to each existing animal: exactly the additions the plan allocated —
+ * the same catalog it remapped every day reference against — keyed by the animal they join. A
+ * ready file has every non-existing camera resolved (brought, keeping an id the plan allocated,
+ * or mapped onto an existing id), so the plan's additions are precisely the accepted ones.
  */
-function collectBatchCatalogAdditions(
-  assessments: FileAssessment[],
-  includedSourceKeys: Set<string>
-): BatchPreview['catalogAdditions'] {
-  return mergeExistingAnimalCatalogAdditions(
-    assessments
-      .filter((assessment) => assessment.ready && includedSourceKeys.has(assessment.file.key))
-      .map((assessment) =>
-        collectExistingAnimalCatalogAdditions(assessment.file.plan, assessment.file.resolutions)
-      )
+function plannedCatalogAdditions(plan: ImportPlan): NonNullable<ApplyImportOptions['catalogAdditions']> {
+  return Object.fromEntries(
+    plan.animals
+      .filter((animal) => animal.conflict === 'exists' && animal.existingAnimalId)
+      .map((animal) => [animal.existingAnimalId as string, animal.catalogAdditions])
   );
 }
 
@@ -314,10 +303,7 @@ export default function ImportRepair() {
     const summary = applyImportPlan(assessment.importPlan, actions, {
       workspace: model.workspace,
       resolutions: existing ? { [subjectId]: 'add' } : {},
-      catalogAdditions: collectExistingAnimalCatalogAdditions(
-        repairPlan,
-        assessment.file.resolutions
-      ),
+      catalogAdditions: plannedCatalogAdditions(assessment.importPlan),
     });
     // `failed` means the executor pre-flight rejected the animal and wrote nothing, so there is
     // no animal to link to — `subjectId` would point at a page that may not exist.
@@ -362,14 +348,7 @@ export default function ImportRepair() {
         })),
       ...batchPlan.unimportable,
     ];
-    setPreview({
-      plan: batchPlan,
-      excluded,
-      catalogAdditions: collectBatchCatalogAdditions(
-        ready,
-        new Set(batchPlan.animals.flatMap(({ days }) => days.map((day) => day.sourceKey)))
-      ),
-    });
+    setPreview({ plan: batchPlan, excluded });
     setConflictResolutions({});
     setPhase('preview');
   };
@@ -379,7 +358,7 @@ export default function ImportRepair() {
     const summary = applyImportPlan(preview.plan, actions, {
       workspace: model.workspace,
       resolutions: conflictResolutions,
-      catalogAdditions: preview.catalogAdditions,
+      catalogAdditions: plannedCatalogAdditions(preview.plan),
     });
     const failedIds = new Set(summary.failed.map((failure) => failure.subjectId));
     const animalIds = preview.plan.animals
