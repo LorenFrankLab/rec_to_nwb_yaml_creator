@@ -15,14 +15,21 @@ import {
   buildImportRepairPlan,
   applyImportRepairs,
   collectExistingAnimalCatalogAdditions,
+  mergeExistingAnimalCatalogAdditions,
   existingAnimalCatalogResolutionBlocker,
 } from '../../state/importRepair';
-import type { ImportRepairPlan, RepairItem } from '../../state/importRepair';
+import type {
+  ExistingAnimalCatalogAdditions,
+  ImportRepairPlan,
+  RepairItem,
+} from '../../state/importRepair';
 import { planImport } from '../../state/yamlImportPlan';
 import type { ImportPlan, ImportPlanAnimal } from '../../state/yamlImportPlan';
 import { applyImportPlan } from '../../state/yamlImportApply';
 import Button from '../../components/ui/Button';
+import { pluralize } from '../../utils/pluralize';
 import styles from './ImportRepair.module.css';
+import PageShell, { pageShellLedeClass } from '../../components/PageShell';
 
 interface DecodedImportFile {
   sourceName: string;
@@ -53,7 +60,7 @@ interface ExcludedFile {
 interface BatchPreview {
   plan: ImportPlan;
   excluded: ExcludedFile[];
-  catalogAdditions: Record<string, { cameras?: unknown[]; data_acq_device?: unknown[] }>;
+  catalogAdditions: Record<string, ExistingAnimalCatalogAdditions>;
 }
 
 interface ImportResult {
@@ -100,89 +107,71 @@ function assessFile(
   const unresolvedCount = file.plan.items.filter(
     (item) => !isResolvedValue(file.resolutions[item.path])
   ).length;
-  const catalogBlocker = existingAnimalCatalogResolutionBlocker(
-    file.plan,
-    file.resolutions
-  );
-
-  const reason =
-    file.plan.decision.kind === 'blocked'
-      ? file.plan.decision.reason
-      : file.plan.blockers.length > 0
-        ? `${file.plan.blockers.length} field${file.plan.blockers.length === 1 ? '' : 's'} still need source-file editing.`
-        : unresolvedCount > 0
-          ? `${unresolvedCount} flagged field${unresolvedCount === 1 ? '' : 's'} still need a response.`
-          : catalogBlocker
-            ? catalogBlocker
-            : importPlan.animals.length !== 1
-              ? importPlan.unimportable[0]?.reason ?? 'The repaired file cannot be imported yet.'
-              : null;
+  const reason = blockingReason(file, importPlan, unresolvedCount);
 
   return { file, repaired, importPlan, ready: reason === null, reason, unresolvedCount };
 }
 
 /**
- * Identity keys a catalog row would collide on inside the executor's pre-flight: cameras clash on
- * `id` OR `camera_name`, recording systems on `name`. Comparing whole rows is not enough — two day
- * files that carry the same camera recalibrated between them differ in a dependent field, and
- * merging both would fail the whole animal at commit.
- *
- * @param catalog - Which catalog the entry belongs to.
- * @param entry - The catalog row.
- * @returns The identity keys this row occupies.
+ * Why a repaired file cannot be imported yet, in the order the user should act on: an
+ * undecidable file first, then source-file edits, then unanswered rows, then the planner's
+ * own refusal. `null` once nothing is left to answer.
  */
-function catalogIdentityKeys(catalog: 'cameras' | 'data_acq_device', entry: unknown): string[] {
-  if (!entry || typeof entry !== 'object') return [];
-  const row = entry as Record<string, unknown>;
-  const keys = catalog === 'cameras' ? ['id', 'camera_name'] : ['name'];
-  return keys
-    .filter((key) => row[key] !== undefined && row[key] !== null && row[key] !== '')
-    .map((key) => `${key}:${String(row[key])}`);
+function blockingReason(
+  file: RepairFile,
+  importPlan: ImportPlan,
+  unresolvedCount: number
+): string | null {
+  if (file.plan.decision.kind === 'blocked') return file.plan.decision.reason;
+  if (file.plan.blockers.length > 0) {
+    return `${file.plan.blockers.length} ${pluralize(file.plan.blockers.length, 'field')} still need source-file editing.`;
+  }
+  if (unresolvedCount > 0) {
+    return `${unresolvedCount} flagged ${pluralize(unresolvedCount, 'field')} still need a response.`;
+  }
+  const catalogBlocker = existingAnimalCatalogResolutionBlocker(file.plan, file.resolutions);
+  if (catalogBlocker) return catalogBlocker;
+  if (importPlan.animals.length !== 1) {
+    return importPlan.unimportable[0]?.reason ?? 'The repaired file cannot be imported yet.';
+  }
+  return null;
 }
 
 /**
- * Merge per-file catalog additions, keeping the first row accepted for each catalog identity.
- * First-seen wins, matching how `planImport` unions animal-level catalogs across a batch.
+ * Merge the catalog additions of every file the batch plan actually kept.
+ *
+ * `planImport` can reject an otherwise-ready file (most commonly a duplicate animal/date), so the
+ * kept source names are consumed as a MULTISET in input order: catalog rows from a rejected file can
+ * never leak into an existing animal, and two selected files sharing a basename are not mistaken for
+ * the one retained day. The identity rule itself lives with the executor that enforces it.
  */
 function collectBatchCatalogAdditions(
   assessments: FileAssessment[],
   includedSourceNames: string[]
 ): BatchPreview['catalogAdditions'] {
-  const merged: BatchPreview['catalogAdditions'] = {};
-  // `planImport` can reject an otherwise-ready file (most commonly a duplicate animal/date).
-  // Consume the kept source names as a multiset in input order so catalog rows from a rejected
-  // file can never leak into an existing animal. A multiset also handles two selected files with
-  // the same basename without mistaking both for the one retained day.
   const remainingSources = new Map<string, number>();
   for (const sourceName of includedSourceNames) {
     remainingSources.set(sourceName, (remainingSources.get(sourceName) ?? 0) + 1);
   }
+  const included: Array<Record<string, ExistingAnimalCatalogAdditions>> = [];
   for (const assessment of assessments) {
     if (!assessment.ready) continue;
     const sourceName = assessment.file.decoded.sourceName;
     const remaining = remainingSources.get(sourceName) ?? 0;
     if (remaining === 0) continue;
     remainingSources.set(sourceName, remaining - 1);
-    const additions = collectExistingAnimalCatalogAdditions(
-      assessment.file.plan,
-      assessment.file.resolutions
+    included.push(
+      collectExistingAnimalCatalogAdditions(assessment.file.plan, assessment.file.resolutions)
     );
-    for (const [animalId, next] of Object.entries(additions)) {
-      const target = merged[animalId] ?? {};
-      for (const catalog of ['cameras', 'data_acq_device'] as const) {
-        for (const entry of next[catalog] ?? []) {
-          const rows = target[catalog] ?? [];
-          const identity = catalogIdentityKeys(catalog, entry);
-          const alreadyMerged = rows.some((existing) =>
-            catalogIdentityKeys(catalog, existing).some((key) => identity.includes(key))
-          );
-          if (!alreadyMerged) target[catalog] = [...rows, structuredClone(entry)];
-        }
-      }
-      merged[animalId] = target;
-    }
   }
-  return merged;
+  return mergeExistingAnimalCatalogAdditions(included);
+}
+
+/** Suggestions in a file the user has neither accepted nor overridden. */
+function unansweredSuggestions(file: RepairFile): RepairItem[] {
+  return file.plan.items.filter(
+    (item) => item.kind === 'suggestion' && !(item.path in file.resolutions)
+  );
 }
 
 /** Human status shown in the batch file selector. */
@@ -195,7 +184,6 @@ function assessmentLabel(assessment: FileAssessment): string {
 /** The Import & Repair screen. */
 export default function ImportRepair() {
   const { model, actions } = useStoreContext();
-  const inputRef = useRef<HTMLInputElement>(null);
 
   const [phase, setPhase] = useState<'pick' | 'repair' | 'preview' | 'result'>('pick');
   const [files, setFiles] = useState<RepairFile[]>([]);
@@ -209,10 +197,28 @@ export default function ImportRepair() {
   >({});
   const [result, setResult] = useState<ImportResult | null>(null);
 
-  const assessments = useMemo(
-    () => files.map((file) => assessFile(file, model.workspace)),
-    [files, model.workspace]
-  );
+  // Assessing one file runs the full importer (repair → decompose → schema + rule validation), so
+  // it is far too expensive to redo for EVERY selected file on every keystroke in one file's repair
+  // row. `setResolution`/`acceptSuggestions` return the same object for files they did not touch, so
+  // object identity is a sound cache key; the cache is dropped whenever the workspace it was
+  // assessed against changes.
+  const assessmentCache = useRef({
+    workspace: model.workspace,
+    entries: new WeakMap<RepairFile, FileAssessment>(),
+  });
+  const assessments = useMemo(() => {
+    if (assessmentCache.current.workspace !== model.workspace) {
+      assessmentCache.current = { workspace: model.workspace, entries: new WeakMap() };
+    }
+    const cache = assessmentCache.current.entries;
+    return files.map((file) => {
+      const cached = cache.get(file);
+      if (cached) return cached;
+      const assessment = assessFile(file, model.workspace);
+      cache.set(file, assessment);
+      return assessment;
+    });
+  }, [files, model.workspace]);
   const activeAssessment = assessments[activeIndex] ?? null;
   const readyAssessments = assessments.filter((assessment) => assessment.ready);
 
@@ -290,14 +296,16 @@ export default function ImportRepair() {
     setFiles((current) =>
       current.map((file) => {
         if (scope === 'active' && file.key !== activeKey) return file;
-        const suggested = Object.fromEntries(
-          file.plan.items
-            .filter((item) => item.kind === 'suggestion')
-            .map((item) => [item.path, item.suggested])
-        );
+        const suggestions = file.plan.items.filter((item) => item.kind === 'suggestion');
+        // Return the SAME object when there is nothing to apply: identity is what keeps this
+        // file's (expensive) assessment cached.
+        if (suggestions.length === 0) return file;
         return {
           ...file,
-          resolutions: { ...file.resolutions, ...suggested },
+          resolutions: {
+            ...file.resolutions,
+            ...Object.fromEntries(suggestions.map((item) => [item.path, item.suggested])),
+          },
         };
       })
     );
@@ -308,12 +316,12 @@ export default function ImportRepair() {
     const assessment = assessments[0];
     if (!assessment?.ready) return;
     const repairPlan = assessment.file.plan;
-    const isExisting = repairPlan.decision.kind === 'existing';
+    const existing = repairPlan.decision.kind === 'existing' ? repairPlan.decision : null;
     const subjectId =
       repairPlan.decision.kind === 'blocked' ? '' : repairPlan.decision.subjectId;
     const summary = applyImportPlan(assessment.importPlan, actions, {
       workspace: model.workspace,
-      resolutions: isExisting ? { [subjectId]: 'add' } : {},
+      resolutions: existing ? { [subjectId]: 'add' } : {},
       catalogAdditions: collectExistingAnimalCatalogAdditions(
         repairPlan,
         assessment.file.resolutions
@@ -324,14 +332,12 @@ export default function ImportRepair() {
     const animalId =
       summary.failed.length > 0
         ? ''
-        : isExisting
-          ? repairPlan.decision.kind === 'existing'
-            ? repairPlan.decision.existingAnimalId
-            : ''
+        : existing
+          ? existing.existingAnimalId
           : summary.createdAnimals[0] ?? subjectId;
     setResult({
       mode: 'single',
-      kind: isExisting ? 'add' : 'new',
+      kind: existing ? 'add' : 'new',
       animalIds: animalId ? [animalId] : [],
       // Only one file decoded, so everything else the user picked was unreadable.
       excluded: parseFailures,
@@ -361,10 +367,6 @@ export default function ImportRepair() {
         })),
       ...batchPlan.unimportable,
     ];
-    const seeded: Record<string, ConflictResolution> = {};
-    for (const animal of batchPlan.animals) {
-      if (animal.conflict === 'exists') seeded[animal.subjectId] = 'add';
-    }
     setPreview({
       plan: batchPlan,
       excluded,
@@ -373,7 +375,7 @@ export default function ImportRepair() {
         batchPlan.animals.flatMap(({ days }) => days.map((day) => day.sourceName))
       ),
     });
-    setConflictResolutions(seeded);
+    setConflictResolutions({});
     setPhase('preview');
   };
 
@@ -402,7 +404,7 @@ export default function ImportRepair() {
   if (phase === 'pick') {
     return (
       <PageFrame heading="Import metadata YAML">
-        <p className={styles.lede}>
+        <p className={pageShellLedeClass}>
           Select one recording day or a whole history. Files are grouped by animal and date so
           configuration changes can be reconstructed before anything is written.
         </p>
@@ -423,8 +425,7 @@ export default function ImportRepair() {
           </label>
           <input
             id="import-repair-file"
-            ref={inputRef}
-            className={styles.fileInput}
+            className="visually-hidden"
             type="file"
             multiple
             accept=".yml,.yaml"
@@ -448,10 +449,10 @@ export default function ImportRepair() {
         {failure && result.mode === 'single' ? (
           <p className={styles.parseError} role="alert">{failure}</p>
         ) : (
-          <p className={styles.lede}>
-            Imported {result.summary.createdDays.length} recording day
-            {result.summary.createdDays.length === 1 ? '' : 's'} across {result.animalIds.length}{' '}
-            animal{result.animalIds.length === 1 ? '' : 's'}.
+          <p className={pageShellLedeClass}>
+            Imported {result.summary.createdDays.length}{' '}
+            {pluralize(result.summary.createdDays.length, 'recording day')} across{' '}
+            {result.animalIds.length} {pluralize(result.animalIds.length, 'animal')}.
           </p>
         )}
         {result.animalIds.length > 0 && (
@@ -466,31 +467,24 @@ export default function ImportRepair() {
           </ul>
         )}
         {result.summary.failed.length > 0 && result.mode === 'batch' && (
-          <section className={styles.section} aria-label="Import failures">
-            <h2 className={styles.sectionHeading}>Could not import</h2>
-            <ul className={styles.blockerList}>
-              {result.summary.failed.map((item) => (
-                <li key={item.subjectId} role="alert">
-                  <strong>{item.subjectId}:</strong> {item.reason}
-                </li>
-              ))}
-            </ul>
-          </section>
+          <IssueList
+            label="Import failures"
+            heading="Could not import"
+            entries={result.summary.failed.map((item) => ({
+              subject: item.subjectId,
+              reason: item.reason,
+            }))}
+          />
         )}
         {result.excluded.length > 0 && (
-          <section className={styles.section} aria-label="Files not imported">
-            <h2 className={styles.sectionHeading}>
-              Not imported ({result.excluded.length} file
-              {result.excluded.length === 1 ? '' : 's'})
-            </h2>
-            <ul className={styles.blockerList}>
-              {result.excluded.map((entry, index) => (
-                <li key={`${entry.sourceName}-${index}`} role="alert">
-                  <strong>{entry.sourceName}:</strong> {entry.reason}
-                </li>
-              ))}
-            </ul>
-          </section>
+          <IssueList
+            label="Files not imported"
+            heading={`Not imported (${result.excluded.length} ${pluralize(result.excluded.length, 'file')})`}
+            entries={result.excluded.map((entry) => ({
+              subject: entry.sourceName,
+              reason: entry.reason,
+            }))}
+          />
         )}
         <div className={styles.actions}>
           <Button variant="secondary" onClick={reset}>Import more files</Button>
@@ -504,15 +498,15 @@ export default function ImportRepair() {
       <PageFrame heading="Review batch import">
         <section className={styles.batchSummary} aria-label="Batch import summary">
           <strong>
-            {preview.plan.summary.dayCount} recording day
-            {preview.plan.summary.dayCount === 1 ? '' : 's'} →{' '}
-            {preview.plan.summary.animalCount} animal
-            {preview.plan.summary.animalCount === 1 ? '' : 's'}
+            {preview.plan.summary.dayCount}{' '}
+            {pluralize(preview.plan.summary.dayCount, 'recording day')} →{' '}
+            {preview.plan.summary.animalCount}{' '}
+            {pluralize(preview.plan.summary.animalCount, 'animal')}
           </strong>
           <span>
             {preview.excluded.length === 0
               ? 'Every selected file is included.'
-              : `${preview.excluded.length} file${preview.excluded.length === 1 ? '' : 's'} will not be imported.`}
+              : `${preview.excluded.length} ${pluralize(preview.excluded.length, 'file')} will not be imported.`}
           </span>
         </section>
 
@@ -566,15 +560,9 @@ export default function ImportRepair() {
   const subjectId = plan.decision.kind === 'blocked' ? '' : plan.decision.subjectId;
   const singleImportLabel =
     plan.decision.kind === 'existing' ? 'Add recording day' : 'Import as new animal';
-  const activeSuggestionCount = attention.filter(
-    (item) => item.kind === 'suggestion' && !(item.path in current.resolutions)
-  ).length;
+  const activeSuggestionCount = unansweredSuggestions(current).length;
   const allSuggestionCount = files.reduce(
-    (count, file) =>
-      count +
-      file.plan.items.filter(
-        (item) => item.kind === 'suggestion' && !(item.path in file.resolutions)
-      ).length,
+    (count, file) => count + unansweredSuggestions(file).length,
     0
   );
   const outstandingCount = assessments.filter((assessment) => !assessment.ready).length;
@@ -582,18 +570,14 @@ export default function ImportRepair() {
   return (
     <PageFrame heading="Import metadata YAML">
       {parseFailures.length > 0 && (
-        <section className={styles.section} aria-label="Files that could not be read">
-          <h2 className={styles.sectionHeading}>
-            {parseFailures.length} file{parseFailures.length === 1 ? '' : 's'} could not be read
-          </h2>
-          <ul className={styles.blockerList}>
-            {parseFailures.map((entry, index) => (
-              <li key={`${entry.sourceName}-${index}`} role="alert">
-                <strong>{entry.sourceName}:</strong> {entry.reason}
-              </li>
-            ))}
-          </ul>
-        </section>
+        <IssueList
+          label="Files that could not be read"
+          heading={`${parseFailures.length} ${pluralize(parseFailures.length, 'file')} could not be read`}
+          entries={parseFailures.map((entry) => ({
+            subject: entry.sourceName,
+            reason: entry.reason,
+          }))}
+        />
       )}
       {files.length > 1 && (
         <section className={styles.batchToolbar} aria-label="Import batch status">
@@ -716,8 +700,8 @@ export default function ImportRepair() {
       {plan.benign.length > 0 && (
         <details className={styles.benign}>
           <summary>
-            Auto-normalized on import ({plan.benign.length} format-only change
-            {plan.benign.length === 1 ? '' : 's'})
+            Auto-normalized on import ({plan.benign.length}{' '}
+            {pluralize(plan.benign.length, 'format-only change')})
           </summary>
           <ul>
             {plan.benign.map((item) => (
@@ -745,13 +729,12 @@ export default function ImportRepair() {
         ) : (
           <>
             <Button disabled={readyAssessments.length === 0} onClick={openBatchPreview}>
-              Review {readyAssessments.length} ready file
-              {readyAssessments.length === 1 ? '' : 's'}
+              Review {readyAssessments.length} ready {pluralize(readyAssessments.length, 'file')}
             </Button>
             {outstandingCount + parseFailures.length > 0 && (
               <span className={styles.blockerHint} role="status">
-                {outstandingCount + parseFailures.length} file
-                {outstandingCount + parseFailures.length === 1 ? '' : 's'} will stay out until repaired.
+                {outstandingCount + parseFailures.length}{' '}
+                {pluralize(outstandingCount + parseFailures.length, 'file')} will stay out until repaired.
               </span>
             )}
           </>
@@ -771,19 +754,38 @@ interface PageFrameProps {
 
 /** Shared page shell for every phase. */
 function PageFrame({ heading, result = false, children }: PageFrameProps) {
-  const headingId = result ? 'import-result-heading' : 'import-heading';
   return (
-    <main id="main-content" tabIndex={-1} role="main" aria-labelledby={headingId}>
-      <section className={styles.screen} aria-label={result ? 'Import complete' : undefined}>
-        {!result && (
-          <nav className={styles.crumb} aria-label="Breadcrumb">
-            <a href="#/workspace">Animals</a> › Import
-          </nav>
-        )}
-        <h1 id={headingId} className={styles.heading}>{heading}</h1>
-        {children}
-      </section>
-    </main>
+    <PageShell
+      headingId={result ? 'import-result-heading' : 'import-heading'}
+      heading={heading}
+      crumb={result ? undefined : 'Import'}
+      regionLabel={result ? 'Import complete' : undefined}
+      maxWidth={960}
+    >
+      {children}
+    </PageShell>
+  );
+}
+
+interface IssueListProps {
+  label: string;
+  heading: ReactNode;
+  entries: Array<{ subject: string; reason: string }>;
+}
+
+/** A labelled list of things that could not be imported, one row per subject. */
+function IssueList({ label, heading, entries }: IssueListProps) {
+  return (
+    <section className={styles.section} aria-label={label}>
+      <h2 className={styles.sectionHeading}>{heading}</h2>
+      <ul className={styles.blockerList}>
+        {entries.map((entry, index) => (
+          <li key={`${entry.subject}-${index}`} role="alert">
+            <strong>{entry.subject}:</strong> {entry.reason}
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }
 
@@ -888,17 +890,16 @@ function AnimalPreviewCard({ animal, resolution, onResolution }: AnimalPreviewCa
     <section className={styles.animalCard} aria-labelledby={`preview-animal-${animal.subjectId}`}>
       <h2 id={`preview-animal-${animal.subjectId}`}>{animal.subjectId}</h2>
       <p>
-        {animal.days.length} recording day{animal.days.length === 1 ? '' : 's'} ·{' '}
-        {animal.configVersions.length} hardware configuration
-        {animal.configVersions.length === 1 ? '' : 's'}
+        {animal.days.length} {pluralize(animal.days.length, 'recording day')} ·{' '}
+        {animal.configVersions.length}{' '}
+        {pluralize(animal.configVersions.length, 'hardware configuration')}
       </p>
       {animal.configVersions.length > 0 && (
         <ul className={styles.configList}>
           {animal.configVersions.map((configuration) => (
             <li key={configuration.version}>
               Configuration {configuration.version}, from {configuration.date} —{' '}
-              {configuration.dayDates.length} day
-              {configuration.dayDates.length === 1 ? '' : 's'}
+              {configuration.dayDates.length} {pluralize(configuration.dayDates.length, 'day')}
             </li>
           ))}
         </ul>

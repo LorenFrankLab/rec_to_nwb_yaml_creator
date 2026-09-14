@@ -1,27 +1,3 @@
-.screen {
-  max-width: 960px;
-  margin: var(--spacing-lg) auto;
-  padding: 0 var(--spacing-lg);
-}
-
-.crumb {
-  font-size: var(--font-size-sm);
-  color: var(--color-ink-muted);
-  margin-bottom: var(--spacing-sm);
-}
-
-.heading {
-  font-size: var(--font-size-xl);
-  margin: 0 0 var(--spacing-xs);
-}
-
-.lede {
-  color: var(--color-ink-muted);
-  font-size: var(--font-size-sm);
-  margin: 0 0 var(--spacing-lg);
-  max-width: 620px;
-}
-
 .parseError {
   color: var(--color-error);
   background: var(--color-error-light);
@@ -60,16 +36,6 @@
   padding: 0;
 }
 
-.fileLabel {
-  display: block;
-  font-weight: 600;
-  margin-bottom: var(--spacing-sm);
-}
-
-.fileInput {
-  display: block;
-}
-
 .dropZone {
   display: grid;
   justify-items: center;
@@ -98,28 +64,19 @@
   font-size: var(--font-size-sm);
 }
 
-.dropZone .fileLabel {
+/* The label IS the affordance: the file input itself is visually hidden (global `.visually-hidden`)
+   so clicking the label opens the picker, keeping the native label→input association. */
+.fileLabel {
   display: inline-flex;
   min-height: 44px;
   align-items: center;
   padding: 0.5rem 1rem;
   margin: 0;
+  font-weight: 600;
   border-radius: var(--radius-sm);
   background: var(--color-primary);
   color: var(--color-white);
   cursor: pointer;
-}
-
-.dropZone .fileInput {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border: 0;
 }
 
 .decision {
@@ -419,10 +376,6 @@
 }
 
 @media (max-width: 640px) {
-  .screen {
-    padding: 0 var(--spacing-sm);
-  }
-
   .batchControls {
     grid-template-columns: 1fr;
   }
