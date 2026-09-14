@@ -27,6 +27,7 @@ import Button from '../../components/ui/Button';
 import ConfirmDialog from '../../components/Modal/ConfirmDialog';
 import { useUndoToast } from '../../components/ui/UndoToast';
 import styles from './RecoveryReview.module.css';
+import PageShell from '../../components/PageShell';
 
 /**
  * The toast confirmation announced after a repair runs, worded per recovery class. There is no Undo
@@ -110,32 +111,25 @@ export function RecoveryReview() {
   const recoveredLoad = vm.loadOutcome === 'recovered';
 
   return (
-    <main
-      id="main-content"
-      tabIndex={-1}
-      role="main"
-      aria-labelledby="recovery-heading"
-      className={styles.screen}
+    <PageShell
+      headingId="recovery-heading"
+      heading="Review recovered data"
+      crumb="Review recovered data"
+      lede={
+        discardedLoad ? (
+          <>
+            When the workspace loaded, the saved data <strong>could not be restored and was discarded</strong>.
+            The app started with an empty workspace, so there may be no recovered records to review.
+          </>
+        ) : (
+          <>
+            When the workspace loaded, some saved records didn&apos;t fit the current shape.{' '}
+            <strong>Nothing was discarded</strong> — resolve each below. Affected items can&apos;t export
+            until they&apos;re sorted.
+          </>
+        )
+      }
     >
-      <p className={styles.crumb}>
-        <a href="#/workspace">Animals</a> › Review recovered data
-      </p>
-      <h1 id="recovery-heading" className={styles.heading}>
-        Review recovered data
-      </h1>
-      {discardedLoad ? (
-        <p className={styles.lede}>
-          When the workspace loaded, the saved data <strong>could not be restored and was discarded</strong>.
-          The app started with an empty workspace, so there may be no recovered records to review.
-        </p>
-      ) : (
-        <p className={styles.lede}>
-          When the workspace loaded, some saved records didn&apos;t fit the current shape.{' '}
-          <strong>Nothing was discarded</strong> — resolve each below. Affected items can&apos;t export
-          until they&apos;re sorted.
-        </p>
-      )}
-
       {vm.notice && (
         <div className={styles.noticeCard} role="status">
           <span aria-hidden="true">✓</span>
@@ -223,7 +217,7 @@ export function RecoveryReview() {
       />
 
       {toast.node}
-    </main>
+    </PageShell>
   );
 }
 

@@ -26,7 +26,10 @@ import {
 } from '../../state/workspaceSelectors';
 import type { Animal, OptogeneticsConfig } from '../../state/workspaceTypes';
 import Button from '../../components/ui/Button';
+import { optoFieldsPresence } from '../../domain/optoCompleteness';
+import type { OptoFields } from '../../domain/optoCompleteness';
 import styles from './CopyFromAnimal.module.css';
+import PageShell from '../../components/PageShell';
 
 /** The copyable setup sections, in display order. */
 const SECTIONS = ['probes', 'cameras', 'recording-system', 'task-types', 'optogenetics'] as const;
@@ -41,18 +44,10 @@ const SECTION_LABELS: Record<Section, string> = {
   optogenetics: 'Optogenetics',
 };
 
-/** Whether an animal carries non-empty optogenetics setup (read raw — no selector owns it). */
+/** Whether an animal carries any optogenetics setup — the app's ONE definition of "present". */
 function hasOpto(animal: unknown): boolean {
   const opto = (animal as { optogenetics?: unknown } | null)?.optogenetics;
-  if (!opto || typeof opto !== 'object') return false;
-  const o = opto as Record<string, unknown>;
-  const nonEmpty = (k: string) => Array.isArray(o[k]) && (o[k] as unknown[]).length > 0;
-  return (
-    nonEmpty('opto_excitation_source') ||
-    nonEmpty('optical_fiber') ||
-    nonEmpty('virus_injection') ||
-    (typeof o.optogenetic_stimulation_software === 'string' && o.optogenetic_stimulation_software.trim() !== '')
-  );
+  return optoFieldsPresence(opto && typeof opto === 'object' ? (opto as OptoFields) : null).count > 0;
 }
 
 /**
@@ -171,16 +166,13 @@ export default function CopyFromAnimal() {
   };
 
   return (
-    <main id="main-content" tabIndex={-1} role="main" aria-labelledby="copy-heading">
-      <div className={styles.screen}>
-        <nav className={styles.crumb} aria-label="Breadcrumb">
-          <a href="#/workspace">Animals</a> › New animal › Copy from another animal
-        </nav>
-        <h1 id="copy-heading" className={styles.heading}>Copy setup from another animal</h1>
-        <p className={styles.lede}>
-          Reuse a same-rig animal&apos;s hardware setup, then tweak. The new animal gets its own
-          identity — only the setup is copied.
-        </p>
+    <PageShell
+      headingId="copy-heading"
+      heading="Copy setup from another animal"
+      crumb="New animal › Copy from another animal"
+      lede="Reuse a same-rig animal's hardware setup, then tweak. The new animal gets its own identity — only the setup is copied."
+      maxWidth={760}
+    >
 
         {sources.length === 0 ? (
           <p className={styles.empty}>No other animals have a setup to copy from yet.</p>
@@ -264,7 +256,6 @@ export default function CopyFromAnimal() {
             </div>
           </>
         )}
-      </div>
-    </main>
+    </PageShell>
   );
 }

@@ -3,34 +3,6 @@
  * uses the shared z-index scale. Scoped via CSS Modules so class names can't collide app-wide.
  */
 
-.wizard {
-  max-width: 860px;
-  margin: var(--spacing-lg) auto;
-  padding: 0 var(--spacing-lg);
-}
-
-.crumb {
-  font-size: var(--font-size-sm);
-  color: var(--color-grey-600);
-  margin-bottom: var(--spacing-sm);
-}
-
-.crumb a {
-  color: var(--color-grey-600);
-}
-
-.heading {
-  font-size: var(--font-size-xl);
-  margin: 0 0 var(--spacing-xs);
-}
-
-.lede {
-  color: var(--color-grey-700);
-  font-size: var(--font-size-sm);
-  margin: 0 0 var(--spacing-md);
-  max-width: 640px;
-}
-
 .startOptions {
   font-size: var(--font-size-sm);
   color: var(--color-grey-700);

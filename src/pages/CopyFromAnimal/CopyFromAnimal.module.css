@@ -1,27 +1,3 @@
-.screen {
-  max-width: 760px;
-  margin: var(--spacing-lg) auto;
-  padding: 0 var(--spacing-lg);
-}
-
-.crumb {
-  font-size: var(--font-size-sm);
-  color: var(--color-ink-muted);
-  margin-bottom: var(--spacing-sm);
-}
-
-.heading {
-  font-size: var(--font-size-xl);
-  margin: 0 0 var(--spacing-xs);
-}
-
-.lede {
-  color: var(--color-ink-muted);
-  font-size: var(--font-size-sm);
-  margin: 0 0 var(--spacing-lg);
-  max-width: 620px;
-}
-
 .empty {
   color: var(--color-ink-muted);
 }

@@ -1,0 +1,36 @@
+/* The shell every secondary workspace page (import, copy-from, recovery, create wizard) sits in:
+   a centred, width-capped column with the Animals › … breadcrumb, the page heading and its lede.
+   One module so the four pages cannot drift apart (they had — one crumb colour differed). */
+
+.screen {
+  margin: var(--spacing-lg) auto;
+  padding: 0 var(--spacing-lg);
+}
+
+.crumb {
+  font-size: var(--font-size-sm);
+  color: var(--color-ink-muted);
+  margin-bottom: var(--spacing-sm);
+}
+
+.crumb a {
+  color: var(--color-ink-muted);
+}
+
+.heading {
+  font-size: var(--font-size-xl);
+  margin: 0 0 var(--spacing-xs);
+}
+
+.lede {
+  color: var(--color-ink-muted);
+  font-size: var(--font-size-sm);
+  margin: 0 0 var(--spacing-lg);
+  max-width: 640px;
+}
+
+@media (max-width: 640px) {
+  .screen {
+    padding: 0 var(--spacing-sm);
+  }
+}

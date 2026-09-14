@@ -44,6 +44,7 @@ import TaskTypesContainer from '../AnimalEditor/wiring/TaskTypesContainer';
 import RecordingSystemContainer from '../AnimalEditor/wiring/RecordingSystemContainer';
 import { useAnimalFieldUpdate } from '../AnimalEditor/wiring/useAnimalFieldUpdate';
 import styles from './CreateAnimalWizard.module.css';
+import PageShell from '../../components/PageShell';
 
 /** The species options offered in step 1 (a Latin binomial each, plus the custom escape). */
 const SPECIES_OPTIONS = [
@@ -557,18 +558,13 @@ export default function CreateAnimalWizard() {
   };
 
   return (
-    <main id="main-content" tabIndex={-1} role="main" aria-labelledby="wizard-heading">
-      <div className={styles.wizard}>
-        <nav className={styles.crumb} aria-label="Breadcrumb">
-          <a href="#/workspace">Animals</a> › New animal
-        </nav>
-        <h1 id="wizard-heading" className={styles.heading}>
-          New animal — guided setup
-        </h1>
-        <p className={styles.lede}>
-          Enter once what stays the same for this animal across every recording day. Recording days
-          reuse all of this; you&apos;ll only revisit it on a re-implant.
-        </p>
+    <PageShell
+      headingId="wizard-heading"
+      heading="New animal — guided setup"
+      crumb="New animal"
+      lede="Enter once what stays the same for this animal across every recording day. Recording days reuse all of this; you'll only revisit it on a re-implant."
+      maxWidth={860}
+    >
         <p className={styles.startOptions}>
           Starting fresh below, or{' '}
           <a href="#/import">Import a YAML…</a> ·{' '}
@@ -900,7 +896,6 @@ export default function CreateAnimalWizard() {
             </Button>
           </div>
         </div>
-      </div>
-    </main>
+    </PageShell>
   );
 }
