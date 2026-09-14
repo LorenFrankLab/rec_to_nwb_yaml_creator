@@ -32,6 +32,7 @@
 
 import { generateDayId } from './workspaceUtils';
 import { getAnimalCameras, getDataAcqDevices } from './workspaceSelectors';
+import { materializePlanDay } from './yamlImportPlan';
 import type { ImportPlan, ImportPlanAnimal, ImportPlanDay } from './yamlImportPlan';
 import { referencedCameraRefs } from './cameraUsage';
 
@@ -168,7 +169,7 @@ function preflightExistingAnimalCatalogRefs(
   const cameraIds = cameras.map((camera) => (camera as { id?: unknown }).id);
   const deviceNames = devices.map((device) => (device as { name?: unknown }).name);
   for (const day of animalPlan.days) {
-    const missingCamera = dayCameraRefs(day).find(
+    const missingCamera = dayCameraRefs(materializePlanDay(day, 'add')).find(
       (cameraId) => !cameraIds.some((existing) => sameRefValue(existing, cameraId))
     );
     if (missingCamera !== undefined) {
@@ -410,7 +411,7 @@ function applyNewAnimal(
 
   // Write each day's day-owned content (createDay only takes a session).
   for (const day of animalPlan.days) {
-    actions.updateDay(generateDayId(subjectId, day.date), dayOwnedUpdates(day));
+    actions.updateDay(generateDayId(subjectId, day.date), dayOwnedUpdates(materializePlanDay(day, 'create')));
   }
 }
 
@@ -476,7 +477,7 @@ function applyAddToExistingAnimal(
     );
   }
   for (const day of animalPlan.days) {
-    actions.updateDay(generateDayId(targetId, day.date), dayOwnedUpdates(day));
+    actions.updateDay(generateDayId(targetId, day.date), dayOwnedUpdates(materializePlanDay(day, 'add')));
   }
 }
 

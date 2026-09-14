@@ -344,6 +344,56 @@ describe('applyImportPlan — conflict resolutions', () => {
     expect(remy.devices.data_acq_device.map((d) => d.name)).toEqual(['MCU']);
   });
 
+  it("'replace' keeps two DIFFERENT imported cameras that share the old id, each day on its own", () => {
+    // Both ready files declare camera 0 — as "replacement_arena_a" and "replacement_arena_b". Under
+    // 'add' both are references to existing camera 0; under 'replace' the files are self-describing
+    // and these are two cameras: the second gets its own id and day 2's videos follow it.
+    const { result } = renderHook(() => useStore());
+    act(() => {
+      result.current.actions.createAnimal('remy', { subject_id: 'remy' }, {
+        cameras: [{ id: 0, camera_name: 'old_overhead', meters_per_pixel: 0.00085 }],
+        devices: {
+          data_acq_device: [
+            { name: 'SpikeGadgets', system: 'SpikeGadgets', amplifier: 'Intan', adc_circuit: 'Intan' },
+          ],
+          device: { name: ['Trodes'] },
+          electrode_groups: [],
+          ntrode_electrode_group_channel_map: [],
+        },
+      });
+    });
+    const declaringCamera0 = (name) => (animal, day) => {
+      animal.cameras = [{ ...animal.cameras[0], id: 0, camera_name: name }];
+      day.tasks = day.tasks.map((t) => ({ ...t, camera_id: [0] }));
+      day.associated_video_files = [{ name: `video_${name}`, camera_id: 0, task_epochs: 2 }];
+      day.cameras_used = [0];
+    };
+    const plan = planImport(
+      [
+        makeFile({ subjectId: 'remy', date: '2023-06-22', mutateConfig: declaringCamera0('replacement_arena_a') }),
+        makeFile({ subjectId: 'remy', date: '2023-06-23', mutateConfig: declaringCamera0('replacement_arena_b') }),
+      ],
+      result.current.model.workspace
+    );
+
+    let summary;
+    act(() => {
+      summary = applyImportPlan(plan, result.current.actions, {
+        workspace: result.current.model.workspace,
+        resolutions: { remy: 'replace' },
+      });
+    });
+
+    expect(summary.failed).toEqual([]);
+    const { workspace } = result.current.model;
+    const cameras = workspace.animals.remy.cameras;
+    expect(cameras.map((c) => c.camera_name)).toEqual(['replacement_arena_a', 'replacement_arena_b']);
+    const [a, b] = cameras;
+    expect(a.id).not.toBe(b.id);
+    expect(workspace.days['remy-2023-06-22'].associated_video_files[0].camera_id).toBe(a.id);
+    expect(workspace.days['remy-2023-06-23'].associated_video_files[0].camera_id).toBe(b.id);
+  });
+
   it("replace onto an animal with EMPTY config history pins each day to the RIGHT version (no duplicate v1)", () => {
     // Regression (config-version race): the snapshot action reserved the next version from the
     // STALE pre-delete animal. When that old animal's history was empty/malformed,

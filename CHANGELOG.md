@@ -269,9 +269,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   row's name), a brought camera gets an id free in existing ∪ additions, and the executor adds
   exactly the rows the plan allocated (`ImportPlanAnimal.catalogAdditions`) — the same catalog the
   references were remapped against, so a saved reference can never point past what was saved.
-  "Replace" recreates the animal from the **imported** catalogs under those same ids — a
-  re-declared camera keeps the file's calibration and name, a re-declared recording system the
-  file's fields, and rows the files never mention are not carried over from the old animal.
+  "Replace" recreates the animal from the **imported** catalogs with the files treated as
+  self-describing — a re-declared camera keeps the file's calibration and name, two files' "id 0"
+  under different names are two cameras (each day's videos follow its own), a re-declared
+  recording system keeps the file's fields, and rows the files never mention are not carried over.
+  Because Add and Replace answer "which camera is id 0" differently, a planned day carries both
+  remaps and the executor applies the one for the chosen resolution. Two files that name the
+  animal's own recording system but disagree on its fields are flagged as a divergence again
+  (a shortcut had skipped the comparison for existing names).
 - **A duplicate filename can no longer drop a retained file's catalog entries.** Accepted catalog
   additions were matched back to the retained days by basename; with an excluded duplicate ahead of
   a retained file of the same name, the duplicate consumed the slot and the retained day's camera was
