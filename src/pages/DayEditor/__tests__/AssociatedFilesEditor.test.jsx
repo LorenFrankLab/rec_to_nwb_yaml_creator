@@ -1,7 +1,7 @@
 /**
  * AssociatedFilesEditor — the repair surface for the `orphaned_file` validation
  * error, which routes to the Epochs step but previously had no editing UI (a
- * dead-end that blocked export). Mirrors AssociatedVideosEditor's controlled-ref
+ * dead-end that blocked export). Controlled-ref
  * contract: task_epochs is a SCALAR chosen from the day's task epochs; a loaded
  * stale epoch is surfaced as a visible "Missing epoch N" option, flagged via
  * role="alert", and is repairable by re-pointing it. Writes flow through onChange.

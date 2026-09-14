@@ -555,8 +555,8 @@ export interface AssociatedVideoFile {
 }
 
 /**
- * FsGUI YAML (per-day optogenetics protocol) configuration. Matches the schema's `fs_gui_yamls` items
- * (and `FsGuiSection`'s editor shape): a protocol applies to a set of task `epochs` and carries the
+ * FsGUI YAML (per-day optogenetics protocol) configuration. Matches the schema's `fs_gui_yamls` items:
+ * a protocol applies to a set of task `epochs` and carries the
  * stimulation parameters. (The earlier `path`/`task_epochs` fields were never emitted or read — the
  * schema field is the `epochs` array.)
  */

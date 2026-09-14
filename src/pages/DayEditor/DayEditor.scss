@@ -9,53 +9,6 @@
   flex-direction: column;
 }
 
-.day-editor-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: var(--spacing-md) var(--spacing-lg);
-  background-color: var(--color-white);
-  border-bottom: 1px solid var(--color-grey-200);
-}
-
-.day-editor-title {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-md);
-}
-
-.back-button {
-  display: inline-flex;
-  align-items: center;
-  min-height: 44px; /* WCAG target size */
-  padding: var(--spacing-xs) var(--spacing-sm);
-  font-size: var(--font-size-sm);
-  font-weight: 500;
-  color: var(--color-primary);
-  background-color: transparent;
-  border: 1px solid var(--color-primary);
-  border-radius: 4px;
-  text-decoration: none;
-  transition: background-color 0.2s, color 0.2s;
-  white-space: nowrap;
-}
-
-.back-button:hover {
-  background-color: var(--color-primary);
-  color: var(--color-white);
-}
-
-.back-button:focus {
-  outline: 2px solid var(--color-primary);
-  outline-offset: 2px;
-}
-
-.day-editor-header h1 {
-  font-size: var(--font-size-xl);
-  margin: 0;
-  color: var(--color-grey-900);
-}
-
 .day-editor-content {
   flex: 1;
   padding: var(--spacing-lg);
@@ -189,35 +142,6 @@
 
 .day-editor-body .section-nav-item.step-error .section-nav-status-icon {
   color: var(--color-error);
-}
-
-/* Free-navigation pager below the panel. */
-.day-editor-section-pager {
-  display: flex;
-  justify-content: space-between;
-  gap: var(--spacing-md);
-  margin-top: var(--spacing-lg);
-}
-
-.day-editor-pager-prev,
-.day-editor-pager-next {
-  padding: var(--spacing-sm) var(--spacing-md);
-  font-family: inherit;
-  cursor: pointer;
-}
-
-.day-editor-pager-prev:disabled,
-.day-editor-pager-next:disabled {
-  /* Use an explicit muted color (≥3:1 against the button face) instead of opacity:0.5, which
-     dropped the text to ~2:1 on the grey button. Still reads as disabled. */
-  color: var(--color-grey-600);
-  background-color: var(--color-grey-100);
-  border-color: var(--color-grey-300);
-  cursor: not-allowed;
-}
-
-.day-editor-pager-next {
-  margin-left: auto;
 }
 
 /* SaveIndicator styles moved to the colocated CSS Module
@@ -428,15 +352,6 @@
   min-height: 1.25rem;
 }
 
-.validation-loading {
-  font-size: var(--font-size-sm);
-  color: var(--color-primary);
-  margin-top: var(--spacing-xs);
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-xs);
-}
-
 .validation-error {
   font-size: var(--font-size-sm);
   color: var(--color-error);
@@ -450,20 +365,6 @@
 .validation-error::before {
   content: '✗';
   flex-shrink: 0;
-}
-
-/* ===== Screen Reader Only ===== */
-
-.sr-only {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border-width: 0;
 }
 
 /* ===== Error State ===== */
@@ -533,12 +434,6 @@
   outline-offset: 2px;
 }
 
-.toggle-icon {
-  font-size: 0.75rem;
-  color: var(--color-grey-600);
-  transition: transform var(--transition-fast);
-}
-
 .inherited-metadata-badge {
   margin-left: auto;
   padding: var(--spacing-xs) var(--spacing-sm);
@@ -557,21 +452,6 @@
   background-color: var(--color-grey-100);
   border: 1px solid var(--color-grey-200);
   border-radius: 4px;
-}
-
-.inherited-section {
-  margin-bottom: var(--spacing-lg);
-}
-
-.inherited-section:last-child {
-  margin-bottom: 0;
-}
-
-.inherited-section h3 {
-  font-size: var(--font-size-lg);
-  margin-top: 0;
-  margin-bottom: var(--spacing-sm);
-  color: var(--color-grey-800);
 }
 
 .field-help-text {
@@ -1000,38 +880,6 @@
   color: var(--color-grey-900);
 }
 
-/* Bad Channels Checkboxes */
-.bad-channels-checkboxes {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--spacing-md);
-  margin-top: var(--spacing-sm);
-}
-
-.checkbox-item {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-xs);
-  position: relative;
-  z-index: 1;
-}
-
-.checkbox-item input[type="checkbox"] {
-  width: 18px;
-  height: 18px;
-  cursor: pointer;
-  position: relative;
-  z-index: 2;
-}
-
-.checkbox-item label {
-  cursor: pointer;
-  font-size: var(--font-size-base);
-  color: var(--color-grey-900);
-  position: relative;
-  z-index: 2;
-}
-
 /* Channel Map Reference */
 .channel-map-reference {
   margin-top: var(--spacing-md);
@@ -1198,10 +1046,6 @@
       margin: 1rem 0;
       font-style: italic;
     }
-
-    .button-primary {
-      margin-top: 1rem;
-    }
   }
 }
 
@@ -1216,11 +1060,6 @@
   border: 1px solid #ccc;
   border-radius: 4px;
   background: white;
-
-  /* CRITICAL: Ensure details element doesn't block child content */
-  position: relative;
-  z-index: 1;
-  pointer-events: auto;
 
   &[open] {
     .toggle-icon {
@@ -1238,11 +1077,6 @@
   background: #f9f9f9;
   border-bottom: 1px solid #e0e0e0;
   user-select: none;
-
-  /* CRITICAL: Summary should not block content below */
-  position: relative;
-  z-index: 2;
-  pointer-events: auto;
 
   &:hover {
     background: #f0f0f0;
@@ -1293,11 +1127,6 @@
 
 .electrode-group-content {
   padding: 1.5rem;
-
-  /* CRITICAL: Content area must allow interaction */
-  position: relative;
-  z-index: 10;
-  pointer-events: auto;
 
   .electrode-group-header {
     margin-bottom: 1.5rem;
@@ -1409,14 +1238,12 @@
     }
   }
 
-  /* Checkbox grid - ensure interactive */
+  /* The failed-channel checkbox grid. The ONE definition (scoped to this editor). */
   .bad-channels-checkboxes {
     display: flex;
     flex-wrap: wrap;
     gap: 0.5rem;
-    position: relative;
-    z-index: 10;
-    pointer-events: auto !important;
+    margin-top: var(--spacing-sm);
   }
 
   .checkbox-item {
@@ -1427,9 +1254,6 @@
     border: 2px solid #ccc;
     border-radius: 4px;
     background: white;
-    position: relative;
-    z-index: 10;
-    pointer-events: auto !important;
     cursor: pointer;
     transition: border-color 0.2s;
 
@@ -1438,9 +1262,6 @@
     }
 
     input[type='checkbox'] {
-      position: relative;
-      z-index: 100;
-      pointer-events: auto !important;
       cursor: pointer;
       margin: 0;
       width: 16px;
@@ -1453,9 +1274,6 @@
     }
 
     label {
-      position: relative;
-      z-index: 10;
-      pointer-events: auto !important;
       cursor: pointer;
       margin: 0;
       font-size: 0.9rem;
@@ -1541,220 +1359,6 @@
 
     tbody tr:last-child td {
       border-bottom: none;
-    }
-  }
-}
-
-/* ===========================================================================
-   Validation step
-   =========================================================================== */
-.validation-step {
-  .validation-summary-counts {
-    color: #555;
-    font-weight: 600;
-  }
-
-  .validation-readiness {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.625rem 0.875rem;
-    border-radius: 4px;
-    border-left: 4px solid transparent;
-    font-weight: 600;
-
-    &.validation-readiness-ready {
-      background: #e8f5e9;
-      color: #2e7d32;
-      border-left-color: #2e7d32;
-    }
-
-    &.validation-readiness-blocked {
-      background: #ffebee;
-      color: #c62828;
-      border-left-color: #c62828;
-    }
-  }
-
-  .validation-group {
-    margin-top: 1.25rem;
-    padding-left: 0.875rem;
-    border-left: 4px solid #bdbdbd;
-
-    h3 {
-      margin: 0 0 0.5rem;
-    }
-
-    &.validation-group-error {
-      border-left-color: #c62828;
-      h3 { color: #c62828; }
-    }
-
-    &.validation-group-warning {
-      border-left-color: #f57c00;
-      h3 { color: #f57c00; }
-    }
-
-    &.validation-group-info {
-      border-left-color: var(--color-primary);
-      h3 { color: #1976d2; }
-    }
-  }
-
-  .validation-step-group {
-    margin: 0.5rem 0 0.75rem;
-
-    h4 {
-      margin: 0 0 0.25rem;
-      font-size: 0.875rem;
-      color: #555;
-    }
-
-    ul { margin: 0; padding-left: 1.25rem; }
-  }
-
-  .validation-issue {
-    margin-bottom: 0.25rem;
-
-    .validation-issue-path {
-      margin-left: 0.5rem;
-      padding: 0.05rem 0.35rem;
-      background: #f5f5f5;
-      border-radius: 3px;
-      font-size: 0.8125rem;
-      color: #666;
-    }
-  }
-}
-
-/* ===========================================================================
-   Export step
-   =========================================================================== */
-.export-step {
-  .export-filename {
-    padding: 0.1rem 0.4rem;
-    background: #f5f5f5;
-    border-radius: 3px;
-    font-size: 0.9375rem;
-  }
-
-  // Shared-vocabulary lifecycle status line (Ready to export / Validated / Exported) — quiet,
-  // since the primary task here is the download action.
-  .export-lifecycle-status {
-    margin: 0.25rem 0 0.75rem;
-    color: var(--color-grey-700);
-    font-size: 0.9375rem;
-  }
-
-  .export-actions {
-    display: flex;
-    gap: 0.75rem;
-    margin: 1rem 0;
-  }
-
-  .export-download-button {
-    padding: 0.55rem 1.1rem;
-    background: var(--color-primary);
-    color: #fff;
-    border: none;
-    border-radius: 4px;
-    font-weight: 600;
-    cursor: pointer;
-
-    &:hover { background: #1976d2; }
-    &:disabled { background: #bdbdbd; cursor: not-allowed; }
-    &:focus-visible { outline: 2px solid #1976d2; outline-offset: 2px; }
-  }
-
-  .export-preview-toggle,
-  .export-retry-button {
-    padding: 0.55rem 1.1rem;
-    background: #f5f5f5;
-    color: #333;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    cursor: pointer;
-
-    &:hover { background: #eee; }
-    &:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
-  }
-
-  .export-success {
-    color: #2e7d32;
-    font-weight: 600;
-  }
-
-  .export-blocking-error,
-  .export-override-warning {
-    margin: 1rem 0;
-    padding: 0.75rem 0.875rem;
-    border-radius: 4px;
-    border-left: 4px solid transparent;
-  }
-
-  .export-blocking-error {
-    background: #ffebee;
-    border-left-color: #c62828;
-    color: #c62828;
-  }
-
-  .export-override-warning {
-    background: #fff3e0;
-    border-left-color: #f57c00;
-    color: #e65100;
-  }
-
-  .export-diff,
-  .export-preview {
-    margin: 0.5rem 0 0;
-    padding: 0.625rem;
-    background: #fafafa;
-    border: 1px solid #e0e0e0;
-    border-radius: 4px;
-    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-    font-size: 0.8125rem;
-    overflow: auto;
-    white-space: pre;
-  }
-
-  .export-preview { max-height: 30rem; }
-  .export-diff { max-height: 12rem; }
-
-  .export-validation-blocked {
-    margin: 1rem 0;
-    padding: 0.75rem 0.875rem;
-    background: #ffebee;
-    border-left: 4px solid #c62828;
-    border-radius: 4px;
-
-    .export-validation-blocked-reason {
-      margin: 0 0 0.5rem;
-      font-weight: 600;
-      color: #c62828;
-    }
-  }
-
-  .export-preflight {
-    margin: 1rem 0;
-    padding: 0.875rem 1rem;
-    background: #f4f8fb;
-    border: 1px solid #d6e4ef;
-    border-radius: 4px;
-
-    h3 { margin: 0 0 0.625rem; font-size: 1rem; }
-
-    .export-preflight-list {
-      margin: 0;
-      display: grid;
-      grid-template-columns: max-content 1fr;
-      gap: 0.35rem 1rem;
-    }
-
-    .export-preflight-row {
-      display: contents;
-
-      dt { font-weight: 600; color: #37474f; }
-      dd { margin: 0; color: #263238; }
     }
   }
 }

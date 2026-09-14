@@ -28,7 +28,7 @@ const SUPPLEMENTAL_FILE_PRESETS: Array<{ key: SupplementalFilePreset; label: str
  * The associated-files editor offers ONLY these as epoch options so a file can
  * never reference an epoch the day's tasks do not define — the controlled-ref
  * contract that keeps the export from carrying a dangling `task_epochs` (the
- * `orphaned_file` validation error). This mirrors AssociatedVideosEditor.
+ * `orphaned_file` validation error).
  */
 function collectValidEpochs(tasks: unknown): number[] {
   const seen = new Set<number>();
@@ -112,7 +112,7 @@ interface AssociatedFilesEditorProps {
  * associated_files. Without it the error was a dead-end that blocked export with no
  * fixable UI.
  *
- * Controlled-reference contract (mirrors AssociatedVideosEditor): each row's
+ * Controlled-reference contract: each row's
  * `task_epochs` is a SCALAR chosen from the day's task epochs (a `<select>`). There
  * is no manual numeric entry — the normal path can only ever produce an epoch that
  * exists. A row loaded with a stale epoch (no longer present in any task) renders a
