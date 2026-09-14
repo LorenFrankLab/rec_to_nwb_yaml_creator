@@ -132,27 +132,27 @@
 
 /* Live-valid but not yet saved as validated: "Ready to export". Outline-blue (light bg). */
 .table :global(.status-chip--ready) {
-  background-color: var(--color-primary-light);
-  color: var(--color-primary); /* 5.03:1 on primary-light (AA) */
+  background-color: var(--color-lifecycle-ready-bg);
+  color: var(--color-lifecycle-ready); /* 5.03:1 on primary-light (AA) */
 }
 
 /* Persisted validation saved (and still live-valid): "Validated". Green, distinct from ready. */
 .table :global(.status-chip--validated),
 .table :global(.status-chip--valid) {
-  background-color: var(--color-success-light);
-  color: var(--color-success); /* 4.56:1 on success-light (AA) */
+  background-color: var(--color-lifecycle-validated-bg);
+  color: var(--color-lifecycle-validated); /* 4.56:1 on success-light (AA) */
 }
 
 /* Exported (downloaded at least once, still live-valid): solid blue — the committed/terminal
    form of the ready-blue, distinct from ready's outline treatment. White on primary = 5.75:1. */
 .table :global(.status-chip--exported) {
-  background-color: var(--color-primary);
-  color: var(--color-white);
+  background-color: var(--color-lifecycle-exported-bg);
+  color: var(--color-lifecycle-exported);
 }
 
 .table :global(.status-chip--error) {
-  background-color: var(--color-error-light);
-  color: var(--color-error); /* 4.92:1 on error-light (AA) */
+  background-color: var(--color-lifecycle-needs-fixing-bg);
+  color: var(--color-lifecycle-needs-fixing); /* 4.92:1 on error-light (AA) */
 }
 
 .table :global(.status-chip--incomplete) {
@@ -273,7 +273,7 @@
 
 .scopedSubhead {
   margin: 0 0 0.25rem;
-  font-family: var(--mono-font, monospace);
+  font-family: var(--mono-font);
   font-size: 0.8rem;
   color: var(--color-ink-muted);
 }

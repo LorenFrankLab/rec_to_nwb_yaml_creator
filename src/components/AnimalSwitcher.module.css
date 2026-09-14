@@ -31,7 +31,7 @@
   border-radius: 5px;
   background: #e3eeee;
   color: var(--color-primary, #0d5c63);
-  font-family: var(--mono-font, monospace);
+  font-family: var(--mono-font);
   font-size: 9px;
   font-weight: 600;
   flex: none;
@@ -58,7 +58,7 @@
 
 .label {
   padding: 0.25rem 0.5rem 0.35rem;
-  font-family: var(--mono-font, monospace);
+  font-family: var(--mono-font);
   font-size: 9px;
   letter-spacing: 0.15em;
   text-transform: uppercase;
@@ -103,7 +103,7 @@
 
 .count {
   margin-left: auto;
-  font-family: var(--mono-font, monospace);
+  font-family: var(--mono-font);
   font-size: 11px;
   color: var(--color-ink-muted);
   flex: none;
@@ -148,7 +148,7 @@
   border-radius: 6px;
   border: 1.5px dashed #c8c1ae;
   color: var(--color-primary, #0d5c63);
-  font-family: var(--mono-font, monospace);
+  font-family: var(--mono-font);
   flex: none;
 }
 

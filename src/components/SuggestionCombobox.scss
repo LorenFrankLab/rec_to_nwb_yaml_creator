@@ -64,9 +64,9 @@
 
 // ── Portaled listbox (on document.body; positioned inline) ──────────────────────────
 .suggestion-combobox__list {
-  // Above modal overlays (Modal z-index ~1000): the portal sits on document.body and a region
-  // combobox lives inside the electrode-group modal. Reconciled to the token scale in Phase 3.
-  z-index: 1100;
+  // Above the modal layer: the portal sits on document.body and a region combobox lives inside
+  // the electrode-group modal. Tokenized so it stays ordered against --z-modal / --z-skip-link.
+  z-index: var(--z-popover-above-modal);
   margin: 2px 0 0;
   padding: 0.25rem 0;
   list-style: none;

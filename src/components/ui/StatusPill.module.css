@@ -32,50 +32,50 @@
   border-radius: 50%;
 }
 
-/* Day lifecycle scope. */
+/* Day lifecycle scope — colors come from the shared lifecycle tokens (index.css), never local. */
 .draft {
-  color: var(--color-grey-700);
-  background-color: var(--color-grey-100);
+  color: var(--color-lifecycle-draft);
+  background-color: var(--color-lifecycle-draft-bg);
 }
 
 .draft .dot {
-  background-color: var(--color-grey-500);
+  background-color: var(--color-lifecycle-draft-dot);
 }
 
 .ready {
-  color: var(--color-primary);
-  background-color: var(--color-primary-light);
+  color: var(--color-lifecycle-ready);
+  background-color: var(--color-lifecycle-ready-bg);
 }
 
 .ready .dot {
-  background-color: var(--color-primary);
+  background-color: var(--color-lifecycle-ready);
 }
 
 .validated {
-  color: var(--color-success);
-  background-color: var(--color-success-light);
+  color: var(--color-lifecycle-validated);
+  background-color: var(--color-lifecycle-validated-bg);
 }
 
 .validated .dot {
-  background-color: var(--color-success);
+  background-color: var(--color-lifecycle-validated);
 }
 
 .exported {
-  color: var(--color-white);
-  background-color: var(--color-success);
+  color: var(--color-lifecycle-exported);
+  background-color: var(--color-lifecycle-exported-bg);
 }
 
 .exported .dot {
-  background-color: var(--color-white);
+  background-color: var(--color-lifecycle-exported);
 }
 
 .needsFixing {
-  color: var(--color-warning);
-  background-color: var(--color-warning-light);
+  color: var(--color-lifecycle-needs-fixing);
+  background-color: var(--color-lifecycle-needs-fixing-bg);
 }
 
 .needsFixing .dot {
-  background-color: var(--color-warning);
+  background-color: var(--color-lifecycle-needs-fixing);
 }
 
 /* Epoch-row scope — its own classes (never reuse a lifecycle class). */

@@ -370,6 +370,7 @@ every route). Use them instead of raw values: colors (`--color-primary`, `--colo
 --z-popover: 40;    /* menus, autocompletes, switchers */
 --z-overlay: 100;   /* in-page overlays */
 --z-modal: 1000;    /* modal overlays */
+--z-popover-above-modal: 1050; /* a portaled popover opened from inside a modal */
 --z-skip-link: 1100;/* skip link must beat the modal */
 ```
 

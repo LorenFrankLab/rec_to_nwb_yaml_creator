@@ -86,6 +86,23 @@ main#main-content:not(.day-editor-content) {
   --color-grey-900: #333;
   --color-white: #fff;
 
+  /* Day-lifecycle colors — the ONE table the day-row pills, the Validation Summary chips and the
+     shared legend all read, so a user can match a legend swatch to a chip on either page.
+       draft        quiet grey; ready    outline-blue (light bg); validated  green;
+       exported     SOLID blue — the committed/terminal form of ready (white on primary, 5.75:1);
+       needs-fixing error red — a blocking issue, not a warning. */
+  --color-lifecycle-draft: var(--color-grey-700);
+  --color-lifecycle-draft-bg: var(--color-grey-100);
+  --color-lifecycle-draft-dot: var(--color-grey-500);
+  --color-lifecycle-ready: var(--color-primary);
+  --color-lifecycle-ready-bg: var(--color-primary-light);
+  --color-lifecycle-validated: var(--color-success);
+  --color-lifecycle-validated-bg: var(--color-success-light);
+  --color-lifecycle-exported: var(--color-white);
+  --color-lifecycle-exported-bg: var(--color-primary);
+  --color-lifecycle-needs-fixing: var(--color-error);
+  --color-lifecycle-needs-fixing-bg: var(--color-error-light);
+
   /* Warm-ink + accent tokens. The modern ("boring but good") surfaces use a deliberate WARM text
      palette distinct from the neutral grey scale; these three are the genuinely-distinct colors the
      CSS-Modules track consolidated the component modules onto (the rest of the components' hardcoded
@@ -102,6 +119,8 @@ main#main-content:not(.day-editor-content) {
   --spacing-xl: 2rem;
 
   /* Typography */
+  /* The one monospace stack for ids, paths and filenames (every `code`-like surface reads this). */
+  --mono-font: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
   --font-size-sm: 0.875rem;
   --font-size-base: 1rem;
   --font-size-lg: 1.2rem;
@@ -129,5 +148,6 @@ main#main-content:not(.day-editor-content) {
   --z-popover: 40;    /* menus, autocompletes, switchers */
   --z-overlay: 100;   /* in-page overlays */
   --z-modal: 1000;    /* modal overlays (Modal.scss, AlertModal) */
+  --z-popover-above-modal: 1050; /* a portaled popover opened from inside a modal */
   --z-skip-link: 1100;/* skip link must beat the modal */
 }

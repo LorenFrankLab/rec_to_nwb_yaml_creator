@@ -78,25 +78,25 @@
   background-color: currentcolor;
 }
 
-/* Per-variant swatch colors, aligned with the status chips/dots on the other surfaces (the
-   Exported *chip* on the Validation Summary uses solid primary as its committed/terminal form, so
-   its swatch reads as the same blue family). */
+/* Per-variant swatch colors: the shared lifecycle tokens, so a swatch here IS the chip colour on
+   the day rows and the Validation Summary. Exported's chip is white-on-blue, so its swatch is the
+   blue ground; every other swatch is the chip's text/dot colour. */
 .draft {
-  color: var(--color-grey-600);
+  color: var(--color-lifecycle-draft-dot);
 }
 
 .ready {
-  color: var(--color-primary);
+  color: var(--color-lifecycle-ready);
 }
 
 .validated {
-  color: var(--color-success);
+  color: var(--color-lifecycle-validated);
 }
 
 .exported {
-  color: var(--color-primary-hover);
+  color: var(--color-lifecycle-exported-bg);
 }
 
 .needs_fixing {
-  color: var(--color-error);
+  color: var(--color-lifecycle-needs-fixing);
 }

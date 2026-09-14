@@ -20,7 +20,7 @@
 }
 
 .idbadge {
-  font-family: var(--mono-font, monospace);
+  font-family: var(--mono-font);
   font-size: 0.65rem;
   color: var(--color-ink-muted);
   border: 1px solid var(--border-color, #ddd7c9);
@@ -33,7 +33,7 @@
    one canonical home, `src/components/ErrorState.css` (a SHARED global utility, NOT migrated here). */
 
 .facts {
-  font-family: var(--mono-font, monospace);
+  font-family: var(--mono-font);
   font-size: 0.78rem;
   color: var(--color-ink-warm);
 }

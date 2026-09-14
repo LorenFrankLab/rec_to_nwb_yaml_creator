@@ -1,55 +1,3 @@
-/**
- * AnimalWorkspace Component Styles (colocated CSS Module)
- *
- * Layout:
- * - Sidebar: Animal list with selection
- * - Main area: Day list with validation status
- * - Empty states for no animals/days
- *
- * OWNERSHIP NOTE: a few classes are kept `:global()` (byte-identical to the previous globals) because
- * they are SHARED across components or queried dynamically/by tests:
- *   - `.btn-primary` / `.btn-secondary` — the workspace's canonical button rules, referenced literally
- *     by global-class consumers (ShortcutsHelp, the setup modals); Home/CalendarDayCreator no longer
- *     define them globally.
- *   - `.status-chip` (+ variants) — also defined by ValidationSummary.css; a test asserts its absence.
- *   - `.empty-state` — a shared name defined (scoped) by several setup-table stylesheets too.
- *   - `.visually-hidden` — global a11y utility (also defined in index.css).
- */
-
-.workspaceContent {
-  display: flex;
-  gap: 2rem;
-  margin-top: 1rem;
-}
-
-/* Now a <button> (opens the inline create panel) — keep the outlined look, add a pointer cursor. */
-.btnCreateAnimal {
-  display: inline-flex;
-  align-items: center;
-  padding: 0.375rem 0.75rem;
-  font: inherit;
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: var(--color-primary);
-  background-color: transparent;
-  border: 1px solid var(--color-primary);
-  border-radius: 4px;
-  text-decoration: none;
-  cursor: pointer;
-  transition: background-color 0.2s, color 0.2s;
-  white-space: nowrap;
-}
-
-.btnCreateAnimal:hover {
-  background-color: var(--color-primary);
-  color: var(--color-white);
-}
-
-/* Day Management Main Area */
-.dayManagement {
-  flex: 1;
-}
-
 .dayListHeader {
   display: flex;
   justify-content: space-between;
@@ -68,26 +16,6 @@
   align-items: center;
 }
 
-.addDayGroup {
-  display: flex;
-  gap: 0.5rem;
-  align-items: center;
-}
-
-.dateInput {
-  padding: 0.5rem;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  font-size: 0.875rem;
-  font-family: inherit;
-  cursor: pointer;
-}
-
-.dateInput:focus {
-  outline: 2px solid var(--color-primary);
-  outline-offset: 2px;
-}
-
 /* GLOBAL a11y utility (also defined in index.css). */
 :global(.visually-hidden) {
   position: absolute;
@@ -99,36 +27,6 @@
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
   border-width: 0;
-}
-
-/* GLOBAL shared button rules (global-class consumers reference these literally). */
-:global(.btn-primary),
-:global(.btn-secondary) {
-  padding: 0.5rem 1rem;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 0.875rem;
-  white-space: nowrap;
-}
-
-:global(.btn-primary) {
-  background-color: var(--color-primary);
-  color: var(--color-white);
-  border-color: var(--color-primary);
-}
-
-:global(.btn-primary):hover {
-  background-color: var(--color-primary-hover);
-}
-
-:global(.btn-secondary) {
-  background-color: var(--color-white);
-  color: var(--color-grey-900);
-}
-
-:global(.btn-secondary):hover {
-  background-color: var(--color-grey-100);
 }
 
 /* Day List */
@@ -239,35 +137,6 @@
   color: var(--color-primary);
 }
 
-/* GLOBAL status chip (also defined by ValidationSummary.css; a test asserts its absence here). */
-:global(.status-chip) {
-  padding: 0.25rem 0.5rem;
-  border-radius: 12px;
-  font-size: 0.75rem;
-  font-weight: 500;
-  text-transform: uppercase;
-}
-
-:global(.status-chip.draft) {
-  background-color: var(--color-warning-light);
-  color: var(--color-warning);
-}
-
-:global(.status-chip.validated) {
-  background-color: var(--color-success-light);
-  color: var(--color-success);
-}
-
-:global(.status-chip.exported) {
-  background-color: var(--color-primary-light);
-  color: var(--color-primary-hover);
-}
-
-:global(.status-chip.error) {
-  background-color: var(--color-error-light);
-  color: var(--color-error);
-}
-
 /* Dangling-reference / wrong-owner rows — surfaced (not dropped) with an error tint. */
 .dayRowMissing td {
   background-color: var(--color-error-light);
@@ -363,42 +232,6 @@
   min-height: 44px;
 }
 
-/* Narrow-width rescue (Phase 8A-3): at phone widths the day surface stacks into cards so dense
-   inline rows don't squeeze into one-word columns and the destructive action doesn't crowd the
-   primary navigation card. Geometry already avoids hard overflow; this is the touch/readability
-   layer for the ~390px testing path. */
-@media (max-width: 640px) {
-  /* Heading over its actions, full width. */
-  .dayListHeader {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 0.75rem;
-  }
-
-  /* Primary action over the carry-forward toggle (toggle gets the full row, not a squeezed
-     column beside the button). */
-  .dayActions {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  /* Comfortable touch target for the full-width primary action on the phone testing path. */
-  .dayActions :global(.btn-primary) {
-    min-height: 44px;
-  }
-
-  /* Compact the table padding at phone width so the date / status / actions columns still fit. */
-  .dayTable th,
-  .dayTable td {
-    padding: 0.5rem 0.4rem;
-  }
-
-  /* The bulk bar wraps its actions under the count at phone width. */
-  .bulkBar {
-    flex-wrap: wrap;
-  }
-}
-
 /* Empty States — GLOBAL `.empty-state` (a shared name also defined, scoped, by setup-table CSS).
    Still used by the per-animal day list's basic empty/corrupt states; the no-animals onboarding
    card now uses the shared `EmptyState` component (epoch-editor Phase 8). */
@@ -412,28 +245,6 @@
 .animalListActions {
   display: flex;
   gap: 0.5rem;
-}
-
-/* Same outlined look as .btnCreateAnimal so the two header actions read as a pair. */
-.btnImportYaml {
-  display: inline-flex;
-  align-items: center;
-  padding: 0.375rem 0.75rem;
-  font: inherit;
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: var(--color-primary);
-  background-color: transparent;
-  border: 1px solid var(--color-primary);
-  border-radius: 4px;
-  cursor: pointer;
-  transition: background-color 0.2s, color 0.2s;
-  white-space: nowrap;
-}
-
-.btnImportYaml:hover {
-  background-color: var(--color-primary);
-  color: var(--color-white);
 }
 
 /* First-run "Set up this animal" card (Task 2.3) — the LOUD onboarding affordance, shown until
@@ -459,7 +270,7 @@
   color: var(--color-grey-700);
 }
 
-/* Sits between the intro and the section list; base look comes from the shared .button-secondary. */
+/* Sits between the intro and the section list. */
 .setupCardCopyButton {
   margin: 0 0 0.75rem;
 }
@@ -536,22 +347,6 @@
 .setupCardItemAction:hover {
   background-color: var(--color-primary);
   color: var(--color-white);
-}
-
-/* Keep this override after the base setup-card declarations. The earlier phone layout block also
-   owns the day header/table, but these two declarations used to be overridden by the desktop rules
-   below it in the cascade, pushing actions 82px beyond a 390px viewport. */
-@media (max-width: 640px) {
-  .setupCardItem {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 0.25rem;
-    align-items: start;
-  }
-
-  .setupCardItemAction {
-    justify-self: start;
-    min-height: 44px;
-  }
 }
 
 /* Existing-data review state — recovered/imported data is not silently trusted.
@@ -744,4 +539,53 @@
 .noMatches {
   margin-top: var(--spacing-md);
   color: var(--color-grey-600);
+}
+
+
+/* THE phone breakpoint. Deliberately last in the file so every base/desktop declaration is
+   already in the cascade — a phone rule must never depend on where it happens to sit relative
+   to the rule it overrides.
+
+   Narrow-width rescue (Phase 8A-3): at phone widths the day surface stacks into cards so dense
+   inline rows don't squeeze into one-word columns and the destructive action doesn't crowd the
+   primary navigation card. Geometry already avoids hard overflow; this is the touch/readability
+   layer for the ~390px testing path. */
+@media (max-width: 640px) {
+  /* Heading over its actions, full width. */
+  .dayListHeader {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.75rem;
+  }
+
+  /* Primary action over the carry-forward toggle (toggle gets the full row, not a squeezed
+     column beside the button). */
+  .dayActions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  /* Compact the table padding at phone width so the date / status / actions columns still fit. */
+  .dayTable th,
+  .dayTable td {
+    padding: 0.5rem 0.4rem;
+  }
+
+  /* The bulk bar wraps its actions under the count at phone width. */
+  .bulkBar {
+    flex-wrap: wrap;
+  }
+
+  /* The setup card's row is a 4-column grid on desktop; stack it so the action link and state
+     don't squeeze into one-word columns at phone width. */
+  .setupCardItem {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.25rem;
+    align-items: start;
+  }
+
+  .setupCardItemAction {
+    justify-self: start;
+    min-height: 44px;
+  }
 }

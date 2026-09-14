@@ -18,7 +18,7 @@
 }
 
 .groupLabel {
-  font-family: var(--mono-font, monospace);
+  font-family: var(--mono-font);
   font-size: 0.6rem;
   letter-spacing: 0.15em;
   text-transform: uppercase;
@@ -77,7 +77,7 @@
    navigable button at rest. Both are aria-hidden visual cues. */
 .count {
   flex: none;
-  font-family: var(--mono-font, monospace);
+  font-family: var(--mono-font);
   font-size: 0.7rem;
   color: var(--color-ink-muted);
 }

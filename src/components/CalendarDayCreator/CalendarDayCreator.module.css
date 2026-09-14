@@ -29,42 +29,42 @@
   text-align: center;
   font-size: 1rem;
   font-weight: 500;
-  color: var(--color-text-primary, #212121);
+  color: var(--color-grey-900);
 }
 
 .btnNav {
   padding: 0.375rem 0.75rem;
   font-size: 1rem;
   background-color: var(--color-white, #fff);
-  border: 1px solid var(--color-border, #e0e0e0);
+  border: 1px solid var(--color-grey-200);
   border-radius: 4px;
   cursor: pointer;
   transition: background-color 0.2s, border-color 0.2s;
 }
 
 .btnNav:hover {
-  background-color: var(--color-gray-100, #f5f5f5);
-  border-color: var(--color-gray-400, #bdbdbd);
+  background-color: var(--color-grey-100);
+  border-color: var(--color-grey-300);
 }
 
 .btnNav:active {
-  background-color: var(--color-gray-200, #eee);
+  background-color: var(--color-grey-200);
 }
 
 .btnToday {
   padding: 0.375rem 0.75rem;
   font-size: 0.875rem;
   font-weight: 500;
-  color: var(--color-primary, var(--color-primary));
+  color: var(--color-primary);
   background-color: var(--color-white, #fff);
-  border: 1px solid var(--color-primary, var(--color-primary));
+  border: 1px solid var(--color-primary);
   border-radius: 4px;
   cursor: pointer;
   transition: background-color 0.2s, color 0.2s;
 }
 
 .btnToday:hover {
-  background-color: var(--color-primary, var(--color-primary));
+  background-color: var(--color-primary);
   color: var(--color-white, #fff);
 }
 
@@ -115,7 +115,7 @@
   font-size: 0.875rem;
   font-weight: 500;
   background-color: var(--color-white, #fff);
-  border: 1px solid var(--color-border, #e0e0e0);
+  border: 1px solid var(--color-grey-200);
   border-radius: 4px;
   cursor: pointer;
   user-select: none;
@@ -125,13 +125,13 @@
 /* :focus before the higher-specificity :hover:not() so source order matches specificity
    (no-descending-specificity); they set different properties, so order is cosmetic. */
 .day:focus {
-  outline: 2px solid var(--color-primary, var(--color-primary));
+  outline: 2px solid var(--color-primary);
   outline-offset: 2px;
 }
 
 .day:hover:not(.dayDisabled) {
-  background-color: var(--color-gray-100, #f5f5f5);
-  border-color: var(--color-gray-400, #bdbdbd);
+  background-color: var(--color-grey-100);
+  border-color: var(--color-grey-300);
 }
 
 /* Day States */
@@ -144,14 +144,14 @@
 }
 
 .dayToday {
-  border: 2px solid var(--color-primary, var(--color-primary));
+  border: 2px solid var(--color-primary);
   font-weight: 600;
 }
 
 .daySelected {
-  background-color: var(--color-primary, var(--color-primary));
+  background-color: var(--color-primary);
   color: var(--color-white, #fff);
-  border-color: var(--color-primary, var(--color-primary));
+  border-color: var(--color-primary);
 }
 
 .daySelected:hover {
@@ -187,7 +187,7 @@
   align-items: center;
   gap: 1rem;
   padding: 0.75rem;
-  background-color: var(--color-gray-50, #fafafa);
+  background-color: var(--color-grey-100);
   border-radius: 4px;
 }
 
@@ -212,7 +212,7 @@
 .legendIndicator {
   width: 1.5rem;
   height: 1.5rem;
-  border: 1px solid var(--color-border, #e0e0e0);
+  border: 1px solid var(--color-grey-200);
   border-radius: 4px;
   display: flex;
   align-items: center;
@@ -225,7 +225,7 @@
 }
 
 .legendIndicatorSelected {
-  background-color: var(--color-primary, var(--color-primary));
+  background-color: var(--color-primary);
 }
 
 .legendIndicatorExisting {
@@ -234,7 +234,7 @@
 }
 
 .legendIndicatorToday {
-  border: 2px solid var(--color-primary, var(--color-primary));
+  border: 2px solid var(--color-primary);
   background-color: var(--color-white, #fff);
 }
 
@@ -250,55 +250,20 @@
   justify-content: flex-end;
 }
 
-.btnPrimary,
-.btnSecondary,
 .btnClose {
   padding: 0.5rem 1rem;
   font-size: 0.875rem;
   font-weight: 500;
-  border: none;
+  border: 1px solid var(--color-grey-200);
   border-radius: 4px;
   cursor: pointer;
   transition: background-color 0.2s, opacity 0.2s;
-}
-
-.btnPrimary {
-  color: var(--color-white, #fff);
-  background-color: var(--color-primary, var(--color-primary));
-}
-
-.btnPrimary:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.btnPrimary:hover:not(:disabled) {
-  background-color: var(--color-primary-hover);
-}
-
-.btnSecondary {
-  color: var(--color-text-primary, #212121);
-  background-color: var(--color-gray-100, #f5f5f5);
-  border: 1px solid var(--color-border, #e0e0e0);
-}
-
-.btnSecondary:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.btnSecondary:hover:not(:disabled) {
-  background-color: var(--color-gray-200, #eee);
-}
-
-.btnClose {
   color: var(--color-grey-600, #666);
   background-color: transparent;
-  border: 1px solid var(--color-border, #e0e0e0);
 }
 
 .btnClose:hover {
-  background-color: var(--color-gray-100, #f5f5f5);
+  background-color: var(--color-grey-100);
 }
 
 /* Responsive */

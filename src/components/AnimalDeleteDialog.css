@@ -7,14 +7,14 @@
 }
 
 .animal-delete-confirm-name {
-  font-family: var(--mono-font, monospace);
+  font-family: var(--mono-font);
 }
 
 .animal-delete-confirm-field input {
   display: block;
   margin-top: 0.3rem;
   width: 100%;
-  font-family: var(--mono-font, monospace);
+  font-family: var(--mono-font);
   font-size: 0.9rem;
   border: 1px solid var(--border-color, #ddd7c9);
   border-radius: 7px;
