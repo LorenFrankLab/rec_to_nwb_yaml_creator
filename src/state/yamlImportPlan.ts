@@ -236,16 +236,20 @@ export interface ImportPlanAnimal {
   experimenters: any;
   /** Resolved optogenetics (latest-date-wins), or null. */
   optogenetics: any;
-  /** Resolved device catalogs (for an existing animal: the existing catalog plus the additions). */
+  /**
+   * The IMPORTED device catalogs — what the files declare, unioned. For a new animal this is the
+   * animal's catalog; for an existing one it is what `'replace'` recreates the animal from (the
+   * files' calibration / names win over the old rows; catalog rows the files never mention are
+   * not carried over).
+   */
   devices: { data_acq_device: any[]; device: any };
-  /** Resolved camera catalog (for an existing animal: the existing catalog plus the additions). */
+  /** The IMPORTED camera catalog (see `devices`). Ids agree with the days' references. */
   cameras: any[];
   /**
-   * The catalog rows the imported files BRING to an existing animal — the cameras / recording
-   * systems in `cameras` / `devices.data_acq_device` that the animal does not already have, with
-   * the ids the plan allocated for them. Empty for a new animal (everything is new; see
-   * `cameras`). This is what the executor must add on `'add'`, and it is the SAME catalog the
-   * days' references were remapped against, so a reference can never point past it.
+   * The subset of `cameras` / `devices.data_acq_device` an EXISTING animal does not already have,
+   * with the ids the plan allocated for them (free in existing ∪ additions). Empty for a new
+   * animal. This is what the executor adds on `'add'`, and it is the same catalog the days'
+   * references were remapped against, so a saved reference can never point past what was saved.
    */
   catalogAdditions: { cameras: any[]; data_acq_device: any[] };
   configVersions: ConfigVersion[];
@@ -368,7 +372,6 @@ function resolveAnimalFacts(entries: FileEntry[], existing: unknown = null): Res
   // collides with an id the union already assigned. Every later file's day references are then
   // remapped by name onto the union ids (see `cameraIdRemaps`), so an "overhead" video stays an
   // overhead video even when its file numbered the cameras differently. ---
-  const cameras: any[] = [];
   const cameraRegistry: IdentityRegistryEntry[] = [];
   const cameraSets: string[] = [];
   const cameraIdRemaps: Array<Map<unknown, unknown>> = [];
@@ -381,8 +384,13 @@ function resolveAnimalFacts(entries: FileEntry[], existing: unknown = null): Res
     while (usedIds.has(candidate)) candidate += 1;
     return candidate;
   };
-  // Seed with what the animal already holds: those rows are the catalog the executor keeps, and
-  // a file row that names one of their ids is a reference to it, not a new camera.
+  // The IMPORTED row for each existing id the files re-declare (first-seen). Under 'add' the
+  // executor keeps the animal's own row for that id; under 'replace' it recreates the animal from
+  // `cameras`, which must be what the files say — the imported calibration/name, never the old.
+  const importedByExistingId = new Map<unknown, any>();
+  // Seed IDENTITY only from what the animal already holds — its ids (a file row naming one is a
+  // reference to it, not a new camera) and its names (a brought row with an existing name routes
+  // onto that camera). The existing ROWS themselves are never part of the plan's catalog.
   for (const camera of getAnimalCameras(existing)) {
     const name = String(camera.camera_name ?? '').trim();
     cameraRegistry.push({
@@ -395,7 +403,6 @@ function resolveAnimalFacts(entries: FileEntry[], existing: unknown = null): Res
         manufacturer: camera.manufacturer,
       },
     });
-    cameras.push(structuredClone(camera));
     if (!unionIdByName.has(name)) unionIdByName.set(name, camera.id);
     usedIds.add(camera.id);
     existingCameraIds.add(camera.id);
@@ -412,7 +419,10 @@ function resolveAnimalFacts(entries: FileEntry[], existing: unknown = null): Res
     for (const camera of fileCameras) {
       // An id the animal already has is a reference to that camera (an explicit Import & Repair
       // mapping, or a file that already uses the animal's numbering) — never re-identified by name.
-      if (existingCameraIds.has(camera.id)) continue;
+      if (existingCameraIds.has(camera.id)) {
+        if (!importedByExistingId.has(camera.id)) importedByExistingId.set(camera.id, structuredClone(camera));
+        continue;
+      }
       const name = String(camera.camera_name ?? '').trim();
       const candidateFields = {
         id: camera.id,
@@ -439,12 +449,15 @@ function resolveAnimalFacts(entries: FileEntry[], existing: unknown = null): Res
         const id = usedIds.has(camera.id) ? nextFreeId() : camera.id;
         cameraRegistry.push({ name: camera.camera_name, fields: { ...candidateFields, id } });
         const row = { ...structuredClone(camera), id };
-        cameras.push(row);
         addedCameras.push(row);
         unionIdByName.set(name, id);
         usedIds.add(id);
       }
       const unionId = unionIdByName.get(name);
+      if (existingCameraIds.has(unionId) && !importedByExistingId.has(unionId)) {
+        // Routed by name onto an existing camera: this row is what the files say that camera is.
+        importedByExistingId.set(unionId, { ...structuredClone(camera), id: unionId });
+      }
       if (camera.id !== undefined && camera.id !== null && !Object.is(unionId, camera.id)) {
         remap.set(camera.id, unionId);
         remapped.push(`"${camera.camera_name}" ${String(camera.id)} → ${String(unionId)}`);
@@ -466,21 +479,23 @@ function resolveAnimalFacts(entries: FileEntry[], existing: unknown = null): Res
     });
   }
 
-  // --- data_acq_device: union by name (seeded with the existing animal's; a file row whose name
-  // the animal already has is that recording system, never a second one) ---
-  const dataAcqDevice: any[] = [];
+  // --- data_acq_device: union by name. The existing animal's names seed identity only (a file
+  // row with an existing name IS that system — not an addition — and, for 'replace', the file's row
+  // is what the recreated animal gets); everything else is unioned across files and brought. ---
   const dataAcqRegistry: IdentityRegistryEntry[] = [];
+  const existingDeviceNames = new Set<string>();
+  const importedDeviceByName = new Map<string, any>();
   const addedDevices: any[] = [];
   for (const device of getDataAcqDevices(existing)) {
-    dataAcqRegistry.push({
-      name: device.name,
-      fields: { system: device.system, amplifier: device.amplifier, adc_circuit: device.adc_circuit },
-    });
-    dataAcqDevice.push(structuredClone(device));
+    existingDeviceNames.add(String(device.name ?? '').trim());
   }
   for (const { animalFacts } of entries) {
-    const fileDevices = getDataAcqDevices(animalFacts);
-    for (const device of fileDevices) {
+    for (const device of getDataAcqDevices(animalFacts)) {
+      const name = String(device.name ?? '').trim();
+      if (existingDeviceNames.has(name)) {
+        if (!importedDeviceByName.has(name)) importedDeviceByName.set(name, structuredClone(device));
+        continue;
+      }
       const candidateFields = {
         system: device.system,
         amplifier: device.amplifier,
@@ -496,12 +511,11 @@ function resolveAnimalFacts(entries: FileEntry[], existing: unknown = null): Res
       }
       if (!dataAcqRegistry.some((e) => e.name === device.name)) {
         dataAcqRegistry.push({ name: device.name, fields: candidateFields });
-        const row = structuredClone(device);
-        dataAcqDevice.push(row);
-        addedDevices.push(row);
+        addedDevices.push(structuredClone(device));
       }
     }
   }
+  const dataAcqDevice: any[] = [...importedDeviceByName.values(), ...addedDevices];
 
   // --- subject scalars: latest-date-wins, flag any difference ---
   const differingSubjectKeys = SUBJECT_SCALAR_FIELDS.filter((field) => {
@@ -547,7 +561,7 @@ function resolveAnimalFacts(entries: FileEntry[], existing: unknown = null): Res
       data_acq_device: dataAcqDevice,
       device: structuredClone(latest.devices?.device),
     },
-    cameras,
+    cameras: [...importedByExistingId.values(), ...addedCameras],
     cameraIdRemaps,
     catalogAdditions: { cameras: addedCameras, data_acq_device: addedDevices },
     divergences,

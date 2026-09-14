@@ -441,7 +441,8 @@ describe('planImport — camera references against an EXISTING animal', () => {
     expect(remy.days.find((d) => d.date === '2023-06-22').associated_video_files[0].camera_id).toBe(0);
     expect(remy.days.find((d) => d.date === '2023-06-23').associated_video_files[0].camera_id).toBe(1);
     expect(remy.catalogAdditions.cameras).toEqual([]);
-    expect(remy.cameras.map((c) => c.id)).toEqual([0, 1]);
+    // Each file's mapped row is what the files say existing 0 / 1 are (the rows 'replace' recreates).
+    expect(remy.cameras.map((c) => [c.id, c.camera_name])).toEqual([[0, 'arena_side'], [1, 'arena_side']]);
   });
 
   it('allocates a brought camera an id the existing animal does not use, and the additions carry it', () => {
@@ -462,10 +463,11 @@ describe('planImport — camera references against an EXISTING animal', () => {
     expect([0, 1, 3]).not.toContain(wall.id);
     expect(remy.days.find((d) => d.date === '2023-06-22').associated_video_files[0].camera_id).toBe(3);
     expect(remy.days.find((d) => d.date === '2023-06-23').associated_video_files[0].camera_id).toBe(wall.id);
-    // The final catalog the executor will hold: existing + additions, no duplicate ids.
-    const ids = remy.cameras.map((c) => c.id);
-    expect(ids).toEqual([0, 1, 3, wall.id]);
-    expect(new Set(ids).size).toBe(ids.length);
+    // The plan's own catalog is what the FILES declare (that is what 'replace' recreates from);
+    // the additions were allocated so that existing ∪ additions has no duplicate id.
+    expect(remy.cameras.map((c) => c.id)).toEqual([3, wall.id]);
+    const finalIds = [0, 1, ...additions.map((c) => c.id)];
+    expect(new Set(finalIds).size).toBe(finalIds.length);
   });
 
   it('routes a brought camera named like an existing one onto the existing id (no duplicate by name)', () => {
@@ -475,6 +477,45 @@ describe('planImport — camera references against an EXISTING animal', () => {
     );
     const remy = plan.animals.find((a) => a.subjectId === 'remy');
     expect(remy.catalogAdditions.cameras).toEqual([]);
+    expect(remy.days[0].associated_video_files[0].camera_id).toBe(0);
+  });
+});
+
+describe('planImport — the imported catalog for replace', () => {
+  it('plans `cameras` / `devices` from the FILES, not the existing animal, so replace keeps imported values', () => {
+    // The existing remy has camera 0 "overhead_camera" @ 0.00085 and system "SpikeGadgets". The
+    // file re-declares camera 0 with a new calibration + name and a system named "MCU". Under
+    // 'replace' the recreated animal must be what the file says — and must not carry the existing
+    // side camera (id 1) the file never mentions.
+    const ws = createDefaultWorkspace();
+    const { animal } = buildRealisticWorkspace();
+    ws.animals[animal.id] = { ...animal, days: [] };
+    const plan = planImport(
+      [
+        makeFile({
+          subjectId: 'remy',
+          date: '2023-06-22',
+          mutateConfig: (a, day) => {
+            a.cameras = [{ ...a.cameras[0], id: 0, camera_name: 'recalibrated_overhead', meters_per_pixel: 0.0015 }];
+            a.devices.data_acq_device = [{ name: 'MCU', system: 'MCU', amplifier: 'Intan', adc_circuit: 'Intan' }];
+            day.tasks = day.tasks.map((t) => ({ ...t, camera_id: [0] }));
+            day.associated_video_files = [{ name: 'v', camera_id: 0, task_epochs: 2 }];
+            day.cameras_used = [0];
+            day.data_acq_device_name = 'MCU';
+          },
+        }),
+      ],
+      ws
+    );
+    const remy = plan.animals.find((a) => a.subjectId === 'remy');
+    expect(remy.conflict).toBe('exists');
+    expect(remy.cameras).toEqual([
+      expect.objectContaining({ id: 0, camera_name: 'recalibrated_overhead', meters_per_pixel: 0.0015 }),
+    ]);
+    expect(remy.devices.data_acq_device.map((d) => d.name)).toEqual(['MCU']);
+    // …while 'add' brings only what the animal lacks: nothing for camera 0 (it IS existing 0), MCU.
+    expect(remy.catalogAdditions.cameras).toEqual([]);
+    expect(remy.catalogAdditions.data_acq_device.map((d) => d.name)).toEqual(['MCU']);
     expect(remy.days[0].associated_video_files[0].camera_id).toBe(0);
   });
 });

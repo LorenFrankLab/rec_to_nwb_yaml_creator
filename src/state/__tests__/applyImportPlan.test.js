@@ -295,6 +295,55 @@ describe('applyImportPlan — conflict resolutions', () => {
     expect(remy.subject.genotype).not.toBe('OLD');
   });
 
+  it("'replace' recreates the animal from the IMPORTED catalogs, not the existing ones", () => {
+    const { result } = renderHook(() => useStore());
+    act(() => {
+      result.current.actions.createAnimal('remy', { subject_id: 'remy' }, {
+        cameras: [
+          { id: 0, camera_name: 'old_overhead', meters_per_pixel: 0.00085 },
+          { id: 1, camera_name: 'old_side', meters_per_pixel: 0.0009 },
+        ],
+        devices: {
+          data_acq_device: [
+            { name: 'SpikeGadgets', system: 'SpikeGadgets', amplifier: 'Intan', adc_circuit: 'Intan' },
+          ],
+          device: { name: ['Trodes'] },
+          electrode_groups: [],
+          ntrode_electrode_group_channel_map: [],
+        },
+      });
+    });
+
+    const file = makeFile({
+      subjectId: 'remy',
+      date: '2023-06-22',
+      mutateConfig: (animal, day) => {
+        animal.cameras = [{ ...animal.cameras[0], id: 0, camera_name: 'recalibrated_overhead', meters_per_pixel: 0.0015 }];
+        animal.devices.data_acq_device = [{ name: 'MCU', system: 'MCU', amplifier: 'Intan', adc_circuit: 'Intan' }];
+        day.tasks = day.tasks.map((t) => ({ ...t, camera_id: [0] }));
+        day.associated_video_files = [{ name: 'v', camera_id: 0, task_epochs: 2 }];
+        day.cameras_used = [0];
+        day.data_acq_device_name = 'MCU';
+      },
+    });
+    const plan = planImport([file], result.current.model.workspace);
+
+    let summary;
+    act(() => {
+      summary = applyImportPlan(plan, result.current.actions, {
+        workspace: result.current.model.workspace,
+        resolutions: { remy: 'replace' },
+      });
+    });
+
+    expect(summary.failed).toEqual([]);
+    const remy = result.current.model.workspace.animals.remy;
+    expect(remy.cameras).toEqual([
+      expect.objectContaining({ id: 0, camera_name: 'recalibrated_overhead', meters_per_pixel: 0.0015 }),
+    ]);
+    expect(remy.devices.data_acq_device.map((d) => d.name)).toEqual(['MCU']);
+  });
+
   it("replace onto an animal with EMPTY config history pins each day to the RIGHT version (no duplicate v1)", () => {
     // Regression (config-version race): the snapshot action reserved the next version from the
     // STALE pre-delete animal. When that old animal's history was empty/malformed,
