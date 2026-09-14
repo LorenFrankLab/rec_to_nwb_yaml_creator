@@ -364,16 +364,9 @@ export const getDayCamerasUsed = (day: unknown): Array<number | string> =>
 export const getDayBadChannelOverrides = (day: unknown): Record<string, number[]> =>
   asRecord<Record<string, number[]>>(asRecord(asRecord(day).deviceOverrides).bad_channels);
 
-/**
- * The epoch numbers a day has declared video-less (the off-export `absent` set; the `videolessEpochs`
- * half of the video 3-state). Number-normalized and de-duplicated; `[]` when absent/corrupt. Read
- * from `day.state` (never the merged YAML) — exactly like `badChannelRemovalAcks`.
- *
- * @param day
- * @returns The declared-videoless epoch numbers (always an array of integers).
- */
-export const getDayVideolessEpochs = (day: unknown): number[] => {
-  const raw = asArray<unknown>(asRecord(asRecord(day).state).videolessEpochs);
+/** The de-duplicated integer epoch numbers stored under `day.state[key]` (off-export). */
+const dayStateEpochSet = (day: unknown, key: string): number[] => {
+  const raw = asArray<unknown>(asRecord(asRecord(day).state)[key]);
   const seen = new Set<number>();
   for (const value of raw) {
     const n = Number(value);
@@ -383,21 +376,25 @@ export const getDayVideolessEpochs = (day: unknown): number[] => {
 };
 
 /**
+ * The epoch numbers a day has declared video-less (the off-export `absent` set; the `videolessEpochs`
+ * half of the video 3-state). Number-normalized and de-duplicated; `[]` when absent/corrupt. Read
+ * from `day.state` (never the merged YAML) — exactly like `badChannelRemovalAcks`.
+ *
+ * @param day
+ * @returns The declared-videoless epoch numbers (always an array of integers).
+ */
+export const getDayVideolessEpochs = (day: unknown): number[] =>
+  dayStateEpochSet(day, 'videolessEpochs');
+
+/**
  * The epoch numbers whose missing-video error is temporarily displayed as "Incomplete" until the
  * user opens/edits the fresh epoch. Off-export and number-normalized like `videolessEpochs`.
  *
  * @param day
  * @returns Presentation-deferred epoch numbers (always an array of integers).
  */
-export const getDayDeferredEpochs = (day: unknown): number[] => {
-  const raw = asArray<unknown>(asRecord(asRecord(day).state).deferredEpochs);
-  const seen = new Set<number>();
-  for (const value of raw) {
-    const n = Number(value);
-    if (Number.isInteger(n)) seen.add(n);
-  }
-  return [...seen];
-};
+export const getDayDeferredEpochs = (day: unknown): number[] =>
+  dayStateEpochSet(day, 'deferredEpochs');
 
 /**
  * @param day

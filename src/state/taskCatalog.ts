@@ -32,6 +32,8 @@
  * unit-testable.
  */
 
+import { isRecord as isPlainRecord } from '../utils/records';
+
 import type {
   TaskType,
   TaskInstance,
@@ -62,13 +64,8 @@ export interface DerivedTaskCatalog {
   reconciliations: TaskReconciliationRecord[];
 }
 
-/** Whether `value` is a plain object record (not null, not an array). */
-function isPlainRecord(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === 'object' && !Array.isArray(value);
-}
-
 /** ES2020-safe own-property check (the tsconfig `lib` predates `Object.hasOwn`). */
-function hasOwn(record: object, key: string): boolean {
+export function hasOwn(record: object, key: string): boolean {
   return Object.prototype.hasOwnProperty.call(record, key);
 }
 
@@ -78,7 +75,7 @@ function hasOwn(record: object, key: string): boolean {
  * difference must NOT count as a conflict). Arrays compare ORDER-sensitively, because `camera_id`
  * `[0,1]` and `[1,0]` are genuinely different exported bytes.
  */
-function deepEqual(a: unknown, b: unknown): boolean {
+export function deepEqual(a: unknown, b: unknown): boolean {
   if (a === b) return true;
   if (typeof a !== 'object' || typeof b !== 'object' || a === null || b === null) return false;
   const aArray = Array.isArray(a);
@@ -101,7 +98,7 @@ function deepEqual(a: unknown, b: unknown): boolean {
  * the WHOLE remainder (not an enumerated subset) makes the round-trip byte-identical for any task
  * shape — a stray legacy key is preserved exactly as the lossless export would emit it.
  */
-function taskDefinition(task: Record<string, unknown>): Record<string, unknown> {
+export function taskDefinition(task: Record<string, unknown>): Record<string, unknown> {
   const definition: Record<string, unknown> = {};
   for (const key of Object.keys(task)) {
     if (key !== EPOCHS_KEY) definition[key] = task[key];
@@ -119,7 +116,7 @@ function identityFields(task: Record<string, unknown>): TaskDefinitionFields {
 }
 
 /** A usable catalog key: a non-empty, non-whitespace string `task_name`. */
-function usableTaskName(value: unknown): value is string {
+export function usableTaskName(value: unknown): value is string {
   return typeof value === 'string' && value.trim() !== '';
 }
 

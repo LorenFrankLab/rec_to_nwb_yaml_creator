@@ -38,43 +38,67 @@ function cameraKey(id: unknown): string | null {
 }
 
 /**
- * The set of camera-id keys a single day INFERS from its task/video/fs-gui rows: tasks (array
- * `camera_id`), associated video files (scalar `camera_id`), and FsGUI protocols (scalar
- * `camera_id`). This is the "the day demonstrably used this camera" set — it does NOT include the
- * explicit `day.cameras_used` checklist set. Use this (not `referencedCameraKeys`) to decide which
- * cameras-used checkboxes are non-negotiable (rendered checked + disabled): a user must be able to
- * uncheck a camera they only explicitly added, so the disabled decision must ignore `cameras_used`.
- * Shape-tolerant: non-array collections and null/undefined ids are skipped, never thrown on.
+ * The RAW camera-id values a day's task / video / FsGUI rows reference, in first-seen order, exact
+ * duplicates removed (`Object.is` — no string-laundering of numeric ids). THE one enumeration of
+ * "which fields carry a camera reference": the export merge, the cameras-used checklist, the
+ * import pre-flight and the import repair planner all read it, so a fifth camera-bearing field is
+ * added here once. Shape-tolerant: a non-array collection is skipped; a task's `camera_id` is
+ * normally an array but a legacy/corrupt scalar is read as a one-element reference — it is just as
+ * much a reference, and just as dangling when the camera does not exist.
+ *
+ * @param day - A recording-day record or a decoded flat model (both carry these collections).
+ * @returns Raw referenced camera ids (`null`/`undefined` skipped).
+ */
+export function inferredCameraRefs(day: unknown): unknown[] {
+  const refs: unknown[] = [];
+  const add = (id: unknown): void => {
+    if (id === null || id === undefined) return;
+    if (!refs.some((existing) => Object.is(existing, id))) refs.push(id);
+  };
+
+  for (const task of getDayTasks(day)) {
+    const cameraId: unknown = task?.camera_id;
+    (Array.isArray(cameraId) ? cameraId : [cameraId]).forEach(add);
+  }
+  for (const video of getDayAssociatedVideos(day)) add(video?.camera_id);
+  // FsGuiYaml's type omits `camera_id` (the interface predates the FsGUI camera field that
+  // trodes_to_nwb + the `dangling_camera_ref` rule read), so read it tolerantly.
+  for (const protocol of getDayFsGuiYamls(day)) add((protocol as { camera_id?: unknown })?.camera_id);
+
+  return refs;
+}
+
+/**
+ * {@link inferredCameraRefs} UNIONed with the explicit `day.cameras_used` set (listed FIRST, so a
+ * consumer that reports the first unresolvable reference names the user's own checklist entry
+ * before an inferred one). The export / pre-flight reference set.
+ *
+ * @param day - A recording-day record.
+ * @returns Raw referenced camera ids, first-seen order.
+ */
+export function referencedCameraRefs(day: unknown): unknown[] {
+  const refs: unknown[] = [];
+  const add = (id: unknown): void => {
+    if (id === null || id === undefined) return;
+    if (!refs.some((existing) => Object.is(existing, id))) refs.push(id);
+  };
+  getDayCamerasUsed(day).forEach(add);
+  inferredCameraRefs(day).forEach(add);
+  return refs;
+}
+
+/**
+ * The set of camera-id keys a single day INFERS from its task/video/fs-gui rows — the "the day
+ * demonstrably used this camera" set; it does NOT include the explicit `day.cameras_used`
+ * checklist set. Use this (not `referencedCameraKeys`) to decide which cameras-used checkboxes are
+ * non-negotiable (rendered checked + disabled): a user must be able to uncheck a camera they only
+ * explicitly added, so the disabled decision must ignore `cameras_used`.
  *
  * @param day - A recording-day record.
  * @returns Normalized camera-id keys inferred from task/video/fs-gui references.
  */
 export function inferredCameraKeys(day: unknown): Set<string> {
-  const keys = new Set<string>();
-  const add = (id: unknown): void => {
-    const key = cameraKey(id);
-    if (key !== null) keys.add(key);
-  };
-
-  for (const task of getDayTasks(day)) {
-    // task.camera_id is normally an array, but tolerate a stray scalar (raw corruption), so read
-    // it as `unknown` rather than the canonical `string[]`.
-    const cameraId: unknown = task?.camera_id;
-    const ids: unknown[] = Array.isArray(cameraId)
-      ? cameraId
-      : cameraId !== undefined && cameraId !== null
-        ? [cameraId]
-        : [];
-    ids.forEach(add);
-  }
-
-  for (const video of getDayAssociatedVideos(day)) add(video?.camera_id);
-
-  // FsGuiYaml's type omits `camera_id` (the interface predates the FsGUI camera field that
-  // trodes_to_nwb + the `dangling_camera_ref` rule read), so read it tolerantly.
-  for (const protocol of getDayFsGuiYamls(day)) add((protocol as { camera_id?: unknown })?.camera_id);
-
-  return keys;
+  return new Set(inferredCameraRefs(day).map(cameraKey).filter((key): key is string => key !== null));
 }
 
 /**
@@ -89,17 +113,9 @@ export function inferredCameraKeys(day: unknown): Set<string> {
  * @returns Normalized camera-id keys.
  */
 export function referencedCameraKeys(day: unknown): Set<string> {
-  const keys = inferredCameraKeys(day);
-
-  // UNION the explicit per-day "cameras used" set on top of the inferred references. For existing
-  // data (`cameras_used` absent/non-array) this adds nothing, so the export is identical to today.
-  const explicit = getDayCamerasUsed(day);
-  for (const id of explicit) {
-    const key = cameraKey(id);
-    if (key !== null) keys.add(key);
-  }
-
-  return keys;
+  return new Set(
+    referencedCameraRefs(day).map(cameraKey).filter((key): key is string => key !== null)
+  );
 }
 
 /**

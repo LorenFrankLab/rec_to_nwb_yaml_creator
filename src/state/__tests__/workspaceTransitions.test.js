@@ -7,6 +7,8 @@
  */
 import { describe, it, expect } from 'vitest';
 import {
+  ANIMAL_REPLACE_KEYS,
+  DAY_REPLACE_KEYS,
   applyAnimalUpdates,
   addConfigurationSnapshotToAnimal,
   applyConfigurationForwardToAnimal,
@@ -637,5 +639,49 @@ describe('applyDayUpdates', () => {
       NOW
     );
     expect(updated.dataFolder).toBe('');
+  });
+});
+
+// The regression this file has shipped twice: a day-/animal-owned field with no update branch was
+// silently dropped on write. The replace tables now ROUTE those keys; these tests pin that every
+// tabled key persists a write with the gate the table declares.
+describe('update allow-list tables', () => {
+  const SAMPLE = {
+    tasks: [{ task_name: 'sleep' }],
+    taskInstances: [{ taskTypeId: 't1', task_epochs: [1] }],
+    behavioral_events: [{ description: 'Din1', name: 'poke' }],
+    associated_files: [{ name: 'f', path: '/p', task_epochs: 1 }],
+    associated_video_files: [{ name: 'v', camera_id: 0, task_epochs: 1 }],
+    fs_gui_yamls: [{ name: 'g', epochs: [1] }],
+    configurationVersion: 2,
+    keywords: ['k'],
+    data_acq_device_name: 'SpikeGadgets',
+    cameras_used: [0],
+    dataFolder: '/data',
+    cameras: [{ id: 0, camera_name: 'c' }],
+    taskTypes: [{ id: 't1', task_name: 'sleep' }],
+    optogenetics: { opto_excitation_source: [] },
+    experiment_description: 'desc',
+  };
+
+  it.each(Object.keys(DAY_REPLACE_KEYS))('applyDayUpdates persists a %s write', (key) => {
+    const updated = applyDayUpdates({ id: 'd1' }, { [key]: SAMPLE[key] }, NOW);
+    expect(updated[key]).toEqual(SAMPLE[key]);
+  });
+
+  it.each(Object.keys(ANIMAL_REPLACE_KEYS))('applyAnimalUpdates persists a %s write', (key) => {
+    const updated = applyAnimalUpdates({ id: 'a1' }, { [key]: SAMPLE[key] }, NOW);
+    expect(updated[key]).toEqual(SAMPLE[key]);
+  });
+
+  it('honors each declared gate: defined clears to empty, present clears to undefined, nonNull ignores null', () => {
+    const day = { id: 'd1', keywords: ['k'], data_acq_device_name: 'x' };
+    expect(applyDayUpdates(day, { keywords: [] }, NOW).keywords).toEqual([]);
+    expect(applyDayUpdates(day, { keywords: undefined }, NOW).keywords).toEqual(['k']);
+    expect('data_acq_device_name' in applyDayUpdates(day, { data_acq_device_name: undefined }, NOW)).toBe(true);
+    expect(applyDayUpdates(day, { data_acq_device_name: undefined }, NOW).data_acq_device_name).toBeUndefined();
+    const animal = { id: 'a1', cameras: [{ id: 0 }] };
+    expect(applyAnimalUpdates(animal, { cameras: null }, NOW).cameras).toEqual([{ id: 0 }]);
+    expect(applyAnimalUpdates(animal, { optogenetics: null }, NOW).optogenetics).toBeNull();
   });
 });

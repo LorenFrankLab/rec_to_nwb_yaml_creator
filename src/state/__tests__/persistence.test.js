@@ -247,7 +247,9 @@ describe('workspace persistence', () => {
     expect(result.workspace.animals.remy.devices.ntrode_electrode_group_channel_map[0]).not.toHaveProperty('electrode_id');
   });
 
-  it('normalizes device data before persisting', () => {
+  it('persists the slice as-is; LOAD is the single point that normalizes device data', () => {
+    // A workspace the app itself can never hold (every write path normalizes on the way in) —
+    // save must not silently rewrite it, and the next hydrate must repair it.
     const ws = makeTestWorkspace();
     ws.animals.remy.devices.device = { name: [] };
 
@@ -255,7 +257,8 @@ describe('workspace persistence', () => {
 
     const stored = JSON.parse(window.localStorage.getItem(WORKSPACE_STORAGE_KEY));
     expect(stored.schemaVersion).toBe(WORKSPACE_SCHEMA_VERSION);
-    expect(stored.workspace.animals.remy.devices.device.name).toEqual(['Trodes']);
+    expect(stored.workspace.animals.remy.devices.device.name).toEqual([]);
+    expect(loadWorkspace().workspace.animals.remy.devices.device.name).toEqual(['Trodes']);
   });
 
   it('persists only the workspace slice, never legacy formData keys', () => {

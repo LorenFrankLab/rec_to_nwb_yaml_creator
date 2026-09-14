@@ -1,5 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
+  inferredCameraRefs,
+  referencedCameraRefs,
   referencedCameraKeys,
   inferredCameraKeys,
   resolveDayCameraUsage,
@@ -159,5 +161,37 @@ describe('findCameraAffectedDays (blast radius)', () => {
     expect(findCameraAffectedDays(days, 99)).toEqual([]);
     expect(findCameraAffectedDays(days, null)).toEqual([]);
     expect(findCameraAffectedDays(null, 1)).toEqual([]);
+  });
+});
+
+describe('inferredCameraRefs / referencedCameraRefs — the ONE camera-reference enumeration', () => {
+  const day = {
+    cameras_used: [9, 1],
+    tasks: [
+      { task_name: 'run', camera_id: [1, 2] },
+      // A legacy/corrupt scalar is still a reference (the export path always read it this way;
+      // the import repair planner now does too).
+      { task_name: 'sleep', camera_id: 3 },
+      { task_name: 'none' },
+    ],
+    associated_video_files: [{ name: 'v', camera_id: 2 }, { name: 'w', camera_id: null }],
+    fs_gui_yamls: [{ name: 'f', camera_id: '4' }],
+  };
+
+  it('enumerates task (array OR scalar), video and fs-gui camera ids, first-seen, exact-deduped', () => {
+    expect(inferredCameraRefs(day)).toEqual([1, 2, 3, '4']);
+  });
+
+  it('does not string-launder ids: a numeric 2 and a string "2" are distinct references', () => {
+    expect(inferredCameraRefs({ tasks: [{ camera_id: [2, '2'] }] })).toEqual([2, '2']);
+  });
+
+  it('referencedCameraRefs lists the explicit cameras_used set first, then the inferred refs', () => {
+    expect(referencedCameraRefs(day)).toEqual([9, 1, 2, 3, '4']);
+  });
+
+  it('tolerates non-array collections and a missing day', () => {
+    expect(inferredCameraRefs({ tasks: 'corrupt', associated_video_files: null })).toEqual([]);
+    expect(referencedCameraRefs(undefined)).toEqual([]);
   });
 });

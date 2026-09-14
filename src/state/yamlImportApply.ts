@@ -40,6 +40,7 @@ import {
   getDayTasks,
 } from './workspaceSelectors';
 import type { ImportPlan, ImportPlanAnimal, ImportPlanDay } from './yamlImportPlan';
+import { referencedCameraRefs } from './cameraUsage';
 
 /** The current workspace snapshot read (read-only) during pre-flight. */
 interface ApplyWorkspace {
@@ -91,33 +92,46 @@ function sameRefValue(a: unknown, b: unknown): boolean {
 }
 
 /**
- * Add a non-empty decoded YAML camera id to a mutable list.
- *
- * @param refs - The list to append to.
- * @param value - The candidate camera id.
- */
-function pushCameraRef(refs: unknown[], value: unknown): void {
-  if (value === undefined || value === null || value === '') return;
-  if (!refs.some((existing) => sameRefValue(existing, value))) refs.push(value);
-}
-
-/**
- * Camera ids a planned day will reference after it is added.
+ * Camera ids a planned day will reference after it is added — the shared enumeration, minus the
+ * empty-string a decoded YAML can carry for "no camera".
  *
  * @param day - The import-plan day.
  * @returns Referenced camera ids in first-seen order.
  */
 function dayCameraRefs(day: ImportPlanDay): unknown[] {
-  const refs: unknown[] = [];
-  getDayCamerasUsed(day).forEach((cameraId) => pushCameraRef(refs, cameraId));
-  getDayTasks(day).forEach((task) => {
-    if (Array.isArray(task?.camera_id)) {
-      task.camera_id.forEach((cameraId: unknown) => pushCameraRef(refs, cameraId));
-    }
-  });
-  getDayAssociatedVideos(day).forEach((video) => pushCameraRef(refs, video?.camera_id));
-  getDayFsGuiYamls(day).forEach((protocol) => pushCameraRef(refs, protocol?.camera_id));
-  return refs;
+  return referencedCameraRefs(day).filter((cameraId) => cameraId !== '');
+}
+
+/**
+ * Whether two catalog rows occupy the same identity: cameras clash on `id` OR on `camera_name`,
+ * recording systems on `name`. This is the rule the add-to-existing pre-flight below rejects on,
+ * exported so any caller that MERGES additions from several files dedups by the same rule — a
+ * merge that keeps two colliding rows only produces a batch the pre-flight then refuses.
+ *
+ * @param catalog - Which animal catalog the rows belong to.
+ * @param a - First row.
+ * @param b - Second row.
+ * @returns True when the two rows would collide.
+ */
+export function catalogRowsCollide(
+  catalog: 'cameras' | 'data_acq_device',
+  a: unknown,
+  b: unknown
+): boolean {
+  if (!a || typeof a !== 'object' || !b || typeof b !== 'object') return false;
+  const left = a as Record<string, unknown>;
+  const right = b as Record<string, unknown>;
+  if (catalog === 'data_acq_device') return sameRefValue(left.name, right.name);
+  if (sameRefValue(left.id, right.id)) return true;
+  const leftName = left.camera_name;
+  const rightName = right.camera_name;
+  return (
+    leftName !== undefined &&
+    leftName !== null &&
+    rightName !== undefined &&
+    rightName !== null &&
+    String(leftName) === String(rightName)
+  );
 }
 
 /**
@@ -133,41 +147,33 @@ function preflightExistingAnimalCatalogRefs(
   targetAnimal: unknown,
   additions: { cameras?: unknown[]; data_acq_device?: unknown[] } | undefined
 ): string | null {
-  const existingCameras = getAnimalCameras(targetAnimal);
-  const cameraIds: unknown[] = existingCameras.map((camera) => camera.id);
-  const cameraNames = new Set(
-    existingCameras
-      .map((camera) => camera.camera_name)
-      .filter((name) => name !== undefined && name !== null)
-      .map((name) => String(name))
-  );
-
+  // Each accepted row joins the list, so an addition also collides with an EARLIER addition,
+  // not just with what the animal already holds.
+  const cameras: unknown[] = [...getAnimalCameras(targetAnimal)];
   for (const camera of additions?.cameras ?? []) {
     if (!camera || typeof camera !== 'object') continue;
     const { id, camera_name: cameraName } = camera as { id?: unknown; camera_name?: unknown };
-    if (cameraIds.some((existing) => sameRefValue(existing, id))) {
-      return `Camera id "${String(id)}" already exists on animal "${animalPlan.existingAnimalId}".`;
+    const clash = cameras.find((existing) => catalogRowsCollide('cameras', existing, camera));
+    if (clash !== undefined) {
+      return sameRefValue((clash as { id?: unknown }).id, id)
+        ? `Camera id "${String(id)}" already exists on animal "${animalPlan.existingAnimalId}".`
+        : `Camera "${String(cameraName)}" already exists on animal "${animalPlan.existingAnimalId}".`;
     }
-    if (cameraName !== undefined && cameraName !== null && cameraNames.has(String(cameraName))) {
-      return `Camera "${String(cameraName)}" already exists on animal "${animalPlan.existingAnimalId}".`;
-    }
-    cameraIds.push(id);
-    if (cameraName !== undefined && cameraName !== null) cameraNames.add(String(cameraName));
+    cameras.push(camera);
   }
 
-  const existingDevices = getDataAcqDevices(targetAnimal);
-  const deviceNames: unknown[] = existingDevices
-    .map((device) => device.name)
-    .filter((name) => name !== undefined && name !== null);
+  const devices: unknown[] = [...getDataAcqDevices(targetAnimal)];
   for (const device of additions?.data_acq_device ?? []) {
     if (!device || typeof device !== 'object') continue;
-    const name = (device as { name?: unknown }).name;
-    if (deviceNames.some((existing) => sameRefValue(existing, name))) {
+    if (devices.some((existing) => catalogRowsCollide('data_acq_device', existing, device))) {
+      const name = (device as { name?: unknown }).name;
       return `Recording system "${String(name)}" already exists on animal "${animalPlan.existingAnimalId}".`;
     }
-    deviceNames.push(name);
+    devices.push(device);
   }
 
+  const cameraIds = cameras.map((camera) => (camera as { id?: unknown }).id);
+  const deviceNames = devices.map((device) => (device as { name?: unknown }).name);
   for (const day of animalPlan.days) {
     const missingCamera = dayCameraRefs(day).find(
       (cameraId) => !cameraIds.some((existing) => sameRefValue(existing, cameraId))

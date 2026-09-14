@@ -20,7 +20,9 @@
 
 import { getAnimalTaskTypes, getDayTasks } from './workspaceSelectors';
 import { addTaskType } from './taskCatalogActions';
+import { deepEqual, taskDefinition, usableTaskName as usableName } from './taskCatalog';
 import type { TaskType, TaskInstance } from './workspaceTypes';
+import { isRecord as isPlainRecord } from '../utils/records';
 
 /** A task-name match whose reusable definition differs between the inline day and animal catalog. */
 export interface TaskCatalogDivergence {
@@ -46,52 +48,6 @@ export interface DayCatalogView {
   derived: boolean;
   /** Inline→catalog name matches whose task definitions differ and need an explicit user choice. */
   divergences: TaskCatalogDivergence[];
-}
-
-/** A usable task name / dedup key: a non-empty, non-whitespace string. */
-function usableName(value: unknown): value is string {
-  return typeof value === 'string' && value.trim() !== '';
-}
-
-/** Whether `value` is a plain object record (not null, not an array). */
-function isPlainRecord(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === 'object' && !Array.isArray(value);
-}
-
-/** ES2020-safe own-property check (the tsconfig `lib` predates `Object.hasOwn`). */
-function hasOwn(record: object, key: string): boolean {
-  return Object.prototype.hasOwnProperty.call(record, key);
-}
-
-/**
- * Order-insensitive deep equality for definition records. Arrays stay order-sensitive because
- * `[0, 1]` and `[1, 0]` produce different exported bytes.
- */
-function deepEqual(a: unknown, b: unknown): boolean {
-  if (a === b) return true;
-  if (typeof a !== 'object' || typeof b !== 'object' || a === null || b === null) return false;
-  const aArray = Array.isArray(a);
-  const bArray = Array.isArray(b);
-  if (aArray !== bArray) return false;
-  if (aArray && bArray) {
-    if (a.length !== b.length) return false;
-    return a.every((value, index) => deepEqual(value, b[index]));
-  }
-  const aRecord = a as Record<string, unknown>;
-  const bRecord = b as Record<string, unknown>;
-  const aKeys = Object.keys(aRecord);
-  const bKeys = Object.keys(bRecord);
-  if (aKeys.length !== bKeys.length) return false;
-  return aKeys.every((key) => hasOwn(bRecord, key) && deepEqual(aRecord[key], bRecord[key]));
-}
-
-/** The reusable definition of a task: every own key except the day-varying `task_epochs`. */
-function taskDefinition(task: Record<string, unknown>): Record<string, unknown> {
-  const definition: Record<string, unknown> = {};
-  for (const key of Object.keys(task)) {
-    if (key !== 'task_epochs') definition[key] = task[key];
-  }
-  return definition;
 }
 
 /** The exported task definition a catalog task type would emit (strips only the internal `id`). */

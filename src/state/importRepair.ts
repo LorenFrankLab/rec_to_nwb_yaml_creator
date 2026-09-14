@@ -24,8 +24,11 @@ import { isValidSpecies } from '../validation/dandiSubject';
 import { findIdentityDivergence } from './identityDivergence';
 import { extractRecordingDate, findExistingAnimalId } from './yamlImportPlan';
 import { getAnimalCameras, getDataAcqDevices } from './workspaceSelectors';
+import { inferredCameraRefs } from './cameraUsage';
+import { catalogRowsCollide } from './yamlImportApply';
 import type { IdentityRegistryEntry } from './identityDivergence';
 import type { ValidationModel } from '../validation/issueTypes';
+import { blockingIssues } from '../validation/issueTypes';
 
 /** The schema enum for `subject.sex` (mirrors nwb_schema.json — single-letter NWB/DANDI codes). */
 const SEX_ENUM: ReadonlyArray<string> = ['M', 'F', 'U', 'O'];
@@ -554,24 +557,11 @@ function pushCameraRef(refs: unknown[], value: unknown): void {
  */
 function collectFlatCameraRefs(model: ValidationModel): unknown[] {
   const refs: unknown[] = [];
-
   if (Array.isArray(model.cameras)) {
     model.cameras.forEach((camera) => pushCameraRef(refs, camera?.id));
   }
-  if (Array.isArray(model.tasks)) {
-    model.tasks.forEach((task) => {
-      if (Array.isArray(task?.camera_id)) {
-        task.camera_id.forEach((cameraId: unknown) => pushCameraRef(refs, cameraId));
-      }
-    });
-  }
-  if (Array.isArray(model.associated_video_files)) {
-    model.associated_video_files.forEach((video) => pushCameraRef(refs, video?.camera_id));
-  }
-  if (Array.isArray(model.fs_gui_yamls)) {
-    model.fs_gui_yamls.forEach((protocol) => pushCameraRef(refs, protocol?.camera_id));
-  }
-
+  // The day-owned references, enumerated the same way the export and the import pre-flight do.
+  inferredCameraRefs(model).forEach((cameraId) => pushCameraRef(refs, cameraId));
   return refs;
 }
 
@@ -830,7 +820,7 @@ function buildValidationItems(model: ValidationModel): {
   items: RepairItem[];
   blockers: RepairBlocker[];
 } {
-  const errors = validate(model).filter((issue) => issue.severity === 'error');
+  const errors = blockingIssues(validate(model));
   const items: RepairItem[] = [];
   const blockers: RepairBlocker[] = [];
   // One field can draw multiple errors (e.g. a null location fails BOTH the schema `type` check and
@@ -955,13 +945,13 @@ function buildValidationItems(model: ValidationModel): {
     // Duplicate associated-file identities are scalar fields and can be corrected safely in this
     // screen. Sending users to a text editor for these was especially disruptive for the supplied
     // trodes_to_nwb sample, whose placeholder paths intentionally collide.
-    if (
-      (code === 'duplicate_associated_file_name' || code === 'duplicate_associated_file_path') &&
-      (path.endsWith('.name') || path.endsWith('.path'))
-    ) {
+    if (code === 'duplicate_associated_file_name' || code === 'duplicate_associated_file_path') {
       items.push({
         path,
-        label: path.endsWith('.name') ? 'Associated file name' : 'Associated file path',
+        label:
+          code === 'duplicate_associated_file_name'
+            ? 'Associated file name'
+            : 'Associated file path',
         code,
         group: 'attention',
         kind: 'input',
@@ -1325,6 +1315,37 @@ export function collectExistingAnimalCatalogAdditions(
     additions[action.targetAnimalId] = target;
   }
   return additions;
+}
+
+/**
+ * Merge per-file catalog additions into one set per existing animal, keeping the FIRST row accepted
+ * for each catalog identity (matching how `planImport` unions animal-level catalogs across a batch).
+ *
+ * Dedup uses the executor's own collision rule (`catalogRowsCollide`), so a merge can never hand the
+ * pre-flight two rows it will reject: two day files carrying the same camera recalibrated between
+ * them differ in a dependent field, and merging both would fail the whole animal at commit.
+ *
+ * @param perFile - One `collectExistingAnimalCatalogAdditions` result per included file, in order.
+ * @returns Merged catalog additions keyed by existing animal id.
+ */
+export function mergeExistingAnimalCatalogAdditions(
+  perFile: Array<Record<string, ExistingAnimalCatalogAdditions>>
+): Record<string, ExistingAnimalCatalogAdditions> {
+  const merged: Record<string, ExistingAnimalCatalogAdditions> = {};
+  for (const additions of perFile) {
+    for (const [animalId, next] of Object.entries(additions)) {
+      const target = merged[animalId] ?? {};
+      for (const catalog of ['cameras', 'data_acq_device'] as const) {
+        for (const entry of next[catalog] ?? []) {
+          const rows = target[catalog] ?? [];
+          if (rows.some((existing) => catalogRowsCollide(catalog, existing, entry))) continue;
+          target[catalog] = [...rows, structuredClone(entry)];
+        }
+      }
+      merged[animalId] = target;
+    }
+  }
+  return merged;
 }
 
 /**

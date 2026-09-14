@@ -40,7 +40,7 @@ export function useStore(initialState: InitialWorkspaceState | null = null) {
 
   // Cross-slice data integrity: clear orphaned task epochs from associated files,
   // for both the legacy form and every workspace day.
-  useEpochCleanup({ formData, setFormData, workspace, updateDay: workspaceActions.updateDay });
+  useEpochCleanup({ formData, setFormData });
 
   // Actions combine all mutation functions; same key set as before the decomposition.
   const actions = useMemo(

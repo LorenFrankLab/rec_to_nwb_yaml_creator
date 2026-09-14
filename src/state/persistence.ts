@@ -184,14 +184,12 @@ export function loadWorkspace(): LoadWorkspaceResult {
  * @param workspace - The workspace slice (animals + days + settings).
  */
 export function saveWorkspace(workspace: object): void {
-  const blob = JSON.stringify({
-    schemaVersion: WORKSPACE_SCHEMA_VERSION,
-    // Device-SHAPE normalization only — the one-time bad-channel base→day migration is a LOAD
-    // concern (it ran on hydrate; the in-memory workspace is already migrated, so re-running it
-    // here is a redundant no-op). Skipping it keeps the migration's idempotency off the hot save
-    // path; `loadWorkspace` still migrates anything older on the way back in.
-    workspace: normalizeWorkspaceDevices(workspace, { migrateBadChannels: false }),
-  });
+  // Persisted AS-IS. Every write path normalizes device shape on the way in (`createAnimal` /
+  // `updateAnimal` / snapshot / `updateDay`) and `loadWorkspace` normalizes + migrates on the way
+  // back, so re-normalizing here was a deep clone + full channel-map walk per autosave tick that
+  // never changed a byte (proved by persistence.saveNormalization.test.js). Load is the single
+  // repair point; a blob that somehow persisted un-normalized is normalized on its next hydrate.
+  const blob = JSON.stringify({ schemaVersion: WORKSPACE_SCHEMA_VERSION, workspace });
   window.localStorage.setItem(WORKSPACE_STORAGE_KEY, blob);
 }
 

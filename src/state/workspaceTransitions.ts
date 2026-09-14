@@ -105,6 +105,86 @@ export interface DayUpdates {
 }
 
 /**
+ * How an update key decides it was "given". Declared per key (below) rather than re-decided per
+ * `if` branch — this file has twice shipped a silently-dropped write because a key had no branch.
+ *   - `defined` — `!== undefined`: `null`, `[]` and `''` are real writes (clear-to-empty persists).
+ *   - `nonNull` — `!= null`: a `null` is ignored (the pre-table truthiness gate for these arrays).
+ *   - `present` — `key in updates`: an explicit `undefined` is itself a write (clears the field).
+ */
+type UpdateGate = 'defined' | 'nonNull' | 'present';
+
+function isGiven(updates: object, key: PropertyKey, gate: UpdateGate): boolean {
+  if (gate === 'present') return key in updates;
+  const value = (updates as Record<PropertyKey, unknown>)[key];
+  return gate === 'defined' ? value !== undefined : value != null;
+}
+
+/**
+ * Day keys whose update REPLACES the field wholesale (no merge, no normalization). Every other
+ * `DayUpdates` key is handled by name in {@link applyDayUpdates}; the type assertion after the
+ * table makes "added a field to `DayUpdates` but forgot to route it" a typecheck failure.
+ */
+export const DAY_REPLACE_KEYS = {
+  tasks: 'defined',
+  // The day's ordered references into the animal `taskTypes` catalog (read by `mergeDayMetadata`).
+  taskInstances: 'defined',
+  behavioral_events: 'defined',
+  associated_files: 'defined',
+  associated_video_files: 'defined',
+  // FsGUI protocol files: a day-owned collection the export merge reads.
+  fs_gui_yamls: 'defined',
+  // Probe-reconfiguration: points the day at another snapshot version. Snapshots' `appliedToDays`
+  // are NOT eagerly reconciled here; `reconcileAppliedToDays` derives them from each day's version.
+  configurationVersion: 'defined',
+  keywords: 'defined',
+  // Per-day recording-system selection. PRESENCE, not `defined`: the "Default" option clears back
+  // to the animal default by writing `data_acq_device_name: undefined`, and that clear MUST persist.
+  data_acq_device_name: 'present',
+  // Explicit per-day "cameras used" (UNIONed with inferred refs by `referencedCameraKeys`). Cleared
+  // to `[]`, never undefined; absent for all existing data so the export stays byte-identical.
+  cameras_used: 'defined',
+  // Off-export data folder; `''` persists (the user explicitly cleared it).
+  dataFolder: 'defined',
+} as const satisfies Partial<Record<keyof DayUpdates, UpdateGate>>;
+
+/** Day keys `applyDayUpdates` merges/normalizes by name rather than replacing. */
+const DAY_MERGED_KEYS = ['session', 'technical', 'deviceOverrides', 'state'] as const;
+
+// Every `DayUpdates` key is either replaced by the table or merged by name — or this fails to compile.
+type UnroutedDayKey = Exclude<keyof DayUpdates, keyof typeof DAY_REPLACE_KEYS | (typeof DAY_MERGED_KEYS)[number]>;
+true satisfies [UnroutedDayKey] extends [never] ? true : never;
+
+/** Animal keys whose update REPLACES the field wholesale. See {@link DAY_REPLACE_KEYS}. */
+export const ANIMAL_REPLACE_KEYS = {
+  experiment_description: 'defined',
+  cameras: 'nonNull',
+  // Animal-level behavioral events are an editable reference; the exported source is the day's.
+  behavioral_events: 'nonNull',
+  // The define-once task-type catalog day `taskInstances` reference. `defined` so a delete-last-type
+  // (`taskTypes: []`) persists, never a silent no-op.
+  taskTypes: 'defined',
+  // `defined` so an explicit `null` CLEARS opto (the editor's disable sentinel).
+  optogenetics: 'defined',
+} as const satisfies Partial<Record<keyof AnimalUpdates, UpdateGate>>;
+
+/** Animal keys `applyAnimalUpdates` merges/normalizes/routes by name rather than replacing. */
+const ANIMAL_MERGED_KEYS = ['subject', 'experimenters', 'devices', 'data_acq_device', 'technicalDefaults'] as const;
+
+type UnroutedAnimalKey = Exclude<keyof AnimalUpdates, keyof typeof ANIMAL_REPLACE_KEYS | (typeof ANIMAL_MERGED_KEYS)[number]>;
+true satisfies [UnroutedAnimalKey] extends [never] ? true : never;
+
+/** Apply every table-driven replacement whose key was given. */
+function applyReplacements<T extends object>(
+  target: T,
+  updates: Partial<T>,
+  table: Partial<Record<keyof T, UpdateGate>>
+): void {
+  for (const [key, gate] of Object.entries(table) as Array<[keyof T, UpdateGate]>) {
+    if (isGiven(updates, key, gate)) target[key] = updates[key] as T[keyof T];
+  }
+}
+
+/**
  * Order a list of day ids by their record's `date`, ascending. Day dates are ISO `YYYY-MM-DD`,
  * which sort lexicographically == chronologically, so a string compare is correct. Pure and
  * total: returns a NEW array (never mutates `ids`), coerces a missing record / missing date to
@@ -132,11 +212,9 @@ export function sortDayIdsByDate(ids: string[], daysById: Record<string, Day>): 
  * clears opto (how the editor disables it).
  *
  * @param animal - The current animal record.
- * @param updates - Partial updates; recognized keys: `subject`, `experimenters`,
- *   `devices` (also mirrored into the latest snapshot), `cameras`, `data_acq_device` (routed
- *   onto `devices.data_acq_device`), `technicalDefaults`, `behavioral_events`, `taskTypes`,
- *   `optogenetics`, `experiment_description`. Note: `optogenetics: null` CLEARS opto (uses `!== undefined`, not
- *   truthiness), as does `taskTypes: []`; all other keys are applied only when truthy.
+ * @param updates - Partial updates. `subject` / `experimenters` / `technicalDefaults` merge,
+ *   `devices` normalizes (and mirrors into the latest snapshot), `data_acq_device` routes onto
+ *   `devices.data_acq_device`; every other key replaces per {@link ANIMAL_REPLACE_KEYS}.
  * @param now - Timestamp to stamp `lastModified`.
  * @returns The next animal record (deep-cloned; input not mutated).
  */
@@ -148,9 +226,6 @@ export function applyAnimalUpdates(animal: Animal, updates: AnimalUpdates, now: 
   }
   if (updates.experimenters) {
     updated.experimenters = { ...updated.experimenters, ...updates.experimenters };
-  }
-  if (updates.experiment_description !== undefined) {
-    updated.experiment_description = updates.experiment_description;
   }
   if (updates.devices) {
     updated.devices = normalizeDevices({ ...getAnimalDevices(updated), ...updates.devices });
@@ -167,9 +242,6 @@ export function applyAnimalUpdates(animal: Animal, updates: AnimalUpdates, now: 
       };
     }
   }
-  if (updates.cameras) {
-    updated.cameras = updates.cameras;
-  }
   // Data-acq hardware is an animal-level device read from `animal.devices.data_acq_device`.
   if (updates.data_acq_device) {
     updated.devices = normalizeDevices({
@@ -181,23 +253,7 @@ export function applyAnimalUpdates(animal: Animal, updates: AnimalUpdates, now: 
   if (updates.technicalDefaults) {
     updated.technicalDefaults = { ...updated.technicalDefaults, ...updates.technicalDefaults };
   }
-  // Animal-level behavioral events are an editable reference; the exported source is the
-  // day's `behavioral_events`. Persist them so the editor and the model agree.
-  if (updates.behavioral_events) {
-    updated.behavioral_events = updates.behavioral_events;
-  }
-  // Task-type catalog (Phase 8C): the animal's define-once catalog that day `taskInstances` reference
-  // (read by `mergeDayMetadata`'s `resolveDayTasks`). The sibling of `applyDayUpdates`' taskInstances
-  // branch — without it every Task Types add/edit/delete AND the Day Editor's inline→catalog
-  // conversion / quick-add is silently dropped, leaving days pointing at task types the catalog never
-  // saved. `!== undefined` so a delete-last-type (`taskTypes: []`) persists, never a silent no-op.
-  if (updates.taskTypes !== undefined) {
-    updated.taskTypes = updates.taskTypes;
-  }
-  // `!== undefined` (not truthiness) so an explicit `null` CLEARS opto (editor disable).
-  if (updates.optogenetics !== undefined) {
-    updated.optogenetics = updates.optogenetics;
-  }
+  applyReplacements(updated, updates as Partial<Animal>, ANIMAL_REPLACE_KEYS);
 
   updated.lastModified = now;
   return updated;
@@ -578,29 +634,6 @@ export function applyDayUpdates(day: Day, updates: DayUpdates, now: string): Day
         : {};
     updated.session = { ...currentSession, ...updates.session } as SessionMetadata;
   }
-  if (updates.tasks !== undefined) {
-    updated.tasks = updates.tasks;
-  }
-  // Task-type catalog (Phase 8C): the day's ordered references into the animal `taskTypes` catalog,
-  // read by `mergeDayMetadata`'s `resolveDayTasks`. Without this branch a Tasks & Epochs edit (pick /
-  // order / assign epochs) would be silently dropped, exactly like the other day-owned collections.
-  if (updates.taskInstances !== undefined) {
-    updated.taskInstances = updates.taskInstances;
-  }
-  if (updates.behavioral_events !== undefined) {
-    updated.behavioral_events = updates.behavioral_events;
-  }
-  if (updates.associated_files !== undefined) {
-    updated.associated_files = updates.associated_files;
-  }
-  if (updates.associated_video_files !== undefined) {
-    updated.associated_video_files = updates.associated_video_files;
-  }
-  // FsGUI protocol files are a day-owned collection the export merge reads; without this
-  // branch a write (including the resetDayCollection repair) would be silently dropped.
-  if (updates.fs_gui_yamls !== undefined) {
-    updated.fs_gui_yamls = updates.fs_gui_yamls;
-  }
   if (updates.technical) {
     updated.technical = { ...updated.technical, ...updates.technical };
   }
@@ -620,36 +653,7 @@ export function applyDayUpdates(day: Day, updates: DayUpdates, now: string): Day
   if (clearsValidationDeferral && updated.state) {
     updated.state.validationDeferred = false;
   }
-  // Probe-reconfiguration: point this day at a different snapshot version. Setting it here
-  // does NOT eagerly reconcile snapshots' `appliedToDays`; `reconcileAppliedToDays` derives
-  // the trustworthy view from each day's version.
-  if (updates.configurationVersion !== undefined) {
-    updated.configurationVersion = updates.configurationVersion;
-  }
-  if (updates.keywords !== undefined) {
-    updated.keywords = updates.keywords;
-  }
-  // Per-day recording-system selection (`day.data_acq_device_name`, read by `mergeDayMetadata`).
-  // PRESENCE check, NOT `!== undefined`: the "Default" option clears back to the animal default by
-  // writing `data_acq_device_name: undefined`, and that clear MUST persist (a `!== undefined` guard
-  // would silently drop it, leaving the day pinned to a stale system). This is the one allow-list
-  // key that supports clear-to-undefined.
-  if ('data_acq_device_name' in updates) {
-    updated.data_acq_device_name = updates.data_acq_device_name;
-  }
-  // Explicit per-day "cameras used" set (UNIONed with the inferred task/video/fs-gui references by
-  // `referencedCameraKeys`). `!== undefined` like the other collections — it is cleared to `[]`,
-  // never to undefined. Absent for all existing data (the baseline-safe default), so the export
-  // stays byte-identical when no checklist additions are made.
-  if (updates.cameras_used !== undefined) {
-    updated.cameras_used = updates.cameras_used;
-  }
-  // Day-level data folder (off-export). `!== undefined` so emptying the field to '' persists (the
-  // user explicitly cleared it); absent for all existing data, so the persisted shape is additive
-  // and `mergeDayMetadata` never reads it — the exported YAML is byte-identical.
-  if (updates.dataFolder !== undefined) {
-    updated.dataFolder = updates.dataFolder;
-  }
+  applyReplacements(updated, updates as Partial<Day>, DAY_REPLACE_KEYS);
 
   updated.lastModified = now;
   return updated;

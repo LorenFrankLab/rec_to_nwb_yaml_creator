@@ -1,5 +1,4 @@
 import { useEffect, useRef } from 'react';
-import type { Workspace } from './workspaceTypes';
 
 /** Inputs to {@link useEpochCleanup}. */
 export interface UseEpochCleanupParams {
@@ -7,10 +6,6 @@ export interface UseEpochCleanupParams {
   formData: Record<string, any>;
   /** Legacy form state setter (callback form). */
   setFormData: (updater: (prev: any) => any) => void;
-  /** Workspace state (accepted for call-site stability; not auto-scrubbed). */
-  workspace: Workspace;
-  /** Workspace day updater (accepted for call-site stability; not used to auto-scrub). */
-  updateDay: (dayId: string, updates: any) => void;
 }
 
 /**
@@ -27,21 +22,13 @@ export interface UseEpochCleanupParams {
  * workspace instead **preserves** stale references so they stay visible, lets
  * validation own them (`orphaned_file` / `orphaned_video` → export blocked), and
  * clears them only through the explicit, user-confirmed destructive-edit flow in
- * the Day Editor (EpochsTab). `workspace` / `updateDay` are still accepted
- * for call-site compatibility but no longer drive an automatic scrub.
+ * the Day Editor (EpochsTab).
  *
- * @param params - The legacy form slice + the workspace slice.
+ * @param params - The legacy form slice.
  * @param params.formData - Legacy single-session form state.
  * @param params.setFormData - Legacy form state setter.
- * @param params.workspace - Workspace state (animals, days, settings).
- * @param params.updateDay - Workspace day updater `(dayId, updates) => void`.
  */
-export function useEpochCleanup({
-  formData,
-  setFormData,
-  workspace,
-  updateDay,
-}: UseEpochCleanupParams): void {
+export function useEpochCleanup({ formData, setFormData }: UseEpochCleanupParams): void {
   // ----- Legacy formData cleanup (unchanged behavior) -----
   // Uses a ref to track the last set of valid epochs to avoid infinite loops; only
   // runs cleanup when the valid epochs actually change (when tasks change).
@@ -109,8 +96,5 @@ export function useEpochCleanup({
 
   // Workspace days are intentionally NOT auto-scrubbed (see the hook doc): stale
   // references are preserved for the user, surfaced by validation, and cleared
-  // only via the explicit destructive-edit flow. `workspace` / `updateDay` remain
-  // in the signature for call-site stability and future use.
-  void workspace;
-  void updateDay;
+  // only via the explicit destructive-edit flow.
 }
