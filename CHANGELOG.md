@@ -163,6 +163,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Camera references are enumerated once.** `inferredCameraRefs` / `referencedCameraRefs`
+  (`state/cameraUsage.ts`) are the single list of the fields that carry a camera reference (task
+  `camera_id` — array or a legacy scalar — video and FsGUI `camera_id`, plus the explicit
+  `cameras_used` set). The export path, the cameras-used checklist, the import pre-flight and the
+  import repair planner all read it; the two importer copies had drifted (they ignored a scalar task
+  `camera_id`). In practice the schema gate rejects a scalar before the pre-flight runs, so the only
+  visible effect is that the repair planner now lists such a reference too.
+- **Autosave persists the workspace as-is.** `saveWorkspace` no longer deep-clones and re-walks every
+  configuration snapshot's channel map on each 500 ms tick; every write path normalizes on the way in
+  and `loadWorkspace` normalizes on hydrate, so the save-time pass never changed a byte (a test now
+  proves that on a 300-day, 128-channel workspace). Measured 1.4 ms → 0.3 ms per save on that
+  workspace.
+- **One lifecycle palette for day status.** The day-row status pills, the Validation Summary chips
+  and the shared legend now read the same lifecycle color tokens (`--color-lifecycle-*`). The legend
+  had been teaching a color key the day rows did not use: "Exported" reads as solid blue (the
+  committed form of ready-blue, matching the Validation Summary) rather than green, and "Needs
+  fixing" reads as error red (it is a blocking issue) rather than amber.
+- **One button.** Every action in the workspace app renders the `Button` primitive (or `ButtonLink`
+  for a route-changing call-to-action); the eleven hand-rolled per-stylesheet copies — with their
+  divergent focus rings and missing 44px touch targets — are gone, along with the raw
+  `.btn-*` / `.button-*` classes they styled.
 - **Test and CI hardening.** The schema-sync CI check now fails loudly when the downstream Python
   schema target is missing; local guards now lock JSON-schema dialect-sensitive keywords, persistence
   fixtures, recursive view-model command catalog coverage, and selector-owned raw reads. The legacy
@@ -236,6 +257,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **"Add video" no longer invents a camera.** The per-epoch Add video / Enter video manually actions
+  wrote `camera_id: 0` when the animal had no cameras, and kept a task's original camera id after that
+  camera was deleted — a dangling reference validation then had to block. Both now use the same
+  attribution decision as the bulk generator (`videoCameraIdFor`): the epoch's first surviving
+  declared camera, else the animal's first camera, else nothing — and when there is nothing, the
+  action explains why instead of writing.
 - **A warning no longer discards a whole section on legacy import.** `importFiles` excluded any
   top-level section carrying ANY validation issue, warnings included, so importing the pinned
   upstream trodes_to_nwb sample silently dropped its entire `subject` block — description, genotype,
@@ -290,6 +317,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Removed
 
+- **`src/ntrode/deviceTypes.ts`.** `deviceTypeMap` / `getShankCount` had no production consumer —
+  the probe catalog (`PROBE_CATALOG` + `getProbeShanks`) and `utils/deviceTypeUtils` are the source of
+  truth. Its tetrode-shaped `[0,1,2,3]` fallback for an unknown device type went with it; the catalog
+  answers "no shanks" for a probe it does not know.
+- **Unreachable Day Editor components.** `TaskModal`, `TaskInstanceModal`, `TasksTable`,
+  `TaskInstancesTable`, `AssociatedVideosEditor`, `FsGuiSection` and `TaskEpochsEditor` (with their
+  stylesheets and tests) were superseded by the epoch grid and rendered from nowhere; ~2,800 lines
+  removed. The Day Editor stylesheet also lost ~400 lines of stepper/export-step rules whose markup
+  no longer exists.
 - **Retired the multi-file batch import dialog (`ImportYamlDialog`).** The new single-file Import &
   Repair screen (`#/import`) is the import experience; the modal batch dialog and its
   `#/workspace?import=1` handshake are gone (both "Import YAML…" buttons and the wizard's "Import a
