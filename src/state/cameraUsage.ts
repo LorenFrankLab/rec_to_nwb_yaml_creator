@@ -69,6 +69,41 @@ export function inferredCameraRefs(day: unknown): unknown[] {
 }
 
 /**
+ * A NEW day record with every camera reference rewritten through `mapping` (old id → new id),
+ * applied simultaneously (a `0↔1` swap does not chain). References the mapping does not name are
+ * left exactly as they are. Reads and writes the same four reference sites {@link inferredCameraRefs}
+ * enumerates plus `cameras_used`; the input is never mutated.
+ *
+ * @param day - A recording-day record or decoded flat model.
+ * @param mapping - Old camera id → new camera id (exact-value keys; SameValueZero).
+ * @returns A deep-cloned day with its references remapped.
+ */
+export function remapCameraRefs<T extends object>(day: T, mapping: Map<unknown, unknown>): T {
+  if (mapping.size === 0) return day;
+  const next = structuredClone(day) as Record<string, unknown>;
+  const map = (id: unknown): unknown => (mapping.has(id) ? mapping.get(id) : id);
+
+  if (Array.isArray(next.tasks)) {
+    for (const task of next.tasks as Array<Record<string, unknown>>) {
+      if (!task || typeof task !== 'object') continue;
+      const cameraId = task.camera_id;
+      if (Array.isArray(cameraId)) task.camera_id = cameraId.map(map);
+      else if (cameraId !== undefined && cameraId !== null) task.camera_id = map(cameraId);
+    }
+  }
+  for (const key of ['associated_video_files', 'fs_gui_yamls'] as const) {
+    if (!Array.isArray(next[key])) continue;
+    for (const row of next[key] as Array<Record<string, unknown>>) {
+      if (row && typeof row === 'object' && row.camera_id !== undefined && row.camera_id !== null) {
+        row.camera_id = map(row.camera_id);
+      }
+    }
+  }
+  if (Array.isArray(next.cameras_used)) next.cameras_used = next.cameras_used.map(map);
+  return next as T;
+}
+
+/**
  * {@link inferredCameraRefs} UNIONed with the explicit `day.cameras_used` set (listed FIRST, so a
  * consumer that reports the first unresolvable reference names the user's own checklist entry
  * before an inferred one). The export / pre-flight reference set.

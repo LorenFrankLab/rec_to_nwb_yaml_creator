@@ -257,6 +257,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Batch import can no longer attach a video to the wrong camera.** When two files for the same
+  animal numbered their cameras differently (file A: overhead = 0, side = 1; file B: the reverse),
+  the plan unioned the catalog by `camera_name` keeping the first-seen ids but left the later
+  file's day references unchanged — so B's overhead videos exported as side-camera videos. Each
+  file's references are now remapped by camera name onto the combined catalog's ids, a later file's
+  new-by-name camera whose id collides with a unioned one is renumbered (and its references follow),
+  and the preview's "Differences to review" names every remap.
 - **"Add video" no longer invents a camera.** The per-epoch Add video / Enter video manually actions
   wrote `camera_id: 0` when the animal had no cameras, and kept a task's original camera id after that
   camera was deleted — a dangling reference validation then had to block. Both now use the same

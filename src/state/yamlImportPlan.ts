@@ -28,6 +28,7 @@ import { getAnimalCameras, getDataAcqDevices } from './workspaceSelectors';
 import type { ValidationModel } from '../validation/issueTypes';
 import { isBlockingIssue } from '../validation/issueTypes';
 import { canonicalJson } from '../utils/canonicalJson';
+import { remapCameraRefs } from './cameraUsage';
 
 /** A single surfaced disagreement across a subject's files. */
 export interface Divergence {
@@ -75,6 +76,11 @@ interface SubjectBatch {
 
 /** A subject's resolved animal-level facts (latest-date-wins) plus surfaced divergences. */
 interface ResolvedAnimalFacts {
+  /**
+   * Per file (by index into the date-sorted entries): that file's camera id → the unioned
+   * catalog's id for the camera of the same name. Empty when the file's ids already agree.
+   */
+  cameraIdRemaps: Array<Map<unknown, unknown>>;
   subject: any;
   experimenters: any;
   optogenetics: any;
@@ -333,17 +339,33 @@ function resolveAnimalFacts(entries: FileEntry[]): ResolvedAnimalFacts {
   const divergences: Divergence[] = [];
   const latest = entries[entries.length - 1].animalFacts;
 
-  // --- cameras: union by camera_name, first-seen order ---
+  // --- cameras: union by camera_name, first-seen order. A camera is IDENTIFIED by its name; its
+  // id in the union is the first-seen id, or a fresh one when a later file's new-by-name camera
+  // collides with an id the union already assigned. Every later file's day references are then
+  // remapped by name onto the union ids (see `cameraIdRemaps`), so an "overhead" video stays an
+  // overhead video even when its file numbered the cameras differently. ---
   const cameras: any[] = [];
   const cameraRegistry: IdentityRegistryEntry[] = [];
   const cameraSets: string[] = [];
-  for (const { animalFacts } of entries) {
+  const cameraIdRemaps: Array<Map<unknown, unknown>> = [];
+  const unionIdByName = new Map<string, unknown>();
+  const usedIds = new Set<unknown>();
+  const nextFreeId = (): number => {
+    let candidate = 0;
+    while (usedIds.has(candidate)) candidate += 1;
+    return candidate;
+  };
+  for (const entry of entries) {
+    const { animalFacts } = entry;
     // Treat imported cameras as loose data: `camera_name` is the identity key here (a string in
     // imported YAML), but the `Camera` type declares it `number` — `findIdentityDivergence` coerces
     // either via `String(...)`, so widen to avoid a spurious number-vs-string mismatch.
     const fileCameras: any[] = getAnimalCameras(animalFacts);
     cameraSets.push(fileCameras.map((c) => c.camera_name).sort().join('|'));
+    const remap = new Map<unknown, unknown>();
+    const remapped: string[] = [];
     for (const camera of fileCameras) {
+      const name = String(camera.camera_name ?? '').trim();
       const candidateFields = {
         id: camera.id,
         meters_per_pixel: camera.meters_per_pixel,
@@ -357,16 +379,33 @@ function resolveAnimalFacts(entries: FileEntry[]): ResolvedAnimalFacts {
         cameraRegistry
       );
       if (divergence) {
-        divergences.push({
-          field: 'cameras',
-          detail: `Camera "${camera.camera_name}" differs across files in: ${divergence.differingFields.join(', ')}`,
-        });
-        continue; // keep the first-seen identity; do not add a conflicting duplicate.
+        const nonIdFields = divergence.differingFields.filter((field) => field !== 'id');
+        if (nonIdFields.length > 0) {
+          divergences.push({
+            field: 'cameras',
+            detail: `Camera "${camera.camera_name}" differs across files in: ${nonIdFields.join(', ')}`,
+          });
+        }
+        // keep the first-seen identity; do not add a conflicting duplicate.
+      } else if (!unionIdByName.has(name)) {
+        const id = usedIds.has(camera.id) ? nextFreeId() : camera.id;
+        cameraRegistry.push({ name: camera.camera_name, fields: { ...candidateFields, id } });
+        cameras.push({ ...structuredClone(camera), id });
+        unionIdByName.set(name, id);
+        usedIds.add(id);
       }
-      if (!cameraRegistry.some((e) => e.name === camera.camera_name)) {
-        cameraRegistry.push({ name: camera.camera_name, fields: candidateFields });
-        cameras.push(structuredClone(camera));
+      const unionId = unionIdByName.get(name);
+      if (camera.id !== undefined && camera.id !== null && !Object.is(unionId, camera.id)) {
+        remap.set(camera.id, unionId);
+        remapped.push(`"${camera.camera_name}" ${String(camera.id)} → ${String(unionId)}`);
       }
+    }
+    cameraIdRemaps.push(remap);
+    if (remapped.length > 0) {
+      divergences.push({
+        field: 'cameras',
+        detail: `${entry.sourceName} numbers its cameras differently; its references were mapped to the combined catalog (${remapped.join(', ')}).`,
+      });
     }
   }
   // Differing camera SETS across files (even without per-camera field drift) → flag.
@@ -448,6 +487,7 @@ function resolveAnimalFacts(entries: FileEntry[]): ResolvedAnimalFacts {
       device: structuredClone(latest.devices?.device),
     },
     cameras,
+    cameraIdRemaps,
     divergences,
   };
 }
@@ -459,10 +499,15 @@ function resolveAnimalFacts(entries: FileEntry[]): ResolvedAnimalFacts {
  *
  * @param entry - File entry.
  * @param configurationVersion - The version this day pins.
+ * @param cameraIdRemap - This file's camera id → unioned catalog id (see `resolveAnimalFacts`).
  * @returns The planned import day.
  */
-function buildPlanDay(entry: FileEntry, configurationVersion: number): ImportPlanDay {
-  const { dayFacts } = entry;
+function buildPlanDay(
+  entry: FileEntry,
+  configurationVersion: number,
+  cameraIdRemap: Map<unknown, unknown>
+): ImportPlanDay {
+  const dayFacts = remapCameraRefs(entry.dayFacts, cameraIdRemap);
   return {
     date: entry.date,
     sourceName: entry.sourceName,
@@ -621,7 +666,9 @@ export function planImport(
     const facts = resolveAnimalFacts(entries);
     const existingAnimalId = findExistingAnimalId(subjectId, existingWorkspace);
 
-    const days = entries.map((entry) => buildPlanDay(entry, versionByDate[entry.date]));
+    const days = entries.map((entry, index) =>
+      buildPlanDay(entry, versionByDate[entry.date], facts.cameraIdRemaps[index])
+    );
     dayCount += days.length;
 
     animals.push({

@@ -178,6 +178,82 @@ describe('planImport — divergence flags', () => {
   });
 });
 
+describe('planImport — camera references follow the unioned catalog', () => {
+  /**
+   * The realistic fixture: id 0 = overhead_camera, id 1 = side_camera. Swap the ids in one file.
+   * @param {object} animal - The file's animal (cameras renumbered in place).
+   * @param {object} day - The file's day (every camera reference follows the renumbering).
+   */
+  const swapCameraIds = (animal, day) => {
+    animal.cameras = animal.cameras.map((c) => ({ ...c, id: c.id === 0 ? 1 : c.id === 1 ? 0 : c.id }));
+    const swap = (id) => (id === 0 ? 1 : id === 1 ? 0 : id);
+    day.tasks = day.tasks.map((t) => ({ ...t, camera_id: t.camera_id.map(swap) }));
+    day.associated_video_files = day.associated_video_files.map((v) => ({ ...v, camera_id: swap(v.camera_id) }));
+    day.cameras_used = [1, 0];
+  };
+
+  it('remaps a later file whose cameras carry different ids onto the union ids (by camera_name)', () => {
+    const plan = planImport(
+      [
+        makeFile({ subjectId: 'remy', date: '2023-06-22' }),
+        makeFile({ subjectId: 'remy', date: '2023-06-23', mutateConfig: swapCameraIds }),
+      ],
+      createDefaultWorkspace()
+    );
+    const remy = plan.animals.find((a) => a.subjectId === 'remy');
+    // First-seen catalog: overhead is 0, side is 1.
+    expect(remy.cameras.map((c) => [c.camera_name, c.id])).toEqual([['overhead_camera', 0], ['side_camera', 1]]);
+    const later = remy.days.find((d) => d.date === '2023-06-23');
+    // The later day named overhead as 1 and side as 0 — after the union its overhead videos MUST
+    // still be overhead videos.
+    expect(later.associated_video_files.find((v) => v.name === 'overhead_video_epoch2').camera_id).toBe(0);
+    expect(later.associated_video_files.find((v) => v.name === 'side_view_video_epoch2').camera_id).toBe(1);
+    expect(later.tasks.find((t) => t.task_name === 'w_alternation').camera_id).toEqual([0, 1]);
+    expect(later.cameras_used).toEqual([0, 1]);
+    expect(remy.divergences.some((d) => d.field === 'cameras' && /2023-06-23|06232023/.test(d.detail))).toBe(true);
+  });
+
+  it('renumbers a later file\'s NEW camera whose id collides with a unioned camera, and remaps its refs', () => {
+    const plan = planImport(
+      [
+        makeFile({ subjectId: 'remy', date: '2023-06-22' }),
+        makeFile({
+          subjectId: 'remy',
+          date: '2023-06-23',
+          mutateConfig: (animal, day) => {
+            // This file's id 0 is a DIFFERENT camera ("arena_camera"); its videos reference 0.
+            animal.cameras = [{ ...animal.cameras[0], id: 0, camera_name: 'arena_camera' }];
+            day.tasks = day.tasks.map((t) => ({ ...t, camera_id: [0] }));
+            day.associated_video_files = [{ name: 'arena_video', camera_id: 0, task_epochs: 2 }];
+            day.cameras_used = [0];
+          },
+        }),
+      ],
+      createDefaultWorkspace()
+    );
+    const remy = plan.animals.find((a) => a.subjectId === 'remy');
+    const ids = remy.cameras.map((c) => c.id);
+    expect(new Set(ids).size).toBe(ids.length); // no duplicate ids in the unioned catalog
+    const arena = remy.cameras.find((c) => c.camera_name === 'arena_camera');
+    expect(arena.id).not.toBe(0);
+    const later = remy.days.find((d) => d.date === '2023-06-23');
+    expect(later.associated_video_files[0].camera_id).toBe(arena.id);
+    expect(later.tasks.every((t) => t.camera_id.every((id) => id === arena.id))).toBe(true);
+    expect(later.cameras_used).toEqual([arena.id]);
+  });
+
+  it('leaves a file whose ids already agree with the union untouched', () => {
+    const plan = planImport(
+      [makeFile({ subjectId: 'remy', date: '2023-06-22' }), makeFile({ subjectId: 'remy', date: '2023-06-23' })],
+      createDefaultWorkspace()
+    );
+    const remy = plan.animals.find((a) => a.subjectId === 'remy');
+    const later = remy.days.find((d) => d.date === '2023-06-23');
+    expect(later.associated_video_files.find((v) => v.name === 'side_view_video_epoch2').camera_id).toBe(1);
+    expect(remy.divergences.filter((d) => d.field === 'cameras')).toEqual([]);
+  });
+});
+
 describe('planImport — conflict with existing workspace', () => {
   it('marks conflict:exists when the subject already exists, defaultResolution add', () => {
     const ws = createDefaultWorkspace();
