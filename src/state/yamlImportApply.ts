@@ -31,14 +31,7 @@
  */
 
 import { generateDayId } from './workspaceUtils';
-import {
-  getAnimalCameras,
-  getDataAcqDevices,
-  getDayAssociatedVideos,
-  getDayCamerasUsed,
-  getDayFsGuiYamls,
-  getDayTasks,
-} from './workspaceSelectors';
+import { getAnimalCameras, getDataAcqDevices } from './workspaceSelectors';
 import type { ImportPlan, ImportPlanAnimal, ImportPlanDay } from './yamlImportPlan';
 import { referencedCameraRefs } from './cameraUsage';
 
