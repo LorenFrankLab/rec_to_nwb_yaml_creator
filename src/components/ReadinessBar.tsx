@@ -1,9 +1,13 @@
 import { useState } from 'react';
 import { humanizeValidationMessage } from '../domain/humanizeValidationMessage';
-import { repairTargetForIssue } from '../domain/repairRouting';
+import { DAY_SECTIONS, daySectionForPath, repairTargetForIssue } from '../domain/repairRouting';
+import type { DaySectionKey } from '../domain/repairRouting';
 import type { RepairableIssue } from '../domain/repairRouting';
 import WarningAcknowledgement from './WarningAcknowledgement';
 import styles from './ReadinessBar.module.css';
+import { isBlockingIssue, isAdvisoryIssue } from '../validation/issueTypes';
+import Button from './ui/Button';
+import { pluralize } from '../utils/pluralize';
 
 export interface ReadinessBarProps {
   /** The day's validation issues, pre-computed by the page (from `validateDay`). */
@@ -20,9 +24,6 @@ export interface ReadinessBarProps {
   canFix?: (issue: RepairableIssue) => boolean;
 }
 
-/** A blocking issue is an error; warnings never block export. */
-const isBlocking = (issue: RepairableIssue) => issue.severity === 'error';
-const isWarning = (issue: RepairableIssue) => issue.severity === 'warning';
 const MAX_VISIBLE_ERROR_GROUPS = 3;
 const MAX_VISIBLE_ERRORS_PER_GROUP = 3;
 
@@ -32,60 +33,21 @@ interface IssueGroup {
   issues: RepairableIssue[];
 }
 
+/** Which section owns an issue, from the SAME catalog that labels the "Fix in …" button. */
 function sectionForIssue(issue: RepairableIssue): { key: string; label: string } {
   const target = repairTargetForIssue(issue);
   if (target.surface === 'animal') return { key: 'animal', label: 'Animal setup' };
-  const path = String(issue.focusPath || issue.path || issue.instancePath || '').replace(/^\//, '').replace(/\//g, '.');
-  if (
-    path.startsWith('associated_files') ||
-    path.startsWith('associated_video_files') ||
-    path.includes('fs_gui') ||
-    path.includes('task') ||
-    path.includes('epoch')
-  ) {
-    return { key: 'tasks', label: 'Tasks & Files' };
-  }
-  if (path.includes('behavioral_events') || path.includes('dio_output_name')) {
-    return { key: 'dio', label: 'DIO Wiring' };
-  }
-  if (
-    path.includes('ntrode_electrode_group_channel_map') ||
-    path.includes('bad_channels') ||
-    path.includes('deviceOverrides.bad_channels')
-  ) {
-    return { key: 'channels', label: 'Failed Channels' };
-  }
-  if (
-    path.includes('data_acq') ||
-    path.includes('cameras_used') ||
-    path.includes('technical') ||
-    path.includes('configurationVersion') ||
-    path.includes('deviceOverrides')
-  ) {
-    return { key: 'recording', label: 'Recording Setup' };
-  }
-  if (
-    path.includes('session') ||
-    path.includes('subject.weight') ||
-    path.includes('experiment_description') ||
-    path.includes('keywords') ||
-    path.includes('dataFolder')
-  ) {
-    return { key: 'daily', label: 'Daily Setup' };
-  }
-  switch (target.step) {
-    case 'epochs':
-      return { key: 'tasks', label: 'Tasks & Files' };
-    case 'devices':
-      return { key: 'recording', label: 'Recording Setup' };
-    case 'behavioral':
-      return { key: 'dio', label: 'DIO Wiring' };
-    case 'overview':
-    case 'validation':
-    default:
-      return { key: 'daily', label: 'Daily Setup' };
-  }
+  const path = String(issue.focusPath || issue.path || issue.instancePath || '');
+  const key = daySectionForPath(path) ?? STEP_SECTION[target.step ?? ''] ?? 'daily';
+  return { key, label: DAY_SECTIONS[key] };
 }
+
+/** Fallback when the path names no section: the step the issue was routed to. */
+const STEP_SECTION: Record<string, DaySectionKey> = {
+  epochs: 'tasks',
+  devices: 'recording',
+  behavioral: 'dio',
+};
 
 function groupIssues(issues: RepairableIssue[]): IssueGroup[] {
   const groups = new Map<string, IssueGroup>();
@@ -114,8 +76,8 @@ function displayMessage(issue: RepairableIssue): string {
  */
 const ReadinessBar = ({ issues, onFix, canFix }: ReadinessBarProps) => {
   const [warningsAcknowledged, setWarningsAcknowledged] = useState(false);
-  const blocking = issues.filter(isBlocking);
-  const warnings = issues.filter(isWarning);
+  const blocking = issues.filter(isBlockingIssue);
+  const warnings = issues.filter(isAdvisoryIssue);
   const warningGroups = groupIssues(warnings);
   const warningItems = warningGroups.map((group) => ({
     key: group.key,
@@ -126,7 +88,7 @@ const ReadinessBar = ({ issues, onFix, canFix }: ReadinessBarProps) => {
   const warningsDisclosure = warnings.length > 0 ? (
     <details className={styles.warnings}>
       <summary>
-        {warnings.length} warning{warnings.length === 1 ? '' : 's'} to review
+        {warnings.length} {pluralize(warnings.length, 'warning')} to review
         {warningsAcknowledged ? ' — reviewed' : ''}
       </summary>
       <WarningAcknowledgement
@@ -177,7 +139,7 @@ const ReadinessBar = ({ issues, onFix, canFix }: ReadinessBarProps) => {
             <div className={styles.groupHeader}>
               <strong>{group.label}</strong>
               <span>
-                {group.issues.length} thing{group.issues.length === 1 ? '' : 's'} to fix
+                {group.issues.length} {pluralize(group.issues.length, 'thing')} to fix
               </span>
             </div>
             <ul className={styles.groupIssues}>
@@ -190,9 +152,9 @@ const ReadinessBar = ({ issues, onFix, canFix }: ReadinessBarProps) => {
                   {/* Render the Fix button only when the issue has an actionable in-app target — an issue
                       with no fixable destination shows its message alone (no dead control). */}
                   {(canFix ? canFix(issue) : true) && (
-                    <button type="button" className={styles.fix} onClick={() => onFix(issue)}>
+                    <Button variant="dangerSubtle" size="small" className={styles.fix} onClick={() => onFix(issue)}>
                       {issue.actionLabel ?? 'Fix'}
-                    </button>
+                    </Button>
                   )}
                 </li>
               ))}
@@ -207,7 +169,7 @@ const ReadinessBar = ({ issues, onFix, canFix }: ReadinessBarProps) => {
       </ul>
       {hiddenGroupCount > 0 && (
         <p className={styles.moreGroups}>
-          +{hiddenGroupCount} more section{hiddenGroupCount === 1 ? '' : 's'} with fixes
+          +{hiddenGroupCount} {pluralize(hiddenGroupCount, 'more section')} with fixes
         </p>
       )}
       {warningsDisclosure}

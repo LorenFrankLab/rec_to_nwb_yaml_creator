@@ -38,6 +38,8 @@ import {
 import type { ElectrodeGroup } from '../state/workspaceTypes';
 import type { RepairableIssue } from './repairRouting';
 import type { ValidationModel } from '../validation/issueTypes';
+import { isBlockingIssue } from '../validation/issueTypes';
+import { pluralize } from '../utils/pluralize';
 
 /** A setup-area key a validation issue can be attributed to (for the per-item `has_errors` state). */
 type SetupArea = 'subject' | 'electrodes' | 'cameras' | 'data_acq';
@@ -264,7 +266,7 @@ export function getAnimalSetupChecklist(
   // Set is `Set<string>` and `errorAreas.has(key)` typechecks below.
   const errorAreas = new Set(
     (Array.isArray(issues) ? issues : [])
-      .filter((i) => i?.severity === 'error')
+      .filter(isBlockingIssue)
       .map(setupAreaForIssue)
       .filter((area): area is SetupArea => Boolean(area))
   );
@@ -312,7 +314,7 @@ export function getAnimalSetupChecklist(
     const summary = electrodesNeedSync
       ? `${snapshotElectrodeCount} in saved configuration (not loaded for editing)`
       : electrodesPresent
-        ? `${electrodeCount} electrode group${electrodeCount === 1 ? '' : 's'}`
+        ? `${electrodeCount} ${pluralize(electrodeCount, 'electrode group')}`
         : 'Not set up';
     return {
       key: 'electrodes',
@@ -331,61 +333,65 @@ export function getAnimalSetupChecklist(
       subjectPresent ? subject.subject_id : 'Not set'),
     electrodesItem,
     item('cameras', 'Cameras / calibration', camerasPresent, SETUP_STATE.NEEDS_REVIEW, cameras.length,
-      camerasPresent ? `${cameras.length} camera${cameras.length === 1 ? '' : 's'}` : 'None'),
+      camerasPresent ? `${cameras.length} ${pluralize(cameras.length, 'camera')}` : 'None'),
     item('data_acq', 'Data acquisition', dataAcqPresent, SETUP_STATE.NEEDS_REVIEW, dataAcq.length,
-      dataAcqPresent ? `${dataAcq.length} device${dataAcq.length === 1 ? '' : 's'}` : 'None'),
+      dataAcqPresent ? `${dataAcq.length} ${pluralize(dataAcq.length, 'device')}` : 'None'),
     item('days', 'Recording days', daysPresent, SETUP_STATE.COMPLETE, dayCount,
-      daysPresent ? `${dayCount} day${dayCount === 1 ? '' : 's'}` : 'None'),
+      daysPresent ? `${dayCount} ${pluralize(dayCount, 'day')}` : 'None'),
   ];
 }
 
 /**
  * The first blocking (error-severity) reason a day cannot export, in the validation layer's
- * own words — or null when the day has no blocking issue. Reuses {@link validateDay} (the SAME
- * error set the export gate's `computeStepStatus(...).export` and the animal-level
- * `collectAnimalSetupIssues` consume); it does NOT re-derive validation. A null `mergedDay`
- * (the merge threw on a corrupt/missing configuration) is itself a blocking reason.
+ * own words — or null when the day has no blocking issue. Reads the {@link validateDay} result
+ * the row already computed (the SAME error set the export gate's `computeStepStatus(...).export`
+ * and the animal-level `collectAnimalSetupIssues` consume); it does NOT re-derive validation. A
+ * null `mergedDay` (the merge threw on a corrupt/missing configuration) is itself a blocking
+ * reason, and so is a validation pass that threw (`issues === null`).
  *
- * @param animal - The owning animal.
  * @param day - The recording day record.
  * @param mergedDay - `mergeDayMetadata(animal, day)`, or null if it threw.
- * @param animalDays - The animal's day records; enables the bad-channel monotonicity
- *   export-block (a day that silently un-fails an earlier same-config bad channel reads as
- *   "Needs fixing"). Omitted → no cross-day comparison (back-compat).
+ * @param issues - `validateDay(...)` for this day, or null when validation itself threw.
  * @returns The blocking reason, or null when nothing blocks export.
  */
 function firstBlockingReason(
-  animal: unknown,
   day: ValidationModel,
   mergedDay: ValidationModel | null,
-  animalDays: unknown[] = []
+  issues: RepairableIssue[] | null
 ): string | null {
   if (isDayValidationDeferred(day)) return null;
   if (!mergedDay) return 'recording day configuration could not be loaded';
-  let issues;
-  try {
-    issues = validateDay(day, mergedDay, animal, animalDays);
-  } catch (err) {
-    // Validation itself failed on this record — treat as blocking rather than silently clean.
-    // eslint-disable-next-line no-console
-    console.debug(`[workflow-status] could not validate day "${day?.id}":`, err);
-    return 'recording day could not be validated';
-  }
-  const firstError = presentValidationIssues(issues, day).find((i) => i?.severity === 'error');
+  // Validation itself failed on this record — treat as blocking rather than silently clean.
+  if (issues === null) return 'recording day could not be validated';
+  const firstError = presentValidationIssues(issues, day).find(isBlockingIssue);
   return firstError ? firstError.message || 'see the validation summary' : null;
 }
 
 function rawBlockingIssuesAreDeferred(
-  animal: unknown,
   day: ValidationModel,
   mergedDay: ValidationModel | null,
-  animalDays: unknown[]
+  issues: RepairableIssue[] | null
 ): boolean {
   if (!mergedDay) return isDayValidationDeferred(day);
+  return issues !== null && allBlockingIssuesDeferred(issues, day);
+}
+
+/**
+ * Run `validateDay` once for a row, or null when validation itself threw (the callers above treat
+ * that as a blocker, never as clean).
+ */
+function validateDayOrNull(
+  animal: unknown,
+  day: ValidationModel,
+  mergedDay: ValidationModel,
+  animalDays: unknown[]
+): RepairableIssue[] | null {
   try {
-    return allBlockingIssuesDeferred(validateDay(day, mergedDay, animal, animalDays), day);
-  } catch {
-    return false;
+    return validateDay(day, mergedDay, animal, animalDays);
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.debug(`[workflow-status] could not validate day "${day?.id}":`, err);
+    return null;
   }
 }
 
@@ -439,22 +445,23 @@ export function getDayRowStatus(
   if (isDayValidationDeferred(day)) {
     return { variant: DAY_LIFECYCLE.DRAFT, label: `${DAY_LIFECYCLE_LABEL.draft} — incomplete` };
   }
-  const reason = firstBlockingReason(animal, day, mergedDay, animalDays);
+  // The one validation pass this row needs: the blocking reason, the step statuses and the
+  // deferred-issue check below all read it (this runs per day, per animal, on the workspace home).
+  const issues = mergedDay ? validateDayOrNull(animal, day, mergedDay, animalDays) : null;
+  const reason = firstBlockingReason(day, mergedDay, issues);
   if (reason) {
     return { variant: DAY_LIFECYCLE.NEEDS_FIXING, label: `${DAY_LIFECYCLE_LABEL.needs_fixing} — ${reason}` };
   }
   // The LIVE export gate is authoritative and is checked BEFORE the persisted flags: a saved
   // Validated/Exported flag must not claim ready while a step-only blocker (all channels bad,
   // incomplete prerequisites) — which `validateDay` does NOT surface as an error — currently closes
-  // export. `firstBlockingReason` already validated this day successfully (it returned null), so a
-  // throw HERE is genuine step-derivation corruption → report it honestly as "Needs fixing"
-  // (matching firstBlockingReason's throw handling), never a misleading "Draft". (computeStepStatus
-  // re-runs validateDay internally; that second pass is acceptable O(days) per row for realistic
-  // counts — see RecordingDaysTab's note.)
+  // export. This day already validated successfully (`reason === null`), so a throw HERE is genuine
+  // step-derivation corruption → report it honestly as "Needs fixing" (matching the validation-throw
+  // handling above), never a misleading "Draft".
   let stepStatus: ReturnType<typeof computeStepStatus>;
   try {
-    // `reason === null` from firstBlockingReason guarantees `mergedDay` is non-null here.
-    stepStatus = computeStepStatus(day, mergedDay!, animal, animalDays);
+    // `reason === null` guarantees `mergedDay` and `issues` are non-null here.
+    stepStatus = computeStepStatus(day, mergedDay!, animal, animalDays, issues!);
   } catch (err) {
     // eslint-disable-next-line no-console
     console.error(`[workflow-status] could not compute readiness for day "${day?.id}":`, err);
@@ -482,7 +489,7 @@ export function getDayRowStatus(
   // a blocker → "Needs fixing"; merely-incomplete prerequisites → "Draft — incomplete". A stale
   // validated/exported flag does NOT show here — the live gate wins.
   const hasStepError = Object.values(stepStatus).some((s) => s === STEP_STATUS.ERROR);
-  if (hasStepError && rawBlockingIssuesAreDeferred(animal, day, mergedDay, animalDays)) {
+  if (hasStepError && rawBlockingIssuesAreDeferred(day, mergedDay, issues)) {
     return { variant: DAY_LIFECYCLE.DRAFT, label: `${DAY_LIFECYCLE_LABEL.draft} — incomplete` };
   }
   return hasStepError

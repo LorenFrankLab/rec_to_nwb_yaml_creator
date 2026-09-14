@@ -43,6 +43,7 @@ import {
 import type { Animal, Day, ElectrodeGroup } from '../state/workspaceTypes';
 import { buildAnimalRows } from './validationSummaryRows';
 import type { SectionViewModel } from './types';
+import { isRecord } from '../utils/records';
 
 /** The animal header: the store-key id and the read-only species/sex facts shown beside it. */
 export interface AnimalHeaderViewModel {
@@ -300,11 +301,6 @@ function buildConfigCard(
   };
   if (latest?.date) card.sinceDate = latest.date;
   return card;
-}
-
-/** Whether a value is a non-null, non-array object. */
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === 'object' && !Array.isArray(value);
 }
 
 /**

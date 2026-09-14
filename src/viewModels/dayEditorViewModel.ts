@@ -70,6 +70,8 @@ import { isMultiShankGroup, validBadChannelIds } from '../domain/badChannels';
 import { classifyDeviceOverrides } from '../domain/deviceOverrides';
 import { validateRawDay, validateRawAnimal } from '../validation/rawShape';
 import type { Animal, Day } from '../state/workspaceTypes';
+import { isRecord } from '../utils/records';
+import { isBlockingIssue, blockingIssues } from '../validation/issueTypes';
 import type {
   BadChannelMarkViewModel,
   BreadcrumbViewModel,
@@ -86,26 +88,10 @@ import type {
   WorkflowCommandId,
   WorkflowSeverity,
 } from './types';
+import { pluralize } from '../utils/pluralize';
 
 /** The six user-facing day-editor section keys, in display order. */
 export type DayTabKey = 'daily' | 'tasks' | 'recording' | 'channels' | 'dio' | 'export';
-
-/**
- * One section of the day-editor frame. Its `status` rolls up from the underlying step(s) the
- * section folds, so the rail agrees with validation truth without replacing the gate substrate.
- */
-export interface DayTabViewModel {
-  /** Section key (the frame's local nav state). */
-  key: DayTabKey;
-  /** Section label (e.g. 'Recording Setup'). */
-  label: string;
-  /** Rolled-up status of the step this tab folds. */
-  status: StepStatus;
-  /** Accessible status label (e.g. 'Complete'). */
-  statusLabel: string;
-  /** Whether this is the active section. */
-  active: boolean;
-}
 
 /** One grouped rail block in the Day Editor. */
 export interface DayEditorSectionGroupViewModel {
@@ -142,8 +128,6 @@ export interface DayEditorViewModel {
   breadcrumb: BreadcrumbViewModel;
   /** The header day chips (config / opto / carried-from / lifecycle). */
   chips: DayChipsViewModel;
-  /** The flat section model, retained for consumers/tests that do not need group headings. */
-  tabs: DayTabViewModel[];
   /** The grouped vertical-rail model (SESSION / RECORDING / FINISH). */
   sectionGroups: DayEditorSectionGroupViewModel[];
   /** The section stepper, in display order, each with its domain step status + the active flag. */
@@ -160,11 +144,6 @@ export interface DayEditorViewModel {
   notices: RecoveryNoticeViewModel[];
   /** The authoritative export gate (open + reason + blockers + the export action). */
   export: ExportGateViewModel;
-}
-
-/** Whether a value is a non-null, non-array object. */
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === 'object' && !Array.isArray(value);
 }
 
 // ──────────────────────────────────────────────────────────────────────────────────────────
@@ -252,7 +231,7 @@ function issuePath(issue: RepairableIssue): string {
 }
 
 function hasErrorIssue(issues: RepairableIssue[], matcher: (issue: RepairableIssue) => boolean): boolean {
-  return issues.some((issue) => issue.severity === 'error' && matcher(issue));
+  return issues.some((issue) => isBlockingIssue(issue) && matcher(issue));
 }
 
 function sectionIssuePath(issue: RepairableIssue): string {
@@ -409,23 +388,6 @@ function buildSectionItems(
     statusLabel: STEP_STATUS_LABEL[spec.status],
     active: spec.key === activeTab,
     ...(spec.issueCount != null ? { issueCount: spec.issueCount } : {}),
-  }));
-}
-
-/**
- * Build the flat six-section model, each section's status rolled up from the step(s) it folds.
- */
-function buildTabs(
-  stepStatus: Record<string, StepStatus>,
-  activeStep: string,
-  issues: RepairableIssue[] = []
-): DayTabViewModel[] {
-  return buildSectionItems(stepStatus, 0, activeStep, issues).map((section) => ({
-    key: section.key as DayTabKey,
-    label: section.label,
-    status: section.status,
-    statusLabel: section.statusLabel,
-    active: section.active,
   }));
 }
 
@@ -964,7 +926,7 @@ function buildExportGate(opts: {
   } else if (errorIssues.length > 0) {
     reason = 'validation-errors';
     message = `Resolve ${errorIssues.length} validation ${
-      errorIssues.length === 1 ? 'error' : 'errors'
+      pluralize(errorIssues.length, 'error')
     } before exporting.`;
   } else {
     reason = 'incomplete-steps';
@@ -1308,7 +1270,6 @@ function emptyShellViewModel(
     shell,
     breadcrumb: buildBreadcrumb(ownerKey, dayDate),
     chips: DEFAULT_CHIPS,
-    tabs: buildTabs(FAIL_CLOSED_STEP_STATUS, DEFAULT_STEP),
     sectionGroups: buildSectionGroups(FAIL_CLOSED_STEP_STATUS, 0, DEFAULT_STEP),
     steps,
     overall: 'error',
@@ -1424,7 +1385,7 @@ export function buildDayEditorViewModel(
     stepStatus = { ...FAIL_CLOSED_STEP_STATUS };
     rawIssues = [];
   }
-  const rawErrorIssues = rawIssues.filter((issue) => issue.severity === 'error');
+  const rawErrorIssues = blockingIssues(rawIssues);
   // The Validation step's "N to fix" scent matches the stepper, which shows NO count when the merge
   // failed (it cannot compute a trustworthy readiness) — so suppress the count on the merge-failed
   // path even though the raw-shape animal issue is still surfaced in `issues`/`notices`.
@@ -1436,7 +1397,7 @@ export function buildDayEditorViewModel(
   const issues: IssueViewModel[] = rawIssues
     .filter((issue) => issue.severity === 'error' || issue.severity === 'warning')
     .map((issue) => toIssueViewModel(issue, dayId, ownerKey));
-  const errorIssues = issues.filter((issue) => issue.severity === 'error');
+  const errorIssues = blockingIssues(issues);
 
   const overall = overallSeverity(stepStatus, errorIssues.length > 0 || mergeFailed);
 
@@ -1477,7 +1438,6 @@ export function buildDayEditorViewModel(
     shell,
     breadcrumb: buildBreadcrumb(ownerKey, day.date),
     chips: buildChips(day, animal as Animal, merged, animalDays as Day[], mergeFailed),
-    tabs: buildTabs(stepStatus, activeStep, rawIssues),
     sectionGroups: buildSectionGroups(stepStatus, toFixCount, activeStep, rawIssues),
     steps,
     overall,

@@ -133,15 +133,3 @@ export function downloadYamlFile(fileName: string, content: string): void {
     URL.revokeObjectURL(url);
   }
 }
-
-/**
- * Legacy API compatibility - converts object to YAML string
- * @deprecated Use encodeYaml() instead
- */
-export const convertObjectToYAMLString = encodeYaml;
-
-/**
- * Legacy API compatibility - creates YAML file download
- * @deprecated Use downloadYamlFile() instead
- */
-export const createYAMLFile = downloadYamlFile;

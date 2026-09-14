@@ -6,18 +6,15 @@
  * the editing-surface counterpart of {@link module:domain/validation.dayOverrideIssues}: the
  * validator surfaces each unhonorable override as an export-blocking issue, and this
  * classifier tells the Devices step exactly which removal controls to render so every such
- * issue is repairable. The two MUST agree shape-for-shape (covered by a correspondence test).
+ * issue is repairable. They agree shape-for-shape because both read the SAME classifiers from
+ * `deviceOverrideMerge`, which owns them.
  */
 
-/**
- * Whether `value` is a plain object record (not null, not an array).
- *
- * @param value
- * @returns True for a non-null, non-array object.
- */
-function isRecord(value: unknown): boolean {
-  return value !== null && typeof value === 'object' && !Array.isArray(value);
-}
+import {
+  classifyBadChannelsContainer,
+  classifyGeometryOverride,
+  isPlainRecord,
+} from './deviceOverrideMerge';
 
 /** The classification of a day's `deviceOverrides` into the shapes the Devices step can clean up. */
 export interface DeviceOverrideClassification {
@@ -57,7 +54,7 @@ export function classifyDeviceOverrides(
   resolvedNtrodeIds: Set<string>
 ): DeviceOverrideClassification {
   const rawOverrides = day?.deviceOverrides;
-  const overridesRecord = isRecord(rawOverrides) ? rawOverrides : null;
+  const overridesRecord = isPlainRecord(rawOverrides) ? rawOverrides : null;
 
   // The WHOLE deviceOverrides is present but not a record (e.g. a restored scalar
   // "corrupt"): the merge reads override keys off it (all undefined → fail-open), so it
@@ -65,10 +62,12 @@ export function classifyDeviceOverrides(
   const wholeOverridesMalformed = rawOverrides != null && overridesRecord === null;
 
   const badChannelContainer = overridesRecord?.bad_channels;
-  const badChannelContainerIsRecord = isRecord(badChannelContainer);
+  // `isPlainRecord` (a type predicate) narrows the container for the key reads below; the
+  // malformed decision itself is the merge's classifier, so the two can't disagree.
+  const badChannelContainerIsRecord = isPlainRecord(badChannelContainer);
   // The container is present but not an ntrode→list map (e.g. scalar "2.9"): remove the
   // whole override (there are no per-key controls to render).
-  const badChannelContainerMalformed = badChannelContainer != null && !badChannelContainerIsRecord;
+  const badChannelContainerMalformed = classifyBadChannelsContainer(badChannelContainer) === 'malformed';
 
   // Per-key problems, partitioned for distinct labels: stale (no resolved ntrode) vs.
   // corrupt value (resolved key, non-array value). Both removed by deleting the key.
@@ -86,7 +85,7 @@ export function classifyDeviceOverrides(
   // override that SHADOWS the editable snapshot. Both are removed by dropping the key.
   const presentGeometryKeys = overridesRecord
     ? ['electrode_groups', 'ntrode_electrode_group_channel_map'].filter(
-        (k) => overridesRecord[k] != null
+        (k) => classifyGeometryOverride(overridesRecord[k]) !== 'absent'
       )
     : [];
 

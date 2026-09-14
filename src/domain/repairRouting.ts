@@ -123,8 +123,23 @@ export const STEP_LABELS: Record<string, string> = {
   export: 'Fix & Export',
 };
 
-/** Section-label override for day-owned paths split out from their legacy validation step. */
-function sectionLabelForDayPath(path: string): string | null {
+/**
+ * The Day Editor sections a repair can land in. `key` groups issues; `label` names the section the
+ * user navigates to. Exported so any surface that GROUPS issues by section uses the same catalog as
+ * the "Fix in …" button labels, instead of re-deriving the routing from path substrings.
+ */
+export const DAY_SECTIONS = {
+  tasks: 'Tasks & Files',
+  dio: 'DIO Wiring',
+  channels: 'Failed Channels',
+  recording: 'Recording Setup',
+  daily: 'Daily Setup',
+} as const;
+
+export type DaySectionKey = keyof typeof DAY_SECTIONS;
+
+/** Section key for a day-owned path, or null when the path names no specific section. */
+export function daySectionForPath(path: string): DaySectionKey | null {
   const normalized = path.replace(/^\//, '').replace(/\//g, '.');
   if (
     normalized.startsWith('associated_files') ||
@@ -133,17 +148,17 @@ function sectionLabelForDayPath(path: string): string | null {
     normalized.includes('task') ||
     normalized.includes('epoch')
   ) {
-    return 'Tasks & Files';
+    return 'tasks';
   }
   if (normalized.includes('behavioral_events') || normalized.includes('dio_output_name')) {
-    return 'DIO Wiring';
+    return 'dio';
   }
   if (
     normalized.includes('ntrode_electrode_group_channel_map') ||
     normalized.includes('bad_channels') ||
     normalized.includes('deviceOverrides.bad_channels')
   ) {
-    return 'Failed Channels';
+    return 'channels';
   }
   if (
     normalized.includes('data_acq') ||
@@ -152,7 +167,7 @@ function sectionLabelForDayPath(path: string): string | null {
     normalized.includes('configurationVersion') ||
     normalized.includes('deviceOverrides')
   ) {
-    return 'Recording Setup';
+    return 'recording';
   }
   if (
     normalized.includes('subject.weight') ||
@@ -162,9 +177,15 @@ function sectionLabelForDayPath(path: string): string | null {
     normalized.includes('keywords') ||
     normalized.includes('dataFolder')
   ) {
-    return 'Daily Setup';
+    return 'daily';
   }
   return null;
+}
+
+/** Section-label override for day-owned paths split out from their legacy validation step. */
+function sectionLabelForDayPath(path: string): string | null {
+  const key = daySectionForPath(path);
+  return key === null ? null : DAY_SECTIONS[key];
 }
 
 /**

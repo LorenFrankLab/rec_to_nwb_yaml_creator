@@ -194,9 +194,12 @@ export function buildAnimalDaysByKey(workspace: unknown): Record<string, Array<R
  * renders and the batch export downloads in, so behavior is reproducible.
  *
  * @param workspace - `model.workspace` ({ animals, days }).
+ * @param onlyAnimalKey - When given, decorate only the days listed under this animal key. The
+ *   classification still runs workspace-wide (it is what decides a day's recovery status, and it
+ *   is cheap); only the per-row merge + validation is skipped for other animals.
  * @returns The flattened, table-ordered rows.
  */
-export function buildRows(workspace: unknown): SummaryRow[] {
+export function buildRows(workspace: unknown, onlyAnimalKey?: string): SummaryRow[] {
   // The day RECOVERY STATUS of every reference/record is decided ONCE in the domain
   // ({@link classifyWorkspaceDays}) so this surface doesn't re-derive "what kind of day is
   // this?". buildRows only DECORATES each classified day with its validation chip and the
@@ -212,6 +215,7 @@ export function buildRows(workspace: unknown): SummaryRow[] {
 
   for (const { animalKey, dayId, record, status } of classifyWorkspaceDays(workspace)) {
     const key = animalKey as string;
+    if (onlyAnimalKey !== undefined && key !== onlyAnimalKey) continue;
     const animal: Record<string, unknown> = isRecord(animalsMap[key]) ? animalsMap[key] : { id: animalKey };
 
     if (status === DAY_STATUS.DANGLING_REFERENCE) {
@@ -289,17 +293,18 @@ export function buildRows(workspace: unknown): SummaryRow[] {
 /**
  * Animal-scoped slice of {@link buildRows}: the per-animal Validation & Export tab's row set.
  *
- * A FILTER over the workspace-global rows, NOT a parallel validation path — the readiness chips are
- * exactly what the unscoped summary computes for those days, so the two can never drift. Keyed on
- * `animalKey` (the index key a day is listed under), so a wrong-owner / duplicate-index row scopes
- * to the animal it's LISTED under, matching how the global table groups it.
+ * The SAME code path as the workspace-global rows, NOT a parallel validation one — the readiness
+ * chips are exactly what the unscoped summary computes for those days, so the two can never drift.
+ * Keyed on `animalKey` (the index key a day is listed under), so a wrong-owner / duplicate-index row
+ * scopes to the animal it's LISTED under, matching how the global table groups it. Other animals'
+ * days are never merged or validated: this runs on every store write from the Animal page.
  *
  * @param workspace - `model.workspace` ({ animals, days }).
  * @param animalKey - The animal whose rows to keep.
  * @returns The rows scoped to that animal.
  */
 export function buildAnimalRows(workspace: unknown, animalKey: string): SummaryRow[] {
-  return buildRows(workspace).filter((row) => row.animalKey === animalKey);
+  return buildRows(workspace, animalKey);
 }
 
 // Coerced to a string so a corrupt (object/number) subject_id or animal id can never be returned

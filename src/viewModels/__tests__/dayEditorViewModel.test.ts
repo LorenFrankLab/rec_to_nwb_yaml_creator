@@ -803,8 +803,9 @@ describe('buildDayEditorViewModel — grouped section rail model', () => {
   it('exposes exactly the six focused sections in order', () => {
     const { animal, day } = loadRealistic();
     const vm = buildDayEditorViewModel(wrap(animal, day), day.id);
-    expect(vm.tabs.map((t) => t.key)).toEqual(['daily', 'tasks', 'recording', 'channels', 'dio', 'export']);
-    expect(vm.tabs.map((t) => t.label)).toEqual([
+    const sections = vm.sectionGroups.flatMap((group) => group.steps);
+    expect(sections.map((t) => t.key)).toEqual(['daily', 'tasks', 'recording', 'channels', 'dio', 'export']);
+    expect(sections.map((t) => t.label)).toEqual([
       'Daily Setup',
       'Tasks & Files',
       'Recording Setup',
@@ -818,10 +819,10 @@ describe('buildDayEditorViewModel — grouped section rail model', () => {
   it('marks the requested section active (default is Daily Setup)', () => {
     const { animal, day } = loadRealistic();
     const ws = wrap(animal, day);
-    expect(buildDayEditorViewModel(ws, day.id).tabs.find((t) => t.active)?.key).toBe('daily');
-    expect(
-      buildDayEditorViewModel(ws, day.id, 'recording').tabs.find((t) => t.active)?.key
-    ).toBe('recording');
+    const activeKey = (vm: ReturnType<typeof buildDayEditorViewModel>) =>
+      vm.sectionGroups.flatMap((group) => group.steps).find((t) => t.active)?.key;
+    expect(activeKey(buildDayEditorViewModel(ws, day.id))).toBe('daily');
+    expect(activeKey(buildDayEditorViewModel(ws, day.id, 'recording'))).toBe('recording');
   });
 
   it('rolls focused section statuses from the legacy validation substrate', () => {
@@ -830,7 +831,9 @@ describe('buildDayEditorViewModel — grouped section rail model', () => {
     const animalDays = getAnimalDays(ws, animal.id) as unknown as Day[];
     const stepStatus = expectedStepStatus(animal, day, animalDays as unknown as Idable[]);
     const vm = buildDayEditorViewModel(ws, day.id);
-    const byKey = Object.fromEntries(vm.tabs.map((t) => [t.key, t.status]));
+    const byKey = Object.fromEntries(
+      vm.sectionGroups.flatMap((group) => group.steps).map((t) => [t.key, t.status])
+    );
     expect(byKey.daily).toBe(stepStatus.overview);
     expect(byKey.tasks).toBe(stepStatus.epochs);
     expect(byKey.recording).toBe(stepStatus.devices);

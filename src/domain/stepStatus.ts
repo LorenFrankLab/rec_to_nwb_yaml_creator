@@ -11,6 +11,7 @@
 import { stepIdForIssue } from './repairRouting';
 import type { RepairableIssue } from './repairRouting';
 import { validateDay } from './dayValidationComposer';
+import { isBlockingIssue, blockingIssues } from '../validation/issueTypes';
 
 /**
  * The closed vocabulary of per-step statuses `computeStepStatus` produces. Named + frozen so the
@@ -78,17 +79,18 @@ type StepStatusMap = {
  *   (e.g. a non-array `cameras`) into the export gate.
  * @param animalDays - The animal's day records (optional); enables the bad-channel
  *   monotonicity export-block. Empty/omitted → no cross-day comparison (back-compat).
+ * @param issues - The day's issues from `validateDay(day, mergedDay, animal, animalDays)` when the
+ *   caller has ALREADY computed them (the row-status path validates once and threads the result
+ *   here). Omitted → validated internally.
  * @returns Status map per step.
  */
 export function computeStepStatus(
   day: StepStatusDay,
   mergedDay: StepStatusMergedDay,
   animal?: unknown,
-  animalDays: unknown[] = []
+  animalDays: unknown[] = [],
+  issues: RepairableIssue[] = validateDay(day, mergedDay, animal as object, animalDays)
 ): StepStatusMap {
-  // `animal as object` bridges validateDay's `@param {object}` JSDoc; the composer guards a
-  // missing/corrupt animal internally, so the cast is behavior-neutral.
-  const issues = validateDay(day, mergedDay, animal as object, animalDays);
 
   // Group errors by step
   const errorsByStep = groupErrorsByStep(issues);
@@ -103,8 +105,8 @@ export function computeStepStatus(
     // overview/devices/epochs). It is in error only when that bucket has an
     // error-severity issue; an empty/clean catch-all reports valid so it stops
     // permanently disabling Export.
-    validation: errorsByStep.validation.some(i => i.severity === 'error') ? STEP_STATUS.ERROR : STEP_STATUS.VALID,
-    export: issues.filter(i => i.severity === 'error').length === 0 ? STEP_STATUS.VALID : STEP_STATUS.ERROR,
+    validation: errorsByStep.validation.some(isBlockingIssue) ? STEP_STATUS.ERROR : STEP_STATUS.VALID,
+    export: blockingIssues(issues).length === 0 ? STEP_STATUS.VALID : STEP_STATUS.ERROR,
   };
 }
 
@@ -146,20 +148,20 @@ export function computeEpochsStatus(
   // read 'error', not a false 'incomplete'/'valid'. This generalizes the non-array-`tasks`
   // guard to the whole raw-shape family so the badge can't disagree with the reset notice.
   // The direct `day.tasks` check also covers a standalone call whose bucket isn't populated.
-  if (day?.tasks != null && !Array.isArray(day.tasks)) return 'error';
+  if (day?.tasks != null && !Array.isArray(day.tasks)) return STEP_STATUS.ERROR;
   // A corrupt non-array `taskInstances` is an epochs-owned raw-shape error too (its reset renders on
   // this step) — guard it directly so a standalone badge can't disagree with the reset notice.
-  if (day?.taskInstances != null && !Array.isArray(day.taskInstances)) return 'error';
-  if ((epochErrors || []).some((i) => i.severity === 'error' && i.code === 'malformed_day_collection')) {
-    return 'error';
+  if (day?.taskInstances != null && !Array.isArray(day.taskInstances)) return STEP_STATUS.ERROR;
+  if ((epochErrors || []).some((i) => isBlockingIssue(i) && i.code === 'malformed_day_collection')) {
+    return STEP_STATUS.ERROR;
   }
   // A task-level error BADGES the step 'error' even when the resolved tasks are empty: a day whose
   // only instance is a dangling_task_type_ref resolves to NO tasks (the ref is dropped) but needs
   // REPAIR, not "add a task" — so check errors BEFORE the empty-tasks 'incomplete' return.
   const hasTaskError = (epochErrors || []).some(
-    (issue) => issue.severity === 'error' && (issue.path || '').includes('task')
+    (issue) => isBlockingIssue(issue) && (issue.path || '').includes('task')
   );
-  if (hasTaskError) return 'error';
+  if (hasTaskError) return STEP_STATUS.ERROR;
 
   // The EFFECTIVE tasks: a catalog day resolves `taskInstances` → inline tasks in the merge, and
   // removes raw `day.tasks`, so reading the raw day would falsely report 'incomplete'. Prefer the
@@ -169,7 +171,7 @@ export function computeEpochsStatus(
     : Array.isArray(day?.tasks)
       ? day.tasks
       : [];
-  return tasks.length === 0 ? 'incomplete' : 'valid';
+  return tasks.length === 0 ? STEP_STATUS.INCOMPLETE : STEP_STATUS.VALID;
 }
 
 /**
@@ -188,8 +190,8 @@ export function computeBehavioralStatus(
   day: StepStatusDay | null | undefined,
   behavioralErrors: RepairableIssue[]
 ): StepStatus {
-  if (day?.behavioral_events != null && !Array.isArray(day.behavioral_events)) return 'error';
-  return (behavioralErrors || []).some((issue) => issue.severity === 'error')
+  if (day?.behavioral_events != null && !Array.isArray(day.behavioral_events)) return STEP_STATUS.ERROR;
+  return (behavioralErrors || []).some(isBlockingIssue)
     ? STEP_STATUS.ERROR
     : STEP_STATUS.VALID;
 }
@@ -224,14 +226,14 @@ export function computeDevicesStatus(
   // A day-owned, Devices-step-repairable error must badge the step 'error' so a green badge
   // never sits beside its own blocking repair control. (Animal-owned errors excluded — see
   // the param doc / gate-non-redundancy contract.)
-  if ((deviceErrors || []).some((i) => i.severity === 'error' && i.ownerSurface === 'day')) {
-    return 'error';
+  if ((deviceErrors || []).some((i) => isBlockingIssue(i) && i.ownerSurface === 'day')) {
+    return STEP_STATUS.ERROR;
   }
 
   const groups = mergedDay?.electrode_groups || [];
   const ntrodeMap = mergedDay?.ntrode_electrode_group_channel_map || [];
 
-  if (groups.length === 0) return 'incomplete';
+  if (groups.length === 0) return STEP_STATUS.INCOMPLETE;
 
   let anyGroupAllBad = false;
 
@@ -241,7 +243,7 @@ export function computeDevicesStatus(
 
     // A group with no channel mapping is a data-completeness problem (corruption
     // branch in DevicesStep), surfaced as incomplete rather than a hard error.
-    if (ntrodes.length === 0) return 'incomplete';
+    if (ntrodes.length === 0) return STEP_STATUS.INCOMPLETE;
 
     let totalChannels = 0;
     let totalBadChannels = 0;
@@ -254,7 +256,7 @@ export function computeDevicesStatus(
     }
   }
 
-  return anyGroupAllBad ? 'error' : 'valid';
+  return anyGroupAllBad ? STEP_STATUS.ERROR : STEP_STATUS.VALID;
 }
 
 /**
@@ -268,24 +270,24 @@ function getStepStatus(errors: RepairableIssue[], data: SessionLike | null | und
   // blocking error whose reset control renders on this step — it must badge 'error' even
   // when other required fields are still blank, otherwise the corruption hides behind
   // 'incomplete'. (Plain missing-required-field errors keep the softer 'incomplete' below.)
-  if ((errors || []).some((e) => e.severity === 'error' && e.code === 'malformed_day_collection')) {
-    return 'error';
+  if ((errors || []).some((e) => isBlockingIssue(e) && e.code === 'malformed_day_collection')) {
+    return STEP_STATUS.ERROR;
   }
 
   // Check completeness first - if data is incomplete, treat as incomplete
   // rather than error (even if validation would fail)
   if (!data || !isStepComplete(data)) {
     // Missing required data
-    return 'incomplete';
+    return STEP_STATUS.INCOMPLETE;
   }
 
   if (errors && errors.length > 0) {
     // Has validation errors (but data is present)
-    return 'error';
+    return STEP_STATUS.ERROR;
   }
 
   // All good
-  return 'valid';
+  return STEP_STATUS.VALID;
 }
 
 /**
