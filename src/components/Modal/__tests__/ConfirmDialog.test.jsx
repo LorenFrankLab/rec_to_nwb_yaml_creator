@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import ConfirmDialog from '../ConfirmDialog';
+import buttonStyles from '../../ui/Button.module.css';
 
 const baseProps = {
   isOpen: true,
@@ -55,12 +56,12 @@ describe('ConfirmDialog', () => {
 
   it('applies destructive styling to the confirm button when destructive', () => {
     render(<ConfirmDialog {...baseProps} destructive confirmLabel="Delete" onConfirm={vi.fn()} onCancel={vi.fn()} />);
-    expect(screen.getByRole('button', { name: 'Delete' })).toHaveClass('btn-danger');
+    expect(screen.getByRole('button', { name: 'Delete' })).toHaveClass(buttonStyles.danger);
   });
 
   it('uses a non-destructive confirm button by default', () => {
     render(<ConfirmDialog {...baseProps} confirmLabel="OK" onConfirm={vi.fn()} onCancel={vi.fn()} />);
-    expect(screen.getByRole('button', { name: 'OK' })).toHaveClass('btn-save');
+    expect(screen.getByRole('button', { name: 'OK' })).toHaveClass(buttonStyles.primary);
   });
 
   it('exposes role="alertdialog" with the message described when destructive', () => {

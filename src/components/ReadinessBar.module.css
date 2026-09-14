@@ -115,25 +115,7 @@
   line-height: 1;
 }
 
+/* The row's Fix action is the restrained-danger Button primitive; only its flex placement lives here. */
 .fix {
   flex: 0 0 auto;
-  min-height: 44px;
-  padding: 0.3rem 0.8rem;
-  border: 1px solid var(--color-error);
-  border-radius: var(--radius-sm);
-  color: var(--color-error);
-  background-color: var(--color-white);
-  font: inherit;
-  font-size: var(--font-size-sm);
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.fix:hover {
-  background-color: var(--color-error-light);
-}
-
-.fix:focus-visible {
-  outline: 2px solid var(--color-error);
-  outline-offset: 2px;
 }

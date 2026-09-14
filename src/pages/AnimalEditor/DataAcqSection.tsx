@@ -216,12 +216,12 @@ export default function DataAcqSection({ animal, onFieldUpdate, dataAcqRegistry 
       className="recording-system-modal"
       footer={
         <div className="recording-system-editor-actions">
-          <button type="button" className="button-secondary" onClick={closeEditor}>
+          <Button variant="secondary" onClick={closeEditor}>
             Cancel
-          </button>
-          <button type="button" className="button-primary" onClick={saveEditor}>
+          </Button>
+          <Button onClick={saveEditor}>
             Save recording system
-          </button>
+          </Button>
         </div>
       }
     >
@@ -333,9 +333,9 @@ export default function DataAcqSection({ animal, onFieldUpdate, dataAcqRegistry 
             The recording systems this animal was recorded on. Each recording day uses one; the first
             is the default a day inherits when it hasn&apos;t chosen its own.
           </p>
-          <button type="button" className="button-primary add-recording-system" onClick={openAdd}>
+          <Button className="add-recording-system" onClick={openAdd}>
             Add First Recording System
-          </button>
+          </Button>
         </div>
         {technicalDefaults}
         {editorModal}
@@ -356,9 +356,9 @@ export default function DataAcqSection({ animal, onFieldUpdate, dataAcqRegistry 
       </header>
 
       <div className="table-actions">
-        <button type="button" className="button-primary add-recording-system" onClick={openAdd}>
+        <Button className="add-recording-system" onClick={openAdd}>
           + Add Recording System
-        </button>
+        </Button>
       </div>
 
       <table className="data-acq-table cameras-table" role="table">

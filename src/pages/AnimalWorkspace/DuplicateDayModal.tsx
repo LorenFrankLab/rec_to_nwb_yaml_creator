@@ -1,4 +1,5 @@
 import { Modal } from '../../components/Modal';
+import Button from '../../components/ui/Button';
 
 interface DuplicateDayModalProps {
   /** Whether the picker is shown. */
@@ -33,15 +34,15 @@ export default function DuplicateDayModal({ isOpen, source = null, date, error, 
       describedById="duplicate-day-desc"
       footer={
         <div className="modal-actions">
-          <button type="button" className="btn-secondary" onClick={onClose}>
+          <Button variant="secondary" onClick={onClose}>
             Cancel
-          </button>
+          </Button>
           {/* type="button" (not submit): the action row now lives in Modal's footer,
               outside the <form>. Enter in the date field still submits via the form's
               onSubmit, which calls the same onSubmit handler. */}
-          <button type="button" className="btn-primary" onClick={onSubmit}>
+          <Button onClick={onSubmit}>
             Duplicate day
-          </button>
+          </Button>
         </div>
       }
     >

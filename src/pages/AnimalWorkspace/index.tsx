@@ -189,22 +189,22 @@ export function AnimalWorkspace() {
               </label>
             </div>
             <div className={styles.animalListActions}>
-              <button
-                type="button"
-                className={styles.btnImportYaml}
+              <Button
+                variant="secondary"
+                size="small"
                 aria-label="Import YAML files"
                 onClick={goToImport}
               >
                 Import YAML…
-              </button>
-              <button
-                type="button"
-                className={styles.btnCreateAnimal}
+              </Button>
+              <Button
+                variant="secondary"
+                size="small"
                 aria-label="Create new animal"
                 onClick={goToCreate}
               >
                 + New Animal
-              </button>
+              </Button>
             </div>
           </div>
 

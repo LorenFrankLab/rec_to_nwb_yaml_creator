@@ -2,6 +2,7 @@ import { useId } from 'react';
 import type { ReactNode } from 'react';
 import Modal from './Modal/Modal';
 import './AlertModal.scss';
+import Button from './ui/Button';
 
 type AlertType = 'info' | 'success' | 'warning' | 'error';
 
@@ -64,9 +65,9 @@ const AlertModal = ({ isOpen, message, title = 'Alert', onClose, type = 'info' }
         </>
       }
       footer={
-        <button type="button" onClick={onClose} className="alert-modal-close" aria-label="Close alert">
+        <Button onClick={onClose} aria-label="Close alert">
           Close
-        </button>
+        </Button>
       }
     >
       <p id={messageId} className="alert-modal-message">

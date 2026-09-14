@@ -56,6 +56,7 @@ import type { BulkExportResult } from './exportSelectedDays';
 import { restoreDay } from './restoreDay';
 import type { CapturedDay } from './restoreDay';
 import styles from './AnimalWorkspace.module.css';
+import { pluralize } from '../../utils/pluralize';
 
 interface RecordingDaysTabProps {
   /** The animal whose recording days to manage. */
@@ -184,7 +185,7 @@ export function RecordingDaysTab({ animalId }: RecordingDaysTabProps) {
       ids.forEach((id) => actions.deleteDay(id, selectedAnimalId));
       setSelectedDayIds(new Set());
       const n = records.length;
-      undo.show(`Deleted ${n} recording ${n === 1 ? 'day' : 'days'}`, () => {
+      undo.show(`Deleted ${n} recording ${pluralize(n, 'day')}`, () => {
         // restoreDay is TOTAL (never throws), so one un-restorable record (e.g. its date was re-used
         // during the undo window) can't abort the rest. Count failures and surface them — deferred
         // past the toast host's own dismiss(), which runs right after this Undo handler.
@@ -192,7 +193,7 @@ export function RecordingDaysTab({ animalId }: RecordingDaysTabProps) {
           (rec) => !restoreDay(rec, actions as unknown as Parameters<typeof restoreDay>[1])
         ).length;
         if (failed > 0) {
-          const noun = failed === 1 ? 'day' : 'days';
+          const noun = pluralize(failed, 'day');
           queueMicrotask(() =>
             undo.show(`Couldn't restore ${failed} ${noun} — a recording day already exists on that date`)
           );
@@ -407,13 +408,12 @@ export function RecordingDaysTab({ animalId }: RecordingDaysTabProps) {
                 the open/closed state; the visible text already flips Add Recording Days ↔ Hide
                 Calendar for sighted users. */}
             {dayRows.length > 0 && (
-              <button
-                className="btn-primary"
+              <Button
                 onClick={handleToggleCalendar}
                 aria-expanded={showCalendar}
               >
                 {showCalendar ? 'Hide Calendar' : 'Add Recording Days'}
-              </button>
+              </Button>
             )}
             {carryForwardVm.available && (
               <label className={styles.carryForwardToggle}>
@@ -475,7 +475,7 @@ export function RecordingDaysTab({ animalId }: RecordingDaysTabProps) {
           <div className={styles.exportResult} role="status">
             <p>
               Exported {exportResult.exported.length}{' '}
-              {exportResult.exported.length === 1 ? 'file' : 'files'}
+              {pluralize(exportResult.exported.length, 'file')}
               {exportResult.skipped.length > 0 ? ` · Skipped ${exportResult.skipped.length}` : ''}.
             </p>
             {exportResult.skipped.length > 0 && (

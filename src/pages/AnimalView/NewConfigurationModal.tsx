@@ -21,6 +21,8 @@ import { nextConfigurationVersion } from '../../state/workspaceTransitions';
 import { classifyAnimalDays, DAY_STATUS } from '../../domain/dayRecovery';
 import type { Animal, Day } from '../../state/workspaceTypes';
 import styles from './NewConfigurationModal.module.css';
+import Button from '../../components/ui/Button';
+import { pluralize } from '../../utils/pluralize';
 
 interface NewConfigurationModalProps {
   /** Whether the dialog is shown. */
@@ -144,12 +146,12 @@ export default function NewConfigurationModal({
       describedById={summaryId}
       footer={
         <div className="form-actions">
-          <button type="button" className="btn-cancel" onClick={onClose}>
+          <Button variant="neutral" onClick={onClose}>
             Cancel
-          </button>
-          <button type="button" className="button-primary" onClick={handleApply}>
+          </Button>
+          <Button onClick={handleApply}>
             Start configuration v{nextVersion}
-          </button>
+          </Button>
         </div>
       }
     >
@@ -201,7 +203,7 @@ export default function NewConfigurationModal({
         <ul className={styles.consequences}>
           <li>
             Recording days from {effectiveDate || 'the effective date'} forward use v{nextVersion}
-            {effectiveDate ? ` (${movingDays.length} ${movingDays.length === 1 ? 'day' : 'days'})` : ''}.
+            {effectiveDate ? ` (${movingDays.length} ${pluralize(movingDays.length, 'day')})` : ''}.
           </li>
           <li>
             <strong>Bad-channel marks reset</strong> for v{nextVersion} — v

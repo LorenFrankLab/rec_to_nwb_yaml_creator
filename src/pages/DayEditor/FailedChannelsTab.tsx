@@ -20,6 +20,7 @@ import type { ReconfigActions } from './ConfigVersionPanel';
 import ElectrodeGroupsAccordion from './ElectrodeGroupsAccordion';
 import type { Day } from '../../state/workspaceTypes';
 import './DayEditor.scss';
+import { ButtonLink } from '../../components/ui/Button';
 
 /**
  * FailedChannelsTab — shared renderer behind the Recording Setup and Failed Channels sections.
@@ -312,9 +313,9 @@ export default function FailedChannelsTab(props: FailedChannelsTabProps) {
             This animal&apos;s device configuration is missing or corrupt, so devices
             can&apos;t be shown for this day.
           </p>
-          <a href={`#/animal/${ownerKey}/electrode-groups?field=electrode_groups`} className="button-primary">
+          <ButtonLink href={`#/animal/${ownerKey}/electrode-groups?field=electrode_groups`}>
             Configure devices in Animal Setup
-          </a>
+          </ButtonLink>
         </div>
       </div>
     );
@@ -365,9 +366,9 @@ export default function FailedChannelsTab(props: FailedChannelsTabProps) {
                 This animal&apos;s device configuration is missing or corrupt, so configuration version
                 details can&apos;t be shown for this day.
               </p>
-              <a href={`#/animal/${ownerKey}/electrode-groups?field=electrode_groups`} className="button-primary">
+              <ButtonLink href={`#/animal/${ownerKey}/electrode-groups?field=electrode_groups`}>
                 Configure devices in Animal Setup
-              </a>
+              </ButtonLink>
             </div>
           ) : (
             <>

@@ -1,5 +1,7 @@
 import { useId } from 'react';
 import Modal from '../../components/Modal/Modal';
+import Button from '../../components/ui/Button';
+import { pluralize } from '../../utils/pluralize';
 
 interface CameraReferenceDialogProps {
   isOpen: boolean;
@@ -36,7 +38,7 @@ export default function CameraReferenceDialog({ isOpen, camera = null, affectedD
   if (!isOpen) return null;
 
   const count = affectedDays.length;
-  const dayWord = count === 1 ? 'day' : 'days';
+  const dayWord = pluralize(count, 'day');
   const title =
     count > 0
       ? `Camera ${camera?.id} is used by ${count} recording ${dayWord}`
@@ -54,15 +56,15 @@ export default function CameraReferenceDialog({ isOpen, camera = null, affectedD
       className="camera-reference-dialog"
       footer={
         <div className="form-actions">
-          <button type="button" className="btn-cancel" onClick={onCancel}>
+          <Button variant="neutral" onClick={onCancel}>
             Cancel
-          </button>
-          <button type="button" className="button-secondary" onClick={onCorrect}>
+          </Button>
+          <Button variant="secondary" onClick={onCorrect}>
             {count > 0 ? `Correct this camera (updates ${count} ${dayWord})` : 'Correct this camera'}
-          </button>
-          <button type="button" className="button-primary" onClick={onCreateNew}>
+          </Button>
+          <Button onClick={onCreateNew}>
             Create a new camera (recommended)
-          </button>
+          </Button>
         </div>
       }
     >

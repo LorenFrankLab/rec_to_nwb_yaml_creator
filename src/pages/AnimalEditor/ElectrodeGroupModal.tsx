@@ -4,6 +4,7 @@ import Modal from '../../components/Modal/Modal';
 import BrainRegionAutocomplete, { canonicalizeRegion, BRAIN_REGIONS } from '../../components/BrainRegionAutocomplete';
 import { deviceTypes, deviceTypeLabel } from '../../valueList';
 import './ElectrodeGroupModal.scss';
+import Button from '../../components/ui/Button';
 
 /**
  * Edit-mode input: the saved electrode group as THIS editor reads it. `targeted_location` is a brain-
@@ -166,23 +167,20 @@ function ElectrodeGroupForm({ mode, group = null, knownRegions = [], onSave, onC
       className="electrode-group-modal-content"
       footer={
         <div className="form-actions">
-          <button
-            type="button"
-            className="btn-cancel"
+          <Button
+            variant="neutral"
             onClick={onCancel}
             aria-label="Cancel and close modal"
           >
             Cancel
-          </button>
-          <button
-            type="button"
-            className="btn-save"
+          </Button>
+          <Button
             onClick={handleSave}
             disabled={!isFormValid()}
             aria-label="Save electrode group configuration"
           >
             Save
-          </button>
+          </Button>
         </div>
       }
     >

@@ -12,6 +12,8 @@ import { useDayEditorContext } from './DayEditorContext';
 import type { DayEditorBundle } from './DayEditorContext';
 import type { BehavioralEvent } from '../../state/workspaceTypes';
 import styles from './DioTab.module.css';
+import Button from '../../components/ui/Button';
+import { pluralize } from '../../utils/pluralize';
 
 interface DioTabProps extends DayEditorBundle {
   /** Other animals' DIO sets that can seed a blank first day; offered as a bootstrap CTA when empty. */
@@ -81,14 +83,14 @@ export default function DioTab(props: DioTabProps) {
       <div className={styles.header}>
         <h2>Behavioral events</h2>
         {mode === 'summary' ? (
-          <button type="button" className="button-secondary" onClick={() => setMode('edit')}>
+          <Button variant="secondary" onClick={() => setMode('edit')}>
             Edit · rewired the rig
-          </button>
+          </Button>
         ) : (
           named.length > 0 && (
-            <button type="button" className="button-secondary" onClick={() => setMode('summary')}>
+            <Button variant="secondary" onClick={() => setMode('summary')}>
               ← Back to summary
-            </button>
+            </Button>
           )
         )}
       </div>
@@ -139,7 +141,7 @@ function DioSummary({ named, carriedFrom, hasCollision, onEdit }: DioSummaryProp
     <div>
       <p className={styles.status}>
         <span className={styles.dot} aria-hidden="true" />
-        <strong>{count} {count === 1 ? 'event' : 'events'}</strong>
+        <strong>{count} {pluralize(count, 'event')}</strong>
         {carriedFrom ? <span className={styles.meta}> · carried from {carriedFrom} · unchanged</span> : null}
       </p>
 

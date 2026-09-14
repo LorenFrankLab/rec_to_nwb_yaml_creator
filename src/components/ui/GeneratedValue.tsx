@@ -1,4 +1,5 @@
 import styles from './GeneratedValue.module.css';
+import Button from './Button';
 
 export interface GeneratedValueProps {
   /**
@@ -43,9 +44,9 @@ const GeneratedValue = ({
       <span className={styles.root}>
         <code className={styles.generated}>{value}</code>
         <span className={`${styles.tag} ${styles.tagGenerated}`}>generated</span>
-        <button type="button" className={styles.action} onClick={onOverride}>
+        <Button variant="secondary" size="small" onClick={onOverride}>
           {overrideLabel}
-        </button>
+        </Button>
       </span>
     );
   }
@@ -60,9 +61,9 @@ const GeneratedValue = ({
         onChange={onChange ? (event) => onChange(event.target.value) : undefined}
       />
       <span className={`${styles.tag} ${styles.tagManual}`}>manual</span>
-      <button type="button" className={styles.action} onClick={onRevert}>
+      <Button variant="secondary" size="small" onClick={onRevert}>
         Revert to generated
-      </button>
+      </Button>
     </span>
   );
 };

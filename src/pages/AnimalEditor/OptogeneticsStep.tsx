@@ -3,6 +3,7 @@ import {
   opticalFiberModelNames,
   virusNames,
 } from '../../valueList';
+import Button from '../../components/ui/Button';
 
 /** A single configurable optogenetics field (drives {@link renderField}). */
 interface OptoFieldDef {
@@ -374,23 +375,21 @@ export default function OptogeneticsStep({ animal, onUpdate }: OptogeneticsStepP
                     )
                   )}
                 </div>
-                <button
-                  type="button"
-                  className="btn-secondary"
+                <Button
+                  variant="secondary"
                   onClick={() => removeItem('optical_fiber', index)}
                   aria-label={`Remove optical fiber ${index + 1}`}
                 >
                   Remove fiber
-                </button>
+                </Button>
               </div>
             ))}
-            <button
-              type="button"
-              className="btn-secondary"
+            <Button
+              variant="secondary"
               onClick={() => addItem('optical_fiber', FIBER_FIELDS)}
             >
               Add optical fiber
-            </button>
+            </Button>
           </fieldset>
 
           {/* Virus injections — one or more. */}
@@ -408,23 +407,21 @@ export default function OptogeneticsStep({ animal, onUpdate }: OptogeneticsStepP
                     )
                   )}
                 </div>
-                <button
-                  type="button"
-                  className="btn-secondary"
+                <Button
+                  variant="secondary"
                   onClick={() => removeItem('virus_injection', index)}
                   aria-label={`Remove virus injection ${index + 1}`}
                 >
                   Remove injection
-                </button>
+                </Button>
               </div>
             ))}
-            <button
-              type="button"
-              className="btn-secondary"
+            <Button
+              variant="secondary"
               onClick={() => addItem('virus_injection', VIRUS_FIELDS)}
             >
               Add virus injection
-            </button>
+            </Button>
           </fieldset>
 
           {/* Stimulation software (converter gate key). */}

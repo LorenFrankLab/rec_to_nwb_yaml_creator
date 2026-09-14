@@ -2,6 +2,7 @@ import { useId } from 'react';
 import type { ReactNode } from 'react';
 import Modal from './Modal';
 import './ConfirmDialog.scss';
+import Button from '../ui/Button';
 
 interface ConfirmDialogProps {
   /** Whether the dialog is shown. */
@@ -58,16 +59,12 @@ const ConfirmDialog = ({
       className="confirm-dialog"
       footer={
         <div className="form-actions">
-          <button type="button" className="btn-cancel" onClick={onCancel}>
+          <Button variant="neutral" onClick={onCancel}>
             {cancelLabel}
-          </button>
-          <button
-            type="button"
-            className={destructive ? 'btn-danger' : 'btn-save'}
-            onClick={onConfirm}
-          >
+          </Button>
+          <Button variant={destructive ? 'danger' : 'primary'} onClick={onConfirm}>
             {confirmLabel}
-          </button>
+          </Button>
         </div>
       }
     >

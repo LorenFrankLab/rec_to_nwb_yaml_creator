@@ -36,6 +36,7 @@ import ExportReport from './ExportReport';
 import BatchExportPreflight from './BatchExportPreflight';
 import DayStatusTable from './DayStatusTable';
 import styles from './ValidationSummary.module.css';
+import Button from '../../components/ui/Button';
 
 // Back-compat: the per-animal AnimalView "Validation & Export" tab and the row tests import these
 // from this module. The implementations now live in `./validationSummaryRows` (Phase 9c).
@@ -166,15 +167,14 @@ export function ValidationSummary({ animalKey }: { animalKey?: string } = {}) {
           </p>
 
           <div className={styles.actions}>
-            <button
-              type="button"
+            <Button
+              variant="secondary"
               onClick={handleValidateAll}
               title="Save the current validation status for each recording day so it persists across reloads and other views. Recovered and wrong-owner days are skipped (they aren't this animal's recording days)."
             >
               Validate All
-            </button>
-            <button
-              type="button"
+            </Button>
+            <Button
               onClick={handleExportValidOnly}
               disabled={exportValidDisabled}
               aria-describedby={exportValidDisabled ? 'export-valid-disabled-reason' : undefined}
@@ -185,7 +185,7 @@ export function ValidationSummary({ animalKey }: { animalKey?: string } = {}) {
               }
             >
               Export Valid Only
-            </button>
+            </Button>
             {exportValidDisabled && (
               // Accessible disabled reason: a disabled control is not announced on hover by SRs, so
               // pair it with a visible, programmatically-associated explanation (aria-describedby).

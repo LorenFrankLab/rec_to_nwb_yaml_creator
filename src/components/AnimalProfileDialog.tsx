@@ -5,6 +5,8 @@ import Modal from './Modal/Modal';
 import { ConfirmDialog } from './Modal';
 import BlastRadiusChip from './ui/BlastRadiusChip';
 import './AnimalProfileDialog.css';
+import Button from './ui/Button';
+import { pluralize } from '../utils/pluralize';
 
 /** The editable constant subject facts held by this dialog's form. */
 interface ProfileForm {
@@ -112,7 +114,7 @@ export default function AnimalProfileDialog({
 
   const isDirty = Object.keys(changedFields).length > 0;
 
-  const dayCountText = `${dayCount} recording day${dayCount === 1 ? '' : 's'}`;
+  const dayCountText = `${dayCount} ${pluralize(dayCount, 'recording day')}`;
   const blastRadius = `this animal and all ${dayCountText}, including any already exported`;
 
   const handleSaveClick = () => {
@@ -144,12 +146,12 @@ export default function AnimalProfileDialog({
         className="animal-profile-dialog"
         footer={
           <div className="form-actions">
-            <button type="button" className="btn-cancel" onClick={onClose}>
+            <Button variant="neutral" onClick={onClose}>
               Cancel
-            </button>
-            <button type="button" className="button-primary" disabled={!isDirty} onClick={handleSaveClick}>
+            </Button>
+            <Button disabled={!isDirty} onClick={handleSaveClick}>
               Save profile changes
-            </button>
+            </Button>
           </div>
         }
       >

@@ -1,8 +1,10 @@
-import type { ButtonHTMLAttributes } from 'react';
+import type { AnchorHTMLAttributes, ButtonHTMLAttributes } from 'react';
 import styles from './Button.module.css';
 
-/** Props for the {@link Button} primitive; any unlisted `<button>` attribute is forwarded. */
-interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
+type ButtonVariant = 'primary' | 'secondary' | 'danger' | 'dangerSubtle' | 'neutral';
+type ButtonSize = 'medium' | 'small';
+
+interface ButtonStyleProps {
   /**
    * Visual variant (default 'primary').
    * - `danger` — a filled red for consequential confirms (e.g. a delete confirm dialog).
@@ -11,9 +13,22 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
    *   so a list of rows isn't a wall of filled red.
    * - `neutral` — a quiet grey action (e.g. a table row's Edit) that pairs with `dangerSubtle`.
    */
-  variant?: 'primary' | 'secondary' | 'danger' | 'dangerSubtle' | 'neutral';
+  variant?: ButtonVariant;
   /** Size (default 'medium'). 'small' is the compact size for dense table-row actions. */
-  size?: 'medium' | 'small';
+  size?: ButtonSize;
+}
+
+/** Props for the {@link Button} primitive; any unlisted `<button>` attribute is forwarded. */
+interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement>, ButtonStyleProps {}
+
+/** Props for {@link ButtonLink}; any unlisted `<a>` attribute is forwarded. */
+interface ButtonLinkProps extends AnchorHTMLAttributes<HTMLAnchorElement>, ButtonStyleProps {}
+
+/** The class list for a variant/size, shared by the button and link renderings. */
+function buttonClasses(variant: ButtonVariant, size: ButtonSize, className: string): string {
+  const variantClass = styles[variant] || styles.primary;
+  const sizeClass = size === 'small' ? styles.small : '';
+  return [styles.button, variantClass, sizeClass, className].filter(Boolean).join(' ');
 }
 
 /**
@@ -25,16 +40,22 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
  * (`onClick`, `disabled`, `aria-*`, `title`, `ref` via callback, …) is forwarded to
  * the underlying `<button>`.
  */
-const Button = ({ variant = 'primary', size = 'medium', type = 'button', className = '', children, ...rest }: ButtonProps) => {
-  const variantClass = styles[variant] || styles.primary;
-  const sizeClass = size === 'small' ? styles.small : '';
-  const classes = [styles.button, variantClass, sizeClass, className].filter(Boolean).join(' ');
-  return (
-    // eslint-disable-next-line react/button-has-type
-    <button {...rest} type={type} className={classes}>
-      {children}
-    </button>
-  );
-};
+const Button = ({ variant = 'primary', size = 'medium', type = 'button', className = '', children, ...rest }: ButtonProps) => (
+  // eslint-disable-next-line react/button-has-type
+  <button {...rest} type={type} className={buttonClasses(variant, size, className)}>
+    {children}
+  </button>
+);
+
+/**
+ * ButtonLink - a navigation link styled as a {@link Button}. Use it for a call-to-action that
+ * changes route (an `<a href>`), so the primitive's look isn't re-created as a global class on an
+ * anchor. It stays a real link: right-click / middle-click / focus semantics are the anchor's.
+ */
+export const ButtonLink = ({ variant = 'primary', size = 'medium', className = '', children, ...rest }: ButtonLinkProps) => (
+  <a {...rest} className={buttonClasses(variant, size, className)}>
+    {children}
+  </a>
+);
 
 export default Button;

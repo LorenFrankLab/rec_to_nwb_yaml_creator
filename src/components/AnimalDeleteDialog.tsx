@@ -3,6 +3,8 @@ import Modal from './Modal/Modal';
 import { getAnimalDeleteCascade, DOWNSTREAM_NOT_DELETED_NOTE } from '../domain/animalDeleteCascade';
 import type { Animal, Day } from '../state/workspaceTypes';
 import './AnimalDeleteDialog.css';
+import Button from './ui/Button';
+import { pluralize } from '../utils/pluralize';
 
 interface AnimalDeleteDialogProps {
   /** Whether the dialog is shown. */
@@ -78,33 +80,32 @@ export default function AnimalDeleteDialog({
       className="confirm-dialog animal-delete-dialog"
       footer={
         <div className="form-actions">
-          <button type="button" className="btn-cancel" onClick={onCancel}>
+          <Button variant="neutral" onClick={onCancel}>
             Cancel
-          </button>
-          <button
-            type="button"
-            className="btn-danger"
+          </Button>
+          <Button
+            variant="danger"
             disabled={!matches}
             // Names why it's disabled for assistive tech until the typed name matches.
             aria-describedby={matches ? undefined : messageId}
             onClick={handleConfirm}
           >
             Delete animal
-          </button>
+          </Button>
         </div>
       }
     >
       <p id={messageId} className="confirm-dialog-message">
         Delete <strong>{animalId}</strong> and its {cascade.ownedDayCount}{' '}
-        {cascade.ownedDayCount === 1 ? 'recording day' : 'recording days'}? This removes the animal
+        {pluralize(cascade.ownedDayCount, 'recording day')}? This removes the animal
         and the recording days it owns from this workspace and from export lists.
         {cascade.wrongOwnerCount > 0 &&
           ` ${cascade.wrongOwnerCount} day ${
-            cascade.wrongOwnerCount === 1 ? 'record' : 'records'
+            pluralize(cascade.wrongOwnerCount, 'record')
           } listed here by mistake (belonging to another animal) will be preserved.`}
         {cascade.orphanCount > 0 &&
           ` ${cascade.orphanCount} recovered day ${
-            cascade.orphanCount === 1 ? 'record' : 'records'
+            pluralize(cascade.orphanCount, 'record')
           } not in this animal's day list will remain in the workspace (resolve them from the validation summary).`}
         {cascade.hasArtifacts && DOWNSTREAM_NOT_DELETED_NOTE} This cannot be undone.
       </p>

@@ -166,14 +166,13 @@ export default function DayList({
                   </span>
                 </td>
                 <td className={styles.actionsCell}>
-                  <button
-                    type="button"
-                    className="btn-secondary"
+                  <Button
+                    variant="secondary"
                     onClick={() => unlinkCommand && onRepairCommand(unlinkCommand)}
                     aria-label={`Remove ${dateText} from ${animalId} (belongs to ${owner})`}
                   >
                     Remove from this animal
-                  </button>
+                  </Button>
                 </td>
               </tr>
             );

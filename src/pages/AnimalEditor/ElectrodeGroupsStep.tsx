@@ -10,6 +10,7 @@ import { getChannelCount, getShankCount } from '../../utils/deviceTypeUtils';
 import { deviceTypeLabel } from '../../valueList';
 import Button from '../../components/ui/Button';
 import './ElectrodeGroupsStep.scss';
+import { pluralize } from '../../utils/pluralize';
 
 /**
  * Editor-side electrode group: the canonical {@link ElectrodeGroup} plus the `units` field the
@@ -132,13 +133,13 @@ export default function ElectrodeGroupsStep({ animal, onFieldUpdate, onEdit, onA
         <section className="raw-corruption-banner" role="alert" aria-label="Electrode setup needs repair">
           <p className="field-help-text">
             This animal&apos;s saved configuration has {snapshotGroups.length} electrode{' '}
-            {snapshotGroups.length === 1 ? 'group' : 'groups'} that {snapshotGroups.length === 1 ? 'is' : 'are'} not
+            {pluralize(snapshotGroups.length, 'group')} that {snapshotGroups.length === 1 ? 'is' : 'are'} not
             loaded for editing. Load the saved configuration to review or edit it — adding new
             groups here instead would replace the saved configuration.
           </p>
-          <button type="button" className="button-primary" onClick={handleLoadSaved}>
+          <Button onClick={handleLoadSaved}>
             Load saved electrode configuration
-          </button>
+          </Button>
         </section>
       </div>
     );
@@ -156,12 +157,12 @@ export default function ElectrodeGroupsStep({ animal, onFieldUpdate, onEdit, onA
         <p className="empty-state-hint">
           After adding electrode groups, you'll configure channel maps to match your Trodes hardware setup.
         </p>
-        <button className="button-primary" onClick={handleAddClick}>
+        <Button onClick={handleAddClick}>
           Add First Electrode Group
-        </button>
-        <button className="button-secondary" onClick={handleCopyClick}>
+        </Button>
+        <Button variant="secondary" onClick={handleCopyClick}>
           Copy from Existing Animal
-        </button>
+        </Button>
       </div>
     );
   }
@@ -178,12 +179,12 @@ export default function ElectrodeGroupsStep({ animal, onFieldUpdate, onEdit, onA
       </header>
 
       <div className="table-actions">
-        <button className="button-primary" onClick={handleAddClick}>
+        <Button onClick={handleAddClick}>
           + Add Electrode Group
-        </button>
-        <button className="button-secondary" onClick={handleCopyClick}>
+        </Button>
+        <Button variant="secondary" onClick={handleCopyClick}>
           Copy from Animal
-        </button>
+        </Button>
       </div>
 
       <table className="electrode-groups-table">

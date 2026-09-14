@@ -38,6 +38,8 @@ import DayEditorSectionNav from './DayEditorSectionNav';
 import type { CopyableDioSource } from './BehavioralEventsDisplay';
 import ErrorState from './ErrorState';
 import styles from './DayEditorFrame.module.css';
+import Button from '../../components/ui/Button';
+import { pluralize } from '../../utils/pluralize';
 
 /** A repair-routed focus request: the target field path + a monotonic token to retrigger the effect. */
 interface FocusRequest {
@@ -119,7 +121,7 @@ function toScopeSummary(summary: ReturnType<typeof buildAnimalViewModel>['summar
     [summary.genotype, summary.sex, summary.species].filter(Boolean).join(' · ') || summary.id;
   const probes =
     summary.probeCount > 0
-      ? `${summary.probeCount} probe${summary.probeCount === 1 ? '' : 's'}` +
+      ? `${summary.probeCount} ${pluralize(summary.probeCount, 'probe')}` +
         (summary.probeSummary ? ` · ${summary.probeSummary}` : '')
       : 'No probes';
   const config = summary.configVersion != null ? `v${summary.configVersion}` : '—';
@@ -433,14 +435,13 @@ export default function DayEditorFrame() {
           <Breadcrumb items={vm.breadcrumb.items} />
           <div className={styles.headerActions}>
             <SaveIndicator persistence={persistence} />
-            <button
-              type="button"
-              className="button-secondary"
+            <Button
+              variant="secondary"
               onClick={() => setMode('export')}
               aria-pressed={mode === 'export'}
             >
               Export
-            </button>
+            </Button>
           </div>
         </div>
 

@@ -1,5 +1,6 @@
 import type { SectionViewModel } from '../../viewModels/types';
 import styles from './AnimalWorkspace.module.css';
+import Button from '../../components/ui/Button';
 
 /**
  * The static per-section hints, keyed by the setup-section key. They state honestly WHEN a section
@@ -39,14 +40,14 @@ export default function AnimalSetupCard({ sections, hasOtherAnimals, onCopyFromA
         electrodes, and each section is referenced per day.
       </p>
       {hasOtherAnimals && (
-        <button
-          type="button"
-          className={`${styles.setupCardCopyButton} button-secondary`}
+        <Button
+          variant="secondary"
+          className={styles.setupCardCopyButton}
           onClick={onCopyFromAnimal}
           aria-label="Copy from another animal — electrode groups, cameras, recording system"
         >
           Copy from another animal…
-        </button>
+        </Button>
       )}
       <ul className={styles.setupCardList}>
         {sections.map((section) => {

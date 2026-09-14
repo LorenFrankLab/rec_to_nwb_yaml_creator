@@ -1,6 +1,7 @@
 import React, { useId } from 'react';
 import Modal from '../Modal/Modal';
 import './ShortcutsHelp.scss';
+import Button from '../ui/Button';
 
 interface ShortcutsHelpProps {
   /** Whether the dialog is shown. */
@@ -38,9 +39,9 @@ export default function ShortcutsHelp({ isOpen, onClose }: ShortcutsHelpProps) {
       className="shortcuts-help"
       footer={
         <div className="form-actions">
-          <button type="button" className="btn-primary" onClick={onClose}>
+          <Button onClick={onClose}>
             Close
-          </button>
+          </Button>
         </div>
       }
     >

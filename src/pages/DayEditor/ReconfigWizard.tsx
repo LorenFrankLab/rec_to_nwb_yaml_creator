@@ -9,6 +9,8 @@ import {
 } from '../../state/workspaceSelectors';
 import type { Animal, Day } from '../../state/workspaceTypes';
 import './ReconfigWizard.scss';
+import Button from '../../components/ui/Button';
+import { pluralize } from '../../utils/pluralize';
 
 interface ReconfigWizardProps {
   /** Whether the dialog is shown. */
@@ -172,20 +174,19 @@ export default function ReconfigWizard({
       className="reconfig-wizard"
       footer={
         <div className="form-actions">
-          <button
-            type="button"
-            className="btn-cancel"
+          <Button
+            variant="neutral"
             onClick={() => onClose()}
             aria-label="Cancel and close"
           >
             Cancel
-          </button>
+          </Button>
           {/* type="button" (not submit): the action row now lives in Modal's footer,
               outside the <form>. Enter in a field still submits via the form's onSubmit,
               which calls the same handleApply. */}
-          <button type="button" className="btn-primary" onClick={handleApply}>
-            Create version & apply to {movingDays.length} {movingDays.length === 1 ? 'day' : 'days'}
-          </button>
+          <Button onClick={handleApply}>
+            Create version & apply to {movingDays.length} {pluralize(movingDays.length, 'day')}
+          </Button>
         </div>
       }
     >

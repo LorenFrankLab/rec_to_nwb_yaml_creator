@@ -15,6 +15,8 @@ import { exportAllDays } from './exportPreviewBatch';
 import type { ExportAllResult } from './exportPreviewBatch';
 import type { IssueViewModel, ExportGateViewModel } from '../../viewModels/types';
 import styles from './ExportPreview.module.css';
+import { blockingIssues } from '../../validation/issueTypes';
+import Button from '../../components/ui/Button';
 
 interface ExportPreviewProps extends DayEditorBundle {
   /** The classified issue list (`vm.issues`) — the blocked region's repair list reads its errors. */
@@ -78,7 +80,7 @@ export default function ExportPreview(props: ExportPreviewProps) {
   // The gate is the view-model's authoritative export gate; absent → fail closed (blocked).
   const blocked = !exportGate?.open;
   const disabledReason = exportGate?.action?.disabledReason;
-  const vmErrorIssues = issues.filter((issue) => issue.severity === 'error');
+  const vmErrorIssues = blockingIssues(issues);
   const strict = isFeatureEnabled('shadowExportStrict');
   const dayCount = getAnimalDayIds(animal).length;
 
@@ -150,22 +152,19 @@ export default function ExportPreview(props: ExportPreviewProps) {
 
       {!blocked && (
         <div className={styles.actions}>
-          <button
-            type="button"
-            className="button-primary"
+          <Button
             onClick={handleDownload}
             title={`Download ${fileName}`}
           >
             Download
-          </button>
-          <button
-            type="button"
-            className="button-secondary"
+          </Button>
+          <Button
+            variant="secondary"
             onClick={handleCopy}
             title="Both Download and Copy produce the file"
           >
             Copy
-          </button>
+          </Button>
         </div>
       )}
 
@@ -215,24 +214,21 @@ export default function ExportPreview(props: ExportPreviewProps) {
 
       {blocked && (
         <div className={styles.actions}>
-          <button
-            type="button"
-            className="button-primary"
+          <Button
             onClick={handleDownload}
             disabled={blocked}
             title={blocked ? disabledReason : `Download ${fileName}`}
           >
             Download
-          </button>
-          <button
-            type="button"
-            className="button-secondary"
+          </Button>
+          <Button
+            variant="secondary"
             onClick={handleCopy}
             disabled={blocked}
             title={blocked ? disabledReason : 'Both Download and Copy produce the file'}
           >
             Copy
-          </button>
+          </Button>
         </div>
       )}
 

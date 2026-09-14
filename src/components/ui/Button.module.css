@@ -102,3 +102,8 @@
   padding: 0.4rem 0.8rem;
   font-size: var(--font-size-sm);
 }
+
+/* An anchor carries the browser's link underline/colour; the primitive's own colour wins. */
+a.button {
+  text-decoration: none;
+}

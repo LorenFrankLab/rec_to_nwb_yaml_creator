@@ -2,6 +2,8 @@ import WarningAcknowledgement from '../../components/WarningAcknowledgement';
 import { describeConfigVersionLabel } from '../../viewModels/validationSummaryRows';
 import type { PendingExport } from './useValidationSummaryActions';
 import styles from './ValidationSummary.module.css';
+import Button from '../../components/ui/Button';
+import { pluralize } from '../../utils/pluralize';
 
 interface BatchExportPreflightProps {
   /** The pending batch: the valid rows, the per-day preflight entries, and the days carrying warnings. */
@@ -36,7 +38,7 @@ export default function BatchExportPreflight({
     <section className={styles.batchExportPreflight} aria-label="Batch export preflight">
       <h2>Confirm batch export</h2>
       <p>
-        {pendingExport.rows.length} {pendingExport.rows.length === 1 ? 'day' : 'days'} will
+        {pendingExport.rows.length} {pluralize(pendingExport.rows.length, 'day')} will
         be encoded and downloaded. Review what each file will contain before exporting:
       </p>
       <ul className={styles.batchExportPreflightList}>
@@ -50,9 +52,9 @@ export default function BatchExportPreflight({
             ) : (
               <span className={styles.batchExportPreflightDetail}>
                 {describeConfigVersionLabel(entry.version as number | null, entry.historical as boolean)}; {entry.groups}{' '}
-                electrode {entry.groups === 1 ? 'group' : 'groups'}, {entry.failedChannels}{' '}
-                failed {entry.failedChannels === 1 ? 'channel' : 'channels'}; {entry.cameras}{' '}
-                {entry.cameras === 1 ? 'camera' : 'cameras'}; {entry.opto}
+                electrode {pluralize(entry.groups, 'group')}, {entry.failedChannels}{' '}
+                failed {pluralize(entry.failedChannels, 'channel')}; {entry.cameras}{' '}
+                {pluralize(entry.cameras, 'camera')}; {entry.opto}
               </span>
             )}
           </li>
@@ -66,12 +68,12 @@ export default function BatchExportPreflight({
         onChange={onAcknowledgeChange}
       />
       <div className={styles.batchExportPreflightActions}>
-        <button type="button" className="btn-primary" onClick={onConfirm} disabled={confirmDisabled}>
+        <Button onClick={onConfirm} disabled={confirmDisabled}>
           Confirm export ({pendingExport.rows.length})
-        </button>
-        <button type="button" onClick={onCancel}>
+        </Button>
+        <Button variant="neutral" onClick={onCancel}>
           Cancel
-        </button>
+        </Button>
       </div>
     </section>
   );

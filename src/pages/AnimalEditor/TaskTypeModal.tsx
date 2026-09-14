@@ -5,6 +5,7 @@ import { getAnimalCameras } from '../../state/workspaceSelectors';
 import type { Camera, TaskType } from '../../state/workspaceTypes';
 import type { TaskTypeDefinitionInput } from '../../state/taskCatalogActions';
 import './TaskTypeModal.scss';
+import Button from '../../components/ui/Button';
 
 /** Local form state for the task-type editor (scalars as strings, cameras as string keys). */
 interface TaskTypeFormData {
@@ -99,18 +100,16 @@ function TaskTypeForm({ mode, taskType = null, cameras, nameError = null, onSave
       className="task-type-modal-content"
       footer={
         <div className="form-actions">
-          <button type="button" className="btn-cancel" onClick={onCancel} aria-label="Cancel and close modal">
+          <Button variant="neutral" onClick={onCancel} aria-label="Cancel and close modal">
             Cancel
-          </button>
-          <button
-            type="button"
-            className="btn-save"
+          </Button>
+          <Button
             onClick={handleSave}
             disabled={!isFormValid()}
             aria-label="Save task type"
           >
             Save
-          </button>
+          </Button>
         </div>
       }
     >

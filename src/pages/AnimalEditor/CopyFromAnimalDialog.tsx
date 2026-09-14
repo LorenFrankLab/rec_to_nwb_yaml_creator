@@ -22,6 +22,8 @@ import {
 } from './identitySafety';
 import type { IdentityRegistryEntry } from './identitySafety';
 import './CopyFromAnimalDialog.scss';
+import Button from '../../components/ui/Button';
+import { pluralize } from '../../utils/pluralize';
 
 /** The sections this dialog can copy, in display order. */
 const ALL_SECTIONS = ['electrode_groups', 'cameras', 'data_acq_device'];
@@ -385,17 +387,15 @@ export default function CopyFromAnimalDialog({
       className="copy-from-animal-modal"
       footer={
         <div className="modal-actions">
-          <button type="button" onClick={handleCancel} className="button-secondary">
+          <Button onClick={handleCancel} variant="secondary">
             Cancel
-          </button>
-          <button
-            type="button"
+          </Button>
+          <Button
             onClick={handleCopy}
             disabled={!canCopy}
-            className="button-primary"
           >
             Copy
-          </button>
+          </Button>
         </div>
       }
     >
@@ -508,7 +508,7 @@ export default function CopyFromAnimalDialog({
             {selectedAnimal && !isMultiSection && groupCount > 0 && (
               <div className="copy-preview">
                 <p>
-                  {groupCount} electrode {groupCount === 1 ? 'group' : 'groups'} will be copied from{' '}
+                  {groupCount} electrode {pluralize(groupCount, 'group')} will be copied from{' '}
                   <strong>{selectedAnimal.name}</strong> with new IDs starting from{' '}
                   {nextIds.nextGroupId}.
                 </p>

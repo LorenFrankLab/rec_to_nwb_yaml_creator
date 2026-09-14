@@ -5,6 +5,7 @@ import { IDENTITY_FIELD_LABELS } from './identitySafety';
 import type { IdentityDivergence } from './identitySafety';
 import type { Camera } from '../../state/workspaceTypes';
 import './CameraModal.scss';
+import Button from '../../components/ui/Button';
 
 const TYPICAL_MIN = 0.0005;
 const TYPICAL_MAX = 0.002;
@@ -144,23 +145,20 @@ function CameraForm({ mode, camera = null, existingCameras, onSave, onCancel, di
       className="camera-modal-content"
       footer={
         <div className="form-actions">
-          <button
-            type="button"
-            className="btn-cancel"
+          <Button
+            variant="neutral"
             onClick={onCancel}
             aria-label="Cancel and close modal"
           >
             Cancel
-          </button>
-          <button
-            type="button"
-            className="btn-save"
+          </Button>
+          <Button
             onClick={handleSave}
             disabled={!isFormValid()}
             aria-label="Save camera configuration"
           >
             Save
-          </button>
+          </Button>
         </div>
       }
     >
@@ -290,9 +288,9 @@ function CameraForm({ mode, camera = null, existingCameras, onSave, onCancel, di
               ))}
             </tbody>
           </table>
-          <button type="button" className="btn-save" onClick={focusName}>
+          <Button onClick={focusName}>
             Use a new camera name
-          </button>
+          </Button>
         </div>
       )}
       </form>

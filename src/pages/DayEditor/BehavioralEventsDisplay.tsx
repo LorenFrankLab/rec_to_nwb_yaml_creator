@@ -12,6 +12,8 @@ import {
 import SuggestionCombobox from '../../components/SuggestionCombobox';
 import type { BehavioralEvent } from '../../state/workspaceTypes';
 import './BehavioralEventsDisplay.scss';
+import Button from '../../components/ui/Button';
+import { pluralize } from '../../utils/pluralize';
 
 /** Another animal's DIO set, offered to seed a blank first day. */
 export interface CopyableDioSource {
@@ -262,16 +264,15 @@ export default function BehavioralEventsDisplay({ dayEvents = [], onDayEventsCha
           </p>
           <div className="dio-copy-cta__actions">
             {copyableSources.map((source) => (
-              <button
+              <Button
                 key={source.id}
-                type="button"
-                className="button-secondary"
+                variant="secondary"
                 onClick={() => onDayEventsChange(structuredClone(source.events))}
               >
                 {`Copy from ${source.name} (${source.events.length} ${
-                  source.events.length === 1 ? 'event' : 'events'
+                  pluralize(source.events.length, 'event')
                 })`}
-              </button>
+              </Button>
             ))}
           </div>
         </div>
@@ -357,9 +358,9 @@ export default function BehavioralEventsDisplay({ dayEvents = [], onDayEventsCha
               offListMessage="Not a standard event name. Pick a suggestion for consistency, or keep a custom name."
             />
           </label>
-          <button type="button" className="button-secondary" onClick={addNamedLine} disabled={!newLineName.trim()}>
+          <Button variant="secondary" onClick={addNamedLine} disabled={!newLineName.trim()}>
             Add line
-          </button>
+          </Button>
         </div>
       </section>
 
