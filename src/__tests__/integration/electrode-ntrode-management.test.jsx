@@ -1,6 +1,15 @@
 import { describe, it, expect, vi } from 'vitest';
-import { deviceTypeMap, getShankCount } from '../../ntrode/deviceTypes';
+import { getProbeShanks } from '../../ntrode/probeCatalog';
+import { getShankCount } from '../../utils/deviceTypeUtils';
 import { arrayDefaultValues } from '../../valueList';
+
+/**
+ * Shank 0's electrode ids — the per-ntrode `map` structure a device type generates.
+ *
+ * @param {string} deviceType - The probe/device type id.
+ * @returns {number[]} Shank 0's electrode ids, or [] for an unknown type.
+ */
+const firstShankIds = (deviceType) => getProbeShanks(deviceType)[0]?.electrodeIds ?? [];
 
 /**
  * Integration tests for Electrode Group and Ntrode Management
@@ -15,20 +24,20 @@ import { arrayDefaultValues } from '../../valueList';
  * - nTrodeMapSelected() - App.js line 292
  * - removeElectrodeGroupItem() - App.js line 410
  * - duplicateElectrodeGroupItem() - App.js line 707
- * - deviceTypeMap() - ntrode/deviceTypes.js line 7
- * - getShankCount() - ntrode/deviceTypes.js line 68
+ * - getProbeShanks() - ntrode/probeCatalog.ts (shank 0's electrode ids = the ntrode map structure)
+ * - getShankCount() - utils/deviceTypeUtils.ts
  */
 
 describe('Electrode Group and Ntrode Management', () => {
   describe('Device Type Mapping', () => {
     it('maps tetrode_12.5 to 4 channels', () => {
-      const channels = deviceTypeMap('tetrode_12.5');
+      const channels = firstShankIds('tetrode_12.5');
 
       expect(channels).toEqual([0, 1, 2, 3]);
     });
 
     it('maps A1x32-6mm-50-177-H32_21mm to 32 channels', () => {
-      const channels = deviceTypeMap('A1x32-6mm-50-177-H32_21mm');
+      const channels = firstShankIds('A1x32-6mm-50-177-H32_21mm');
 
       expect(channels).toHaveLength(32);
       expect(channels[0]).toBe(0);
@@ -36,13 +45,13 @@ describe('Electrode Group and Ntrode Management', () => {
     });
 
     it('maps 128c-4s8mm6cm-20um-40um-sl to 32 channels per shank', () => {
-      const channels = deviceTypeMap('128c-4s8mm6cm-20um-40um-sl');
+      const channels = firstShankIds('128c-4s8mm6cm-20um-40um-sl');
 
       expect(channels).toHaveLength(32);
     });
 
     it('maps 32c-2s8mm6cm-20um-40um-dl to 16 channels per shank', () => {
-      const channels = deviceTypeMap('32c-2s8mm6cm-20um-40um-dl');
+      const channels = firstShankIds('32c-2s8mm6cm-20um-40um-dl');
 
       expect(channels).toHaveLength(16);
       expect(channels).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]);
@@ -50,8 +59,8 @@ describe('Electrode Group and Ntrode Management', () => {
 
     it('maps 64c-3s6mm6cm-20um-40um-sl to its first shank (21 ids, uneven probe)', () => {
       // 64c-3s partitions 64 electrodes UNEVENLY across 3 shanks (21/21/22).
-      // deviceTypeMap returns the FIRST shank only: ids 0..20 (21 ids), NOT 20.
-      const channels = deviceTypeMap('64c-3s6mm6cm-20um-40um-sl');
+      // Shank 0 only: ids 0..20 (21 ids), NOT 20.
+      const channels = firstShankIds('64c-3s6mm6cm-20um-40um-sl');
 
       expect(channels).toHaveLength(21);
       expect(channels).toEqual([
@@ -60,17 +69,17 @@ describe('Electrode Group and Ntrode Management', () => {
     });
 
     it('maps NET-EBL-128ch-single-shank to 128 channels', () => {
-      const channels = deviceTypeMap('NET-EBL-128ch-single-shank');
+      const channels = firstShankIds('NET-EBL-128ch-single-shank');
 
       expect(channels).toHaveLength(128);
       expect(channels[0]).toBe(0);
       expect(channels[127]).toBe(127);
     });
 
-    it('returns default [0,1,2,3] for unknown device type', () => {
-      const channels = deviceTypeMap('unknown-device');
+    it('returns no channels for an unknown device type (the catalog is the only source of truth)', () => {
+      const channels = firstShankIds('unknown-device');
 
-      expect(channels).toEqual([0, 1, 2, 3]);
+      expect(channels).toEqual([]);
     });
   });
 
@@ -134,7 +143,7 @@ describe('Electrode Group and Ntrode Management', () => {
     it('generates ntrode channel map when device type is selected', () => {
       // Simulate nTrodeMapSelected logic (App.js line 292)
       const deviceType = 'tetrode_12.5';
-      const deviceTypeValues = deviceTypeMap(deviceType);
+      const deviceTypeValues = firstShankIds(deviceType);
       const shankCount = getShankCount(deviceType);
 
       // Create channel map with default values
@@ -150,7 +159,7 @@ describe('Electrode Group and Ntrode Management', () => {
     it('generates multiple ntrode entries for multi-shank devices', () => {
       const deviceType = '128c-4s8mm6cm-20um-40um-sl';
       const electrodeGroupId = 0;
-      const deviceTypeValues = deviceTypeMap(deviceType);
+      const deviceTypeValues = firstShankIds(deviceType);
       const shankCount = getShankCount(deviceType);
 
       const nTrodes = [];
@@ -179,7 +188,7 @@ describe('Electrode Group and Ntrode Management', () => {
 
     it('creates default channel map for each ntrode', () => {
       const deviceType = 'tetrode_12.5';
-      const deviceTypeValues = deviceTypeMap(deviceType);
+      const deviceTypeValues = firstShankIds(deviceType);
 
       const map = {};
       deviceTypeValues.forEach((value) => {
@@ -196,7 +205,7 @@ describe('Electrode Group and Ntrode Management', () => {
   describe('Ntrode Channel Map Updates', () => {
     it('allows custom channel mapping', () => {
       const deviceType = 'tetrode_12.5';
-      const deviceTypeValues = deviceTypeMap(deviceType);
+      const deviceTypeValues = firstShankIds(deviceType);
 
       // User can remap channels
       const customMap = {};
@@ -465,7 +474,7 @@ describe('Electrode Group and Ntrode Management', () => {
 
     it('uses same channel map for all shanks by default', () => {
       const deviceType = '128c-4s8mm6cm-20um-40um-sl';
-      const deviceTypeValues = deviceTypeMap(deviceType);
+      const deviceTypeValues = firstShankIds(deviceType);
       const shankCount = getShankCount(deviceType);
 
       const nTrodes = [];

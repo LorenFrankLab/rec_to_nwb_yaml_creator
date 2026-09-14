@@ -13,7 +13,16 @@
 
 import { describe, it, expect } from 'vitest';
 import { deviceTypes } from '../../../valueList';
-import { deviceTypeMap, getShankCount } from '../../../ntrode/deviceTypes';
+import { getProbeShanks } from '../../../ntrode/probeCatalog';
+import { getShankCount } from '../../../utils/deviceTypeUtils';
+
+/**
+ * Shank 0's electrode ids — the per-ntrode `map` structure a device type generates.
+ *
+ * @param {string} deviceType - The probe/device type id.
+ * @returns {number[]} Shank 0's electrode ids, or [] for an unknown type.
+ */
+const firstShankIds = (deviceType) => getProbeShanks(deviceType)[0]?.electrodeIds ?? [];
 
 describe('Device Type Synchronization', () => {
   describe('Required Device Types from trodes_to_nwb', () => {
@@ -45,7 +54,7 @@ describe('Device Type Synchronization', () => {
 
   describe('Device Type Channel Mappings', () => {
     it('128c-4s8mm6cm-15um-26um-sl should have 32 channels', () => {
-      const channels = deviceTypeMap('128c-4s8mm6cm-15um-26um-sl');
+      const channels = firstShankIds('128c-4s8mm6cm-15um-26um-sl');
       expect(channels).toHaveLength(32);
       expect(channels).toEqual([
         0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
@@ -54,17 +63,17 @@ describe('Device Type Synchronization', () => {
     });
 
     it('128c-4s6mm6cm-20um-40um-sl should have 32 channels', () => {
-      const channels = deviceTypeMap('128c-4s6mm6cm-20um-40um-sl');
+      const channels = firstShankIds('128c-4s6mm6cm-20um-40um-sl');
       expect(channels).toHaveLength(32);
     });
 
     it('128c-4s4mm6cm-20um-40um-sl should have 32 channels', () => {
-      const channels = deviceTypeMap('128c-4s4mm6cm-20um-40um-sl');
+      const channels = firstShankIds('128c-4s4mm6cm-20um-40um-sl');
       expect(channels).toHaveLength(32);
     });
 
     it('128c-4s4mm6cm-15um-26um-sl should have 32 channels', () => {
-      const channels = deviceTypeMap('128c-4s4mm6cm-15um-26um-sl');
+      const channels = firstShankIds('128c-4s4mm6cm-15um-26um-sl');
       expect(channels).toHaveLength(32);
     });
   });

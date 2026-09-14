@@ -97,6 +97,16 @@ const PROBE_CATALOG: Record<string, ProbeMetadata> = {
 };
 
 /**
+ * Every device type the catalog knows, in declaration order. The ONE list to consult for "which
+ * probes exist" — any second hand-maintained list of these ids will drift from it.
+ *
+ * @returns The catalog's device-type ids.
+ */
+export function probeDeviceTypes(): string[] {
+  return Object.keys(PROBE_CATALOG);
+}
+
+/**
  * Returns the catalog entry for a device type, or undefined if not catalogued.
  *
  * @param deviceType - Device/probe type identifier

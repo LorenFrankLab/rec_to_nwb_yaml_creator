@@ -9,31 +9,14 @@
  */
 
 import {
+  probeDeviceTypes,
   getProbeMetadata,
   getProbeElectrodeIds,
 } from '../ntrode/probeCatalog';
 
 /**
- * The supported device/probe types, in their canonical order.
- * @private
- */
-const DEVICE_TYPES = [
-  'tetrode_12.5',
-  'A1x32-6mm-50-177-H32_21mm',
-  '128c-4s8mm6cm-20um-40um-sl',
-  '128c-4s6mm6cm-15um-26um-sl',
-  '128c-4s8mm6cm-15um-26um-sl',
-  '128c-4s6mm6cm-20um-40um-sl',
-  '128c-4s4mm6cm-20um-40um-sl',
-  '128c-4s4mm6cm-15um-26um-sl',
-  '32c-2s8mm6cm-20um-40um-dl',
-  '64c-4s6mm6cm-20um-40um-dl',
-  '64c-3s6mm6cm-20um-40um-sl',
-  'NET-EBL-128ch-single-shank',
-];
-
-/**
- * Returns an array of all available device/probe types
+ * Returns an array of all available device/probe types — the keys of the probe catalog, the
+ * single source of truth, so a probe added there appears here without a second list to edit.
  *
  * @returns Array of device type strings
  * @example
@@ -41,7 +24,7 @@ const DEVICE_TYPES = [
  * // ['tetrode_12.5', 'A1x32-6mm-50-177-H32_21mm', ...]
  */
 export function getDeviceTypes(): string[] {
-  return [...DEVICE_TYPES];
+  return probeDeviceTypes();
 }
 
 /**

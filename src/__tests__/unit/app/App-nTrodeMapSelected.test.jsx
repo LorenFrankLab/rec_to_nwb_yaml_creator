@@ -14,7 +14,7 @@
  * 5. Renumbers all ntrode_id values sequentially (1, 2, 3, ...)
  *
  * Architecture understanding:
- * - deviceTypeMap(type): returns channel index array [0, 1, 2, 3] for map structure
+ * - getProbeShanks(type): each shank's electrode ids (the map structure)
  * - getShankCount(type): returns number of shanks (determines # of ntrodes)
  * - Each shank gets ONE ntrode object
  * - ntrode.map: { 0: 0, 1: 1, 2: 2, 3: 3 } with offsets for multi-shank
@@ -25,7 +25,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import App from '../../../App';
 import { StoreProvider } from '../../../state/StoreContext';
-import { getShankCount } from '../../../ntrode/deviceTypes';
+import { getShankCount } from '../../../utils/deviceTypeUtils';
 import { clickAddButton } from '../../helpers/test-hooks';
 import { getById, getByName } from '../../helpers/test-selectors';
 

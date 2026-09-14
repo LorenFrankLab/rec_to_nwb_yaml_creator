@@ -3,10 +3,18 @@ import { render, waitFor } from '@testing-library/react';
 import { App } from '../../App';
 import { StoreProvider } from '../../state/StoreContext';
 import YAML from 'yaml';
-import { deviceTypeMap } from '../../ntrode/deviceTypes';
+import { getProbeShanks } from '../../ntrode/probeCatalog';
 import { isProbeCatalogConsistent } from '../../ntrode/probeCatalog';
 import fs from 'fs';
 import path from 'path';
+
+/**
+ * Shank 0's electrode ids — the per-ntrode `map` structure a device type generates.
+ *
+ * @param {string} deviceType - The probe/device type id.
+ * @returns {number[]} Shank 0's electrode ids, or [] for an unknown type.
+ */
+const firstShankIds = (deviceType) => getProbeShanks(deviceType)[0]?.electrodeIds ?? [];
 
 /**
  * Integration test to reproduce the complete sample metadata YAML file
@@ -242,7 +250,7 @@ describe('Sample Metadata Reproduction Integration Test', () => {
 
     it('verifies all device types are supported', () => {
       sampleMetadata.electrode_groups.forEach((electrodeGroup) => {
-        const channels = deviceTypeMap(electrodeGroup.device_type);
+        const channels = firstShankIds(electrodeGroup.device_type);
 
         // Should return a valid (first-shank) channel array...
         expect(channels).toBeDefined();

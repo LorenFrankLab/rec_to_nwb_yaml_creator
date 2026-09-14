@@ -502,7 +502,7 @@ Complex array sections (electrode_groups, cameras, tasks, etc.) support dynamic 
 The most complex architectural component is the relationship between electrode groups and ntrode channel maps:
 
 1. When a user selects a `device_type` for an electrode group, `nTrodeMapSelected()` auto-generates appropriate ntrode channel map entries
-2. Device types are defined in [src/ntrode/deviceTypes.ts](src/ntrode/deviceTypes.ts), which maps probe types to channel configurations
+2. Device types are defined in [src/ntrode/probeCatalog.ts](src/ntrode/probeCatalog.ts) (`PROBE_CATALOG`), which maps each probe type to its shanks and per-shank electrode ids; `src/utils/channelMapUtils.ts` turns that into ntrode channel maps
 3. Each ntrode has a `map` object defining channel index mappings (e.g., `{0: 0, 1: 1, 2: 2, 3: 3}`)
 4. `ChannelMap.jsx` component renders the UI for editing these mappings
 5. When electrode groups are duplicated/removed, associated ntrode maps are automatically managed
@@ -596,11 +596,12 @@ total and non-destructive (a field one can't map forward is preserved or surface
 
 When adding a new probe/device type to support:
 
-1. **Add to valueList.js**: Add the device type string to `deviceTypes()` function in [valueList.js](src/valueList.ts)
+1. **Add to the probe catalog**: add the entry to `PROBE_CATALOG` in [src/ntrode/probeCatalog.ts](src/ntrode/probeCatalog.ts)
+   (`num_shanks` + each shank's `electrodeIds`, partitioning `0..N-1` across shanks). Channel counts,
+   shank counts and ntrode channel maps are all derived from it — there is no second list to edit.
 
-2. **Add to deviceTypes.js**: Add channel mapping logic in [src/ntrode/deviceTypes.ts](src/ntrode/deviceTypes.ts):
-   - `deviceTypeMap()` - Define the channel array (e.g., `[0,1,2,3]` for tetrode)
-   - `getShankCount()` - Define number of shanks for the device
+2. **Add to the dropdown order**: add the id to `deviceTypes()` in [src/deviceCatalog.ts](src/deviceCatalog.ts)
+   (re-exported through `valueList`). This list is ordered for display; the catalog is the source of truth.
 
 3. **Create device metadata in trodes_to_nwb**: Create a corresponding YAML file in `trodes_to_nwb/src/trodes_to_nwb/device_metadata/probe_metadata/` with:
    - `probe_type` (must match the string from step 1)
