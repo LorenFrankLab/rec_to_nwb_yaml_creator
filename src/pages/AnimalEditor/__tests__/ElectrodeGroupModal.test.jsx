@@ -272,6 +272,9 @@ describe('ElectrodeGroupModal', () => {
 
       // Incomplete form: a hint names what's missing instead of a silent disabled button.
       expect(screen.getByText(/fill in all required fields/i)).toBeInTheDocument();
+      // The hint must name the axes in the SAME order the fields are labelled (ML, AP, DV),
+      // otherwise it tells the user to fill in coordinates that aren't on screen.
+      expect(screen.getByText(/ML\/AP\/DV coordinates/i)).toBeInTheDocument();
 
       await fillRequiredFields(user);
 

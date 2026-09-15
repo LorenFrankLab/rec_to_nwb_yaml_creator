@@ -132,6 +132,40 @@ describe('buildAnimalViewModel — animal-static summary + configuration card', 
     expect(vm.configCard.probes[1].coords).toBe(''); // partial coords also omitted
   });
 
+  it('formats probe coordinates in the group\u2019s own units (\u03bcm groups are not labelled mm)', () => {
+    const { animal, day } = loadRealistic();
+    const micron = clone(animal);
+    micron.configurationHistory = [
+      {
+        version: 1,
+        date: '2023-06-22',
+        description: 'Initial',
+        devices: {
+          electrode_groups: [
+            // A \u03bcm group: labelling this 'mm' would misreport the depth by 1000\u00d7.
+            {
+              id: 0,
+              location: 'CA1',
+              device_type: 'tetrode_12.5',
+              targeted_x: 1000,
+              targeted_y: 2000,
+              targeted_z: 3000,
+              units: '\u03bcm',
+            },
+            // No `units` key (all pre-existing data): still mm, exactly as before.
+            { id: 1, location: 'CA3', device_type: 'tetrode_12.5', targeted_x: 1, targeted_y: 2, targeted_z: 3 },
+          ],
+          ntrode_electrode_group_channel_map: [],
+        },
+        appliedToDays: [],
+      },
+    ];
+    micron.devices = { electrode_groups: [], ntrode_electrode_group_channel_map: [] };
+    const vm = buildAnimalViewModel(wrap(micron, day), micron.id, 'electrode-groups');
+    expect(vm.configCard.probes[0].coords).toBe('(1000, 2000, 3000) \u03bcm');
+    expect(vm.configCard.probes[1].coords).toBe('(1, 2, 3) mm');
+  });
+
   it('flags an opto animal in the summary', () => {
     const { animal, day } = loadRealistic();
     const opto = clone(animal);

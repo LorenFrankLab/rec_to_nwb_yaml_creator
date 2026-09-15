@@ -358,7 +358,7 @@ function ElectrodeGroupForm({ mode, group = null, knownRegions = [], onSave, onC
       {!isFormValid() && (
         <p className="form-invalid-hint" role="status">
           Fill in all required fields (device type, targeted location, and the
-          AP/ML/DV coordinates) to save.
+          ML/AP/DV coordinates) to save.
         </p>
       )}
 

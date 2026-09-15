@@ -242,9 +242,13 @@ function finiteCoord(value: unknown): number | null {
 }
 
 /**
- * Format a probe's stereotaxic coordinates from the per-axis fields. Returns '' unless ALL three
- * axes are present and numeric — a partial or empty-string set yields '' (never a malformed
- * `(3, , ) mm`), since the per-axis fields default to empty strings.
+ * Format a probe's stereotaxic coordinates from the per-axis fields, labelled with the group's OWN
+ * `units`. Returns '' unless ALL three axes are present and numeric — a partial or empty-string set
+ * yields '' (never a malformed `(3, , ) mm`), since the per-axis fields default to empty strings.
+ *
+ * The editor offers mm and μm, so the unit must be read from the group: hard-coding 'mm' would
+ * misreport a μm probe by 1000× on a review surface. `units` is optional (absent on all data
+ * predating the field), and mm is its documented default — the same fallback the export uses.
  *
  * `targeted_location` is deliberately NOT a fallback source: it is a brain-region label
  * (`nwb_schema.json` types it `string`), so reading coordinates out of it would invent values.
@@ -253,7 +257,8 @@ function formatProbeCoords(group: ElectrodeGroup): string {
   const x = finiteCoord(group.targeted_x);
   const y = finiteCoord(group.targeted_y);
   const z = finiteCoord(group.targeted_z);
-  if (x != null && y != null && z != null) return `(${x}, ${y}, ${z}) mm`;
+  const units = typeof group.units === 'string' && group.units.trim() !== '' ? group.units.trim() : 'mm';
+  if (x != null && y != null && z != null) return `(${x}, ${y}, ${z}) ${units}`;
   return '';
 }
 

@@ -1,5 +1,5 @@
 /**
- * @fileoverview Pure task-type catalog model (Phase 8B rehearsal — inert at runtime).
+ * @fileoverview Pure task-type catalog model: animal-level task types + per-day instances.
  *
  * Converts the date-ordered inline `day.tasks[]` model into the animal-level catalog the team chose
  * for the Tasks & Epochs redesign: a *task type* is defined ONCE on the animal (`taskTypes[]`) and
@@ -29,9 +29,13 @@
  * keys (no internal `id`/`taskTypeId`), so `mergeDayMetadata`'s `reorderKeys(t, TASK_ORDER)` emits
  * byte-identical YAML for a day whose instances reproduce its old inline tasks.
  *
- * **Phase 8B: NOT wired into persistence, the export merge, or the UI.** Inline `day.tasks` remains
- * the runtime source of truth; these utilities are exercised only by tests/fixtures. Phase 8C
- * activates the persisted shape, the migrator, and the catalog UI.
+ * **This catalog is LIVE.** When a day carries `taskInstances` (the persisted v3 shape) those
+ * instances are the runtime source of truth: the export merge resolves them through
+ * `resolveDayTasks` (`state/dayTaskCatalog`) and the Day Editor's Tasks & Epochs step edits them.
+ * Inline `day.tasks` remains the fallback for days that have not been folded into the catalog yet
+ * (legacy records and freshly imported YAML), and a day's own context — `task_environment` /
+ * `camera_id` ({@link TASK_CONTEXT_FIELDS}) — is recorded as an override on the instance rather than
+ * on the shared type.
  *
  * Pure and dependency-free over plain workspace shapes — no store/page coupling, exhaustively
  * unit-testable.
