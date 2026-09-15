@@ -73,9 +73,11 @@ async function fillRequiredFields(user, overrides = {}) {
   await typeIfPresent(screen.getByLabelText('Targeted Location'), values.targeted_location);
   await typeIfPresent(screen.getByLabelText('Location (optional)'), values.location);
   await typeIfPresent(screen.getByLabelText(/description/i), values.description);
-  await typeIfPresent(screen.getByLabelText(/ap|anterior[- ]?posterior/i), values.targeted_x);
-  await typeIfPresent(screen.getByLabelText(/ml|medial[- ]?lateral/i), values.targeted_y);
-  await typeIfPresent(screen.getByLabelText(/dv|dorsal[- ]?ventral/i), values.targeted_z);
+  // Driven BY LABEL on purpose: `nwb_schema.json` fixes targeted_x = ML, targeted_y = AP,
+  // targeted_z = DV, so a transposed label makes the onSave assertions below fail.
+  await typeIfPresent(screen.getByLabelText(/ML \(Medial-Lateral\)/i), values.targeted_x);
+  await typeIfPresent(screen.getByLabelText(/AP \(Anterior-Posterior\)/i), values.targeted_y);
+  await typeIfPresent(screen.getByLabelText(/DV \(Dorsal-Ventral\)/i), values.targeted_z);
   await user.selectOptions(screen.getByLabelText(/units/i), values.units);
 }
 
@@ -112,10 +114,22 @@ describe('ElectrodeGroupModal', () => {
       expect(screen.getByLabelText('Location (optional)')).toBeInTheDocument();
       expect(screen.getByLabelText(/description/i)).toBeInTheDocument();
       expect(screen.getByLabelText('Targeted Location')).toBeInTheDocument();
-      expect(screen.getByLabelText(/ap|anterior[- ]?posterior/i)).toBeInTheDocument();
-      expect(screen.getByLabelText(/ml|medial[- ]?lateral/i)).toBeInTheDocument();
-      expect(screen.getByLabelText(/dv|dorsal[- ]?ventral/i)).toBeInTheDocument();
+      expect(screen.getByLabelText(/ML \(Medial-Lateral\)/i)).toBeInTheDocument();
+      expect(screen.getByLabelText(/AP \(Anterior-Posterior\)/i)).toBeInTheDocument();
+      expect(screen.getByLabelText(/DV \(Dorsal-Ventral\)/i)).toBeInTheDocument();
       expect(screen.getByLabelText(/units/i)).toBeInTheDocument();
+    });
+
+    it('labels each coordinate input with the axis its schema field actually holds', () => {
+      // Regression: the labels were transposed (AP on targeted_x, ML on targeted_y). That is not
+      // cosmetic — `nwb_schema.json` types targeted_x as Medial/Lateral, and Spyglass derives the
+      // implant hemisphere from the SIGN of targeted_x (common_ephys.hemisphere_from_targeted_x),
+      // so a transposed label silently sends an AP value into the hemisphere decision.
+      render(<ElectrodeGroupModal isOpen mode="add" onSave={() => {}} onCancel={() => {}} />);
+
+      expect(screen.getByLabelText(/ML \(Medial-Lateral\)/i)).toHaveAttribute('name', 'targeted_x');
+      expect(screen.getByLabelText(/AP \(Anterior-Posterior\)/i)).toHaveAttribute('name', 'targeted_y');
+      expect(screen.getByLabelText(/DV \(Dorsal-Ventral\)/i)).toHaveAttribute('name', 'targeted_z');
     });
 
     it('shows human device-type summaries while keeping the option VALUE the exact probe ID', () => {
@@ -147,9 +161,9 @@ describe('ElectrodeGroupModal', () => {
 
       const body = screen.getByTestId('modal-body');
       expect(within(body).getByLabelText(/device type/i)).toBeInTheDocument();
-      expect(within(body).getByLabelText(/ap|anterior[- ]?posterior/i)).toBeInTheDocument();
-      expect(within(body).getByLabelText(/ml|medial[- ]?lateral/i)).toBeInTheDocument();
-      expect(within(body).getByLabelText(/dv|dorsal[- ]?ventral/i)).toBeInTheDocument();
+      expect(within(body).getByLabelText(/ML \(Medial-Lateral\)/i)).toBeInTheDocument();
+      expect(within(body).getByLabelText(/AP \(Anterior-Posterior\)/i)).toBeInTheDocument();
+      expect(within(body).getByLabelText(/DV \(Dorsal-Ventral\)/i)).toBeInTheDocument();
 
       const footer = screen.getByTestId('modal-footer');
       expect(within(footer).getByRole('button', { name: /cancel/i })).toBeInTheDocument();
@@ -240,7 +254,7 @@ describe('ElectrodeGroupModal', () => {
       render(<ElectrodeGroupModal isOpen mode="add" onSave={() => {}} onCancel={() => {}} />);
       await fillRequiredFields(user);
 
-      fireEvent.change(screen.getByLabelText(/ap|anterior[- ]?posterior/i), {
+      fireEvent.change(screen.getByLabelText(/AP \(Anterior-Posterior\)/i), {
         target: { value: 'NaN' },
       });
 

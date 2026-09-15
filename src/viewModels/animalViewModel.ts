@@ -242,19 +242,18 @@ function finiteCoord(value: unknown): number | null {
 }
 
 /**
- * Format a probe's stereotaxic coordinates, preferring the per-axis fields. Returns '' unless ALL
- * three axes are present and numeric — a partial or empty-string set yields '' (never a malformed
+ * Format a probe's stereotaxic coordinates from the per-axis fields. Returns '' unless ALL three
+ * axes are present and numeric — a partial or empty-string set yields '' (never a malformed
  * `(3, , ) mm`), since the per-axis fields default to empty strings.
+ *
+ * `targeted_location` is deliberately NOT a fallback source: it is a brain-region label
+ * (`nwb_schema.json` types it `string`), so reading coordinates out of it would invent values.
  */
 function formatProbeCoords(group: ElectrodeGroup): string {
   const x = finiteCoord(group.targeted_x);
   const y = finiteCoord(group.targeted_y);
   const z = finiteCoord(group.targeted_z);
   if (x != null && y != null && z != null) return `(${x}, ${y}, ${z}) mm`;
-  const loc = group.targeted_location;
-  if (Array.isArray(loc) && loc.length === 3 && loc.every((v) => finiteCoord(v) != null)) {
-    return `(${loc[0]}, ${loc[1]}, ${loc[2]}) mm`;
-  }
   return '';
 }
 

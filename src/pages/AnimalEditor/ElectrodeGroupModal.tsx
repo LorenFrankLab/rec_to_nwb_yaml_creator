@@ -7,9 +7,10 @@ import './ElectrodeGroupModal.scss';
 import Button from '../../components/ui/Button';
 
 /**
- * Edit-mode input: the saved electrode group as THIS editor reads it. `targeted_location` is a brain-
- * region string here and coordinates live in `targeted_x/y/z` — the editor's contract (mirrors the
- * original PropTypes), which deliberately differs from the canonical workspace `ElectrodeGroup`.
+ * Edit-mode input: the editor's tolerant view of the canonical workspace `ElectrodeGroup`. Same
+ * fields and same meanings (`targeted_location` is a brain-region string; coordinates live in
+ * `targeted_x/y/z`), but all-optional and accepting `string | number` coordinates so a group
+ * carrying the legacy empty-string default (`targeted_x: ''`) still opens for editing.
  */
 export interface ElectrodeGroupInput {
   id?: number;
@@ -278,11 +279,17 @@ function ElectrodeGroupForm({ mode, group = null, knownRegions = [], onSave, onC
         </span>
       </div>
 
-      {/* Coordinates. Values are in the unit selected below (mm by default). */}
+      {/*
+        Coordinates. Values are in the unit selected below (mm by default).
+        The axis on each label is fixed by `nwb_schema.json`: `targeted_x` is medial/lateral,
+        `targeted_y` is anterior/posterior, `targeted_z` is ventral/dorsal. Spyglass reads the
+        SIGN of `targeted_x` to assign the hemisphere (`common_ephys.hemisphere_from_targeted_x`),
+        so transposing these labels silently mislabels the hemisphere downstream.
+      */}
       <div className="form-group-coordinates">
         <div className="form-group">
           <label htmlFor="targeted_x">
-            AP (Anterior-Posterior) ({formData.units}) <span className="required">*</span>
+            ML (Medial-Lateral) ({formData.units}) <span className="required">*</span>
           </label>
           <input
             id="targeted_x"
@@ -298,7 +305,7 @@ function ElectrodeGroupForm({ mode, group = null, knownRegions = [], onSave, onC
 
         <div className="form-group">
           <label htmlFor="targeted_y">
-            ML (Medial-Lateral) ({formData.units}) <span className="required">*</span>
+            AP (Anterior-Posterior) ({formData.units}) <span className="required">*</span>
           </label>
           <input
             id="targeted_y"

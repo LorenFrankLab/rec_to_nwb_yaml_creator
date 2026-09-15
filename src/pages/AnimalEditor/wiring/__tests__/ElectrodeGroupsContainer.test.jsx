@@ -105,8 +105,9 @@ function renderContainer(animals) {
 async function fillAddModal(user, count) {
   await user.selectOptions(screen.getByLabelText(/device type/i), 'tetrode_12.5');
   await user.type(screen.getByLabelText(/targeted location/i), 'CA1');
-  await user.type(screen.getByLabelText(/AP \(Anterior-Posterior\)/i), '1');
-  await user.type(screen.getByLabelText(/ML \(Medial-Lateral\)/i), '2');
+  // Filled in schema field order: targeted_x is ML, targeted_y is AP, targeted_z is DV.
+  await user.type(screen.getByLabelText(/ML \(Medial-Lateral\)/i), '1');
+  await user.type(screen.getByLabelText(/AP \(Anterior-Posterior\)/i), '2');
   await user.type(screen.getByLabelText(/DV \(Dorsal-Ventral\)/i), '3');
   if (count != null) {
     const countField = screen.getByLabelText(/number of electrode groups/i);

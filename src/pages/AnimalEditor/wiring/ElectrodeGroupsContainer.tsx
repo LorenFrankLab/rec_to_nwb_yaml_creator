@@ -24,7 +24,7 @@ import {
 } from '../../../utils/deviceNormalization';
 import ElectrodeGroupsStep from '../ElectrodeGroupsStep';
 import ElectrodeGroupModal from '../ElectrodeGroupModal';
-import type { ElectrodeGroupInput, ElectrodeGroupSaveData } from '../ElectrodeGroupModal';
+import type { ElectrodeGroupSaveData } from '../ElectrodeGroupModal';
 import CopyFromAnimalDialog from '../CopyFromAnimalDialog';
 import type { CopyPayload } from '../CopyFromAnimalDialog';
 import { useKnownRegions } from './useKnownRegions';
@@ -291,7 +291,7 @@ export default function ElectrodeGroupsContainer({ animalId, addRef, onPendingEd
       <ElectrodeGroupModal
         isOpen={modalOpen}
         mode={modalMode}
-        group={editingGroup as unknown as ElectrodeGroupInput | null}
+        group={editingGroup}
         knownRegions={knownRegions}
         onSave={handleSaveGroup}
         onCancel={handleCancelModal}

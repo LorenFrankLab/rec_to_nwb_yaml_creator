@@ -285,6 +285,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **The electrode-group coordinate fields were mislabeled: AP and ML were swapped relative to the
+  NWB schema and Spyglass.** The Animal Setup electrode-group form labeled `targeted_x` "AP
+  (Anterior-Posterior)" and `targeted_y` "ML (Medial-Lateral)", but `nwb_schema.json` defines
+  `targeted_x` as the medial/lateral coordinate and `targeted_y` as the anterior/posterior one, and
+  Spyglass assigns the implant hemisphere from the sign of `targeted_x` (Right when >= 0, otherwise
+  Left). The labels now read ML on `targeted_x`, AP on `targeted_y` and DV on `targeted_z`; the
+  fields, their order and every stored value are unchanged. **Coordinates entered through the
+  previous labels may be transposed and should be checked** — in an affected group, `targeted_x`
+  holds the anterior/posterior value and `targeted_y` the medial/lateral one, so the hemisphere
+  Spyglass derives may also be wrong.
+
 - **Day editor sections are reachable with Tab; failed-channel badges and footer links meet contrast
   and target-size guidelines.**
 
