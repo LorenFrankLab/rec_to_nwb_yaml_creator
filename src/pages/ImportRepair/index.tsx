@@ -165,12 +165,12 @@ function plannedCatalogAdditions(plan: ImportPlan): NonNullable<ApplyImportOptio
  * screen reports (the cameras a split created, and the values a unify did not import).
  *
  * @param plan - The plan that was applied.
- * @param wasWritten - Whether an animal's days were written (default: all of them).
+ * @param wasWritten - Whether an animal's days were written.
  * @returns One entry per animal that had a conflict.
  */
 function writtenCameraConflicts(
   plan: ImportPlan,
-  wasWritten: (animal: ImportPlanAnimal) => boolean = () => true
+  wasWritten: (animal: ImportPlanAnimal) => boolean
 ): ImportResult['cameraConflicts'] {
   return plan.animals
     .filter((animal) => animal.cameraConflicts.length > 0 && wasWritten(animal))
@@ -361,7 +361,8 @@ export default function ImportRepair() {
       animalIds: animalId ? [animalId] : [],
       // Only one file decoded, so everything else the user picked was unreadable.
       excluded: parseFailures,
-      cameraConflicts: summary.failed.length > 0 ? [] : writtenCameraConflicts(assessment.importPlan),
+      // None: a plan carrying a calibration conflict was routed to the review screen above.
+      cameraConflicts: [],
       summary,
     });
     setPhase('result');
@@ -378,9 +379,7 @@ export default function ImportRepair() {
       sourceKey: assessment.file.key,
       flatModel: assessment.repaired,
     }));
-    const batchPlan = planImport(inputs, model.workspace, {
-      cameraConflictResolutions: {},
-    });
+    const batchPlan = planImport(inputs, model.workspace);
     const excluded: ExcludedFile[] = [
       ...parseFailures,
       ...assessments
