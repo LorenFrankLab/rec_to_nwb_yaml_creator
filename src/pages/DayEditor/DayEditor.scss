@@ -765,8 +765,8 @@
 }
 
 .status-badge.status-warning {
-  background-color: #fff3e0; /* Amber 50 */
-  color: #e65100; /* Orange 900 - WCAG AA compliant */
+  background-color: var(--color-warning-light); /* Amber 50 */
+  color: var(--color-warning); /* 5.11:1 on amber-50 (was #e65100, 3.46:1) */
 }
 
 .status-badge.status-error {
@@ -1114,8 +1114,8 @@
     }
 
     &.status-warning {
-      background: #fff3e0;
-      color: #f57c00;
+      background: var(--color-warning-light);
+      color: var(--color-warning); /* 5.11:1 on amber-50 (was #f57c00, 2.46:1) */
     }
 
     &.status-error {

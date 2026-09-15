@@ -109,3 +109,73 @@ describe('color contrast (audited workspace pairs meet AA)', () => {
     expect(ratio, `${label}: ${fgHex} on ${bgHex} = ${ratio.toFixed(2)}:1 (need ${min}:1)`).toBeGreaterThanOrEqual(min);
   });
 });
+
+/**
+ * Every `.status-warning` badge rule in the Day Editor stylesheet, as
+ * `{ selector, color, background }` with `var(--token)` references resolved.
+ *
+ * The Failed Channels badge is styled by the nested, higher-specificity rule under
+ * `.electrode-group-summary`, which shadows the top-level one — so auditing a single
+ * cited line is not enough. This scans the whole class: every block that sets a text
+ * color on `.status-warning` is measured. A block that declares no background of its
+ * own is measured against the amber-50 badge surface (`--color-warning-light`), the
+ * surface every warning badge in this stylesheet sits on and the more conservative of
+ * the surfaces in play.
+ *
+ * @param {string} scss - SCSS source text.
+ * @returns {{selector: string, color: string, background: string}[]} Audited rules.
+ */
+function parseWarningBadgeRules(scss) {
+  const rules = [];
+  const re = /((?:&|\.status-badge)\.status-warning)\s*\{([^{}]*)\}/g;
+  let m;
+  while ((m = re.exec(scss)) !== null) {
+    const [, selector, body] = m;
+    const colorDecl = /(?:^|[;{\s])color:\s*([^;]+);/.exec(body);
+    if (!colorDecl) continue;
+    const bgDecl = /background(?:-color)?:\s*([^;]+);/.exec(body);
+    rules.push({
+      selector,
+      color: resolveValue(colorDecl[1].trim()),
+      background: resolveValue(bgDecl ? bgDecl[1].trim() : 'var(--color-warning-light)'),
+    });
+  }
+  return rules;
+}
+
+/**
+ * Resolve a CSS color value that may be a hex literal or a `var(--token)` reference.
+ *
+ * @param {string} value - Declaration value, e.g. `#bf360c` or `var(--color-warning)`.
+ * @returns {string|undefined} The hex color, or undefined if unresolvable.
+ */
+function resolveValue(value) {
+  const varRef = /var\(\s*--([\w-]+)\s*\)/.exec(value);
+  if (varRef) return TOKENS[varRef[1]];
+  const hex = /#[0-9a-fA-F]{3,6}/.exec(value);
+  return hex ? hex[0] : undefined;
+}
+
+const dayEditorScss = fs.readFileSync(
+  path.join(__dirname, '../../../pages/DayEditor/DayEditor.scss'),
+  'utf8'
+);
+const WARNING_BADGE_RULES = parseWarningBadgeRules(dayEditorScss);
+
+describe('DayEditor.scss .status-warning badge text meets AA', () => {
+  it('finds the warning-badge rules to audit', () => {
+    // Guards the scan itself: if the class is renamed, this fails loudly rather than
+    // passing vacuously over zero rules.
+    expect(WARNING_BADGE_RULES.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it.each(WARNING_BADGE_RULES)('$selector', ({ selector, color: fg, background: bg }) => {
+    expect(fg, `unresolved color for ${selector}`).toBeTruthy();
+    expect(bg, `unresolved background for ${selector}`).toBeTruthy();
+    const ratio = contrastRatio(fg, bg);
+    expect(
+      ratio,
+      `${selector}: ${fg} on ${bg} = ${ratio.toFixed(2)}:1 (need 4.5:1)`
+    ).toBeGreaterThanOrEqual(4.5);
+  });
+});
