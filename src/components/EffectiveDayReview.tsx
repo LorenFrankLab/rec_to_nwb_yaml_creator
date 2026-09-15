@@ -1,10 +1,10 @@
-import { mergeDayMetadata } from '../../state/workspaceUtils';
-import { getConfigHistory } from '../../state/workspaceSelectors';
-import type { Animal, Day } from '../../state/workspaceTypes';
-import { getDayWorkflowStatus } from '../../domain/workflowStatus';
-import { buildPreflightSummary } from '../../domain/preflightSummary';
-import { resolveRigConstant } from '../../domain/rigConstants';
-import styles from './ValidationSummary.module.css';
+import { mergeDayMetadata } from '../state/workspaceUtils';
+import { getConfigHistory } from '../state/workspaceSelectors';
+import type { Animal, Day } from '../state/workspaceTypes';
+import { getDayWorkflowStatus } from '../domain/workflowStatus';
+import { buildPreflightSummary } from '../domain/preflightSummary';
+import { resolveRigConstant } from '../domain/rigConstants';
+import styles from './EffectiveDayReview.module.css';
 
 /**
  * EffectiveDayReview — read-only "what THIS day actually used" review (Phase 3-5, Task 3.3a:

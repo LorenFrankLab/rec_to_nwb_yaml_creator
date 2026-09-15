@@ -1,7 +1,7 @@
 import type { Animal, Day } from '../../state/workspaceTypes';
 import type { WorkflowCommand } from '../../viewModels/types';
 import type { DayStatusRowViewModel } from '../../viewModels/validationSummaryViewModel';
-import EffectiveDayReview from './EffectiveDayReview';
+import EffectiveDayReview from '../../components/EffectiveDayReview';
 import styles from './ValidationSummary.module.css';
 import { pluralize } from '../../utils/pluralize';
 
