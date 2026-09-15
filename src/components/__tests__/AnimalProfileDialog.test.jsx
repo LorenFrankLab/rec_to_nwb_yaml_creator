@@ -140,6 +140,24 @@ describe('AnimalProfileDialog', () => {
     expect(onSave.mock.calls[0][0].date_of_birth).toMatch(/^2022-12-25T/);
   });
 
+  it('clearing a date of birth removes it from the stored subject (never an empty string)', async () => {
+    renderOpen({ dayCount: 1 });
+    const dob = screen.getByLabelText(/Date of Birth/i);
+    expect(dob).toHaveValue('2023-01-15');
+
+    await user.clear(dob);
+    await user.click(screen.getByRole('button', { name: /save profile/i }));
+    await user.click(screen.getByRole('button', { name: /update/i }));
+
+    const saved = onSave.mock.calls[0][0];
+    // The KEY must be present with an `undefined` value: that is the store's spelling of "remove
+    // this fact" (workspaceTransitions.mergeSubject) — an absent key would mean "no change", and an
+    // empty string would both break the never-an-empty-string invariant and make the export report
+    // the ISO-format message instead of the missing-DOB one that points back at this dialog.
+    expect('date_of_birth' in saved).toBe(true);
+    expect(saved.date_of_birth).toBeUndefined();
+  });
+
   it('caps the date-of-birth picker at today (no future birth dates)', () => {
     renderOpen();
     const today = new Date().toISOString().split('T')[0];

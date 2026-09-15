@@ -121,14 +121,20 @@ export default function AnimalProfileDialog({
   const setField = (field: keyof ProfileForm, value: string) =>
     setForm((prev) => ({ ...prev, [field]: value }));
 
-  // Only the changed fields are saved (the store shallow-merges subject), with DOB re-encoded.
+  // Only the changed fields are saved (the store merges subject by key), with DOB re-encoded. A
+  // CLEARED date of birth is saved as an explicit `undefined`, which the store reads as "remove this
+  // fact" (workspaceTransitions.mergeSubject) — never as `''`. An empty string would be a
+  // present-but-malformed date: it keeps the animal's day exports blocked on the ISO-format message
+  // ("Date of birth needs to comply with ISO 8601 format") instead of the missing-DOB message that
+  // points the scientist back at this dialog, and it breaks the never-an-empty-string invariant on
+  // `SubjectMetadata.date_of_birth`.
   const changedFields = useMemo(() => {
     const out: Partial<ProfileForm> = {};
     if (form.subject_id.trim() !== initial.subject_id) out.subject_id = form.subject_id.trim();
     if (form.species.trim() !== (initial.species || '').trim()) out.species = form.species.trim();
     if (form.sex !== initial.sex) out.sex = form.sex;
     if (form.date_of_birth !== initial.date_of_birth) {
-      out.date_of_birth = form.date_of_birth ? new Date(form.date_of_birth).toISOString() : '';
+      out.date_of_birth = form.date_of_birth ? new Date(form.date_of_birth).toISOString() : undefined;
     }
     if (form.genotype !== initial.genotype) out.genotype = form.genotype;
     if (form.description !== initial.description) out.description = form.description;
