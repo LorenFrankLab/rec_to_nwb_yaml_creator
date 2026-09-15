@@ -191,12 +191,13 @@ describe('buildWizardCommitPayload — the createAnimal payload', () => {
     expect(payload.subject).toEqual(expected.subject);
   });
 
-  it('omits weight and date_of_birth entirely when the draft leaves them blank', () => {
+  it('marks a blank weight / date_of_birth as unknown rather than 0 or an empty date', () => {
     const payload = buildWizardCommitPayload(validIdentity({ weight: '', date_of_birth: '' }));
-    // Never a fabricated 0 g / empty-string date: an unknown fact stays ABSENT and surfaces at
-    // export as a blocking issue with a repair route.
-    expect('weight' in payload.subject).toBe(false);
-    expect('date_of_birth' in payload.subject).toBe(false);
+    // `Number('')` is 0 and a blank date input is `''` — neither may reach the record. The explicit
+    // `undefined` is what the store reads as "absent", so the created animal carries no such key
+    // and clearing the field post-create removes it (see the store + wizard tests).
+    expect(payload.subject.weight).toBeUndefined();
+    expect(payload.subject.date_of_birth).toBeUndefined();
   });
 
   it('resolves a custom species to its trimmed value', () => {

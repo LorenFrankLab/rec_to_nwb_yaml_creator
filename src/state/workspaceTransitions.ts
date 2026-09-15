@@ -192,6 +192,47 @@ export const ANIMAL_REPLACE_KEYS = {
   optogenetics: 'defined',
 } as const satisfies Partial<Record<keyof AnimalUpdates, UpdateGate>>;
 
+/**
+ * Merge a partial subject onto the current one, treating an explicit `undefined` value as a
+ * REMOVAL of that key rather than as "no change".
+ *
+ * A subject fact can legitimately become unknown again — a date of birth entered from the wrong
+ * cage card, a baseline weight that was never actually measured. The editor shows a blank field for
+ * that, so the record must not keep the old value: every day's export reads this one subject, and a
+ * stale value behind a blank field is a valid-but-WRONG export. Removing the key (rather than
+ * storing `undefined`) also keeps the in-memory shape equal to the persisted JSON one, which drops
+ * undefined-valued keys — otherwise `'weight' in subject` would flip across a reload.
+ *
+ * A key the payload does not mention is untouched, so partial writes (the profile dialog saves only
+ * its changed fields) keep working exactly as before.
+ *
+ * @param current - The animal's current subject.
+ * @param updates - The partial subject payload.
+ * @returns The merged subject, without any key the payload set to `undefined`.
+ */
+function mergeSubject(
+  current: SubjectMetadata,
+  updates: Partial<SubjectMetadata>
+): SubjectMetadata {
+  return withoutUnknownFacts({ ...current, ...updates }) as SubjectMetadata;
+}
+
+/**
+ * Drop every key whose value is `undefined` — the shared "an unknown fact is an ABSENT key, not a
+ * present-but-undefined one" normalization. Used by {@link mergeSubject} and by `createAnimal`, so
+ * a subject built by the shared creation glue lands the same way whether it is created or edited.
+ *
+ * @param record - A subject-shaped record.
+ * @returns A new record without the `undefined`-valued keys.
+ */
+export function withoutUnknownFacts<T extends object>(record: T): T {
+  const out = { ...record } as Record<string, unknown>;
+  for (const key of Object.keys(out)) {
+    if (out[key] === undefined) delete out[key];
+  }
+  return out as T;
+}
+
 /** Animal keys `applyAnimalUpdates` merges/normalizes/routes by name rather than replacing. */
 const ANIMAL_MERGED_KEYS = ['subject', 'experimenters', 'devices', 'data_acq_device', 'technicalDefaults'] as const;
 
@@ -237,7 +278,8 @@ export function sortDayIdsByDate(ids: string[], daysById: Record<string, Day>): 
  * clears opto (how the editor disables it).
  *
  * @param animal - The current animal record.
- * @param updates - Partial updates. `subject` / `experimenters` / `technicalDefaults` merge,
+ * @param updates - Partial updates. `subject` merges with removal semantics (an explicit
+ *   `undefined` DELETES that fact — see {@link mergeSubject}); `experimenters` / `technicalDefaults` merge,
  *   `devices` normalizes (and mirrors into the latest snapshot), `data_acq_device` routes onto
  *   `devices.data_acq_device`; every other key replaces per {@link ANIMAL_REPLACE_KEYS}.
  * @param now - Timestamp to stamp `lastModified`.
@@ -247,7 +289,7 @@ export function applyAnimalUpdates(animal: Animal, updates: AnimalUpdates, now: 
   const updated = structuredClone(animal);
 
   if (updates.subject) {
-    updated.subject = { ...updated.subject, ...updates.subject };
+    updated.subject = mergeSubject(updated.subject, updates.subject);
   }
   if (updates.experimenters) {
     updated.experimenters = { ...updated.experimenters, ...updates.experimenters };

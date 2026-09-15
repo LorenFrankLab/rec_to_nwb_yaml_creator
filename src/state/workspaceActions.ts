@@ -17,6 +17,7 @@ import {
   applyDayUpdates,
   nextConfigurationVersion,
   sortDayIdsByDate,
+  withoutUnknownFacts,
 } from './workspaceTransitions';
 import type { AnimalUpdates, ConfigSnapshotInput, DayUpdates } from './workspaceTransitions';
 import type {
@@ -130,7 +131,11 @@ export function createWorkspaceActions({
         const devices = normalizeDevices(metadata.devices);
         const animal = {
           id: animalId,
-          subject: {
+          // `withoutUnknownFacts` so a caller that spells an unknown fact as an explicit
+          // `undefined` (the shared `buildAnimalFromForm` glue does) yields a record with NO such
+          // key — the same "undefined means absent" rule `applyAnimalUpdates` applies to a later
+          // edit, and the shape JSON persistence round-trips.
+          subject: withoutUnknownFacts({
             subject_id: animalId,
             // Schema-required fallback for callers that omit it; the creation form collects a real
             // description (or derives one from genotype + species).
@@ -141,7 +146,7 @@ export function createWorkspaceActions({
             ...subject,
             // The caller may pass a partial subject; the store seeds valid-enough defaults and
             // validation gates true completeness, so trust the shape here.
-          } as SubjectMetadata,
+          }) as SubjectMetadata,
           devices,
           cameras: metadata.cameras || [],
           experimenters,

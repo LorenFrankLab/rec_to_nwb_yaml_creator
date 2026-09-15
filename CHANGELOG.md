@@ -171,7 +171,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   longer fabricates a `weight: 100` baseline, so a weight in the record is one somebody actually
   measured. A missing date of birth still blocks export, now with the message "Date of birth is
   missing. Add it in the animal profile." routed to that profile, and the Identity step stays marked
-  incomplete until it is supplied.
+  incomplete until it is supplied. Blanking a date of birth or baseline weight that was entered
+  earlier now clears it from the animal record too, instead of showing an empty field while every
+  day's export kept the old value.
 
 - **Camera references are enumerated once.** `inferredCameraRefs` / `referencedCameraRefs`
   (`state/cameraUsage.ts`) are the single list of the fields that carry a camera reference (task

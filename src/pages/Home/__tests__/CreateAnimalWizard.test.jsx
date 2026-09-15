@@ -321,6 +321,33 @@ describe('CreateAnimalWizard — post-create identity edits (the fragile create-
     expect(captured.animals.laurent.subject.genotype).toBe('PV-Cre');
   });
 
+  it('clearing the date of birth after create removes it from the stored subject', async () => {
+    const user = userEvent.setup();
+    renderWizard();
+    await createThenEditIdentity(user);
+    expect(captured.animals.laurent.subject.date_of_birth).toBeTruthy();
+
+    const dob = screen.getByLabelText(/Date of birth/i);
+    fireEvent.change(dob, { target: { value: '' } });
+    fireEvent.blur(dob);
+
+    // A wrong DOB corrected back to "unknown" must not keep exporting the old value behind a blank
+    // field — every day's export reads this one record.
+    expect('date_of_birth' in captured.animals.laurent.subject).toBe(false);
+  });
+
+  it('clearing the baseline weight after create removes it from the stored subject', async () => {
+    const user = userEvent.setup();
+    renderWizard();
+    await createThenEditIdentity(user);
+    expect(captured.animals.laurent.subject.weight).toBe(450);
+
+    await user.clear(screen.getByLabelText(/Baseline weight/i));
+    await user.tab();
+
+    expect('weight' in captured.animals.laurent.subject).toBe(false);
+  });
+
   it('persists a Sex change (the select must commit, not just update local state)', async () => {
     const user = userEvent.setup();
     renderWizard();

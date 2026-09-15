@@ -67,10 +67,13 @@ describe('buildAnimalFromForm', () => {
     });
   });
 
-  it('omits weight and date_of_birth when the form leaves them unknown (never a fabricated value)', () => {
+  it('marks an unknown weight / date_of_birth as undefined (never a fabricated value)', () => {
     const { subject } = buildAnimalFromForm({ ...baseForm, weight: undefined, date_of_birth: '' });
-    expect('weight' in subject).toBe(false);
-    expect('date_of_birth' in subject).toBe(false);
+    // Never 0 g and never an empty-string date. The explicit `undefined` is the store's "this fact
+    // is unknown" spelling: `createAnimal` / `applyAnimalUpdates` land it as an ABSENT key, so the
+    // same payload both creates a draft without the fact and CLEARS it on a later edit.
+    expect(subject.weight).toBeUndefined();
+    expect(subject.date_of_birth).toBeUndefined();
     // The rest of the identity is untouched.
     expect(subject.species).toBe('Rattus norvegicus');
   });

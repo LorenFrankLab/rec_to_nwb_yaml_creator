@@ -167,8 +167,12 @@ export interface SubjectMetadata {
   sex: 'M' | 'F' | 'U' | 'O';
   /** Genetic background. */
   genotype: string;
-  /** ISO datetime string. */
-  date_of_birth: string;
+  /**
+   * ISO datetime string (optional). An animal may be created as a DRAFT before its date of birth is
+   * known; the key is then ABSENT (never an empty string or a fabricated date) and the export gate
+   * asks for it, routing the repair to the animal profile.
+   */
+  date_of_birth?: string;
   /** Subject description. */
   description: string;
   /**

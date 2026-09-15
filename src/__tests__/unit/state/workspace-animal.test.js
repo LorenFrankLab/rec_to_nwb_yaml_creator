@@ -365,6 +365,36 @@ describe('Animal State Management', () => {
       expect(animal.subject.sex).toBe('M');
     });
 
+    it('an explicit undefined subject fact REMOVES the key (a corrected-to-unknown value is really cleared)', () => {
+      const { result } = renderHook(() => useStore());
+
+      act(() => {
+        result.current.actions.createAnimal('remy', {
+          species: 'Rattus norvegicus',
+          sex: 'M',
+          genotype: 'Wild Type',
+          date_of_birth: '2023-01-10T00:00:00Z',
+          description: 'Original description',
+          weight: 450,
+        });
+      });
+
+      act(() => {
+        result.current.actions.updateAnimal('remy', {
+          subject: { date_of_birth: undefined, weight: undefined },
+        });
+      });
+
+      const { subject } = result.current.model.workspace.animals['remy'];
+      // Not present-with-undefined (which JSON persistence would drop, so the in-memory and the
+      // reloaded shapes would disagree) and NOT the stale old value — the key is gone.
+      expect('date_of_birth' in subject).toBe(false);
+      expect('weight' in subject).toBe(false);
+      // A key the payload did not mention is untouched (subject writes stay a partial merge).
+      expect(subject.species).toBe('Rattus norvegicus');
+      expect(subject.description).toBe('Original description');
+    });
+
     it('updates animal experimenters', () => {
       const { result } = renderHook(() => useStore());
 

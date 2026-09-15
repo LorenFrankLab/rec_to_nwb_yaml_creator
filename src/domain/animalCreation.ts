@@ -134,9 +134,11 @@ export function subjectIdCollision(
  * `subject_id` is the scientific identity and must match the recording filenames' animal token
  * exactly (see `domain/recordingFilename`); duplicate detection is case-insensitive via
  * {@link subjectLookupKey}. `description` is schema-required (non-empty), so it auto-generates a
- * `genotype species` label when left blank. An unknown `date_of_birth` / `weight` is OMITTED rather
- * than defaulted (the export gate asks for what is genuinely missing). Devices are seeded empty with
- * the legacy `device.name: ['Trodes']` default (schema minItems: 1).
+ * `genotype species` label when left blank. An unknown `date_of_birth` / `weight` is carried as an
+ * explicit `undefined` — the store's "unknown means absent" rule then leaves the key OFF the record
+ * (and a later edit that blanks the field REMOVES it) rather than defaulting it; the export gate
+ * asks for what is genuinely missing. Devices are seeded empty with the legacy
+ * `device.name: ['Trodes']` default (schema minItems: 1).
  *
  * @param formData - The processed AnimalCreationForm payload (already trimmed/numbered).
  * @returns
@@ -149,12 +151,16 @@ export function buildAnimalFromForm(formData: AnimalCreationFormData) {
     species: formData.species,
     sex: formData.sex,
     genotype: formData.genotype,
-    // Unknown facts stay ABSENT — never an empty-string date or a fabricated weight. A new animal
-    // may legitimately be a draft: the baseline weight is only a first-day suggestion (each
-    // recording day carries its own measurement), and a missing date of birth surfaces at EXPORT as
-    // a blocking issue routed to the animal profile.
-    ...(formData.date_of_birth ? { date_of_birth: formData.date_of_birth } : {}),
-    ...(Number.isFinite(formData.weight) ? { weight: formData.weight as number } : {}),
+    // An unknown fact is spelled as an explicit `undefined`, which BOTH store write paths read as
+    // "this key is absent" (`createAnimal` / `applyAnimalUpdates` — see `workspaceTransitions`'s
+    // `mergeSubject`). Never an empty-string date or a fabricated weight, and — because the same
+    // payload commits a post-create identity edit — clearing either field really clears the record
+    // instead of leaving a stale value behind a blank input. A new animal may legitimately be a
+    // draft: the baseline weight is only a first-day suggestion (each recording day carries its own
+    // measurement), and a missing date of birth surfaces at EXPORT as a blocking issue routed to
+    // the animal profile.
+    date_of_birth: formData.date_of_birth || undefined,
+    weight: Number.isFinite(formData.weight) ? formData.weight : undefined,
     description: formData.description?.trim()
       ? formData.description.trim()
       : `${formData.genotype} ${formData.species}`.trim(),
