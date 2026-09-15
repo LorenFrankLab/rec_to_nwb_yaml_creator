@@ -297,6 +297,19 @@ describe('buildDayEditorViewModel — overview field sources', () => {
     expect(f.source).toBe('default');
   });
 
+  it('the experimenter fields show the DAY’s team (what exports), not the animal default', () => {
+    const { animal, day } = loadRealistic();
+    animal.experimenters = { experimenter_name: ['Default, Person'], lab: 'Default Lab', institution: 'Default U' };
+    day.experimenters = { experimenter_name: ['Doe, Jane', 'Roe, Richard'], lab: 'Frank', institution: 'UCSF' };
+    const fields = fieldsByPath(animal, day);
+    expect(fields['experimenters.experimenter_name'].value).toBe('Doe, Jane, Roe, Richard');
+    expect(fields['experimenters.experimenter_name'].source).toBe('day');
+    expect(fields['experimenters.lab'].value).toBe('Frank');
+    expect(fields['experimenters.institution'].value).toBe('UCSF');
+    // The merged export agrees.
+    expect(mergeDayMetadata(animal as unknown as Animal, day as unknown as Day).experimenter_name).toEqual(['Doe, Jane', 'Roe, Richard']);
+  });
+
   it('inherited subject identity facts are read-only and inherited from the animal', () => {
     const { animal, day } = loadRealistic();
     const fields = fieldsByPath(animal, day);

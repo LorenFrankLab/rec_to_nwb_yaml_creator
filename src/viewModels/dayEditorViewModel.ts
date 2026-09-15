@@ -41,6 +41,7 @@ import {
   getExperimenterNames,
   getDaySession,
   resolveDayOwner,
+  resolveDayOptogenetics,
 } from '../state/workspaceSelectors';
 import { computeStepStatus } from '../domain/stepStatus';
 import { isExportEnabled } from '../domain/stepGate';
@@ -522,9 +523,7 @@ function buildChips(
       ? ((day as { configurationVersion: number }).configurationVersion)
       : null;
   const isOpto =
-    optoFieldsPresence(
-      (isRecord(animal) ? animal.optogenetics : undefined) as Parameters<typeof optoFieldsPresence>[0]
-    ).count > 0;
+    optoFieldsPresence(resolveDayOptogenetics(animal, day) as Parameters<typeof optoFieldsPresence>[0]).count > 0;
   // The prior same-block day (content seeds forward from it). `animalDays` is date-sorted, so the
   // record immediately before this one is the carry source; the first day of an animal has none.
   const idx = animalDays.findIndex((d) => d.id === (day as { id?: unknown }).id);
@@ -582,8 +581,12 @@ function buildOverviewFields(
 ): FieldValueViewModel[] {
   const daySession = getDaySession(day);
   const subject = getAnimalSubject(animal);
-  const experimenters = getAnimalExperimenters(animal);
-  const experimenterNames = getExperimenterNames(animal);
+  // The team is DAY-owned (what the export reads): the day's own record, else the animal default
+  // for a record that predates day ownership — the same rule as `mergeDayMetadata`.
+  const dayTeam = (day as { experimenters?: unknown }).experimenters;
+  const teamIsDayOwned = dayTeam !== null && typeof dayTeam === 'object' && !Array.isArray(dayTeam);
+  const experimenters = teamIsDayOwned ? getAnimalExperimenters({ experimenters: dayTeam }) : getAnimalExperimenters(animal);
+  const experimenterNames = getExperimenterNames({ experimenters });
   const dayDateKey = String((day as { date?: unknown }).date ?? '').replace(/-/g, '');
 
   const fields: FieldValueViewModel[] = [];
@@ -668,19 +671,22 @@ function buildOverviewFields(
   fields.push(readOnlyInherited('subject.date_of_birth', 'Date of Birth', subject.date_of_birth));
   fields.push(readOnlyInherited('subject.description', 'Subject Description', subject.description));
 
-  // Read-only inherited experimenter facts.
-  fields.push(
-    readOnlyInherited('experimenters.experimenter_name', 'Names', experimenterNames.join(', '))
-  );
-  fields.push(readOnlyInherited('experimenters.lab', 'Lab', experimenters.lab));
-  fields.push(
-    readOnlyInherited('experimenters.institution', 'Institution', experimenters.institution)
-  );
+  // The team as recorded for THIS day (editable on the Daily log); the animal's team is only the
+  // default a new day starts from.
+  const teamField = (fieldPath: string, label: string, value: unknown): FieldValueViewModel => ({
+    fieldPath,
+    label,
+    value: asDisplay(value),
+    source: teamIsDayOwned ? 'day' : 'default',
+  });
+  fields.push(teamField('experimenters.experimenter_name', 'Names', experimenterNames.join(', ')));
+  fields.push(teamField('experimenters.lab', 'Lab', experimenters.lab));
+  fields.push(teamField('experimenters.institution', 'Institution', experimenters.institution));
 
   return fields;
 }
 
-/** A read-only inherited animal fact (subject identity / experimenters): always inherited. */
+/** A read-only inherited animal fact (subject identity): always inherited. */
 function readOnlyInherited(fieldPath: string, label: string, value: unknown): FieldValueViewModel {
   return {
     fieldPath,

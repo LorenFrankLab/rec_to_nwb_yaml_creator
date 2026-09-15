@@ -268,6 +268,19 @@ describe('buildEpochGrid — grid metadata', () => {
     expect(grid.subjectId).toBe('54321');
   });
 
+  it('the opto flag follows the DAY’s saved setup (what exports), not the animal default, in both directions', () => {
+    const { animal, day } = goldenInlineWorkspace();
+    // A historical day that recorded a laser setup keeps its controls after the animal default is disabled…
+    const savedSetup = structuredClone(animal.optogenetics);
+    expect(buildEpochGrid({ ...animal, optogenetics: null }, { ...day, optogenetics: savedSetup }).isOpto).toBe(true);
+    // …and a day that explicitly recorded NO optogenetics shows none even though the animal default has a setup.
+    expect(buildEpochGrid(animal, { ...day, optogenetics: null }).isOpto).toBe(false);
+    // A day without its own record (pre-ownership) still falls back to the animal default.
+    const withoutRecord = { ...day } as Record<string, unknown>;
+    delete withoutRecord.optogenetics;
+    expect(buildEpochGrid(animal, withoutRecord).isOpto).toBe(true);
+  });
+
   it('is empty (no rows) for a behavior-free day with no tasks', () => {
     const grid = buildEpochGrid({ id: 'a', subject: {} }, { id: 'd', tasks: [], state: {} });
     expect(grid.rows).toEqual([]);

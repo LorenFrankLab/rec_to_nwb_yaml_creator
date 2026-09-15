@@ -27,6 +27,7 @@ import {
   getDayFsGuiYamls,
   getDayDeferredEpochs,
   getDayVideolessEpochs,
+  resolveDayOptogenetics,
 } from '../state/workspaceSelectors';
 import { resolveDayCatalogView } from '../state/dayTaskCatalog';
 import { resolveTaskInstances } from '../state/taskCatalog';
@@ -203,7 +204,8 @@ export function buildEpochGrid(animal: unknown, day: unknown): EpochGrid {
   const dataFolder = (isRecord(day) && typeof day.dataFolder === 'string' ? day.dataFolder : '') || '';
   const subjectId = getAnimalSubject(animal).subject_id || '';
   const date = deriveDateToken(isRecord(day) ? day.date : undefined);
-  const isOpto = isRecord(animal) && animal.optogenetics != null;
+  // The DAY's setup (what exports), never the animal default alone — see resolveDayOptogenetics.
+  const isOpto = resolveDayOptogenetics(animal, day) != null;
 
   // Each task's integer epochs (computed once); used for the join, the tag occurrence, and the union.
   const taskEpochs: number[][] = tasks.map((t) => normalizeEpochs(t.task_epochs));

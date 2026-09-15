@@ -35,6 +35,7 @@ import {
   getDayFsGuiYamls,
   getProbeElectrodeGroups,
   getProbeNtrodeMaps,
+  resolveDayOptogenetics,
 } from './workspaceSelectors';
 import type {
   Animal,
@@ -387,7 +388,7 @@ export function mergeDayMetadata(animal: Animal, day: Day): Record<string, unkno
   // from the DAY's copy. The animal's values are only the defaults for new days — reading them here
   // would let a later default edit silently rewrite an earlier session. The animal fallback covers
   // un-migrated records only (the v3→v4 migration copies the values onto every day).
-  const opto = 'optogenetics' in day ? day.optogenetics || null : animal.optogenetics || null;
+  const opto = resolveDayOptogenetics(animal, day);
   const experimenters = isPlainRecord(day.experimenters)
     ? getAnimalExperimenters({ experimenters: day.experimenters })
     : getAnimalExperimenters(animal);

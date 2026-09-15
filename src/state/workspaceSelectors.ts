@@ -129,6 +129,10 @@ export const getProbeElectrodeGroups = (probeConfig: unknown): ElectrodeGroup[] 
 export const getProbeNtrodeMaps = (probeConfig: unknown): NtrodeMap[] =>
   asArray<NtrodeMap>(asRecord(probeConfig).ntrode_electrode_group_channel_map);
 
+/** Whether `value` is a non-null, non-array object record. */
+const isRecordValue = (value: unknown): value is Record<string, unknown> =>
+  value !== null && typeof value === 'object' && !Array.isArray(value);
+
 /** The animal's subject record (always a record). */
 export const getAnimalSubject = (animal: unknown): SubjectMetadata =>
   asRecord<SubjectMetadata>(asRecord(animal).subject);
@@ -140,6 +144,26 @@ export const getAnimalExperimenters = (animal: unknown): ExperimenterInfo =>
 /** The experimenter_name list (always an array). */
 export const getExperimenterNames = (animal: unknown): string[] =>
   asArray<string>(getAnimalExperimenters(animal).experimenter_name);
+
+/**
+ * The optogenetics setup that applies to a recording DAY — the single rule every reader shares
+ * (export merge, epoch controls, header chips, validation): the day's own record when it has one
+ * (`null` = the day recorded no optogenetics), else the animal default for a record that predates
+ * day ownership. Editing the animal default never changes what an existing day shows or exports;
+ * `applyAnimalDefaultsToDays` is the explicit correction.
+ *
+ * @param animal - The owning animal.
+ * @param day - The recording day.
+ * @returns The setup record, or null when the day has none.
+ */
+export const resolveDayOptogenetics = (animal: unknown, day: unknown): Record<string, unknown> | null => {
+  const dayRecord = asRecord(day);
+  if ('optogenetics' in dayRecord) {
+    return isRecordValue(dayRecord.optogenetics) ? dayRecord.optogenetics : null;
+  }
+  const fallback = asRecord(animal).optogenetics;
+  return isRecordValue(fallback) ? fallback : null;
+};
 
 /** The animal's day ids (always an array). */
 export const getAnimalDayIds = (animal: unknown): DayId[] =>
@@ -167,10 +191,6 @@ export interface ResolvedDayOwner {
   /** The owning animal record; null when unresolvable. */
   animal: Animal | null;
 }
-
-/** Whether `value` is a non-null, non-array object record. */
-const isRecordValue = (value: unknown): value is Record<string, unknown> =>
-  value !== null && typeof value === 'object' && !Array.isArray(value);
 
 /**
  * Resolve a recording day's owning animal the way the Day Editor opens it. A string `day.animalId`
