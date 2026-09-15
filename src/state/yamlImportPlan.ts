@@ -30,9 +30,9 @@ import { isBlockingIssue } from '../validation/issueTypes';
 import { canonicalJson } from '../utils/canonicalJson';
 import { remapCameraRefs } from './cameraUsage';
 import {
+  analyzeCameraCalibrations,
   applyCameraConflictResolutions,
   describeCameraConflict,
-  detectCameraCalibrationConflicts,
 } from './cameraCalibrationConflicts';
 import type {
   CameraCalibrationConflict,
@@ -82,11 +82,19 @@ interface FileEntry {
   /** The probe configuration from {@link decomposeYaml}. */
   configuration: Record<string, any>;
   /**
-   * The FILE-space camera ids this file's rows were renamed under (a SPLIT calibration conflict —
-   * see {@link module:state/cameraCalibrationConflicts}). Such a row is a camera of its OWN, so it
-   * must not be short-circuited as "an id the existing animal already has".
+   * How this file's camera rows were rewritten by the calibration analysis (see
+   * {@link module:state/cameraCalibrationConflicts}); absent when nothing was rewritten.
    */
-  splitCameraIds?: Set<unknown>;
+  cameraRewrite?: {
+    /**
+     * The FILE-space ids whose row was RE-IDENTIFIED (split out, or routed onto an existing camera
+     * of another name). Such a row means a specific camera, so it must not be short-circuited as
+     * "an id the existing animal already has".
+     */
+    reidentifiedIds: Set<unknown>;
+    /** The rows' names BEFORE the rewrite — what the file itself declared. */
+    originalNames: string[];
+  };
 }
 
 /** Files grouped under the first-seen spelling of a case-insensitive subject id. */
@@ -472,7 +480,15 @@ function unionCameras(entries: FileEntry[], existing: unknown, divergences: Dive
     // imported YAML), but the `Camera` type declares it `number` — `findIdentityDivergence` coerces
     // either via `String(...)`, so widen to avoid a spurious number-vs-string mismatch.
     const fileCameras: any[] = getAnimalCameras(animalFacts);
-    cameraSets.push(fileCameras.map((c) => c.camera_name).sort().join('|'));
+    // The set is compared on what the FILE declared: a row this plan renamed (a split, or a route
+    // onto a camera the animal already has) is the same camera the file named, so it must not read
+    // back as "these files carry different camera sets".
+    cameraSets.push(
+      (entry.cameraRewrite?.originalNames ?? fileCameras.map((c) => c.camera_name))
+        .map((name) => String(name ?? ''))
+        .sort()
+        .join('|')
+    );
     const remap = new Map<unknown, unknown>();
     const remapped: string[] = [];
     for (const camera of fileCameras) {
@@ -481,7 +497,7 @@ function unionCameras(entries: FileEntry[], existing: unknown, divergences: Dive
       // EXCEPT a row a SPLIT calibration conflict renamed: the animal's id numbering says nothing
       // about a camera the animal does not have, and collapsing it onto the existing row would
       // re-scale this day's positions with the wrong calibration (finding F1).
-      if (existingCameraIds.has(camera.id) && entry.splitCameraIds?.has(camera.id) !== true) {
+      if (existingCameraIds.has(camera.id) && entry.cameraRewrite?.reidentifiedIds.has(camera.id) !== true) {
         if (!importedByExistingId.has(camera.id)) importedByExistingId.set(camera.id, structuredClone(camera));
         continue;
       }
@@ -584,7 +600,7 @@ function resolveAnimalFacts(
   // --- cameras: same name, different calibration = a DIFFERENT camera (finding F1). Resolve every
   // such conflict BEFORE unioning, so the union sees rows that already say what they are: split
   // rows carry their own dated name, unified rows carry the chosen calibration. ---
-  const cameraConflicts = detectCameraCalibrationConflicts(
+  const cameraAnalysis = analyzeCameraCalibrations(
     subjectId,
     entries.map((entry) => ({
       sourceName: entry.sourceName,
@@ -594,20 +610,21 @@ function resolveAnimalFacts(
     existing,
     cameraConflictResolutions
   );
-  const resolvedEntries: FileEntry[] =
-    cameraConflicts.length === 0
-      ? entries
-      : entries.map((entry) => {
-          const { cameras, splitCameraIds } = applyCameraConflictResolutions(
-            getAnimalCameras(entry.animalFacts) as unknown as Array<Record<string, unknown>>,
-            cameraConflicts
-          );
-          return {
-            ...entry,
-            animalFacts: { ...entry.animalFacts, cameras },
-            splitCameraIds,
-          };
-        });
+  const { conflicts: cameraConflicts } = cameraAnalysis;
+  const rewriting = cameraConflicts.length > 0 || cameraAnalysis.reroutes.size > 0;
+  const resolvedEntries: FileEntry[] = !rewriting
+    ? entries
+    : entries.map((entry) => {
+        const { cameras, reidentifiedCameraIds, originalNames } = applyCameraConflictResolutions(
+          getAnimalCameras(entry.animalFacts) as unknown as Array<Record<string, unknown>>,
+          cameraAnalysis
+        );
+        return {
+          ...entry,
+          animalFacts: { ...entry.animalFacts, cameras },
+          cameraRewrite: { reidentifiedIds: reidentifiedCameraIds, originalNames },
+        };
+      });
   for (const conflict of cameraConflicts) {
     pushDivergence(divergences, { field: 'cameras', detail: describeCameraConflict(conflict) });
   }

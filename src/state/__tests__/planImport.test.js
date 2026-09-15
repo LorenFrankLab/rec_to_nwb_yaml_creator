@@ -836,6 +836,46 @@ describe('planImport — camera calibration conflicts (F1)', () => {
     expect(names).toContain('overhead_camera_20230623_2');
   });
 
+  it('records no camera-set divergence when the only difference is a split', () => {
+    // The two files declare the SAME cameras; splitting one of them into its own row must not
+    // read back as "these files carry different camera sets".
+    const plan = planImport(twoCalibrationFiles(), createDefaultWorkspace());
+    const remy = plan.animals.find((a) => a.subjectId === 'remy');
+    expect(remy.divergences.filter((d) => /different camera sets/i.test(d.detail))).toEqual([]);
+  });
+
+  it('re-imports a calibration the animal already holds under a split name without duplicating it', () => {
+    // Days 1–2 were imported earlier and split, so the animal holds BOTH calibrations. A later day
+    // recording the second calibration under the bare name is that split camera — not a third one,
+    // and not a conflict to answer again.
+    const ws = createDefaultWorkspace();
+    const { animal } = buildRealisticWorkspace();
+    const overhead = animal.cameras.find((c) => c.camera_name === 'overhead_camera');
+    ws.animals[animal.id] = {
+      ...animal,
+      days: [],
+      cameras: [
+        { ...overhead, id: 0, meters_per_pixel: 0.001 },
+        animal.cameras.find((c) => c.camera_name === 'side_camera'),
+        { ...overhead, id: 2, camera_name: 'overhead_camera_20230623', meters_per_pixel: 0.002 },
+      ],
+    };
+
+    const plan = planImport(
+      [makeFile({ subjectId: 'remy', date: '2023-06-24', mutateConfig: withOverheadCalibration(0.002) })],
+      ws
+    );
+    const remy = plan.animals.find((a) => a.subjectId === 'remy');
+
+    expect(remy.cameraConflicts).toEqual([]);
+    expect(remy.catalogAdditions.cameras).toEqual([]);
+    const added = materializePlanDay(remy.days[0], 'add');
+    expect(added.associated_video_files.find((v) => v.name === 'overhead_video_epoch2').camera_id).toBe(2);
+    expect(added.associated_video_files.find((v) => v.name === 'side_view_video_epoch2').camera_id).toBe(1);
+    expect(added.tasks.find((t) => t.task_name === 'w_alternation').camera_id).toEqual([2, 1]);
+    expect(added.cameras_used).toEqual([2, 1]);
+  });
+
   it('records NO conflict when every file agrees on the calibration', () => {
     const plan = planImport(
       [

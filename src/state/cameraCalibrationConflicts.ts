@@ -87,11 +87,26 @@ export interface CameraConflictSource {
   cameras: Array<Record<string, unknown>>;
 }
 
-/** A camera row plus the ids whose row was renamed by a split (see {@link applyCameraConflictResolutions}). */
+/** A camera row plus the ids whose row this resolution RE-IDENTIFIED (renamed onto another camera). */
 export interface ResolvedCameraRows {
   cameras: Array<Record<string, unknown>>;
-  /** The FILE-space ids of rows this resolution renamed into a camera of their own. */
-  splitCameraIds: Set<unknown>;
+  /** The FILE-space ids of rows this resolution renamed (a split, or a reroute onto an existing row). */
+  reidentifiedCameraIds: Set<unknown>;
+  /** The rows' names BEFORE the rewrite, in row order (a renamed row must not read as a new camera set). */
+  originalNames: string[];
+}
+
+/**
+ * The whole calibration analysis of one subject's batch: the questions to answer, plus the rows
+ * whose answer is already in the animal's catalog (see {@link analyzeCameraCalibrations}).
+ */
+export interface CameraCalibrationAnalysis {
+  conflicts: CameraCalibrationConflict[];
+  /**
+   * `rerouteKey(name, calibration)` → the EXISTING `camera_name` that row already is. Populated
+   * when a file re-records a calibration the animal already holds under a split name.
+   */
+  reroutes: Map<string, string>;
 }
 
 /**
@@ -160,6 +175,35 @@ function allocateSplitName(cameraName: string, date: string, taken: Set<string>)
   return name;
 }
 
+/**
+ * Whether `candidateName` is a name {@link allocateSplitName} would have produced for `baseName` —
+ * `overhead_camera_20230623`, or `…_20230623_2` after a collision.
+ *
+ * Deliberately narrow: it recognizes a camera THIS app split out of `baseName`, not any camera that
+ * happens to share a calibration. Two genuinely different cameras can carry identical dependent
+ * fields (same model and lens at the same height), and routing one onto the other by calibration
+ * alone would attach a day's video to the wrong camera.
+ *
+ * @param candidateName - An existing camera's name.
+ * @param baseName - The name a file recorded.
+ * @returns True when `candidateName` is a split of `baseName`.
+ */
+function isSplitNameOf(candidateName: string, baseName: string): boolean {
+  if (candidateName === baseName || !candidateName.startsWith(`${baseName}_`)) return false;
+  return /^\d{8}(_\d+)?$/.test(candidateName.slice(baseName.length + 1));
+}
+
+/**
+ * The lookup key for a reroute: a file row's recorded name plus its calibration.
+ *
+ * @param cameraName - The name the file recorded.
+ * @param calibration - That row's calibration key.
+ * @returns The map key.
+ */
+function rerouteKey(cameraName: string, calibration: string): string {
+  return JSON.stringify([cameraName, calibration]);
+}
+
 /** A candidate under construction (its `splitName` is allocated once the conflict is confirmed). */
 type DraftCandidate = Omit<CameraCalibrationCandidate, 'splitName'>;
 
@@ -195,28 +239,42 @@ function effectiveResolution(
 }
 
 /**
- * Find every `camera_name` a subject's files (and, when it already exists, the animal's own
- * catalog) record with MORE THAN ONE calibration.
+ * Analyze one subject's batch: find every `camera_name` its files (and, when it already exists, the
+ * animal's own catalog) record with MORE THAN ONE calibration, and the file rows whose calibration
+ * the animal ALREADY holds under a split name.
  *
  * Candidates are one per distinct calibration in first-seen order; the existing animal's row is
  * candidate 0 (`fromExisting`), since it is what the animal's earlier days already reference and
  * the import never rewrites it.
  *
+ * A REROUTE is what keeps an incremental import idempotent: once days 1–2 were imported and split,
+ * the animal holds `overhead_camera` AND `overhead_camera_20230623`. A later file recording the
+ * second calibration under the bare name IS that split camera — routing it there (rather than
+ * splitting a second time) is why a day-by-day import does not accumulate one redundant
+ * `CameraDevice` per batch, and why the preview does not re-ask a question already answered.
+ *
  * @param subjectId - The planned animal id (namespaces the conflict key).
  * @param sources - The subject's files, DATE-SORTED, with the cameras each declares.
  * @param existing - The existing workspace animal, or null when the subject is new.
  * @param resolutions - Caller-chosen resolutions keyed by conflict key.
- * @returns One conflict per reused name with divergent calibrations (empty when there are none).
+ * @returns The conflicts to answer plus the rows already answered by the animal's catalog.
  */
-export function detectCameraCalibrationConflicts(
+export function analyzeCameraCalibrations(
   subjectId: string,
   sources: CameraConflictSource[],
   existing: unknown = null,
   resolutions: Record<string, CameraConflictResolution> = {}
-): CameraCalibrationConflict[] {
+): CameraCalibrationAnalysis {
   /** camera_name → calibration key → candidate (insertion order = first-seen order). */
   const byName = new Map<string, Map<string, DraftCandidate>>();
   const takenNames = new Set<string>();
+  const existingRows = getAnimalCameras(existing).map((camera) => ({
+    name: cameraNameOf(camera as unknown as Record<string, unknown>),
+    calibration: calibrationKey(
+      calibrationFieldsOf(camera as unknown as Record<string, unknown>)
+    ),
+  }));
+  const reroutes = new Map<string, string>();
 
   const record = (
     camera: Record<string, unknown>,
@@ -225,10 +283,21 @@ export function detectCameraCalibrationConflicts(
     const name = cameraNameOf(camera);
     if (name === '') return;
     takenNames.add(name);
-    if (!byName.has(name)) byName.set(name, new Map());
-    const candidates = byName.get(name)!;
     const fields = calibrationFieldsOf(camera);
     const key = calibrationKey(fields);
+    if (source !== null) {
+      // Already answered: the animal holds this very calibration as a split of this name. The row
+      // IS that camera, so it declares nothing new — no candidate, no second split.
+      const held = existingRows.find(
+        (row) => row.calibration === key && isSplitNameOf(row.name, name)
+      );
+      if (held !== undefined) {
+        reroutes.set(rerouteKey(name, key), held.name);
+        return;
+      }
+    }
+    if (!byName.has(name)) byName.set(name, new Map());
+    const candidates = byName.get(name)!;
     const candidate = candidates.get(key);
     if (candidate === undefined) {
       candidates.set(key, {
@@ -280,35 +349,51 @@ export function detectCameraCalibrationConflicts(
       resolution: effectiveResolution(resolutions[key], drafts),
     });
   }
-  return conflicts;
+  return { conflicts, reroutes };
 }
 
 /**
- * Rewrite ONE file's camera rows so the batch's conflicts are resolved:
- *  - `split`: a row carrying a later calibration is renamed to that candidate's `splitName`, which
- *    makes it a camera of its own downstream (the union identifies cameras by name). Its id is
- *    reported in `splitCameraIds` so the caller can tell a NEW camera from a row that merely
- *    reuses an existing animal's camera id.
- *  - `unify`: every row under the conflicted name takes the chosen candidate's fields, so all of
+ * Rewrite ONE file's camera rows so the batch's analysis is applied:
+ *  - a REROUTE renames the row to the existing camera it already is (see
+ *    {@link analyzeCameraCalibrations});
+ *  - `split` renames a row carrying a later calibration to that candidate's `splitName`, which
+ *    makes it a camera of its own downstream (the union identifies cameras by name);
+ *  - `unify` gives every row under the conflicted name the chosen candidate's fields, so all of
  *    them collapse onto one catalog row with the chosen calibration.
  *
+ * Every renamed row's id is reported in `reidentifiedCameraIds`, so the caller can tell a row that
+ * means a DIFFERENT camera from one that merely reuses an existing animal's id numbering.
+ *
  * @param cameras - The file's declared cameras.
- * @param conflicts - The subject's conflicts (from {@link detectCameraCalibrationConflicts}).
- * @returns The rewritten rows plus the ids renamed by a split. Input is never mutated.
+ * @param analysis - The subject's analysis (from {@link analyzeCameraCalibrations}).
+ * @returns The rewritten rows, the re-identified ids, and the names before the rewrite. Input is
+ *   never mutated.
  */
 export function applyCameraConflictResolutions(
   cameras: Array<Record<string, unknown>>,
-  conflicts: CameraCalibrationConflict[]
+  analysis: CameraCalibrationAnalysis
 ): ResolvedCameraRows {
-  const splitCameraIds = new Set<unknown>();
-  if (conflicts.length === 0) return { cameras, splitCameraIds };
+  const reidentifiedCameraIds = new Set<unknown>();
+  const originalNames = cameras.map((camera) =>
+    camera !== null && typeof camera === 'object' ? cameraNameOf(camera) : ''
+  );
+  const { conflicts, reroutes } = analysis;
+  if (conflicts.length === 0 && reroutes.size === 0) {
+    return { cameras, reidentifiedCameraIds, originalNames };
+  }
   const byName = new Map(conflicts.map((conflict) => [conflict.cameraName, conflict]));
 
   const resolved = cameras.map((camera) => {
     if (camera === null || typeof camera !== 'object') return camera;
-    const conflict = byName.get(cameraNameOf(camera));
-    if (conflict === undefined) return camera;
+    const name = cameraNameOf(camera);
     const key = calibrationKey(calibrationFieldsOf(camera));
+    const rerouted = reroutes.get(rerouteKey(name, key));
+    if (rerouted !== undefined) {
+      reidentifiedCameraIds.add(camera.id);
+      return { ...camera, camera_name: rerouted };
+    }
+    const conflict = byName.get(name);
+    if (conflict === undefined) return camera;
     const index = conflict.candidates.findIndex(
       (candidate) => calibrationKey(candidate.fields) === key
     );
@@ -317,11 +402,11 @@ export function applyCameraConflictResolutions(
       return { ...camera, ...conflict.candidates[conflict.resolution.candidateIndex].fields };
     }
     if (index === 0) return camera;
-    splitCameraIds.add(camera.id);
+    reidentifiedCameraIds.add(camera.id);
     return { ...camera, camera_name: conflict.candidates[index].splitName };
   });
 
-  return { cameras: resolved, splitCameraIds };
+  return { cameras: resolved, reidentifiedCameraIds, originalNames };
 }
 
 /**
