@@ -111,39 +111,6 @@ describe('color contrast (audited workspace pairs meet AA)', () => {
 });
 
 /**
- * Every `.status-warning` badge rule in the Day Editor stylesheet, as
- * `{ selector, color, background }` with `var(--token)` references resolved.
- *
- * The Failed Channels badge is styled by the nested, higher-specificity rule under
- * `.electrode-group-summary`, which shadows the top-level one — so auditing a single
- * cited line is not enough. This scans the whole class: every block that sets a text
- * color on `.status-warning` is measured. A block that declares no background of its
- * own is measured against the amber-50 badge surface (`--color-warning-light`), the
- * surface every warning badge in this stylesheet sits on and the more conservative of
- * the surfaces in play.
- *
- * @param {string} scss - SCSS source text.
- * @returns {{selector: string, color: string, background: string}[]} Audited rules.
- */
-function parseWarningBadgeRules(scss) {
-  const rules = [];
-  const re = /((?:&|\.status-badge)\.status-warning)\s*\{([^{}]*)\}/g;
-  let m;
-  while ((m = re.exec(scss)) !== null) {
-    const [, selector, body] = m;
-    const colorDecl = /(?:^|[;{\s])color:\s*([^;]+);/.exec(body);
-    if (!colorDecl) continue;
-    const bgDecl = /background(?:-color)?:\s*([^;]+);/.exec(body);
-    rules.push({
-      selector,
-      color: resolveValue(colorDecl[1].trim()),
-      background: resolveValue(bgDecl ? bgDecl[1].trim() : 'var(--color-warning-light)'),
-    });
-  }
-  return rules;
-}
-
-/**
  * Resolve a CSS color value that may be a hex literal or a `var(--token)` reference.
  *
  * @param {string} value - Declaration value, e.g. `#bf360c` or `var(--color-warning)`.
@@ -156,26 +123,141 @@ function resolveValue(value) {
   return hex ? hex[0] : undefined;
 }
 
-const dayEditorScss = fs.readFileSync(
-  path.join(__dirname, '../../../pages/DayEditor/DayEditor.scss'),
-  'utf8'
-);
-const WARNING_BADGE_RULES = parseWarningBadgeRules(dayEditorScss);
+/**
+ * Is this an orange/amber "warning" color rather than a grey, red, green or blue?
+ *
+ * Hue 10°–55° with real saturation: the warning family (`#bf360c`, `#e65100`, `#f57c00`,
+ * `#d84315`, `#8a3b00`, `#5a4a13`). Excludes near-greys like `#46443d` (saturation 0.13)
+ * and reds like `#c62828`/`#7a241c` (hue < 10°), which have their own tokens and ratios.
+ *
+ * @param {string} hex - Color as `#rgb` or `#rrggbb`.
+ * @returns {boolean} True when the color is in the warning hue family.
+ */
+function isWarningFamily(hex) {
+  const c = hex.replace('#', '');
+  const full = c.length === 3 ? c.split('').map((x) => x + x).join('') : c;
+  const [r, g, b] = [0, 2, 4].map((i) => parseInt(full.slice(i, i + 2), 16) / 255);
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  if (max === 0 || (max - min) / max < 0.25) return false;
+  if (max !== r) return false; // Orange/amber is red-dominant.
+  const hue = (60 * (g - b)) / (max - min);
+  return hue >= 10 && hue < 55;
+}
 
-describe('DayEditor.scss .status-warning badge text meets AA', () => {
-  it('finds the warning-badge rules to audit', () => {
-    // Guards the scan itself: if the class is renamed, this fails loudly rather than
-    // passing vacuously over zero rules.
-    expect(WARNING_BADGE_RULES.length).toBeGreaterThanOrEqual(2);
+/**
+ * Parse a stylesheet into a tree of rule blocks with their own declarations.
+ *
+ * SCSS nesting means a warning color's surface is often declared on an ANCESTOR block
+ * (`.identity-divergence { background: …; .identity-divergence-title { color: … } }`), so a
+ * flat regex over one block cannot tell what the text actually sits on.
+ *
+ * @param {string} css - CSS/SCSS source text (block comments stripped).
+ * @returns {object} Root node: `{selector, decls, children, parent}`.
+ */
+function parseBlocks(css) {
+  const root = { selector: '(file)', decls: [], children: [], parent: null };
+  let node = root;
+  let buf = '';
+  /** Record a `prop: value` declaration on the current node. */
+  const flush = () => {
+    const m = /^\s*([\w-]+)\s*:\s*([^:]*)$/.exec(buf.replace(/\/\/.*$/gm, ''));
+    if (m) node.decls.push({ prop: m[1].toLowerCase(), value: m[2].trim() });
+    buf = '';
+  };
+  for (const ch of css) {
+    if (ch === '{') {
+      const selector = buf.replace(/\/\/.*$/gm, '').trim().replace(/\s+/g, ' ');
+      const child = { selector, decls: [], children: [], parent: node };
+      node.children.push(child);
+      node = child;
+      buf = '';
+    } else if (ch === '}') {
+      flush();
+      node = node.parent ?? root;
+      buf = '';
+    } else if (ch === ';') {
+      flush();
+    } else {
+      buf += ch;
+    }
+  }
+  return root;
+}
+
+/**
+ * Every warning-colored text declaration in a stylesheet, paired with the surface it
+ * sits on (the nearest self-or-ancestor background, else the sheet's default surface).
+ *
+ * @param {string} css - CSS/SCSS source text.
+ * @param {string} file - Path label used in test names/messages.
+ * @param {string} defaultSurface - Hex of the sheet's page/panel background.
+ * @returns {{name: string, color: string, background: string}[]} Audited declarations.
+ */
+function auditWarningText(css, file, defaultSurface) {
+  const audits = [];
+  /**
+   * Nearest declared background hex walking up from `node`, else the default surface.
+   * @param node
+   */
+  const surfaceOf = (node) => {
+    for (let n = node; n; n = n.parent) {
+      const bg = n.decls.find((d) => d.prop === 'background' || d.prop === 'background-color');
+      const hex = bg ? resolveValue(bg.value) : undefined;
+      if (hex) return hex;
+    }
+    return defaultSurface;
+  };
+  /**
+   * Depth-first walk collecting warning-family `color` declarations.
+   * @param node
+   * @param trail
+   */
+  const walk = (node, trail) => {
+    const path_ = node.selector === '(file)' ? trail : [...trail, node.selector];
+    const colorDecl = node.decls.find((d) => d.prop === 'color');
+    const hex = colorDecl ? resolveValue(colorDecl.value) : undefined;
+    if (hex && isWarningFamily(hex)) {
+      audits.push({ name: `${file} ${path_.join(' ')}`, color: hex, background: surfaceOf(node) });
+    }
+    node.children.forEach((child) => walk(child, path_));
+  };
+  walk(parseBlocks(css), []);
+  return audits;
+}
+
+// Stylesheets carrying warning-colored text, with the surface their un-backgrounded blocks
+// sit on. Every one of these had a sub-AA orange at some point: the fix is the shared
+// `--color-warning` token, and this audit fails if any of them regresses to a raw orange.
+const AUDITED_SHEETS = [
+  ['pages/DayEditor/DayEditor.scss', '#ffffff'],
+  ['pages/AnimalEditor/CamerasSection.scss', '#ffffff'],
+  ['pages/AnimalEditor/CameraModal.scss', '#ffffff'],
+  ['pages/AnimalEditor/CopyFromAnimalDialog.scss', '#ffffff'],
+  ['pages/AnimalEditor/DataAcqSection.scss', '#ffffff'],
+  ['components/SuggestionCombobox.scss', '#ffffff'],
+  ['App.scss', '#ffffff'],
+];
+
+const WARNING_TEXT_AUDITS = AUDITED_SHEETS.flatMap(([file, surface]) => {
+  const css = fs
+    .readFileSync(path.join(__dirname, '../../../', file), 'utf8')
+    .replace(/\/\*[\s\S]*?\*\//g, '');
+  return auditWarningText(css, file, surface);
+});
+
+describe('warning-colored text meets AA on its own surface', () => {
+  it('finds the warning-colored declarations to audit', () => {
+    // Guards the scan itself: a parser or path regression must fail loudly rather than
+    // pass vacuously over zero declarations.
+    expect(WARNING_TEXT_AUDITS.length).toBeGreaterThanOrEqual(10);
   });
 
-  it.each(WARNING_BADGE_RULES)('$selector', ({ selector, color: fg, background: bg }) => {
-    expect(fg, `unresolved color for ${selector}`).toBeTruthy();
-    expect(bg, `unresolved background for ${selector}`).toBeTruthy();
+  it.each(WARNING_TEXT_AUDITS)('$name', ({ name, color: fg, background: bg }) => {
     const ratio = contrastRatio(fg, bg);
     expect(
       ratio,
-      `${selector}: ${fg} on ${bg} = ${ratio.toFixed(2)}:1 (need 4.5:1)`
+      `${name}: ${fg} on ${bg} = ${ratio.toFixed(2)}:1 (need 4.5:1)`
     ).toBeGreaterThanOrEqual(4.5);
   });
 });

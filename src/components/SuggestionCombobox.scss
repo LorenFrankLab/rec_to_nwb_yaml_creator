@@ -55,8 +55,8 @@
     padding: 0.25rem 0.5rem;
     font-size: 0.8125rem;
     line-height: 1.4;
-    color: #e65100; // Orange 900 — WCAG AA on white
-    background: #fff3e0;
+    color: var(--color-warning); // 5.11:1 on the amber-50 panel (was #e65100, 3.46:1)
+    background: var(--color-warning-light);
     border-left: 4px solid #ff9800;
     border-radius: 4px;
   }

@@ -944,8 +944,8 @@
   display: block;
   margin-top: var(--spacing-sm);
   padding: var(--spacing-sm);
-  background-color: #fff3e0; /* Amber 50 */
-  color: #e65100; /* Orange 900 */
+  background-color: var(--color-warning-light); /* Amber 50 */
+  color: var(--color-warning); /* 5.11:1 on amber-50 (was #e65100, 3.46:1) */
   border-left: 3px solid #f57c00; /* Amber 700 */
   border-radius: 4px;
   font-size: var(--font-size-sm);
@@ -1293,7 +1293,7 @@
   .validation-warning {
     display: block;
     margin-top: 0.5rem;
-    color: #f57c00;
+    color: var(--color-warning); /* 5.60:1 on white (was #f57c00, 2.70:1) */
     font-size: 0.875rem;
     font-weight: 500;
   }
@@ -1526,8 +1526,8 @@
   }
 
   &.config-version-tag-historical {
-    background: #fff3e0;
-    color: #e65100;
+    background: var(--color-warning-light);
+    color: var(--color-warning); /* 5.11:1 on amber-50 (was #e65100, 3.46:1) */
   }
 }
 

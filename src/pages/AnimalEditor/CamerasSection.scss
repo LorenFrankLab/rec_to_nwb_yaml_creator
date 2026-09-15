@@ -266,7 +266,7 @@
 /* Amber warning - Warning (required fields present but meters_per_pixel outside range) */
 .status-badge.status-warning {
   background-color: var(--color-warning-light);
-  color: #e65100; /* Orange 900 - WCAG AA compliant (4.5:1 contrast) */
+  color: var(--color-warning); /* 5.11:1 on warning-light (was #e65100, 3.46:1) */
   border: 1px solid #ffb74d;
 }
 
