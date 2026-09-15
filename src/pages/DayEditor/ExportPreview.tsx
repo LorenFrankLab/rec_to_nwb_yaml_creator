@@ -19,7 +19,8 @@ import { exportAllDays } from './exportPreviewBatch';
 import type { ExportAllResult } from './exportPreviewBatch';
 import type { IssueViewModel, ExportGateViewModel } from '../../viewModels/types';
 import styles from './ExportPreview.module.css';
-import { blockingIssues } from '../../validation/issueTypes';
+import { blockingIssues, isAdvisoryIssue } from '../../validation/issueTypes';
+import { pluralize } from '../../utils/pluralize';
 import Button from '../../components/ui/Button';
 
 interface ExportPreviewProps extends DayEditorBundle {
@@ -84,6 +85,9 @@ export default function ExportPreview(props: ExportPreviewProps) {
   const blocked = !exportGate?.open;
   const disabledReason = exportGate?.action?.disabledReason;
   const vmErrorIssues = blockingIssues(issues);
+  // The SAME issue list the gate is decided from — the readiness line never re-derives a second
+  // count. "Ready to export" must not sit beside an unexplained warning-toned badge elsewhere.
+  const warningCount = issues.filter(isAdvisoryIssue).length;
   const strict = isFeatureEnabled('shadowExportStrict');
   const dayCount = getAnimalDayIds(animal).length;
 
@@ -212,6 +216,7 @@ export default function ExportPreview(props: ExportPreviewProps) {
             ✓
           </span>{' '}
           Ready to export
+          {warningCount > 0 && ` · ${warningCount} ${pluralize(warningCount, 'warning')} to review`}
         </div>
       )}
 

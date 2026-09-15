@@ -86,6 +86,30 @@ describe('ExportPreview — readiness gate', () => {
     expect(screen.getByRole('button', { name: /^copy$/i })).toBeEnabled();
   });
 
+  it('says how many warnings are still to review beside "Ready to export"', () => {
+    const { animal, day } = buildRealisticWorkspace();
+    // Two real, non-blocking warnings: statescript logs whose description omits the keyword
+    // Spyglass needs to create StateScriptFile rows. Neither blocks the gate.
+    day.associated_files.push(
+      { name: 'statescript_epoch2', description: 'Log for epoch 2', path: '/data/remy/20230622/e2.stateScriptLog', task_epochs: 2 },
+      { name: 'statescript_epoch4', description: 'Log for epoch 4', path: '/data/remy/20230622/e4.stateScriptLog', task_epochs: 4 }
+    );
+    renderPreview(animal, day);
+
+    const ready = screen.getByRole('status');
+    expect(ready).toHaveTextContent(/Ready to export\s*·\s*2 warnings to review/i);
+    expect(screen.getByRole('button', { name: /download/i })).toBeEnabled();
+  });
+
+  it('stays a bare "Ready to export" when nothing is left to review', () => {
+    const { animal, day } = buildRealisticWorkspace();
+    renderPreview(animal, day);
+
+    const ready = screen.getByRole('status');
+    expect(ready).toHaveTextContent(/Ready to export/i);
+    expect(ready).not.toHaveTextContent(/to review/i);
+  });
+
   it('disables BOTH Download AND Copy on a blocking day (Copy is not a gate bypass)', () => {
     const { animal, day } = buildExportErrorWorkspace();
     renderPreview(animal, day);
