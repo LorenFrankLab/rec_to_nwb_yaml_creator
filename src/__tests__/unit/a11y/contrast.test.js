@@ -187,11 +187,11 @@ function parseBlocks(css) {
 
 /**
  * Every warning-colored text declaration in a stylesheet, paired with the surface it
- * sits on (the nearest self-or-ancestor background, else the sheet's default surface).
+ * sits on (the nearest self-or-ancestor background, else the conservative fallback).
  *
  * @param {string} css - CSS/SCSS source text.
  * @param {string} file - Path label used in test names/messages.
- * @param {string} defaultSurface - Hex of the sheet's page/panel background.
+ * @param {string} defaultSurface - Hex assumed when no background is declared.
  * @returns {{name: string, color: string, background: string}[]} Audited declarations.
  */
 function auditWarningText(css, file, defaultSurface) {
@@ -226,24 +226,32 @@ function auditWarningText(css, file, defaultSurface) {
   return audits;
 }
 
-// Stylesheets carrying warning-colored text, with the surface their un-backgrounded blocks
-// sit on. Every one of these had a sub-AA orange at some point: the fix is the shared
-// `--color-warning` token, and this audit fails if any of them regresses to a raw orange.
+// Surface assumed for a block that declares no background of its own or on an ancestor.
+// Amber-50, NOT white, for two reasons: it is the lower-contrast of the two surfaces the
+// warning family sits on (5.11:1 vs 5.60:1 for `--color-warning`), and the real surface is
+// often set by a SIBLING rule this parser cannot see — `.bad-channels-editor
+// .validation-warning` inherits its amber panel from the top-level `.validation-warning`
+// rule, so measuring it against white would have understated the requirement.
+const FALLBACK_SURFACE = TOKENS['color-warning-light'];
+
+// Stylesheets carrying warning-colored text. Every one of these had a sub-AA orange at some
+// point: the fix is the shared `--color-warning` token, and this audit fails if any of them
+// regresses to a raw orange.
 const AUDITED_SHEETS = [
-  ['pages/DayEditor/DayEditor.scss', '#ffffff'],
-  ['pages/AnimalEditor/CamerasSection.scss', '#ffffff'],
-  ['pages/AnimalEditor/CameraModal.scss', '#ffffff'],
-  ['pages/AnimalEditor/CopyFromAnimalDialog.scss', '#ffffff'],
-  ['pages/AnimalEditor/DataAcqSection.scss', '#ffffff'],
-  ['components/SuggestionCombobox.scss', '#ffffff'],
-  ['App.scss', '#ffffff'],
+  'pages/DayEditor/DayEditor.scss',
+  'pages/AnimalEditor/CamerasSection.scss',
+  'pages/AnimalEditor/CameraModal.scss',
+  'pages/AnimalEditor/CopyFromAnimalDialog.scss',
+  'pages/AnimalEditor/DataAcqSection.scss',
+  'components/SuggestionCombobox.scss',
+  'App.scss',
 ];
 
-const WARNING_TEXT_AUDITS = AUDITED_SHEETS.flatMap(([file, surface]) => {
+const WARNING_TEXT_AUDITS = AUDITED_SHEETS.flatMap((file) => {
   const css = fs
     .readFileSync(path.join(__dirname, '../../../', file), 'utf8')
     .replace(/\/\*[\s\S]*?\*\//g, '');
-  return auditWarningText(css, file, surface);
+  return auditWarningText(css, file, FALLBACK_SURFACE);
 });
 
 describe('warning-colored text meets AA on its own surface', () => {
