@@ -677,7 +677,7 @@ describe('ImportRepair — honest reporting of files that never made it', () => 
 });
 
 describe('ImportRepair — repair rows and catalog additions', () => {
-  it('brings a catalog entry once when two day files carry the same id with drifting fields', async () => {
+  it('keeps BOTH calibrations when two day files carry the same camera id recalibrated between them', async () => {
     const user = userEvent.setup();
     renderScreen({
       remy: {
@@ -703,7 +703,9 @@ describe('ImportRepair — repair rows and catalog additions', () => {
       },
     });
 
-    // Two recording days that bring the SAME camera id / name, recalibrated between them.
+    // Two recording days that bring the SAME camera id / name, recalibrated between them. The
+    // calibration IS the position scale, so the two days did not use one camera: each keeps its own
+    // row (finding F1) — and the rows must not collide at commit time.
     const firstDay = decodeYaml(existingCatalogGapYaml());
     const secondDay = structuredClone(firstDay);
     secondDay.cameras[0].meters_per_pixel = 0.002;
@@ -725,13 +727,27 @@ describe('ImportRepair — repair rows and catalog additions', () => {
     await user.click(screen.getByRole('button', { name: /confirm import/i }));
 
     await screen.findByRole('heading', { name: /import complete/i });
-    // The animal gains ONE camera 3 — not two rows that collide at commit time.
-    expect(captured.animals.remy.cameras.map((camera) => camera.id)).toEqual([0, 3]);
+    // One row per calibration, each with a distinct id and name — never two rows that collide.
+    const cameras = captured.animals.remy.cameras;
+    expect(cameras.map((camera) => [camera.camera_name, camera.meters_per_pixel])).toEqual([
+      ['existing_cam', undefined],
+      ['arena_side', 0.001],
+      ['arena_side_20230623', 0.002],
+    ]);
+    expect(new Set(cameras.map((camera) => camera.id)).size).toBe(3);
     expect(captured.animals.remy.devices.data_acq_device.map((device) => device.name)).toEqual([
       'ExistingRig',
       'ImportedRig',
     ]);
     expect(Object.keys(captured.days).sort()).toEqual(['remy-2023-06-22', 'remy-2023-06-23']);
+    // Each day exports the calibration that was true on it.
+    const cameraIdOf = (name) => cameras.find((camera) => camera.camera_name === name).id;
+    expect(captured.days['remy-2023-06-22'].associated_video_files[0].camera_id).toBe(
+      cameraIdOf('arena_side')
+    );
+    expect(captured.days['remy-2023-06-23'].associated_video_files[0].camera_id).toBe(
+      cameraIdOf('arena_side_20230623')
+    );
   });
 
   it('leaves a required-input row empty rather than pre-filling the rejected value', async () => {

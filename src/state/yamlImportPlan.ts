@@ -29,6 +29,21 @@ import type { ValidationModel } from '../validation/issueTypes';
 import { isBlockingIssue } from '../validation/issueTypes';
 import { canonicalJson } from '../utils/canonicalJson';
 import { remapCameraRefs } from './cameraUsage';
+import {
+  applyCameraConflictResolutions,
+  describeCameraConflict,
+  detectCameraCalibrationConflicts,
+} from './cameraCalibrationConflicts';
+import type {
+  CameraCalibrationConflict,
+  CameraConflictResolution,
+} from './cameraCalibrationConflicts';
+
+export type {
+  CameraCalibrationCandidate,
+  CameraCalibrationConflict,
+  CameraConflictResolution,
+} from './cameraCalibrationConflicts';
 
 /** A single surfaced disagreement across a subject's files. */
 export interface Divergence {
@@ -66,6 +81,12 @@ interface FileEntry {
   dayFacts: Record<string, any>;
   /** The probe configuration from {@link decomposeYaml}. */
   configuration: Record<string, any>;
+  /**
+   * The FILE-space camera ids this file's rows were renamed under (a SPLIT calibration conflict —
+   * see {@link module:state/cameraCalibrationConflicts}). Such a row is a camera of its OWN, so it
+   * must not be short-circuited as "an id the existing animal already has".
+   */
+  splitCameraIds?: Set<unknown>;
 }
 
 /** Files grouped under the first-seen spelling of a case-insensitive subject id. */
@@ -87,6 +108,8 @@ interface ResolvedAnimalFacts {
   optogenetics: any;
   devices: { data_acq_device: any[]; device: any };
   cameras: any[];
+  /** The same-name/different-calibration conflicts and how this plan resolved them. */
+  cameraConflicts: CameraCalibrationConflict[];
   divergences: Divergence[];
 }
 
@@ -268,9 +291,25 @@ export interface ImportPlanAnimal {
    * references were remapped against, so a saved reference can never point past what was saved.
    */
   catalogAdditions: { cameras: any[]; data_acq_device: any[] };
+  /**
+   * The `camera_name`s this batch records with MORE THAN ONE calibration, each with one candidate
+   * per distinct calibration and the resolution this plan applied (`split` by default — a different
+   * calibration is a different camera). The preview renders these; a caller changes one by
+   * re-planning with {@link PlanImportOptions.cameraConflictResolutions}.
+   */
+  cameraConflicts: CameraCalibrationConflict[];
   configVersions: ConfigVersion[];
   days: ImportPlanDay[];
   divergences: Divergence[];
+}
+
+/** Options for {@link planImport}. */
+export interface PlanImportOptions {
+  /**
+   * How to resolve each camera calibration conflict, keyed by
+   * `ImportPlanAnimal.cameraConflicts[].key`. Absent (or an entry absent) ⇒ `{ kind: 'split' }`.
+   */
+  cameraConflictResolutions?: Record<string, CameraConflictResolution>;
 }
 
 /** The full import plan: per-animal plans, the unimportable files, and a summary. */
@@ -439,7 +478,10 @@ function unionCameras(entries: FileEntry[], existing: unknown, divergences: Dive
     for (const camera of fileCameras) {
       // An id the animal already has is a reference to that camera (an explicit Import & Repair
       // mapping, or a file that already uses the animal's numbering) — never re-identified by name.
-      if (existingCameraIds.has(camera.id)) {
+      // EXCEPT a row a SPLIT calibration conflict renamed: the animal's id numbering says nothing
+      // about a camera the animal does not have, and collapsing it onto the existing row would
+      // re-scale this day's positions with the wrong calibration (finding F1).
+      if (existingCameraIds.has(camera.id) && entry.splitCameraIds?.has(camera.id) !== true) {
         if (!importedByExistingId.has(camera.id)) importedByExistingId.set(camera.id, structuredClone(camera));
         continue;
       }
@@ -526,18 +568,56 @@ function pushDivergence(divergences: Divergence[], divergence: Divergence): void
  *  - experimenters / optogenetics / device: latest-date-wins; differences → a flag.
  *
  * @param entries - Date-sorted file entries.
+ * @param subjectId - The planned animal id (namespaces the camera-conflict keys).
  * @param existing - The existing animal record when the subject is already in the workspace.
+ * @param cameraConflictResolutions - Caller-chosen camera-conflict resolutions, keyed by conflict key.
  * @returns The resolved animal-level facts plus the surfaced divergences.
  */
-function resolveAnimalFacts(entries: FileEntry[], existing: unknown = null): ResolvedAnimalFacts {
+function resolveAnimalFacts(
+  entries: FileEntry[],
+  subjectId: string,
+  existing: unknown = null,
+  cameraConflictResolutions: Record<string, CameraConflictResolution> = {}
+): ResolvedAnimalFacts {
   const divergences: Divergence[] = [];
-  const latest = entries[entries.length - 1].animalFacts;
 
-  const addSpace = unionCameras(entries, existing, divergences);
+  // --- cameras: same name, different calibration = a DIFFERENT camera (finding F1). Resolve every
+  // such conflict BEFORE unioning, so the union sees rows that already say what they are: split
+  // rows carry their own dated name, unified rows carry the chosen calibration. ---
+  const cameraConflicts = detectCameraCalibrationConflicts(
+    subjectId,
+    entries.map((entry) => ({
+      sourceName: entry.sourceName,
+      date: entry.date,
+      cameras: getAnimalCameras(entry.animalFacts) as unknown as Array<Record<string, unknown>>,
+    })),
+    existing,
+    cameraConflictResolutions
+  );
+  const resolvedEntries: FileEntry[] =
+    cameraConflicts.length === 0
+      ? entries
+      : entries.map((entry) => {
+          const { cameras, splitCameraIds } = applyCameraConflictResolutions(
+            getAnimalCameras(entry.animalFacts) as unknown as Array<Record<string, unknown>>,
+            cameraConflicts
+          );
+          return {
+            ...entry,
+            animalFacts: { ...entry.animalFacts, cameras },
+            splitCameraIds,
+          };
+        });
+  for (const conflict of cameraConflicts) {
+    pushDivergence(divergences, { field: 'cameras', detail: describeCameraConflict(conflict) });
+  }
+
+  const latest = resolvedEntries[resolvedEntries.length - 1].animalFacts;
+  const addSpace = unionCameras(resolvedEntries, existing, divergences);
   // For 'replace' the existing animal is discarded, so the files are self-describing: identity
   // is by name across files, ids are allocated among the files alone. For a new animal that is
   // the only space there is.
-  const replaceSpace = existing ? unionCameras(entries, null, divergences) : addSpace;
+  const replaceSpace = existing ? unionCameras(resolvedEntries, null, divergences) : addSpace;
 
   // --- data_acq_device: union by NAME across the files, first-seen fields win, every file-vs-file
   // disagreement flagged. A row whose name the existing animal already has is that system under
@@ -620,6 +700,7 @@ function resolveAnimalFacts(entries: FileEntry[], existing: unknown = null): Res
     cameras: replaceSpace.imported,
     cameraIdRemaps: { add: addSpace.remaps, replace: replaceSpace.remaps },
     catalogAdditions: { cameras: addSpace.added, data_acq_device: addedDevices },
+    cameraConflicts,
     divergences,
   };
 }
@@ -698,11 +779,16 @@ export function materializePlanDay(
  *
  * @param decodedFiles - Parsed files.
  * @param existingWorkspace - The current workspace slice (`{ animals }`), read-only.
+ * @param options - Planning options ({@link PlanImportOptions}).
+ * @param options.cameraConflictResolutions - How to resolve each camera calibration conflict
+ *   (keyed by `ImportPlanAnimal.cameraConflicts[].key`). Absent ⇒ `split`. The plan is PURE, so a
+ *   preview re-plans with an updated map rather than mutating the plan it is showing.
  * @returns The import plan.
  */
 export function planImport(
   decodedFiles: unknown,
-  existingWorkspace: { animals?: unknown } | null | undefined
+  existingWorkspace: { animals?: unknown } | null | undefined,
+  { cameraConflictResolutions = {} }: PlanImportOptions = {}
 ): ImportPlan {
   const files = Array.isArray(decodedFiles) ? decodedFiles : [];
   const unimportable: Array<{ sourceName: string; sourceKey: string; reason: string }> = [];
@@ -828,7 +914,12 @@ export function planImport(
     const existingAnimal = existingAnimalId
       ? (existingWorkspace?.animals as Record<string, unknown> | undefined)?.[existingAnimalId] ?? null
       : null;
-    const facts = resolveAnimalFacts(entries, existingAnimal);
+    const facts = resolveAnimalFacts(
+      entries,
+      subjectId,
+      existingAnimal,
+      cameraConflictResolutions
+    );
 
     const days = entries.map((entry, index) =>
       buildPlanDay(entry, versionByDate[entry.date], {
@@ -856,6 +947,7 @@ export function planImport(
       devices: facts.devices,
       cameras: facts.cameras,
       catalogAdditions: facts.catalogAdditions,
+      cameraConflicts: facts.cameraConflicts,
       configVersions,
       days,
       divergences: facts.divergences,

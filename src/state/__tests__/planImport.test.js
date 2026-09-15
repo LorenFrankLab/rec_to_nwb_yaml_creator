@@ -615,3 +615,237 @@ describe('planImport — subject_id must be a route-safe animal id', () => {
     expect(plan.animals.map((a) => a.subjectId)).toEqual(['remy']);
   });
 });
+
+describe('planImport — camera calibration conflicts (F1)', () => {
+  /**
+   * Re-calibrate the fixture's overhead camera in one file, and declare the day's camera usage
+   * explicitly so every reference site (tasks, videos, cameras_used) is exercised.
+   *
+   * @param {number} metersPerPixel - The calibration this file records for `overhead_camera`.
+   * @returns {(animal: object, day: object) => void} A `mutateConfig` callback.
+   */
+  const withOverheadCalibration = (metersPerPixel) => (animal, day) => {
+    animal.cameras = animal.cameras.map((camera) =>
+      camera.camera_name === 'overhead_camera'
+        ? { ...camera, meters_per_pixel: metersPerPixel }
+        : camera
+    );
+    day.cameras_used = [0, 1];
+  };
+
+  /** Two remy files whose `overhead_camera` carries two different calibrations. */
+  const twoCalibrationFiles = () => [
+    makeFile({
+      subjectId: 'remy',
+      date: '2023-06-22',
+      mutateConfig: withOverheadCalibration(0.001),
+    }),
+    makeFile({
+      subjectId: 'remy',
+      date: '2023-06-23',
+      mutateConfig: withOverheadCalibration(0.002),
+    }),
+  ];
+
+  /**
+   * A workspace already holding remy, whose `overhead_camera` (id 0) is calibrated at 0.001.
+   *
+   * @param metersPerPixel
+   * @returns {object} The workspace.
+   */
+  const existingRemyAt = (metersPerPixel) => {
+    const ws = createDefaultWorkspace();
+    const { animal } = buildRealisticWorkspace();
+    ws.animals[animal.id] = {
+      ...animal,
+      days: [],
+      cameras: animal.cameras.map((camera) =>
+        camera.camera_name === 'overhead_camera'
+          ? { ...camera, meters_per_pixel: metersPerPixel }
+          : camera
+      ),
+    };
+    return ws;
+  };
+
+  it('surfaces one structured conflict with a candidate per distinct calibration, in date order', () => {
+    const plan = planImport(twoCalibrationFiles(), createDefaultWorkspace());
+    const remy = plan.animals.find((a) => a.subjectId === 'remy');
+
+    expect(remy.cameraConflicts).toHaveLength(1);
+    const [conflict] = remy.cameraConflicts;
+    expect(conflict.key).toBe('remy:overhead_camera');
+    expect(conflict.cameraName).toBe('overhead_camera');
+    expect(conflict.resolution).toEqual({ kind: 'split' });
+    expect(conflict.candidates.map((c) => c.fields.meters_per_pixel)).toEqual([0.001, 0.002]);
+    expect(conflict.candidates.map((c) => c.firstDate)).toEqual(['2023-06-22', '2023-06-23']);
+    expect(conflict.candidates.map((c) => c.firstSourceName)).toEqual([
+      '06222023_remy_metadata.yml',
+      '06232023_remy_metadata.yml',
+    ]);
+    expect(conflict.candidates.map((c) => c.sourceNames)).toEqual([
+      ['06222023_remy_metadata.yml'],
+      ['06232023_remy_metadata.yml'],
+    ]);
+    expect(conflict.candidates.map((c) => c.dates)).toEqual([['2023-06-22'], ['2023-06-23']]);
+    expect(conflict.candidates.map((c) => c.fromExisting)).toEqual([false, false]);
+    expect(conflict.candidates.map((c) => c.splitName)).toEqual([
+      'overhead_camera',
+      'overhead_camera_20230623',
+    ]);
+    // Still surfaced in the human-readable list, naming BOTH values.
+    const divergence = remy.divergences.find((d) => d.field === 'cameras');
+    expect(divergence.detail).toMatch(/0\.001/);
+    expect(divergence.detail).toMatch(/0\.002/);
+  });
+
+  it('splits by default: the later calibration becomes its own camera and its day follows it', () => {
+    const plan = planImport(twoCalibrationFiles(), createDefaultWorkspace());
+    const remy = plan.animals.find((a) => a.subjectId === 'remy');
+
+    expect(remy.cameras.map((c) => [c.camera_name, c.meters_per_pixel])).toEqual([
+      ['overhead_camera', 0.001],
+      ['side_camera', 0.0009],
+      ['overhead_camera_20230623', 0.002],
+    ]);
+    const dated = remy.cameras.find((c) => c.camera_name === 'overhead_camera_20230623');
+    expect(dated.id).not.toBe(0);
+
+    const first = materializePlanDay(remy.days[0], 'create');
+    expect(first.associated_video_files.find((v) => v.name === 'overhead_video_epoch2').camera_id).toBe(0);
+    expect(first.cameras_used).toEqual([0, 1]);
+
+    const later = materializePlanDay(remy.days[1], 'create');
+    expect(later.associated_video_files.find((v) => v.name === 'overhead_video_epoch2').camera_id).toBe(dated.id);
+    expect(later.associated_video_files.find((v) => v.name === 'side_view_video_epoch2').camera_id).toBe(1);
+    expect(later.tasks.find((t) => t.task_name === 'w_alternation').camera_id).toEqual([dated.id, 1]);
+    expect(later.cameras_used).toEqual([dated.id, 1]);
+  });
+
+  it('unify onto a chosen candidate gives ONE row at that calibration with every day on it', () => {
+    const plan = planImport(twoCalibrationFiles(), createDefaultWorkspace(), {
+      cameraConflictResolutions: { 'remy:overhead_camera': { kind: 'unify', candidateIndex: 1 } },
+    });
+    const remy = plan.animals.find((a) => a.subjectId === 'remy');
+
+    expect(remy.cameraConflicts[0].resolution).toEqual({ kind: 'unify', candidateIndex: 1 });
+    expect(remy.cameras.map((c) => [c.camera_name, c.meters_per_pixel])).toEqual([
+      ['overhead_camera', 0.002],
+      ['side_camera', 0.0009],
+    ]);
+    for (const day of remy.days) {
+      const materialized = materializePlanDay(day, 'create');
+      expect(materialized.associated_video_files.find((v) => v.name === 'overhead_video_epoch2').camera_id).toBe(0);
+      expect(materialized.cameras_used).toEqual([0, 1]);
+    }
+    // The discarded value is still named, so the result summary can report it.
+    const divergence = remy.divergences.find((d) => d.field === 'cameras');
+    expect(divergence.detail).toMatch(/0\.001/);
+  });
+
+  it('splits against an EXISTING animal: a dated camera is ADDED and the existing row is untouched', () => {
+    const ws = existingRemyAt(0.001);
+    const plan = planImport(
+      [makeFile({ subjectId: 'remy', date: '2023-06-23', mutateConfig: withOverheadCalibration(0.002) })],
+      ws
+    );
+    const remy = plan.animals.find((a) => a.subjectId === 'remy');
+
+    expect(remy.conflict).toBe('exists');
+    const [conflict] = remy.cameraConflicts;
+    expect(conflict.candidates.map((c) => c.fromExisting)).toEqual([true, false]);
+    expect(conflict.candidates.map((c) => c.fields.meters_per_pixel)).toEqual([0.001, 0.002]);
+
+    expect(remy.catalogAdditions.cameras.map((c) => [c.camera_name, c.meters_per_pixel])).toEqual([
+      ['overhead_camera_20230623', 0.002],
+    ]);
+    const [dated] = remy.catalogAdditions.cameras;
+    expect([0, 1]).not.toContain(dated.id);
+
+    const added = materializePlanDay(remy.days[0], 'add');
+    expect(added.associated_video_files.find((v) => v.name === 'overhead_video_epoch2').camera_id).toBe(dated.id);
+    expect(added.associated_video_files.find((v) => v.name === 'side_view_video_epoch2').camera_id).toBe(1);
+    expect(added.cameras_used).toEqual([dated.id, 1]);
+    // The existing animal keeps its own calibration (the plan never rewrites history).
+    expect(ws.animals.remy.cameras.find((c) => c.camera_name === 'overhead_camera').meters_per_pixel).toBe(0.001);
+  });
+
+  it('keeps all three calibrations of a three-file sequence, in date order', () => {
+    const plan = planImport(
+      [
+        makeFile({ subjectId: 'emmett', date: '2025-11-03', mutateConfig: withOverheadCalibration(0.00102) }),
+        makeFile({ subjectId: 'emmett', date: '2026-01-05', mutateConfig: withOverheadCalibration(0.001073) }),
+        makeFile({ subjectId: 'emmett', date: '2026-02-10', mutateConfig: withOverheadCalibration(0.001173) }),
+      ],
+      createDefaultWorkspace()
+    );
+    const emmett = plan.animals.find((a) => a.subjectId === 'emmett');
+
+    expect(emmett.cameraConflicts[0].candidates.map((c) => c.fields.meters_per_pixel)).toEqual([
+      0.00102, 0.001073, 0.001173,
+    ]);
+    expect(
+      emmett.cameras
+        .filter((c) => c.camera_name.startsWith('overhead_camera'))
+        .map((c) => [c.camera_name, c.meters_per_pixel])
+    ).toEqual([
+      ['overhead_camera', 0.00102],
+      ['overhead_camera_20260105', 0.001073],
+      ['overhead_camera_20260210', 0.001173],
+    ]);
+    const idOf = (name) => emmett.cameras.find((c) => c.camera_name === name).id;
+    expect(
+      emmett.days.map(
+        (day) =>
+          materializePlanDay(day, 'create').associated_video_files.find(
+            (v) => v.name === 'overhead_video_epoch2'
+          ).camera_id
+      )
+    ).toEqual([idOf('overhead_camera'), idOf('overhead_camera_20260105'), idOf('overhead_camera_20260210')]);
+  });
+
+  it('suffixes a split name a file already uses, so no two cameras share a name', () => {
+    const plan = planImport(
+      [
+        makeFile({
+          subjectId: 'remy',
+          date: '2023-06-22',
+          mutateConfig: (animal, day) => {
+            withOverheadCalibration(0.001)(animal, day);
+            // A camera the lab already named after the very date the split would use. It must be
+            // USED by the day, or the export merge would not emit it into the file at all.
+            animal.cameras = [
+              ...animal.cameras,
+              { ...animal.cameras[1], id: 2, camera_name: 'overhead_camera_20230623' },
+            ];
+            day.cameras_used = [0, 1, 2];
+          },
+        }),
+        makeFile({ subjectId: 'remy', date: '2023-06-23', mutateConfig: withOverheadCalibration(0.002) }),
+      ],
+      createDefaultWorkspace()
+    );
+    const remy = plan.animals.find((a) => a.subjectId === 'remy');
+
+    expect(remy.cameraConflicts[0].candidates.map((c) => c.splitName)).toEqual([
+      'overhead_camera',
+      'overhead_camera_20230623_2',
+    ]);
+    const names = remy.cameras.map((c) => c.camera_name);
+    expect(new Set(names).size).toBe(names.length);
+    expect(names).toContain('overhead_camera_20230623_2');
+  });
+
+  it('records NO conflict when every file agrees on the calibration', () => {
+    const plan = planImport(
+      [
+        makeFile({ subjectId: 'remy', date: '2023-06-22', mutateConfig: withOverheadCalibration(0.001) }),
+        makeFile({ subjectId: 'remy', date: '2023-06-23', mutateConfig: withOverheadCalibration(0.001) }),
+      ],
+      createDefaultWorkspace()
+    );
+    const remy = plan.animals.find((a) => a.subjectId === 'remy');
+    expect(remy.cameraConflicts).toEqual([]);
+    expect(remy.cameras.map((c) => c.camera_name)).toEqual(['overhead_camera', 'side_camera']);
+  });
+});
