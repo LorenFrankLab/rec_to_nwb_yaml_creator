@@ -102,13 +102,23 @@ describe('useGlobalShortcuts', () => {
     expect(handlers.onAdd).not.toHaveBeenCalled();
   });
 
-  it('still suppresses the browser save dialog while typing but does not save', () => {
+  it('suppresses the browser save dialog while typing AND saves (the save flushes the focused draft)', () => {
     const handlers = mount();
     const input = document.createElement('input');
     document.body.appendChild(input);
 
     const event = press('s', { ctrlKey: true, target: input });
     expect(event.defaultPrevented).toBe(true);
-    expect(handlers.onSave).not.toHaveBeenCalled();
+    expect(handlers.onSave).toHaveBeenCalledTimes(1);
+  });
+
+  it('saves on Ctrl/Cmd+S even while a modal is open (a dialog draft is still work worth saving)', () => {
+    const handlers = mount();
+    const overlay = document.createElement('div');
+    overlay.setAttribute('aria-modal', 'true');
+    document.body.appendChild(overlay);
+
+    press('s', { metaKey: true });
+    expect(handlers.onSave).toHaveBeenCalledTimes(1);
   });
 });

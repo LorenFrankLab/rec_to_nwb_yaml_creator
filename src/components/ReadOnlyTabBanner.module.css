@@ -1,0 +1,18 @@
+/* Read-only-tab notice (single-writer ownership). Tokens only. */
+
+.banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm) var(--spacing-md);
+  background-color: var(--color-warning-light);
+  color: var(--color-warning);
+  border-bottom: 1px solid var(--color-warning);
+  font-size: var(--font-size-sm);
+}
+
+.text {
+  flex: 1 1 24rem;
+}

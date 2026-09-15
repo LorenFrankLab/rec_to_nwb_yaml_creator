@@ -21,6 +21,7 @@ import EmptyState from '../../components/ui/EmptyState';
 import OverflowMenu from '../../components/OverflowMenu';
 import AnimalDeleteDialog from '../../components/AnimalDeleteDialog';
 import AnimalProfileDialog from '../../components/AnimalProfileDialog';
+import WorkspaceBackupPanel from '../../components/WorkspaceBackupPanel';
 import styles from './AnimalWorkspace.module.css';
 
 /** Status-filter options; the value (other than 'all') is a status-rollup variant. */
@@ -279,6 +280,9 @@ export function AnimalWorkspace() {
           )}
         </section>
       )}
+
+      {/* Where the data lives + portable backup / restore (finding F8). */}
+      <WorkspaceBackupPanel />
 
       <AnimalDeleteDialog
         isOpen={pendingDeleteAnimalId != null}

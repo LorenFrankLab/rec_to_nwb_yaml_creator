@@ -26,6 +26,7 @@ describe('useStore public API contract', () => {
     const { result } = renderHook(() => useStore());
     expect(Object.keys(result.current.actions).sort()).toEqual([
       'addArrayItem',
+      'applyAnimalDefaultsToDays',
       'createAnimal',
       'createConfigurationSnapshotAndApplyForward',
       'createDay',
@@ -44,6 +45,8 @@ describe('useStore public API contract', () => {
       'removeArrayItem',
       'removeDayReference',
       'removeElectrodeGroupItem',
+      'reseedDayFrom',
+      'setConfigurationEffectiveDate',
       'setFormData',
       'unlinkDayReference',
       'updateAnimal',
@@ -69,12 +72,16 @@ describe('useStore public API contract', () => {
     expect(Object.keys(result.current.persistence).sort()).toEqual([
       'dismissLoadNotice',
       'enabled',
+      'hasPendingDrafts',
       'hasPendingWrite',
       'lastSaved',
       'loadNotice',
       'loadOutcome',
+      'restoreWorkspace',
       'saveError',
       'saveNow',
+      'takeOver',
+      'writer',
     ]);
   });
 

@@ -57,24 +57,20 @@ describe('global shortcuts + help (integration)', () => {
 
   it('Alt+ArrowRight / Alt+ArrowLeft move the DayEditor sections', async () => {
     await renderRoute(`#/day/${DAY_ID}`);
-    await screen.findByRole('heading', { name: /daily setup/i });
+    await screen.findByRole('heading', { name: /daily log/i });
 
-    // Advance to Tasks & Files.
+    // Advance to Recording Setup.
     fireEvent.keyDown(document.body, { key: 'ArrowRight', altKey: true });
-    expect(await screen.findByRole('button', { name: /^Tasks & Files\b/i })).toHaveAttribute('aria-current', 'page');
+    expect(await screen.findByRole('button', { name: /^Recording Setup\b/i })).toHaveAttribute('aria-current', 'page');
 
-    // Retreat back to Daily Setup.
+    // Retreat back to the daily log.
     fireEvent.keyDown(document.body, { key: 'ArrowLeft', altKey: true });
-    expect(await screen.findByRole('heading', { name: /daily setup/i })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: /daily log/i })).toBeInTheDocument();
   });
 
-  it('Alt+N opens the epoch template menu in Tasks & Files', async () => {
-    const user = userEvent.setup();
+  it('Alt+N opens the epoch template menu on the daily log (the epoch editor lives there)', async () => {
     await renderRoute(`#/day/${DAY_ID}`);
     await screen.findByRole('heading', { name: /day editor/i });
-
-    // Go to the Tasks & Files section.
-    await user.click(screen.getByRole('button', { name: /^Tasks & Files\b/i }));
     await screen.findByRole('heading', { name: /^Epochs$/i });
 
     // Alt+N opens the grid's add affordance — the "+ from template" menu.
@@ -82,20 +78,22 @@ describe('global shortcuts + help (integration)', () => {
     expect(await screen.findByRole('menuitem', { name: /Sleep day/i })).toBeInTheDocument();
   });
 
-  it('Alt+N is a no-op on a section with no add target (Daily Setup)', async () => {
+  it('Alt+N is a no-op on a section with no add target (Recording Setup)', async () => {
+    const user = userEvent.setup();
     await renderRoute(`#/day/${DAY_ID}`);
-    await screen.findByRole('heading', { name: /daily setup/i });
+    await screen.findByRole('heading', { name: /daily log/i });
+    await user.click(screen.getByRole('button', { name: /^Recording Setup\b/i }));
 
     fireEvent.keyDown(document.body, { key: 'n', altKey: true });
     await act(async () => { await Promise.resolve(); });
     // No dialog appears and the view is unchanged.
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: /daily setup/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^Recording Setup\b/i })).toHaveAttribute('aria-current', 'page');
   });
 
   it('further shortcuts are ignored while the help dialog is open', async () => {
     await renderRoute(`#/day/${DAY_ID}`);
-    await screen.findByRole('heading', { name: /daily setup/i });
+    await screen.findByRole('heading', { name: /daily log/i });
 
     fireEvent.keyDown(document.body, { key: '?' });
     expect(await screen.findByRole('dialog', { name: /keyboard shortcuts/i })).toBeInTheDocument();

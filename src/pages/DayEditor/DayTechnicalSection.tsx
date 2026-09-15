@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useRef } from 'react';
+import { useDraftField } from '../../hooks/useDraftField';
 import { resolveRigConstant } from '../../domain/rigConstants';
 import type { TechnicalParameters, TechnicalDefaults } from '../../state/workspaceTypes';
 
@@ -43,11 +44,53 @@ export default function DayTechnicalSection({
   animalKey = undefined,
   embedded = false,
 }: DayTechnicalSectionProps) {
-  const [local, setLocal] = useState({
-    default_header_file_path: technical?.default_header_file_path || '',
-    analog: technical?.units?.analog || '',
-    behavioral_events: technical?.units?.behavioral_events || '',
+  // Draft-tracked (see hooks/useDraftField): the typed text is committed on a debounce / blur /
+  // Ctrl+S and is visible to persistence while pending. `units` is committed as a whole object
+  // from BOTH drafts, so each field's commit reads the other's current draft.
+  const analogRef = useRef(technical?.units?.analog || '');
+  const behavioralRef = useRef(technical?.units?.behavioral_events || '');
+  const commitUnitsFrom = (analogText: string, behavioralText: string) => {
+    const analog = analogText.trim();
+    const behavioralEvents = behavioralText.trim();
+    // Omit units entirely when both are blank; the schema rejects present-but-empty
+    // units, and the export drops an absent `units`.
+    if (!analog && !behavioralEvents) {
+      onFieldUpdate('technical.units', undefined);
+      return;
+    }
+    if (!analog || !behavioralEvents) {
+      return;
+    }
+    onFieldUpdate('technical.units', { analog, behavioral_events: behavioralEvents });
+  };
+  const header = useDraftField<string>({
+    value: technical?.default_header_file_path || '',
+    onCommit: (text) => onFieldUpdate('technical.default_header_file_path', text.trim()),
+    label: 'technical.default_header_file_path',
   });
+  const analog = useDraftField<string>({
+    value: technical?.units?.analog || '',
+    onCommit: (text) => {
+      analogRef.current = text;
+      commitUnitsFrom(text, behavioralRef.current);
+    },
+    label: 'technical.units.analog',
+  });
+  const behavioral = useDraftField<string>({
+    value: technical?.units?.behavioral_events || '',
+    onCommit: (text) => {
+      behavioralRef.current = text;
+      commitUnitsFrom(analogRef.current, text);
+    },
+    label: 'technical.units.behavioral_events',
+  });
+  analogRef.current = analog.value;
+  behavioralRef.current = behavioral.value;
+  const local = {
+    default_header_file_path: header.value,
+    analog: analog.value,
+    behavioral_events: behavioral.value,
+  };
 
   const raw = resolveRigConstant(technical, recordingSystemDefaults, 'raw_data_to_volts');
   const mult = resolveRigConstant(technical, recordingSystemDefaults, 'times_period_multiplier');
@@ -63,29 +106,20 @@ export default function DayTechnicalSection({
       : `Different from current recording-system default (current default: ${c.currentDefault})`;
   };
 
-  const change = (key: keyof typeof local, value: string) => setLocal((prev) => ({ ...prev, [key]: value }));
+  const change = (key: keyof typeof local, value: string) => {
+    if (key === 'default_header_file_path') header.setValue(value);
+    else if (key === 'analog') analog.setValue(value);
+    else behavioral.setValue(value);
+  };
 
   // units requires BOTH analog and behavioral_events together (schema). Flag the
   // partial case inline rather than letting it surface only at the export gate.
   const unitsPartial = !!local.analog.trim() !== !!local.behavioral_events.trim();
 
-  const commitHeader = () => {
-    onFieldUpdate('technical.default_header_file_path', local.default_header_file_path.trim());
-  };
-
+  const commitHeader = () => header.flush();
   const commitUnits = () => {
-    const analog = local.analog.trim();
-    const behavioralEvents = local.behavioral_events.trim();
-    // Omit units entirely when both are blank; the schema rejects present-but-empty
-    // units, and the export drops an absent `units`.
-    if (!analog && !behavioralEvents) {
-      onFieldUpdate('technical.units', undefined);
-      return;
-    }
-    if (!analog || !behavioralEvents) {
-      return;
-    }
-    onFieldUpdate('technical.units', { analog, behavioral_events: behavioralEvents });
+    analog.flush();
+    behavioral.flush();
   };
 
   const content = (

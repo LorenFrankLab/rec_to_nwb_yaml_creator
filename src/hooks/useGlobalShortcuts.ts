@@ -44,8 +44,9 @@ function isModalOpen() {
  * - **? (Shift+/)** — open the shortcuts help.
  *
  * Guarded: while focus is in an input/textarea/select/contenteditable, or any modal
- * is open, the handlers do not fire (Ctrl/Cmd+S still suppresses the browser dialog
- * but does not save). The help dialog's own Esc-to-close is owned by `<Modal>`.
+ * is open, the navigation/add/help handlers do not fire. Ctrl/Cmd+S is the exception — it
+ * always saves (flushing the focused field's draft), since that is precisely when it is needed.
+ * The help dialog's own Esc-to-close is owned by `<Modal>`.
  *
  * @param handlers
  * @param [handlers.onSave]
@@ -66,10 +67,13 @@ export default function useGlobalShortcuts(handlers: ShortcutHandlers = {}): voi
       const { onSave, onNextStep, onPrevStep, onAdd, onShowHelp } = handlersRef.current;
       const guarded = isEditableTarget(e.target as HTMLElement | null) || isModalOpen();
 
-      // Ctrl/Cmd+S: always prevent the browser save dialog; save only when unguarded.
+      // Ctrl/Cmd+S: always prevent the browser save dialog, and ALWAYS save — including while a
+      // text field is focused or a dialog is open. The save flushes the focused field's draft first
+      // (persistence.saveNow → flushAllDrafts), which is exactly when a scientist reaches for the
+      // shortcut; suppressing it there was review finding F3.
       if ((e.metaKey || e.ctrlKey) && (e.key === 's' || e.key === 'S')) {
         e.preventDefault();
-        if (!guarded) onSave?.();
+        onSave?.();
         return;
       }
 

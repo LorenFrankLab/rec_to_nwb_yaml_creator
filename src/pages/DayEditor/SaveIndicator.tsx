@@ -20,6 +20,7 @@ interface SaveIndicatorProps {
  * - `enabled === false`: persistence is off, so the indicator must NOT claim "Saved";
  *   it shows a muted "Not saved (in memory)".
  * - `saveError`: a write failed; shows the error.
+ * - `hasPendingDrafts`: a text field holds text the store has not received; shows "Unsaved edits".
  * - `hasPendingWrite`: a debounced write is in flight; shows "Saving…".
  * - `lastSaved`: a write succeeded; shows "Saved <time ago>".
  */
@@ -29,6 +30,7 @@ export default function SaveIndicator({ persistence }: SaveIndicatorProps) {
     lastSaved = null,
     saveError = null,
     hasPendingWrite = false,
+    hasPendingDrafts = false,
   } = persistence ?? {};
   const error = saveError;
   const pending = hasPendingWrite;
@@ -53,6 +55,22 @@ export default function SaveIndicator({ persistence }: SaveIndicatorProps) {
       <div className={`${styles.saveIndicator} ${styles.error}`} role="alert" aria-live="assertive">
         <span aria-hidden="true">✗</span>
         <span>{error}</span>
+      </div>
+    );
+  }
+
+  // A field is mid-edit: its newest text is NOT in storage yet. Say so rather than "Saved" (it
+  // commits when typing pauses, on blur, or on Ctrl/Cmd+S).
+  if (hasPendingDrafts) {
+    return (
+      <div
+        className={`${styles.saveIndicator} ${styles.saving}`}
+        role="status"
+        aria-live="polite"
+        aria-label="Unsaved edits — saved when you pause typing"
+      >
+        <span aria-hidden="true">●</span>
+        <span>Unsaved edits</span>
       </div>
     );
   }

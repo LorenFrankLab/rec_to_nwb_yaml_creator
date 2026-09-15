@@ -57,10 +57,22 @@ export interface PersistenceStatus {
   saveError: string | null;
   /** True while a debounced write is in flight. */
   hasPendingWrite: boolean;
+  /**
+   * True while a text field holds a value the store has not received yet (typing in progress —
+   * see `state/draftRegistry`). Never claim durability while this is set; an explicit save
+   * flushes these first.
+   */
+  hasPendingDrafts: boolean;
   /** Notice shown when a saved workspace was recovered or discarded, or null. */
   loadNotice: string | null;
   /** The load-time persistence outcome, kept runtime-only so the UI can distinguish repair vs discard. */
   loadOutcome: PersistenceLoadOutcome;
+  /**
+   * This tab's ownership of the persisted workspace: `writer` (the one editing tab), `reader` (another
+   * tab holds the lease — this tab never writes and follows the writer's saves), or `pending` while
+   * the lease is being acquired. See `state/writerLock`.
+   */
+  writer: { role: 'pending' } | { role: 'writer' } | { role: 'reader'; reason: 'held-elsewhere' | 'handed-over' | 'unavailable' };
   /** Clears the load notice. */
   dismissLoadNotice: () => void;
 }
@@ -83,20 +95,24 @@ export interface Animal {
   devices: DeviceConfiguration;
   /** Camera setup. */
   cameras: Camera[];
-  /** Lab and experimenter details. */
+  /**
+   * DEFAULT team (+ lab / institution) for NEW days. The exported team is the day-owned
+   * `Day.experimenters` copy; editing this default does not change existing days.
+   */
   experimenters: ExperimenterInfo;
   /**
-   * Animal-level default experiment description. A day with no per-session
-   * `experiment_description` inherits this in the export merge (the OverviewStep
-   * "leave blank to use animal's default" hint). Optional; defaults to `''`.
+   * Animal-level DEFAULT experiment description, copied into `session.experiment_description` when a
+   * day is created. The export reads the day's copy only, so editing this default never changes an
+   * existing day. Optional; defaults to `''`.
    */
   experiment_description?: string;
   /** Defaults copied into new days. */
   technicalDefaults: TechnicalDefaults;
   /**
-   * Optional optogenetics setup. An explicit `null` is the editor's "disabled" sentinel
-   * (written by `applyAnimalUpdates` on `optogenetics: null`); readers treat `null` and
-   * `undefined` alike (both falsy). See {@link module:state/workspaceTransitions}.
+   * Optional optogenetics setup — the DEFAULT copied into new days (`Day.optogenetics`). An explicit
+   * `null` is the editor's "disabled" sentinel (written by `applyAnimalUpdates` on
+   * `optogenetics: null`); readers treat `null` and `undefined` alike (both falsy). See
+   * {@link module:state/workspaceTransitions}.
    */
   optogenetics?: OptogeneticsConfig | null;
   /**
@@ -144,9 +160,9 @@ export interface SubjectMetadata {
   /** Subject description. */
   description: string;
   /**
-   * Animal BASELINE weight in grams (optional). This is an initial/fallback value
-   * only; the per-session exported weight is the day-owned `SessionMetadata.weight`,
-   * which the export prefers over this baseline.
+   * Animal BASELINE weight in grams at setup (optional). A dated SUGGESTION only — the exported
+   * weight is the day-owned `SessionMetadata.weight`, and a day without one is not exportable (the
+   * export never substitutes this baseline for a measurement).
    */
   weight?: number;
   /** Age string (optional, computed from DOB). */
@@ -297,8 +313,19 @@ export interface VirusInjection {
  * derives the trustworthy view from each day's version regardless.
  */
 export interface ConfigurationSnapshot {
-  /** Date this config became active (YYYY-MM-DD). */
+  /**
+   * Date this config became effective (YYYY-MM-DD) — the SETUP EFFECTIVE DATE, distinct from any
+   * recording date and from the metadata-entry timestamp. `createAnimal` stamps version 1 with the
+   * entry date, which is NOT evidence of when the implant became effective (see
+   * `effectiveDateKnown`); the reconfiguration wizard records an entered date.
+   */
   date: string;
+  /**
+   * Whether `date` is a KNOWN effective date. `false` for a version-1 snapshot stamped with the
+   * animal's entry date (the effective period before that date is unknown, so a backfilled day
+   * before it needs an explicit setup choice — `domain/configurationSelection`). Absent ⇒ known.
+   */
+  effectiveDateKnown?: boolean;
   /** Sequential version number (1, 2, 3, ...). */
   version: number;
   /** Change description (e.g., "Lowered CA1 tetrodes by 40um"). */
@@ -370,6 +397,25 @@ export interface Day {
   sessionStartTime?: string;
   /** Session-specific metadata. */
   session: SessionMetadata;
+  /**
+   * DAY-OWNED actual team (+ lab / institution) — the people present on this recording day. Copied
+   * into the day at creation (from the nearest earlier day, else the animal default team) or from
+   * the imported file, and exported from HERE; the animal's `experimenters` is only the default
+   * for new days. Absent only on un-migrated data (the export then falls back to the animal).
+   */
+  experimenters?: ExperimenterInfo;
+  /**
+   * DAY-OWNED optogenetics setup snapshot: the sources / fibers / injections / software as they
+   * applied to this recording day (`null` = none used). Copied at creation / import; exported from
+   * here when the KEY is present (absent ⇒ un-migrated: the export falls back to the animal). A
+   * change to the animal's optogenetics setup reaches existing days only through an explicit
+   * "apply to these days" correction — never implicitly.
+   */
+  optogenetics?: OptogeneticsConfig | null;
+  /** Where this day's copied / derived facts came from (off-export; see {@link DayProvenance}). */
+  provenance?: DayProvenance;
+  /** The most recent download of this day's YAML (off-export; see {@link ExportReceipt}). */
+  exportReceipt?: ExportReceipt;
   /** Optional searchable keyword tags (NWB keywords). */
   keywords?: string[];
   /** Behavioral tasks (inline model — the current runtime/export source of truth). */
@@ -425,8 +471,81 @@ export interface SessionMetadata {
   session_description: string;
   /** Optional override of animal default. */
   experiment_description?: string;
-  /** Subject weight override for this day. */
+  /** The weight measured on this recording day (grams). Required for export; never inferred. */
   weight?: number;
+}
+
+/** Where a copied / derived day fact came from. */
+export type DayFactSource = 'copied' | 'animal-default' | 'derived' | 'import' | 'entered' | 'migration';
+
+/**
+ * Off-export provenance of a recording day's copied and derived facts. Keeps the three dates
+ * apart — the recording date (`Day.date`), the setup effective date
+ * ({@link ConfigurationSnapshot.date}) and the metadata-ENTRY timestamp (`enteredAt`) — and records
+ * which earlier day the copied fields were seeded from. Never read by the export merge.
+ */
+export interface DayProvenance {
+  /** ISO timestamp when the record was entered into the app (NOT the recording date). */
+  enteredAt: string;
+  /** The day the copied fields were seeded from, or null (blank day / import / migration). */
+  copiedFromDayId: string | null;
+  /** That source day's recording date, for display. */
+  copiedFromDate: string | null;
+  /** How the pinned configuration version was chosen. */
+  configuration: {
+    /**
+     * `effective-date` — the version whose effective date most recently precedes the recording
+     * date; `explicit` — chosen/confirmed by the user; `copied` — the duplicate-day source's pin;
+     * `import` — inferred from the imported file's geometry; `migration` — carried from the pre-v4
+     * record; `latest` — pinned to the newest version (legacy behavior).
+     */
+    source: 'effective-date' | 'explicit' | 'copied' | 'import' | 'migration' | 'latest';
+    /**
+     * Whether the user has explicitly confirmed the choice. Only consulted when the chosen version's
+     * effective date does not cover the recording date (see `domain/configurationSelection`).
+     */
+    confirmed: boolean;
+  };
+  /** Per-field source for the copied/derived fields (e.g. `experimenters`, `dataFolder`). */
+  fields?: Record<string, DayFactSource>;
+  /**
+   * Review flags left by a migration or import that could not resolve a historical fact
+   * (e.g. `weight_from_baseline`: the exported weight reproduced the animal baseline the old
+   * export used, not a measurement). Surfaced as advisory issues; cleared by the user's edit.
+   */
+  review?: string[];
+}
+
+/**
+ * The most recent download of a day's YAML. "Changed since download" is DERIVED by comparing the
+ * current effective export (filename + bytes) with `contentHash` — a stored boolean cannot know
+ * about later edits (finding F6). A download is not evidence of a successful conversion.
+ */
+export interface ExportReceipt {
+  /** The filename that was downloaded. */
+  filename: string;
+  /** ISO timestamp of the download. */
+  exportedAt: string;
+  /** SHA-256 (hex) of `filename + "\n" + yaml`. Empty when unknown (migrated legacy flag). */
+  contentHash: string;
+  /** App version that produced the file. */
+  appVersion: string;
+  /** Persisted-workspace schema version at export time. */
+  schemaVersion: number;
+  /** Whether the exact YAML bytes are kept in the side store (`receipt:<dayId>`) for inspection. */
+  yamlStored: boolean;
+  /**
+   * The day's and animal's `lastModified` at export time — a CACHE KEY only: while both are
+   * unchanged nothing that feeds the export has been edited, so the hash comparison can be skipped.
+   * The hash stays authoritative when either moved.
+   */
+  dayLastModified?: string;
+  animalLastModified?: string;
+  /**
+   * True when migrated from the pre-receipt `state.exported` flag: a download happened, but its
+   * content cannot be verified against the current export.
+   */
+  unverified?: boolean;
 }
 
 /** Behavioral task configuration. */
@@ -493,6 +612,12 @@ export interface TaskInstance {
   taskTypeId: string;
   /** Epoch numbers for this task on this day. */
   task_epochs: number[];
+  /**
+   * Day-owned camera override: the cameras THIS day actually used for the task, when they differ
+   * from the catalog definition's `camera_id` (a legitimate per-day difference — Spyglass assigns
+   * cameras per epoch, not per task identity). Absent ⇒ the definition's cameras.
+   */
+  camera_id?: Array<number | string>;
 }
 
 /**
@@ -635,7 +760,11 @@ export interface DayState {
   draft: boolean;
   /** true if passed validation pipeline. */
   validated: boolean;
-  /** true if YAML file generated. */
+  /**
+   * true if a YAML file was ever downloaded. Display derives freshness from
+   * {@link Day.exportReceipt} (a sticky boolean cannot see later edits); this flag is kept for the
+   * "has ever been downloaded" fact and for pre-receipt data.
+   */
   exported: boolean;
   /** ISO timestamp of export. */
   exportedAt?: string;

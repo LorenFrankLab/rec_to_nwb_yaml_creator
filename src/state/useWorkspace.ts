@@ -93,11 +93,19 @@ export function useWorkspace(initialState: InitialWorkspaceState | null = null) 
     [workspace]
   );
 
+  // Whole-workspace replacement (reader live-follow, take-over, backup/checkpoint restore). Goes
+  // through `commitWorkspace` so the ref is in lockstep for the synchronous write that follows.
+  const replaceWorkspace = useCallback(
+    (next: Workspace) => commitWorkspace(() => next),
+    [commitWorkspace]
+  );
+
   const persistence = useWorkspacePersistence({
     workspace,
     workspaceRef,
     initialDiscardRef,
     initialRecoverRef,
+    replaceWorkspace,
   });
 
   return { workspace, setWorkspace, workspaceActions, workspaceSelectors, persistence };

@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { DraftTextInput } from '../../components/ui/DraftFields';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faArrowDown, faArrowUp, faTrash } from '@fortawesome/free-solid-svg-icons';
 import { ConfirmDialog, useDialogBehavior } from '../../components/Modal';
@@ -1418,13 +1419,13 @@ function EpochDetailsPanel(p: EpochDetailsPanelProps) {
             <div className={styles.fieldRow}>
               <span className={styles.fieldLabel}>Power</span>
               <span>
-                <input className={styles.optoInput} type="number" aria-label={`Epoch ${row.epoch} power`} defaultValue={row.opto?.entry.power_in_mW ?? ''} onBlur={(e) => p.onOpto('power_in_mW', e.target.value)} /> mW
+                <DraftTextInput className={styles.optoInput} type="number" aria-label={`Epoch ${row.epoch} power`} value={String(row.opto?.entry.power_in_mW ?? '')} onCommit={(value) => p.onOpto('power_in_mW', value)} /> mW
               </span>
             </div>
             <div className={styles.fieldRow}>
               <span className={styles.fieldLabel}>Pulse</span>
               <span>
-                <input className={styles.optoInput} type="number" aria-label={`Epoch ${row.epoch} pulse`} defaultValue={row.opto?.entry.pulseLength ?? ''} onBlur={(e) => p.onOpto('pulseLength', e.target.value)} /> ms
+                <DraftTextInput className={styles.optoInput} type="number" aria-label={`Epoch ${row.epoch} pulse`} value={String(row.opto?.entry.pulseLength ?? '')} onCommit={(value) => p.onOpto('pulseLength', value)} /> ms
               </span>
             </div>
           </section>

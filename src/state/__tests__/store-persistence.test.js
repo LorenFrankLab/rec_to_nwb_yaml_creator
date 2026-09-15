@@ -16,6 +16,15 @@ import {
 } from '../persistence';
 import { makeTestWorkspace } from '../../__tests__/helpers/test-fixtures';
 
+/**
+ * Count writes to the workspace blob key only (each save also stamps a small meta key).
+ *
+ * @param {import('vitest').MockInstance} setItemSpy - The `localStorage.setItem` spy.
+ * @returns {number}
+ */
+const blobWrites = (setItemSpy) =>
+  setItemSpy.mock.calls.filter(([key]) => key === WORKSPACE_STORAGE_KEY).length;
+
 const seedBlob = (workspace, schemaVersion = WORKSPACE_SCHEMA_VERSION) => {
   window.localStorage.setItem(
     WORKSPACE_STORAGE_KEY,
@@ -96,7 +105,8 @@ describe('useStore persistence', () => {
       vi.advanceTimersByTime(600);
     });
 
-    expect(setItem).toHaveBeenCalledTimes(1);
+    // One blob write (the revision-stamp meta key is written alongside it, not counted here).
+    expect(blobWrites(setItem)).toBe(1);
   });
 
   it('surfaces a notice and clears the blob when a saved workspace is unusable', () => {
@@ -178,7 +188,7 @@ describe('useStore persistence', () => {
     });
     expect(result.current.persistence.saveError).toBeNull();
     expect(result.current.persistence.hasPendingWrite).toBe(false);
-    expect(setItem).toHaveBeenCalledTimes(2); // one failed attempt + one successful retry
+    expect(blobWrites(setItem)).toBe(2); // one failed attempt + one successful retry
   });
 
   it('hydrates a structurally-empty blob and surfaces a recovery notice naming the missing sections', () => {

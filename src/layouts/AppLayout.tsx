@@ -20,6 +20,7 @@ import { ShortcutsHelp } from '../components/ShortcutsHelp';
 import AnimalSwitcher from '../components/AnimalSwitcher';
 import AnimalDeleteDialog from '../components/AnimalDeleteDialog';
 import AnimalProfileDialog from '../components/AnimalProfileDialog';
+import ReadOnlyTabBanner from '../components/ReadOnlyTabBanner';
 import { getAnimalDayIds } from '../state/workspaceSelectors';
 import { Home } from '../pages/Home';
 import { AnimalWorkspace } from '../pages/AnimalWorkspace';
@@ -111,7 +112,9 @@ export function AppLayout() {
   // the guard must stay armed even once the pending-write debounce has settled
   // (including the saveNow path, which sets saveError without re-arming hasPendingWrite).
   const { persistence, model, actions } = useStoreContext();
-  useUnsavedWorkGuard(persistence.hasPendingWrite || !!persistence.saveError);
+  useUnsavedWorkGuard(
+    persistence.hasPendingWrite || !!persistence.saveError || persistence.hasPendingDrafts
+  );
 
   // Top object-selector lifecycle (Task 4.5). The switcher (chrome) delegates delete UP to here so
   // ONE shared type-to-confirm dialog serves it (and "+ New animal…" routes to the workspace's
@@ -376,6 +379,9 @@ export function AppLayout() {
       )}
 
       <ShortcutsHelp isOpen={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
+
+      {/* Single-writer ownership: a second tab is read-only and says so (self-hides for the writer). */}
+      {!isLegacyRoute && <ReadOnlyTabBanner />}
 
       {/* Notice when previously-saved workspace data was recovered or could not be restored, so a
           recovered/discarded workspace is never silent. The "Review recovered data" link routes to

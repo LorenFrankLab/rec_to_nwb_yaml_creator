@@ -14,6 +14,8 @@
 import { normalizeWorkspaceDevices } from '../utils/deviceNormalization';
 import { createDefaultWorkspace } from './workspaceUtils';
 import { migrateWorkspace, WORKSPACE_SCHEMA_VERSION } from './workspaceMigrations';
+import { WRITER_ID } from './writerLock';
+import { getBlob, putBlob } from './blobStore';
 
 // Re-exported so consumers keep importing the current schema version from the persistence layer
 // (its public home), while the migration registry owns its definition + the forward migrators.
@@ -94,6 +96,152 @@ function clearLoadedValidationDeferrals(workspace: Record<string, unknown>): Rec
 
 /** localStorage key for the persisted workspace blob. */
 export const WORKSPACE_STORAGE_KEY = 'rec_to_nwb_workspace_v1';
+/** localStorage key for the write-revision stamp `{ revision, writerId, savedAt }`. */
+export const WORKSPACE_META_KEY = 'rec_to_nwb_workspace_v1.meta';
+/**
+ * Side-store (IndexedDB, see `blobStore`) key holding the ORIGINAL bytes of a blob that could not
+ * be loaded (parse error / version mismatch / malformed), written BEFORE the main key is cleared so
+ * the recovery source is never discarded (review finding F8). `{ savedAt, reason, raw }`.
+ */
+export const WORKSPACE_QUARANTINE_KEY = 'rec_to_nwb_workspace_v1.quarantine';
+/**
+ * Side-store key holding the original bytes of the last blob that was forward-migrated, so a
+ * migration bug can be diagnosed and undone. `{ savedAt, reason: 'migration', schemaVersion, raw }`.
+ */
+export const WORKSPACE_PREMIGRATION_KEY = 'rec_to_nwb_workspace_v1.premigration';
+/**
+ * Side-store key of the last-known-good checkpoint: the most recent blob that (a) hydrated
+ * cleanly at session start or (b) was written by an EXPLICIT save. Distinct from the autosave
+ * key so a corrupting sequence of autosaves can be rolled back. `{ savedAt, schemaVersion, raw }`.
+ *
+ * The copies live in IndexedDB rather than localStorage on purpose: a representative long study
+ * (3 animals × 200 days, 128 channels) measures ~2.5 MiB per envelope, so four localStorage copies
+ * would not fit the smallest supported quota (5 MiB). See storageBudget.test.js.
+ */
+export const WORKSPACE_CHECKPOINT_KEY = 'rec_to_nwb_workspace_v1.checkpoint';
+
+/** A preserved copy of raw workspace bytes (quarantine / pre-migration / checkpoint). */
+export interface PreservedBlob {
+  /** ISO timestamp of when the copy was made. */
+  savedAt: string;
+  /** Why it was kept (quarantine reason, `migration`, or `checkpoint`). */
+  reason: string;
+  /** The stored `schemaVersion` of the copy when known. */
+  schemaVersion?: number;
+  /** The original bytes. */
+  raw: string;
+}
+
+/**
+ * Thrown by {@link saveWorkspace} when another tab has written a NEWER revision than this tab has
+ * seen — the write is refused so the other tab's work is not overwritten (finding F4).
+ */
+export class WorkspaceConflictError extends Error {
+  constructor(message = 'Another tab has saved a newer version of this workspace; this tab did not overwrite it.') {
+    super(message);
+    this.name = 'WorkspaceConflictError';
+  }
+}
+
+/** The revision stamp stored under {@link WORKSPACE_META_KEY}. */
+interface WorkspaceMeta {
+  revision: number;
+  writerId: string;
+  savedAt: string;
+}
+
+// The last revision this tab loaded or wrote. A save refuses to overwrite a newer one.
+let lastSeenRevision = 0;
+
+function readMeta(): WorkspaceMeta | null {
+  try {
+    const raw = window.localStorage.getItem(WORKSPACE_META_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Partial<WorkspaceMeta>;
+    if (typeof parsed.revision !== 'number') return null;
+    return {
+      revision: parsed.revision,
+      writerId: typeof parsed.writerId === 'string' ? parsed.writerId : '',
+      savedAt: typeof parsed.savedAt === 'string' ? parsed.savedAt : '',
+    };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * The write revision currently in storage (0 when none).
+ *
+ * @returns The stored revision.
+ */
+export function readWorkspaceRevision(): number {
+  return readMeta()?.revision ?? 0;
+}
+
+/**
+ * Adopt the revision currently in storage as "seen" — call after (re)hydrating from storage so a
+ * later save is not refused as a conflict.
+ */
+export function syncRevisionFromStorage(): void {
+  lastSeenRevision = readWorkspaceRevision();
+}
+
+/**
+ * Whether storage holds a revision this tab has not loaded (another tab saved since).
+ *
+ * @returns True when a newer revision exists.
+ */
+export function hasUnseenRevision(): boolean {
+  const meta = readMeta();
+  return meta != null && meta.revision !== lastSeenRevision && meta.writerId !== WRITER_ID;
+}
+
+// Side-store writes are asynchronous and fire-and-forget from the synchronous load/save paths; the
+// last one is tracked so callers (tests, the backup panel) can await settlement.
+let pendingPreserve: Promise<unknown> = Promise.resolve();
+
+function preserveRaw(key: string, raw: string, reason: string, schemaVersion?: number): void {
+  const record: PreservedBlob = { savedAt: new Date().toISOString(), reason, raw };
+  if (schemaVersion !== undefined) record.schemaVersion = schemaVersion;
+  pendingPreserve = pendingPreserve.then(() => putBlob(key, record)).catch(() => false);
+}
+
+/**
+ * Resolve once every queued side-store write has settled.
+ *
+ * @returns A promise that resolves after pending preservation writes.
+ */
+export function preservationSettled(): Promise<void> {
+  return pendingPreserve.then(() => undefined);
+}
+
+/**
+ * Read a preserved copy (quarantine / pre-migration / checkpoint) from the side store.
+ *
+ * @param key - One of the preserved-blob keys.
+ * @returns The record, or null when absent/unreadable.
+ */
+export async function readPreservedBlob(key: string): Promise<PreservedBlob | null> {
+  await preservationSettled();
+  const parsed = await getBlob<Partial<PreservedBlob>>(key);
+  if (!parsed || typeof parsed.raw !== 'string' || typeof parsed.savedAt !== 'string') return null;
+  return {
+    savedAt: parsed.savedAt,
+    reason: typeof parsed.reason === 'string' ? parsed.reason : '',
+    schemaVersion: typeof parsed.schemaVersion === 'number' ? parsed.schemaVersion : undefined,
+    raw: parsed.raw,
+  };
+}
+
+/**
+ * Write the last-known-good checkpoint from a blob string.
+ *
+ * @param blob - The serialized `{ schemaVersion, workspace }` envelope.
+ * @param schemaVersion - Its schema version.
+ */
+export function writeCheckpoint(blob: string, schemaVersion: number): void {
+  preserveRaw(WORKSPACE_CHECKPOINT_KEY, blob, 'checkpoint', schemaVersion);
+}
 
 /**
  * Reason codes returned alongside a discarded load, for a user-visible notice.
@@ -138,26 +286,61 @@ export function loadWorkspace(): LoadWorkspaceResult {
 
   if (raw == null) return null;
 
+  return hydrateRaw(raw, { preserve: true });
+}
+
+/**
+ * Turn a raw envelope string into a hydrated workspace (the body of {@link loadWorkspace}, shared
+ * with backup restore and checkpoint recovery). With `preserve`, an unusable blob is quarantined,
+ * a migrated blob's original bytes are kept, and a clean load refreshes the checkpoint + adopts the
+ * stored revision. Without it (a preview of a backup file) storage is not touched.
+ *
+ * @param raw - The serialized `{ schemaVersion, workspace }` envelope.
+ * @param options - `preserve`: whether to write the quarantine / pre-migration / checkpoint copies.
+ * @param options.preserve - See above.
+ * @returns The same result contract as {@link loadWorkspace} (never `null`).
+ */
+export function hydrateRaw(
+  raw: string,
+  { preserve }: { preserve: boolean }
+): Exclude<LoadWorkspaceResult, null> {
+  const discard = (reason: LoadDiscardReason): { workspace: null; discarded: LoadDiscardReason } => {
+    // Keep the ORIGINAL bytes before the caller clears the main key — the notice must never
+    // arrive after the only recovery source is gone.
+    if (preserve) preserveRaw(WORKSPACE_QUARANTINE_KEY, raw, reason);
+    return { workspace: null, discarded: reason };
+  };
+
   let parsed: unknown;
   try {
     parsed = JSON.parse(raw);
   } catch {
-    return { workspace: null, discarded: LOAD_DISCARD_REASON.PARSE_ERROR };
+    return discard(LOAD_DISCARD_REASON.PARSE_ERROR);
   }
 
   // Structural corruption (not a version problem) → MALFORMED. The workspace root must
   // be a plain object: an array (or other non-plain-object) is root corruption, not an
   // empty/partial object, and must not be laundered into a default-shaped workspace.
   if (!isPlainObject(parsed) || !isPlainObject(parsed.workspace)) {
-    return { workspace: null, discarded: LOAD_DISCARD_REASON.MALFORMED };
+    return discard(LOAD_DISCARD_REASON.MALFORMED);
   }
 
+  const storedVersion = parsed.schemaVersion;
   // Forward-migrate the blob from its stored schemaVersion up to the current version BEFORE any
   // device-normalize / shape-ensure, so downstream code only ever sees the current shape. A
   // version the registry can't reach (too old, too new, or non-integer) is a version mismatch.
+  // The ORIGINAL envelope is kept first so a migration can be inspected or undone.
+  if (preserve && storedVersion !== WORKSPACE_SCHEMA_VERSION) {
+    preserveRaw(
+      WORKSPACE_PREMIGRATION_KEY,
+      raw,
+      'migration',
+      typeof storedVersion === 'number' ? storedVersion : undefined
+    );
+  }
   const migrated = migrateWorkspace(parsed);
   if (migrated.discarded) {
-    return { workspace: null, discarded: LOAD_DISCARD_REASON.VERSION_MISMATCH };
+    return discard(LOAD_DISCARD_REASON.VERSION_MISMATCH);
   }
 
   // Device-normalize first, then guarantee the required top-level sections exist so a
@@ -169,9 +352,16 @@ export function loadWorkspace(): LoadWorkspaceResult {
   // A present-but-wrong-typed required section is corruption, not absence: discard
   // loudly rather than silently overwrite real data and mislabel it as "restored".
   if (corruptKeys.length > 0) {
-    return { workspace: null, discarded: LOAD_DISCARD_REASON.MALFORMED };
+    return discard(LOAD_DISCARD_REASON.MALFORMED);
   }
   const loadedWorkspace = clearLoadedValidationDeferrals(workspace);
+  if (preserve) {
+    // This blob hydrated: it is the session's last-known-good starting point.
+    if (storedVersion === WORKSPACE_SCHEMA_VERSION) {
+      writeCheckpoint(raw, WORKSPACE_SCHEMA_VERSION);
+    }
+    syncRevisionFromStorage();
+  }
   return missingKeys.length > 0
     ? { workspace: loadedWorkspace, recovered: { missingKeys } }
     : { workspace: loadedWorkspace };
@@ -183,7 +373,12 @@ export function loadWorkspace(): LoadWorkspaceResult {
  *
  * @param workspace - The workspace slice (animals + days + settings).
  */
-export function saveWorkspace(workspace: object): void {
+export function saveWorkspace(workspace: object, options: { checkpoint?: boolean } = {}): void {
+  // Refuse to overwrite a revision this tab has not seen: another tab wrote since we loaded. The
+  // writer lease normally prevents this; the stamp is the belt to that suspender (finding F4).
+  if (hasUnseenRevision()) {
+    throw new WorkspaceConflictError();
+  }
   // Persisted AS-IS. Every write path normalizes device shape on the way in (`createAnimal` /
   // `updateAnimal` / snapshot / `updateDay`) and `loadWorkspace` normalizes + migrates on the way
   // back, so re-normalizing here was a deep clone + full channel-map walk per autosave tick that
@@ -191,6 +386,58 @@ export function saveWorkspace(workspace: object): void {
   // repair point; a blob that somehow persisted un-normalized is normalized on its next hydrate.
   const blob = JSON.stringify({ schemaVersion: WORKSPACE_SCHEMA_VERSION, workspace });
   window.localStorage.setItem(WORKSPACE_STORAGE_KEY, blob);
+  const revision = lastSeenRevision + 1;
+  const meta: WorkspaceMeta = { revision, writerId: WRITER_ID, savedAt: new Date().toISOString() };
+  window.localStorage.setItem(WORKSPACE_META_KEY, JSON.stringify(meta));
+  lastSeenRevision = revision;
+  // An explicit save is a deliberate "this is good" — refresh the last-known-good checkpoint.
+  if (options.checkpoint) writeCheckpoint(blob, WORKSPACE_SCHEMA_VERSION);
+}
+
+/**
+ * Serialize the current workspace as a portable backup envelope (what "Download workspace" writes).
+ * Includes incomplete days, configuration history and provenance verbatim — it is the persisted
+ * shape, not a YAML export.
+ *
+ * @param workspace - The workspace slice.
+ * @param appVersion - The app version string to stamp.
+ * @returns The JSON text of the backup file.
+ */
+export function serializeWorkspaceBackup(workspace: object, appVersion: string): string {
+  return JSON.stringify(
+    {
+      format: 'rec_to_nwb_workspace_backup',
+      formatVersion: 1,
+      appVersion,
+      exportedAt: new Date().toISOString(),
+      schemaVersion: WORKSPACE_SCHEMA_VERSION,
+      workspace,
+    },
+    null,
+    2
+  );
+}
+
+/**
+ * Parse a backup file (or a preserved raw envelope) WITHOUT touching storage, returning the
+ * hydrated workspace or the discard reason — the input to a restore preview.
+ *
+ * @param text - The file text: a backup envelope, or a bare `{ schemaVersion, workspace }` blob.
+ * @returns The hydration result.
+ */
+export function parseWorkspaceBackup(text: string): Exclude<LoadWorkspaceResult, null> {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+    return { workspace: null, discarded: LOAD_DISCARD_REASON.PARSE_ERROR };
+  }
+  // A backup envelope wraps the same `{ schemaVersion, workspace }` pair the storage key holds.
+  const envelope =
+    isPlainObject(parsed) && parsed.format === 'rec_to_nwb_workspace_backup'
+      ? { schemaVersion: parsed.schemaVersion, workspace: parsed.workspace }
+      : parsed;
+  return hydrateRaw(JSON.stringify(envelope), { preserve: false });
 }
 
 /**
@@ -202,4 +449,9 @@ export function clearWorkspace(): void {
   } catch {
     // No-op: nothing else to do if storage is unavailable.
   }
+}
+
+/** Test-only: forget the seen revision. */
+export function resetPersistenceForTests(): void {
+  lastSeenRevision = 0;
 }
