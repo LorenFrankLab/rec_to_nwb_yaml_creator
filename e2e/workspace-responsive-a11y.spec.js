@@ -112,16 +112,25 @@ test.describe('Responsive + a11y smoke — navigation reachable at both viewport
         'Object-selector trigger',
       );
 
-      // --- AnimalView section-nav tabs: the landmark + each tab is visible and not clipped. At
-      //     ≤1040px the nav STACKS full-width above the panel; every tab still renders. ---
+      // --- AnimalView section-nav: the landmark is visible and not clipped. At ≤720px the long
+      //     list collapses into ONE compact native select (every section still reachable); wider,
+      //     each tab link renders (≤1040px stacks the nav full-width above the panel). ---
       const sectionNav = page.getByRole('navigation', { name: 'Animal sections' });
       await expect(sectionNav).toBeVisible();
-      for (const name of ['Recording Days', 'Validation & Export', 'Electrode Groups', 'Cameras']) {
-        await expectWithinViewportHorizontally(
-          sectionNav.getByRole('link', { name: new RegExp(`^${name}`) }),
-          viewport,
-          `Section-nav "${name}" tab`,
-        );
+      if (viewport.width <= 720) {
+        const select = sectionNav.getByRole('combobox', { name: 'Section' });
+        await expectWithinViewportHorizontally(select, viewport, 'Compact section selector');
+        for (const name of ['Recording Days', 'Validation & Export', 'Electrode Groups', 'Cameras']) {
+          await expect(select.locator('option', { hasText: name })).toHaveCount(1);
+        }
+      } else {
+        for (const name of ['Recording Days', 'Validation & Export', 'Electrode Groups', 'Cameras']) {
+          await expectWithinViewportHorizontally(
+            sectionNav.getByRole('link', { name: new RegExp(`^${name}`) }),
+            viewport,
+            `Section-nav "${name}" tab`,
+          );
+        }
       }
     });
   }
@@ -195,7 +204,6 @@ test.describe('Responsive + a11y smoke — epoch cards and details on a narrow p
     await page.setViewportSize({ width: viewport.width, height: viewport.height });
     await resetWorkspace(page);
     await seedAndOpen(page, buildConfiguredWorkspaceBlob(), `/#/day/${DAY_ID}`);
-    await page.getByRole('button', { name: /^Tasks & Files\b/i }).click();
 
     const opener = page.getByRole('button', { name: 'Show epoch 1 details' });
     const epochRow = page.getByRole('row').filter({ has: opener });

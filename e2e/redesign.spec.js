@@ -61,8 +61,8 @@ test.describe('redesign — core flow', () => {
     await expect(page).toHaveURL(new RegExp(`#/day/${DAY_ID}`));
     await expect(page.getByRole('heading', { level: 1, name: /Day Editor/ })).toBeVisible();
 
-    // Tasks & Files section: drill into an epoch via its edit button (keyboard-operable disclosure button).
-    await page.getByRole('button', { name: /^Tasks & Files\b/i }).click();
+    // The epoch editor lives on the daily log (the first screen): drill into an epoch via its edit
+    // button (keyboard-operable disclosure button).
     const caret = page.getByRole('button', { name: /Show epoch .* details/i }).first();
     await expect(caret).toBeVisible();
     await expect(caret).toHaveAttribute('aria-expanded', 'false');
@@ -123,7 +123,7 @@ test.describe('redesign — recovery review', () => {
 });
 
 test.describe('redesign — Day Editor IA layout', () => {
-  test('1280x720 renders the focused six-section Day Editor rail', async ({ page }) => {
+  test('1280x720 renders the focused five-section Day Editor rail', async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 720 });
     await seedAndOpen(page, buildConfiguredWorkspaceBlob(), `/#/day/${DAY_ID}`);
 
@@ -134,8 +134,7 @@ test.describe('redesign — Day Editor IA layout', () => {
     }
 
     const sectionLabels = [
-      'Daily Setup',
-      'Tasks & Files',
+      'Daily log',
       'Recording Setup',
       'Failed Channels',
       'DIO Wiring',
@@ -155,7 +154,7 @@ test.describe('redesign — Day Editor IA layout', () => {
         };
       }),
     );
-    expect(railMetrics).toHaveLength(6);
+    expect(railMetrics).toHaveLength(5);
     for (let i = 0; i < railMetrics.length; i += 1) {
       expect(railMetrics[i].width, `rail button ${i + 1} fills the rail`).toBeGreaterThan(180);
       expect(railMetrics[i].height, `rail button ${i + 1} label should not wrap`).toBeLessThanOrEqual(52);
@@ -171,12 +170,13 @@ test.describe('redesign — Day Editor IA layout', () => {
       }
     }
 
-    const dailySetup = page
+    const dailyLog = page
       .locator('.day-editor-section')
-      .filter({ has: page.getByRole('heading', { level: 2, name: 'Daily Setup' }) });
-    await expect(dailySetup.getByRole('heading', { name: 'File location' })).toBeVisible();
-    await expect(dailySetup.getByRole('heading', { name: 'Required descriptions' })).toBeVisible();
-    await expect(dailySetup.getByRole('heading', { name: 'Session measurement' })).toBeVisible();
+      .filter({ has: page.getByRole('heading', { level: 2, name: 'Daily log' }) });
+    await expect(dailyLog.getByRole('heading', { name: 'Weight' })).toBeVisible();
+    await expect(dailyLog.getByRole('heading', { name: 'Team' })).toBeVisible();
+    await expect(dailyLog.getByRole('heading', { level: 2, name: 'Epochs' })).toBeVisible();
+    await expect(dailyLog.getByTestId('day-provenance')).toBeVisible();
   });
 });
 
@@ -211,7 +211,6 @@ test.describe('redesign — accessibility (axe)', () => {
 test.describe('redesign — keyboard operability', () => {
   test('the epoch edit button is a keyboard-operable disclosure', async ({ page }) => {
     await seedAndOpen(page, buildConfiguredWorkspaceBlob(), `/#/day/${DAY_ID}`);
-    await page.getByRole('button', { name: /^Tasks & Files\b/i }).click();
 
     const caret = page.getByRole('button', { name: /Show epoch .* details/i }).first();
     await expect(caret).toHaveAttribute('aria-expanded', 'false');

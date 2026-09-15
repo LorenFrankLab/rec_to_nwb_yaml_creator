@@ -35,7 +35,7 @@ import {
   DAY_ID,
 } from './helpers/workspace';
 
-const EXPECTED_FILENAME = '06222023_remy_metadata.yml';
+const EXPECTED_FILENAME = '20230622_remy_metadata.yml';
 
 /**
  * A COMPLETE, converter-valid optogenetics implant for the realistic `remy` animal.
@@ -230,7 +230,6 @@ test.describe('Optogenetics export gating and the two-layer opto model', () => {
     blob.workspace.days[DAY_ID].fs_gui_yamls = [];
     await seedAndOpen(page, blob, `/#/day/${DAY_ID}`);
 
-    await page.getByRole('button', { name: /^Tasks & Files\b/ }).click();
     await expect(page.getByRole('heading', { level: 2, name: 'Epochs' })).toBeVisible();
 
     // The compact grid signals opto only for an implanted animal; its numeric controls live in the

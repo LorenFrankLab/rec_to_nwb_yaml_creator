@@ -46,7 +46,7 @@ test.describe('Timeline-aware Add Recording Days calendar', () => {
     await expect(page.getByText(currentMonthYear)).toHaveCount(0);
 
     // "Today" is preserved as an explicit jump to the current wall-clock month.
-    await page.getByRole('button', { name: 'Today' }).click();
+    await page.getByRole('button', { name: 'Today', exact: true }).click();
     await expect(page.getByText(currentMonthYear)).toBeVisible();
   });
 
@@ -93,7 +93,7 @@ test.describe('Shared day-lifecycle vocabulary', () => {
     await expect(page.getByText('What do these statuses mean?')).toBeVisible();
   });
 
-  test('a persisted-validated day reads "Validated" (not "Ready to export") on both surfaces', async ({
+  test('a saved-validated day reads "Ready to export" (a saved validation is not a separate step) on both surfaces', async ({
     page,
   }) => {
     // Persist the validation outcome onto the seeded day (what "Validate All" writes). Spread the
@@ -110,8 +110,8 @@ test.describe('Shared day-lifecycle vocabulary', () => {
     // Validation Summary.
     await seedAndOpen(page, blob, '/#/validation');
     const summaryRow = page.getByTestId(`day-row-${DAY_ID}`);
-    await expect(summaryRow.getByText('Validated')).toBeVisible();
-    await expect(summaryRow.getByText('Ready to export')).toHaveCount(0);
+    await expect(summaryRow.getByText('Ready to export')).toBeVisible();
+    await expect(summaryRow.getByText('Validated')).toHaveCount(0);
 
     // Animal Days list — the SAME word for the SAME state (scope to the day's list row so the
     // legend's reference copy isn't matched).
@@ -121,7 +121,7 @@ test.describe('Shared day-lifecycle vocabulary', () => {
     // The Animal Days list is a table; scope to the day's row (same `day-row-<id>` testid the
     // Validation Summary uses) so the legend's reference copy of the word isn't matched.
     const dayItem = page.getByTestId(`day-row-${DAY_ID}`);
-    await expect(dayItem.getByText('Validated')).toBeVisible();
-    await expect(dayItem.getByText('Ready to export')).toHaveCount(0);
+    await expect(dayItem.getByText('Ready to export')).toBeVisible();
+    await expect(dayItem.getByText('Validated')).toHaveCount(0);
   });
 });

@@ -210,7 +210,9 @@ test.describe('Workspace persistence & recovery', () => {
     ).toBeVisible();
 
     // Edit a day-owned field so a workspace change triggers the debounced autosave, whose
-    // write will throw. Editing Session Description → updateDay → autosave.
+    // write will throw. Editing Session Description (inside the daily log's collapsed
+    // "Descriptions…" group) → updateDay → autosave.
+    await page.getByText('Descriptions, data folder & search terms').click();
     const sessionDescription = page.getByRole('textbox', { name: 'Session Description *' });
     await expect(sessionDescription).toBeVisible();
     await sessionDescription.fill('Edited so autosave fires and fails');

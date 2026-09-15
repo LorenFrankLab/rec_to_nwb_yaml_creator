@@ -26,7 +26,7 @@ import {
   DAY_ID,
 } from './helpers/workspace';
 
-const EXPECTED_FILENAME = '06222023_remy_metadata.yml';
+const EXPECTED_FILENAME = '20230622_remy_metadata.yml';
 
 test.describe('Browser export of a configured recording day', () => {
   test.beforeEach(async ({ page }) => {

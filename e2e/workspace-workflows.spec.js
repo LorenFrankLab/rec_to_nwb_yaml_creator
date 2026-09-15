@@ -19,7 +19,7 @@ import {
   DAY_ID,
 } from './helpers/workspace';
 
-const EXPECTED_FILENAME = '06222023_remy_metadata.yml';
+const EXPECTED_FILENAME = '20230622_remy_metadata.yml';
 
 /**
  * Clone the seeded day into a SECOND recording day under a new id/date, register it on the
@@ -68,8 +68,8 @@ test.describe('Workspace export workflows', () => {
     // animal-level shared setup, not re-entered per day. Assert the day's grouped rail exposes only
     // day-scoped sections and NOT an electrode-group or camera configuration section.
     const dayNav = page.getByRole('navigation', { name: 'Day editor sections' });
-    await expect(dayNav.getByRole('button', { name: /^Daily Setup\b/ })).toBeVisible();
-    await expect(dayNav.getByRole('button', { name: /^Tasks & Files\b/ })).toBeVisible();
+    await expect(dayNav.getByRole('button', { name: /^Daily log\b/ })).toBeVisible();
+    await expect(dayNav.getByRole('button', { name: /^Recording Setup\b/ })).toBeVisible();
     await expect(dayNav.getByRole('button', { name: /^Recording Setup\b/ })).toBeVisible();
     await expect(dayNav.getByRole('button', { name: /^Failed Channels\b/ })).toBeVisible();
     await expect(dayNav.getByRole('button', { name: /^DIO Wiring\b/ })).toBeVisible();
@@ -163,8 +163,8 @@ test.describe('Workspace export workflows', () => {
     await batch.getByRole('button', { name: 'Confirm export (2)' }).click();
     await expect(page.getByRole('status').filter({ hasText: 'Exported 2 files.' })).toBeVisible();
     await expect.poll(() => downloads.map((d) => d.suggestedFilename()).sort()).toEqual([
-      '06222023_remy_metadata.yml',
-      '06232023_remy_metadata.yml',
+      '20230622_remy_metadata.yml',
+      '20230623_remy_metadata.yml',
     ]);
   });
 

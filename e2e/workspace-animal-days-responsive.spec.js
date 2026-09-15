@@ -47,7 +47,7 @@ for (const viewport of [NARROW, DESKTOP]) {
       // Primary action + carry-forward toggle are both visible and within the viewport.
       const addButton = page.getByRole('button', { name: 'Add Recording Days' });
       await expect(addButton).toBeVisible();
-      const toggle = page.getByRole('checkbox', { name: /start each new day from the last day/i });
+      const toggle = page.getByRole('checkbox', { name: /start each new day from the nearest earlier day/i });
       await expect(toggle).toBeVisible();
       const addBox = await addButton.boundingBox();
       expect(addBox.x).toBeGreaterThanOrEqual(0);

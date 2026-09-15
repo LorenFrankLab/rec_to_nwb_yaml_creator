@@ -33,7 +33,7 @@ export const STORAGE_KEY = 'rec_to_nwb_workspace_v1';
  * the export's inline-compat path until a builder seeds catalog `taskInstances`.)
  * @type {number}
  */
-export const SCHEMA_VERSION = 3;
+export const SCHEMA_VERSION = 4;
 
 /**
  * The animal id seeded by {@link buildConfiguredWorkspaceBlob} (via

@@ -129,11 +129,11 @@ test.describe('Fail-closed export gate + repair navigation', () => {
       page.getByRole('heading', { level: 1, name: `Day Editor: ${ANIMAL_ID} - 2023-06-22` }),
     ).toBeVisible();
 
-    // Alt+←/→ walks the six grouped sections. Reaching Fix & Export by keyboard still lands
+    // Alt+←/→ walks the five grouped sections. Reaching Fix & Export by keyboard still lands
     // on the same gated surface as the header action.
-    await expect(page.getByRole('heading', { level: 2, name: 'Daily Setup' })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 2, name: 'Daily log' })).toBeVisible();
     const exportHeading = page.getByRole('heading', { level: 2, name: 'Export — 2023-06-22' });
-    for (let i = 0; i < 5; i += 1) {
+    for (let i = 0; i < 4; i += 1) {
       await page.keyboard.press('Alt+ArrowRight');
     }
     await expect(exportHeading).toBeVisible();
