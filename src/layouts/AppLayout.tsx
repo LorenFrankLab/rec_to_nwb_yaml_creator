@@ -8,7 +8,7 @@
  */
 
 import { lazy, Suspense, useEffect, useRef, useState } from 'react';
-import type { MouseEvent as ReactMouseEvent } from 'react';
+import type { MouseEvent as ReactMouseEvent, ReactNode } from 'react';
 import { useHashRouter } from '../hooks/useHashRouter';
 import type { RouteInfo } from '../hooks/useHashRouter';
 import { isFeatureEnabled } from '../featureFlags';
@@ -54,11 +54,31 @@ const LegacyFormView = lazy(() =>
 );
 
 /**
- * How long a route change keeps looking for the new page's `#main-content` before giving up.
- * Generous enough for a route chunk on a slow connection, bounded so a failed load cannot leave a
- * frame loop running.
+ * Moves keyboard / screen-reader focus to the routed page's `#main-content` when that page is
+ * actually on screen.
+ *
+ * This is rendered INSIDE the Suspense boundary on purpose. Focus cannot be driven from a timer in
+ * AppLayout: when an already-visible boundary re-suspends, React keeps the PREVIOUS page mounted but
+ * hidden and shows the fallback, so `#main-content` still resolves during the load — to the OLD
+ * page. Focusing that node is a no-op in a browser (it is not rendered) and leaves focus stranded on
+ * whatever the user clicked. Being inside the boundary means this component's effect is suspended
+ * along with the page and runs when the page is revealed, which is exactly the moment focus should
+ * move. (Same shape as DayEditorFrame's own focus effect.)
+ *
+ * `token` changes only on a focus-worthy route change (see AppLayout's route effect); it starts at 0,
+ * which is the initial render — a fresh page load must not steal focus.
+ *
+ * @param root0 - Component props.
+ * @param root0.token - Bumped by AppLayout for each route change that should move focus.
+ * @param root0.children - The routed page.
  */
-const ROUTE_FOCUS_DEADLINE_MS = 10000;
+function RouteFocus({ token, children }: { token: number; children: ReactNode }) {
+  useEffect(() => {
+    if (token === 0) return;
+    document.getElementById('main-content')?.focus();
+  }, [token]);
+  return <>{children}</>;
+}
 
 /**
  * Get view name for screen reader announcements.
@@ -190,7 +210,10 @@ export function AppLayout() {
     onAdd: () => emitStepperShortcut('add'),
   });
 
-  // Focus management on route changes
+  // Focus management on route changes. AppLayout decides WHETHER a route change should move focus;
+  // RouteFocus (inside the Suspense boundary) decides WHEN, because the new page may still be
+  // downloading. 0 means "nothing to focus yet" — the initial page load must not steal focus.
+  const [routeFocusToken, setRouteFocusToken] = useState(0);
   useEffect(() => {
     const prev = previousRoute.current;
     previousRoute.current = currentRoute;
@@ -205,28 +228,17 @@ export function AppLayout() {
       currentRoute.view === 'day' &&
       prev.view === 'day' &&
       prev.params.id !== currentRoute.params.id;
-    if (!(viewChanged || dayChanged)) return undefined;
+    if (!(viewChanged || dayChanged)) return;
 
-    // Announce FIRST and unconditionally: the live region belongs to the eager shell, so the
+    // Announce straight away and unconditionally: the live region belongs to the eager shell, so the
     // announcement must not be gated on the routed page (a lazily-loaded chunk) having arrived.
     announceRouteChange(currentRoute);
 
-    // Then move focus to the new page's main landmark. On a route's FIRST visit that element does
-    // not exist yet — its chunk is still downloading and the Suspense fallback is on screen — so
-    // look again on later frames instead of silently skipping the focus move. The deadline keeps a
-    // route that never mounts (or a chunk that fails to load) from retrying forever.
-    let frameId = 0;
-    const deadline = Date.now() + ROUTE_FOCUS_DEADLINE_MS;
-    const focusMain = () => {
-      const main = document.getElementById('main-content');
-      if (main) {
-        main.focus();
-        return;
-      }
-      if (Date.now() < deadline) frameId = requestAnimationFrame(focusMain);
-    };
-    frameId = requestAnimationFrame(focusMain);
-    return () => cancelAnimationFrame(frameId);
+    // Focus is NOT moved from here. The routed page may still be downloading, and while an
+    // already-visible Suspense boundary re-suspends the previous page stays in the DOM (hidden) — so
+    // anything that looked up `#main-content` now would find the OLD page. RouteFocus, which lives
+    // inside the boundary, does the focusing when the new page is revealed.
+    setRouteFocusToken((token) => token + 1);
   }, [currentRoute]);
 
   /**
@@ -450,13 +462,15 @@ export function AppLayout() {
           fieldset so the boundary (and its fallback) is shared by both branches and does not remount
           when the legacy/workspace branch changes. */}
       <Suspense fallback={<RouteLoading />}>
-        {isLegacyRoute ? (
-          renderView()
-        ) : (
-          <fieldset className={styles.editScope} disabled={readOnly}>
-            {renderView()}
-          </fieldset>
-        )}
+        <RouteFocus token={routeFocusToken}>
+          {isLegacyRoute ? (
+            renderView()
+          ) : (
+            <fieldset className={styles.editScope} disabled={readOnly}>
+              {renderView()}
+            </fieldset>
+          )}
+        </RouteFocus>
       </Suspense>
 
       {/* Shared animal-delete dialog for the top object-selector (Task 4.5). Hosted once in chrome

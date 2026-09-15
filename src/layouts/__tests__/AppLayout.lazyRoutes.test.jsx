@@ -48,8 +48,11 @@ vi.mock('../../pages/Home', async () => {
 });
 
 vi.mock('../../pages/LegacyFormView', () => ({
+  // Mirrors the real LegacyFormView: a programmatically focusable `#main-content` that is NOT a
+  // <main> element. It has to be focusable for the "focus never lands on the hidden previous page"
+  // assertion below to be able to fail.
   LegacyFormView: () => (
-    <div id="main-content" data-testid="legacy-view">
+    <div id="main-content" tabIndex="-1" data-testid="legacy-view">
       Legacy
     </div>
   ),
@@ -104,23 +107,29 @@ describe('AppLayout — lazy route bundles', () => {
     await screen.findByTestId('legacy-view');
   });
 
-  it('announces the route change and focuses the new page even when its chunk arrives late', async () => {
+  it('announces immediately and focuses the NEW page once its chunk lands, never the hidden previous one', async () => {
     window.location.hash = '#/';
     render(<AppLayout />);
-    await screen.findByTestId('legacy-view');
+    const legacy = await screen.findByTestId('legacy-view');
 
     window.location.hash = '#/home';
     window.dispatchEvent(new HashChangeEvent('hashchange'));
 
-    // Home's chunk is still held open, so the outlet stays on the fallback across several frames —
-    // the window in which the old single-frame focus attempt found no `#main-content` at all.
+    // React keeps the PREVIOUS children mounted-but-hidden while an already-visible boundary
+    // re-suspends, so `#main-content` still resolves during this window — to the old page. Let a
+    // whole animation frame elapse inside it, which is when any frame-timed focus attempt would run
+    // and grab that stale node.
     await waitFor(() => expect(loadingStatus()).toHaveLength(1));
-    // The announcement lives in the eager shell, so it must NOT wait for the chunk.
+    await new Promise((resolve) => {
+      requestAnimationFrame(() => resolve());
+    });
+
+    // The announcement belongs to the eager shell, so it does NOT wait for the chunk.
     expect(document.getElementById('route-announcer')).toHaveTextContent(/home/i);
 
-    // Once the chunk lands, focus still moves to the new page's main landmark.
     homeChunk.release();
     const home = await screen.findByTestId('home-view');
     await waitFor(() => expect(document.activeElement).toBe(home));
+    expect(document.activeElement).not.toBe(legacy);
   });
 });
