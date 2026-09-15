@@ -55,6 +55,12 @@ interface PendingContextChange {
   oldValues: TaskContextOverrides;
   /** Which fields changed, for the dialog copy. */
   changedLabel: string;
+  /**
+   * Whether "keep earlier days as recorded" can be honoured: false when a changed field had NO old
+   * value, since absence is not expressible as an override (absent ⇒ follow the default). Those days
+   * WILL change, so the only honest routes are an explicit correction or cancel.
+   */
+  canKeepEarlierDays: boolean;
   /** The days that still follow the old default (they are what the choice is about). */
   affectedDays: Day[];
   /** Whether some of the animal's day records could not be loaded. */
@@ -153,6 +159,10 @@ export default function TaskTypesContainer({ animal, onFieldUpdate, onPendingEdi
    * environment nor the cameras, or because no loadable day still follows the old default (a day
    * that recorded its own values is unaffected either way).
    *
+   * A changed field whose OLD value was absent still needs the decision: those days cannot keep "no
+   * value" (absence means "follow the default"), so their exports change — a correction to history,
+   * which must be explicit and confirmed rather than silent.
+   *
    * @param taskType - The task type being edited.
    * @param definition - The edited definition.
    * @returns The pending scope decision, or null to save immediately.
@@ -163,9 +173,7 @@ export default function TaskTypesContainer({ animal, onFieldUpdate, onPendingEdi
   ): PendingContextChange | null => {
     const edited = definition as unknown as Record<string, unknown>;
     const current = taskType as unknown as Record<string, unknown>;
-    const changed = TASK_CONTEXT_FIELDS.filter(
-      (field) => !deepEqual(edited[field], current[field]) && current[field] !== undefined
-    );
+    const changed = TASK_CONTEXT_FIELDS.filter((field) => !deepEqual(edited[field], current[field]));
     if (changed.length === 0) return null;
 
     // Only days FOLLOWING the old default are affected; one that recorded its own value is not.
@@ -185,6 +193,7 @@ export default function TaskTypesContainer({ animal, onFieldUpdate, onPendingEdi
       definition,
       oldValues: oldValues as TaskContextOverrides,
       changedLabel: changedFieldsLabel(changed),
+      canKeepEarlierDays: changed.every((field) => current[field] !== undefined),
       affectedDays,
       hasUnresolvableDays,
     };
@@ -252,6 +261,7 @@ export default function TaskTypesContainer({ animal, onFieldUpdate, onPendingEdi
           date: day.date,
         }))}
         hasUnresolvableDays={pendingContext?.hasUnresolvableDays}
+        canKeepEarlierDays={pendingContext?.canKeepEarlierDays ?? true}
         onKeepEarlierDays={() => resolveContextChange(true)}
         onCorrectEarlierDays={() => resolveContextChange(false)}
         onCancel={() => {

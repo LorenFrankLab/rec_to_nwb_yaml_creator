@@ -7,9 +7,10 @@
  * `onFieldUpdate('taskTypes', nextArray)` (mirrors the camera catalog; no dedicated store action).
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { StoreProvider, useStoreContext } from '../../../../state/StoreContext';
+import { mergeDayMetadata } from '../../../../state/workspaceUtils';
 import TaskTypesContainer from '../TaskTypesContainer';
 
 /** The live workspace, republished on every store commit by {@link WorkspaceProbe}. */
@@ -131,22 +132,41 @@ describe('TaskTypesContainer — changing a task default that recording days alr
     camera_id: [],
   };
 
-  /** An animal with two recording days that both ran the task type, following its default. */
+  /**
+   * An animal with two recording days that both ran the task type, following its default. It
+   * carries a (minimal) configuration history so the days can actually be merged for export.
+   */
   const workspaceWithTwoDays = () => ({
     animals: {
-      sc38: { id: 'sc38', taskTypes: [TASK_TYPE], days: ['sc38-2023-06-06', 'sc38-2023-06-13'] },
+      sc38: {
+        id: 'sc38',
+        subject: { subject_id: 'sc38' },
+        taskTypes: [structuredClone(TASK_TYPE)],
+        days: ['sc38-2023-06-06', 'sc38-2023-06-13'],
+        configurationHistory: [
+          {
+            version: 1,
+            date: '2023-06-01',
+            description: 'Initial configuration',
+            devices: { electrode_groups: [], ntrode_electrode_group_channel_map: [] },
+            appliedToDays: [],
+          },
+        ],
+      },
     },
     days: {
       'sc38-2023-06-06': {
         id: 'sc38-2023-06-06',
         animalId: 'sc38',
         date: '2023-06-06',
+        configurationVersion: 1,
         taskInstances: [{ taskTypeId: 'tasktype-0', task_epochs: [2] }],
       },
       'sc38-2023-06-13': {
         id: 'sc38-2023-06-13',
         animalId: 'sc38',
         date: '2023-06-13',
+        configurationVersion: 1,
         taskInstances: [{ taskTypeId: 'tasktype-0', task_epochs: [2] }],
       },
     },
@@ -226,6 +246,53 @@ describe('TaskTypesContainer — changing a task default that recording days alr
     ]);
   });
 
+  it('after keeping earlier days, the NEXT recording day starts from the new default', async () => {
+    // The scope dialog promises the new default "applies to days created from now on". A new day
+    // carries the prior day's task references forward, so if the pinned OLD value rode along, the
+    // promise would be broken on the very next day.
+    const workspace = workspaceWithTwoDays();
+    let storeActions = null;
+    const Capture = () => {
+      storeActions = useStoreContext().actions;
+      return null;
+    };
+    render(
+      <StoreProvider initialState={{ workspace }}>
+        <TaskTypesContainer
+          animal={workspace.animals.sc38}
+          onFieldUpdate={(field, value) => storeActions.updateAnimal('sc38', { [field]: value })}
+        />
+        <Capture />
+        <WorkspaceProbe />
+      </StoreProvider>
+    );
+
+    await editEnvironment('HaightLeft');
+    await user.click(screen.getByRole('button', { name: /Keep earlier days as recorded/i }));
+
+    act(() => {
+      // The same call the Recording Days tab makes: carry forward from the nearest earlier day.
+      storeActions.createDay(
+        'sc38',
+        '2023-06-20',
+        { session_id: 'sc38_20230620' },
+        { carryForwardFromDayId: 'auto' }
+      );
+    });
+
+    const animal = liveWorkspace.animals.sc38;
+    const environmentOn = (dayId) =>
+      mergeDayMetadata(animal, liveWorkspace.days[dayId]).tasks[0].task_environment;
+    // The earlier days keep what they recorded…
+    expect(environmentOn('sc38-2023-06-06')).toBe('HaightRight');
+    expect(environmentOn('sc38-2023-06-13')).toBe('HaightRight');
+    // …and the new day follows the new default, with no override of its own.
+    expect(liveWorkspace.days['sc38-2023-06-20'].taskInstances).toEqual([
+      { taskTypeId: 'tasktype-0', task_epochs: [2] },
+    ]);
+    expect(environmentOn('sc38-2023-06-20')).toBe('HaightLeft');
+  });
+
   it('cancelling the scope choice returns to the form with the edit intact (no silent discard)', async () => {
     const workspace = workspaceWithTwoDays();
     const onFieldUpdate = vi.fn();
@@ -251,6 +318,43 @@ describe('TaskTypesContainer — changing a task default that recording days alr
 
     await editEnvironment('HaightLeft');
     expect(document.querySelectorAll('[aria-modal="true"]')).toHaveLength(1);
+  });
+
+  it('still asks when the type had NO value to keep — but only "correct" is possible', async () => {
+    // A task type with no cameras that gains them: earlier days cannot keep "no cameras" (absence
+    // is not expressible as an override), so their exports WILL change. That is a correction to
+    // history, and the global rule is that it must be explicit and confirmed — never silent.
+    const workspace = workspaceWithTwoDays();
+    delete workspace.animals.sc38.taskTypes[0].camera_id;
+    workspace.animals.sc38 = {
+      ...workspace.animals.sc38,
+      cameras: [{ id: 0, camera_name: 'overhead' }],
+    };
+    const onFieldUpdate = vi.fn();
+    renderWithStore(
+      <TaskTypesContainer animal={workspace.animals.sc38} onFieldUpdate={onFieldUpdate} />,
+      workspace
+    );
+
+    await user.click(screen.getByRole('button', { name: /Edit task type forkTrack/i }));
+    await user.click(screen.getByRole('checkbox', { name: /overhead/i }));
+    await user.click(screen.getByRole('button', { name: /Save task type/i }));
+
+    const dialog = screen.getByRole('alertdialog');
+    expect(dialog).toHaveTextContent(/2 recording days/i);
+    expect(dialog).toHaveTextContent(/cannot keep/i);
+    expect(onFieldUpdate).not.toHaveBeenCalled();
+    // The "keep as recorded" route is not offered, because it cannot be honoured.
+    expect(screen.queryByRole('button', { name: /Keep earlier days as recorded/i })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /Also correct those 2 days/i }));
+    expect(onFieldUpdate).toHaveBeenCalledWith('taskTypes', [
+      { ...TASK_TYPE, camera_id: [0] },
+    ]);
+    // No day was pinned — there was nothing recorded to preserve.
+    expect(liveWorkspace.days['sc38-2023-06-06'].taskInstances).toEqual([
+      { taskTypeId: 'tasktype-0', task_epochs: [2] },
+    ]);
   });
 
   it('saves straight away when no recording day follows the default', async () => {
