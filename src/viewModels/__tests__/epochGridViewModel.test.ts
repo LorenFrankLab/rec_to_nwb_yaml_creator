@@ -343,3 +343,78 @@ describe('buildEpochGrid — day-owned task context (F3)', () => {
     expect(grid.rows[0].camerasOverridden).toBe(false);
   });
 });
+
+describe('buildEpochGrid — statescript three-state (F6)', () => {
+  const animal = {
+    id: 'r',
+    subject: { subject_id: 'r' },
+    taskTypes: [
+      { id: 'tasktype-0', task_name: 'Sleep', task_description: 'sleep' },
+      { id: 'tasktype-1', task_name: 'Run', task_description: 'run' },
+    ],
+  };
+
+  /**
+   * A catalog day where Sleep owns epoch 1 and Run owns epoch 2.
+   *
+   * @param date - The day's ISO date.
+   * @param files - Its `associated_files`.
+   * @param configurationVersion - Its probe-configuration version.
+   * @returns The day record.
+   */
+  const dayOn = (date: string, files: LooseRow[] = [], configurationVersion = 1) => ({
+    id: `r-${date}`,
+    animalId: 'r',
+    date,
+    configurationVersion,
+    taskInstances: [
+      { taskTypeId: 'tasktype-0', task_epochs: [1] },
+      { taskTypeId: 'tasktype-1', task_epochs: [2] },
+    ],
+    associated_files: files,
+    associated_video_files: [],
+    fs_gui_yamls: [],
+    state: {},
+  });
+
+  const statescript = (epoch: number) => ({
+    name: `statescript_${epoch}`,
+    description: 'Statescript Log',
+    path: `/data/r/20230622_r_0${epoch}.stateScriptLog`,
+    task_epochs: epoch,
+  });
+
+  it('a run epoch with no statescript is expected; a first-ever sleep epoch is not', () => {
+    const day = dayOn('2023-06-22');
+    const grid = buildEpochGrid(animal, day, [day]);
+    const state = Object.fromEntries(grid.rows.map((r) => [r.epoch, r.statescriptState]));
+    expect(state).toEqual({ 1: 'not_expected', 2: 'expected' });
+  });
+
+  it('a bound statescript reads linked, whatever the expectation', () => {
+    const day = dayOn('2023-06-22', [statescript(1), statescript(2)]);
+    const grid = buildEpochGrid(animal, day, [day]);
+    const state = Object.fromEntries(grid.rows.map((r) => [r.epoch, r.statescriptState]));
+    expect(state).toEqual({ 1: 'linked', 2: 'linked' });
+  });
+
+  it('a sleep epoch becomes expected once an earlier same-config day linked a sleep statescript', () => {
+    const prior = dayOn('2023-06-21', [statescript(1)]);
+    const day = dayOn('2023-06-22');
+    const grid = buildEpochGrid(animal, day, [prior, day]);
+    expect(grid.rows.find((r) => r.epoch === 1)?.statescriptState).toBe('expected');
+  });
+
+  it('a probe reconfiguration resets the sleep precedent', () => {
+    const prior = dayOn('2023-06-21', [statescript(1)], 1);
+    const day = dayOn('2023-06-22', [], 2);
+    const grid = buildEpochGrid(animal, day, [prior, day]);
+    expect(grid.rows.find((r) => r.epoch === 1)?.statescriptState).toBe('not_expected');
+  });
+
+  it('defaults to no sleep precedent when the caller passes no sibling days', () => {
+    const grid = buildEpochGrid(animal, dayOn('2023-06-22'));
+    expect(grid.rows.find((r) => r.epoch === 1)?.statescriptState).toBe('not_expected');
+    expect(grid.rows.find((r) => r.epoch === 2)?.statescriptState).toBe('expected');
+  });
+});

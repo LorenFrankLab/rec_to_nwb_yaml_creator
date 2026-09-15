@@ -33,6 +33,12 @@ import { resolveDayCatalogView } from '../state/dayTaskCatalog';
 import { deepEqual, hasOwn, resolveTaskInstances } from '../state/taskCatalog';
 import { duplicateTaskEpochs } from '../validation/taskEpochs';
 import { getIndexedStatescriptFiles } from '../domain/associatedFiles';
+import {
+  buildStatescriptExpectation,
+  isSleepTaskName,
+  statescriptStateFor,
+} from '../domain/statescriptExpectation';
+import type { StatescriptState } from '../domain/statescriptExpectation';
 import { isDerivedStatescript } from '../domain/fileNaming';
 import { isRecord } from '../utils/records';
 import type {
@@ -44,6 +50,7 @@ import type {
 
 /** Naming state of a row's statescript file (the collapsed Statescript cell axis). */
 export type StatescriptNaming = 'generated' | 'manual' | 'none';
+export type { StatescriptState } from '../domain/statescriptExpectation';
 /** Presence state of a row's video (the collapsed Video cell axis + the video 3-state). */
 export type VideoPresence = 'present' | 'missing' | 'absent';
 /** Epoch-row completeness scope (the EpochStatusPill vocabulary). */
@@ -101,6 +108,11 @@ export interface EpochGridRow {
   opto: EpochOptoRef | null;
   /** Collapsed Statescript cell axis: naming state. */
   statescriptNaming: StatescriptNaming;
+  /**
+   * Three-state statescript vocabulary — linked / expected (the amber warning) / not expected.
+   * A missing statescript NEVER blocks export; see {@link module:domain/statescriptExpectation}.
+   */
+  statescriptState: StatescriptState;
   /** Collapsed Video cell axis: presence state (3-state). */
   videoPresence: VideoPresence;
   /** Row status pill. */
@@ -176,7 +188,7 @@ function tagFromExistingFiles(statescript: EpochFileRef | null, videos: EpochVid
 
 /** Fallback tag prefix for new generated file names when the day has no matching files yet. */
 function tagShortCode(taskName: string): string {
-  return /\bsleep\b/i.test(taskName) ? 's' : 'r';
+  return isSleepTaskName(taskName) ? 's' : 'r';
 }
 
 /** The `YYYYMMDD` date token for derivation, from the day's `YYYY-MM-DD` date. */
@@ -192,9 +204,11 @@ function deriveDateToken(date: unknown): string {
  *
  * @param animal - The owning animal (its task-type catalog + subject + optogenetics).
  * @param day - The recording day (`taskInstances` if catalog-shaped, else inline `tasks`).
+ * @param animalDays - The animal's day records, used ONLY for the sleep-statescript carry-forward
+ *   precedent (`statescriptState`). Omitted ⇒ no precedent, so sleep epochs read `not_expected`.
  * @returns The epoch grid: rows + duplicate set + derivation context.
  */
-export function buildEpochGrid(animal: unknown, day: unknown): EpochGrid {
+export function buildEpochGrid(animal: unknown, day: unknown, animalDays: unknown[] = []): EpochGrid {
   const view = resolveDayCatalogView(animal, day);
   // The resolved task at index i corresponds to taskInstances[i] (the write-back target).
   const tasks: Task[] = resolveTaskInstances(view.taskTypes, view.taskInstances);
@@ -225,6 +239,13 @@ export function buildEpochGrid(animal: unknown, day: unknown): EpochGrid {
 
   // Each task's integer epochs (computed once); used for the join, the tag occurrence, and the union.
   const taskEpochs: number[][] = tasks.map((t) => normalizeEpochs(t.task_epochs));
+
+  // The sleep carry-forward precedent, resolved ONCE per grid (it scans the animal's earlier
+  // same-configuration days) and only when a sleep task actually owns an epoch here.
+  const hasSleepEpoch = tasks.some((t, i) => isSleepTaskName(t?.task_name) && taskEpochs[i].length > 0);
+  const expectation = hasSleepEpoch
+    ? buildStatescriptExpectation(animal, day, animalDays)
+    : { sleepExpected: false };
 
   const duplicateEpochs = [...duplicateTaskEpochs(tasks)].sort((a, b) => a - b);
   const duplicateSet = new Set(duplicateEpochs);
@@ -273,6 +294,8 @@ export function buildEpochGrid(animal: unknown, day: unknown): EpochGrid {
           ? 'generated'
           : 'manual';
 
+    const statescriptState = statescriptStateFor({ taskName, statescript }, expectation);
+
     const videoPresence: VideoPresence = absentSet.has(epoch)
       ? 'absent'
       : matchedVideos.length > 0
@@ -304,6 +327,7 @@ export function buildEpochGrid(animal: unknown, day: unknown): EpochGrid {
       videos: matchedVideos,
       opto,
       statescriptNaming,
+      statescriptState,
       videoPresence,
       status,
       duplicate: duplicateSet.has(epoch),
