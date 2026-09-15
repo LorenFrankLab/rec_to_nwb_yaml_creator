@@ -143,7 +143,9 @@ export default function CamerasContainer({ animal, onFieldUpdate, onPendingEdits
     // updates the named days.
     if (cameraModal.mode === 'edit' && cameraModal.camera) {
       const original = cameraModal.camera;
-      const affectedIds = findCameraAffectedDays(animalDays, original.id);
+      // Pass the animal so a CATALOG day (empty inline `tasks`, task camera refs on its
+      // `taskInstances` / the referenced task type) is scanned through its effective tasks.
+      const affectedIds = findCameraAffectedDays(animalDays, original.id, animal);
       // Conservative: if any day record couldn't be resolved, we can't rule out that it references
       // this camera, so don't take the silent fast-path — let the user decide (new vs correct).
       if ((affectedIds.length > 0 || hasUnresolvableDays) && cameraIdentityChanged(original, cameraData)) {

@@ -23,16 +23,17 @@
  * Pure; reuses the tested `addTaskType` id-minting so a converted day's new types never collide.
  */
 
-import { getAnimalTaskTypes, getDayTasks } from './workspaceSelectors';
+import { getAnimalTaskTypes, getDayTaskInstances, getDayTasks } from './workspaceSelectors';
 import { addTaskType } from './taskCatalogActions';
 import {
   deepEqual,
+  resolveTaskInstances,
   taskContextOverrides,
   taskDefinition,
   usableTaskName as usableName,
 } from './taskCatalog';
 import type { TaskContextOverrides } from './taskCatalog';
-import type { TaskType, TaskInstance } from './workspaceTypes';
+import type { Task, TaskType, TaskInstance } from './workspaceTypes';
 import { isRecord as isPlainRecord } from '../utils/records';
 
 /** A task-name match whose reusable definition differs between the inline day and animal catalog. */
@@ -261,4 +262,32 @@ export function preserveInlineTaskDefinitions(
   }
 
   return { taskTypes, taskInstances };
+}
+
+/**
+ * Resolve a day's EFFECTIVE tasks — the ONE answer to "which tasks did this day run", shared by the
+ * export merge (`mergeDayMetadata`) and by any reader that must see a day's task-borne data
+ * (e.g. the camera blast radius in {@link module:state/cameraUsage}).
+ *
+ * The catalog is the source of truth: when the day carries `taskInstances` (the v3 shape), each
+ * instance is resolved against the animal's `taskTypes` into an inline `{ task_name, task_description,
+ * task_environment, camera_id, task_epochs }` row — carrying ONLY those keys (no internal
+ * `id`/`taskTypeId`), so the export's `reorderKeys(t, TASK_ORDER)` emits byte-identical YAML for a
+ * migrated day (proven in {@link module:state/taskCatalog}). An old/unmigrated/imported day with no
+ * `taskInstances` falls back to inline `day.tasks` (compatibility for legacy and test fixtures). A
+ * catalog day with zero instances correctly resolves to `[]`.
+ *
+ * Reading raw `day.tasks` instead is the recurring bug: a catalog day's inline list is EMPTY, so the
+ * reader silently sees no task_environment and no task `camera_id` — neither the type's default nor
+ * the instance's per-day override.
+ *
+ * @param animal - The owning animal (its `taskTypes` catalog); read shape-safely.
+ * @param day - The recording day.
+ * @returns Inline task rows, in instance/inline order.
+ */
+export function resolveDayTasks(animal: unknown, day: unknown): Task[] {
+  const instances = getDayTaskInstances(day);
+  return instances === null
+    ? getDayTasks(day)
+    : resolveTaskInstances(getAnimalTaskTypes(animal), instances);
 }

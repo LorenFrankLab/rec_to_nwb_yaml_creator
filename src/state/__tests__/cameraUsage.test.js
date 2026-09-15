@@ -152,15 +152,63 @@ describe('findCameraAffectedDays (blast radius)', () => {
   ];
 
   it('returns the ids of days that reference a given camera', () => {
-    expect(findCameraAffectedDays(days, 1)).toEqual(['d1', 'd2']);
-    expect(findCameraAffectedDays(days, 0)).toEqual(['d1', 'd3']);
-    expect(findCameraAffectedDays(days, 2)).toEqual(['d4']);
+    expect(findCameraAffectedDays(days, 1, animal)).toEqual(['d1', 'd2']);
+    expect(findCameraAffectedDays(days, 0, animal)).toEqual(['d1', 'd3']);
+    expect(findCameraAffectedDays(days, 2, animal)).toEqual(['d4']);
   });
 
   it('returns [] for an unreferenced camera or bad inputs', () => {
-    expect(findCameraAffectedDays(days, 99)).toEqual([]);
-    expect(findCameraAffectedDays(days, null)).toEqual([]);
-    expect(findCameraAffectedDays(null, 1)).toEqual([]);
+    expect(findCameraAffectedDays(days, 99, animal)).toEqual([]);
+    expect(findCameraAffectedDays(days, null, animal)).toEqual([]);
+    expect(findCameraAffectedDays(null, 1, animal)).toEqual([]);
+  });
+});
+
+/**
+ * The blast radius must be computed from the day's EFFECTIVE tasks. A catalog-shaped day carries
+ * `taskInstances` and an EMPTY inline `tasks`, so its task camera references live on the referenced
+ * animal task TYPE (the default) or on the instance itself (the day's own override). Reading raw
+ * `day.tasks` would miss both, and editing that camera's identity would silently rewrite the day's
+ * export instead of offering the "new camera vs correct history" decision.
+ */
+describe('findCameraAffectedDays resolves catalog days through the task-type catalog', () => {
+  const catalogAnimal = {
+    cameras: animal.cameras,
+    taskTypes: [
+      { id: 'tasktype-0', task_name: 'Sleep', task_description: 'sleep box', camera_id: [0] },
+      { id: 'tasktype-1', task_name: 'Run', task_description: 'w-track' },
+    ],
+  };
+  const days = [
+    // Only reference to camera 0: the referenced task TYPE's default `camera_id`.
+    { id: 'type-default', tasks: [], taskInstances: [{ taskTypeId: 'tasktype-0', task_epochs: [1] }] },
+    // Only reference to camera 1: the INSTANCE's per-day override.
+    {
+      id: 'instance-override',
+      tasks: [],
+      taskInstances: [{ taskTypeId: 'tasktype-1', task_epochs: [2], camera_id: [1] }],
+    },
+    // A legacy inline day still behaves exactly as before.
+    { id: 'inline', tasks: [{ camera_id: [1] }] },
+    // Catalog day whose resolved task references no camera at all.
+    { id: 'no-ref', tasks: [], taskInstances: [{ taskTypeId: 'tasktype-1', task_epochs: [3] }] },
+  ];
+
+  it('returns a catalog day whose ONLY reference is an instance override', () => {
+    expect(findCameraAffectedDays(days, 1, catalogAnimal)).toEqual(['instance-override', 'inline']);
+  });
+
+  it("returns a catalog day whose ONLY reference is the task type's default camera_id", () => {
+    expect(findCameraAffectedDays(days, 0, catalogAnimal)).toEqual(['type-default']);
+  });
+
+  it('does not return a day that references the camera nowhere', () => {
+    expect(findCameraAffectedDays(days, 2, catalogAnimal)).toEqual([]);
+  });
+
+  it('keeps the explicit cameras_used checklist in the blast radius for a catalog day', () => {
+    const explicit = [{ id: 'explicit', tasks: [], taskInstances: [], cameras_used: [2] }];
+    expect(findCameraAffectedDays(explicit, 2, catalogAnimal)).toEqual(['explicit']);
   });
 });
 

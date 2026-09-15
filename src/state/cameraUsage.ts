@@ -25,6 +25,8 @@ import {
   getDayAssociatedVideos,
   getDayFsGuiYamls,
 } from './workspaceSelectors';
+import { resolveDayTasks } from './dayTaskCatalog';
+import { isRecord as isPlainRecord } from '../utils/records';
 import type { Camera } from './workspaceTypes';
 
 /**
@@ -180,19 +182,43 @@ export function resolveDayCameraUsage(animal: unknown, day: unknown): Camera[] {
 }
 
 /**
+ * A day with its inline `tasks` replaced by its EFFECTIVE tasks (catalog `taskInstances` resolved
+ * against the animal's `taskTypes`; an inline day keeps its own tasks). The videos / FsGUI refs and
+ * the explicit `cameras_used` checklist stay day-owned and are read from the day as-is. A non-record
+ * day is passed through untouched (the enumeration is already shape-tolerant).
+ *
+ * @param animal - The owning animal.
+ * @param day - The recording day.
+ * @returns The day, task-resolved.
+ */
+function withEffectiveTasks(animal: unknown, day: unknown): unknown {
+  if (!isPlainRecord(day)) return day;
+  return { ...day, tasks: resolveDayTasks(animal, day) };
+}
+
+/**
  * Blast-radius helper: the ids of the given days that reference `cameraId`. Used to enumerate the
  * affected days before an "apply this camera correction to the N days using it" action (the
  * immutable-once-referenced rule), and never folded into the single-day export helper above.
  *
+ * Each day is scanned through its EFFECTIVE tasks ({@link resolveDayTasks}), exactly as the export
+ * merge and the cameras-used checklist do: a catalog-shaped day has an EMPTY inline `tasks` list and
+ * carries its task camera refs on the referenced animal task TYPE (`camera_id` default) or on the
+ * instance itself (the day's per-day override). Reading raw `day.tasks` would miss both, so editing
+ * that camera's identity would skip the "new camera vs correct history" decision and silently
+ * rewrite the day's export. An inline (legacy/imported) day resolves to its own `tasks`, so its
+ * behavior is unchanged.
+ *
  * @param days - Recording-day records to scan.
  * @param cameraId - The camera id to look for.
+ * @param animal - The owning animal (its `taskTypes` catalog), required to resolve catalog days.
  * @returns The ids of days that reference the camera, in input order.
  */
-export function findCameraAffectedDays(days: unknown, cameraId: unknown): unknown[] {
+export function findCameraAffectedDays(days: unknown, cameraId: unknown, animal: unknown): unknown[] {
   const key = cameraKey(cameraId);
   if (key === null) return [];
   return (Array.isArray(days) ? days : [])
-    .filter((day) => referencedCameraKeys(day).has(key))
+    .filter((day) => referencedCameraKeys(withEffectiveTasks(animal, day)).has(key))
     .map((day) => day?.id)
     .filter((id) => id !== null && id !== undefined);
 }

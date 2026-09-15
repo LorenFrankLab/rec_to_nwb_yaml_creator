@@ -15,7 +15,7 @@ import {
 } from '../utils/deviceNormalization';
 import { resolveEffectiveDevices } from '../domain/deviceOverrideMerge';
 import { resolveDayCameraUsage } from './cameraUsage';
-import { resolveTaskInstances } from './taskCatalog';
+import { resolveDayTasks } from './dayTaskCatalog';
 import { isRecord as isPlainRecord } from '../utils/records';
 import {
   getConfigHistory,
@@ -24,10 +24,7 @@ import {
   getAnimalDevices,
   getAnimalExperimenters,
   getAnimalSubject,
-  getAnimalTaskTypes,
   getDaySession,
-  getDayTasks,
-  getDayTaskInstances,
   getDayAssociatedFiles,
   getDayAssociatedVideos,
   getDayBehavioralEvents,
@@ -43,7 +40,6 @@ import type {
   ElectrodeGroup,
   NtrodeMap,
   TechnicalParameters,
-  Task,
 } from './workspaceTypes';
 
 // Canonical key orders, mirroring the legacy `formData` shape in
@@ -292,28 +288,6 @@ export function resolveDayDataAcqDevice(animal: Animal, day: Day): unknown[] {
     );
   }
   return chosen ? [reorderKeys(chosen, DATA_ACQ_DEVICE_ORDER)] : [];
-}
-
-/**
- * Resolve a day's tasks for export, preferring the animal-level task-type catalog.
- *
- * The catalog is the source of truth: when the day carries `taskInstances` (the v3 shape), each
- * instance is resolved against the animal's `taskTypes` into an inline `{ task_name, task_description,
- * task_environment, camera_id, task_epochs }` row — carrying ONLY those keys (no internal
- * `id`/`taskTypeId`), so the downstream `reorderKeys(t, TASK_ORDER)` emits byte-identical YAML for a
- * migrated day (proven in {@link module:state/taskCatalog}). An old/unmigrated day with no
- * `taskInstances` falls back to inline `day.tasks` (compatibility for legacy and test fixtures). A
- * catalog day with zero instances correctly exports `tasks: []`.
- *
- * @param animal - The owning animal (its `taskTypes` catalog).
- * @param day - The recording day.
- * @returns Inline task rows for export, in instance/inline order.
- */
-function resolveDayTasks(animal: Animal, day: Day): Task[] {
-  const instances = getDayTaskInstances(day);
-  return instances === null
-    ? getDayTasks(day)
-    : resolveTaskInstances(getAnimalTaskTypes(animal), instances);
 }
 
 /**
