@@ -562,6 +562,9 @@ export function assertIsoDate(date: string): void {
   }
 }
 
+// The last stamp handed out (ms since epoch); see getCurrentTimestamp.
+let lastStampMs = 0;
+
 /**
  * Gets current ISO timestamp
  *
@@ -571,7 +574,13 @@ export function assertIsoDate(date: string): void {
  * getCurrentTimestamp() // => '2023-06-22T14:30:00.000Z'
  */
 export function getCurrentTimestamp(): string {
-  return new Date().toISOString();
+  // Strictly monotonic within a session: modification stamps are compared for identity (the export
+  // freshness fast path reads "nothing changed since the download" from an equal stamp), so two
+  // writes in the same millisecond must still get different stamps.
+  let next = Date.now();
+  if (next <= lastStampMs) next = lastStampMs + 1;
+  lastStampMs = next;
+  return new Date(next).toISOString();
 }
 
 /**

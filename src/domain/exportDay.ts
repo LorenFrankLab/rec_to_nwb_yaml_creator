@@ -25,7 +25,12 @@ import { isRecord } from '../utils/records';
 
 /** The store write the export needs (the lifecycle flag + the download receipt). */
 export interface ExportDayActions {
-  updateDay: (dayId: string, patch: { state?: Record<string, unknown>; exportReceipt?: ExportReceipt }) => void;
+  updateDay: (dayId: string, patch: { state: Record<string, unknown>; exportReceipt?: ExportReceipt }) => void;
+  /**
+   * Metadata-only acknowledgement that a receipt's bytes are durably stored (the store action of
+   * the same name). Optional so a caller without the store (tests) still exports.
+   */
+  acknowledgeReceiptStorage?: (dayId: string, identity: { contentHash: string; exportedAt: string }) => void;
 }
 
 /** Options controlling the export gate. */
@@ -98,9 +103,13 @@ export function exportDayFile(animal: Animal, day: Day, { actions, strict }: Exp
         state: { ...prevState, validationDeferred: false, deferredEpochs: [], exported: true, exportedAt: now },
         exportReceipt: receipt,
       });
+      // The acknowledgement is matched to THIS receipt's identity and changes no stamp, so an edit
+      // made meanwhile stays "Changed since download" and a newer receipt is never replaced.
       void putBlob(`${RECEIPT_YAML_KEY_PREFIX}${day.id}`, { filename: fileName, yaml: yamlBytes, exportedAt: now }).then(
         (stored) => {
-          if (stored) actions.updateDay(day.id as string, { exportReceipt: { ...receipt, yamlStored: true } });
+          if (stored) {
+            actions.acknowledgeReceiptStorage?.(day.id as string, { contentHash: receipt.contentHash, exportedAt: now });
+          }
         },
         () => undefined
       );

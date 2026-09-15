@@ -29,15 +29,20 @@ function formatWhen(iso: string): string {
  */
 export default function DownloadStatusCard({ animal, day, artifact }: DownloadStatusCardProps) {
   const fresh = exportFreshness(animal, day, artifact);
-  const [previous, setPrevious] = useState<{ filename: string; yaml: string } | null>(null);
+  // `undefined` = not looked up yet; `null` = looked up, the bytes are not in this browser.
+  const [previous, setPrevious] = useState<{ filename: string; yaml: string } | null | undefined>(undefined);
   const [diffOpen, setDiffOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
-    setPrevious(null);
+    setPrevious(undefined);
     if (fresh.status !== 'changed' || !fresh.receipt?.yamlStored) return undefined;
     getBlob<{ filename?: string; yaml?: string }>(`${RECEIPT_YAML_KEY_PREFIX}${day.id}`).then((stored) => {
-      if (cancelled || !stored || typeof stored.yaml !== 'string') return;
+      if (cancelled) return;
+      if (!stored || typeof stored.yaml !== 'string') {
+        setPrevious(null);
+        return;
+      }
       setPrevious({ filename: String(stored.filename ?? fresh.receipt?.filename ?? ''), yaml: stored.yaml });
     });
     return () => {
@@ -110,9 +115,12 @@ export default function DownloadStatusCard({ animal, day, artifact }: DownloadSt
           </pre>
         </details>
       )}
-      {!previous && receipt.yamlStored && <p className={styles.muted}>Loading the previous download for comparison…</p>}
-      {!receipt.yamlStored && (
-        <p className={styles.muted}>The previous download’s bytes were not kept, so a line-by-line comparison is not available.</p>
+      {previous === undefined && receipt.yamlStored && <p className={styles.muted}>Loading the previous download for comparison…</p>}
+      {(!receipt.yamlStored || previous === null) && (
+        <p className={styles.muted}>
+          The previous download’s bytes are not available in this browser, so a line-by-line comparison is not
+          possible (the content hash still shows it differs).
+        </p>
       )}
     </div>
   );

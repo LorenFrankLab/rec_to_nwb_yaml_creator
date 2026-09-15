@@ -552,6 +552,36 @@ export function createWorkspaceActions({
     },
 
     /**
+     * Acknowledge that a download receipt's YAML bytes were durably stored — for THAT receipt only
+     * (matched by content hash + export time). A metadata-only write: it touches no modification
+     * stamp, so an edit made while the store was still writing keeps reading "Changed since
+     * download", and a late acknowledgement of an older download never replaces a newer receipt.
+     *
+     * @param dayId - Day identifier.
+     * @param identity - The receipt to acknowledge.
+     * @param identity.contentHash - Its content hash.
+     * @param identity.exportedAt - Its export timestamp.
+     */
+    acknowledgeReceiptStorage: (dayId: string, identity: { contentHash: string; exportedAt: string }) => {
+      commitWorkspace((prev) => {
+        const day = prev.days[dayId];
+        const receipt = day?.exportReceipt;
+        if (
+          !receipt ||
+          receipt.contentHash !== identity.contentHash ||
+          receipt.exportedAt !== identity.exportedAt ||
+          receipt.yamlStored === true
+        ) {
+          return prev;
+        }
+        return {
+          ...prev,
+          days: { ...prev.days, [dayId]: { ...day, exportReceipt: { ...receipt, yamlStored: true } } },
+        };
+      });
+    },
+
+    /**
      * Record WHEN a probe configuration version became effective (the setup effective date — distinct
      * from any recording date and from the entry timestamp). Marks the date as known, so days from that
      * date on select it automatically and earlier days no longer need per-day confirmation.

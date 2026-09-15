@@ -25,6 +25,7 @@ describe('useStore public API contract', () => {
   it('exposes exactly the expected action keys', () => {
     const { result } = renderHook(() => useStore());
     expect(Object.keys(result.current.actions).sort()).toEqual([
+      'acknowledgeReceiptStorage',
       'addArrayItem',
       'applyAnimalDefaultsToDays',
       'createAnimal',
@@ -79,6 +80,7 @@ describe('useStore public API contract', () => {
       'loadNotice',
       'loadOutcome',
       'originalUnpreserved',
+      'preservationPending',
       'restoreWorkspace',
       'saveError',
       'saveNow',
