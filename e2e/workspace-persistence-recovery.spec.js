@@ -31,6 +31,8 @@ import {
   resetWorkspace,
   seedWorkspace,
   buildConfiguredWorkspaceBlob,
+  captureDownload,
+  createAnimalViaUI,
 } from './helpers/workspace.js';
 
 /**
@@ -158,6 +160,51 @@ test.describe('Workspace persistence & recovery', () => {
     // The notice can be dismissed.
     await page.getByRole('button', { name: 'Dismiss notice' }).click();
     await expect(notice).toHaveCount(0);
+  });
+
+  test('without IndexedDB, the discarded original is still downloadable after a reload (a durable localStorage copy)', async ({
+    page,
+  }) => {
+    await page.addInitScript(() => {
+      Object.defineProperty(window, 'indexedDB', { value: undefined, configurable: true });
+    });
+    await page.goto('/#/workspace');
+    await page.evaluate((key) => window.localStorage.setItem(key, '{corrupt original bytes'), STORAGE_KEY);
+    await page.reload();
+    await expect(page.getByRole('alert')).toContainText('copy of the original data was kept');
+    await expect
+      .poll(async () => page.evaluate((key) => window.localStorage.getItem(key), STORAGE_KEY))
+      .toBeNull();
+
+    // A fresh document (memory gone) still offers the original.
+    await page.reload();
+    await expect(page.getByRole('button', { name: 'Download original data' })).toBeVisible();
+    const { text } = await captureDownload(page, (p) => p.getByRole('button', { name: 'Download original data' }).click());
+    expect(text).toBe('{corrupt original bytes');
+  });
+
+  test('a leftover revision stamp from a closed tab never blocks the sole writer after a discard', async ({ page }) => {
+    await page.goto('/#/workspace');
+    await page.evaluate(
+      ([key, metaKey]) => {
+        window.localStorage.setItem(key, '{corrupt');
+        window.localStorage.setItem(metaKey, JSON.stringify({ revision: 9, writerId: 'closed-tab', savedAt: 'x' }));
+      },
+      [STORAGE_KEY, `${STORAGE_KEY}.meta`]
+    );
+    await page.reload();
+    await expect(page.getByRole('alert')).toContainText('could not be restored');
+    await expect
+      .poll(async () => page.evaluate((key) => window.localStorage.getItem(key), STORAGE_KEY))
+      .toBeNull();
+    await page.getByRole('button', { name: 'Dismiss notice' }).click();
+    // Create an animal: the autosave lands (revision 10), no "another tab has saved" conflict.
+    const { animalId } = await createAnimalViaUI(page, { subjectId: 'bean' });
+    await expect(page).toHaveURL(new RegExp(`#/animal/${animalId}/days`));
+    await expect
+      .poll(async () => page.evaluate((key) => JSON.parse(window.localStorage.getItem(`${key}.meta`) ?? '{}').revision, STORAGE_KEY))
+      .toBe(10);
+    await expect(page.getByRole('alert').filter({ hasText: /Could not save/ })).toHaveCount(0);
   });
 
   test('a malformed blob whose required section is wrong-typed is discarded, not laundered', async ({
