@@ -51,9 +51,14 @@ function sameEpochSet(a: number[], b: number[]): boolean {
   return b.every((value) => seen.has(value));
 }
 
-/** Build an instance with the given epochs (preserving its taskTypeId). */
+/**
+ * Build an instance with the given epochs, keeping everything else the occurrence owns — its
+ * `taskTypeId` AND any day-owned context override (`task_environment` / `camera_id`). Re-listing
+ * only the epochs would silently reset a day that recorded its own room/cameras back to the task
+ * type's default the first time the user moved or deleted an epoch.
+ */
 function withEpochs(instance: TaskInstance, task_epochs: number[]): TaskInstance {
-  return { taskTypeId: instance.taskTypeId, task_epochs };
+  return { ...instance, task_epochs };
 }
 
 /**

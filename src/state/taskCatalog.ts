@@ -15,9 +15,14 @@
  *  - Scan days in DATE order. The FIRST occurrence of a name defines the canonical `TaskType` from
  *    its definition (every field except the day-varying `task_epochs`).
  *  - A later occurrence whose definition MATCHES reuses the type (round-trip is byte-identical).
- *  - A later occurrence that CONFLICTS still references the canonical type (first-occurrence wins,
- *    for determinism) and is recorded as a `task_definition_reconciled` issue preserving the
- *    original vs canonical values — never silently dropped.
+ *  - A later occurrence that differs ONLY in CONTEXT — `task_environment` / `camera_id`, which
+ *    Spyglass puts on `TaskEpoch`, not on the `Task` identity — reuses the type and keeps what it
+ *    recorded as an instance override ({@link TASK_CONTEXT_FIELDS}). Nothing is lost, so there is
+ *    no reconciliation record; the round-trip stays byte-identical for that day too.
+ *  - A later occurrence that conflicts on IDENTITY (a different `task_description`, or any other
+ *    key) still references the canonical type (first-occurrence wins, for determinism) and is
+ *    recorded as a `task_definition_reconciled` issue preserving the original vs canonical values —
+ *    never silently dropped.
  *
  * {@link resolveTaskInstances} is the C1-preserving bridge back to inline `tasks[]`: it rebuilds an
  * entry from the referenced type's definition + the instance's epochs, carrying ONLY the inline-task
@@ -47,6 +52,20 @@ const EPOCHS_KEY = 'task_epochs';
 
 /** The Spyglass-identity fields surfaced in a reconciliation record (present-keys only). */
 const IDENTITY_FIELDS = ['task_description', 'task_environment', 'camera_id'] as const;
+
+/**
+ * The day-varying CONTEXT of a task occurrence: where it ran and which cameras recorded it. These
+ * belong to Spyglass's `TaskEpoch`, not to the `Task` identity, so the same task legitimately runs
+ * in a different room (or with different cameras) on a different day. A {@link TaskInstance} may
+ * carry either as an override: present ⇒ this day's actual value; absent ⇒ the type's default.
+ */
+export const TASK_CONTEXT_FIELDS = ['task_environment', 'camera_id'] as const;
+
+/** One of {@link TASK_CONTEXT_FIELDS}. */
+export type TaskContextField = (typeof TASK_CONTEXT_FIELDS)[number];
+
+/** Day-owned context values for a task occurrence (present keys only). */
+export type TaskContextOverrides = Partial<Record<TaskContextField, unknown>>;
 
 /** A reconciliation record as produced by {@link deriveAnimalTaskCatalog} (carries its source day). */
 export interface TaskReconciliationRecord extends TaskDefinitionReconciliation {
@@ -115,6 +134,41 @@ function identityFields(task: Record<string, unknown>): TaskDefinitionFields {
   return fields as TaskDefinitionFields;
 }
 
+/** Whether `key` is one of the day-overridable context fields. */
+function isContextField(key: string): key is TaskContextField {
+  return (TASK_CONTEXT_FIELDS as readonly string[]).includes(key);
+}
+
+/**
+ * Express `definition` as day-level CONTEXT overrides of the reusable `canonical` definition, or
+ * `null` when the difference is not expressible that way — which is the whole test for "did this
+ * day just run the same task somewhere else, or is it a different task?".
+ *
+ * Not expressible, and therefore a genuine identity conflict for the caller to reconcile:
+ *  - any non-context key differs (`task_description` above all — the Spyglass identity);
+ *  - a context key the canonical HAS is ABSENT from this occurrence. Absent means "use the
+ *    default", so there is no override that reproduces the absence; forcing one would invent a
+ *    value (e.g. `''`) and change the exported bytes.
+ *
+ * @param definition - This occurrence's reusable definition (no `task_epochs`).
+ * @param canonical - The canonical task type's definition (no `id`, no `task_epochs`).
+ * @returns The overrides that reproduce `definition` (empty when identical), or null.
+ */
+export function taskContextOverrides(
+  definition: Record<string, unknown>,
+  canonical: Record<string, unknown>
+): TaskContextOverrides | null {
+  const overrides: TaskContextOverrides = {};
+  for (const key of new Set([...Object.keys(definition), ...Object.keys(canonical)])) {
+    const inBoth = hasOwn(definition, key) && hasOwn(canonical, key);
+    if (inBoth && deepEqual(definition[key], canonical[key])) continue;
+    if (!isContextField(key)) return null;
+    if (!hasOwn(definition, key)) return null;
+    overrides[key] = structuredClone(definition[key]);
+  }
+  return overrides;
+}
+
 /** A usable catalog key: a non-empty, non-whitespace string `task_name`. */
 export function usableTaskName(value: unknown): value is string {
   return typeof value === 'string' && value.trim() !== '';
@@ -177,18 +231,25 @@ export function deriveAnimalTaskCatalog(days: unknown): DerivedTaskCatalog {
       const definition = taskDefinition(task);
       let type: TaskType;
 
+      let overrides: TaskContextOverrides = {};
       if (usableTaskName(name) && canonicalByName.has(name)) {
         const canonical = canonicalByName.get(name)!;
         type = canonical.type;
         if (!deepEqual(definition, canonical.definition)) {
-          // First occurrence wins; record the divergence so the user can review the original.
-          reconciliations.push({
-            dayId,
-            taskTypeId: type.id,
-            task_name: name,
-            original: identityFields(task),
-            canonical: identityFields(canonical.definition),
-          });
+          // A room/camera difference is what this day RECORDED — keep it on the instance. Anything
+          // else is an identity conflict: first occurrence wins, with the original preserved.
+          const context = taskContextOverrides(definition, canonical.definition);
+          if (context) {
+            overrides = context;
+          } else {
+            reconciliations.push({
+              dayId,
+              taskTypeId: type.id,
+              task_name: name,
+              original: identityFields(task),
+              canonical: identityFields(canonical.definition),
+            });
+          }
         }
       } else {
         type = createType(definition);
@@ -197,7 +258,7 @@ export function deriveAnimalTaskCatalog(days: unknown): DerivedTaskCatalog {
 
       // Preserve `task_epochs` by PRESENCE: a (malformed) task with no epochs must not gain a
       // spurious `task_epochs: undefined` on its instance — mirror how the definition copies keys.
-      const instance: Record<string, unknown> = { taskTypeId: type.id };
+      const instance: Record<string, unknown> = { taskTypeId: type.id, ...overrides };
       if (hasOwn(task, EPOCHS_KEY)) instance[EPOCHS_KEY] = structuredClone(task[EPOCHS_KEY]);
       instances.push(instance as unknown as TaskInstance);
     }
@@ -212,10 +273,12 @@ export function deriveAnimalTaskCatalog(days: unknown): DerivedTaskCatalog {
  * Resolve a day's ordered `taskInstances` back to inline `tasks[]` — the C1-preserving export bridge.
  *
  * Each entry is rebuilt from its referenced `TaskType`'s definition (every field except the internal
- * `id`) plus the instance's own `task_epochs`, carrying ONLY inline-task keys. A leaked `id`/
- * `taskTypeId` would survive `reorderKeys` (which is lossless) and break byte-identity, so neither is
- * ever emitted. A dangling instance (a `taskTypeId` with no matching type) is DROPPED rather than
- * crashing the merge — the catalog `dangling_task_type_ref` rule surfaces it for repair.
+ * `id`) plus the instance's own `task_epochs` and any day-owned CONTEXT override
+ * ({@link TASK_CONTEXT_FIELDS}), carrying ONLY inline-task keys. A leaked `id`/`taskTypeId` would
+ * survive `reorderKeys` (which is lossless) and break byte-identity, so neither is ever emitted. An
+ * instance with no override resolves to the type definition unchanged, byte for byte (the golden
+ * baselines depend on it). A dangling instance (a `taskTypeId` with no matching type) is DROPPED
+ * rather than crashing the merge — the catalog `dangling_task_type_ref` rule surfaces it for repair.
  *
  * @param taskTypes - The animal's task-type catalog.
  * @param taskInstances - A day's ordered instances.
@@ -238,8 +301,59 @@ export function resolveTaskInstances(taskTypes: unknown, taskInstances: unknown)
     const { id: _id, ...definition } = type;
     // Carry `task_epochs` by PRESENCE (mirrors derive): never emit a spurious `undefined` key.
     const entry: Record<string, unknown> = { ...structuredClone(definition) };
+    // The day's own room / cameras win over the type default — again by PRESENCE, so a day that
+    // recorded nothing of its own keeps following the catalog.
+    for (const field of TASK_CONTEXT_FIELDS) {
+      if (hasOwn(instance, field)) entry[field] = structuredClone(instance[field]);
+    }
     if (hasOwn(instance, EPOCHS_KEY)) entry[EPOCHS_KEY] = structuredClone(instance[EPOCHS_KEY]);
     resolved.push(entry as unknown as Task);
   }
   return resolved;
+}
+
+/**
+ * Pin `fields` onto every occurrence of `taskTypeId` that has no override of its own — the pure
+ * core of "keep earlier days as recorded" when a task type's default environment/cameras change.
+ *
+ * Called with the OLD default values BEFORE the new ones are saved: a day that was following the
+ * default now records what it actually was, so the new default applies only to days created from
+ * now on. A day that already recorded its own value is never overwritten, and a field with no old
+ * value (`undefined`) is skipped — there is nothing recorded to preserve.
+ *
+ * @param days - The animal's recording days (shape-tolerant).
+ * @param taskTypeId - The task type whose default is changing.
+ * @param fields - The OLD context values to pin (present keys only).
+ * @returns The days, with changed ones replaced by new records; unchanged days keep their identity
+ *   (so a caller can skip a no-op `updateDay`). The input is never mutated.
+ */
+export function pinTaskContextOnDays<T extends object>(
+  days: unknown,
+  taskTypeId: string,
+  fields: TaskContextOverrides
+): T[] {
+  const pinnable = TASK_CONTEXT_FIELDS.filter(
+    (field) => hasOwn(fields, field) && fields[field] !== undefined
+  );
+  const dayList = (Array.isArray(days) ? days : []) as T[];
+  if (pinnable.length === 0) return dayList;
+
+  return dayList.map((day) => {
+    if (!isPlainRecord(day)) return day;
+    const instances = day.taskInstances;
+    if (!Array.isArray(instances)) return day;
+
+    let changed = false;
+    const next = instances.map((instance) => {
+      if (!isPlainRecord(instance) || instance.taskTypeId !== taskTypeId) return instance;
+      const missing = pinnable.filter((field) => !hasOwn(instance, field));
+      if (missing.length === 0) return instance;
+      changed = true;
+      const pinned: Record<string, unknown> = { ...instance };
+      for (const field of missing) pinned[field] = structuredClone(fields[field]);
+      return pinned;
+    });
+
+    return changed ? ({ ...day, taskInstances: next } as T) : day;
+  });
 }

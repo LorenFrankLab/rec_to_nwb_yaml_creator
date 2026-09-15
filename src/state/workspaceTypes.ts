@@ -627,12 +627,24 @@ export interface TaskType {
  * which task types it ran and orders their epochs; it does not re-type definitions. The
  * export bridge resolves `{ taskTypeId, task_epochs }` back to an inline `tasks[]` entry of
  * exactly the five `TASK_ORDER` keys (see {@link module:state/taskCatalog}).
+ *
+ * An occurrence also owns its CONTEXT — where it ran and which cameras recorded it. Spyglass puts
+ * environment and cameras on `TaskEpoch`, not on the `Task` identity (`common_task.py`), and real
+ * data needs it: SC38 ran one task in `HaightRight` on 2023-06-06 and `HaightLeft` on 2023-06-13.
+ * Both context fields follow ONE rule — **present ⇒ this day's actual value; absent ⇒ the task
+ * type's current default** — so editing a task type's defaults never rewrites a day that recorded
+ * its own value, and a day with no override keeps following the catalog.
  */
 export interface TaskInstance {
   /** References {@link TaskType.id} on the owning animal. */
   taskTypeId: string;
   /** Epoch numbers for this task on this day. */
   task_epochs: number[];
+  /**
+   * Day-owned environment override: the room/apparatus THIS day's occurrence actually ran in, when
+   * it differs from the task type's default. Absent ⇒ the type's `task_environment`.
+   */
+  task_environment?: string;
   /**
    * Day-owned camera override: the cameras THIS day actually used for the task, when they differ
    * from the catalog definition's `camera_id` (a legitimate per-day difference — Spyglass assigns

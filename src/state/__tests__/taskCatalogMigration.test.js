@@ -9,8 +9,10 @@
  * The load-bearing guarantees pinned here:
  *  - the conversion is non-destructive (input untouched) and reproduces the v3 catalog shape;
  *  - a migrated, non-conflicting day round-trips back to its ORIGINAL inline tasks (the C1 gate);
- *  - a conflicting `task_name` is normalized to the first-occurrence definition with the original
- *    preserved on the day for review (`task_definition_reconciled`);
+ *  - a day that reused a `task_name` in a different ROOM or with different CAMERAS keeps what it
+ *    recorded, as an instance override — the upgrade never rewrites history (F3);
+ *  - a conflicting `task_description` (the Spyglass identity) is normalized to the first-occurrence
+ *    definition with the original preserved on the day for review (`task_definition_reconciled`);
  *  - the persisted-migration registry is UNCHANGED — 8B activates nothing.
  */
 import { describe, it, expect } from 'vitest';
@@ -27,6 +29,18 @@ import {
   sameNameDifferentEnvironment,
   workspaceFromDays,
 } from './fixtures/taskCatalog';
+
+/**
+ * Two days reusing one `task_name` with DIFFERENT descriptions — the Spyglass identity conflict
+ * the migrator normalizes to the first occurrence (a room/camera difference is preserved instead).
+ * @returns {Array<object>} Two inline-task day records.
+ */
+const divergentDescriptionDays = () => {
+  const days = structuredClone(sameNameDifferentEnvironment.days);
+  days[1].tasks[0].task_environment = days[0].tasks[0].task_environment;
+  days[1].tasks[0].task_description = 'Rests somewhere else';
+  return days;
+};
 
 describe('migrateTasksToCatalogV2ToV3 — non-destructive workspace→workspace transform', () => {
   it('moves inline day.tasks into animal.taskTypes + day.taskInstances (tasks removed)', () => {
@@ -60,8 +74,24 @@ describe('migrateTasksToCatalogV2ToV3 — non-destructive workspace→workspace 
     }
   });
 
-  it('records a task_definition conflict on the day and normalizes export to the canonical', () => {
+  it('keeps a different-environment day as recorded, with NO reconciliation (F3)', () => {
     const out = migrateTasksToCatalogV2ToV3(workspaceFromDays(sameNameDifferentEnvironment.days));
+
+    // Neither day is "reconciled" — nothing was lost, so there is nothing to review.
+    expect(out.days['remy-2023-06-01'].state?.taskDefinitionReconciliations).toBeUndefined();
+    expect(out.days['remy-2023-06-02'].state?.taskDefinitionReconciliations).toBeUndefined();
+
+    // Day 2 exports the room IT ran in, not the shared default.
+    const resolved = resolveTaskInstances(
+      out.animals.remy.taskTypes,
+      out.days['remy-2023-06-02'].taskInstances
+    );
+    expect(resolved[0].task_environment).toBe('QuietRoom');
+    expect(resolved[0].task_epochs).toEqual([3]);
+  });
+
+  it('records a task_definition conflict on the day and normalizes export to the canonical', () => {
+    const out = migrateTasksToCatalogV2ToV3(workspaceFromDays(divergentDescriptionDays()));
 
     // Day 1 (first occurrence) has no reconciliation.
     expect(out.days['remy-2023-06-01'].state?.taskDefinitionReconciliations).toBeUndefined();
@@ -73,8 +103,8 @@ describe('migrateTasksToCatalogV2ToV3 — non-destructive workspace→workspace 
     expect(recon[0]).toMatchObject({
       task_name: 'sleep',
       taskTypeId: 'tasktype-0',
-      original: { task_environment: 'QuietRoom' },
-      canonical: { task_environment: 'SleepBox' },
+      original: { task_description: 'Rests somewhere else' },
+      canonical: { task_description: 'Rests in a box' },
     });
 
     // Export normalizes to the canonical definition (the one legitimately-changed migrated case).
@@ -82,12 +112,12 @@ describe('migrateTasksToCatalogV2ToV3 — non-destructive workspace→workspace 
       out.animals.remy.taskTypes,
       out.days['remy-2023-06-02'].taskInstances
     );
-    expect(resolved[0].task_environment).toBe('SleepBox');
+    expect(resolved[0].task_description).toBe('Rests in a box');
     expect(resolved[0].task_epochs).toEqual([3]);
   });
 
   it('preserves an existing day.state while adding reconciliations', () => {
-    const days = structuredClone(sameNameDifferentEnvironment.days);
+    const days = divergentDescriptionDays();
     days[1].state = { draft: true, validated: false, exported: false };
     const out = migrateTasksToCatalogV2ToV3(workspaceFromDays(days));
     expect(out.days['remy-2023-06-02'].state).toMatchObject({ draft: true, validated: false });
@@ -136,17 +166,33 @@ describe('migrateTasksToCatalogV2ToV3 — non-destructive workspace→workspace 
 
   it('records a reconciliation per conflicting day, all canonical to the first occurrence', () => {
     const days = [
+      { id: 'remy-2023-06-01', date: '2023-06-01', tasks: [{ task_name: 'sleep', task_description: 'A', task_environment: 'e', camera_id: [0], task_epochs: [1] }] },
+      { id: 'remy-2023-06-02', date: '2023-06-02', tasks: [{ task_name: 'sleep', task_description: 'B', task_environment: 'e', camera_id: [0], task_epochs: [2] }] },
+      { id: 'remy-2023-06-03', date: '2023-06-03', tasks: [{ task_name: 'sleep', task_description: 'C', task_environment: 'e', camera_id: [0], task_epochs: [3] }] },
+    ];
+    const out = migrateTasksToCatalogV2ToV3(workspaceFromDays(days));
+    expect(out.animals.remy.taskTypes).toHaveLength(1);
+    expect(out.animals.remy.taskTypes[0].task_description).toBe('A'); // first occurrence wins
+    const d2 = out.days['remy-2023-06-02'].state.taskDefinitionReconciliations;
+    const d3 = out.days['remy-2023-06-03'].state.taskDefinitionReconciliations;
+    expect(d2[0]).toMatchObject({ original: { task_description: 'B' }, canonical: { task_description: 'A' } });
+    expect(d3[0]).toMatchObject({ original: { task_description: 'C' }, canonical: { task_description: 'A' } });
+  });
+
+  it('preserves EACH day\'s own environment when only the room changed over time (F3)', () => {
+    const days = [
       { id: 'remy-2023-06-01', date: '2023-06-01', tasks: [{ task_name: 'sleep', task_description: 'd', task_environment: 'A', camera_id: [0], task_epochs: [1] }] },
       { id: 'remy-2023-06-02', date: '2023-06-02', tasks: [{ task_name: 'sleep', task_description: 'd', task_environment: 'B', camera_id: [0], task_epochs: [2] }] },
       { id: 'remy-2023-06-03', date: '2023-06-03', tasks: [{ task_name: 'sleep', task_description: 'd', task_environment: 'C', camera_id: [0], task_epochs: [3] }] },
     ];
     const out = migrateTasksToCatalogV2ToV3(workspaceFromDays(days));
     expect(out.animals.remy.taskTypes).toHaveLength(1);
-    expect(out.animals.remy.taskTypes[0].task_environment).toBe('A'); // first occurrence wins
-    const d2 = out.days['remy-2023-06-02'].state.taskDefinitionReconciliations;
-    const d3 = out.days['remy-2023-06-03'].state.taskDefinitionReconciliations;
-    expect(d2[0]).toMatchObject({ original: { task_environment: 'B' }, canonical: { task_environment: 'A' } });
-    expect(d3[0]).toMatchObject({ original: { task_environment: 'C' }, canonical: { task_environment: 'A' } });
+    const environmentOf = (dayId) =>
+      resolveTaskInstances(out.animals.remy.taskTypes, out.days[dayId].taskInstances)[0].task_environment;
+    expect(environmentOf('remy-2023-06-01')).toBe('A');
+    expect(environmentOf('remy-2023-06-02')).toBe('B');
+    expect(environmentOf('remy-2023-06-03')).toBe('C');
+    expect(out.days['remy-2023-06-03'].state?.taskDefinitionReconciliations).toBeUndefined();
   });
 });
 

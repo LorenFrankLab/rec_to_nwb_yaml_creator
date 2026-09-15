@@ -178,3 +178,34 @@ describe('epochsOrphanedBy — confirm-before-orphan detector', () => {
     expect(orphans.files).toHaveLength(0);
   });
 });
+
+describe('day-owned task context survives every epoch transform (F3)', () => {
+  // An instance can carry the room / cameras THIS day used (`task_environment` / `camera_id`
+  // overrides). Every transform rebuilds instances, so a rebuild that dropped the extra keys would
+  // silently rewrite the day's exported environment back to the task-type default.
+  const pinned = () => ({ taskTypeId: 'a', task_environment: 'HaightLeft', camera_id: [1], task_epochs: [1, 3] });
+
+  it('removeEpoch keeps the surviving instance overrides', () => {
+    expect(removeEpoch([pinned()], 3)).toEqual([
+      { taskTypeId: 'a', task_environment: 'HaightLeft', camera_id: [1], task_epochs: [1] },
+    ]);
+  });
+
+  it('addEpochToTask / duplicateEpoch keep the overrides', () => {
+    expect(addEpochToTask([pinned()], 'a')[0]).toMatchObject({ task_environment: 'HaightLeft', camera_id: [1] });
+    expect(duplicateEpoch([pinned()], 1)[0]).toMatchObject({ task_environment: 'HaightLeft', camera_id: [1] });
+  });
+
+  it('swapEpochs / insertEpochAfter keep the overrides', () => {
+    expect(swapEpochs([pinned(), inst('b', [2])], 1, 2)[0]).toMatchObject({ task_environment: 'HaightLeft' });
+    expect(insertEpochAfter([pinned()], 1)[0]).toMatchObject({ task_environment: 'HaightLeft' });
+  });
+
+  it('setEpochTask leaves the DESTINATION task with its own context, not the source override', () => {
+    const next = setEpochTask([pinned(), inst('b', [2])], 1, 'b');
+    expect(next).toEqual([
+      { taskTypeId: 'a', task_environment: 'HaightLeft', camera_id: [1], task_epochs: [3] },
+      { taskTypeId: 'b', task_epochs: [1, 2] },
+    ]);
+  });
+});
