@@ -15,7 +15,12 @@
  */
 import { describe, it, expect } from 'vitest';
 import { encodeYaml } from '../../io/yaml';
-import { deriveAnimalTaskCatalog, resolveTaskInstances, pinTaskContextOnDays } from '../taskCatalog';
+import {
+  deriveAnimalTaskCatalog,
+  resolveTaskInstances,
+  pinTaskContextOnDays,
+  stripTaskContext,
+} from '../taskCatalog';
 import {
   oneTask,
   multipleTasks,
@@ -411,5 +416,32 @@ describe('round-trip robustness (8C-activation regression guards)', () => {
     const resolved = resolveTaskInstances(taskTypes, instancesByDayId['remy-2023-06-02']);
     expect(resolved[0].camera_id).toEqual([1]); // the cameras THAT day used
     expect(resolved[0].task_epochs).toEqual([3]); // its own epochs preserved
+  });
+});
+
+describe('stripTaskContext (what a NEW day inherits from an earlier one)', () => {
+  it('keeps the task reference and epochs, drops the earlier day\'s own room/cameras', () => {
+    expect(
+      stripTaskContext([
+        { taskTypeId: 'tasktype-0', task_environment: 'HaightRight', camera_id: [1], task_epochs: [1, 3] },
+        { taskTypeId: 'tasktype-1', task_epochs: [2] },
+      ])
+    ).toEqual([
+      { taskTypeId: 'tasktype-0', task_epochs: [1, 3] },
+      { taskTypeId: 'tasktype-1', task_epochs: [2] },
+    ]);
+  });
+
+  it('never mutates the source day (it still records what IT ran)', () => {
+    const source = [{ taskTypeId: 'tasktype-0', task_environment: 'HaightRight', task_epochs: [1] }];
+    const snapshot = structuredClone(source);
+    const stripped = stripTaskContext(source);
+    expect(source).toEqual(snapshot);
+    expect(stripped[0]).not.toBe(source[0]);
+  });
+
+  it('is shape-tolerant: a non-array yields []', () => {
+    expect(stripTaskContext(null)).toEqual([]);
+    expect(stripTaskContext('nope')).toEqual([]);
   });
 });

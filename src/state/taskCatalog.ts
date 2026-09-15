@@ -359,3 +359,24 @@ export function pinTaskContextOnDays<T extends object>(
     return changed ? ({ ...day, taskInstances: next } as T) : day;
   });
 }
+
+/**
+ * The instances a NEW day inherits from an earlier one: the task-type REFERENCES and their epochs,
+ * without the source day's own recorded context ({@link TASK_CONTEXT_FIELDS}).
+ *
+ * Where a session ran and what filmed it are that day's facts, not a template — copying them onto a
+ * new day would make it export a room nobody chose for it, and would silently outlive a later change
+ * to the task type's default (F3: an occurrence DEFAULTS its context at creation, and records its
+ * own only when the user says so). Used by both carry-forward paths: creating a day from the prior
+ * one, and the epoch grid's "Copy structure from prior day".
+ *
+ * @param taskInstances - The source day's ordered instances (shape-tolerant).
+ * @returns New instances owning their data, with no context overrides.
+ */
+export function stripTaskContext(taskInstances: unknown): TaskInstance[] {
+  return (Array.isArray(taskInstances) ? taskInstances : []).filter(isPlainRecord).map((instance) => {
+    const next = structuredClone(instance);
+    for (const field of TASK_CONTEXT_FIELDS) delete next[field];
+    return next as unknown as TaskInstance;
+  });
+}

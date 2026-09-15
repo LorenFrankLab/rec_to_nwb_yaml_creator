@@ -29,6 +29,7 @@ import {
   getDaySession,
 } from './workspaceSelectors';
 import { selectConfigurationForDate } from '../domain/configurationSelection';
+import { stripTaskContext } from './taskCatalog';
 import { deriveDataFolderForDate } from '../domain/dayCarryPolicy';
 import {
   normalizeDeviceOverrides,
@@ -653,10 +654,16 @@ export function createDayRecord(
   // Task carry-forward by SHAPE: a catalog source day carries its `taskInstances` (references into
   // the shared animal task-type catalog), with NO inline `tasks`; a legacy inline source carries its
   // `tasks`. A new (no-carry) day starts empty.
+  //
+  // What carries is the REFERENCE — which task types ran, in which epochs — not the prior day's own
+  // recorded CONTEXT. `task_environment` / `camera_id` on an instance are that day's facts (where it
+  // ran, what filmed it), so a new day defaults them from the task type instead: copying them would
+  // make today export a room nobody chose for it, and would outlive a later change to the default
+  // (F3: occurrences default their context at creation).
   const carriedInstances = carryFrom ? getDayTaskInstances(carryFrom) : null;
   const taskCarry =
     carriedInstances !== null
-      ? { tasks: [], taskInstances: structuredClone(carriedInstances) }
+      ? { tasks: [], taskInstances: stripTaskContext(carriedInstances) }
       : { tasks: carryFrom ? structuredClone(getDayTasks(carryFrom)) : [] };
   if (carryFrom) fields.tasks = 'copied';
 

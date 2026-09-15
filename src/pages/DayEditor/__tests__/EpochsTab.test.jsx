@@ -370,12 +370,60 @@ describe('EpochsTab — write-back patches', () => {
       expect(screen.getByLabelText(/Environment for this day/i)).toHaveValue('Track');
     });
 
+    it('"Copy structure from prior day" copies the task references, not that day\'s room', async () => {
+      // Same rule as creating a day from the prior one: the earlier day's recorded room/cameras are
+      // ITS facts. Copying its structure must not silently claim today ran in the same place.
+      const user = userEvent.setup();
+      const priorDay = {
+        id: 'r-2023-06-21',
+        animalId: 'r',
+        date: '2023-06-21',
+        configurationVersion: undefined,
+        taskInstances: [
+          { taskTypeId: 'tasktype-0', task_environment: 'HaightRight', camera_id: [1], task_epochs: [1] },
+        ],
+      };
+      const bundle = makeBundle(
+        { id: 'r-2023-06-22', taskInstances: [], associated_video_files: [], associated_files: [] },
+        {
+          taskTypes: [
+            { id: 'tasktype-0', task_name: 'Sleep', task_description: 'sleep', task_environment: 'HaightLeft', camera_id: [0] },
+          ],
+        }
+      );
+      render(<EpochsTab {...bundle} animalDays={[priorDay, bundle.day]} />);
+
+      await user.click(screen.getByRole('button', { name: /Templates/i }));
+      await user.click(screen.getByRole('menuitem', { name: /Copy structure from prior day/i }));
+
+      expect(lastPatch(bundle.onFieldUpdate, 'taskInstances')).toEqual([
+        { taskTypeId: 'tasktype-0', task_epochs: [1] },
+      ]);
+    });
+
     it('has no axe violations with the per-day editor open', async () => {
       const user = userEvent.setup();
       const { container } = render(<EpochsTab {...contextBundle()} />);
       await user.click(screen.getByRole('button', { name: /Show epoch 1 details/i }));
       await user.click(screen.getByRole('button', { name: /Edit for this day/i }));
       expect(await axe(container)).toHaveNoViolations();
+    });
+
+    it('blanking the environment means "use the task default", never an empty exported value', async () => {
+      // A blank `task_environment` is never valid downstream, so an emptied field records nothing
+      // and the occurrence goes back to following the task type.
+      const user = userEvent.setup();
+      const bundle = contextBundle({ task_environment: 'HaightLeft' });
+      render(<EpochsTab {...bundle} />);
+
+      await user.click(screen.getByRole('button', { name: /Show epoch 1 details/i }));
+      await user.click(screen.getByRole('button', { name: /Edit for this day/i }));
+      await user.clear(screen.getByLabelText(/Environment for this day/i));
+      await user.click(screen.getByRole('button', { name: /Save for this day/i }));
+
+      expect(lastPatch(bundle.onFieldUpdate, 'taskInstances')).toEqual([
+        { taskTypeId: 'tasktype-0', task_epochs: [1] },
+      ]);
     });
 
     it('"Use task default" clears the day overrides', async () => {

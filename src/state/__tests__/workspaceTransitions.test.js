@@ -431,6 +431,27 @@ describe('createDayRecord', () => {
     const animal = { configurationHistory: [{ version: 2 }] };
     const session = { session_id: 'remy_20230623', session_description: 'Day 2' };
 
+    it('carries the prior day\'s task REFERENCES but not the context it recorded for itself', () => {
+      // A prior day's `task_environment` / `camera_id` override is that DAY's fact — where it ran
+      // and what filmed it — not a template. Copying it forward would make a new day export a room
+      // nobody chose for it, and would silently outlive a later change to the task type's default.
+      const catalogSource = {
+        ...carryFrom,
+        tasks: undefined,
+        taskInstances: [
+          { taskTypeId: 'tasktype-0', task_environment: 'HaightRight', camera_id: [1], task_epochs: [1] },
+          { taskTypeId: 'tasktype-1', task_epochs: [2] },
+        ],
+      };
+      const day = createDayRecord(animal, 'remy', 'd', '2023-06-23', session, NOW, catalogSource);
+      expect(day.taskInstances).toEqual([
+        { taskTypeId: 'tasktype-0', task_epochs: [1] },
+        { taskTypeId: 'tasktype-1', task_epochs: [2] },
+      ]);
+      // The source day is untouched — it still records what it ran.
+      expect(catalogSource.taskInstances[0].task_environment).toBe('HaightRight');
+    });
+
     it('seeds tasks/behavioral_events/keywords/technical from the source', () => {
       const day = createDayRecord(animal, 'remy', 'd', '2023-06-23', session, NOW, carryFrom);
       expect(day.tasks).toEqual(carryFrom.tasks);

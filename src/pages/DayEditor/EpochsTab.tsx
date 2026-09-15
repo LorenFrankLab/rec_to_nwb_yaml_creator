@@ -55,6 +55,7 @@ import {
   getDayVideolessEpochs,
 } from '../../state/workspaceSelectors';
 import { preserveInlineTaskDefinitions, resolveDayCatalogView } from '../../state/dayTaskCatalog';
+import { stripTaskContext } from '../../state/taskCatalog';
 import { addTaskType, nextTaskTypeId } from '../../state/taskCatalogActions';
 import type { TaskTypeDefinitionInput } from '../../state/taskCatalogActions';
 import type { TaskInstance, TaskType, Camera } from '../../state/workspaceTypes';
@@ -937,8 +938,11 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
   function applyTemplate(kind: 'sleep' | 'wtrack' | 'copy' | 'blank') {
     if (unresolvedTaskCatalogDivergence) return;
     if (kind === 'copy') {
+      // The prior day's STRUCTURE — which tasks ran in which epochs. Its own recorded room/cameras
+      // are that day's facts, so this day starts from the task-type defaults (same rule as creating
+      // a day from the prior one; see stripTaskContext).
       const prior = priorDayInstances();
-      if (prior) commit(structuredClone(prior));
+      if (prior) commit(stripTaskContext(prior));
       return;
     }
     if (kind === 'blank') {
@@ -1541,7 +1545,9 @@ function TaskContextForm({ row, cameras, taskType, onSave, onUseTaskDefault, onC
     const nextCameras = cameras.filter((camera) => selected.includes(String(camera?.id))).map((c) => c.id);
     const trimmed = environment.trim();
     onSave({
-      task_environment: trimmed === defaultEnvironment ? null : trimmed,
+      // A BLANK environment is never a valid exported value, so an emptied field means "use the
+      // task default" rather than recording `''` on the day.
+      task_environment: trimmed === '' || trimmed === defaultEnvironment ? null : trimmed,
       camera_id:
         nextCameras.length === defaultCameras.length &&
         nextCameras.every((id, i) => String(id) === String(defaultCameras[i]))
