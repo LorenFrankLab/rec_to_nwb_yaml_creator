@@ -1,0 +1,18 @@
+/* Scope choice for a task type's default environment / cameras (F3). */
+
+.dialog {
+  max-width: 34rem;
+}
+
+.affected {
+  margin: var(--spacing-sm) 0 0;
+  padding-left: var(--spacing-lg);
+  color: var(--color-grey-700);
+  font-size: var(--font-size-sm);
+}
+
+.uncheckable {
+  margin: var(--spacing-sm) 0 0;
+  color: var(--color-warning);
+  font-size: var(--font-size-sm);
+}
