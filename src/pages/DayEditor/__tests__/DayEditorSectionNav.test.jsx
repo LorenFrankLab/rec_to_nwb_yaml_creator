@@ -68,9 +68,38 @@ describe('DayEditorSectionNav', () => {
     render(<DayEditorSectionNav groups={makeGroups({ active: 'recording' })} onNavigate={vi.fn()} />);
     const recording = screen.getByRole('button', { name: /Recording Setup/i });
     expect(recording).toHaveAttribute('aria-current', 'page');
-    expect(recording).toHaveAttribute('tabindex', '0');
     expect(screen.getByRole('button', { name: /^Daily log/i })).not.toHaveAttribute('aria-current');
-    expect(screen.getByRole('button', { name: /^Daily log/i })).toHaveAttribute('tabindex', '-1');
+  });
+
+  // The nav is plain Tab-order navigation, not an ARIA tabs widget: taking the inactive
+  // sections out of the Tab order (tabindex="-1") without an arrow-key handler made them
+  // keyboard-unreachable, so no item may carry a tabindex at all.
+  it('leaves every section in the natural Tab order (no tabindex on any item)', () => {
+    const { container } = render(
+      <DayEditorSectionNav groups={makeGroups({ active: 'recording' })} onNavigate={vi.fn()} />
+    );
+    expect(container.querySelectorAll('.section-nav-item[tabindex]')).toHaveLength(0);
+    screen.getAllByRole('button').forEach((button) => {
+      expect(button).not.toHaveAttribute('tabindex');
+    });
+  });
+
+  it('reaches every section button with Tab, in display order', async () => {
+    const user = userEvent.setup();
+    render(<DayEditorSectionNav groups={makeGroups({ active: 'recording' })} onNavigate={vi.fn()} />);
+    const order = [
+      /^Daily log/i,
+      /^Tasks & Files/i,
+      /^Recording Setup/i,
+      /^Failed Channels/i,
+      /^DIO Wiring/i,
+      /^Fix & Export/i,
+    ];
+    for (const name of order) {
+      // eslint-disable-next-line no-await-in-loop -- Tab moves focus one stop at a time.
+      await user.tab();
+      expect(screen.getByRole('button', { name })).toHaveFocus();
+    }
   });
 
   it('calls onNavigate for ANY section clicked — including Fix & Export (no gating)', async () => {

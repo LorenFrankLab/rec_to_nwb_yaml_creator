@@ -29,6 +29,10 @@ interface DayEditorSectionNavProps {
  * gates on the authoritative `vm.export`), not as a nav lock. Each item renders the view-model's
  * step status as visible text plus a small decorative marker, so status is not encoded by glyph or
  * color alone.
+ *
+ * Keyboard model: plain Tab order. This is NOT an ARIA tabs widget, so no item carries a
+ * `tabIndex` — a roving `tabIndex={-1}` without an arrow-key handler would make the inactive
+ * sections unreachable by keyboard. Alt+←/→ still steps sections (see `useGlobalShortcuts`).
  */
 export default function DayEditorSectionNav({ groups, onNavigate }: DayEditorSectionNavProps) {
   const compact = useMediaQuery(COMPACT_NAV_QUERY);
@@ -82,7 +86,6 @@ export default function DayEditorSectionNav({ groups, onNavigate }: DayEditorSec
                 className={`section-nav-item ${step.active ? 'is-active' : ''} step-${step.status}`}
                 aria-current={step.active ? 'page' : undefined}
                 aria-label={`${step.label} — ${step.statusLabel}${countLabel ? `, ${countLabel}` : ''}`}
-                tabIndex={step.active ? 0 : -1}
                 onClick={() => onNavigate(step.key)}
               >
                 <span className="section-nav-item-name">{step.label}</span>
