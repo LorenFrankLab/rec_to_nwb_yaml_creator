@@ -635,9 +635,11 @@ export async function discardStagedArtifacts(staged: StagedArtifacts): Promise<v
 }
 
 /**
- * Best-effort cleanup after a COMMITTED restore: the artifacts the replaced workspace's receipts
- * referred to are no longer reachable from any receipt (a leftover would be harmless — every
- * reader verifies bytes against the receipt hash — but wastes space).
+ * Best-effort cleanup after a COMMITTED restore: the IMMUTABLE per-attempt artifacts the replaced
+ * workspace's receipts referred to are no longer reachable from any receipt (a leftover would be
+ * harmless — every reader verifies bytes against the receipt hash — but wastes space). The
+ * reusable per-day key (`receipt:<dayId>`, where a download in this browser puts its bytes) is
+ * never deleted here: a download made while this cleanup is still pending would lose its bytes.
  *
  * @param replaced - The workspace that was replaced.
  * @param replaced.days - Its days map.
@@ -657,6 +659,7 @@ export async function releaseReplacedArtifacts(
     const receipt = (day as DayWithReceipt)?.exportReceipt;
     if (!isPlainObject(receipt)) continue;
     const key = receiptYamlKey(dayId, receipt as { yamlKey?: unknown });
+    if (key === `${RECEIPT_YAML_KEY_PREFIX}${dayId}`) continue; // reusable: a new download may own it
     // eslint-disable-next-line no-await-in-loop
     if (!keep.has(key)) await deleteBlob(key);
   }

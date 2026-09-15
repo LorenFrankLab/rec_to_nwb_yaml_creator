@@ -24,6 +24,13 @@ vi.mock('../blobStore', async () => {
           deferred.push(() => actual.putBlob(key, value).then(() => resolve(true)));
         })
     ),
+    // Deletes are deferred too: a post-restore cleanup stays pending until released.
+    deleteBlob: vi.fn(
+      (key) =>
+        new Promise((resolve) => {
+          deferred.push(() => actual.deleteBlob(key).then(() => resolve()));
+        })
+    ),
   };
 });
 
@@ -273,5 +280,31 @@ describe('restore outcome covers the revision marker and the referenced bytes', 
     const receipt = result.current.model.workspace.days[DAY].exportReceipt;
     expect(receipt.yamlStored).toBe(true);
     expect((await getBlob(receiptYamlKey(DAY, receipt))).yaml).toBe('weight: 480\n');
+  });
+});
+
+describe('post-restore cleanup', () => {
+  it('never deletes the reusable per-day download key — a download made while cleanup is pending keeps its bytes', async () => {
+    const initial = await activeWorkspace(); // bytes under the reusable key receipt:<DAY>
+    const { result } = renderHook(() => useStore({ workspace: initial }));
+    await waitFor(() => expect(result.current.persistence.writer.role).toBe('writer'));
+    const { ws, artifacts } = backup();
+    let ok;
+    await act(async () => {
+      const done = result.current.persistence.restoreWorkspace(ws, artifacts);
+      await releaseAll();
+      ok = await done;
+    });
+    expect(ok).toBe(true);
+    // Cleanup of the replaced workspace's artifacts is still pending; meanwhile a NEW download of
+    // the restored day writes its bytes to the reusable per-day key.
+    const actual = await vi.importActual('../blobStore');
+    const fresh = { filename: 'f.yml', yaml: 'weight: 480\nnew: download\n', exportedAt: 'later' };
+    await actual.putBlob(`${RECEIPT_YAML_KEY_PREFIX}${DAY}`, fresh);
+    await act(async () => {
+      await releaseAll();
+      await flush();
+    });
+    expect(await getBlob(`${RECEIPT_YAML_KEY_PREFIX}${DAY}`)).toEqual(fresh);
   });
 });
