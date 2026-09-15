@@ -2,10 +2,10 @@ import type { ElectrodeGroup } from '../../state/workspaceTypes';
 
 interface ReadOnlyDeviceInfoProps {
   /**
-   * Electrode group configuration (the canonical `ElectrodeGroup`, plus an optional `units`
-   * string this read-only panel also displays when present on an effective/merged group).
+   * Electrode group configuration (the canonical `ElectrodeGroup`; its optional `units`
+   * string is displayed alongside the coordinates when present).
    */
-  group: ElectrodeGroup & { units?: string };
+  group: ElectrodeGroup;
 }
 
 /**

@@ -13,12 +13,6 @@ import './ElectrodeGroupsStep.scss';
 import { pluralize } from '../../utils/pluralize';
 
 /**
- * Editor-side electrode group: the canonical {@link ElectrodeGroup} plus the `units` field the
- * editor maintains (it is part of the saved snapshot but not the canonical workspace type).
- */
-type ElectrodeGroupRow = ElectrodeGroup & { units?: string };
-
-/**
  * Per-group completeness status: a decorative icon paired with a screen-reader
  * label so status is never conveyed by color/emoji alone (WCAG 1.4.1).
  */
@@ -70,10 +64,10 @@ export default function ElectrodeGroupsStep({ animal, onFieldUpdate, onEdit, onA
   const electrodeGroups = getAnimalElectrodeGroups(animal);
 
   /** Compute status badge (✓ complete, ❌ missing required). */
-  function getStatusKey(group: ElectrodeGroupRow): 'complete' | 'incomplete' {
+  function getStatusKey(group: ElectrodeGroup): 'complete' | 'incomplete' {
     // `location` and `description` are optional in the editor (filled in on save),
     // so completeness keys off the fields the scientist must supply.
-    const requiredText: Array<keyof ElectrodeGroupRow> = ['device_type', 'targeted_location', 'units'];
+    const requiredText: Array<keyof ElectrodeGroup> = ['device_type', 'targeted_location', 'units'];
     const hasRequired = (
       requiredText.every(field => hasNonBlankValue(group[field])) &&
       hasFiniteCoordinate(group.targeted_x) &&

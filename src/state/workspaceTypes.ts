@@ -219,14 +219,16 @@ export interface ElectrodeGroup {
   device_type: string;
   /** Group description. */
   description: string;
-  /** Stereotaxic coordinates [AP, ML, DV]. */
-  targeted_location?: number[];
-  /** X coordinate. */
-  targeted_x?: string;
-  /** Y coordinate. */
-  targeted_y?: string;
-  /** Z coordinate. */
-  targeted_z?: string;
+  /** Planned brain region of the electrode/probe (e.g., "Cornu ammonis 1 (CA1)"). */
+  targeted_location?: string;
+  /** Targeted stereotaxic coordinate in `units`; `nwb_schema.json` names this axis medial/lateral. */
+  targeted_x?: number;
+  /** Targeted stereotaxic coordinate in `units`; `nwb_schema.json` names this axis anterior/posterior. */
+  targeted_y?: number;
+  /** Targeted stereotaxic coordinate in `units`; `nwb_schema.json` names this axis ventral/dorsal. */
+  targeted_z?: number;
+  /** Units for `targeted_x`/`targeted_y`/`targeted_z` (e.g., "mm"). */
+  units?: string;
 }
 
 /** Ntrode electrode channel mapping. */
