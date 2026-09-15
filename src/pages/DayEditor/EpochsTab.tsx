@@ -73,7 +73,7 @@ interface PendingOrphan extends OrphanedReferences {
   nextInstances: TaskInstance[];
 }
 
-type EpochFilter = 'all' | 'needs-video' | 'missing-statescript' | 'custom-filenames';
+type EpochFilter = 'all' | 'needs-video' | 'expected-statescript' | 'custom-filenames';
 type FileFocusTarget = 'statescript' | 'video';
 
 interface PendingFileFocus {
@@ -150,7 +150,7 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
 
   // Both derivations join the day against the animal's task catalog; memoized so opening a menu,
   // switching a filter chip or toggling the drawer doesn't redo the join.
-  const grid = useMemo(() => buildEpochGrid(animal, day), [animal, day]);
+  const grid = useMemo(() => buildEpochGrid(animal, day, animalDays), [animal, day, animalDays]);
   const view = useMemo(() => resolveDayCatalogView(animal, day), [animal, day]);
   const cameras = getAnimalCameras(animal);
   const unresolvedTaskCatalogDivergence = view.derived && view.divergences.length > 0;
@@ -556,7 +556,9 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
   const hasOpto = grid.isOpto;
   const epochCount = grid.rows.length;
   const missingVideoCount = grid.rows.filter((row) => row.status === 'needs_video').length;
-  const missingStatescriptCount = grid.rows.filter((row) => row.statescript == null).length;
+  // Only the epochs that actually EXPECT a statescript are counted: a lab that never logs a sleep
+  // statescript is not missing one. Never a blocker — the chip is a warning-toned filter.
+  const expectedStatescriptCount = grid.rows.filter((row) => row.statescriptState === 'expected').length;
   const generatedStatescriptCount = countMissingGeneratedStatescripts(grid);
   const generatedVideoCount = countMissingGeneratedVideos(grid, cameras);
   const hasCustomFilename = (row: EpochGridRow) =>
@@ -571,7 +573,7 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
   const customFilenameCount = grid.rows.filter(hasCustomFilename).length;
   const matchesEpochFilter = (row: EpochGridRow, filter: EpochFilter) => {
     if (filter === 'needs-video') return row.status === 'needs_video';
-    if (filter === 'missing-statescript') return row.statescript == null;
+    if (filter === 'expected-statescript') return row.statescriptState === 'expected';
     if (filter === 'custom-filenames') return hasCustomFilename(row);
     return true;
   };
@@ -650,13 +652,13 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
                   <button
                     type="button"
                     className={filterButtonClass(
-                      'missing-statescript',
-                      missingStatescriptCount > 0 ? styles.summaryNeedsAttention : ''
+                      'expected-statescript',
+                      expectedStatescriptCount > 0 ? styles.summaryReview : ''
                     )}
-                    aria-pressed={epochFilter === 'missing-statescript'}
-                    onClick={() => changeFilter('missing-statescript')}
+                    aria-pressed={epochFilter === 'expected-statescript'}
+                    onClick={() => changeFilter('expected-statescript')}
                   >
-                    {missingStatescriptCount} {pluralize(missingStatescriptCount, 'statescript')} missing
+                    {expectedStatescriptCount} {pluralize(expectedStatescriptCount, 'statescript')} expected
                   </button>
                   <button
                     type="button"
@@ -671,6 +673,26 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
                   </button>
                 </div>
               </div>
+              {!grid.dataFolder && (
+                <div className={`${styles.toolbarGroup} ${styles.dataFolderGroup}`}>
+                  <label className={styles.toolbarLabel} htmlFor="epochs-data-folder">
+                    Data folder
+                  </label>
+                  <DraftTextInput
+                    id="epochs-data-folder"
+                    type="text"
+                    name="dataFolder"
+                    className={styles.dataFolderInput}
+                    value={grid.dataFolder}
+                    onCommit={(value) => onFieldUpdate('dataFolder', value)}
+                    placeholder="e.g. /stelmo/denisse/Laurent/20260514/"
+                    aria-describedby="epochs-data-folder-help"
+                  />
+                  <span id="epochs-data-folder-help" className={styles.dataFolderHelp}>
+                    Set the data folder to generate statescript and video file names.
+                  </span>
+                </div>
+              )}
               {(generatedStatescriptCount > 0 || generatedVideoCount > 0) && (
                 <div className={`${styles.toolbarGroup} ${styles.bulkGroup}`}>
                   <span className={styles.toolbarLabel}>Generate missing</span>
@@ -680,7 +702,7 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
                         variant="secondary"
                         size="small"
                         disabled={!grid.dataFolder}
-                        title={!grid.dataFolder ? 'Set the data folder in Daily Setup first' : undefined}
+                        title={!grid.dataFolder ? 'Set the data folder first' : undefined}
                         onClick={generateMissingStatescripts}
                       >
                         Statescripts ({generatedStatescriptCount})
@@ -745,12 +767,6 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
             </Button>
           </div>
         </section>
-      )}
-
-      {!grid.dataFolder && (
-        <div className={styles.dataFolderNotice} role="status">
-          Data folder missing: generated paths need Daily Setup before export.
-        </div>
       )}
 
       {grid.rows.length === 0 ? (
@@ -1028,12 +1044,39 @@ interface EpochDetailsPanelProps {
   onVideoNameChange: (videoIndex: number, name: string) => void;
 }
 
-/** Collapsed statescript-cell label. */
-const STATESCRIPT_LABEL: Record<EpochGridRow['statescriptNaming'], string> = {
+/** How a LINKED statescript got its name (the collapsed cell's label once a file is bound). */
+const STATESCRIPT_NAMING_LABEL: Record<EpochGridRow['statescriptNaming'], string> = {
   generated: 'Generated',
   manual: 'Manual',
   none: '—',
 };
+
+/** The unlinked half of the three-state vocabulary — a warning at worst, never an error. */
+const STATESCRIPT_UNLINKED_LABEL: Record<'expected' | 'not_expected', string> = {
+  expected: 'Expected',
+  not_expected: 'Not expected',
+};
+
+/**
+ * The collapsed statescript cell's label + tone. A linked file is named by HOW it was named; an
+ * unlinked one reads "Expected" (amber — a reminder, not a blocker) or "Not expected" (quiet).
+ *
+ * @param row - The epoch row.
+ * @returns The label, its tone class, and the linked file's path for the cell's tooltip.
+ */
+function statescriptCell(row: EpochGridRow): { label: string; tone: string; title?: string } {
+  if (row.statescriptState === 'linked') {
+    return {
+      label: STATESCRIPT_NAMING_LABEL[row.statescriptNaming],
+      tone: row.statescriptNaming === 'manual' ? styles.fileSummaryReview : styles.fileSummaryReady,
+      title: row.statescript?.entry.path || row.statescript?.entry.name || undefined,
+    };
+  }
+  return {
+    label: STATESCRIPT_UNLINKED_LABEL[row.statescriptState],
+    tone: row.statescriptState === 'expected' ? styles.fileSummaryExpected : styles.fileSummaryMuted,
+  };
+}
 
 /** One epoch row: scan-friendly state, quick missing-file fixes, and structural actions. */
 function EpochRowBlock(p: EpochRowProps) {
@@ -1044,13 +1087,7 @@ function EpochRowBlock(p: EpochRowProps) {
       : row.videoPresence === 'missing'
         ? 'Missing'
         : `${row.videos.length} ${pluralize(row.videos.length, 'video')}`;
-  const statescriptLabel = STATESCRIPT_LABEL[row.statescriptNaming];
-  const statescriptSummaryClass =
-    row.statescriptNaming === 'generated'
-      ? styles.fileSummaryReady
-      : row.statescriptNaming === 'manual'
-        ? styles.fileSummaryReview
-        : styles.fileSummaryMissing;
+  const statescript = statescriptCell(row);
   const videoSummaryClass =
     row.videoPresence === 'missing'
       ? styles.fileSummaryMissing
@@ -1104,8 +1141,8 @@ function EpochRowBlock(p: EpochRowProps) {
       </td>
       <td className={styles.fileSummaryCell}>
         <span className={styles.fileSummaryStack}>
-          <span className={`${styles.fileSummaryChip} ${statescriptSummaryClass}`}>
-            Statescript: {statescriptLabel === '—' ? 'Missing' : statescriptLabel}
+          <span className={`${styles.fileSummaryChip} ${statescript.tone}`} title={statescript.title}>
+            Statescript: {statescript.label}
           </span>
           <span className={`${styles.fileSummaryChip} ${videoSummaryClass}`}>
             Video: {videoLabel}
@@ -1192,13 +1229,16 @@ function EpochDetailsPanel(p: EpochDetailsPanelProps) {
     tag: row.tag,
     index: row.videos.length + 1,
   });
-  const statescriptStateLabel = row.statescript ? STATESCRIPT_LABEL[row.statescriptNaming] : 'Missing';
+  const statescriptStateLabel =
+    row.statescriptState === 'linked'
+      ? STATESCRIPT_NAMING_LABEL[row.statescriptNaming]
+      : STATESCRIPT_UNLINKED_LABEL[row.statescriptState];
   const statescriptStateClass =
-    row.statescriptNaming === 'generated'
-      ? styles.fileStateGenerated
-      : row.statescriptNaming === 'manual'
-        ? styles.fileStateManual
-        : styles.fileStateMissing;
+    row.statescriptState === 'linked'
+      ? (row.statescriptNaming === 'manual' ? styles.fileStateManual : styles.fileStateGenerated)
+      : row.statescriptState === 'expected'
+        ? styles.fileStateExpected
+        : styles.fileStateAbsent;
   const videoStateLabel =
     row.videoPresence === 'absent'
       ? 'No video'
