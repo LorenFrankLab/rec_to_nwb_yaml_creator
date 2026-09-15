@@ -84,7 +84,9 @@ export default function ConfigVersionPanel({ reconfig, day, animal, ownerKey, on
               <span className="config-version-warning-text">
                 {choice.reason === 'unknown-period'
                   ? `Probe setup v${choice.version} was entered on ${choice.effectiveDate ?? 'an unknown date'}; whether it already applied on ${day.date} is not recorded.`
-                  : `Probe setup v${choice.version} became effective ${choice.effectiveDate ?? 'later'} — after this recording day (${day.date}).`}{' '}
+                  : choice.reason === 'superseded'
+                    ? `Probe setup v${choice.version} was chosen for this day automatically, but v${choice.supersededBy} is now recorded as effective from ${choice.supersededFrom ?? 'an earlier date'} — before this recording day (${day.date}).`
+                    : `Probe setup v${choice.version} became effective ${choice.effectiveDate ?? 'later'} — after this recording day (${day.date}).`}{' '}
                 Confirm that this is the setup the day was recorded with, or pin the version that was.
                 To make future backfills automatic, set the version&apos;s effective date on the animal&apos;s
                 Electrode Groups page.

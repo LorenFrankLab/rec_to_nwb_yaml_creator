@@ -237,6 +237,24 @@ describe('#5c correcting a setup’s effective date re-evaluates the days it cov
   });
 });
 
+describe('#5d correcting the NEXT setup’s effective date re-evaluates the days it now covers', () => {
+  it('June 25 auto-pinned to v1 is flagged when v2 (July 1) is corrected to June 20', () => {
+    const { result } = renderHook(() => useStore(seed()));
+    act(() => {
+      result.current.actions.createDay('remy', '2023-06-25', { session_id: 'remy_20230625', session_description: 'x' }, { carryForwardFromDayId: 'auto' });
+    });
+    act(() => {
+      result.current.actions.setConfigurationEffectiveDate('remy', 2, '2023-06-20');
+    });
+    const { animals, days } = result.current.model.workspace;
+    const after = days['remy-2023-06-25'];
+    expect(after.configurationVersion).toBe(1); // geometry untouched
+    const issue = validateDay(after, mergeDayMetadata(animals.remy, after), animals.remy).find((i) => i.code === 'configuration_effective_date_unconfirmed');
+    expect(issue).toBeTruthy();
+    expect(issue.message).toMatch(/v2/);
+  });
+});
+
 describe('#9 a correction or a filename change makes a previous download stale', () => {
   /**
    * Export June 22 through the real export core (download mocked).

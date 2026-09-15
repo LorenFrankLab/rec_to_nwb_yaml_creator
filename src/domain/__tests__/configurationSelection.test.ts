@@ -106,6 +106,19 @@ describe('configurationChoiceStatus', () => {
     expect(configurationChoiceStatus(moved, auto)).toMatchObject({ status: 'unconfirmed', version: 1, reason: 'before-effective-date' });
   });
 
+  it('a derived confirmation is also re-evaluated against the NEXT setup: moving v2 before the day supersedes the v1 pin', () => {
+    const auto = { ...day('2023-06-25', 1), provenance: { configuration: { source: 'effective-date', confirmed: true } } } as unknown as Day;
+    const v2Earlier = {
+      configurationHistory: [
+        { version: 1, date: '2023-06-01', description: 'implant', devices: {}, appliedToDays: [] },
+        { version: 2, date: '2023-06-20', description: 'lowered', devices: {}, appliedToDays: [] },
+      ],
+    };
+    expect(configurationChoiceStatus(v2Earlier, auto)).toMatchObject({ status: 'unconfirmed', version: 1, reason: 'superseded', supersededBy: 2 });
+    // The explicit exemption still holds.
+    expect(configurationChoiceStatus(v2Earlier, day('2023-06-25', 1, true))).toMatchObject({ status: 'confirmed' });
+  });
+
   it('reports an unpinned day', () => {
     expect(configurationChoiceStatus(animal, { id: 'x', date: '2023-06-25' } as unknown as Day)).toEqual({ status: 'unpinned' });
   });

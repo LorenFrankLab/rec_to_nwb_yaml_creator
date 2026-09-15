@@ -32,7 +32,9 @@ export function configurationChoiceIssues(day: unknown, animal: unknown): Repair
   const why =
     status.reason === 'unknown-period'
       ? `The probe setup v${status.version} was entered on ${status.effectiveDate ?? 'an unknown date'} and its effective period before that is not recorded, so it is not known to apply to this earlier recording.`
-      : `The probe setup v${status.version}${when} became effective AFTER this recording day.`;
+      : status.reason === 'superseded'
+        ? `The probe setup v${status.version}${when} was chosen for this day automatically, but v${status.supersededBy} is now recorded as effective from ${status.supersededFrom ?? 'an earlier date'} — before this recording day.`
+        : `The probe setup v${status.version}${when} became effective AFTER this recording day.`;
   return [
     {
       code: 'configuration_effective_date_unconfirmed',

@@ -88,7 +88,16 @@ export function selectConfigurationForDate(animalOrHistory: unknown, date: strin
 /** Whether a day's pinned configuration choice is settled for export. */
 export type ConfigurationChoiceStatus =
   | { status: 'confirmed'; version: number; effectiveDate: string | null }
-  | { status: 'unconfirmed'; version: number; effectiveDate: string | null; reason: 'before-effective-date' | 'unknown-period' }
+  | {
+      status: 'unconfirmed';
+      version: number;
+      effectiveDate: string | null;
+      reason: 'before-effective-date' | 'unknown-period' | 'superseded';
+      /** For `superseded`: the version whose effective date now covers the day instead. */
+      supersededBy?: number;
+      /** For `superseded`: that version's effective date. */
+      supersededFrom?: string | null;
+    }
   | { status: 'unpinned' };
 
 /**
@@ -114,13 +123,28 @@ export function configurationChoiceStatus(animal: unknown, day: Day): Configurat
   const explicitlyConfirmed = Boolean(choice?.confirmed) && choice?.source === 'explicit';
   if (explicitlyConfirmed) return { status: 'confirmed', version, effectiveDate };
   if (!snapshot) return { status: 'confirmed', version, effectiveDate };
-  if (isIsoDate(day.date) && snapshot.date <= day.date) return { status: 'confirmed', version, effectiveDate };
-  return {
-    status: 'unconfirmed',
-    version,
-    effectiveDate,
-    reason: snapshot.effectiveDateKnown === false ? 'unknown-period' : 'before-effective-date',
-  };
+  if (!isIsoDate(day.date) || snapshot.date > day.date) {
+    return {
+      status: 'unconfirmed',
+      version,
+      effectiveDate,
+      reason: snapshot.effectiveDateKnown === false ? 'unknown-period' : 'before-effective-date',
+    };
+  }
+  // The pin's effective INTERVAL has an end too: if the date rule now selects a different version
+  // (a later setup's effective date was moved before this day), the pin is superseded.
+  const selected = selectConfigurationForDate(animal, day.date);
+  if (selected.version != null && selected.version !== version) {
+    return {
+      status: 'unconfirmed',
+      version,
+      effectiveDate,
+      reason: 'superseded',
+      supersededBy: selected.version,
+      supersededFrom: selected.effectiveDate,
+    };
+  }
+  return { status: 'confirmed', version, effectiveDate };
 }
 
 /**
