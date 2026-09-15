@@ -285,6 +285,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **The daily log names the data folder right where file names are generated and shows statescripts
+  as expected / linked / not expected instead of a red "missing" count.** The "Data folder missing"
+  notice pointed at a section that does not exist while the field itself sat in a collapsed
+  disclosure below the epoch grid; the prompt is now the field, inline beside the generate buttons
+  and shown only until the folder is filled in. A statescript that has not been linked yet is a
+  warning, never an error: the summary chip counts only the epochs that actually expect one — always
+  a run epoch, and a sleep epoch only once an earlier day on the same probe configuration logged a
+  sleep statescript — and the row cell reads "Expected" / "Not expected" or names the linked file.
+  When the export gate is open with advisory issues left, the readiness line reads "Ready to export
+  · N warnings to review" instead of a bare green tick beside an amber badge. Repair buttons now say
+  "Fix in Daily log", the name the section rail actually shows.
+
 - **Batch import no longer collapses a camera's differing calibrations onto the first file's
   value.** `meters_per_pixel` is the scale the converter applies to that day's positions, so two
   files that reuse one `camera_name` with different calibrations do not describe one camera —
