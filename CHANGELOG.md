@@ -24,7 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   rejected shows the failure and no animal link, and a batch "replace" links to the id the animal was
   recreated under rather than the deleted one. Catalog entries brought into an existing animal are
   deduped by the identity keys the executor checks (camera `id`/`camera_name`, device `name`), so two
-  day files carrying the same camera recalibrated between them no longer fail the whole animal at
+  day files that re-declare one camera no longer fail the whole animal at
   commit. A repair input that has not been answered renders empty instead of being seeded with the
   value validation rejected, which had made unanswered rows look answered while the gate still
   counted them unresolved.
@@ -284,6 +284,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     zero console errors served exactly as GitHub Pages does, and e2e (104).
 
 ### Fixed
+
+- **Batch import no longer collapses a camera's differing calibrations onto the first file's
+  value.** `meters_per_pixel` is the scale the converter applies to that day's positions, so two
+  files that reuse one `camera_name` with different calibrations do not describe one camera —
+  keeping only the first file's value silently re-scaled every later recording day. Each conflict
+  is now surfaced in the batch preview with every calibration, the file and date that recorded it,
+  and a choice: keep them as separate cameras (the default — later calibrations are imported as
+  `{camera_name}_{YYYYMMDD}` of the date they first appear) or use one calibration for every day,
+  which names the values it will not import. Changing the choice re-plans the preview, each day's
+  camera references follow the calibration its own file recorded, an existing animal's own camera
+  row is never rewritten, and the result screen reports what was created or left behind.
 
 - **Batch import can no longer attach a video to the wrong camera.** When two files for the same
   animal numbered their cameras differently (file A: overhead = 0, side = 1; file B: the reverse),
