@@ -1,0 +1,15 @@
+{
+  "cleanup": {
+    "restoreSucceeded": true,
+    "beforeCleanup": {
+      "key": "receipt:remy-2023-06-22",
+      "yamlStored": true,
+      "artifactMatches": true
+    },
+    "afterReload": {
+      "yamlStored": true,
+      "artifact": null
+    },
+    "comparisonUnavailable": true
+  }
+}

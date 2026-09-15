@@ -227,6 +227,15 @@ baselines fail. No YAML byte path changed.
 Verification: `npx vitest run` **385 files / 5,468 tests pass** (two halves); typecheck, eslint,
 stylelint, build exit 0; Playwright **130 pass**, the same 7 pre-existing legacy visual baselines fail.
 
+## Fifth review response (docs/reviews/2026-09-15/REVISION_5_REVIEW.md, `5fa83f98`): fixed
+
+| Finding | Fix | Failing-first test |
+| --- | --- | --- |
+| P2 Post-restore cleanup can delete a newer download's bytes | `releaseReplacedArtifacts` never deletes the reusable per-day key (`receipt:<dayId>`, where a download in this browser puts its bytes); only the replaced workspace's immutable per-attempt keys are released. | `restoreAtomicity.test.js` "never deletes the reusable per-day download key" (deletes deferred; a download lands while cleanup is pending; its bytes survive the release) |
+
+Verification: `npx vitest run` **385 files / 5,469 tests pass** (two halves); typecheck, eslint,
+stylelint, build exit 0; Playwright **130 pass**, the same 7 pre-existing legacy visual baselines fail.
+
 ## Scientific assumptions needing pilot confirmation
 1. Subject ids never contain `_` (140/140 corpus ids agree) — the app now blocks it at creation and export.
 2. Weight: unknown weight blocks export (converter requires `subject.weight`); baseline is only a dated suggestion.

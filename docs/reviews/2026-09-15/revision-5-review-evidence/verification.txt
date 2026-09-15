@@ -1,0 +1,73 @@
+Branch: feat/first-useful-release
+Commit: 5fa83f984a480ff0f53e6ddd83d9e171e1b041b3
+Reviewed changes since 5906074f.
+Date: 2026-09-15 America/Los_Angeles
+
+
+> Rec-to-NWB YAML Generator@2.3.0 typecheck
+> tsc --noEmit
+
+
+
+Full Vitest run (final summary):
+
+ Test Files  385 passed (385)
+      Tests  5468 passed (5468)
+   Start at  09:38:38
+   Duration  52.63s (transform 16.55s, setup 161.04s, collect 62.83s, tests 251.55s, environment 140.42s, prepare 2.35s)
+
+
+
+Selected existing Playwright workflows:
+(node:41411) [DEP0205] DeprecationWarning: `module.register()` is deprecated. Use `module.registerHooks()` instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+
+Running 26 tests using 2 workers
+
+(node:41471) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:41470) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:41471) [DEP0205] DeprecationWarning: `module.register()` is deprecated. Use `module.registerHooks()` instead.
+(node:41470) [DEP0205] DeprecationWarning: `module.register()` is deprecated. Use `module.registerHooks()` instead.
+(node:41471) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:41470) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   2 e2e/workspace-persistence-recovery.spec.js:65:7 › Workspace persistence & recovery › a seeded configured workspace survives a full reload (2.0s)
+  ✓   3 e2e/workspace-persistence-recovery.spec.js:104:7 › Workspace persistence & recovery › an empty workspace blob recovers (no crash) with a "missing sections" notice (511ms)
+  ✓   1 e2e/workspace-daily-workflow.spec.js:55:7 › backfill June 25 by typed date: starts from June 22, pins setup v1 (not the newer v2), opens directly (desktop 1280×720) (3.0s)
+  ✓   4 e2e/workspace-persistence-recovery.spec.js:136:7 › Workspace persistence & recovery › a corrupt (non-JSON) blob is discarded with a visible notice, no crash (538ms)
+  ✓   6 e2e/workspace-persistence-recovery.spec.js:166:7 › Workspace persistence & recovery › without IndexedDB, the discarded original is still downloadable after a reload (a durable localStorage copy) (931ms)
+  ✓   5 e2e/workspace-daily-workflow.spec.js:55:7 › backfill June 25 by typed date: starts from June 22, pins setup v1 (not the newer v2), opens directly (phone 390×844) (2.0s)
+  ✓   7 e2e/workspace-persistence-recovery.spec.js:187:7 › Workspace persistence & recovery › restoring a backup is refused while the unrestorable original could not be preserved (nothing overwrites the only copy) (990ms)
+  ✓   8 e2e/workspace-daily-workflow.spec.js:93:5 › Log today creates today’s day and opens it; a second press just opens it (988ms)
+  ✓   9 e2e/workspace-persistence-recovery.spec.js:212:7 › Workspace persistence & recovery › Cancel during a delayed restore aborts it: an edit saved afterwards is never overwritten by the stale restore (1.5s)
+  ✓  11 e2e/workspace-persistence-recovery.spec.js:283:7 › Workspace persistence & recovery › a restore whose revision-marker write fails is refused as a whole: this tab, storage and a fresh tab all keep the old workspace (1.4s)
+  ✓  10 e2e/workspace-daily-workflow.spec.js:101:5 › typing into a focused field, Ctrl+S, and reloading preserves the text (F3) (2.0s)
+  ✓  12 e2e/workspace-persistence-recovery.spec.js:318:7 › Workspace persistence & recovery › a leftover revision stamp from a closed tab never blocks the sole writer after a discard (1.6s)
+  ✓  13 e2e/workspace-daily-workflow.spec.js:115:5 › a second tab opens read-only — its editing controls are DISABLED — and cannot overwrite the editing tab (F4) (1.6s)
+  ✓  14 e2e/workspace-persistence-recovery.spec.js:342:7 › Workspace persistence & recovery › a malformed blob whose required section is wrong-typed is discarded, not laundered (540ms)
+  ✓  15 e2e/workspace-daily-workflow.spec.js:145:5 › hand-over is REFUSED while the editing tab cannot save: its unsaved observation is kept, the requester is told why (1.7s)
+  ✓  16 e2e/workspace-persistence-recovery.spec.js:372:7 › Workspace persistence & recovery › a failed autosave shows the save-failure state and keeps the unsaved-work guard armed (1.8s)
+  ✓  18 e2e/workspace-persistence-recovery.spec.js:422:7 › Workspace persistence & recovery › importing a YAML missing required fields surfaces them for repair, never silently (827ms)
+  ✓  19 e2e/workspace-persistence-recovery.spec.js:466:7 › Workspace persistence & recovery › a valid YAML imported through the FILE PICKER advances to the repair view (not zero files) (661ms)
+  ✓  17 e2e/workspace-daily-workflow.spec.js:176:5 › workspace backup → restore preserves incomplete days, setup history and provenance (F8) (2.4s)
+  ✓  20 e2e/workspace-persistence-recovery.spec.js:520:7 › Workspace persistence & recovery › multiple ready YAMLs are reviewed and committed as one animal history (836ms)
+  ✓  21 e2e/workspace-daily-workflow.spec.js:215:5 › a download reads "Downloaded"; a later weight correction reads "Changed since download" (F6) (1.1s)
+  ✓  22 e2e/workspace-workflows.spec.js:58:7 › Workspace export workflows › same-day: a prepared animal exports one day without re-entering shared setup (1.1s)
+  ✓  24 e2e/workspace-workflows.spec.js:98:7 › Workspace export workflows › catch-up: per-day scan fields are visible and batch export ships every ready day (1.1s)
+  ✓  23 e2e/workspace-daily-workflow.spec.js:233:5 › duplicating June 22 (setup v1) to July 5 pins the setup effective July 5 (v2), not the source’s (2.2s)
+  ✓  25 e2e/workspace-workflows.spec.js:173:7 › Workspace export workflows › catch-up: an unready day is excluded from batch export (1.0s)
+  ✓  26 e2e/workspace-daily-workflow.spec.js:248:5 › the profile editor refuses a subject id another animal already uses (819ms)
+
+  26 passed (18.3s)
+
+
+Additional scripts: both exit 0. See neighboring JSON files.
+
+
+git diff --check 5906074f..HEAD: exit 0.
+
+
+Build, lint, converter, NWB Inspector, DANDI validation and Spyglass ingestion not rerun.

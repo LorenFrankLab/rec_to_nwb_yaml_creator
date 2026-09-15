@@ -1,0 +1,9 @@
+{
+  "retryAndBackup": {
+    "weight": 499,
+    "yamlStored": true,
+    "artifactMatches": true,
+    "backupIncludesArtifact": true,
+    "comparisonCorrectAfterEdit": true
+  }
+}
