@@ -1169,6 +1169,9 @@ function EpochDetailsPanel(p: EpochDetailsPanelProps) {
   const ownerType = taskTypes.find((t) => t?.id === ownerTypeId) ?? null;
   // "Edit for this day" is a disclosure, not a mode: the read-only context stays visible above it.
   const [editingContext, setEditingContext] = useState(false);
+  // The panel is reused across epochs, so an open editor must close when the epoch changes — it
+  // was prefilled from the PREVIOUS epoch and would otherwise write that day-context onto this one.
+  useEffect(() => setEditingContext(false), [row.epoch]);
   const hasManualVideo = row.videos.some((v) => p.manualVideoKeys.has(`e${row.epoch}-v${v.index}`));
   const generatedFilesNeedReview =
     !row.statescript ||

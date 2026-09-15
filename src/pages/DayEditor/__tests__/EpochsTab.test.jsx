@@ -345,6 +345,31 @@ describe('EpochsTab — write-back patches', () => {
       expect(screen.queryByText(/differs from task default/i)).not.toBeInTheDocument();
     });
 
+    it('closes the per-day editor when the drill-in moves to another epoch', async () => {
+      // The panel is reused across epochs; a left-open editor would still be prefilled from the
+      // previous epoch and could write its context onto a different day's occurrence.
+      const user = userEvent.setup();
+      const bundle = makeBundle(
+        { taskInstances: [{ taskTypeId: 'tasktype-0', task_epochs: [1] }, { taskTypeId: 'tasktype-1', task_epochs: [2] }], associated_video_files: [] },
+        {
+          taskTypes: [
+            { id: 'tasktype-0', task_name: 'Sleep', task_description: 'sleep', task_environment: 'HaightRight', camera_id: [0] },
+            { id: 'tasktype-1', task_name: 'Run', task_description: 'run', task_environment: 'Track', camera_id: [1] },
+          ],
+        }
+      );
+      render(<EpochsTab {...bundle} />);
+
+      await user.click(screen.getByRole('button', { name: /Show epoch 1 details/i }));
+      await user.click(screen.getByRole('button', { name: /Edit for this day/i }));
+      expect(screen.getByLabelText(/Environment for this day/i)).toHaveValue('HaightRight');
+
+      await user.click(screen.getByRole('button', { name: /Show epoch 2 details/i }));
+      expect(screen.queryByLabelText(/Environment for this day/i)).not.toBeInTheDocument();
+      await user.click(screen.getByRole('button', { name: /Edit for this day/i }));
+      expect(screen.getByLabelText(/Environment for this day/i)).toHaveValue('Track');
+    });
+
     it('has no axe violations with the per-day editor open', async () => {
       const user = userEvent.setup();
       const { container } = render(<EpochsTab {...contextBundle()} />);
