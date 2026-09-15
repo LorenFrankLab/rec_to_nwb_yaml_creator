@@ -7,10 +7,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { useStore } from '../store';
-import { WORKSPACE_STORAGE_KEY, resetPersistenceForTests } from '../persistence';
+import { WORKSPACE_STORAGE_KEY, WORKSPACE_META_KEY, loadWorkspace, resetPersistenceForTests } from '../persistence';
 import { resetWriterLockForTests } from '../writerLock';
 import { resetBlobStoreForTests, getBlob } from '../blobStore';
-import { receiptHash, RECEIPT_YAML_KEY_PREFIX } from '../../domain/exportReceipt';
+import { receiptHash, receiptYamlKey, RECEIPT_YAML_KEY_PREFIX } from '../../domain/exportReceipt';
 import { makeTestWorkspace } from '../../__tests__/helpers/test-fixtures';
 
 const { deferred } = vi.hoisted(() => ({ deferred: [] }));
@@ -184,11 +184,94 @@ describe('restore atomicity', () => {
     });
     expect(ok).toBe(true);
     expect(storedWeight()).toBe(480);
-    // The commit phase promotes the staged bytes (one more deferred store write).
+    const receipt = result.current.model.workspace.days[DAY].exportReceipt;
+    expect((await getBlob(receiptYamlKey(DAY, receipt))).yaml).toBe('weight: 480\n');
+    expect(result.current.model.workspace.days[DAY].exportReceipt.yamlStored).toBe(true);
+  });
+});
+
+describe('restore outcome covers the revision marker and the referenced bytes', () => {
+  it('a failed revision-marker write refuses the restore with storage, memory and a fresh load all at 485 g', async () => {
+    const initial = await activeWorkspace();
+    const { result } = renderHook(() => useStore({ workspace: initial }));
+    await waitFor(() => expect(result.current.persistence.writer.role).toBe('writer'));
+    act(() => {
+      expect(result.current.persistence.saveNow()).toBe(true);
+    });
+    const realSetItem = window.localStorage.setItem.bind(window.localStorage);
+    vi.spyOn(window.localStorage, 'setItem').mockImplementation((key, value) => {
+      if (key === WORKSPACE_META_KEY) throw new Error('Quota full on revision marker');
+      realSetItem(key, value);
+    });
+    const { ws, artifacts } = backup();
+    let ok;
     await act(async () => {
+      const done = result.current.persistence.restoreWorkspace(ws, artifacts);
+      await releaseAll();
+      ok = await done;
+    });
+    expect(ok).toBe(false);
+    expect(result.current.model.workspace.days[DAY].session.weight).toBe(485);
+    expect(storedWeight()).toBe(485);
+    vi.restoreAllMocks();
+    resetPersistenceForTests();
+    expect(loadWorkspace().workspace.days[DAY].session.weight).toBe(485); // what a fresh tab reads
+  });
+
+  it('a completed restore refers to acknowledged bytes at a key the receipt names (no promotion step to lose them)', async () => {
+    const initial = await activeWorkspace();
+    const { result } = renderHook(() => useStore({ workspace: initial }));
+    await waitFor(() => expect(result.current.persistence.writer.role).toBe('writer'));
+    const { ws, artifacts } = backup();
+    let ok;
+    await act(async () => {
+      const done = result.current.persistence.restoreWorkspace(ws, artifacts);
+      await releaseAll();
+      ok = await done;
+    });
+    expect(ok).toBe(true);
+    expect(result.current.persistence.restoreInFlight).toBe(false);
+    const receipt = result.current.model.workspace.days[DAY].exportReceipt;
+    expect(receipt.yamlStored).toBe(true);
+    expect((await getBlob(receiptYamlKey(DAY, receipt))).yaml).toBe('weight: 480\n');
+    expect(deferred).toHaveLength(0); // nothing left pending after "restored"
+  });
+
+  it('a cancelled restore’s cleanup never deletes a retry’s staged bytes for the same day', async () => {
+    const initial = await activeWorkspace();
+    const { result } = renderHook(() => useStore({ workspace: initial }));
+    await waitFor(() => expect(result.current.persistence.writer.role).toBe('writer'));
+    const a = backup();
+    let doneA;
+    act(() => {
+      doneA = result.current.persistence.restoreWorkspace(a.ws, a.artifacts);
+    });
+    const releaseA = deferred.shift();
+    act(() => {
+      result.current.persistence.cancelRestore();
+    });
+    const b = backup();
+    b.ws.days[DAY].session.weight = 499;
+    let doneB;
+    act(() => {
+      doneB = result.current.persistence.restoreWorkspace(b.ws, b.artifacts);
+    });
+    const releaseB = deferred.shift();
+    // B has written its staged bytes; A's cancelled continuation now runs its cleanup.
+    await act(async () => {
+      await releaseA();
+      await flush();
+      expect(await doneA).toBe(false);
+    });
+    await act(async () => {
+      await releaseB();
+      await flush();
+      expect(await doneB).toBe(true);
       await releaseAll();
     });
-    expect((await getBlob(`${RECEIPT_YAML_KEY_PREFIX}${DAY}`)).yaml).toBe('weight: 480\n');
-    expect(result.current.model.workspace.days[DAY].exportReceipt.yamlStored).toBe(true);
+    expect(storedWeight()).toBe(499);
+    const receipt = result.current.model.workspace.days[DAY].exportReceipt;
+    expect(receipt.yamlStored).toBe(true);
+    expect((await getBlob(receiptYamlKey(DAY, receipt))).yaml).toBe('weight: 480\n');
   });
 });

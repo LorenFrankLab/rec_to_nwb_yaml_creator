@@ -544,8 +544,13 @@ export interface ExportReceipt {
   appVersion: string;
   /** Persisted-workspace schema version at export time. */
   schemaVersion: number;
-  /** Whether the exact YAML bytes are kept in the side store (`receipt:<dayId>`) for inspection. */
+  /** Whether the exact YAML bytes are kept in the side store for inspection. */
   yamlStored: boolean;
+  /**
+   * The side-store key holding those bytes when it is not the default `receipt:<dayId>` — a
+   * restored receipt names the write-once key its restore attempt wrote (see `receiptYamlKey`).
+   */
+  yamlKey?: string;
   /**
    * The day's and animal's `lastModified` at export time — a CACHE KEY only: while both are
    * unchanged nothing that feeds the export has been edited, so the hash comparison can be skipped.

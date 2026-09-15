@@ -23,6 +23,19 @@ import type { Animal, Day, ExportReceipt } from '../state/workspaceTypes';
 /** Side-store key prefix for a day's last exported bytes. */
 export const RECEIPT_YAML_KEY_PREFIX = 'receipt:';
 
+/**
+ * The side-store key holding a receipt's YAML bytes: the receipt's own `yamlKey` when it names one
+ * (a restored receipt refers to the write-once key its restore attempt wrote), else the day's
+ * default key (`receipt:<dayId>`, where a download in this browser puts them).
+ *
+ * @param dayId - The day id.
+ * @param receipt - The receipt (or anything with an optional `yamlKey`).
+ * @returns The key.
+ */
+export function receiptYamlKey(dayId: string, receipt: { yamlKey?: unknown } | null | undefined): string {
+  return typeof receipt?.yamlKey === 'string' && receipt.yamlKey !== '' ? receipt.yamlKey : `${RECEIPT_YAML_KEY_PREFIX}${dayId}`;
+}
+
 /** The app version stamped into receipts (package.json is not importable in the browser bundle). */
 export const RECEIPT_APP_VERSION = '3.0.0-modern';
 

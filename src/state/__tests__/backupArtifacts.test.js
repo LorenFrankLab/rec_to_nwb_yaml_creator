@@ -11,7 +11,7 @@ import {
   restoreBackupArtifacts,
   resetPersistenceForTests,
 } from '../persistence';
-import { receiptHash, RECEIPT_YAML_KEY_PREFIX } from '../../domain/exportReceipt';
+import { receiptHash, receiptYamlKey, RECEIPT_YAML_KEY_PREFIX } from '../../domain/exportReceipt';
 import { makeTestWorkspace } from '../../__tests__/helpers/test-fixtures';
 
 // jsdom has no IndexedDB: `putBlob` reports memory-only (false). `durable.value = true` stands in
@@ -63,8 +63,11 @@ describe('backup artifacts', () => {
     durable.value = true;
     const parsed = parseWorkspaceBackup(text);
     const restored = await restoreBackupArtifacts(parsed.workspace, parsed.artifacts);
-    expect(restored.days[DAY].exportReceipt.yamlStored).toBe(true);
-    expect(await getBlob(`${RECEIPT_YAML_KEY_PREFIX}${DAY}`)).toMatchObject({ filename: FILENAME, yaml: YAML });
+    const receipt = restored.days[DAY].exportReceipt;
+    expect(receipt.yamlStored).toBe(true);
+    // Written once, to a key of this attempt's own that the receipt names.
+    expect(receipt.yamlKey).toMatch(new RegExp(`^${RECEIPT_YAML_KEY_PREFIX}${DAY}:restore-`));
+    expect(await getBlob(receiptYamlKey(DAY, receipt))).toMatchObject({ filename: FILENAME, yaml: YAML });
   });
 
   it('a restore whose store did NOT durably accept the bytes (no IndexedDB) leaves yamlStored false — a fresh document has no bytes', async () => {
@@ -88,16 +91,17 @@ describe('backup artifacts', () => {
     expect(restored.days[DAY].exportReceipt.contentHash).toBe(receiptHash(FILENAME, YAML));
   });
 
-  it('an artifact that does not match its receipt hash is rejected, and stale bytes under the same day id are cleared', async () => {
+  it('an artifact that does not match its receipt hash is rejected: the receipt claims no bytes and names no key', async () => {
     const text = await buildWorkspaceBackup(await downloadedWorkspace(), 'test');
     const tampered = JSON.parse(text);
     tampered.artifacts[DAY].yaml = 'something else\n';
-    // The receiving browser already holds unrelated bytes under this day id.
+    // The receiving browser already holds unrelated bytes under this day's default key; they are
+    // never presented as this receipt's download (every reader verifies the hash).
     resetBlobStoreForTests();
     await putBlob(`${RECEIPT_YAML_KEY_PREFIX}${DAY}`, { filename: 'old.yml', yaml: 'old bytes\n', exportedAt: 'x' });
     const parsed = parseWorkspaceBackup(JSON.stringify(tampered));
     const restored = await restoreBackupArtifacts(parsed.workspace, parsed.artifacts);
     expect(restored.days[DAY].exportReceipt.yamlStored).toBe(false);
-    expect(await getBlob(`${RECEIPT_YAML_KEY_PREFIX}${DAY}`)).toBeUndefined();
+    expect(restored.days[DAY].exportReceipt.yamlKey).toBeUndefined();
   });
 });

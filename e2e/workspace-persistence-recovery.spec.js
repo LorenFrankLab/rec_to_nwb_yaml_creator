@@ -280,6 +280,41 @@ test.describe('Workspace persistence & recovery', () => {
     await expect(page.getByLabel('Weight measured today (grams)')).toHaveValue('777');
   });
 
+  test('a restore whose revision-marker write fails is refused as a whole: this tab, storage and a fresh tab all keep the old workspace', async ({ context, page }) => {
+    await page.addInitScript((metaKey) => {
+      const original = window.localStorage.setItem.bind(window.localStorage);
+      window.localStorage.setItem = (k, v) => {
+        if (k === metaKey && window.__failMeta) throw new DOMException('Quota full on revision marker', 'QuotaExceededError');
+        original(k, v);
+      };
+    }, `${STORAGE_KEY}.meta`);
+    const seed = buildConfiguredWorkspaceBlob();
+    seed.workspace.days[DAY_ID].session = { ...seed.workspace.days[DAY_ID].session, weight: 485 };
+    await seedWorkspace(page, seed);
+
+    const backup = buildConfiguredWorkspaceBlob();
+    backup.workspace.days[DAY_ID].session = { ...backup.workspace.days[DAY_ID].session, weight: 480 };
+    const text = JSON.stringify({ ...backup, format: 'rec_to_nwb_workspace_backup', formatVersion: 2, artifacts: {} });
+    await page.evaluate(() => {
+      window.__failMeta = true;
+    });
+    const chooser = page.waitForEvent('filechooser');
+    await page.getByRole('button', { name: /Restore from backup/ }).click();
+    await (await chooser).setFiles({ name: 'backup.json', mimeType: 'application/json', buffer: Buffer.from(text) });
+    const dialog = page.getByRole('alertdialog');
+    await dialog.getByRole('button', { name: 'Replace workspace' }).click();
+    await expect(dialog).toContainText(/Nothing was replaced/);
+    await expect(dialog).toContainText(/Quota full on revision marker/);
+
+    const stored = await page.evaluate((key) => JSON.parse(window.localStorage.getItem(key)).workspace.days, STORAGE_KEY);
+    expect(stored[DAY_ID].session.weight).toBe(485);
+    // A fresh (read-only) tab reads the same workspace this tab shows.
+    const second = await context.newPage();
+    await second.goto(`/#/day/${DAY_ID}`);
+    await expect(second.getByLabel('Weight measured today (grams)')).toHaveValue('485');
+    await second.close();
+  });
+
   test('a leftover revision stamp from a closed tab never blocks the sole writer after a discard', async ({ page }) => {
     await page.goto('/#/workspace');
     await page.evaluate(

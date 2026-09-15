@@ -16,7 +16,7 @@ import {
   WORKSPACE_STORAGE_KEY,
   WorkspaceConflictError,
 } from './persistence';
-import { stageBackupArtifacts, commitStagedArtifacts, discardStagedArtifacts } from './persistence';
+import { stageBackupArtifacts, discardStagedArtifacts, releaseReplacedArtifacts } from './persistence';
 import type { LoadDiscardReason, BackupArtifacts } from './persistence';
 import {
   acquireWriterLock,
@@ -427,9 +427,12 @@ export function useWorkspacePersistence({
       const token = restoreTokenRef.current;
       restoreInFlightRef.current = true;
       setRestoreInFlight(true);
+      // Every attempt writes its incoming bytes to keys of its own (named by the restored
+      // receipts), so a cancelled attempt's cleanup can never touch a retry's bytes.
+      const opId = `restore-${Date.now().toString(36)}-${token}`;
       let staged: Awaited<ReturnType<typeof stageBackupArtifacts>>['staged'] = {};
       try {
-        const stagedResult = await stageBackupArtifacts(incoming, artifacts);
+        const stagedResult = await stageBackupArtifacts(incoming, artifacts, opId);
         staged = stagedResult.staged;
         const next = stagedResult.workspace;
         // Cancelled or superseded while staging: commit nothing.
@@ -453,12 +456,15 @@ export function useWorkspacePersistence({
           setSaveError(`Could not save the restored workspace: ${(err as Error).message}`);
           return false;
         }
+        const replaced = workspaceRef.current;
         replaceWorkspace(next);
         lastPersistedRef.current = next;
         setLastSaved(new Date().toISOString());
         setSaveError(null);
         setHasPendingWrite(false);
-        void commitStagedArtifacts(next, staged);
+        // Nothing left to promote: the restored receipts already name their acknowledged bytes.
+        // The replaced workspace's artifacts are unreachable now — best-effort cleanup.
+        void releaseReplacedArtifacts(replaced, next);
         return true;
       } finally {
         if (restoreTokenRef.current === token) {
@@ -467,7 +473,7 @@ export function useWorkspacePersistence({
         }
       }
     },
-    [enabled, replaceWorkspace, writeBlocker]
+    [enabled, replaceWorkspace, writeBlocker, workspaceRef]
   );
 
   // Real persistence status (never part of `model` — must not reach YAML).
