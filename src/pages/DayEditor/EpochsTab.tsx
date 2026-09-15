@@ -58,7 +58,7 @@ import { preserveInlineTaskDefinitions, resolveDayCatalogView } from '../../stat
 import { stripTaskContext } from '../../state/taskCatalog';
 import { addTaskType, nextTaskTypeId } from '../../state/taskCatalogActions';
 import type { TaskTypeDefinitionInput } from '../../state/taskCatalogActions';
-import type { TaskInstance, TaskType, Camera } from '../../state/workspaceTypes';
+import type { Day, TaskInstance, TaskType, Camera } from '../../state/workspaceTypes';
 import styles from './EpochsTab.module.css';
 import { pluralize } from '../../utils/pluralize';
 
@@ -148,9 +148,21 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
   const ownerKey = animalKey ?? (animal as { id?: string })?.id;
   const focusRequest = props.focusRequest ?? null;
 
+  // The frame rebuilds its `animalDays` ARRAY on every render while the day RECORDS inside it stay
+  // the same objects. Hold the array identity steady across such renders so the grid memo below
+  // (and the earlier-day scan behind `statescriptState`) is not redone on every keystroke.
+  const animalDaysRef = useRef<Day[]>(animalDays);
+  if (
+    animalDaysRef.current.length !== animalDays.length
+    || animalDaysRef.current.some((entry, index) => entry !== animalDays[index])
+  ) {
+    animalDaysRef.current = animalDays;
+  }
+  const siblingDays = animalDaysRef.current;
+
   // Both derivations join the day against the animal's task catalog; memoized so opening a menu,
   // switching a filter chip or toggling the drawer doesn't redo the join.
-  const grid = useMemo(() => buildEpochGrid(animal, day, animalDays), [animal, day, animalDays]);
+  const grid = useMemo(() => buildEpochGrid(animal, day, siblingDays), [animal, day, siblingDays]);
   const view = useMemo(() => resolveDayCatalogView(animal, day), [animal, day]);
   const cameras = getAnimalCameras(animal);
   const unresolvedTaskCatalogDivergence = view.derived && view.divergences.length > 0;
