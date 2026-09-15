@@ -1,6 +1,6 @@
 # Workflow review fixes (2026-09-15)
 
-**Status:** In progress on branch `fix/workflow-review-findings` (off `feat/first-useful-release` @ 036b9591).
+**Status:** COMPLETE — nine tasks + final fix wave on `fix/workflow-review-findings` (commits 70fe5b38..6d7aa64b, plus this docs commit), fast-forward merged into `feat/first-useful-release`. Response table + follow-ups: docs/reviews/2026-09-14/IMPLEMENTATION_STATUS.md.
 **Spec:** [docs/reviews/2026-09-15/WORKFLOW_UX_ARCHITECTURE_REVIEW.md](../../../../docs/reviews/2026-09-15/WORKFLOW_UX_ARCHITECTURE_REVIEW.md) — findings F1–F7 and architecture items 2, 3, 5. The spec's central rule binds every task:
 
 > Reuse definitions and suggest previous values; preserve what was actually true on each recording date. Distinguish a correction to history from a change that starts on a particular date.
