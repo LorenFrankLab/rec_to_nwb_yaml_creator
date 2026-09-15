@@ -21,7 +21,7 @@ import { useStoreContext } from '../../../state/StoreContext';
 import { getAnimalDayIds, getAnimalTaskTypes } from '../../../state/workspaceSelectors';
 import { addTaskType, updateTaskType, deleteTaskType } from '../../../state/taskCatalogActions';
 import type { TaskTypeDefinitionInput } from '../../../state/taskCatalogActions';
-import { TASK_CONTEXT_FIELDS, deepEqual, pinTaskContextOnDays } from '../../../state/taskCatalog';
+import { TASK_CONTEXT_FIELDS, deepEqual, hasOwn, pinTaskContextOnDays } from '../../../state/taskCatalog';
 import type { TaskContextOverrides } from '../../../state/taskCatalog';
 import type { Animal, Day, TaskType } from '../../../state/workspaceTypes';
 import { ConfirmDialog } from '../../../components/Modal';
@@ -49,28 +49,71 @@ interface TaskTypeModalState {
 interface PendingContextChange {
   /** The task type being edited. */
   taskType: TaskType;
-  /** The edited definition to save once the scope is chosen. */
+  /** The edited definition to save once the scope is chosen (blank no-value keys dropped). */
   definition: TaskTypeDefinitionInput;
-  /** The OLD values of the fields that changed (what an earlier day would be pinned with). */
+  /** The OLD values of the fields that can be pinned (what an earlier day would record). */
   oldValues: TaskContextOverrides;
-  /** Which fields changed, for the dialog copy. */
+  /** Which fields changed, for the dialog title. */
   changedLabel: string;
   /**
-   * Whether "keep earlier days as recorded" can be honoured: false when a changed field had NO old
-   * value, since absence is not expressible as an override (absent ⇒ follow the default). Those days
-   * WILL change, so the only honest routes are an explicit correction or cancel.
+   * The changed fields whose old value CAN be recorded on an earlier day — the ones "keep earlier
+   * days as recorded" actually preserves. Empty when none, which withholds that route entirely.
    */
-  canKeepEarlierDays: boolean;
+  keepableLabel: string;
+  /**
+   * The changed fields whose old value CANNOT be recorded, because the type had no value there and
+   * absence is not expressible as an override (absent ⇒ follow the default). Those days WILL change
+   * for these fields whichever route is taken, and the dialog says so. Empty when none.
+   */
+  unkeepableLabel: string;
   /** The days that still follow the old default (they are what the choice is about). */
   affectedDays: Day[];
   /** Whether some of the animal's day records could not be loaded. */
   hasUnresolvableDays: boolean;
 }
 
-/** Human label for the changed context fields ("environment", "cameras", or both). */
+/** Human label for a set of context fields ("environment", "cameras", or both). */
 function changedFieldsLabel(fields: readonly string[]): string {
   const names = fields.map((field) => (field === 'task_environment' ? 'environment' : 'cameras'));
   return names.join(' and ');
+}
+
+/**
+ * Whether a context value says "no value at all". The catalog stores absence (a template mints
+ * `{ task_name, task_description }` only; a derived type carries just the keys its inline task had),
+ * while {@link TaskTypeModal} always emits a trimmed string and an array — so `undefined`, `''` and
+ * `[]` are three spellings of the same thing and must compare EQUAL, or a description-only edit
+ * would read as a context change and write blank keys into every referencing day's export.
+ *
+ * @param value - A `task_environment` / `camera_id` value.
+ * @returns True when the value carries no information.
+ */
+function isNoContextValue(value: unknown): boolean {
+  if (value === undefined || value === null) return true;
+  if (typeof value === 'string') return value.trim() === '';
+  if (Array.isArray(value)) return value.length === 0;
+  return false;
+}
+
+/** Whether a context value differs in MEANING (the three "no value" spellings are one value). */
+function contextValueChanged(edited: unknown, current: unknown): boolean {
+  if (isNoContextValue(edited) && isNoContextValue(current)) return false;
+  return !deepEqual(edited, current);
+}
+
+/**
+ * Whether an earlier day could RECORD this old value as its own. An absent value cannot (absence
+ * means "follow the default"), and neither can a blank environment — pinning `''` would write a
+ * value the schema rejects onto days that are mid-repair. An empty `camera_id` IS recordable: "this
+ * day used no cameras" is a real, exportable fact.
+ *
+ * @param value - The task type's OLD value for a context field.
+ * @returns True when the value can be pinned onto an earlier day.
+ */
+function isRecordableContextValue(value: unknown): boolean {
+  if (value === undefined || value === null) return false;
+  if (typeof value === 'string') return value.trim() !== '';
+  return true;
 }
 
 export default function TaskTypesContainer({ animal, onFieldUpdate, onPendingEditsChange }: TaskTypesContainerProps) {
@@ -135,7 +178,8 @@ export default function TaskTypesContainer({ animal, onFieldUpdate, onPendingEdi
     }
 
     if (modal.mode === 'edit' && editingId != null && modal.taskType) {
-      const scoped = contextChangeFor(modal.taskType, definition);
+      const cleaned = withoutAddedBlankContext(modal.taskType, definition);
+      const scoped = contextChangeFor(modal.taskType, cleaned);
       if (scoped) {
         // Days already follow the old default: ask before their exports change. The edit form
         // closes first so the scope dialog is the only modal surface (one focus trap at a time);
@@ -144,14 +188,39 @@ export default function TaskTypesContainer({ animal, onFieldUpdate, onPendingEdi
         setModal({ open: false, mode: 'add', taskType: null });
         return;
       }
+      onFieldUpdate('taskTypes', updateTaskType(taskTypes, editingId, cleaned));
+      closeModal();
+      return;
     }
 
-    const next =
-      modal.mode === 'edit' && editingId != null
-        ? updateTaskType(taskTypes, editingId, definition)
-        : addTaskType(taskTypes, definition);
-    onFieldUpdate('taskTypes', next);
+    onFieldUpdate('taskTypes', addTaskType(taskTypes, definition));
     closeModal();
+  };
+
+  /**
+   * The edited definition with any context field DROPPED that the task type never had and the user
+   * left blank. The modal always emits `task_environment: <string>` + `camera_id: <array>`, so
+   * without this a description-only edit of a template-minted type would add `camera_id: []` (and,
+   * were the modal ever to allow it, a schema-invalid `task_environment: ''`) to the type — silently
+   * changing the exported bytes of every day that references it.
+   *
+   * A field the type ALREADY had is left exactly as the user left it: emptying a populated
+   * `camera_id` to `[]` is a real edit, not a no-op.
+   *
+   * @param taskType - The task type being edited.
+   * @param definition - The modal's definition.
+   * @returns The definition to compare and save.
+   */
+  const withoutAddedBlankContext = (
+    taskType: TaskType,
+    definition: TaskTypeDefinitionInput
+  ): TaskTypeDefinitionInput => {
+    const current = taskType as unknown as Record<string, unknown>;
+    const next = { ...definition } as Record<string, unknown>;
+    for (const field of TASK_CONTEXT_FIELDS) {
+      if (isNoContextValue(next[field]) && !hasOwn(current, field)) delete next[field];
+    }
+    return next as unknown as TaskTypeDefinitionInput;
   };
 
   /**
@@ -159,12 +228,13 @@ export default function TaskTypesContainer({ animal, onFieldUpdate, onPendingEdi
    * environment nor the cameras, or because no loadable day still follows the old default (a day
    * that recorded its own values is unaffected either way).
    *
-   * A changed field whose OLD value was absent still needs the decision: those days cannot keep "no
-   * value" (absence means "follow the default"), so their exports change — a correction to history,
-   * which must be explicit and confirmed rather than silent.
+   * A changed field whose OLD value cannot be recorded (the type had none) still needs the
+   * decision: those days cannot keep "no value", so their exports change — a correction to history,
+   * which must be explicit and confirmed rather than silent. The keep/cannot-keep split is computed
+   * PER FIELD, so a mixed edit still preserves the field that has an old value to preserve.
    *
    * @param taskType - The task type being edited.
-   * @param definition - The edited definition.
+   * @param definition - The edited definition (already stripped of added blank context).
    * @returns The pending scope decision, or null to save immediately.
    */
   const contextChangeFor = (
@@ -173,7 +243,9 @@ export default function TaskTypesContainer({ animal, onFieldUpdate, onPendingEdi
   ): PendingContextChange | null => {
     const edited = definition as unknown as Record<string, unknown>;
     const current = taskType as unknown as Record<string, unknown>;
-    const changed = TASK_CONTEXT_FIELDS.filter((field) => !deepEqual(edited[field], current[field]));
+    const changed = TASK_CONTEXT_FIELDS.filter((field) =>
+      contextValueChanged(edited[field], current[field])
+    );
     if (changed.length === 0) return null;
 
     // Only days FOLLOWING the old default are affected; one that recorded its own value is not.
@@ -186,14 +258,18 @@ export default function TaskTypesContainer({ animal, onFieldUpdate, onPendingEdi
     );
     if (affectedDays.length === 0 && !hasUnresolvableDays) return null;
 
+    // Split the changed fields by whether their OLD value can be written onto an earlier day.
+    const keepable = changed.filter((field) => isRecordableContextValue(current[field]));
+    const unkeepable = changed.filter((field) => !isRecordableContextValue(current[field]));
     const oldValues: Record<string, unknown> = {};
-    for (const field of changed) oldValues[field] = current[field];
+    for (const field of keepable) oldValues[field] = current[field];
     return {
       taskType,
       definition,
       oldValues: oldValues as TaskContextOverrides,
       changedLabel: changedFieldsLabel(changed),
-      canKeepEarlierDays: changed.every((field) => current[field] !== undefined),
+      keepableLabel: changedFieldsLabel(keepable),
+      unkeepableLabel: changedFieldsLabel(unkeepable),
       affectedDays,
       hasUnresolvableDays,
     };
@@ -261,7 +337,8 @@ export default function TaskTypesContainer({ animal, onFieldUpdate, onPendingEdi
           date: day.date,
         }))}
         hasUnresolvableDays={pendingContext?.hasUnresolvableDays}
-        canKeepEarlierDays={pendingContext?.canKeepEarlierDays ?? true}
+        keepableLabel={pendingContext?.keepableLabel ?? ''}
+        unkeepableLabel={pendingContext?.unkeepableLabel ?? ''}
         onKeepEarlierDays={() => resolveContextChange(true)}
         onCorrectEarlierDays={() => resolveContextChange(false)}
         onCancel={() => {

@@ -357,6 +357,105 @@ describe('TaskTypesContainer — changing a task default that recording days alr
     ]);
   });
 
+  describe('a task type that never had an environment/cameras key', () => {
+    // Templates mint `{ task_name, task_description }` only (EpochsTab applyTemplate), and a type
+    // derived from an inline task carries only the keys that task had. The modal, though, always
+    // emits `task_environment: <string>` and `camera_id: <array>` — so "absent" and the modal's
+    // blank `''`/`[]` must count as the same "no value", or an edit that touched neither field
+    // would ask for a scope AND add blank keys to every referencing day's export.
+
+    /**
+     * A workspace whose task type lacks the given context keys.
+     * @param {...any} absentFields
+     */
+    const workspaceLacking = (...absentFields) => {
+      const workspace = workspaceWithTwoDays();
+      for (const field of absentFields) delete workspace.animals.sc38.taskTypes[0][field];
+      workspace.animals.sc38 = { ...workspace.animals.sc38, cameras: [{ id: 0, camera_name: 'overhead' }] };
+      return workspace;
+    };
+
+    it('a description-only edit asks nothing and does not add a blank camera_id', async () => {
+      const workspace = workspaceLacking('camera_id');
+      const onFieldUpdate = vi.fn();
+      renderWithStore(
+        <TaskTypesContainer animal={workspace.animals.sc38} onFieldUpdate={onFieldUpdate} />,
+        workspace
+      );
+
+      await user.click(screen.getByRole('button', { name: /Edit task type forkTrack/i }));
+      const description = screen.getByLabelText('Description');
+      await user.clear(description);
+      await user.type(description, 'Handle alternation, two second delay');
+      await user.click(screen.getByRole('button', { name: /Save task type/i }));
+
+      expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+      const [, saved] = onFieldUpdate.mock.calls.at(-1);
+      expect(saved[0]).toEqual({
+        id: 'tasktype-0',
+        task_name: 'forkTrack',
+        task_description: 'Handle alternation, two second delay',
+        task_environment: 'HaightRight',
+      });
+      expect(saved[0]).not.toHaveProperty('camera_id'); // the key it never had stays absent
+    });
+
+    it('naming an environment for the first time asks about THAT field only', async () => {
+      // With both keys absent the modal cannot save without an environment (it is required), so
+      // this is the closest thing to a "touched neither" edit: the environment genuinely changes,
+      // the cameras do not, and the dialog must say so — and still not add `camera_id: []`.
+      const workspace = workspaceLacking('task_environment', 'camera_id');
+      const onFieldUpdate = vi.fn();
+      renderWithStore(
+        <TaskTypesContainer animal={workspace.animals.sc38} onFieldUpdate={onFieldUpdate} />,
+        workspace
+      );
+
+      await user.click(screen.getByRole('button', { name: /Edit task type forkTrack/i }));
+      await user.type(screen.getByLabelText('Environment'), 'HaightLeft');
+      await user.click(screen.getByRole('button', { name: /Save task type/i }));
+
+      const dialog = screen.getByRole('alertdialog');
+      expect(dialog).toHaveTextContent(/environment/i);
+      expect(dialog).not.toHaveTextContent(/cameras/i);
+
+      await user.click(screen.getByRole('button', { name: /Also correct those 2 days/i }));
+      const [, saved] = onFieldUpdate.mock.calls.at(-1);
+      expect(saved[0]).not.toHaveProperty('camera_id');
+      expect(saved[0].task_environment).toBe('HaightLeft');
+    });
+
+    it('a MIXED edit still offers keep, and pins only the field that had an old value', async () => {
+      // Environment had a value (keepable); cameras did not (absence cannot be recorded). The keep
+      // route must still be offered for the environment, and the copy must name only the cameras as
+      // un-keepable.
+      const workspace = workspaceLacking('camera_id');
+      const onFieldUpdate = vi.fn();
+      renderWithStore(
+        <TaskTypesContainer animal={workspace.animals.sc38} onFieldUpdate={onFieldUpdate} />,
+        workspace
+      );
+
+      await user.click(screen.getByRole('button', { name: /Edit task type forkTrack/i }));
+      const environment = screen.getByLabelText('Environment');
+      await user.clear(environment);
+      await user.type(environment, 'HaightLeft');
+      await user.click(screen.getByRole('checkbox', { name: /overhead/i }));
+      await user.click(screen.getByRole('button', { name: /Save task type/i }));
+
+      const dialog = screen.getByRole('alertdialog');
+      expect(dialog).toHaveTextContent(/cameras/i);
+      expect(dialog).toHaveTextContent(/cannot keep/i);
+      const keep = screen.getByRole('button', { name: /Keep earlier days as recorded/i });
+
+      await user.click(keep);
+      // Only the environment — the recordable old value — is pinned on the earlier days.
+      expect(liveWorkspace.days['sc38-2023-06-06'].taskInstances).toEqual([
+        { taskTypeId: 'tasktype-0', task_environment: 'HaightRight', task_epochs: [2] },
+      ]);
+    });
+  });
+
   it('saves straight away when no recording day follows the default', async () => {
     const workspace = {
       animals: { sc38: { id: 'sc38', taskTypes: [TASK_TYPE], days: [] } },
