@@ -73,21 +73,59 @@ export function subjectLookupKey(subjectId: unknown): string {
   return typeof subjectId === 'string' ? subjectId.trim().toLowerCase() : '';
 }
 
+/** The stored scientific identity of an animal record (its `subject.subject_id`), if any. */
+function storedSubjectId(animal: unknown): string | null {
+  const subject = animal && typeof animal === 'object' ? (animal as { subject?: unknown }).subject : null;
+  const id = subject && typeof subject === 'object' ? (subject as { subject_id?: unknown }).subject_id : null;
+  return typeof id === 'string' ? id : null;
+}
+
 /**
- * Find the existing animal whose id matches `subjectId` under {@link subjectLookupKey} (an exact
- * match wins; otherwise the first case-insensitive match).
+ * Find the existing animal whose SCIENTIFIC identity (its stored `subject.subject_id`) matches
+ * `subjectId` under {@link subjectLookupKey} — an exact match wins, then a case-insensitive one —
+ * falling back to the store key (an animal is stored under the id it was created with, which the
+ * profile editor may since have corrected).
  *
  * @param subjectId - The candidate subject id.
  * @param animals - The workspace `animals` map (keys are the store ids).
  * @returns The matching store key, or null.
  */
 export function findAnimalIdByLookup(subjectId: unknown, animals: Record<string, unknown>): string | null {
-  if (typeof subjectId === 'string' && Object.prototype.hasOwnProperty.call(animals, subjectId)) {
-    return subjectId;
-  }
+  if (typeof subjectId !== 'string') return null;
+  const entries = Object.entries(animals);
+  const exact = entries.find(([, animal]) => storedSubjectId(animal) === subjectId.trim());
+  if (exact) return exact[0];
   const target = subjectLookupKey(subjectId);
   if (!target) return null;
-  return Object.keys(animals).find((id) => subjectLookupKey(id) === target) ?? null;
+  const folded = entries.find(([, animal]) => subjectLookupKey(storedSubjectId(animal)) === target);
+  if (folded) return folded[0];
+  if (Object.prototype.hasOwnProperty.call(animals, subjectId)) return subjectId;
+  return entries.find(([id]) => subjectLookupKey(id) === target)?.[0] ?? null;
+}
+
+/**
+ * The OTHER animal already using `subjectId` (case-insensitively), or null. Two animals with the
+ * same subject id would export the same `{date}_{subject}_metadata.yml` and be one animal
+ * downstream; a case correction of the edited animal's own id is not a collision.
+ *
+ * @param subjectId - The candidate subject id.
+ * @param animals - The workspace `animals` map.
+ * @param exceptAnimalId - The store key of the animal being edited (ignored).
+ * @returns The colliding animal's store key, or null.
+ */
+export function subjectIdCollision(
+  subjectId: unknown,
+  animals: Record<string, unknown>,
+  exceptAnimalId: string | null = null
+): string | null {
+  const target = subjectLookupKey(subjectId);
+  if (!target) return null;
+  for (const [id, animal] of Object.entries(animals)) {
+    if (id === exceptAnimalId) continue;
+    const stored = storedSubjectId(animal);
+    if (subjectLookupKey(stored ?? id) === target) return id;
+  }
+  return null;
 }
 
 /**

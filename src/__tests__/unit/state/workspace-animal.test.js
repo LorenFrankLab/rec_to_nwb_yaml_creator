@@ -112,6 +112,9 @@ describe('Animal State Management', () => {
       expect(animal.technicalDefaults).toEqual({ raw_data_to_volts: 0.195, times_period_multiplier: 1.5 });
       expect(animal.configurationHistory).toHaveLength(1);
       expect(animal.configurationHistory[0].version).toBe(1);
+      // The initial snapshot is stamped with the ENTRY date, which is not evidence of when the
+      // setup became effective (a backfilled earlier day must ask, not assume).
+      expect(animal.configurationHistory[0].effectiveDateKnown).toBe(false);
       expect(animal.created).toMatch(/^\d{4}-\d{2}-\d{2}T/); // ISO timestamp
       expect(animal.lastModified).toMatch(/^\d{4}-\d{2}-\d{2}T/);
       // device.name is schema-required (minItems: 1); default it to the legacy value
@@ -293,6 +296,25 @@ describe('Animal State Management', () => {
   });
 
   describe('updateAnimal', () => {
+    it('refuses a subject id another animal already uses (case-insensitively) — two animals must never export the same filename', () => {
+      const { result } = renderHook(() => useStore());
+      act(() => {
+        result.current.actions.createAnimal('remy', { species: 'Rattus norvegicus' });
+        result.current.actions.createAnimal('OtherRat', { species: 'Rattus norvegicus' });
+      });
+      expect(() =>
+        act(() => {
+          result.current.actions.updateAnimal('remy', { subject: { subject_id: 'otherrat' } });
+        })
+      ).toThrow(/already used by animal "OtherRat"/);
+      expect(result.current.model.workspace.animals.remy.subject.subject_id).toBe('remy');
+      // A case correction of its own id is fine.
+      act(() => {
+        result.current.actions.updateAnimal('remy', { subject: { subject_id: 'Remy' } });
+      });
+      expect(result.current.model.workspace.animals.remy.subject.subject_id).toBe('Remy');
+    });
+
     it('updates animal subject metadata', () => {
       const { result } = renderHook(() => useStore());
 

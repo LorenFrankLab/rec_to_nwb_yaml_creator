@@ -621,6 +621,8 @@ export function AnimalView({ animalId, tab }: AnimalViewProps) {
       <AnimalProfileDialog
         isOpen={profileOpen}
         animal={animal}
+        animalId={animalId}
+        animals={animals}
         dayCount={getAnimalDayIds(animal).length}
         focusPath={profileFocusPath}
         onSave={(subject) => {

@@ -439,6 +439,27 @@ describe('ValidationSummary', () => {
     expect(alert).toHaveTextContent(ids.validDayId);
   });
 
+  it('Export Valid Only: refuses two days that would download under the SAME filename (two animals sharing a subject id)', async () => {
+    const user = userEvent.setup();
+    const { workspace, ids } = makeSummaryWorkspace();
+    // Make totoro's day valid and give totoro remy's subject id (a workspace that predates the
+    // uniqueness check, or a hand-edited backup): both June 22 days now name the same file.
+    workspace.days['totoro-2023-06-22'].session.session_description = 'A valid day';
+    workspace.animals.totoro.subject.subject_id = workspace.animals.remy.subject.subject_id;
+    delete workspace.days[ids.incompleteDayId];
+    workspace.animals.remy.days = [ids.validDayId];
+    provideStore(workspace);
+
+    render(<ValidationSummary />);
+    await user.click(screen.getByRole('button', { name: /export valid only/i }));
+    await user.click(screen.getByRole('button', { name: /confirm export/i }));
+
+    expect(downloadYamlFile).not.toHaveBeenCalled();
+    const alert = screen.getByRole('alert');
+    expect(alert).toHaveTextContent(/same filename/i);
+    expect(alert).toHaveTextContent('20230622_remy_metadata.yml');
+  });
+
   it('Export Valid Only: drops a day whose record was DELETED after the preflight', async () => {
     const user = userEvent.setup();
     const { workspace, ids } = makeSummaryWorkspace();

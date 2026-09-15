@@ -5,7 +5,7 @@
  * (no fork). These pin the exact shapes `createAnimal` is called with.
  */
 import { describe, it, expect } from 'vitest';
-import { buildAnimalFromForm, getDefaultExperimenters, subjectLookupKey, findAnimalIdByLookup } from '../animalCreation';
+import { buildAnimalFromForm, getDefaultExperimenters, subjectLookupKey, findAnimalIdByLookup, subjectIdCollision } from '../animalCreation';
 
 /** A fully-processed form payload (AnimalCreationForm trims/filters/numbers before onSubmit). */
 const baseForm = {
@@ -36,6 +36,24 @@ describe('buildAnimalFromForm', () => {
     expect(findAnimalIdByLookup('REMY', { Remy: {} })).toBe('Remy');
     expect(findAnimalIdByLookup('Remy', { Remy: {}, remy: {} })).toBe('Remy');
     expect(findAnimalIdByLookup('bean', { Remy: {} })).toBeNull();
+  });
+
+  it('findAnimalIdByLookup finds an animal by its STORED subject id, not only by its store key (a renamed animal)', () => {
+    const animals = { remy: { subject: { subject_id: 'OtherRat' } } };
+    expect(findAnimalIdByLookup('OtherRat', animals)).toBe('remy');
+    expect(findAnimalIdByLookup('otherrat', animals)).toBe('remy');
+    expect(findAnimalIdByLookup('remy', animals)).toBe('remy'); // the key still resolves (import by key)
+  });
+
+  it('subjectIdCollision names another animal already using the subject id, and ignores the animal being edited', () => {
+    const animals = {
+      remy: { subject: { subject_id: 'remy' } },
+      other: { subject: { subject_id: 'OtherRat' } },
+    };
+    expect(subjectIdCollision('OtherRat', animals, 'remy')).toBe('other');
+    expect(subjectIdCollision('otherrat', animals, 'remy')).toBe('other');
+    expect(subjectIdCollision('Remy', animals, 'remy')).toBeNull(); // a case correction of itself
+    expect(subjectIdCollision('bean', animals, 'remy')).toBeNull();
   });
 
   it('carries species, sex, genotype, dob and weight straight onto the subject', () => {

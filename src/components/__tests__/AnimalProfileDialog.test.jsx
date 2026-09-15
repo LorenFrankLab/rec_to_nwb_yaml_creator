@@ -67,6 +67,15 @@ describe('AnimalProfileDialog', () => {
     expect(onSave).toHaveBeenCalledWith({ subject_id: 'Remy' });
   });
 
+  it('blocks a subject id another animal already uses (case-insensitively), naming that animal', async () => {
+    renderOpen({ animalId: 'remy', animals: { remy: animal, other: { subject: { subject_id: 'OtherRat' } } } });
+    const input = screen.getByLabelText(/subject id \(exact spelling/i);
+    await user.clear(input);
+    await user.type(input, 'otherrat');
+    expect(screen.getByRole('alert')).toHaveTextContent(/already used by animal "OtherRat"/i);
+    expect(screen.getByRole('button', { name: /save profile changes/i })).toBeDisabled();
+  });
+
   it('shows species guidance (Latin binomial / NCBI URI) and DOB ISO expectation at the edit point', () => {
     renderOpen();
     expect(screen.getByText(/Latin binomial.*NCBI Taxonomy/is)).toBeInTheDocument();

@@ -21,6 +21,9 @@ import { describeDayOptoState } from '../../domain/optoStatus';
 import { classifyWorkspaceDays, isDayStatus, isExportableDayStatus } from '../../domain/dayRecovery';
 import type { DayStatus } from '../../domain/dayRecovery';
 import { exportDayFile } from '../../domain/exportDay';
+import type { ExportDayActions } from '../../domain/exportDay';
+import { formatRecordingMetadataFilename } from '../../domain/recordingFilename';
+import { getAnimalSubject } from '../../state/workspaceSelectors';
 import { isFeatureEnabled } from '../../featureFlags';
 import {
   deriveChip,
@@ -74,7 +77,7 @@ interface ValidationSummaryActionsParams {
   /** `model.workspace` ({ animals, days }) — read live at action time. */
   workspace: unknown;
   /** The store actions (`updateDay`, …). */
-  actions: { updateDay: (dayId: string, patch: { state: Record<string, unknown> }) => void };
+  actions: ExportDayActions;
 }
 
 /**
@@ -286,6 +289,29 @@ export function useValidationSummaryActions({ rows, workspace, actions }: Valida
     // through the batch gate even if it was 'valid' at preflight time).
     const animalDaysByKey = buildAnimalDaysByKey(workspace);
 
+    // Two days of the batch must never download under ONE filename (two animals sharing a subject
+    // id, e.g. a workspace from before the uniqueness check): the second file would silently
+    // overwrite the first on disk and the converter would treat them as one animal. Every day
+    // whose filename collides is refused, named.
+    const filenameOf = (rowAnimalKey: string, rowDay: Record<string, unknown>): string | null => {
+      const animal = isRecord(workspace) && isRecord(workspace.animals) ? workspace.animals[rowAnimalKey] : undefined;
+      const day = isRecord(workspace) && isRecord(workspace.days) ? workspace.days[rowDay.id as string] : undefined;
+      if (!isRecord(animal) || !isRecord(day) || typeof day.date !== 'string') return null;
+      try {
+        return formatRecordingMetadataFilename({
+          date: day.date,
+          subjectId: String(getAnimalSubject(animal).subject_id ?? ''),
+        });
+      } catch {
+        return null;
+      }
+    };
+    const filenameCounts = new Map<string, number>();
+    validRows.forEach(({ animalKey: rowAnimalKey, day: rowDay }) => {
+      const name = filenameOf(rowAnimalKey, rowDay as Record<string, unknown>);
+      if (name) filenameCounts.set(name, (filenameCounts.get(name) ?? 0) + 1);
+    });
+
     validRows.forEach(({ animalKey: rowAnimalKey, day: rowDay }) => {
       // Re-resolve the CURRENT records and RE-VALIDATE before downloading: state may have
       // changed while the preflight was open, so a day that was valid at preflight time must
@@ -300,6 +326,14 @@ export function useValidationSummaryActions({ rows, workspace, actions }: Valida
 
       if (!animal || !isRecord(day)) {
         stale.push({ ...identity, detail: 'No longer present since the preflight.' });
+        return;
+      }
+      const filename = filenameOf(rowAnimalKey, rowDay as Record<string, unknown>);
+      if (filename && (filenameCounts.get(filename) ?? 0) > 1) {
+        failed.push({
+          ...identity,
+          detail: `Would download under the same filename as another day (${filename}) — two animals share this subject id; correct one animal's Subject ID first.`,
+        });
         return;
       }
       const currentStatus = currentStatusByKey.get(statusKey(rowAnimalKey, rowDay.id));

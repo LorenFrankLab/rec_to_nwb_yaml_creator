@@ -2,6 +2,7 @@ import { useId, useMemo, useState, useEffect } from 'react';
 import { getAnimalSubject } from '../state/workspaceSelectors';
 import { isValidSpecies } from '../validation/dandiSubject';
 import { recordingFilenameIssue } from '../domain/recordingFilename';
+import { subjectIdCollision } from '../domain/animalCreation';
 import Modal from './Modal/Modal';
 import { ConfirmDialog } from './Modal';
 import BlastRadiusChip from './ui/BlastRadiusChip';
@@ -33,6 +34,10 @@ interface AnimalProfileDialogProps {
   onClose: () => void;
   /** Optional repair-focus field path, e.g. `subject.species`. */
   focusPath?: string | null;
+  /** The edited animal's store key (excluded from the subject-id collision check). */
+  animalId?: string | null;
+  /** The workspace animals map, to refuse a subject id another animal already uses. */
+  animals?: Record<string, unknown>;
 }
 
 /**
@@ -58,6 +63,8 @@ export default function AnimalProfileDialog({
   onSave,
   onClose,
   focusPath = null,
+  animalId = null,
+  animals,
 }: AnimalProfileDialogProps) {
   const baseId = useId();
   const titleId = `${baseId}-title`;
@@ -79,9 +86,17 @@ export default function AnimalProfileDialog({
 
   const [form, setForm] = useState(initial);
   const [speciesError, setSpeciesError] = useState('');
-  const subjectIdError = form.subject_id.trim() === ''
+  const trimmedSubjectId = form.subject_id.trim();
+  const collidesWith = animals ? subjectIdCollision(trimmedSubjectId, animals, animalId ?? null) : null;
+  const collidingSubjectId = collidesWith
+    ? String(getAnimalSubject(animals![collidesWith]).subject_id || collidesWith)
+    : null;
+  const subjectIdError = trimmedSubjectId === ''
     ? 'Subject ID is required.'
-    : (recordingFilenameIssue(form.subject_id.trim())?.message ?? '');
+    : (recordingFilenameIssue(trimmedSubjectId)?.message ??
+      (collidingSubjectId
+        ? `Subject ID "${trimmedSubjectId}" is already used by animal "${collidingSubjectId}" — two animals with one ID would export the same filenames and merge downstream.`
+        : ''));
   const [confirmOpen, setConfirmOpen] = useState(false);
 
   // Reseed the form whenever the dialog (re)opens or the subject changes (e.g. after a save commits),
@@ -160,7 +175,7 @@ export default function AnimalProfileDialog({
             <Button variant="neutral" onClick={onClose}>
               Cancel
             </Button>
-            <Button disabled={!isDirty} onClick={handleSaveClick}>
+            <Button disabled={!isDirty || !!subjectIdError} onClick={handleSaveClick}>
               Save profile changes
             </Button>
           </div>
