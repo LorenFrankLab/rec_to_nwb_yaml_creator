@@ -70,6 +70,7 @@ export const REPAIR_COMMAND_TYPES: readonly string[] = Object.freeze([
   'acknowledgeBadChannelRemovals',
   'resetDaySession',
   'confirmConfigurationChoice',
+  'confirmWeightMeasurement',
 ]);
 
 /**
@@ -89,6 +90,7 @@ const COMMAND_SURFACE: Readonly<Record<string, 'day' | 'animal'>> = Object.freez
   acknowledgeBadChannelRemovals: 'day',
   resetDaySession: 'day',
   confirmConfigurationChoice: 'day',
+  confirmWeightMeasurement: 'day',
   resetAnimalCameras: 'animal',
   resetDataAcqDevice: 'animal',
   rebuildConfigurationHistory: 'animal',
@@ -235,6 +237,18 @@ export function applyRepairCommand(command: RepairCommand, ctx: RepairCommandCon
       // its effective date does not cover the day (a backfill before the first entered setup). An
       // explicit, off-export provenance fact — never an invented effective date.
       actions.updateDay(dayId, { provenance: { configuration: { source: 'explicit', confirmed: true } } });
+      return;
+    }
+    case 'confirmWeightMeasurement': {
+      // The user asserts the migrated baseline value WAS the weight that day: drop the review flag
+      // and record the value as explicit. (Typing a different weight clears the flag on its own.)
+      const review = Array.isArray(ctx.day?.provenance?.review) ? ctx.day.provenance.review : [];
+      actions.updateDay(dayId, {
+        provenance: {
+          review: review.filter((flag) => flag !== 'weight_from_baseline'),
+          fields: { 'session.weight': 'entered' },
+        },
+      });
       return;
     }
     default:

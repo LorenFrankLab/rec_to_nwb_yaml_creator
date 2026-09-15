@@ -75,8 +75,12 @@ function migrateDay(day: unknown, animal: Record<string, unknown> | undefined): 
         fields['session.experiment_description'] = 'migration';
       }
       const subject = isRecord(animal.subject) ? animal.subject : {};
-      const wasDownloadedOrValidated = Boolean(state.exported) || Boolean(state.validated);
-      if (session.weight === undefined && typeof subject.weight === 'number' && wasDownloadedOrValidated) {
+      // Only a DOWNLOADED day gets the baseline copied in: that value was in the file it produced,
+      // so it is kept for comparison and flagged for confirmation (a blocking review flag — the
+      // baseline is not a measurement). A merely validated day has no such file: it stays without
+      // a weight and remains incomplete.
+      const wasDownloaded = Boolean(state.exported);
+      if (session.weight === undefined && typeof subject.weight === 'number' && wasDownloaded) {
         session.weight = subject.weight;
         fields['session.weight'] = 'migration';
         review.push('weight_from_baseline');

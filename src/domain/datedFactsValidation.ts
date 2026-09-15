@@ -6,7 +6,7 @@
  *    confirmed the choice — a backfill before every known setup, or a day (from older data) pinned
  *    to a version that became effective AFTER it. Never invents history: the repair is an explicit
  *    confirmation, a re-pin, or extending the version's effective date.
- *  - `weight_from_baseline` (advisory, day-owned): the v3→v4 migration reproduced an earlier
+ *  - `weight_from_baseline` (BLOCKING, day-owned): the v3→v4 migration reproduced an earlier
  *    download's weight from the animal baseline (that is what the old export emitted) — the
  *    scientist should confirm it was a measurement or correct it.
  *
@@ -64,17 +64,18 @@ export function provenanceReviewIssues(day: unknown): RepairableIssue[] {
   if (review.includes('weight_from_baseline')) {
     issues.push({
       code: 'weight_from_baseline',
-      severity: 'warning',
+      severity: 'error',
       step: 'overview',
       repairSurface: 'day',
       field: 'session.weight',
       focusPath: 'session.weight',
       path: 'session.weight',
-      actionLabel: 'Confirm or correct the weight',
+      actionLabel: 'Confirm this weight as measured',
+      repairCommand: { type: 'confirmWeightMeasurement' },
       message:
-        'This day’s weight was filled from the animal baseline when the workspace was upgraded, ' +
-        'because that is the value its earlier download contained — it may not be a measurement. ' +
-        'Confirm it or enter the weight measured that day.',
+        'This day’s weight is the animal baseline that its earlier download contained (filled in ' +
+        'when the workspace was upgraded) — not a recorded measurement. Before downloading again, ' +
+        'confirm it was the weight that day, or enter the measured weight.',
     } as RepairableIssue);
   }
   return issues;

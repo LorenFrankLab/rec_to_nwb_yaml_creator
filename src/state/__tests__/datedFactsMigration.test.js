@@ -4,6 +4,7 @@
  */
 import { describe, it, expect } from 'vitest';
 import { migrateDatedFactsV3ToV4 } from '../datedFactsMigration';
+import { applyDayUpdates } from '../workspaceTransitions';
 import { mergeDayMetadata } from '../workspaceUtils';
 import { validateDay } from '../../domain/dayValidationComposer';
 import { configurationChoiceStatus } from '../../domain/configurationSelection';
@@ -77,13 +78,14 @@ describe('migrateDatedFactsV3ToV4', () => {
     expect(day.provenance.fields).toMatchObject({ experimenters: 'migration', optogenetics: 'migration', 'session.experiment_description': 'migration', 'session.weight': 'migration' });
   });
 
-  it('flags a downloaded day whose weight was the animal baseline for review (never silently a measurement)', () => {
+  it('BLOCKS a new export of a downloaded day whose weight was the animal baseline until it is confirmed or corrected', () => {
     const out = migrateDatedFactsV3ToV4(v3Workspace({ exported: true }));
     const day = out.days['remy-2023-06-22'];
     expect(day.provenance.review).toEqual(['weight_from_baseline']);
     const issues = validateDay(day, mergeDayMetadata(out.animals.remy, day), out.animals.remy);
     const flag = issues.find((i) => i.code === 'weight_from_baseline');
-    expect(flag?.severity).toBe('warning');
+    expect(flag?.severity).toBe('error');
+    expect(flag?.repairCommand).toEqual({ type: 'confirmWeightMeasurement' });
   });
 
   it('does NOT invent a weight for a never-downloaded draft (it stays incomplete)', () => {
@@ -92,6 +94,27 @@ describe('migrateDatedFactsV3ToV4', () => {
     expect(day.session.weight).toBeUndefined();
     expect(day.provenance.review).toBeUndefined();
     expect(mergeDayMetadata(out.animals.remy, day).subject.weight).toBeUndefined();
+  });
+
+  it('does NOT invent a weight for a validated-but-never-downloaded day either (validation is not a measurement)', () => {
+    const out = migrateDatedFactsV3ToV4(v3Workspace({ exported: false, validated: true }));
+    const day = out.days['remy-2023-06-22'];
+    expect(day.session.weight).toBeUndefined();
+    expect(day.provenance.review).toBeUndefined();
+    const issues = validateDay(day, mergeDayMetadata(out.animals.remy, day), out.animals.remy);
+    expect(issues.some((i) => i.code === 'weight_from_baseline')).toBe(false);
+    expect(issues.some((i) => i.severity === 'error')).toBe(true); // still incomplete, honestly
+  });
+
+  it('confirming the value (repair command) or entering a measured weight clears the block', () => {
+    const out = migrateDatedFactsV3ToV4(v3Workspace({ exported: true }));
+    const day = out.days['remy-2023-06-22'];
+    const confirmed = applyDayUpdates(day, { provenance: { review: [], fields: { 'session.weight': 'entered' } } }, 'now');
+    expect(confirmed.provenance.review).toEqual([]);
+    expect(validateDay(confirmed, mergeDayMetadata(out.animals.remy, confirmed), out.animals.remy).some((i) => i.code === 'weight_from_baseline')).toBe(false);
+    const corrected = applyDayUpdates(day, { session: { weight: 491 } }, 'now');
+    expect(corrected.provenance.review).toEqual([]);
+    expect(corrected.provenance.fields['session.weight']).toBe('entered');
   });
 
   it('keeps a measured day weight untouched', () => {
