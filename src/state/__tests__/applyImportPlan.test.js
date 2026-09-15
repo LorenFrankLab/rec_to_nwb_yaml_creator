@@ -667,3 +667,109 @@ describe('applyImportPlan — a task that ran in a different room on a different
     expect(exportedEnvironment(catalogWorkspace, 'sc38-2023-06-13')).toBe('HaightLeft');
   });
 });
+
+describe('applyImportPlan — camera calibration conflicts (F1)', () => {
+  /**
+   * Re-calibrate the fixture's overhead camera in one file and declare the day's camera usage.
+   *
+   * @param {number} metersPerPixel - The calibration this file records for `overhead_camera`.
+   * @returns {(animal: object, day: object) => void} A `mutateConfig` callback.
+   */
+  const withOverheadCalibration = (metersPerPixel) => (animal, day) => {
+    animal.cameras = animal.cameras.map((camera) =>
+      camera.camera_name === 'overhead_camera'
+        ? { ...camera, meters_per_pixel: metersPerPixel }
+        : camera
+    );
+    day.cameras_used = [0, 1];
+  };
+
+  it('exports every day with the calibration ITS OWN file recorded (split)', () => {
+    const plan = planImport(
+      [
+        makeFile({ subjectId: 'remy', date: '2023-06-22', mutateConfig: withOverheadCalibration(0.001) }),
+        makeFile({ subjectId: 'remy', date: '2023-06-23', mutateConfig: withOverheadCalibration(0.002) }),
+      ],
+      createDefaultWorkspace()
+    );
+
+    const { result } = renderHook(() => useStore());
+    let summary;
+    act(() => {
+      summary = applyImportPlan(plan, result.current.actions, {
+        workspace: result.current.model.workspace,
+      });
+    });
+    expect(summary.failed).toEqual([]);
+
+    const { workspace } = result.current.model;
+    const remy = workspace.animals.remy;
+    // Round-trip through the EXPORT merge: what each day would actually write to YAML.
+    const first = mergeDayMetadata(remy, workspace.days['remy-2023-06-22']);
+    const later = mergeDayMetadata(remy, workspace.days['remy-2023-06-23']);
+
+    expect(first.cameras.map((c) => [c.camera_name, c.meters_per_pixel])).toEqual([
+      ['overhead_camera', 0.001],
+      ['side_camera', 0.0009],
+    ]);
+    expect(later.cameras.map((c) => [c.camera_name, c.meters_per_pixel])).toEqual([
+      ['side_camera', 0.0009],
+      ['overhead_camera_20230623', 0.002],
+    ]);
+
+    // …and each day's overhead video resolves to the row carrying ITS calibration.
+    const resolve = (model, videoName) => {
+      const { camera_id: cameraId } = model.associated_video_files.find((v) => v.name === videoName);
+      return model.cameras.find((camera) => camera.id === cameraId);
+    };
+    expect(resolve(first, 'overhead_video_epoch2').meters_per_pixel).toBe(0.001);
+    expect(resolve(later, 'overhead_video_epoch2').meters_per_pixel).toBe(0.002);
+    expect(resolve(later, 'side_view_video_epoch2').camera_name).toBe('side_camera');
+  });
+
+  it("adds the recalibrated camera to an EXISTING animal without touching the animal's own row", () => {
+    const { result } = renderHook(() => useStore());
+    const { animal: fixtureAnimal } = buildRealisticWorkspace();
+    act(() => {
+      result.current.actions.createAnimal('remy', { subject_id: 'remy' }, {
+        cameras: fixtureAnimal.cameras.map((camera) =>
+          camera.camera_name === 'overhead_camera'
+            ? { ...camera, meters_per_pixel: 0.001 }
+            : camera
+        ),
+        devices: fixtureAnimal.devices,
+      });
+    });
+
+    const plan = planImport(
+      [makeFile({ subjectId: 'remy', date: '2023-06-23', mutateConfig: withOverheadCalibration(0.002) })],
+      result.current.model.workspace
+    );
+    const animalPlan = plan.animals[0];
+    expect(animalPlan.cameraConflicts).toHaveLength(1);
+
+    let summary;
+    act(() => {
+      summary = applyImportPlan(plan, result.current.actions, {
+        workspace: result.current.model.workspace,
+        resolutions: { remy: 'add' },
+        catalogAdditions: { remy: animalPlan.catalogAdditions },
+      });
+    });
+    expect(summary.failed).toEqual([]);
+
+    const { workspace } = result.current.model;
+    const remy = workspace.animals.remy;
+    expect(remy.cameras.map((c) => [c.camera_name, c.meters_per_pixel])).toEqual([
+      ['overhead_camera', 0.001],
+      ['side_camera', 0.0009],
+      ['overhead_camera_20230623', 0.002],
+    ]);
+    const exported = mergeDayMetadata(remy, workspace.days['remy-2023-06-23']);
+    const overhead = exported.cameras.find((c) => c.camera_name.startsWith('overhead'));
+    expect(overhead.meters_per_pixel).toBe(0.002);
+    expect(
+      exported.associated_video_files.find((v) => v.name === 'overhead_video_epoch2').camera_id
+    ).toBe(overhead.id);
+  });
+});
