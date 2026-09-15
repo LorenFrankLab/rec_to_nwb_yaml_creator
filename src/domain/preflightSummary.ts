@@ -16,6 +16,9 @@ import { pluralize } from '../utils/pluralize';
 // How many cameras to spell out inline before collapsing the rest into "+K more".
 const MAX_CAMERAS_INLINE = 4;
 
+// How many tasks to spell out inline (name, epochs, room) before falling back to plain counts.
+const MAX_TASKS_INLINE = 6;
+
 /** Workflow context for {@link buildPreflightSummary}. */
 interface PreflightContext {
   /** The owning animal id. */
@@ -63,6 +66,52 @@ function describeCameras(cameras: unknown): string {
   const shown = list.slice(0, MAX_CAMERAS_INLINE).map(describe).join(', ');
   const remaining = list.length - MAX_CAMERAS_INLINE;
   return remaining > 0 ? `${shown} +${remaining} more` : shown;
+}
+
+/**
+ * Render the "who ran it, how heavy was the animal" row value. The weight is the measurement THIS
+ * day recorded (the merge never substitutes the animal's baseline), so an absent one reads "not
+ * recorded" — a preflight must never show a number the file will not carry.
+ *
+ * @param subject - The merged day's subject block.
+ * @param experimenterNames - The merged day's `experimenter_name` list.
+ * @returns The row value.
+ */
+function describeWeightAndTeam(subject: unknown, experimenterNames: unknown): string {
+  const weight = (subject as { weight?: unknown } | null | undefined)?.weight;
+  const weightValue = weight == null || weight === '' ? 'not recorded' : `${weight} g`;
+  const names = Array.isArray(experimenterNames) ? experimenterNames : [];
+  const team = names.filter((name) => typeof name === 'string' && name.trim() !== '').join(', ');
+  return `${weightValue} — ${team || '—'}`;
+}
+
+/**
+ * Render the tasks row value: each task's name, the epochs it ran in, and the environment RECORDED
+ * FOR THIS DAY (a task instance may override its type's default room), so a wrong-room day is
+ * visible at the download gate. Falls back to plain counts when there are no tasks, or too many to
+ * read inline.
+ *
+ * @param tasks - The merged day's tasks (already carrying any per-day overrides).
+ * @param videoCount - How many associated video files the day exports.
+ * @returns The row value.
+ */
+function describeTasks(tasks: unknown, videoCount: number): string {
+  const list = Array.isArray(tasks) ? tasks : [];
+  if (list.length === 0 || list.length > MAX_TASKS_INLINE) {
+    return `${list.length} tasks, ${videoCount} videos`;
+  }
+
+  const described = list
+    .map((task: { task_name?: string; task_environment?: string; task_epochs?: unknown } | null | undefined) => {
+      const name = task?.task_name || 'unnamed task';
+      const epochs = Array.isArray(task?.task_epochs) ? task.task_epochs : [];
+      const epochPart = epochs.length > 0 ? ` (${epochs.join(', ')})` : '';
+      const environment = task?.task_environment || 'environment not recorded';
+      return `${name}${epochPart} — ${environment}`;
+    })
+    .join('; ');
+
+  return `${described} · ${videoCount} ${pluralize(videoCount, 'video')}`;
 }
 
 /**
@@ -114,7 +163,9 @@ export function buildPreflightSummary(
       })`
     : 'None';
 
-  // Row order follows how a scientist confirms export readiness: identify the day, then the
+  // Row order follows how a scientist confirms export readiness: identify the day (and the weight
+  // + team that day recorded — the two facts a scientist can most easily carry over wrong from a
+  // previous day, so they sit where the eye lands first), then the
   // highly-consequential configuration version (critical for historical-day exports — surfaced near
   // the top, not buried after subject/session), then the hardware/recording facts (probes, cameras,
   // data-acq), then the session content (tasks, opto), with the rarely-changing subject identity and
@@ -122,6 +173,7 @@ export function buildPreflightSummary(
   // the preflight is not exported, so YAML bytes are unaffected.
   return [
     { label: 'Animal & day', value: `${animalId || '—'} — ${date || '—'}` },
+    { label: 'Weight & team', value: describeWeightAndTeam(merged.subject, merged.experimenter_name) },
     {
       label: 'Configuration version',
       value:
@@ -137,7 +189,7 @@ export function buildPreflightSummary(
     { label: 'Data acquisition', value: dataAcqValue },
     {
       label: 'Tasks & videos',
-      value: `${(merged.tasks || []).length} tasks, ${(merged.associated_video_files || []).length} videos`,
+      value: describeTasks(merged.tasks, (merged.associated_video_files || []).length),
     },
     { label: 'Optogenetics', value: opto.label },
     { label: 'Subject & session', value: `${subjectId} — session ${sessionId}` },

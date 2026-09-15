@@ -22,6 +22,7 @@ describe('buildPreflightSummary — row order', () => {
     const rows = buildPreflightSummary({}, {});
     expect(rows.map((r) => r.label)).toEqual([
       'Animal & day',
+      'Weight & team',
       'Configuration version',
       'Probes & failed channels',
       'Cameras / calibration',
@@ -31,6 +32,63 @@ describe('buildPreflightSummary — row order', () => {
       'Subject & session',
       'Non-blocking warnings',
     ]);
+  });
+});
+
+describe('buildPreflightSummary — weight & team row', () => {
+  it('shows the weight the day recorded, in grams, beside the experimenters who ran it', () => {
+    const merged = {
+      subject: { subject_id: 'remy', weight: 485 },
+      experimenter_name: ['Guidera, Jennifer', 'Comrie, Alison'],
+    };
+    const value = rowValue(buildPreflightSummary(merged, {}), 'Weight & team');
+    expect(value).toBe('485 g — Guidera, Jennifer, Comrie, Alison');
+  });
+
+  it('says "not recorded" rather than inventing a weight when the day measured none', () => {
+    const merged = { subject: { subject_id: 'remy' }, experimenter_name: ['Comrie, Alison'] };
+    const value = rowValue(buildPreflightSummary(merged, {}), 'Weight & team');
+    expect(value).toBe('not recorded — Comrie, Alison');
+  });
+
+  it('marks an empty experimenter list as unknown instead of rendering a blank team', () => {
+    const value = rowValue(buildPreflightSummary({ subject: { weight: 500 } }, {}), 'Weight & team');
+    expect(value).toBe('500 g — —');
+  });
+});
+
+describe('buildPreflightSummary — tasks & videos row', () => {
+  it('names each task with its epochs and the room it ran in', () => {
+    const merged = {
+      tasks: [
+        { task_name: 'sleep', task_environment: 'home cage', task_epochs: [1, 3] },
+        { task_name: 'w_alternation', task_environment: 'elevated W-track', task_epochs: [2] },
+      ],
+      associated_video_files: [{ name: 'a.h264' }, { name: 'b.h264' }],
+    };
+    const value = rowValue(buildPreflightSummary(merged, {}), 'Tasks & videos');
+    expect(value).toBe('sleep (1, 3) — home cage; w_alternation (2) — elevated W-track · 2 videos');
+  });
+
+  it('says a task environment is not recorded instead of leaving the room blank', () => {
+    const merged = { tasks: [{ task_name: 'sleep', task_epochs: [1] }] };
+    const value = rowValue(buildPreflightSummary(merged, {}), 'Tasks & videos');
+    expect(value).toBe('sleep (1) — environment not recorded · 0 videos');
+  });
+
+  it('falls back to counts when there are too many tasks to read inline', () => {
+    const tasks = Array.from({ length: 7 }, (_, i) => ({
+      task_name: `task${i}`,
+      task_environment: 'room',
+      task_epochs: [i],
+    }));
+    const value = rowValue(buildPreflightSummary({ tasks }, {}), 'Tasks & videos');
+    expect(value).toBe('7 tasks, 0 videos');
+  });
+
+  it('falls back to counts when the day has no tasks at all', () => {
+    const value = rowValue(buildPreflightSummary({ associated_video_files: [{}, {}] }, {}), 'Tasks & videos');
+    expect(value).toBe('0 tasks, 2 videos');
   });
 });
 
