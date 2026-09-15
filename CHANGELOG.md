@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **A task's room/environment and cameras can differ per recording day; editing a task type's
+  defaults no longer rewrites earlier days unless you choose to correct them.** The epoch drill-in's
+  "Edit for this day" records what that session actually used (with "Use task default" to clear it,
+  and a "differs from task default" marker on the row), and changing a task type's default
+  environment or cameras now names the recording days that still follow it and asks whether to keep
+  them as recorded or correct them too.
+
 - **Import & Repair takes a whole history, not one file.** Every selected metadata YAML gets its own
   repair plan; the ready ones are then reconciled together so recording days group by animal and
   configuration changes are inferred across dates, with nothing written until the batch preview is
