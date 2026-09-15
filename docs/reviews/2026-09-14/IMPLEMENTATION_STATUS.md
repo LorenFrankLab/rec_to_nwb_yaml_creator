@@ -188,6 +188,23 @@ Verification after the fixes: `npx vitest run` **381 files / 5,443 tests pass**;
 7 pre-existing legacy visual baselines fail. No YAML byte path changed (golden baselines green), so
 the converter / Spyglass runs were not repeated.
 
+## Second review response (FIX_RESPONSE_REVIEW.md, `51bc3430`): all 7 findings fixed
+
+| Finding | Fix | Failing-first test |
+| --- | --- | --- |
+| P1 Delayed receipt ack marks edited metadata as downloaded | The ack is a dedicated, metadata-only store action `acknowledgeReceiptStorage(dayId, {contentHash, exportedAt})`: it flips `yamlStored` only for THAT receipt identity and touches no modification stamp, so an intervening edit stays "Changed since download" and a late ack of an older download never replaces a newer receipt. Also found and fixed a latent second cause: modification stamps are now strictly monotonic (`getCurrentTimestamp`), so an edit in the same millisecond as a download can no longer satisfy the freshness fast path. | `state/__tests__/receiptAcknowledgement.test.js` (edit-before-ack, second download before first ack, stamp monotonicity) |
+| P1 Delayed recovery deletes new work | `preservationPending` is true from mount until the discarded original is durably preserved (or preservation failed); autosave, Save and restore all refuse meanwhile (one shared `writeBlocker`), edits stay in memory and are written when the flag clears. `discardUnusableWorkspace` clears the main key only if it still holds the quarantined bytes. | `state/__tests__/pendingPreservation.test.js` (save during pending → refused, then applied; discard leaves replaced bytes alone) |
+| P1 Restore overwrites after hand-over | Restore vetoes hand-over while in flight (`restoreInFlightRef`) and re-runs every write guard (ownership, pending, unpreserved) AFTER its asynchronous artifact writes; a stale continuation writes nothing. | `pendingPreservation.test.js` (hand-over refused during restore; lost lease → restore cancelled, storage untouched) |
+| P1 Restore bypasses the unpreserved-original guard | Restore uses the same `writeBlocker` as Save/autosave; the backup dialog shows the refusal instead of closing silently. | `pendingPreservation.test.js`; e2e "restoring a backup is refused while the unrestorable original could not be preserved" |
+| P2 Derived confirmation ignores the next setup | `configurationChoiceStatus` compares a non-explicit pin against the version the date rule currently selects; a pin the next setup now supersedes is `unconfirmed` with reason `superseded` (`supersededBy`/`supersededFrom`), messaged in validation and the ConfigVersionPanel; geometry untouched; explicit exemption kept. | `configurationSelection.test.ts`, `datedFactsBoundaries.test.js` #5d |
+| P2 Restored receipts claim durability | `restoreBackupArtifacts` derives `yamlStored` from `putBlob`'s acknowledged result; the comparison card says when the bytes are not available in this browser instead of "Loading…" forever. | `backupArtifacts.test.js` (durable vs memory-only, then a fresh document) |
+| P2 Opto correction is all-or-nothing | The correction is a checklist of the divergent days (date · current setup · downloaded), all ticked by default; only the ticked ids are applied. | `wiring/__tests__/OptogeneticsContainer.test.jsx` |
+
+Verification after these fixes: `npx vitest run` **383 files / 5,455 tests pass** (run as two halves;
+the seven legacy integration timeouts that appear only under full-suite load pass in isolation and
+are pre-existing); typecheck, eslint (`--max-warnings 0`), stylelint, build all exit 0; Playwright
+**128 pass**, the same 7 pre-existing legacy visual baselines fail. No YAML byte path changed.
+
 ## Scientific assumptions needing pilot confirmation
 1. Subject ids never contain `_` (140/140 corpus ids agree) — the app now blocks it at creation and export.
 2. Weight: unknown weight blocks export (converter requires `subject.weight`); baseline is only a dated suggestion.

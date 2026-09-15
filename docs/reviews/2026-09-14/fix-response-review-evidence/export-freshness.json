@@ -1,0 +1,15 @@
+{
+  "freshness": {
+    "downloadedWeightLine": "  weight: 485",
+    "beforeAcknowledgement": "changed",
+    "editedWeight": 499,
+    "afterAcknowledgement": "current",
+    "actualHashes": {
+      "receipt": "b56211a4995e042b0ad829c881d2e636f66c46c47c72735b4c87ae3938d6da98",
+      "current": "96a83b1dd57bb564e5d17d6613e3414a43c5b51748e994fd3d1abda557de1cf0",
+      "status": "current"
+    },
+    "persistedWeight": "499",
+    "afterReload": "current"
+  }
+}

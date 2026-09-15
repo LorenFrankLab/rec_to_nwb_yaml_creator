@@ -1,0 +1,40 @@
+{
+  "pendingRecovery": {
+    "beforeAcknowledgement": [
+      "NewData"
+    ],
+    "afterAcknowledgement": null,
+    "newAnimalAfterReload": 0
+  },
+  "restoreHandover": {
+    "writerSavedWeight": 777,
+    "restoringTabRole": "reader",
+    "storedWeightAfterReaderRestore": 480,
+    "writerVisibleWeight": "777"
+  },
+  "restoreUnpreserved": {
+    "before": "{original that must be downloaded first",
+    "afterAnimals": [
+      "remy"
+    ],
+    "originalAfterReload": null
+  },
+  "domain": {
+    "pinned": 1,
+    "selected": {
+      "version": 2,
+      "covered": true,
+      "effectiveDate": "2023-06-20"
+    },
+    "status": {
+      "status": "confirmed",
+      "version": 1,
+      "effectiveDate": "2023-06-01"
+    },
+    "issues": []
+  },
+  "artifactDurability": {
+    "yamlStored": true,
+    "artifactAfterMemoryReset": null
+  }
+}
