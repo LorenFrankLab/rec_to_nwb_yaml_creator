@@ -79,6 +79,29 @@ describe('taskTypeCamerasNotUsed (TaskType.camera_id ⊄ day.cameras_used)', () 
     expect(taskTypeCamerasNotUsed(tt, { taskInstances: inst, cameras_used: [] })).toEqual([]); // empty
   });
 
+  it('checks the cameras the DAY actually used when the occurrence overrides them (F3)', () => {
+    // The day recorded with camera 1, not the type's camera 0 — so the finding must name camera 1
+    // (the one the export emits). Checking the type default here would flag a camera this day never
+    // used while silently letting the exported one through.
+    const tt = [{ id: 'tasktype-0', task_name: 'w', camera_id: [0] }];
+    const day = {
+      taskInstances: [{ taskTypeId: 'tasktype-0', camera_id: [1], task_epochs: [1] }],
+      cameras_used: [0],
+    };
+    expect(taskTypeCamerasNotUsed(tt, day)).toEqual([
+      { taskTypeId: 'tasktype-0', task_name: 'w', camera_id: 1 },
+    ]);
+  });
+
+  it('returns [] when the overridden cameras ARE marked used', () => {
+    const tt = [{ id: 'tasktype-0', task_name: 'w', camera_id: [0] }];
+    const day = {
+      taskInstances: [{ taskTypeId: 'tasktype-0', camera_id: [1], task_epochs: [1] }],
+      cameras_used: [1],
+    };
+    expect(taskTypeCamerasNotUsed(tt, day)).toEqual([]);
+  });
+
   it('coerces id types — a numeric cameras_used covers a string camera_id (no false finding)', () => {
     // Corrupt imports can carry a camera id as either number or string; comparing by string key
     // (not raw value) prevents a spurious "camera not used" finding for `1` vs `"1"`.

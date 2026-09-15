@@ -207,3 +207,79 @@ describe('mergeDayMetadata resolves taskInstances when present (catalog is the s
     ]);
   });
 });
+
+describe('a day occurrence owns the room and cameras it ran with (F3)', () => {
+  const catalogAnimal = () => {
+    const { animal } = buildRealisticWorkspace();
+    return {
+      ...animal,
+      taskTypes: [
+        {
+          id: 'tasktype-0',
+          task_name: 'forkTrack_handleAlternation',
+          task_description: 'Handle alternation',
+          task_environment: 'HaightRight',
+          camera_id: [0],
+        },
+      ],
+    };
+  };
+  // The day's own video / fs_gui rows also bind cameras, so they are cleared here: what this
+  // block is about is which cameras the TASK contributes to the export.
+  const catalogDay = (instance) => {
+    const { day } = buildRealisticWorkspace();
+    return {
+      ...day,
+      tasks: undefined,
+      taskInstances: [instance],
+      associated_video_files: [],
+      fs_gui_yamls: [],
+    };
+  };
+
+  it('exports the environment THIS day recorded, not the task type default', () => {
+    const merged = mergeDayMetadata(
+      catalogAnimal(),
+      catalogDay({ taskTypeId: 'tasktype-0', task_environment: 'HaightLeft', task_epochs: [2] })
+    );
+    expect(merged.tasks).toEqual([
+      {
+        task_name: 'forkTrack_handleAlternation',
+        task_description: 'Handle alternation',
+        task_environment: 'HaightLeft',
+        camera_id: [0],
+        task_epochs: [2],
+      },
+    ]);
+    expect(encodeYaml(merged)).toContain('task_environment: HaightLeft');
+  });
+
+  it('the exported `cameras` follow the overridden camera_id (day-used camera binding)', () => {
+    // The task type says camera 0; this day actually recorded with camera 1, so the exported
+    // camera devices must be camera 1's — otherwise the NWB names a device the day never used.
+    const merged = mergeDayMetadata(
+      catalogAnimal(),
+      catalogDay({ taskTypeId: 'tasktype-0', camera_id: [1], task_epochs: [2] })
+    );
+    expect(merged.tasks[0].camera_id).toEqual([1]);
+    expect(merged.cameras.map((c) => c.id)).toEqual([1]);
+    expect(merged.cameras.map((c) => c.camera_name)).toEqual(['side_camera']);
+  });
+
+  it('a day with NO override still exports the task type definition (unchanged behavior)', () => {
+    const merged = mergeDayMetadata(
+      catalogAnimal(),
+      catalogDay({ taskTypeId: 'tasktype-0', task_epochs: [2] })
+    );
+    expect(merged.tasks[0].task_environment).toBe('HaightRight');
+    expect(merged.cameras.map((c) => c.id)).toEqual([0]);
+  });
+
+  it('two days sharing one task type export their own environments (SC38)', () => {
+    const animal = catalogAnimal();
+    const june6 = catalogDay({ taskTypeId: 'tasktype-0', task_epochs: [2] });
+    const june13 = catalogDay({ taskTypeId: 'tasktype-0', task_environment: 'HaightLeft', task_epochs: [2] });
+    expect(mergeDayMetadata(animal, june6).tasks[0].task_environment).toBe('HaightRight');
+    expect(mergeDayMetadata(animal, june13).tasks[0].task_environment).toBe('HaightLeft');
+  });
+});

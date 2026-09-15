@@ -11,6 +11,7 @@ import { buildRealisticWorkspace } from '../../__tests__/fixtures/workspaceBuild
 import { useStore } from '../store';
 import { planImport } from '../yamlImportPlan';
 import { applyImportPlan } from '../yamlImportApply';
+import { deriveAnimalTaskCatalog } from '../taskCatalog';
 
 /**
  *
@@ -587,5 +588,82 @@ describe('applyImportPlan — resilience (real store)', () => {
     expect(summary.createdAnimals).not.toContain('remy');
     expect(summary.createdAnimals).toContain('totoro');
     expect(result.current.model.workspace.days['totoro-2024-01-15']).toBeTruthy();
+  });
+});
+
+describe('applyImportPlan — a task that ran in a different room on a different day (F3)', () => {
+  /**
+   * Two SC38-shaped files: one animal, two dates, the SAME task name, different
+   * `task_environment` (HaightRight on 2023-06-06, HaightLeft on 2023-06-13).
+   *
+   * @returns {Array<object>} Two decoded import files.
+   */
+  const forkTrackFiles = () => {
+    const TASK = {
+      task_name: 'forkTrack_handleAlternation_HaightRight_twoSecondDelay',
+      task_description: 'Handle alternation with a two second delay',
+      camera_id: [0],
+      task_epochs: [2],
+    };
+    const withEnvironment = (date, task_environment) =>
+      makeFile({
+        subjectId: 'sc38',
+        date,
+        mutateConfig: (animal, day) => {
+          day.tasks = [{ ...TASK, task_environment }];
+          day.associated_files = [];
+          day.associated_video_files = [];
+        },
+      });
+    return [withEnvironment('2023-06-06', 'HaightRight'), withEnvironment('2023-06-13', 'HaightLeft')];
+  };
+
+  /**
+   * The `task_environment` a day would export.
+   * @param {object} workspace - The live workspace.
+   * @param {string} dayId - The day id.
+   * @returns {string} The exported environment.
+   */
+  const exportedEnvironment = (workspace, dayId) =>
+    mergeDayMetadata(workspace.animals.sc38, workspace.days[dayId]).tasks[0].task_environment;
+
+  it('each imported day exports the environment ITS file recorded', () => {
+    const plan = planImport(forkTrackFiles(), createDefaultWorkspace());
+    const { result } = renderHook(() => useStore());
+    act(() => {
+      applyImportPlan(plan, result.current.actions, { workspace: result.current.model.workspace });
+    });
+
+    const ws = result.current.model.workspace;
+    expect(exportedEnvironment(ws, 'sc38-2023-06-06')).toBe('HaightRight');
+    expect(exportedEnvironment(ws, 'sc38-2023-06-13')).toBe('HaightLeft');
+  });
+
+  it('…and still does after the days are folded into the animal task catalog', () => {
+    // The import writes inline `day.tasks`; the catalog conversion (the registered v2→v3 migrator,
+    // and the Day Editor's first edit) is what could flatten the two rooms into one. It must not:
+    // ONE task type, each day keeping its own room.
+    const plan = planImport(forkTrackFiles(), createDefaultWorkspace());
+    const { result } = renderHook(() => useStore());
+    act(() => {
+      applyImportPlan(plan, result.current.actions, { workspace: result.current.model.workspace });
+    });
+    const ws = result.current.model.workspace;
+    const dayIds = ['sc38-2023-06-06', 'sc38-2023-06-13'];
+    const { taskTypes, instancesByDayId, reconciliations } = deriveAnimalTaskCatalog(
+      dayIds.map((id) => ws.days[id])
+    );
+
+    expect(taskTypes).toHaveLength(1); // one reusable task identity
+    expect(reconciliations).toEqual([]); // nothing was lost, so nothing to review
+    const catalogAnimal = { ...ws.animals.sc38, taskTypes };
+    const catalogWorkspace = {
+      animals: { sc38: catalogAnimal },
+      days: Object.fromEntries(
+        dayIds.map((id) => [id, { ...ws.days[id], tasks: undefined, taskInstances: instancesByDayId[id] }])
+      ),
+    };
+    expect(exportedEnvironment(catalogWorkspace, 'sc38-2023-06-06')).toBe('HaightRight');
+    expect(exportedEnvironment(catalogWorkspace, 'sc38-2023-06-13')).toBe('HaightLeft');
   });
 });

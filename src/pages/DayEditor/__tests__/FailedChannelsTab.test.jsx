@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import FailedChannelsTab, { RecordingSetupSection, FailedChannelsSection } from '../FailedChannelsTab';
+import { resolveTaskInstances } from '../../../state/taskCatalog';
 
 describe('FailedChannelsTab', () => {
   const ELECTRODE_GROUPS = [
@@ -174,6 +175,30 @@ describe('FailedChannelsTab', () => {
       const referenced = screen.getByRole('checkbox', { name: /track/i });
       expect(referenced).toBeChecked();
       expect(referenced).toBeDisabled();
+    });
+
+    it('locks the camera THIS day recorded with when the occurrence overrides the task default', () => {
+      // F3: the day ran the catalog task with camera 2 instead of the type's camera 1. The
+      // checklist must lock what the day actually used (resolved through the real bridge), and
+      // leave the type's default free — otherwise the user cannot describe the day they had.
+      const taskTypes = [
+        { id: 'tasktype-0', task_name: 'sleep', task_description: 'd', task_environment: 'e', camera_id: [1] },
+      ];
+      const taskInstances = [{ taskTypeId: 'tasktype-0', camera_id: [2], task_epochs: [1] }];
+      const catalogDay = { ...mockDay, taskInstances };
+      const catalogMerged = { ...mockMergedDay, tasks: resolveTaskInstances(taskTypes, taskInstances) };
+      render(
+        <FailedChannelsTab
+          animal={{ ...animalWithCameras, taskTypes }}
+          day={catalogDay}
+          mergedDay={catalogMerged}
+          onFieldUpdate={mockOnFieldUpdate}
+        />
+      );
+      const used = screen.getByRole('checkbox', { name: /overhead/i });
+      expect(used).toBeChecked();
+      expect(used).toBeDisabled();
+      expect(screen.getByRole('checkbox', { name: /track/i })).not.toBeChecked();
     });
 
     it('checking a non-referenced camera writes cameras_used with that id', async () => {

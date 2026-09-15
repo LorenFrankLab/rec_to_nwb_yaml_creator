@@ -115,10 +115,14 @@ export interface TaskCameraNotUsedFinding {
 }
 
 /**
- * Cameras referenced by the task types a day ran but absent from the day's EXPLICIT `cameras_used`
+ * Cameras referenced by the tasks a day ran but absent from the day's EXPLICIT `cameras_used`
  * checklist. Has no opinion when the day declares no checklist (absent or empty `cameras_used`) — the
  * checklist is an additive, opt-in day-level set (mirrors {@link module:state/cameraUsage}), so
  * existing/migrated data without it is never flagged. Each (task type, camera) is reported once.
+ *
+ * Reads the EFFECTIVE cameras — the occurrence's own `camera_id` when it recorded one, else the
+ * task type's — because those are the ids the export emits (see `resolveTaskInstances`). Checking
+ * the type default instead would flag a camera the day never used and let the exported one through.
  *
  * @param taskTypes - The animal's task-type catalog.
  * @param day - A recording day (its `taskInstances` and `cameras_used`).
@@ -143,7 +147,8 @@ export function taskTypeCamerasNotUsed(taskTypes: unknown, day: unknown): TaskCa
     if (typeof ref !== 'string') continue;
     const type = typeById.get(ref);
     if (!type) continue;
-    const cameras = Array.isArray(type.camera_id) ? type.camera_id : [];
+    const effective = Array.isArray(instance.camera_id) ? instance.camera_id : type.camera_id;
+    const cameras = Array.isArray(effective) ? effective : [];
     const name = typeof type.task_name === 'string' ? type.task_name : '';
     for (const camera of cameras) {
       const key = idKey(camera);
