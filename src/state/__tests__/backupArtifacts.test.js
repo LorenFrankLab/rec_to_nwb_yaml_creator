@@ -3,7 +3,7 @@
  * the receipts refer to, and a restore in an INDEPENDENT store gets them back — verified by hash —
  * while never claiming bytes it does not have.
  */
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { resetBlobStoreForTests, putBlob, getBlob } from '../blobStore';
 import {
   buildWorkspaceBackup,
@@ -13,6 +13,20 @@ import {
 } from '../persistence';
 import { receiptHash, RECEIPT_YAML_KEY_PREFIX } from '../../domain/exportReceipt';
 import { makeTestWorkspace } from '../../__tests__/helpers/test-fixtures';
+
+// jsdom has no IndexedDB: `putBlob` reports memory-only (false). `durable.value = true` stands in
+// for a store that ACKNOWLEDGES the write, so the two outcomes can be tested separately.
+const { durable } = vi.hoisted(() => ({ durable: { value: false } }));
+vi.mock('../blobStore', async () => {
+  const actual = await vi.importActual('../blobStore');
+  return {
+    ...actual,
+    putBlob: async (key, value) => {
+      const stored = await actual.putBlob(key, value);
+      return durable.value || stored;
+    },
+  };
+});
 
 const DAY = 'remy_20230622';
 const YAML = 'experimenter_name:\n  - Doe, Jane\n';
@@ -34,21 +48,33 @@ async function downloadedWorkspace() {
 }
 
 beforeEach(() => {
+  durable.value = false;
   resetPersistenceForTests();
   resetBlobStoreForTests();
   window.localStorage.clear();
 });
 
 describe('backup artifacts', () => {
-  it('the backup carries the receipt YAML, and a restore in a fresh store gets it back', async () => {
+  it('the backup carries the receipt YAML, and a DURABLE restore in a fresh store gets it back', async () => {
     const text = await buildWorkspaceBackup(await downloadedWorkspace(), 'test');
     expect(JSON.parse(text).artifacts[DAY].yaml).toBe(YAML);
 
     resetBlobStoreForTests(); // an independent browser: nothing in its side store
+    durable.value = true;
     const parsed = parseWorkspaceBackup(text);
     const restored = await restoreBackupArtifacts(parsed.workspace, parsed.artifacts);
     expect(restored.days[DAY].exportReceipt.yamlStored).toBe(true);
     expect(await getBlob(`${RECEIPT_YAML_KEY_PREFIX}${DAY}`)).toMatchObject({ filename: FILENAME, yaml: YAML });
+  });
+
+  it('a restore whose store did NOT durably accept the bytes (no IndexedDB) leaves yamlStored false — a fresh document has no bytes', async () => {
+    const text = await buildWorkspaceBackup(await downloadedWorkspace(), 'test');
+    resetBlobStoreForTests();
+    const parsed = parseWorkspaceBackup(text);
+    const restored = await restoreBackupArtifacts(parsed.workspace, parsed.artifacts); // memory-only
+    expect(restored.days[DAY].exportReceipt.yamlStored).toBe(false);
+    resetBlobStoreForTests(); // "new document": the memory fallback is gone
+    expect(await getBlob(`${RECEIPT_YAML_KEY_PREFIX}${DAY}`)).toBeUndefined();
   });
 
   it('a receipt whose bytes are missing is restored with yamlStored false (never a claim without the bytes)', async () => {

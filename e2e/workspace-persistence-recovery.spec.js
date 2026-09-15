@@ -183,6 +183,31 @@ test.describe('Workspace persistence & recovery', () => {
     expect(text).toBe('{corrupt original bytes');
   });
 
+  test('restoring a backup is refused while the unrestorable original could not be preserved (nothing overwrites the only copy)', async ({ page }) => {
+    await page.addInitScript((quarantineKey) => {
+      Object.defineProperty(window, 'indexedDB', { value: undefined, configurable: true });
+      const original = window.localStorage.setItem.bind(window.localStorage);
+      window.localStorage.setItem = (k, v) => {
+        if (k === quarantineKey) throw new DOMException('QuotaExceededError', 'QuotaExceededError');
+        original(k, v);
+      };
+    }, `${STORAGE_KEY}.quarantine`);
+    await page.goto('/#/workspace');
+    await page.evaluate((key) => window.localStorage.setItem(key, '{the only copy'), STORAGE_KEY);
+    await page.reload();
+    await expect(page.getByRole('alert')).toContainText('could not keep a durable copy');
+
+    const backup = JSON.stringify({ ...buildConfiguredWorkspaceBlob(), format: 'rec_to_nwb_workspace_backup', formatVersion: 2, artifacts: {} });
+    const chooser = page.waitForEvent('filechooser');
+    await page.getByRole('button', { name: /Restore from backup/ }).click();
+    await (await chooser).setFiles({ name: 'backup.json', mimeType: 'application/json', buffer: Buffer.from(backup) });
+    await page.getByRole('alertdialog').getByRole('button', { name: 'Replace workspace' }).click();
+    // Refused: the original is still the only thing under the main key.
+    await expect(page.getByText(/download the unrestorable original/i).first()).toBeVisible();
+    expect(await page.evaluate((key) => window.localStorage.getItem(key), STORAGE_KEY)).toBe('{the only copy');
+    await expect(page.getByRole('link', { name: ANIMAL_ID })).toHaveCount(0);
+  });
+
   test('a leftover revision stamp from a closed tab never blocks the sole writer after a discard', async ({ page }) => {
     await page.goto('/#/workspace');
     await page.evaluate(

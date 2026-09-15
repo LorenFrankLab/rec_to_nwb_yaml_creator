@@ -78,6 +78,11 @@ export interface PersistenceStatus {
    * could be made: every write is refused until the user downloads it (see the backup panel).
    */
   originalUnpreserved: boolean;
+  /**
+   * True from load until the unrestorable original this load discarded has been durably preserved
+   * (or preservation failed): every write is refused meanwhile, edits are kept and written after.
+   */
+  preservationPending: boolean;
   /** Clears the load notice. */
   dismissLoadNotice: () => void;
 }

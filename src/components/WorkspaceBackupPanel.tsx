@@ -137,13 +137,19 @@ export default function WorkspaceBackupPanel() {
     );
   };
 
+  const [restoreRefusal, setRestoreRefusal] = useState<string | null>(null);
   const confirmRestore = async () => {
     if (!candidate) return;
+    setRestoreRefusal(null);
     const ok = await persistence.restoreWorkspace(candidate.workspace, candidate.artifacts);
     if (ok) {
       setNotice(`Workspace restored from ${candidate.source}.`);
       setCandidate(null);
       setRefreshToken((n) => n + 1);
+    } else {
+      // The persistence layer refused (read-only tab, original not yet preserved, write failure):
+      // say so in the dialog rather than closing it silently.
+      setRestoreRefusal('Nothing was replaced.');
     }
   };
 
@@ -245,7 +251,10 @@ export default function WorkspaceBackupPanel() {
 
       <Modal
         isOpen={candidate != null}
-        onClose={() => setCandidate(null)}
+        onClose={() => {
+          setCandidate(null);
+          setRestoreRefusal(null);
+        }}
         title="Replace the current workspace?"
         titleId="restore-preview-title"
         role="alertdialog"
@@ -272,6 +281,11 @@ export default function WorkspaceBackupPanel() {
             <p>
               Restoring from {candidate.source} replaces everything in this browser&apos;s workspace.
             </p>
+            {restoreRefusal && (
+              <p className={styles.warning} role="alert">
+                {restoreRefusal} {persistence.saveError}
+              </p>
+            )}
             {candidate.recoveredNote && <p className={styles.warning}>{candidate.recoveredNote}</p>}
             <dl className={styles.previewGrid}>
               <dt>In the backup</dt>

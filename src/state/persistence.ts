@@ -225,13 +225,14 @@ export type PreservedWhere = 'indexeddb' | 'localstorage' | null;
  * accepted the copy the main key is left in place (the app keeps running on an empty workspace,
  * but cannot save over the original until it has been downloaded — see `useWorkspacePersistence`).
  *
- * @returns Where the original was kept, or null when it could not be.
+ * @returns Where the original was kept (null when it could not be), and whether the main key was
+ *   cleared (false when it no longer held the quarantined bytes).
  */
-export async function discardUnusableWorkspace(): Promise<{ preserved: PreservedWhere }> {
+export async function discardUnusableWorkspace(): Promise<{ preserved: PreservedWhere; cleared: boolean }> {
   const pending = pendingQuarantine;
   pendingQuarantine = null;
   // No quarantine from this load (not a `loadWorkspace(preserve)` discard): keep everything as is.
-  if (!pending) return { preserved: null };
+  if (!pending) return { preserved: null, cleared: false };
   let preserved: PreservedWhere = null;
   if (await pending.durable) {
     preserved = 'indexeddb';
@@ -243,13 +244,21 @@ export async function discardUnusableWorkspace(): Promise<{ preserved: Preserved
       preserved = null;
     }
   }
-  if (preserved) {
-    clearWorkspace();
-    // The stamp a previous (closed) tab left behind guards nothing now: the blob it stamped is
-    // gone. Adopt it, or the sole writer's first save would be refused as a conflict.
-    syncRevisionFromStorage();
+  if (!preserved) return { preserved, cleared: false };
+  // Clear ONLY the bytes that were quarantined. Anything else under the key was written since
+  // this load began (another tab, or a save this tab let through) and is not ours to discard.
+  let current: string | null = null;
+  try {
+    current = window.localStorage.getItem(WORKSPACE_STORAGE_KEY);
+  } catch {
+    current = null;
   }
-  return { preserved };
+  if (current !== pending.record.raw) return { preserved, cleared: false };
+  clearWorkspace();
+  // The stamp a previous (closed) tab left behind guards nothing now: the blob it stamped is
+  // gone. Adopt it, or the sole writer's first save would be refused as a conflict.
+  syncRevisionFromStorage();
+  return { preserved, cleared: true };
 }
 
 /**
@@ -573,9 +582,9 @@ export async function restoreBackupArtifacts<T extends { days?: Record<string, u
     const artifact = artifacts[dayId];
     let stored = false;
     if (artifact && receiptHash(artifact.filename, artifact.yaml) === receipt.contentHash) {
+      // Claimed only when the store durably accepted the bytes (memory-only is not durable).
       // eslint-disable-next-line no-await-in-loop
-      await putBlob(key, artifact);
-      stored = true;
+      stored = await putBlob(key, artifact);
     }
     nextDays[dayId] = { ...(day as object), exportReceipt: { ...receipt, yamlStored: stored } };
   }

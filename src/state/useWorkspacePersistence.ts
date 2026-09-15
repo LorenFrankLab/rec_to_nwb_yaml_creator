@@ -102,11 +102,32 @@ export function useWorkspacePersistence({
   const [hasPendingWrite, setHasPendingWrite] = useState(false); // debounce in flight
   const [loadNotice, setLoadNotice] = useState<string | null>(null); // recovery/discard notice for the UI
   const [loadOutcome, setLoadOutcome] = useState<PersistenceLoadOutcome>(null);
+  // True from mount until the unusable original this load discarded has been durably preserved (or
+  // preservation has failed): every write is refused meanwhile — the main key still holds the only
+  // copy of the original, and an autosave would replace it. Edits made meanwhile are kept in memory
+  // and written once the flag clears (the autosave effect depends on it).
+  const [preservationPending, setPreservationPending] = useState(() => initialDiscardRef.current != null);
+  const preservationPendingRef = useRef(preservationPending);
+  preservationPendingRef.current = preservationPending;
   // True while a discarded original still sits under the main key because no durable copy could be
   // made: every write is refused (it would overwrite the only copy) until the user downloads it.
   const [originalUnpreserved, setOriginalUnpreserved] = useState(false);
   const originalUnpreservedRef = useRef(false);
   originalUnpreservedRef.current = originalUnpreserved;
+  // A backup restore in flight (its asynchronous artifact writes): hand-over is vetoed meanwhile.
+  const restoreInFlightRef = useRef(false);
+
+  /** Why a write must not happen right now, or null. Shared by autosave, Save and restore. */
+  const writeBlocker = useCallback((): string | null => {
+    if (!isWriterRef.current) return 'This tab is read-only — another tab is editing this workspace.';
+    if (preservationPendingRef.current) {
+      return 'Not saved yet: keeping a copy of the unrestorable original data first (your edits are kept and will be saved).';
+    }
+    if (originalUnpreservedRef.current) {
+      return 'Not saved: download the unrestorable original from the Workspace page first.';
+    }
+    return null;
+  }, []);
 
   const enabled = FLAGS.localStoragePersistence;
 
@@ -177,6 +198,7 @@ export function useWorkspacePersistence({
           'version). Keeping a copy of the original data before continuing…'
       );
       void discardUnusableWorkspace().then(({ preserved }) => {
+        setPreservationPending(false);
         if (preserved) {
           setLoadNotice(
             'Saved workspace data could not be restored (it was from an incompatible ' +
@@ -222,8 +244,10 @@ export function useWorkspacePersistence({
     // by `retriesLeft` so a persistent failure (e.g. quota) can't become a save storm; both timers
     // are cleared on cleanup, and a workspace change re-runs the effect from scratch.
     const attempt = (retriesLeft: number) => {
-      if (originalUnpreservedRef.current) {
-        setSaveError('Not saved: download the unrestorable original from the Workspace page first.');
+      const blocked = writeBlocker();
+      if (blocked) {
+        // Stays "pending" (the unload guard stays armed); re-attempted when the blocker lifts.
+        setSaveError(blocked);
         return;
       }
       try {
@@ -248,7 +272,7 @@ export function useWorkspacePersistence({
       clearTimeout(timer);
       if (retryTimer) clearTimeout(retryTimer);
     };
-  }, [workspace, enabled, isWriter]);
+  }, [workspace, enabled, isWriter, preservationPending, originalUnpreserved, writeBlocker]);
 
   const dismissLoadNotice = useCallback(() => setLoadNotice(null), []);
 
@@ -265,12 +289,9 @@ export function useWorkspacePersistence({
   const saveNow = useCallback((): boolean => {
     flushAllDrafts();
     if (!enabled) return true;
-    if (!isWriterRef.current) {
-      setSaveError('This tab is read-only — another tab is editing this workspace.');
-      return false;
-    }
-    if (originalUnpreservedRef.current) {
-      setSaveError('Not saved: download the unrestorable original from the Workspace page first.');
+    const blocked = writeBlocker();
+    if (blocked) {
+      setSaveError(blocked);
       return false;
     }
     try {
@@ -284,7 +305,7 @@ export function useWorkspacePersistence({
       setSaveError(`Could not save workspace: ${(err as Error).message}`);
       return false;
     }
-  }, [workspaceRef, enabled]);
+  }, [workspaceRef, enabled, writeBlocker]);
 
   // Leaving the page: commit pending drafts and write synchronously (localStorage is synchronous, so
   // this completes before unload) — but ONLY when there is unsaved work (a pending draft, a pending
@@ -311,6 +332,9 @@ export function useWorkspacePersistence({
       finalWrite();
     };
     const onHandOver = (): HandOverOutcome => {
+      if (restoreInFlightRef.current) {
+        return { ok: false, reason: 'the editing tab is restoring a backup' };
+      }
       if (hasUnflushableDrafts()) {
         return { ok: false, reason: 'a dialog with unapplied changes is open in the editing tab' };
       }
@@ -356,28 +380,46 @@ export function useWorkspacePersistence({
   /** Replace the in-memory workspace with a restored one and write it immediately (writer-only). */
   const restoreWorkspace = useCallback(
     async (incoming: Workspace, artifacts: BackupArtifacts = {}): Promise<boolean> => {
-      if (enabled && !isWriterRef.current) {
-        setSaveError('This tab is read-only — take over editing before restoring a backup.');
+      if (!enabled) {
+        replaceWorkspace(incoming);
+        return true;
+      }
+      // The same blockers as any other write — a restore is a whole-workspace write.
+      const blocked = writeBlocker();
+      if (blocked) {
+        setSaveError(blocked);
         return false;
       }
-      const next = await restoreBackupArtifacts(incoming, artifacts);
-      replaceWorkspace(next);
-      if (!enabled) return true;
+      // Hold the lease for the whole operation (hand-over is vetoed meanwhile) and re-check every
+      // guard AFTER the asynchronous artifact writes: ownership or the original's state may have
+      // changed while they were in flight, and a stale continuation must never write.
+      restoreInFlightRef.current = true;
       try {
-        // A restore overwrites deliberately: adopt whatever revision is stored, then write.
-        syncRevisionFromStorage();
-        saveWorkspace(next, { checkpoint: true });
-        lastPersistedRef.current = next;
-        setLastSaved(new Date().toISOString());
-        setSaveError(null);
-        setHasPendingWrite(false);
-        return true;
-      } catch (err) {
-        setSaveError(`Could not save the restored workspace: ${(err as Error).message}`);
-        return false;
+        const next = await restoreBackupArtifacts(incoming, artifacts);
+        const blockedAfter = writeBlocker();
+        if (blockedAfter) {
+          setSaveError(`Restore cancelled — ${blockedAfter}`);
+          return false;
+        }
+        replaceWorkspace(next);
+        try {
+          // A restore overwrites deliberately: adopt whatever revision is stored, then write.
+          syncRevisionFromStorage();
+          saveWorkspace(next, { checkpoint: true });
+          lastPersistedRef.current = next;
+          setLastSaved(new Date().toISOString());
+          setSaveError(null);
+          setHasPendingWrite(false);
+          return true;
+        } catch (err) {
+          setSaveError(`Could not save the restored workspace: ${(err as Error).message}`);
+          return false;
+        }
+      } finally {
+        restoreInFlightRef.current = false;
       }
     },
-    [enabled, replaceWorkspace]
+    [enabled, replaceWorkspace, writeBlocker]
   );
 
   // Real persistence status (never part of `model` — must not reach YAML).
@@ -393,6 +435,7 @@ export function useWorkspacePersistence({
       loadNotice,
       loadOutcome,
       writer: writerState,
+      preservationPending,
       originalUnpreserved,
       dismissLoadNotice,
       saveNow,
@@ -409,6 +452,7 @@ export function useWorkspacePersistence({
       loadNotice,
       loadOutcome,
       writerState,
+      preservationPending,
       originalUnpreserved,
       dismissLoadNotice,
       saveNow,
