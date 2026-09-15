@@ -63,6 +63,17 @@ function buildAllChannelsBadWorkspace() {
   return { animal, day };
 }
 
+/**
+ * Assert `first` precedes `second` in document order (reading order on the rendered page).
+ *
+ * @param {Element} first - The element expected to come first.
+ * @param {Element} second - The element expected to follow it.
+ */
+function expectInDocumentOrder(first, second) {
+  // eslint-disable-next-line no-bitwise
+  expect(first.compareDocumentPosition(second) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+}
+
 /** Stub navigator.clipboard.writeText (a getter-only prop in jsdom), returning the spy for assertions. */
 function stubClipboard() {
   const writeText = vi.fn().mockResolvedValue(undefined);
@@ -108,6 +119,34 @@ describe('ExportPreview — readiness gate', () => {
     const ready = screen.getByRole('status');
     expect(ready).toHaveTextContent(/Ready to export/i);
     expect(ready).not.toHaveTextContent(/to review/i);
+  });
+
+  it('shows what the file will say — weight, team, calibration, each task\'s room — above Download', () => {
+    const { animal, day } = buildRealisticWorkspace();
+    renderPreview(animal, day);
+
+    const review = screen.getByRole('group', { name: /effective setup for this day/i });
+    // The values a plausible-but-wrong day gets caught by: the weight THIS day measured, who ran it,
+    // the calibration each camera was on, and the room each task ran in (per-day overrides included).
+    expect(within(review).getByText('485 g — Guidera, Jennifer, Comrie, Alison')).toBeInTheDocument();
+    expect(within(review).getByText(/overhead_camera \(0\.00085 m\/px\)/)).toBeInTheDocument();
+    expect(within(review).getByText(/w_alternation \(2, 4\) — elevated W-track \(180cm arms\)/)).toBeInTheDocument();
+    expect(within(review).getByText(/sleep \(1\) — home cage/)).toBeInTheDocument();
+    expect(screen.getByText(/check these values before downloading/i)).toBeInTheDocument();
+
+    // Read the values, THEN download: the review sits between the readiness line and the actions.
+    expectInDocumentOrder(screen.getByRole('status'), review);
+    expectInDocumentOrder(review, screen.getByRole('button', { name: /download/i }));
+  });
+
+  it('keeps the repair list first on a blocked day, with the review below it', () => {
+    const { animal, day } = buildExportErrorWorkspace();
+    renderPreview(animal, day);
+
+    const blocked = screen.getByRole('alert');
+    const review = screen.getByRole('group', { name: /effective setup for this day/i });
+    expectInDocumentOrder(blocked, review);
+    expectInDocumentOrder(review, screen.getByRole('button', { name: /download/i }));
   });
 
   it('disables BOTH Download AND Copy on a blocking day (Copy is not a gate bypass)', () => {

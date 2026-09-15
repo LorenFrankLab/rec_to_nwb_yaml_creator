@@ -60,6 +60,18 @@
   gap: var(--spacing-sm, 0.5rem);
 }
 
+/* ── Readable review (what the file will say, in words) ── */
+.review {
+  margin-bottom: var(--spacing-md, 1rem);
+}
+
+.reviewCaption {
+  margin: 0;
+  font-size: var(--font-size-sm, 0.875rem);
+  font-weight: 600;
+  color: var(--color-ink-warm);
+}
+
 /* ── File card + preview ── */
 .filecard {
   border: 1px solid var(--color-grey-200, #e0e0e0);

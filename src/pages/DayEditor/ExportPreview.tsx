@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useId, useMemo, useState } from 'react';
 import { encodeYaml } from '../../io/yaml';
 import { formatRecordingMetadataFilename } from '../../domain/recordingFilename';
 import { getAnimalSubject } from '../../state/workspaceSelectors';
@@ -11,6 +11,7 @@ import type { ExportDayActions } from '../../domain/exportDay';
 import { checkShadowExport } from '../../domain/shadowExport';
 import { isFeatureEnabled } from '../../featureFlags';
 import { useUndoToast } from '../../components/ui/UndoToast';
+import EffectiveDayReview from '../../components/EffectiveDayReview';
 import RepairActions from './RepairActions';
 import type { RepairDispatch } from './RepairActions';
 import { useDayEditorContext } from './DayEditorContext';
@@ -39,15 +40,19 @@ interface ExportPreviewProps extends DayEditorBundle {
 /**
  * ExportPreview — the day's export surface (replaces `ExportStep`).
  *
- * Shows the readiness gate (issue-driven, field-linked when blocking), the derived download filename,
- * a read-only preview of the REAL export bytes (`encodeYaml(mergeDayMetadata(animal, day))`), Download
- * and Copy actions (BOTH gated while blocking — both emit the YAML, so Copy is not a gate bypass), and
- * an "Export all days" batch that reuses the shared exporter.
+ * Shows the readiness gate (issue-driven, field-linked when blocking), a readable review of what the
+ * file will SAY (the shared {@link EffectiveDayReview}, placed between the gate and the actions so the
+ * values are read BEFORE the download), the derived download filename, a read-only preview of the REAL
+ * export bytes (`encodeYaml(mergeDayMetadata(animal, day))`), Download and Copy actions (BOTH gated
+ * while blocking — both emit the YAML, so Copy is not a gate bypass), and an "Export all days" batch
+ * that reuses the shared exporter.
  *
  * It is a thin renderer over already-tested layers: the gate + classified issues come from the
  * view-model (`vm.export` / `vm.issues`, the authoritative `validateDay`-driven gate — never a local
- * re-check); the blocked repair list is the shared {@link RepairActions}; the single download is the
- * shared {@link exportDayFile} core (parity gate + mark-exported); the batch is {@link exportAllDays}
+ * re-check); the review is the SAME component (and the same `buildPreflightSummary` derivation) the
+ * per-animal Validation summary renders, never a second summary; the blocked repair list is the shared
+ * {@link RepairActions}; the single download is the shared {@link exportDayFile} core
+ * (parity gate + mark-exported); the batch is {@link exportAllDays}
  * (the same `exportDayFile` core over every day, never a second export path).
  */
 export default function ExportPreview(props: ExportPreviewProps) {
@@ -61,6 +66,8 @@ export default function ExportPreview(props: ExportPreviewProps) {
   const [actionError, setActionError] = useState<string | null>(null);
   const [batchResult, setBatchResult] = useState<ExportAllResult | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
+  // Ties the review's caption to its region without a hand-written DOM id (unique per instance).
+  const reviewCaptionId = useId();
 
   // Merge once: the preview body, the filename, and the merge-error state all derive from this single
   // merged object (the same bytes the download/copy emit), never duplicate component state.
@@ -157,24 +164,6 @@ export default function ExportPreview(props: ExportPreviewProps) {
         </p>
       </header>
 
-      {!blocked && (
-        <div className={styles.actions}>
-          <Button
-            onClick={handleDownload}
-            title={`Download ${fileName}`}
-          >
-            Download
-          </Button>
-          <Button
-            variant="secondary"
-            onClick={handleCopy}
-            title="Both Download and Copy produce the file"
-          >
-            Copy
-          </Button>
-        </div>
-      )}
-
       {/* Readiness gate — issue-driven. Loud + field-linked when blocking; compact when clean. */}
       {blocked ? (
         <div className={styles.blocked} role="alert">
@@ -220,25 +209,36 @@ export default function ExportPreview(props: ExportPreviewProps) {
         </div>
       )}
 
-      {blocked && (
-        <div className={styles.actions}>
-          <Button
-            onClick={handleDownload}
-            disabled={blocked}
-            title={blocked ? disabledReason : `Download ${fileName}`}
-          >
-            Download
-          </Button>
-          <Button
-            variant="secondary"
-            onClick={handleCopy}
-            disabled={blocked}
-            title={blocked ? disabledReason : 'Both Download and Copy produce the file'}
-          >
-            Copy
-          </Button>
-        </div>
+      {/* What the file will SAY, in words — the defense against a plausible-but-wrong day (a weight
+          carried over from another session, a task recorded in the wrong room, a stale calibration).
+          It sits between the gate and the actions on purpose: read the values, THEN download. The
+          same shared review the Validation summary shows, from the same merge the bytes come from. */}
+      {!mergeError && (
+        <section className={styles.review} aria-labelledby={reviewCaptionId}>
+          <p className={styles.reviewCaption} id={reviewCaptionId}>
+            Check these values before downloading.
+          </p>
+          <EffectiveDayReview animal={animal} day={day} />
+        </section>
       )}
+
+      <div className={styles.actions}>
+        <Button
+          onClick={handleDownload}
+          disabled={blocked}
+          title={blocked ? disabledReason : `Download ${fileName}`}
+        >
+          Download
+        </Button>
+        <Button
+          variant="secondary"
+          onClick={handleCopy}
+          disabled={blocked}
+          title={blocked ? disabledReason : 'Both Download and Copy produce the file'}
+        >
+          Copy
+        </Button>
+      </div>
 
       {/* Download history: never / current / changed since download (with what changed) / unverified. */}
       <DownloadStatusCard
