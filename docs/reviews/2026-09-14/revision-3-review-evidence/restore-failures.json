@@ -1,0 +1,22 @@
+{
+  "cancelledRestore": {
+    "cancelEnabled": true,
+    "savedAfterCancel": 777,
+    "storedAfterCancelledRestoreCompletes": 480,
+    "visibleWeight": "480"
+  },
+  "failedRestore": {
+    "refusal": "Nothing was replaced. Could not save the restored workspace: Quota full",
+    "originalReceiptHash": "b56211a4995e042b0ad829c881d2e636f66c46c47c72735b4c87ae3938d6da98",
+    "inMemoryWeightAfterRefusal": "480",
+    "persistedWeightAfterRefusal": 485,
+    "weightAfterReload": "485",
+    "storedArtifact": {
+      "weightLine": "  weight: 480",
+      "hash": "53fed28c0b4910d04d996b77cc97a741b96d3fb79e6f29572489b1351252151a",
+      "receiptHash": "b56211a4995e042b0ad829c881d2e636f66c46c47c72735b4c87ae3938d6da98",
+      "yamlStored": true
+    },
+    "displayedComparison": "  …\n    subject_id: remy\n    date_of_birth: 2023-01-10T00:00:00\n−   weight: 480\n+   weight: 499\n    age: P164\n  data_acq_device:\n  …\n    - ntrode_id: 3\n      electrode_group_id: 2\n−     bad_channels: []\n+     bad_channels:\n+       - 2\n      map:\n        \"0\": 0\n  …\n    - ntrode_id: 6\n      electrode_group_id: 5\n−     bad_channels: []\n+     bad_channels:\n+       - 3\n      map:\n        \"0\": 0\n  …"
+  }
+}

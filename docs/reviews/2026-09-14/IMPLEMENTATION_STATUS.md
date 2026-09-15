@@ -205,6 +205,17 @@ the seven legacy integration timeouts that appear only under full-suite load pas
 are pre-existing); typecheck, eslint (`--max-warnings 0`), stylelint, build all exit 0; Playwright
 **128 pass**, the same 7 pre-existing legacy visual baselines fail. No YAML byte path changed.
 
+## Third review response (REVISION_3_REVIEW.md, `3c4458a2`): both restore findings fixed
+
+| Finding | Fix | Failing-first test |
+| --- | --- | --- |
+| P1 Cancel does not stop an in-flight restore | A restore is EXCLUSIVE (a second call is refused; saves are refused while one is in flight) and CANCELLABLE: `cancelRestore()` invalidates the operation's token, so its continuation commits nothing. The dialog's Cancel / Escape / overlay abort the restore; while in flight it reads "Restoring…" with Replace disabled. | `state/__tests__/restoreAtomicity.test.js` (cancel then saved edit kept; second restore refused; saves refused), `WorkspaceBackupPanel.test.jsx`; e2e "Cancel during a delayed restore aborts it" (held IndexedDB completion, then a saved 777 g edit survives the release) |
+| P2 Failed restore partially replaces data | Incoming artifacts are STAGED under `receipt-staging:` keys (`stageBackupArtifacts`), never over the active keys; the restored workspace is written to storage FIRST and only then swapped into memory and the staged bytes promoted (`commitStagedArtifacts`); a failed write / cancellation / tripped guard discards the staging keys and leaves memory, storage and the active receipt bytes untouched. The comparison card verifies stored bytes against the receipt hash before showing them as the previous download. | `restoreAtomicity.test.js` (quota failure after staging: memory 485, storage 485, bytes 485), `pages/DayEditor/__tests__/DownloadStatusCard.test.jsx` (mismatched bytes → unavailable) |
+
+Verification: `npx vitest run` **385 files / 5,463 tests pass** (two halves, as before); typecheck,
+eslint, stylelint, build exit 0; Playwright **129 pass**, the same 7 pre-existing legacy visual
+baselines fail. No YAML byte path changed.
+
 ## Scientific assumptions needing pilot confirmation
 1. Subject ids never contain `_` (140/140 corpus ids agree) — the app now blocks it at creation and export.
 2. Weight: unknown weight blocks export (converter requires `subject.weight`); baseline is only a dated suggestion.
