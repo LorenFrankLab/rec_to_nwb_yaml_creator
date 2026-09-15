@@ -158,6 +158,36 @@ unless `DJ_SUPPORT_FILEPATH_MANAGEMENT=TRUE`; Spyglass `test_mode` requires the 
 - The 7 legacy visual-regression baselines and the two load-sensitive legacy integration tests are pre-existing
   and untouched.
 
+## Review response (BRANCH_REVIEW.md + INCREMENTS_1_2_REVIEW.md, 2026-09-14): all 12 findings fixed
+
+Each fix landed with a test that failed first (unit) and, where the finding was reproduced in a
+browser, a Playwright regression. Numbers refer to the reviews' own lists.
+
+| Finding | Fix | Failing-first test |
+| --- | --- | --- |
+| P1 Hand-over after a failed save | `onBeforeHandOver` callbacks now VETO (`HandOverOutcome`); `handOverOnRequest` releases only when the final write succeeded and no dialog holds unapplied edits; the requester is told why (`release-refused` message → `takeOver` error). | `state/__tests__/ownershipSafety.test.js`; e2e "hand-over is REFUSED while the editing tab cannot save" (injected quota failure, two tabs) |
+| P1 Read-only tabs accept edits | Ownership enforced at the mutation boundary: `commitWorkspace` throws `ReadOnlyWorkspaceError` in a reader (`replaceWorkspace` stays open for live-follow; the last raw `setWorkspace` action was routed through it). The routed page is wrapped in a `<fieldset disabled>` while read-only, so every editing control is inert; the banner keeps take-over + backup download; links keep working. | `ownershipSafety.test.js`, `layouts/__tests__/AppLayout.readOnlyTab.test.jsx`; e2e F4 updated (reader's field is disabled) |
+| P1 Recovery copy not durably acknowledged | `blobStore` resolves on transaction COMPLETE; `discardUnusableWorkspace()` awaits the IndexedDB ack, falls back to a localStorage quarantine copy, and only then clears the main key. If neither store takes it, the original stays under the main key and every save is refused (`originalUnpreserved`) until the user downloads it from the backup panel (`acknowledgeUnpreservedOriginal`). | `state/__tests__/recoveryDurability.test.js`, `store-persistence.test.js`; e2e "without IndexedDB, the discarded original is still downloadable after a reload" |
+| P1 Stale revision after recovery | The discard adopts the leftover stamp (`syncRevisionFromStorage`) after clearing; a missing blob with a leftover stamp adopts it on load. | `recoveryDurability.test.js`; e2e "a leftover revision stamp … never blocks the sole writer" |
+| P1 Duplication bypasses date selection | `duplicateDay` no longer passes the source's version: the setup is chosen by the NEW date like creation; bad-channel marks carry only when that is the source's version. In-app v1 snapshots are now `effectiveDateKnown: false` (entry-stamped) and entry-stamped snapshots sort FIRST in selection (the earliest setup by construction). | `datedFactsBoundaries.test.js` #5b (forward / backward / same-setup), `configurationSelection.test.ts` (entry-stamped v1), `workspace-animal.test.js`; e2e "duplicating June 22 (setup v1) to July 5 pins … v2" |
+| P1 Migrated baseline exportable | Migration copies the baseline only for DOWNLOADED days (validated-only days stay without a weight); `weight_from_baseline` is now an ERROR with the `confirmWeightMeasurement` repair; entering a weight clears it. | `datedFactsMigration.test.js` |
+| P2 Backups omit receipt artifacts | `buildWorkspaceBackup` embeds the receipt YAML bytes (hash-verified, format 2); `parseWorkspaceBackup` returns `artifacts`; `restoreBackupArtifacts` writes them into the receiving store, clears stale bytes under restored day ids and sets `yamlStored` truthfully. `exportDay` sets `yamlStored` only after the write is acknowledged. | `state/__tests__/backupArtifacts.test.js` (independent stores, missing bytes, tampered artifact) |
+| P2 ISO dated folders | `deriveDataFolderForDate` rewrites `YYYY-MM-DD` too and treats any other date-like token (6-digit, dotted, month-first) as needing entry — never "stable". | `dayCarryPolicy.test.ts` |
+| New P1 Duplicate subject ids | `findAnimalIdByLookup` resolves by STORED subject id (renamed animals are found); `subjectIdCollision` is refused at `updateAnimal` (store boundary), shown inline in the profile dialog (save disabled), and the cross-animal batch export refuses days that would share one filename. | `animalCreation.test.js`, `workspace-animal.test.js`, `AnimalProfileDialog.test.jsx`, `ValidationSummary.test.jsx`; e2e "the profile editor refuses a subject id another animal already uses" |
+| New P1 Optogenetics editor vs export | One resolver, `resolveDayOptogenetics(animal, day)`, feeds the export merge, the epoch-grid controls and the header chips. The animal Optogenetics section offers the explicit correction "Apply this setup to N recording days…" (confirm → `applyAnimalDefaultsToDays`). | `epochGridViewModel.test.ts` (both directions + pre-ownership fallback), `wiring/__tests__/OptogeneticsContainer.test.jsx` |
+| New P2 Change source overwrites description | `reseedDayFromSource` keeps a non-empty recorded description (and its provenance); only an empty one is filled from the source. | `datedFactsBoundaries.test.js` #8b |
+| New P2 Effective-date correction leaves stale confirmations | `configurationChoiceStatus` treats only `source: 'explicit'` as conclusive; date-derived confirmations (`effective-date` / `copied` / `migration`) are re-evaluated against the CURRENT effective dates every time, so moving a setup's date after a day un-confirms it without re-pinning its geometry. | `configurationSelection.test.ts`, `datedFactsBoundaries.test.js` #5c |
+
+Also from the earlier review's completion checks: the day-editor overview's team fields now read the
+day's own team (source `day`), matching the export (`dayEditorViewModel.test.ts`); the duplicate-day
+modal copy no longer promises the old behavior. Catalogs (cameras, rig, task types) remain
+identity-locked references by design (documented in the ownership table above) — not day snapshots.
+
+Verification after the fixes: `npx vitest run` **381 files / 5,443 tests pass**; typecheck, eslint
+(`--max-warnings 0`), stylelint, `check:schema`, build all exit 0; Playwright **127 pass**, the same
+7 pre-existing legacy visual baselines fail. No YAML byte path changed (golden baselines green), so
+the converter / Spyglass runs were not repeated.
+
 ## Scientific assumptions needing pilot confirmation
 1. Subject ids never contain `_` (140/140 corpus ids agree) — the app now blocks it at creation and export.
 2. Weight: unknown weight blocks export (converter requires `subject.weight`); baseline is only a dated suggestion.

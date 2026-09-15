@@ -1,0 +1,30 @@
+{
+  "effectiveDate": {
+    "before": {
+      "status": "confirmed",
+      "version": 1,
+      "effectiveDate": "2023-06-01"
+    },
+    "after": {
+      "status": "confirmed",
+      "version": 1,
+      "effectiveDate": "2023-07-01"
+    },
+    "issues": []
+  },
+  "sourceChange": {
+    "descriptionBefore": "TARGET recorded protocol",
+    "descriptionAfter": "SOURCE protocol"
+  },
+  "identityLookup": {
+    "lookup": null,
+    "exportSubject": "OtherRat",
+    "workspaceKey": "remy"
+  },
+  "opto": {
+    "historicalGridEnabled": false,
+    "historicalExportSources": 1,
+    "plainGridEnabled": true,
+    "plainExportSources": 0
+  }
+}

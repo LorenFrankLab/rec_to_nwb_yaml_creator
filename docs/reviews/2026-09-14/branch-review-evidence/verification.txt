@@ -1,0 +1,47 @@
+Branch: feat/first-useful-release
+Commit: 4d07e9dd02cc247555225dcbcc122d46d38c5ac0
+Review date: 2026-09-14 America/Los_Angeles
+
+
+> Rec-to-NWB YAML Generator@2.3.0 typecheck
+> tsc --noEmit
+
+
+
+Full Vitest run (final summary):
+
+ Test Files  376 passed (376)
+      Tests  5406 passed (5406)
+   Start at  20:26:18
+   Duration  58.71s (transform 20.19s, setup 188.34s, collect 68.48s, tests 294.30s, environment 157.53s, prepare 2.48s)
+
+
+
+Selected existing Playwright workflows:
+(node:30879) [DEP0205] DeprecationWarning: `module.register()` is deprecated. Use `module.registerHooks()` instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+
+Running 10 tests using 2 workers
+
+(node:30881) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:30882) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:30881) [DEP0205] DeprecationWarning: `module.register()` is deprecated. Use `module.registerHooks()` instead.
+(node:30882) [DEP0205] DeprecationWarning: `module.register()` is deprecated. Use `module.registerHooks()` instead.
+(node:30882) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:30881) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   1 e2e/workspace-workflows.spec.js:58:7 › Workspace export workflows › same-day: a prepared animal exports one day without re-entering shared setup (2.6s)
+  ✓   2 e2e/workspace-daily-workflow.spec.js:55:7 › backfill June 25 by typed date: starts from June 22, pins setup v1 (not the newer v2), opens directly (desktop 1280×720) (3.3s)
+  ✓   3 e2e/workspace-workflows.spec.js:98:7 › Workspace export workflows › catch-up: per-day scan fields are visible and batch export ships every ready day (1.2s)
+  ✓   5 e2e/workspace-workflows.spec.js:173:7 › Workspace export workflows › catch-up: an unready day is excluded from batch export (1.2s)
+  ✓   4 e2e/workspace-daily-workflow.spec.js:55:7 › backfill June 25 by typed date: starts from June 22, pins setup v1 (not the newer v2), opens directly (phone 390×844) (1.9s)
+  ✓   6 e2e/workspace-daily-workflow.spec.js:93:5 › Log today creates today’s day and opens it; a second press just opens it (908ms)
+  ✓   7 e2e/workspace-daily-workflow.spec.js:101:5 › typing into a focused field, Ctrl+S, and reloading preserves the text (F3) (1.1s)
+  ✓   8 e2e/workspace-daily-workflow.spec.js:115:5 › a second tab opens read-only and cannot overwrite the editing tab (F4) (1.3s)
+  ✓   9 e2e/workspace-daily-workflow.spec.js:142:5 › workspace backup → restore preserves incomplete days, setup history and provenance (F8) (2.4s)
+  ✓  10 e2e/workspace-daily-workflow.spec.js:181:5 › a download reads "Downloaded"; a later weight correction reads "Changed since download" (F6) (1.1s)
+
+  10 passed (12.5s)
