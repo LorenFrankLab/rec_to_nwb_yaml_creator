@@ -134,13 +134,25 @@ describe('validateWizardIdentity — identity validity', () => {
 
   it('flags missing required identity fields', () => {
     const result = validateWizardIdentity(
-      validIdentity({ subject_id: '', genotype: '', weight: '', date_of_birth: '' }),
+      validIdentity({ subject_id: '', genotype: '', species: '', sex: '' }),
       {}
     );
     expect(result.valid).toBe(false);
     expect(Object.keys(result.errors)).toEqual(
-      expect.arrayContaining(['subject_id', 'genotype', 'weight', 'date_of_birth'])
+      expect.arrayContaining(['subject_id', 'genotype', 'species', 'sex'])
     );
+  });
+
+  it('accepts a draft with no baseline weight (weight is measured per recording day)', () => {
+    const result = validateWizardIdentity(validIdentity({ weight: '' }), {});
+    expect(result.valid).toBe(true);
+    expect(result.errors.weight).toBeUndefined();
+  });
+
+  it('accepts a draft with no date of birth (it is requested before export, not at create)', () => {
+    const result = validateWizardIdentity(validIdentity({ date_of_birth: '' }), {});
+    expect(result.valid).toBe(true);
+    expect(result.errors.date_of_birth).toBeUndefined();
   });
 
   it('rejects a future date of birth', () => {
@@ -179,6 +191,14 @@ describe('buildWizardCommitPayload — the createAnimal payload', () => {
     expect(payload.subject).toEqual(expected.subject);
   });
 
+  it('omits weight and date_of_birth entirely when the draft leaves them blank', () => {
+    const payload = buildWizardCommitPayload(validIdentity({ weight: '', date_of_birth: '' }));
+    // Never a fabricated 0 g / empty-string date: an unknown fact stays ABSENT and surfaces at
+    // export as a blocking issue with a repair route.
+    expect('weight' in payload.subject).toBe(false);
+    expect('date_of_birth' in payload.subject).toBe(false);
+  });
+
   it('resolves a custom species to its trimmed value', () => {
     const payload = buildWizardCommitPayload(
       validIdentity({ species: 'other', speciesCustom: '  Homo sapiens  ' })
@@ -194,6 +214,16 @@ describe('computeStepStatuses — per-step completeness', () => {
     ).toBe('complete');
     expect(
       computeStepStatuses(null, { identityValid: false, behaviorOnly: false }).identity
+    ).toBe('incomplete');
+  });
+
+  it('identity stays incomplete while a fact export needs (date of birth) is missing', () => {
+    expect(
+      computeStepStatuses(null, {
+        identityValid: true,
+        identityMissingForExport: true,
+        behaviorOnly: false,
+      }).identity
     ).toBe('incomplete');
   });
 
@@ -331,6 +361,20 @@ describe('buildCreateAnimalWizardViewModel — the assembled view-model', () => 
       behaviorOnly: false,
     });
     expect(vm.steps.find((s) => s.key === 'identity')?.status).toBe('complete');
+  });
+
+  it('keeps the identity step incomplete while the draft has no date of birth (export needs it)', () => {
+    // A draft animal is legitimate; the identity step still reads "incomplete" so the missing DOB
+    // stays visible until it is filled in.
+    const vm = buildCreateAnimalWizardViewModel({
+      currentStepKey: 'electrodes',
+      identity: validIdentity({ date_of_birth: '' }),
+      existingAnimals: {},
+      animal: makeAnimal(),
+      behaviorOnly: false,
+    });
+    expect(vm.identity.valid).toBe(true);
+    expect(vm.steps.find((s) => s.key === 'identity')?.status).toBe('incomplete');
   });
 
   it('reports identity validity (gates leaving step 1) and exposes the opto meter', () => {

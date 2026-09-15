@@ -111,6 +111,11 @@ export interface IdentityValidation {
  * for a custom species) and the SAME case-insensitive store-key collision check — but covers ONLY
  * the identity fields (experimenters/lab/institution move to the Team step).
  *
+ * Draft validity is NOT export completeness: the required set is the animal's IDENTITY (subject id,
+ * species, sex, genotype). The baseline weight and the date of birth are optional here — unknown
+ * facts a draft is allowed to leave blank (weight is measured per recording day; a missing DOB
+ * blocks EXPORT, with a repair route to the animal profile) — but are format-checked when given.
+ *
  * @param identity - The step-1 draft.
  * @param existingAnimals - The workspace's animals map (for the uniqueness check; keys are lower-cased).
  * @returns The validity flag + per-field errors.
@@ -158,10 +163,10 @@ export function validateWizardIdentity(
     }
   }
 
-  // Weight (grams) — schema-required, non-negative number.
-  if (identity.weight === '' || identity.weight == null) {
-    errors.weight = 'Weight is required';
-  } else if (!(Number(identity.weight) >= 0)) {
+  // Baseline weight (grams) — OPTIONAL. The exported weight is the recording DAY's own measurement
+  // (`session.weight`); the baseline is only a suggestion for the first day. An unknown baseline
+  // stays blank rather than becoming an invented number. Checked only when given.
+  if (identity.weight !== '' && identity.weight != null && !(Number(identity.weight) >= 0)) {
     errors.weight = 'Weight must be a non-negative number';
   }
 
@@ -175,10 +180,10 @@ export function validateWizardIdentity(
     errors.genotype = 'Genotype is required';
   }
 
-  // Date of birth — required and not in the future.
-  if (!identity.date_of_birth) {
-    errors.date_of_birth = 'Date of birth is required';
-  } else if (new Date(identity.date_of_birth) > new Date()) {
+  // Date of birth — OPTIONAL at create: a draft animal may not have it to hand yet. Export is the
+  // completeness gate (a missing DOB is a blocking schema issue routed to the animal profile), and
+  // the Identity step stays `incomplete` meanwhile. Checked only when given.
+  if (identity.date_of_birth && new Date(identity.date_of_birth) > new Date()) {
     errors.date_of_birth = 'Date of birth cannot be in the future';
   }
 
@@ -256,7 +261,9 @@ export function buildWizardCommitPayload(
     date_of_birth: identity.date_of_birth
       ? new Date(identity.date_of_birth).toISOString()
       : '',
-    weight: Number(identity.weight),
+    // A blank weight is UNKNOWN, not zero — pass it through as undefined so the built subject has
+    // no `weight` key at all (`buildAnimalFromForm` omits both unknown facts).
+    weight: identity.weight === '' || identity.weight == null ? undefined : Number(identity.weight),
     description: identity.description.trim(),
     experimenter_names: defaults.experimenter_names.filter((n) => n.trim()),
     lab: defaults.lab,
@@ -280,6 +287,12 @@ export type StepStatus = 'complete' | 'prefilled' | 'incomplete' | 'optional' | 
 export interface StepCompletenessInput {
   /** Whether the identity draft validates (gates leaving step 1; identity precedes the create). */
   identityValid: boolean;
+  /**
+   * Whether the identity is valid but still missing a fact EXPORT requires (the date of birth).
+   * Such a draft is legitimate — it just isn't finished — so the step reads `incomplete` and the
+   * gap stays visible until it is filled in. Defaults to false.
+   */
+  identityMissingForExport?: boolean;
   /** Whether the user declared this a behavior-only animal (electrodes skipped). */
   behaviorOnly: boolean;
 }
@@ -320,7 +333,7 @@ export function computeStepStatuses(
     }).valid;
 
   return {
-    identity: input.identityValid ? 'complete' : 'incomplete',
+    identity: input.identityValid && !input.identityMissingForExport ? 'complete' : 'incomplete',
     electrodes:
       electrodeGroups.length > 0 ? 'complete' : input.behaviorOnly ? 'skipped' : 'incomplete',
     cameras: cameras.length > 0 ? 'complete' : 'incomplete',
@@ -384,6 +397,9 @@ export function buildCreateAnimalWizardViewModel(
   const identityComplete = input.animal != null || identity.valid;
   const statuses = computeStepStatuses(input.animal, {
     identityValid: identityComplete,
+    // Date of birth is optional to CREATE a draft but required to EXPORT, so the step stays
+    // `incomplete` until it is supplied — the gap must not disappear behind a green pill.
+    identityMissingForExport: !input.identity.date_of_birth?.trim(),
     behaviorOnly: input.behaviorOnly,
   });
   const steps: WizardStepViewModel[] = WIZARD_STEPS.map((step) => ({

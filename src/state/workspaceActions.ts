@@ -132,9 +132,11 @@ export function createWorkspaceActions({
           id: animalId,
           subject: {
             subject_id: animalId,
-            // Schema-required fallbacks for callers that omit them; the creation
-            // form collects a real weight and a description (or derives one).
-            weight: 100,
+            // Schema-required fallback for callers that omit it; the creation form collects a real
+            // description (or derives one from genotype + species).
+            // NOTE: weight is deliberately NOT seeded. It is a MEASUREMENT — a fabricated baseline
+            // would be a number nobody weighed. An omitted weight stays absent; the exported weight
+            // is the recording day's own `session.weight`.
             description: 'Subject',
             ...subject,
             // The caller may pass a partial subject; the store seeds valid-enough defaults and

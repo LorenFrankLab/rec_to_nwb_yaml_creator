@@ -122,6 +122,24 @@ describe('Animal State Management', () => {
       expect(animal.devices.device.name).toEqual(['Trodes']);
     });
 
+    it('leaves weight undefined when the caller has none (no fabricated baseline)', () => {
+      const { result } = renderHook(() => useStore());
+
+      act(() => {
+        result.current.actions.createAnimal('remy', {
+          species: 'Rattus norvegicus',
+          sex: 'M',
+          genotype: 'Wild Type',
+        });
+      });
+
+      const { subject } = result.current.model.workspace.animals['remy'];
+      // A baseline weight is a MEASUREMENT; inventing one would export a number nobody weighed.
+      // The unknown stays absent and the day's own measured weight is what reaches the export.
+      expect(subject.weight).toBeUndefined();
+      expect('weight' in subject).toBe(false);
+    });
+
     it('creates animal with full metadata including devices', () => {
       const { result } = renderHook(() => useStore());
 

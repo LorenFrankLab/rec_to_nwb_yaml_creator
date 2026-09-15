@@ -83,6 +83,19 @@ describe('AnimalProfileDialog', () => {
     expect(screen.getByText(/ISO-8601 datetime/i)).toBeInTheDocument();
   });
 
+  it('opens on a draft animal with no date of birth and lets the user fill it in', async () => {
+    const draft = { id: 'laurent', subject: { subject_id: 'laurent', species: 'Rattus norvegicus', sex: 'U', genotype: 'Wild-type', description: 'Wild-type Rattus norvegicus' } };
+    renderOpen({ animal: draft });
+
+    const dob = screen.getByLabelText(/Date of Birth/i);
+    expect(dob).toHaveValue('');
+
+    await user.type(dob, '2025-01-02');
+    await user.click(screen.getByRole('button', { name: /save profile changes/i }));
+    await user.click(screen.getByRole('button', { name: /^update profile$/i }));
+    expect(onSave).toHaveBeenCalledWith({ date_of_birth: new Date('2025-01-02').toISOString() });
+  });
+
   it('names the blast radius (this animal + all N recording days) before any save', () => {
     renderOpen();
     expect(screen.getByText(/all 3 recording days/i)).toBeInTheDocument();

@@ -52,7 +52,7 @@ export const schemaValidation = (model: ValidationModel): ValidationIssue[] => {
       path,
       code: error.keyword,
       severity: 'error',
-      message: sanitizeMessage(error.message, error.instancePath),
+      message: sanitizeMessage(error.message, error.instancePath, path),
       instancePath: error.instancePath,
       schemaPath: error.schemaPath
     };
@@ -60,16 +60,33 @@ export const schemaValidation = (model: ValidationModel): ValidationIssue[] => {
 };
 
 /**
+ * Messages for a REQUIRED field whose absence is expected in normal use and whose repair lives
+ * somewhere specific, keyed by the resolved issue path. An animal may legitimately be created as a
+ * draft without a date of birth, so "must have required property 'date_of_birth'" is the export
+ * gate finally asking for it — it must name the field and where to supply it.
+ */
+const MISSING_REQUIRED_MESSAGES: Record<string, string> = {
+  'subject.date_of_birth': 'Date of birth is missing. Add it in the animal profile.',
+};
+
+/**
  * Sanitizes AJV error messages to be more user-friendly
  *
  * @param message - Original AJV error message
  * @param instancePath - AJV instancePath for context
+ * @param path - Resolved dotted issue path (includes the missing property for `required` errors)
  * @returns User-friendly error message
  */
-function sanitizeMessage(message: string | undefined, instancePath: string): string {
+function sanitizeMessage(message: string | undefined, instancePath: string, path?: string): string {
   // Defensive null check - AJV should always provide message, but be safe
   if (!message) {
     return 'Validation error';
+  }
+
+  // A missing required field whose absence is a normal draft state (see the table above). The
+  // instancePath names the PARENT object, so this keys off the resolved path instead.
+  if (path && message.startsWith('must have required property') && MISSING_REQUIRED_MESSAGES[path]) {
+    return MISSING_REQUIRED_MESSAGES[path];
   }
 
   // Empty string pattern violation - schema uses pattern "^(.|\\s)*\\S(.|\\s)*$"

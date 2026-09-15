@@ -67,6 +67,14 @@ describe('buildAnimalFromForm', () => {
     });
   });
 
+  it('omits weight and date_of_birth when the form leaves them unknown (never a fabricated value)', () => {
+    const { subject } = buildAnimalFromForm({ ...baseForm, weight: undefined, date_of_birth: '' });
+    expect('weight' in subject).toBe(false);
+    expect('date_of_birth' in subject).toBe(false);
+    // The rest of the identity is untouched.
+    expect(subject.species).toBe('Rattus norvegicus');
+  });
+
   it('auto-generates a description from genotype + species when blank', () => {
     const { subject } = buildAnimalFromForm({ ...baseForm, description: '' });
     expect(subject.description).toBe('Wild-type Rattus norvegicus');

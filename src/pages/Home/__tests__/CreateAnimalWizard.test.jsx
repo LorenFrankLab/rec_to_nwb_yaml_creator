@@ -18,6 +18,7 @@ import userEvent from '@testing-library/user-event';
 import { StoreProvider, useStoreContext } from '../../../state/StoreContext';
 import { mergeDayMetadata } from '../../../state/workspaceUtils';
 import { validate } from '../../../validation';
+import { repairTargetForIssue } from '../../../domain/repairRouting';
 import CreateAnimalWizard from '../CreateAnimalWizard';
 
 const originalHash = window.location.hash;
@@ -265,6 +266,30 @@ describe('CreateAnimalWizard — step navigation + commit', () => {
     expect(paths).not.toContain('lab');
     expect(paths).not.toContain('institution');
   });
+
+  it('a draft animal with no date of birth blocks its day at export, routed to the animal profile', async () => {
+    const user = userEvent.setup();
+    renderWizard();
+    await user.type(screen.getByRole('textbox', { name: /Subject ID/i }), 'laurent');
+    await user.click(screen.getByRole('button', { name: /Save draft/i }));
+
+    act(() => {
+      capturedActions.createDay('laurent', '2026-01-02', {
+        session_id: 'laurent_20260102',
+        session_description: 'First recording day',
+      });
+    });
+    const day = captured.days['laurent-2026-01-02'];
+    const issues = validate(mergeDayMetadata(captured.animals.laurent, day));
+    const dob = issues.find((issue) => issue.path === 'subject.date_of_birth');
+
+    expect(dob).toBeDefined();
+    expect(dob.severity).toBe('error'); // blocking — the export gate is the completeness gate
+    expect(dob.message).toBe('Date of birth is missing. Add it in the animal profile.');
+    const target = repairTargetForIssue(dob);
+    expect(target.surface).toBe('animal');
+    expect(target.label).toMatch(/Profile/);
+  });
 });
 
 describe('CreateAnimalWizard — post-create identity edits (the fragile create-early invariants)', () => {
@@ -415,6 +440,45 @@ describe('CreateAnimalWizard — Save draft', () => {
     expect(screen.getByRole('status')).toHaveTextContent(/draft saved/i);
     expect(captured.animals.laurent).toBeTruthy();
     await waitFor(() => expect(window.location.hash).toBe('#/animal/laurent/days'));
+  });
+
+  it('saves a draft with no baseline weight and no date of birth (both are requested later)', async () => {
+    const user = userEvent.setup();
+    renderWizard();
+    // Subject id is the only thing typed; species / sex / genotype carry their defaults.
+    await user.type(screen.getByRole('textbox', { name: /Subject ID/i }), 'laurent');
+    await user.click(screen.getByRole('button', { name: /Save draft/i }));
+
+    expect(screen.getByRole('status')).toHaveTextContent(/draft saved/i);
+    const { subject } = captured.animals.laurent;
+    // Neither fact is invented: no fabricated 100 g baseline, no empty-string date.
+    expect('weight' in subject).toBe(false);
+    expect('date_of_birth' in subject).toBe(false);
+    await waitFor(() => expect(window.location.hash).toBe('#/animal/laurent/days'));
+  });
+
+  it('leaves the Identity step marked not-done while the date of birth is still missing', async () => {
+    const user = userEvent.setup();
+    renderWizard();
+    await user.type(screen.getByRole('textbox', { name: /Subject ID/i }), 'laurent');
+    // Move off Identity so the step pill shows its completeness (the ACTIVE pill styles as active).
+    await user.click(screen.getByRole('button', { name: /Next/i }));
+    expect(screen.getByRole('tab', { name: /Identity/ }).className).not.toMatch(/stepDone/);
+
+    await user.click(screen.getByRole('tab', { name: /Identity/ }));
+    fireEvent.change(screen.getByLabelText(/Date of birth/i), { target: { value: '2025-01-02' } });
+    await user.click(screen.getByRole('button', { name: /Next/i }));
+    expect(screen.getByRole('tab', { name: /Identity/ }).className).toMatch(/stepDone/);
+  });
+
+  it('labels the baseline weight optional and says when each fact is actually needed', () => {
+    renderWizard();
+    expect(screen.getByLabelText(/Baseline weight \(grams, optional\)/i)).toBeInTheDocument();
+    expect(screen.queryByText(/Weight is required/i)).not.toBeInTheDocument();
+    expect(
+      screen.getByText(/each recording day records its own measured weight/i)
+    ).toBeInTheDocument();
+    expect(screen.getByText(/Needed before export; can be filled in later\./i)).toBeInTheDocument();
   });
 
   it('blocks Save draft on an invalid identity', async () => {

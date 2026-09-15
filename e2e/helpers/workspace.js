@@ -241,8 +241,9 @@ export function buildConfiguredWorkspaceBlob(overrides = {}) {
  * Create a valid animal through the real create-animal wizard and land on its days tab.
  *
  * From-scratch creation is the guided wizard at `#/home` (epoch-editor Phase 6). This helper opens it
- * from the picker, fills the Identity step's genuinely-required fields (Subject ID, Date of Birth,
- * Weight — Species/Sex/Genotype default to valid values), then uses "Save draft" to commit the animal
+ * from the picker, fills the Identity step's required identity (Subject ID — Species/Sex/Genotype
+ * default to valid values) plus the baseline weight and date of birth (both OPTIONAL to create a
+ * draft, but the date of birth is required to export), then uses "Save draft" to commit the animal
  * and land on its days tab. The remaining setup steps (electrodes, cameras, team, …) are left for the
  * caller to drive when a fuller animal is needed; this helper produces the minimal valid draft.
  *
@@ -272,10 +273,11 @@ export async function createAnimalViaUI(page, { subjectId, dateOfBirth = '2023-0
   await expect(page).toHaveURL(/#\/home/);
   await expect(page.getByRole('tablist', { name: 'Setup steps' })).toBeVisible();
 
-  // Fill the Identity step's required fields. Species/Sex/Genotype default to valid values.
+  // Fill the Identity step. Species/Sex/Genotype default to valid values; the baseline weight and
+  // the date of birth are optional here, but an exportable animal needs the date of birth.
   await page.getByRole('textbox', { name: 'Subject ID' }).fill(subjectId);
-  await page.getByLabel('Weight (grams)').fill(String(weight));
-  await page.getByLabel('Date of Birth').fill(dateOfBirth);
+  await page.getByLabel('Baseline weight (grams, optional)').fill(String(weight));
+  await page.getByLabel('Date of birth').fill(dateOfBirth);
 
   // Save draft commits the animal (createAnimal) and lands on its days tab.
   await page.getByRole('button', { name: 'Save draft' }).click();

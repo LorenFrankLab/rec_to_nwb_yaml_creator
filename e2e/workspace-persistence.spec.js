@@ -15,8 +15,8 @@ test.describe('Workspace persistence', () => {
     await resetWorkspace(page);
 
     // Create a valid animal through the real create wizard. The shared harness fills the Identity
-    // step's required fields (Subject ID, Date of Birth, Weight) and saves a draft, then waits for
-    // the create to land on the animal's days route.
+    // step (Subject ID, plus the optional baseline weight and the date of birth an export needs) and
+    // saves a draft, then waits for the create to land on the animal's days route.
     const { animalId } = await createAnimalViaUI(page, { subjectId: 'e2erat' });
 
     // Lands on the new animal's route and shows its id.

@@ -163,6 +163,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **New animals can be saved as drafts without a baseline weight or date of birth; both are
+  requested later (weight per recording day, DOB before export).** The wizard's Identity step now
+  requires only the animal's identity (subject id, species, sex, genotype); the baseline weight is
+  labelled optional (it is only a suggestion for the first recording day — each day records its own
+  measured weight) and the date of birth says it is needed before export. Creating an animal no
+  longer fabricates a `weight: 100` baseline, so a weight in the record is one somebody actually
+  measured. A missing date of birth still blocks export, now with the message "Date of birth is
+  missing. Add it in the animal profile." routed to that profile, and the Identity step stays marked
+  incomplete until it is supplied.
+
 - **Camera references are enumerated once.** `inferredCameraRefs` / `referencedCameraRefs`
   (`state/cameraUsage.ts`) are the single list of the fields that carry a camera reference (task
   `camera_id` — array or a legacy scalar — video and FsGUI `camera_id`, plus the explicit

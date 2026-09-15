@@ -23,9 +23,9 @@ export interface AnimalCreationFormData {
   sex: string;
   /** Genetic background. */
   genotype: string;
-  /** ISO date of birth. */
-  date_of_birth: string;
-  /** Baseline weight in grams. */
+  /** ISO date of birth; blank/omitted when unknown (the key is then absent from the subject). */
+  date_of_birth?: string;
+  /** Baseline weight in grams; omitted when unknown (the key is then absent from the subject). */
   weight?: number;
   /** Free-text subject description (auto-generated when blank). */
   description?: string;
@@ -134,8 +134,9 @@ export function subjectIdCollision(
  * `subject_id` is the scientific identity and must match the recording filenames' animal token
  * exactly (see `domain/recordingFilename`); duplicate detection is case-insensitive via
  * {@link subjectLookupKey}. `description` is schema-required (non-empty), so it auto-generates a
- * `genotype species` label when left blank. Devices are seeded empty with the legacy
- * `device.name: ['Trodes']` default (schema minItems: 1).
+ * `genotype species` label when left blank. An unknown `date_of_birth` / `weight` is OMITTED rather
+ * than defaulted (the export gate asks for what is genuinely missing). Devices are seeded empty with
+ * the legacy `device.name: ['Trodes']` default (schema minItems: 1).
  *
  * @param formData - The processed AnimalCreationForm payload (already trimmed/numbered).
  * @returns
@@ -148,8 +149,12 @@ export function buildAnimalFromForm(formData: AnimalCreationFormData) {
     species: formData.species,
     sex: formData.sex,
     genotype: formData.genotype,
-    date_of_birth: formData.date_of_birth,
-    weight: formData.weight,
+    // Unknown facts stay ABSENT — never an empty-string date or a fabricated weight. A new animal
+    // may legitimately be a draft: the baseline weight is only a first-day suggestion (each
+    // recording day carries its own measurement), and a missing date of birth surfaces at EXPORT as
+    // a blocking issue routed to the animal profile.
+    ...(formData.date_of_birth ? { date_of_birth: formData.date_of_birth } : {}),
+    ...(Number.isFinite(formData.weight) ? { weight: formData.weight as number } : {}),
     description: formData.description?.trim()
       ? formData.description.trim()
       : `${formData.genotype} ${formData.species}`.trim(),

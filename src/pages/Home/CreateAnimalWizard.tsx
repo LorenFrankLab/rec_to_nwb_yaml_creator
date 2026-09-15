@@ -85,9 +85,10 @@ function readAdoptedAnimalId(existingAnimals: Record<string, unknown>): string |
  * Seed an identity draft from an existing animal's subject (for the adopt handshake). A known
  * species maps to its option; an unknown one falls to "other" + custom; the date is sliced to the
  * `YYYY-MM-DD` the date input wants (the commit re-derives the ISO datetime). The placeholder
- * `description: 'Subject'` and `weight: 100` that `createAnimal` seeds for an identity-less animal
- * (e.g. the copy-from flow, which copies setup but NOT identity) are treated as blank so the user
- * supplies a real value rather than silently accepting the placeholder.
+ * `description: 'Subject'` that `createAnimal` seeds for an identity-less animal (e.g. the
+ * copy-from flow, which copies setup but NOT identity) is treated as blank so the user supplies a
+ * real value rather than silently accepting the placeholder. A stored weight is seeded VERBATIM —
+ * `createAnimal` no longer fabricates one, so any number present was actually weighed.
  *
  * @param animal - The existing animal record.
  * @returns The seeded identity draft.
@@ -96,8 +97,7 @@ function seedIdentityFromAnimal(animal: unknown): IdentityDraft {
   const subject = getAnimalSubject(animal);
   const speciesKnown = SPECIES_OPTIONS.some((o) => o.value === subject.species);
   const species = typeof subject.species === 'string' ? subject.species : '';
-  // The placeholders `createAnimal` seeds when the caller omits these (workspaceActions.ts).
-  const SEED_WEIGHT = 100;
+  // The placeholder `createAnimal` seeds when the caller omits it (workspaceActions.ts).
   const SEED_DESCRIPTION = 'Subject';
   return {
     subject_id: subject.subject_id || '',
@@ -106,7 +106,7 @@ function seedIdentityFromAnimal(animal: unknown): IdentityDraft {
     sex: subject.sex || INITIAL_IDENTITY.sex,
     genotype: subject.genotype || INITIAL_IDENTITY.genotype,
     date_of_birth: typeof subject.date_of_birth === 'string' ? subject.date_of_birth.slice(0, 10) : '',
-    weight: subject.weight != null && subject.weight !== SEED_WEIGHT ? String(subject.weight) : '',
+    weight: subject.weight != null ? String(subject.weight) : '',
     description: subject.description && subject.description !== SEED_DESCRIPTION ? subject.description : '',
   };
 }
@@ -626,7 +626,8 @@ export default function CreateAnimalWizard() {
               <h2>Identity</h2>
               <p className={styles.panelDesc}>
                 Who this animal is. Fixed for the animal&apos;s life — set carefully; it can&apos;t
-                drift day to day.
+                drift day to day. Anything you don&apos;t know yet can be left blank and filled in
+                later on the animal&apos;s profile.
               </p>
 
               <div className={styles.field}>
@@ -731,7 +732,7 @@ export default function CreateAnimalWizard() {
                   )}
                 </div>
                 <div className={styles.field}>
-                  <label htmlFor="wizard-weight">Weight (grams)</label>
+                  <label htmlFor="wizard-weight">Baseline weight (grams, optional)</label>
                   <input
                     id="wizard-weight"
                     type="number"
@@ -743,6 +744,10 @@ export default function CreateAnimalWizard() {
                     onChange={(e) => handleIdentityChange('weight', e.target.value)}
                     onBlur={() => handleIdentityBlur('weight')}
                   />
+                  <span className={styles.hint}>
+                    Only a suggestion for the first recording day — each recording day records its
+                    own measured weight.
+                  </span>
                   {identityErrors.weight && (
                     <span className={styles.error} role="alert">
                       {identityErrors.weight}
@@ -752,7 +757,7 @@ export default function CreateAnimalWizard() {
               </div>
 
               <div className={styles.field}>
-                <label htmlFor="wizard-dob">Date of Birth</label>
+                <label htmlFor="wizard-dob">Date of birth</label>
                 <input
                   id="wizard-dob"
                   type="date"
@@ -762,6 +767,7 @@ export default function CreateAnimalWizard() {
                   onChange={(e) => handleIdentityChange('date_of_birth', e.target.value)}
                   onBlur={() => handleIdentityBlur('date_of_birth')}
                 />
+                <span className={styles.hint}>Needed before export; can be filled in later.</span>
                 {identityErrors.date_of_birth && (
                   <span className={styles.error} role="alert">
                     {identityErrors.date_of_birth}
