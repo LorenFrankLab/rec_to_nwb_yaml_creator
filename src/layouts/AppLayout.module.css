@@ -138,3 +138,13 @@
 .loadNoticeDismiss:hover {
   background: #fdf3d0;
 }
+
+/* The read-only scope: a bare fieldset (no border/padding, and none of the min-inline-size
+   quirk that breaks narrow layouts) whose `disabled` state inerts every editing control. */
+.editScope {
+  display: contents;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-inline-size: 0;
+}

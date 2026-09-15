@@ -3,41 +3,33 @@ import type { ChangeEvent } from 'react';
 import { useStoreContext } from '../state/StoreContext';
 import {
   parseWorkspaceBackup,
-  serializeWorkspaceBackup,
   readPreservedBlob,
   WORKSPACE_CHECKPOINT_KEY,
   WORKSPACE_QUARANTINE_KEY,
   WORKSPACE_PREMIGRATION_KEY,
 } from '../state/persistence';
-import type { PreservedBlob, LoadWorkspaceResult } from '../state/persistence';
+import type { PreservedBlob, ParsedBackup, BackupArtifacts } from '../state/persistence';
 import type { Workspace } from '../state/workspaceTypes';
 import {
   summarizeWorkspace,
   diffWorkspaceReplacement,
-  backupFilename,
   estimateStorageUse,
 } from '../domain/workspaceBackup';
 import type { WorkspaceSummary, WorkspaceReplacementDiff } from '../domain/workspaceBackup';
-import { downloadYamlFile } from '../io/yaml';
+import { downloadText, downloadWorkspaceBackup } from './downloadWorkspaceBackup';
 import { Modal } from './Modal';
 import Button from './ui/Button';
 import styles from './WorkspaceBackupPanel.module.css';
-
-/** The app version stamped into backups (package.json is not importable in the browser bundle). */
-const APP_VERSION = '3.0.0-modern';
 
 /** A restore candidate awaiting confirmation. */
 interface RestoreCandidate {
   source: string;
   workspace: Workspace;
+  /** The last-download YAML bytes the backup carries (restored into this browser's side store). */
+  artifacts: BackupArtifacts;
   summary: WorkspaceSummary;
   diff: WorkspaceReplacementDiff;
   recoveredNote: string | null;
-}
-
-/** Download a text file (reuses the YAML download primitive; the MIME type is irrelevant to the browser save). */
-function downloadText(filename: string, text: string): void {
-  downloadYamlFile(filename, text);
 }
 
 function formatBytes(bytes: number): string {
@@ -99,12 +91,12 @@ export default function WorkspaceBackupPanel() {
   const usage = estimateStorageUse(workspace);
   const readOnly = persistence.enabled && persistence.writer.role !== 'writer';
 
-  const downloadBackup = () => {
-    downloadText(backupFilename(), serializeWorkspaceBackup(workspace, APP_VERSION));
+  const downloadBackup = async () => {
+    await downloadWorkspaceBackup(workspace);
     setNotice('Backup downloaded. Keep it somewhere other than this browser.');
   };
 
-  const prepareCandidate = (source: string, parsed: LoadWorkspaceResult) => {
+  const prepareCandidate = (source: string, parsed: ParsedBackup) => {
     setError(null);
     if (!parsed || !parsed.workspace) {
       const reason = parsed && 'discarded' in parsed ? parsed.discarded : 'unreadable';
@@ -119,6 +111,7 @@ export default function WorkspaceBackupPanel() {
     setCandidate({
       source,
       workspace: incoming,
+      artifacts: parsed.artifacts,
       summary: summarizeWorkspace(incoming),
       diff: diffWorkspaceReplacement(workspace, incoming),
       recoveredNote:
@@ -144,9 +137,9 @@ export default function WorkspaceBackupPanel() {
     );
   };
 
-  const confirmRestore = () => {
+  const confirmRestore = async () => {
     if (!candidate) return;
-    const ok = persistence.restoreWorkspace(candidate.workspace);
+    const ok = await persistence.restoreWorkspace(candidate.workspace, candidate.artifacts);
     if (ok) {
       setNotice(`Workspace restored from ${candidate.source}.`);
       setCandidate(null);
@@ -208,11 +201,16 @@ export default function WorkspaceBackupPanel() {
           {kept.quarantine && (
             <p>
               Data that could not be loaded on {formatWhen(kept.quarantine.savedAt)} ({kept.quarantine.reason})
-              was kept as-is.{' '}
+              {persistence.originalUnpreserved
+                ? ' is still in this browser’s storage because no durable copy of it could be made. Nothing is saved until you download it; the download clears it and lets saving resume.'
+                : ' was kept as-is.'}{' '}
               <button
                 type="button"
                 className={styles.linkButton}
-                onClick={() => downloadText(`rec_to_nwb_workspace_quarantine_${kept.quarantine!.savedAt.slice(0, 10)}.json`, kept.quarantine!.raw)}
+                onClick={() => {
+                  downloadText(`rec_to_nwb_workspace_quarantine_${kept.quarantine!.savedAt.slice(0, 10)}.json`, kept.quarantine!.raw);
+                  if (persistence.originalUnpreserved) persistence.acknowledgeUnpreservedOriginal();
+                }}
               >
                 Download original data
               </button>

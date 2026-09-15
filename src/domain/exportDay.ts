@@ -25,7 +25,7 @@ import { isRecord } from '../utils/records';
 
 /** The store write the export needs (the lifecycle flag + the download receipt). */
 export interface ExportDayActions {
-  updateDay: (dayId: string, patch: { state: Record<string, unknown>; exportReceipt?: ExportReceipt }) => void;
+  updateDay: (dayId: string, patch: { state?: Record<string, unknown>; exportReceipt?: ExportReceipt }) => void;
 }
 
 /** Options controlling the export gate. */
@@ -82,13 +82,13 @@ export function exportDayFile(animal: Animal, day: Day, { actions, strict }: Exp
     try {
       const now = new Date().toISOString();
       const yamlBytes = yaml as string;
-      void putBlob(`${RECEIPT_YAML_KEY_PREFIX}${day.id}`, { filename: fileName, yaml: yamlBytes, exportedAt: now });
       const receipt = buildExportReceipt({
         filename: fileName,
         yaml: yamlBytes,
         now,
         schemaVersion: WORKSPACE_SCHEMA_VERSION,
-        yamlStored: true,
+        // Claimed only once the side-store write is acknowledged (below).
+        yamlStored: false,
         // Cache stamps (`applyDayUpdates` re-stamps `dayLastModified` to the post-update value).
         dayLastModified: day.lastModified,
         animalLastModified: animal.lastModified,
@@ -98,6 +98,12 @@ export function exportDayFile(animal: Animal, day: Day, { actions, strict }: Exp
         state: { ...prevState, validationDeferred: false, deferredEpochs: [], exported: true, exportedAt: now },
         exportReceipt: receipt,
       });
+      void putBlob(`${RECEIPT_YAML_KEY_PREFIX}${day.id}`, { filename: fileName, yaml: yamlBytes, exportedAt: now }).then(
+        (stored) => {
+          if (stored) actions.updateDay(day.id as string, { exportReceipt: { ...receipt, yamlStored: true } });
+        },
+        () => undefined
+      );
     } catch (persistErr) {
       // eslint-disable-next-line no-console
       console.error(`[export-day] could not mark day "${day.id}" exported:`, persistErr);

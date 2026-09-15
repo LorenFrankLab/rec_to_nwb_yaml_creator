@@ -14,6 +14,7 @@ const mockPersistence = {
   hasPendingWrite: false,
   loadNotice: null,
   loadOutcome: null,
+  writer: { role: 'writer' },
   dismissLoadNotice: vi.fn(),
   saveNow: vi.fn(),
 };

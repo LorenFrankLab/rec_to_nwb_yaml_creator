@@ -15,7 +15,8 @@ import { normalizeWorkspaceDevices } from '../utils/deviceNormalization';
 import { createDefaultWorkspace } from './workspaceUtils';
 import { migrateWorkspace, WORKSPACE_SCHEMA_VERSION } from './workspaceMigrations';
 import { WRITER_ID } from './writerLock';
-import { getBlob, putBlob } from './blobStore';
+import { getBlob, putBlob, deleteBlob } from './blobStore';
+import { receiptHash, RECEIPT_YAML_KEY_PREFIX } from '../domain/exportReceipt';
 
 // Re-exported so consumers keep importing the current schema version from the persistence layer
 // (its public home), while the migration registry owns its definition + the forward migrators.
@@ -200,10 +201,55 @@ export function hasUnseenRevision(): boolean {
 // last one is tracked so callers (tests, the backup panel) can await settlement.
 let pendingPreserve: Promise<unknown> = Promise.resolve();
 
-function preserveRaw(key: string, raw: string, reason: string, schemaVersion?: number): void {
+/** Queue a side-store write; resolves true when IndexedDB durably accepted it. */
+function preserveRaw(key: string, raw: string, reason: string, schemaVersion?: number): Promise<boolean> {
   const record: PreservedBlob = { savedAt: new Date().toISOString(), reason, raw };
   if (schemaVersion !== undefined) record.schemaVersion = schemaVersion;
-  pendingPreserve = pendingPreserve.then(() => putBlob(key, record)).catch(() => false);
+  const write = pendingPreserve.then(() => putBlob(key, record)).catch(() => false);
+  pendingPreserve = write;
+  return write;
+}
+
+// The unusable blob quarantined by the most recent `loadWorkspace` (its bytes, its record, and
+// the pending IndexedDB write), so `discardUnusableWorkspace` can confirm durability before the
+// main key is cleared. Cleared once the discard completes.
+let pendingQuarantine: { record: PreservedBlob; durable: Promise<boolean> } | null = null;
+
+/** Where a discarded workspace's original bytes were durably kept (null = nowhere yet). */
+export type PreservedWhere = 'indexeddb' | 'localstorage' | null;
+
+/**
+ * Finish discarding an unusable saved workspace (after `loadWorkspace` reported `discarded`):
+ * wait for the quarantine write to be ACKNOWLEDGED by IndexedDB, or fall back to a localStorage
+ * copy, and only then remove the main key and adopt the leftover revision stamp. If neither store
+ * accepted the copy the main key is left in place (the app keeps running on an empty workspace,
+ * but cannot save over the original until it has been downloaded — see `useWorkspacePersistence`).
+ *
+ * @returns Where the original was kept, or null when it could not be.
+ */
+export async function discardUnusableWorkspace(): Promise<{ preserved: PreservedWhere }> {
+  const pending = pendingQuarantine;
+  pendingQuarantine = null;
+  // No quarantine from this load (not a `loadWorkspace(preserve)` discard): keep everything as is.
+  if (!pending) return { preserved: null };
+  let preserved: PreservedWhere = null;
+  if (await pending.durable) {
+    preserved = 'indexeddb';
+  } else {
+    try {
+      window.localStorage.setItem(WORKSPACE_QUARANTINE_KEY, JSON.stringify(pending.record));
+      preserved = 'localstorage';
+    } catch {
+      preserved = null;
+    }
+  }
+  if (preserved) {
+    clearWorkspace();
+    // The stamp a previous (closed) tab left behind guards nothing now: the blob it stamped is
+    // gone. Adopt it, or the sole writer's first save would be refused as a conflict.
+    syncRevisionFromStorage();
+  }
+  return { preserved };
 }
 
 /**
@@ -223,7 +269,16 @@ export function preservationSettled(): Promise<void> {
  */
 export async function readPreservedBlob(key: string): Promise<PreservedBlob | null> {
   await preservationSettled();
-  const parsed = await getBlob<Partial<PreservedBlob>>(key);
+  let parsed = await getBlob<Partial<PreservedBlob>>(key);
+  if (!parsed && key === WORKSPACE_QUARANTINE_KEY) {
+    // The quarantine falls back to localStorage when IndexedDB could not keep it.
+    try {
+      const raw = window.localStorage.getItem(WORKSPACE_QUARANTINE_KEY);
+      parsed = raw ? (JSON.parse(raw) as Partial<PreservedBlob>) : undefined;
+    } catch {
+      parsed = undefined;
+    }
+  }
   if (!parsed || typeof parsed.raw !== 'string' || typeof parsed.savedAt !== 'string') return null;
   return {
     savedAt: parsed.savedAt,
@@ -284,7 +339,12 @@ export function loadWorkspace(): LoadWorkspaceResult {
     return null;
   }
 
-  if (raw == null) return null;
+  if (raw == null) {
+    // No blob: a stamp left by a closed tab guards nothing — adopt it so the first save is not a
+    // false conflict.
+    syncRevisionFromStorage();
+    return null;
+  }
 
   return hydrateRaw(raw, { preserve: true });
 }
@@ -306,8 +366,12 @@ export function hydrateRaw(
 ): Exclude<LoadWorkspaceResult, null> {
   const discard = (reason: LoadDiscardReason): { workspace: null; discarded: LoadDiscardReason } => {
     // Keep the ORIGINAL bytes before the caller clears the main key — the notice must never
-    // arrive after the only recovery source is gone.
-    if (preserve) preserveRaw(WORKSPACE_QUARANTINE_KEY, raw, reason);
+    // arrive after the only recovery source is gone. The caller finishes the discard with
+    // `discardUnusableWorkspace`, which waits for this write to be acknowledged.
+    if (preserve) {
+      const record: PreservedBlob = { savedAt: new Date().toISOString(), reason, raw };
+      pendingQuarantine = { record, durable: preserveRaw(WORKSPACE_QUARANTINE_KEY, raw, reason) };
+    }
     return { workspace: null, discarded: reason };
   };
 
@@ -394,24 +458,90 @@ export function saveWorkspace(workspace: object, options: { checkpoint?: boolean
   if (options.checkpoint) writeCheckpoint(blob, WORKSPACE_SCHEMA_VERSION);
 }
 
+/** The exact bytes of a day's last download, as the side store holds them. */
+export interface ReceiptArtifact {
+  filename: string;
+  yaml: string;
+  exportedAt: string;
+}
+
+/** The artifacts a backup carries, keyed by day id. */
+export type BackupArtifacts = Record<string, ReceiptArtifact>;
+
+/** Minimal day shape the artifact transfer reads/writes (a receipt is optional). */
+interface DayWithReceipt {
+  exportReceipt?: { contentHash?: unknown; yamlStored?: unknown } & Record<string, unknown>;
+}
+
+function isArtifact(value: unknown): value is ReceiptArtifact {
+  return (
+    isPlainObject(value) &&
+    typeof value.filename === 'string' &&
+    typeof value.yaml === 'string' &&
+    typeof value.exportedAt === 'string'
+  );
+}
+
 /**
- * Serialize the current workspace as a portable backup envelope (what "Download workspace" writes).
- * Includes incomplete days, configuration history and provenance verbatim — it is the persisted
- * shape, not a YAML export.
+ * Collect the receipt artifacts (last-download YAML bytes) referenced by a workspace's days from
+ * the side store — only those whose bytes are present AND match the receipt's hash.
+ *
+ * @param workspace - The workspace slice.
+ * @returns Artifacts keyed by day id.
+ */
+async function collectReceiptArtifacts(workspace: object): Promise<BackupArtifacts> {
+  const days = isPlainObject(workspace) && isPlainObject(workspace.days) ? workspace.days : {};
+  const artifacts: BackupArtifacts = {};
+  for (const [dayId, day] of Object.entries(days)) {
+    const receipt = (day as DayWithReceipt)?.exportReceipt;
+    if (!receipt || receipt.yamlStored !== true || typeof receipt.contentHash !== 'string') continue;
+    // eslint-disable-next-line no-await-in-loop
+    const stored = await getBlob<unknown>(`${RECEIPT_YAML_KEY_PREFIX}${dayId}`);
+    if (isArtifact(stored) && receiptHash(stored.filename, stored.yaml) === receipt.contentHash) {
+      artifacts[dayId] = { filename: stored.filename, yaml: stored.yaml, exportedAt: stored.exportedAt };
+    }
+  }
+  return artifacts;
+}
+
+/**
+ * Serialize the workspace as a portable backup envelope (what "Download workspace" writes):
+ * the persisted shape verbatim — incomplete days, configuration history, provenance — PLUS the
+ * exact YAML bytes of every download the receipts refer to (finding 7), so "Changed since
+ * download" can show what changed on another computer too.
  *
  * @param workspace - The workspace slice.
  * @param appVersion - The app version string to stamp.
  * @returns The JSON text of the backup file.
  */
-export function serializeWorkspaceBackup(workspace: object, appVersion: string): string {
+export async function buildWorkspaceBackup(workspace: object, appVersion: string): Promise<string> {
+  const artifacts = await collectReceiptArtifacts(workspace);
+  return serializeWorkspaceBackup(workspace, appVersion, artifacts);
+}
+
+/**
+ * Serialize a backup envelope synchronously (no side-store lookup): used by {@link
+ * buildWorkspaceBackup} and where the artifacts are already in hand.
+ *
+ * @param workspace - The workspace slice.
+ * @param appVersion - The app version string to stamp.
+ * @param artifacts - Receipt artifacts to embed (none by default).
+ * @returns The JSON text of the backup file.
+ */
+export function serializeWorkspaceBackup(
+  workspace: object,
+  appVersion: string,
+  artifacts: BackupArtifacts = {}
+): string {
   return JSON.stringify(
     {
       format: 'rec_to_nwb_workspace_backup',
-      formatVersion: 1,
+      formatVersion: 2,
       appVersion,
       exportedAt: new Date().toISOString(),
       schemaVersion: WORKSPACE_SCHEMA_VERSION,
       workspace,
+      artifacts,
     },
     null,
     2
@@ -419,25 +549,70 @@ export function serializeWorkspaceBackup(workspace: object, appVersion: string):
 }
 
 /**
+ * Put a restored workspace's receipt artifacts into THIS browser's side store and make every
+ * receipt's `yamlStored` truthful: true only for a day whose artifact arrived and matches the
+ * receipt hash. Bytes already under a restored day's key are removed first, so unrelated leftovers
+ * from a previous workspace can never be shown as that day's download.
+ *
+ * @param workspace - The hydrated workspace about to be restored.
+ * @param artifacts - The artifacts carried by the backup (from `parseWorkspaceBackup`).
+ * @returns The workspace with truthful `yamlStored` flags (a new object; input not mutated).
+ */
+export async function restoreBackupArtifacts<T extends { days?: Record<string, unknown> }>(
+  workspace: T,
+  artifacts: BackupArtifacts
+): Promise<T> {
+  const days = isPlainObject(workspace.days) ? workspace.days : {};
+  const nextDays: Record<string, unknown> = { ...days };
+  for (const [dayId, day] of Object.entries(days)) {
+    const receipt = (day as DayWithReceipt)?.exportReceipt;
+    if (!isPlainObject(receipt)) continue;
+    const key = `${RECEIPT_YAML_KEY_PREFIX}${dayId}`;
+    // eslint-disable-next-line no-await-in-loop
+    await deleteBlob(key);
+    const artifact = artifacts[dayId];
+    let stored = false;
+    if (artifact && receiptHash(artifact.filename, artifact.yaml) === receipt.contentHash) {
+      // eslint-disable-next-line no-await-in-loop
+      await putBlob(key, artifact);
+      stored = true;
+    }
+    nextDays[dayId] = { ...(day as object), exportReceipt: { ...receipt, yamlStored: stored } };
+  }
+  return { ...workspace, days: nextDays };
+}
+
+/** A parsed backup: the hydration result plus the artifacts the file carried (none for a bare blob). */
+export type ParsedBackup = Exclude<LoadWorkspaceResult, null> & { artifacts: BackupArtifacts };
+
+/**
  * Parse a backup file (or a preserved raw envelope) WITHOUT touching storage, returning the
- * hydrated workspace or the discard reason — the input to a restore preview.
+ * hydrated workspace or the discard reason — the input to a restore preview — plus the receipt
+ * artifacts the file carries (validated shape; hashes are checked at restore time).
  *
  * @param text - The file text: a backup envelope, or a bare `{ schemaVersion, workspace }` blob.
- * @returns The hydration result.
+ * @returns The hydration result with `artifacts`.
  */
-export function parseWorkspaceBackup(text: string): Exclude<LoadWorkspaceResult, null> {
+export function parseWorkspaceBackup(text: string): ParsedBackup {
   let parsed: unknown;
   try {
     parsed = JSON.parse(text);
   } catch {
-    return { workspace: null, discarded: LOAD_DISCARD_REASON.PARSE_ERROR };
+    return { workspace: null, discarded: LOAD_DISCARD_REASON.PARSE_ERROR, artifacts: {} };
   }
   // A backup envelope wraps the same `{ schemaVersion, workspace }` pair the storage key holds.
-  const envelope =
-    isPlainObject(parsed) && parsed.format === 'rec_to_nwb_workspace_backup'
-      ? { schemaVersion: parsed.schemaVersion, workspace: parsed.workspace }
-      : parsed;
-  return hydrateRaw(JSON.stringify(envelope), { preserve: false });
+  const envelopeRecord =
+    isPlainObject(parsed) && parsed.format === 'rec_to_nwb_workspace_backup' ? parsed : null;
+  const envelope = envelopeRecord
+    ? { schemaVersion: envelopeRecord.schemaVersion, workspace: envelopeRecord.workspace }
+    : parsed;
+  const artifacts: BackupArtifacts = {};
+  if (envelopeRecord && isPlainObject(envelopeRecord.artifacts)) {
+    for (const [dayId, artifact] of Object.entries(envelopeRecord.artifacts)) {
+      if (isArtifact(artifact)) artifacts[dayId] = artifact;
+    }
+  }
+  return { ...hydrateRaw(JSON.stringify(envelope), { preserve: false }), artifacts };
 }
 
 /**
@@ -451,7 +626,8 @@ export function clearWorkspace(): void {
   }
 }
 
-/** Test-only: forget the seen revision. */
+/** Test-only: forget the seen revision and any pending quarantine. */
 export function resetPersistenceForTests(): void {
   lastSeenRevision = 0;
+  pendingQuarantine = null;
 }

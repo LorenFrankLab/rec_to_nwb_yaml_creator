@@ -1,15 +1,23 @@
 import { useState, useEffect, useRef, useCallback, useMemo, useSyncExternalStore } from 'react';
-import { flushAllDrafts, hasPendingDrafts as readPendingDrafts, subscribeDrafts, getDraftVersion } from './draftRegistry';
+import {
+  flushAllDrafts,
+  hasPendingDrafts as readPendingDrafts,
+  hasUnflushableDrafts,
+  subscribeDrafts,
+  getDraftVersion,
+} from './draftRegistry';
 import { FLAGS } from '../featureFlags';
 import {
   saveWorkspace,
   clearWorkspace,
+  discardUnusableWorkspace,
   loadWorkspace,
   syncRevisionFromStorage,
   WORKSPACE_STORAGE_KEY,
   WorkspaceConflictError,
 } from './persistence';
-import type { LoadDiscardReason } from './persistence';
+import { restoreBackupArtifacts } from './persistence';
+import type { LoadDiscardReason, BackupArtifacts } from './persistence';
 import {
   acquireWriterLock,
   getWriterState,
@@ -18,7 +26,7 @@ import {
   retryAcquire,
   onBeforeHandOver,
 } from './writerLock';
-import type { WriterState } from './writerLock';
+import type { WriterState, HandOverOutcome } from './writerLock';
 import type { Workspace, PersistenceLoadOutcome, PersistenceStatus } from './workspaceTypes';
 
 /** Inputs to {@link useWorkspacePersistence} (the workspace + the refs `useWorkspace` owns). */
@@ -37,15 +45,25 @@ export interface UseWorkspacePersistenceParams {
 
 /** The persistence status plus the actions (a superset of {@link PersistenceStatus}). */
 export interface WorkspacePersistence extends PersistenceStatus {
-  /** Force an immediate write (Ctrl/Cmd+S / Save), flushing pending field drafts first. */
-  saveNow: () => void;
+  /**
+   * Force an immediate write (Ctrl/Cmd+S / Save), flushing pending field drafts first. Returns
+   * whether the write was confirmed.
+   */
+  saveNow: () => boolean;
   /** Ask the editing tab to hand over the writer lease to this tab. */
   takeOver: () => Promise<boolean>;
   /**
    * Replace the in-memory workspace with an already-hydrated one (a restored backup or checkpoint)
-   * and write it immediately. Writer-only; returns false (and sets `saveError`) otherwise.
+   * and write it immediately, first putting the backup's receipt artifacts into this browser's
+   * side store (receipts without arriving bytes are marked `yamlStored: false`). Writer-only;
+   * resolves false (and sets `saveError`) otherwise.
    */
-  restoreWorkspace: (next: Workspace) => boolean;
+  restoreWorkspace: (next: Workspace, artifacts?: BackupArtifacts) => Promise<boolean>;
+  /**
+   * The unusable original could not be copied anywhere durable, so saving is blocked until the
+   * user has downloaded it; call this after that download to clear the original and unblock.
+   */
+  acknowledgeUnpreservedOriginal: () => void;
 }
 
 /** How often a read-only tab re-tries the writer lease (the editing tab may have closed). */
@@ -84,6 +102,11 @@ export function useWorkspacePersistence({
   const [hasPendingWrite, setHasPendingWrite] = useState(false); // debounce in flight
   const [loadNotice, setLoadNotice] = useState<string | null>(null); // recovery/discard notice for the UI
   const [loadOutcome, setLoadOutcome] = useState<PersistenceLoadOutcome>(null);
+  // True while a discarded original still sits under the main key because no durable copy could be
+  // made: every write is refused (it would overwrite the only copy) until the user downloads it.
+  const [originalUnpreserved, setOriginalUnpreserved] = useState(false);
+  const originalUnpreservedRef = useRef(false);
+  originalUnpreservedRef.current = originalUnpreserved;
 
   const enabled = FLAGS.localStoragePersistence;
 
@@ -141,19 +164,35 @@ export function useWorkspacePersistence({
     };
   }, [enabled, isWriter, reloadFromStorage]);
 
-  // Surface a discard notice after mount when a saved blob could not be restored,
-  // and clear the unusable blob so it isn't re-read (its bytes are already quarantined).
+  // Surface a discard notice after mount when a saved blob could not be restored. The unusable
+  // blob is cleared ONLY once its bytes are durably kept (IndexedDB acknowledged, or a localStorage
+  // copy); until then — and if neither store could take it — the main key stays and saving is
+  // blocked, so the only copy of the original is never overwritten by an empty workspace.
   useEffect(() => {
     if (initialDiscardRef.current) {
-      setLoadNotice(
-        'Saved workspace data could not be restored (it was from an incompatible ' +
-          'or corrupted version) and was discarded from the active workspace. A copy of the ' +
-          'original data was kept — see "Saved on this browser" on the Workspace page to download it. ' +
-          'Starting with an empty workspace.'
-      );
       setLoadOutcome('discarded');
       initialDiscardRef.current = null;
-      clearWorkspace();
+      setLoadNotice(
+        'Saved workspace data could not be restored (it was from an incompatible or corrupted ' +
+          'version). Keeping a copy of the original data before continuing…'
+      );
+      void discardUnusableWorkspace().then(({ preserved }) => {
+        if (preserved) {
+          setLoadNotice(
+            'Saved workspace data could not be restored (it was from an incompatible ' +
+              'or corrupted version) and was discarded from the active workspace. A copy of the ' +
+              'original data was kept — see "Saved on this browser" on the Workspace page to download it. ' +
+              'Starting with an empty workspace.'
+          );
+        } else {
+          setOriginalUnpreserved(true);
+          setLoadNotice(
+            'Saved workspace data could not be restored (it was from an incompatible or corrupted ' +
+              'version), and this browser could not keep a durable copy of it. Nothing will be saved ' +
+              'until you download the original from "Saved on this browser" on the Workspace page.'
+          );
+        }
+      });
     } else if (initialRecoverRef.current) {
       // Salvaged a structurally-incomplete blob: its data was kept, only the missing
       // top-level sections were restored. Name them so the recovery is never silent.
@@ -183,6 +222,10 @@ export function useWorkspacePersistence({
     // by `retriesLeft` so a persistent failure (e.g. quota) can't become a save storm; both timers
     // are cleared on cleanup, and a workspace change re-runs the effect from scratch.
     const attempt = (retriesLeft: number) => {
+      if (originalUnpreservedRef.current) {
+        setSaveError('Not saved: download the unrestorable original from the Workspace page first.');
+        return;
+      }
       try {
         saveWorkspace(workspace);
         lastPersistedRef.current = workspace;
@@ -219,12 +262,16 @@ export function useWorkspacePersistence({
   // `commitWorkspace`, so `workspaceRef.current` already holds them when the synchronous write
   // below runs. An explicit save also refreshes the last-known-good checkpoint. No-op when
   // persistence is disabled; refused (with a visible reason) in a read-only tab.
-  const saveNow = useCallback(() => {
+  const saveNow = useCallback((): boolean => {
     flushAllDrafts();
-    if (!enabled) return;
+    if (!enabled) return true;
     if (!isWriterRef.current) {
       setSaveError('This tab is read-only — another tab is editing this workspace.');
-      return;
+      return false;
+    }
+    if (originalUnpreservedRef.current) {
+      setSaveError('Not saved: download the unrestorable original from the Workspace page first.');
+      return false;
     }
     try {
       saveWorkspace(workspaceRef.current, { checkpoint: true });
@@ -232,8 +279,10 @@ export function useWorkspacePersistence({
       setLastSaved(new Date().toISOString());
       setSaveError(null);
       setHasPendingWrite(false);
+      return true;
     } catch (err) {
       setSaveError(`Could not save workspace: ${(err as Error).message}`);
+      return false;
     }
   }, [workspaceRef, enabled]);
 
@@ -244,44 +293,74 @@ export function useWorkspacePersistence({
   // or a test harness seed) with stale content. `pagehide` fires on every navigation/close
   // (including mobile tab discard, where `beforeunload` does not); `beforeunload` is kept for the
   // unsaved-work prompt (useUnsavedWorkGuard). The same final write runs right before this tab hands
-  // the writer lease to another tab.
+  // the writer lease to another tab — and there it is a VETO: the lease is released only when nothing
+  // is left unsaved (a failed write, or a dialog holding unapplied edits, keeps this tab the writer,
+  // because the next writer's save would otherwise replace observations that were never written).
   const saveNowRef = useRef(saveNow);
   saveNowRef.current = saveNow;
   const unsavedRef = useRef(false);
   unsavedRef.current = hasPendingWrite || saveError != null;
   useEffect(() => {
-    const finalWrite = () => {
+    /** Flush + write if anything is unsaved; true when nothing is left unsaved afterwards. */
+    const finalWrite = (): boolean => {
       const flushed = flushAllDrafts();
-      if (flushed > 0 || unsavedRef.current) saveNowRef.current();
+      const dirty = flushed > 0 || unsavedRef.current || workspaceRef.current !== lastPersistedRef.current;
+      return dirty ? saveNowRef.current() : true;
     };
-    window.addEventListener('pagehide', finalWrite);
-    const offHandOver = onBeforeHandOver(finalWrite);
+    const onPageHide = () => {
+      finalWrite();
+    };
+    const onHandOver = (): HandOverOutcome => {
+      if (hasUnflushableDrafts()) {
+        return { ok: false, reason: 'a dialog with unapplied changes is open in the editing tab' };
+      }
+      return finalWrite()
+        ? { ok: true }
+        : { ok: false, reason: 'the editing tab could not save its unsaved work (its last save failed)' };
+    };
+    window.addEventListener('pagehide', onPageHide);
+    const offHandOver = onBeforeHandOver(onHandOver);
     return () => {
-      window.removeEventListener('pagehide', finalWrite);
+      window.removeEventListener('pagehide', onPageHide);
       offHandOver();
     };
-  }, []);
+  }, [workspaceRef]);
 
   /** Ask the editing tab for the lease, then load its final save. */
   const takeOver = useCallback(async (): Promise<boolean> => {
     if (!enabled) return true;
-    const next = await requestTakeOver();
+    const { state: next, refusal } = await requestTakeOver();
     if (next.role === 'writer') {
       reloadFromStorage();
       setSaveError(null);
       return true;
     }
-    setSaveError('Could not take over editing — the other tab did not respond. Close it and try again.');
+    setSaveError(
+      refusal
+        ? `Could not take over editing — ${refusal}. Resolve that in the other tab and try again.`
+        : 'Could not take over editing — the other tab did not respond. Close it and try again.'
+    );
     return false;
   }, [enabled, reloadFromStorage]);
 
+  /** The user downloaded the unpreserved original: clear it and let saves resume. */
+  const acknowledgeUnpreservedOriginal = useCallback(() => {
+    if (!originalUnpreservedRef.current) return;
+    clearWorkspace();
+    syncRevisionFromStorage();
+    setOriginalUnpreserved(false);
+    setSaveError(null);
+    setLoadNotice(null);
+  }, []);
+
   /** Replace the in-memory workspace with a restored one and write it immediately (writer-only). */
   const restoreWorkspace = useCallback(
-    (next: Workspace): boolean => {
+    async (incoming: Workspace, artifacts: BackupArtifacts = {}): Promise<boolean> => {
       if (enabled && !isWriterRef.current) {
         setSaveError('This tab is read-only — take over editing before restoring a backup.');
         return false;
       }
+      const next = await restoreBackupArtifacts(incoming, artifacts);
       replaceWorkspace(next);
       if (!enabled) return true;
       try {
@@ -314,10 +393,12 @@ export function useWorkspacePersistence({
       loadNotice,
       loadOutcome,
       writer: writerState,
+      originalUnpreserved,
       dismissLoadNotice,
       saveNow,
       takeOver,
       restoreWorkspace,
+      acknowledgeUnpreservedOriginal,
     }),
     [
       enabled,
@@ -328,10 +409,12 @@ export function useWorkspacePersistence({
       loadNotice,
       loadOutcome,
       writerState,
+      originalUnpreserved,
       dismissLoadNotice,
       saveNow,
       takeOver,
       restoreWorkspace,
+      acknowledgeUnpreservedOriginal,
     ]
   );
 

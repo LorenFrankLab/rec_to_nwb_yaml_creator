@@ -63,8 +63,14 @@ function withStore<T>(
         try {
           const tx = db.transaction(STORE, mode);
           const request = run(tx.objectStore(STORE));
-          request.onsuccess = () => resolve(request.result as T);
-          request.onerror = () => resolve(undefined);
+          let result: T | undefined;
+          request.onsuccess = () => {
+            result = request.result as T;
+          };
+          // Resolve on transaction COMPLETE, not request success: a request can succeed and the
+          // transaction still abort (quota, closed connection) — durability is only known here.
+          tx.oncomplete = () => resolve(result);
+          tx.onerror = () => resolve(undefined);
           tx.onabort = () => resolve(undefined);
         } catch {
           resolve(undefined);
@@ -86,6 +92,16 @@ export async function putBlob(key: string, value: unknown): Promise<boolean> {
   if (!hasIndexedDb()) return false;
   const result = await withStore<IDBValidKey>('readwrite', (store) => store.put(value, key));
   return result !== undefined;
+}
+
+/**
+ * Whether IndexedDB is available at all (callers that need DURABLE preservation fall back to
+ * another store when it is not; the in-memory map is session-only).
+ *
+ * @returns True when IndexedDB exists in this environment.
+ */
+export function hasDurableBlobStore(): boolean {
+  return hasIndexedDb();
 }
 
 /**

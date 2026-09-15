@@ -6,6 +6,20 @@ import { getAnimalDays } from './workspaceSelectors';
 import { useWorkspacePersistence } from './useWorkspacePersistence';
 import type { LoadDiscardReason } from './persistence';
 import type { Workspace } from './workspaceTypes';
+import { FLAGS } from '../featureFlags';
+import { getWriterState } from './writerLock';
+
+/**
+ * Thrown by every record-mutating action in a READ-ONLY tab (another tab holds the writer lease).
+ * Ownership is enforced at the mutation boundary, not only at the write: an edit a reader accepted
+ * would be replaced by the writer's next save and lost.
+ */
+export class ReadOnlyWorkspaceError extends Error {
+  constructor() {
+    super('This tab is read-only — another tab is editing this workspace. Take over editing first.');
+    this.name = 'ReadOnlyWorkspaceError';
+  }
+}
 
 /**
  * Owns the workspace slice of the store: multi-animal/day state plus the store primitives the
@@ -70,13 +84,25 @@ export function useWorkspace(initialState: InitialWorkspaceState | null = null) 
    *
    * @param updater - Workspace transform.
    */
-  const commitWorkspace = useCallback((updater: (prev: Workspace) => Workspace) => {
+  const applyWorkspace = useCallback((updater: (prev: Workspace) => Workspace) => {
     workspaceRef.current = updater(workspaceRef.current);
     setWorkspace(updater);
   }, []);
 
+  // The single mutation boundary for record edits: refused while this tab is read-only (the
+  // persistence layer also refuses to write, but an accepted-then-discarded edit is data loss).
+  const commitWorkspace = useCallback(
+    (updater: (prev: Workspace) => Workspace) => {
+      if (FLAGS.localStoragePersistence && getWriterState().role === 'reader') {
+        throw new ReadOnlyWorkspaceError();
+      }
+      applyWorkspace(updater);
+    },
+    [applyWorkspace]
+  );
+
   const workspaceActions = useMemo(
-    () => createWorkspaceActions({ commitWorkspace, setWorkspace, workspaceRef }),
+    () => createWorkspaceActions({ commitWorkspace, workspaceRef }),
     [commitWorkspace]
   );
 
@@ -93,12 +119,10 @@ export function useWorkspace(initialState: InitialWorkspaceState | null = null) 
     [workspace]
   );
 
-  // Whole-workspace replacement (reader live-follow, take-over, backup/checkpoint restore). Goes
-  // through `commitWorkspace` so the ref is in lockstep for the synchronous write that follows.
-  const replaceWorkspace = useCallback(
-    (next: Workspace) => commitWorkspace(() => next),
-    [commitWorkspace]
-  );
+  // Whole-workspace replacement (reader live-follow, take-over, backup/checkpoint restore). Keeps
+  // the ref in lockstep for the synchronous write that follows; NOT ownership-gated, because a
+  // read-only tab replaces its copy precisely to follow the writer.
+  const replaceWorkspace = useCallback((next: Workspace) => applyWorkspace(() => next), [applyWorkspace]);
 
   const persistence = useWorkspacePersistence({
     workspace,

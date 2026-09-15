@@ -5,7 +5,7 @@
  * silently overwrite each other's work (the later save wins, whole-blob). The pilot policy is
  * therefore one editing tab: the first tab to open takes an exclusive **writer** lease; any other
  * tab opens **read-only** and says so, follows the writer's saves live, and can ask to take over
- * (the writer flushes, saves, releases, and turns read-only).
+ * (the writer flushes, saves, and releases ONLY if that save succeeded, then turns read-only).
  *
  * Mechanism, in order of preference:
  *  1. **Web Locks** (`navigator.locks`, exclusive, `ifAvailable`) — a real, browser-arbitrated
@@ -181,37 +181,64 @@ function ensureChannel(): BroadcastChannel | null {
     const msg = event.data as { type?: string; from?: string } | null;
     if (!msg || msg.from === WRITER_ID) return;
     if (msg.type === 'release-request' && state.role === 'writer') {
-      // Another tab asked to edit: hand over. The persistence layer subscribed to `onBeforeHandOver`
-      // flushes drafts and writes first (synchronously), then we release.
-      beforeHandOver.forEach((fn) => {
-        try {
-          fn();
-        } catch {
-          // a failed final write must not block the hand-over; the revision stamp protects the blob
-        }
-      });
-      releaseWriterLock('handed-over');
-      channel?.postMessage({ type: 'released', from: WRITER_ID });
+      const outcome = handOverOnRequest();
+      channel?.postMessage(
+        outcome.ok
+          ? { type: 'released', from: WRITER_ID }
+          : { type: 'release-refused', from: WRITER_ID, reason: outcome.reason }
+      );
+    }
+    if (msg.type === 'release-refused' && typeof (msg as { reason?: unknown }).reason === 'string') {
+      lastRefusal = (msg as { reason: string }).reason;
     }
   };
   return channel;
 }
 
-const beforeHandOver = new Set<() => void>();
+/** The result of a hand-over attempt: released, or kept with the reason. */
+export type HandOverOutcome = { ok: true } | { ok: false; reason: string };
+
+const beforeHandOver = new Set<() => HandOverOutcome>();
 
 /**
  * Register a callback the writer runs (synchronously) right before handing the lease to another
- * tab — persistence uses it to flush drafts and write the final state.
+ * tab — persistence uses it to flush drafts and write the final state. A callback that returns
+ * `{ ok: false }` VETOES the hand-over: the tab stays the writer and the requester is told why.
  *
  * @param fn - The callback.
  * @returns Unregister.
  */
-export function onBeforeHandOver(fn: () => void): () => void {
+export function onBeforeHandOver(fn: () => HandOverOutcome): () => void {
   beforeHandOver.add(fn);
   return () => {
     beforeHandOver.delete(fn);
   };
 }
+
+/**
+ * Handle another tab's request to edit: run every before-hand-over callback and release the lease
+ * ONLY when all of them succeed. A failed final write, or an open dialog holding unapplied edits,
+ * keeps this tab the writer — a revision stamp cannot recover observations that were never written.
+ *
+ * @returns Whether the lease was released, with the veto reason otherwise.
+ */
+export function handOverOnRequest(): HandOverOutcome {
+  if (state.role !== 'writer') return { ok: true };
+  for (const fn of beforeHandOver) {
+    let outcome: HandOverOutcome;
+    try {
+      outcome = fn();
+    } catch (err) {
+      outcome = { ok: false, reason: (err as Error).message || 'the final save failed' };
+    }
+    if (!outcome.ok) return outcome;
+  }
+  releaseWriterLock('handed-over');
+  return { ok: true };
+}
+
+// The reason the last take-over request was refused by the writer (cleared per request).
+let lastRefusal: string | null = null;
 
 /**
  * Acquire the writer lease for this tab (idempotent). Resolves to the resulting state.
@@ -251,28 +278,39 @@ export function releaseWriterLock(reason: ReaderReason = 'handed-over'): void {
 
 /**
  * Ask whichever tab holds the lease to hand it over, then take it. Resolves to the resulting
- * state (`writer` on success; `reader` if no tab released within the timeout).
+ * state (`writer` on success; `reader` if no tab released within the timeout or the writer
+ * refused — then `refusal` says why).
  *
  * @param timeoutMs - How long to wait for the release.
- * @returns The ownership state after the attempt.
+ * @returns The ownership state after the attempt (+ the refusal reason, if any).
  */
-export async function requestTakeOver(timeoutMs = 3_000): Promise<WriterState> {
-  if (state.role === 'writer') return state;
+export async function requestTakeOver(timeoutMs = 3_000): Promise<TakeOverResult> {
+  if (state.role === 'writer') return { state };
   const ch = ensureChannel();
+  lastRefusal = null;
   ch?.postMessage({ type: 'release-request', from: WRITER_ID });
   const deadline = Date.now() + timeoutMs;
-  // Retry the acquire until the previous holder releases (Web Locks) or its lease is cleared.
+  // Retry the acquire until the previous holder releases (Web Locks) or its lease is cleared —
+  // or it refuses (its final save failed / a dialog holds unapplied edits).
   while (Date.now() < deadline) {
+    if (lastRefusal != null) break;
     acquired = false;
     setState({ role: 'pending' });
     // eslint-disable-next-line no-await-in-loop
     const next = await acquireWriterLock();
-    if (next.role === 'writer') return next;
+    if (next.role === 'writer') return { state: next };
     // eslint-disable-next-line no-await-in-loop
     await new Promise((resolve) => setTimeout(resolve, 150));
   }
   setState({ role: 'reader', reason: 'held-elsewhere' });
-  return state;
+  return lastRefusal != null ? { state, refusal: lastRefusal } : { state };
+}
+
+/** The result of {@link requestTakeOver}: the resulting state, plus the writer's veto reason. */
+export interface TakeOverResult {
+  state: WriterState;
+  /** Set when the editing tab refused to release (why, in the writer's words). */
+  refusal?: string;
 }
 
 /**
@@ -298,6 +336,7 @@ export function resetWriterLockForTests(): void {
     channel = null;
   }
   beforeHandOver.clear();
+  lastRefusal = null;
   acquired = false;
   state = { role: 'pending' };
   listeners.clear();

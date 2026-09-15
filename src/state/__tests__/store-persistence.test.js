@@ -8,12 +8,15 @@
  */
 
 import { describe, it, expect, afterEach, vi } from 'vitest';
-import { renderHook, act } from '@testing-library/react';
+import { renderHook, act, waitFor } from '@testing-library/react';
 import { useStore } from '../store';
 import {
   WORKSPACE_STORAGE_KEY,
+  WORKSPACE_QUARANTINE_KEY,
   WORKSPACE_SCHEMA_VERSION,
+  resetPersistenceForTests,
 } from '../persistence';
+import { resetWriterLockForTests } from '../writerLock';
 import { makeTestWorkspace } from '../../__tests__/helpers/test-fixtures';
 
 /**
@@ -36,6 +39,8 @@ afterEach(() => {
   vi.useRealTimers();
   vi.restoreAllMocks();
   window.localStorage.clear();
+  resetPersistenceForTests();
+  resetWriterLockForTests();
 });
 
 describe('useStore persistence', () => {
@@ -61,7 +66,7 @@ describe('useStore persistence', () => {
     act(() => {
       vi.advanceTimersByTime(600);
     });
-    expect(setItem).not.toHaveBeenCalled();
+    expect(blobWrites(setItem)).toBe(0);
 
     // Workspace edit: writes after the debounce.
     act(() => {
@@ -109,16 +114,53 @@ describe('useStore persistence', () => {
     expect(blobWrites(setItem)).toBe(1);
   });
 
-  it('surfaces a notice and clears the blob when a saved workspace is unusable', () => {
+  it('surfaces a notice and clears the blob when a saved workspace is unusable — once a durable copy exists', async () => {
     window.localStorage.setItem(WORKSPACE_STORAGE_KEY, '{corrupt json');
 
     const { result } = renderHook(() => useStore());
 
     expect(result.current.persistence.loadNotice).not.toBeNull();
     expect(result.current.persistence.loadOutcome).toBe('discarded');
-    expect(window.localStorage.getItem(WORKSPACE_STORAGE_KEY)).toBeNull();
     // Starts with an empty workspace rather than crashing.
     expect(result.current.model.workspace.animals).toEqual({});
+    // The main key is cleared only after the copy is kept (jsdom has no IndexedDB → localStorage copy).
+    await waitFor(() => expect(window.localStorage.getItem(WORKSPACE_STORAGE_KEY)).toBeNull());
+    expect(result.current.persistence.originalUnpreserved).toBe(false);
+    expect(result.current.persistence.loadNotice).toMatch(/copy of the original data was kept/);
+    expect(window.localStorage.getItem(WORKSPACE_QUARANTINE_KEY)).toContain('{corrupt json');
+  });
+
+  it('keeps the unusable original and refuses every save when no durable copy could be made, until it is downloaded', async () => {
+    window.localStorage.setItem(WORKSPACE_STORAGE_KEY, '{corrupt json');
+    const realSetItem = window.localStorage.setItem.bind(window.localStorage);
+    const spy = vi.spyOn(window.localStorage, 'setItem').mockImplementation((key, value) => {
+      if (key === WORKSPACE_QUARANTINE_KEY) throw new Error('QuotaExceededError');
+      realSetItem(key, value);
+    });
+
+    const { result } = renderHook(() => useStore());
+    await waitFor(() => expect(result.current.persistence.originalUnpreserved).toBe(true));
+    expect(window.localStorage.getItem(WORKSPACE_STORAGE_KEY)).toBe('{corrupt json');
+    expect(result.current.persistence.loadNotice).toMatch(/could not keep a durable copy/);
+
+    act(() => {
+      result.current.actions.createAnimal('remy', { species: 'Rattus norvegicus' });
+    });
+    act(() => {
+      expect(result.current.persistence.saveNow()).toBe(false);
+    });
+    expect(result.current.persistence.saveError).toMatch(/download the unrestorable original/);
+    expect(window.localStorage.getItem(WORKSPACE_STORAGE_KEY)).toBe('{corrupt json');
+
+    // The download acknowledges the original: it is cleared and saving resumes.
+    act(() => {
+      result.current.persistence.acknowledgeUnpreservedOriginal();
+    });
+    act(() => {
+      expect(result.current.persistence.saveNow()).toBe(true);
+    });
+    expect(JSON.parse(window.localStorage.getItem(WORKSPACE_STORAGE_KEY)).workspace.animals).toHaveProperty('remy');
+    spy.mockRestore();
   });
 
   it('sets lastSaved only after a confirmed write; reports saveError on failure', () => {
@@ -216,7 +258,7 @@ describe('useStore persistence', () => {
     expect(result.current.persistence.loadOutcome).toBe('recovered');
   });
 
-  it('discards (not recovers) a corrupt-typed section: discard notice + cleared blob + empty workspace', () => {
+  it('discards (not recovers) a corrupt-typed section: discard notice + cleared blob + empty workspace', async () => {
     // A present-but-wrong-typed section is corruption, not absence: the store must route
     // it to the loud discard path (notice + clear blob), never the recovery path.
     seedBlob({ animals: ['corrupt'], days: {}, settings: {} });
@@ -225,7 +267,7 @@ describe('useStore persistence', () => {
 
     expect(result.current.persistence.loadNotice).toMatch(/could not be restored/i);
     expect(result.current.persistence.loadOutcome).toBe('discarded');
-    expect(window.localStorage.getItem(WORKSPACE_STORAGE_KEY)).toBeNull();
+    await waitFor(() => expect(window.localStorage.getItem(WORKSPACE_STORAGE_KEY)).toBeNull());
     expect(result.current.model.workspace.animals).toEqual({});
   });
 

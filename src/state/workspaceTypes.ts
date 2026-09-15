@@ -73,6 +73,11 @@ export interface PersistenceStatus {
    * the lease is being acquired. See `state/writerLock`.
    */
   writer: { role: 'pending' } | { role: 'writer' } | { role: 'reader'; reason: 'held-elsewhere' | 'handed-over' | 'unavailable' };
+  /**
+   * True while an unrestorable saved workspace still sits in storage because no durable copy of it
+   * could be made: every write is refused until the user downloads it (see the backup panel).
+   */
+  originalUnpreserved: boolean;
   /** Clears the load notice. */
   dismissLoadNotice: () => void;
 }

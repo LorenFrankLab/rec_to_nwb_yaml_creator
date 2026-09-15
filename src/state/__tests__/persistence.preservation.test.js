@@ -111,10 +111,11 @@ describe('persistence preservation', () => {
   });
 
   it('parseWorkspaceBackup reports an unusable file instead of throwing', async () => {
-    expect(parseWorkspaceBackup('garbage')).toEqual({ workspace: null, discarded: 'parse-error' });
+    expect(parseWorkspaceBackup('garbage')).toEqual({ workspace: null, discarded: 'parse-error', artifacts: {} });
     expect(parseWorkspaceBackup(JSON.stringify({ schemaVersion: 99, workspace: {} }))).toEqual({
       workspace: null,
       discarded: 'version-mismatch',
+      artifacts: {},
     });
   });
 });

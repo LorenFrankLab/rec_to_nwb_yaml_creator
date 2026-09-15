@@ -252,6 +252,7 @@ export function AppLayout() {
   }
 
   const isLegacyRoute = currentRoute.view === 'legacy';
+  const readOnly = persistence.enabled && persistence.writer.role === 'reader';
 
   // The lab logo doubles as the in-app "home": legacy returns to the form, the new routes
   // go to the workspace. Shared between the legacy banner and the workspace app-bar.
@@ -404,8 +405,18 @@ export function AppLayout() {
         </div>
       )}
 
-      {/* Main content area - views provide their own <main> element */}
-      {renderView()}
+      {/* Main content area - views provide their own <main> element. On the workspace routes it is
+          wrapped in a fieldset that is DISABLED while this tab is read-only (another tab holds the
+          writer lease): every editing control inside is inert, so a reader cannot type observations
+          that the writer's next save would replace. Links (navigation) are unaffected; the ownership
+          banner above (take over, download a backup) sits outside the fieldset. */}
+      {isLegacyRoute ? (
+        renderView()
+      ) : (
+        <fieldset className={styles.editScope} disabled={readOnly}>
+          {renderView()}
+        </fieldset>
+      )}
 
       {/* Shared animal-delete dialog for the top object-selector (Task 4.5). Hosted once in chrome
           so a switcher row's Delete uses the SAME type-to-confirm + cascade copy as the picker/header
@@ -425,6 +436,8 @@ export function AppLayout() {
       <AnimalProfileDialog
         isOpen={pendingProfileAnimalId != null}
         animal={pendingProfileAnimal}
+        animalId={pendingProfileAnimalId}
+        animals={animals}
         dayCount={pendingProfileAnimal ? getAnimalDayIds(pendingProfileAnimal).length : 0}
         onSave={(subject) => actions.updateAnimal(pendingProfileAnimalId, { subject })}
         onClose={() => setPendingProfileAnimalId(null)}

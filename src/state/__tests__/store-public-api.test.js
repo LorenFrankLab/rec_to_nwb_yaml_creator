@@ -70,6 +70,7 @@ describe('useStore public API contract', () => {
   it('exposes exactly the expected persistence keys', () => {
     const { result } = renderHook(() => useStore());
     expect(Object.keys(result.current.persistence).sort()).toEqual([
+      'acknowledgeUnpreservedOriginal',
       'dismissLoadNotice',
       'enabled',
       'hasPendingDrafts',
@@ -77,6 +78,7 @@ describe('useStore public API contract', () => {
       'lastSaved',
       'loadNotice',
       'loadOutcome',
+      'originalUnpreserved',
       'restoreWorkspace',
       'saveError',
       'saveNow',
