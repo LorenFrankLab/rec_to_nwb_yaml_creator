@@ -216,6 +216,17 @@ Verification: `npx vitest run` **385 files / 5,463 tests pass** (two halves, as 
 eslint, stylelint, build exit 0; Playwright **129 pass**, the same 7 pre-existing legacy visual
 baselines fail. No YAML byte path changed.
 
+## Fourth review response (REVISION_4_REVIEW.md, `5906074f`): all 3 restore findings fixed
+
+| Finding | Fix | Failing-first test |
+| --- | --- | --- |
+| P1 Revision-marker failure partially commits a refused restore | `saveWorkspace` writes its two keys as ONE outcome: the small marker first, then the blob; a blob failure rolls the marker back; a marker failure writes nothing. A caller that catches the throw can trust nothing durable changed. | `recoveryDurability.test.js` (fail marker → old blob+marker; fail blob → marker not advanced), `restoreAtomicity.test.js` (marker failure → memory, storage and a fresh load all 485); e2e "a restore whose revision-marker write fails is refused as a whole" (a fresh tab reads 485) |
+| P2 Failed promotion loses the comparison bytes | No promotion step any more: each restore attempt writes its incoming bytes ONCE to a key of its own (`receipt:<dayId>:<opId>`) and the restored receipt names it (`ExportReceipt.yamlKey`, read via `receiptYamlKey`); `yamlStored` is true only for an acknowledged write. The replaced workspace's now-unreachable artifacts are released best-effort after the commit. | `restoreAtomicity.test.js` (completed restore refers to acknowledged bytes; nothing pending after "restored"), `backupArtifacts.test.js` |
+| P2 Cancel-then-retry deletes the retry's bytes | Per-attempt keys: a cancelled attempt's cleanup deletes only its own keys. | `restoreAtomicity.test.js` (A cancelled, B staged, A released → B's bytes intact, 499 g restored) |
+
+Verification: `npx vitest run` **385 files / 5,468 tests pass** (two halves); typecheck, eslint,
+stylelint, build exit 0; Playwright **130 pass**, the same 7 pre-existing legacy visual baselines fail.
+
 ## Scientific assumptions needing pilot confirmation
 1. Subject ids never contain `_` (140/140 corpus ids agree) — the app now blocks it at creation and export.
 2. Weight: unknown weight blocks export (converter requires `subject.weight`); baseline is only a dated suggestion.

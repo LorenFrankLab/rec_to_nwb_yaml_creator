@@ -1,0 +1,22 @@
+{
+  "revisionWriteFailure": {
+    "refusal": "Nothing was replaced. Could not save the restored workspace: Quota full on revision marker",
+    "savedWeight": 480,
+    "memoryWeight": "485",
+    "weightInSecondTab": "480"
+  },
+  "promotionFailure": {
+    "successNotice": "Workspace restored from \"restore.json\".",
+    "afterReload": {
+      "yamlStored": true,
+      "activeArtifact": null,
+      "stagedArtifact": null
+    }
+  },
+  "cancelThenRetry": {
+    "restoredWeight": 499,
+    "yamlStored": true,
+    "activeArtifact": null,
+    "stagedArtifact": null
+  }
+}

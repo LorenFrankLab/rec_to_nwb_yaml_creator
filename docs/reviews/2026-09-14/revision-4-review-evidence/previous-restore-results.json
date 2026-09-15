@@ -1,0 +1,22 @@
+{
+  "cancelledRestore": {
+    "cancelEnabled": true,
+    "savedAfterCancel": 777,
+    "storedAfterCancelledRestoreCompletes": 777,
+    "visibleWeight": "777"
+  },
+  "failedRestore": {
+    "refusal": "Nothing was replaced. Could not save the restored workspace: Quota full",
+    "originalReceiptHash": "b56211a4995e042b0ad829c881d2e636f66c46c47c72735b4c87ae3938d6da98",
+    "inMemoryWeightAfterRefusal": "485",
+    "persistedWeightAfterRefusal": 485,
+    "weightAfterReload": "485",
+    "storedArtifact": {
+      "weightLine": "  weight: 485",
+      "hash": "b56211a4995e042b0ad829c881d2e636f66c46c47c72735b4c87ae3938d6da98",
+      "receiptHash": "b56211a4995e042b0ad829c881d2e636f66c46c47c72735b4c87ae3938d6da98",
+      "yamlStored": true
+    },
+    "displayedComparison": "  …\n    subject_id: remy\n    date_of_birth: 2023-01-10T00:00:00\n−   weight: 485\n+   weight: 499\n    age: P164\n  data_acq_device:\n  …"
+  }
+}
