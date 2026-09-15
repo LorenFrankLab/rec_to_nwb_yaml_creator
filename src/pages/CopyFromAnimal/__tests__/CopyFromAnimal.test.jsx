@@ -130,4 +130,47 @@ describe('CopyFromAnimal', () => {
     // Other sections still copied.
     expect(wilbur.devices.electrode_groups).toHaveLength(1);
   });
+
+  it('keeps the new subject ID\'s capitalization as the animal identity and the wizard handoff', async () => {
+    // The exported subject_id must match the recording filenames' animal token exactly, so the
+    // copy screen must not launder "ReviewCase" into "reviewcase".
+    const user = userEvent.setup();
+    renderScreen();
+
+    await user.selectOptions(screen.getByLabelText(/source animal/i), 'emmett');
+    await user.type(screen.getByLabelText(/subject id/i), 'ReviewCase');
+    await user.click(screen.getByRole('button', { name: /copy.*continue setup/i }));
+
+    expect(captured.animals.ReviewCase).toBeDefined();
+    expect(captured.animals.reviewcase).toBeUndefined();
+    expect(captured.animals.ReviewCase.subject.subject_id).toBe('ReviewCase');
+    expect(window.location.hash).toBe('#/home?animal=ReviewCase');
+  });
+
+  it('rejects a converter-incompatible id before creating the animal', async () => {
+    // The converter splits `{date}_{subject}_{epoch}.rec` on `_`, so an underscore in the subject
+    // token can never be matched — the SAME rule the wizard enforces, applied before create.
+    const user = userEvent.setup();
+    renderScreen();
+
+    await user.selectOptions(screen.getByLabelText(/source animal/i), 'emmett');
+    await user.type(screen.getByLabelText(/subject id/i), 'Review_Rat');
+
+    expect(screen.getByRole('alert').textContent).toMatch(/underscore/i);
+    expect(screen.getByRole('button', { name: /copy.*continue setup/i })).toBeDisabled();
+
+    await user.click(screen.getByRole('button', { name: /copy.*continue setup/i }));
+    expect(Object.keys(captured.animals)).toEqual(['emmett']);
+  });
+
+  it('rejects a new id that collides with an existing animal in another capitalization', async () => {
+    const user = userEvent.setup();
+    renderScreen();
+
+    await user.selectOptions(screen.getByLabelText(/source animal/i), 'emmett');
+    await user.type(screen.getByLabelText(/subject id/i), 'Emmett');
+
+    expect(screen.getByRole('alert').textContent).toMatch(/already exists/i);
+    expect(screen.getByRole('button', { name: /copy.*continue setup/i })).toBeDisabled();
+  });
 });

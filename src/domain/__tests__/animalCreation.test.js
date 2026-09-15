@@ -5,7 +5,14 @@
  * (no fork). These pin the exact shapes `createAnimal` is called with.
  */
 import { describe, it, expect } from 'vitest';
-import { buildAnimalFromForm, getDefaultExperimenters, subjectLookupKey, findAnimalIdByLookup, subjectIdCollision } from '../animalCreation';
+import {
+  buildAnimalFromForm,
+  getDefaultExperimenters,
+  subjectLookupKey,
+  findAnimalIdByLookup,
+  subjectIdCollision,
+  validateSubjectId,
+} from '../animalCreation';
 
 /** A fully-processed form payload (AnimalCreationForm trims/filters/numbers before onSubmit). */
 const baseForm = {
@@ -115,6 +122,47 @@ describe('buildAnimalFromForm', () => {
       raw_data_to_volts: 0.195,
       times_period_multiplier: 1.5,
     });
+  });
+});
+
+describe('validateSubjectId — the ONE identity boundary every creation entry shares', () => {
+  it('accepts a well-formed id and returns it with its case preserved', () => {
+    // The exported subject_id must match the recording filenames' animal token exactly, so the
+    // boundary never case-folds what the scientist typed (only trims surrounding whitespace).
+    expect(validateSubjectId('ReviewCase', {})).toEqual({ ok: true, subjectId: 'ReviewCase' });
+    expect(validateSubjectId('  ReviewCase  ', {})).toEqual({ ok: true, subjectId: 'ReviewCase' });
+  });
+
+  it('rejects a blank id', () => {
+    const result = validateSubjectId('   ', {});
+    expect(result.ok).toBe(false);
+    expect(result.message).toMatch(/required/i);
+  });
+
+  it('rejects an underscore — the converter splits recording filenames on it', () => {
+    const result = validateSubjectId('Review_Rat', {});
+    expect(result.ok).toBe(false);
+    expect(result.message).toMatch(/underscore/i);
+  });
+
+  it('rejects a slash (DANDI rejects it)', () => {
+    const result = validateSubjectId('Review/Rat', {});
+    expect(result.ok).toBe(false);
+    expect(result.message).toMatch(/\//);
+  });
+
+  it('detects a case-insensitive collision and names the existing animal', () => {
+    const result = validateSubjectId('rs10', { RS10: { subject: { subject_id: 'RS10' } } });
+    expect(result.ok).toBe(false);
+    expect(result.message).toMatch(/RS10/);
+    expect(result.message).toMatch(/already exists/i);
+  });
+
+  it('allows an animal to keep its own id when exceptAnimalId names it (a case correction)', () => {
+    const animals = { RS10: { subject: { subject_id: 'RS10' } } };
+    expect(validateSubjectId('RS10', animals, 'RS10')).toEqual({ ok: true, subjectId: 'RS10' });
+    // Still a collision for any OTHER animal.
+    expect(validateSubjectId('RS10', animals, 'bean').ok).toBe(false);
   });
 });
 

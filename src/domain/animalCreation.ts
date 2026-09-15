@@ -11,11 +11,13 @@
  * @module domain/animalCreation
  */
 import { getAnimalExperimenters } from '../state/workspaceSelectors';
+import { recordingFilenameIssue } from './recordingFilename';
+import { idHasSlash } from '../validation/dandiSubject';
 import type { WorkspaceSettings } from '../state/workspaceTypes';
 
 /** The processed AnimalCreationForm payload (already trimmed/numbered) consumed by {@link buildAnimalFromForm}. */
 export interface AnimalCreationFormData {
-  /** Subject id (lower-cased/trimmed to derive the store key + subject_id). */
+  /** Subject id (trimmed, case preserved, to derive the store key + subject_id). */
   subject_id: string;
   /** Species (Latin binomial). */
   species: string;
@@ -126,6 +128,77 @@ export function subjectIdCollision(
     if (subjectLookupKey(stored ?? id) === target) return id;
   }
   return null;
+}
+
+/** The outcome of {@link validateSubjectId}: the accepted id, or the one reason it was refused. */
+export type SubjectIdValidation =
+  | { ok: true; subjectId: string }
+  | { ok: false; message: string };
+
+/**
+ * The ONE identity boundary every animal-creation entry point shares (the guided wizard, copy-from-
+ * animal, and any future entry): decide whether a typed subject id may become an animal, and return
+ * the exact spelling to store.
+ *
+ * A subject id is scientific identity, not a slug. The converter matches a session's metadata file
+ * to its recordings by splitting `{date}_{animal}_{epoch}_{tag}.rec` on `_` and comparing the animal
+ * token CASE-SENSITIVELY, so this boundary trims but never case-folds, and rejects any character
+ * that could not appear in that token (reusing `recordingFilenameIssue`). Duplicate detection is the
+ * mirror image: case-INSENSITIVE, because `RS10` and `rs10` are one animal whose days would
+ * otherwise fragment downstream in Spyglass.
+ *
+ * Validating BEFORE `createAnimal` is the point — an id laundered or waved through at create becomes
+ * the animal's permanent store key, and the wizard then locks that field, trapping the scientist
+ * behind an identity they can no longer fix.
+ *
+ * @param candidate - The typed subject id (any value; a non-string is treated as blank).
+ * @param existingAnimals - The workspace `animals` map, for the duplicate check.
+ * @param exceptAnimalId - The store key of the animal being edited, ignored when looking for a
+ *   duplicate (so correcting an animal's own capitalization is not a self-collision).
+ * @returns The accepted, trimmed, case-preserved id, or the message to show under the field.
+ */
+export function validateSubjectId(
+  candidate: unknown,
+  existingAnimals: Record<string, unknown>,
+  exceptAnimalId: string | null = null
+): SubjectIdValidation {
+  const subjectId = typeof candidate === 'string' ? candidate.trim() : '';
+  if (!subjectId) {
+    return { ok: false, message: 'Subject ID is required' };
+  }
+  if (idHasSlash(subjectId)) {
+    return { ok: false, message: 'Subject ID cannot contain "/" — DANDI rejects it' };
+  }
+  if (/\s/.test(subjectId)) {
+    return { ok: false, message: 'Subject ID cannot contain spaces' };
+  }
+  if (recordingFilenameIssue(subjectId)) {
+    // The converter groups `{date}_{subject}_metadata.yml` with `{date}_{subject}_{epoch}_{tag}.rec`
+    // by splitting on `_`, so an underscore (or any other unsafe character) can never be matched.
+    return {
+      ok: false,
+      message:
+        'Use only letters, numbers, and hyphens (no underscores — the converter splits filenames on them)',
+    };
+  }
+  // The stored id keeps its case, but "RS10" and "rs10" are still the SAME animal for lookup — a
+  // different-cased duplicate is a real collision, not a near-duplicate. Look up against the store
+  // key AND the stored scientific identity (a profile edit may have moved them apart).
+  const others =
+    exceptAnimalId === null
+      ? existingAnimals
+      : Object.fromEntries(Object.entries(existingAnimals).filter(([id]) => id !== exceptAnimalId));
+  const collision = findAnimalIdByLookup(subjectId, others);
+  if (collision) {
+    return {
+      ok: false,
+      message:
+        collision === subjectId
+          ? `Animal "${subjectId}" already exists`
+          : `Animal "${collision}" already exists (same ID with different capitalization)`,
+    };
+  }
+  return { ok: true, subjectId };
 }
 
 /**

@@ -546,6 +546,35 @@ describe('CreateAnimalWizard — adopt handshake (#/home?animal=<id>)', () => {
     // Identity is seeded from the adopted animal.
     expect(screen.getByLabelText(/Species/i)).toHaveValue('Rattus norvegicus');
   });
+
+  it('adopts a mixed-case animal id verbatim and accepts it as a valid identity', async () => {
+    // Copy-from-animal hands off `#/home?animal=ReviewCase`. The wizard locks the id it adopts, so
+    // a laundered or invalid id would trap the user behind a read-only field — the id must arrive
+    // with its case intact and pass the shared identity rule (no self-collision).
+    const user = userEvent.setup();
+    window.location.hash = '#/home?animal=ReviewCase';
+    renderWizard({
+      ReviewCase: {
+        id: 'ReviewCase',
+        subject: {
+          subject_id: 'ReviewCase',
+          species: 'Rattus norvegicus',
+          sex: 'M',
+          genotype: 'PV-Cre',
+        },
+        devices: { electrode_groups: [], ntrode_electrode_group_channel_map: [] },
+        days: [],
+        configurationHistory: [{ version: 1, devices: { electrode_groups: [], ntrode_electrode_group_channel_map: [] }, appliedToDays: [] }],
+      },
+    });
+
+    expect(screen.getByLabelText(/Subject ID/i)).toHaveValue('ReviewCase');
+    // Leaving the identity step runs the commit gate: a valid identity advances (no error shown).
+    await user.click(screen.getByRole('tab', { name: /Electrodes/i }));
+    expect(screen.queryByText(/already exists/i)).not.toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: /Electrodes/i })).toHaveAttribute('aria-selected', 'true');
+    expect(captured.animals.ReviewCase.subject.subject_id).toBe('ReviewCase');
+  });
 });
 
 describe('CreateAnimalWizard — alternate start options', () => {

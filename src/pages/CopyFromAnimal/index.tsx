@@ -27,6 +27,7 @@ import {
 import type { Animal, OptogeneticsConfig } from '../../state/workspaceTypes';
 import Button from '../../components/ui/Button';
 import { optoFieldsPresence } from '../../domain/optoCompleteness';
+import { validateSubjectId } from '../../domain/animalCreation';
 import type { OptoFields } from '../../domain/optoCompleteness';
 import styles from './CopyFromAnimal.module.css';
 import PageShell from '../../components/PageShell';
@@ -85,7 +86,6 @@ export default function CopyFromAnimal() {
   // null = defaults (every available section checked); otherwise the explicit map.
   const [checked, setChecked] = useState<Record<string, boolean> | null>(null);
   const [newId, setNewId] = useState('');
-  const [error, setError] = useState<string | null>(null);
 
   const source = sourceId ? animals[sourceId] : null;
 
@@ -118,17 +118,18 @@ export default function CopyFromAnimal() {
     });
   };
 
-  const normalizedId = newId.toLowerCase().trim();
-  const idValid = /^[a-zA-Z0-9_-]+$/.test(normalizedId);
-  const canCopy = !!source && idValid && !animals[normalizedId];
+  // The SHARED identity boundary — the same rule the guided wizard applies, run BEFORE the animal
+  // exists. It keeps the typed capitalization (the exported subject_id must match the recording
+  // filenames' animal token exactly), rejects an id the converter could never match, and catches a
+  // different-cased duplicate. The wizard locks the subject id of the animal it adopts, so an id
+  // waved through here would trap the scientist on the next screen.
+  const idCheck = useMemo(() => validateSubjectId(newId, animals), [newId, animals]);
+  const canCopy = !!source && idCheck.ok;
 
   /** Create the new animal from the copied setup, then hand off to the wizard to continue. */
   const handleCopy = () => {
-    if (!source || !idValid) return;
-    if (animals[normalizedId]) {
-      setError(`An animal named “${normalizedId}” already exists.`);
-      return;
-    }
+    if (!source || !idCheck.ok) return;
+    const subjectId = idCheck.subjectId;
 
     const copyProbes = isChecked('probes') && availableSections.includes('probes');
     const copyCameras = isChecked('cameras') && availableSections.includes('cameras');
@@ -146,8 +147,8 @@ export default function CopyFromAnimal() {
     };
 
     actions.createAnimal(
-      normalizedId,
-      { subject_id: normalizedId },
+      subjectId,
+      { subject_id: subjectId },
       {
         devices,
         cameras: copyCameras ? structuredClone(getAnimalCameras(source)) : [],
@@ -157,12 +158,12 @@ export default function CopyFromAnimal() {
       }
     );
     if (copyTasks) {
-      actions.updateAnimal(normalizedId, { taskTypes: structuredClone(getAnimalTaskTypes(source)) });
+      actions.updateAnimal(subjectId, { taskTypes: structuredClone(getAnimalTaskTypes(source)) });
     }
 
     // Continue in the guided wizard, which adopts the just-created animal (identity to confirm,
     // the copied setup pre-filled).
-    window.location.hash = `#/home?animal=${normalizedId}`;
+    window.location.hash = `#/home?animal=${subjectId}`;
   };
 
   return (
@@ -188,7 +189,6 @@ export default function CopyFromAnimal() {
                   onChange={(e) => {
                     setSourceId(e.target.value);
                     setChecked(null);
-                    setError(null);
                   }}
                 >
                   <option value="">Select an animal…</option>
@@ -232,19 +232,18 @@ export default function CopyFromAnimal() {
                   type="text"
                   value={newId}
                   placeholder="e.g. Wilbur"
-                  onChange={(e) => {
-                    setNewId(e.target.value);
-                    setError(null);
-                  }}
+                  onChange={(e) => setNewId(e.target.value)}
                 />
               </label>
-              {newId.trim() !== '' && !idValid && (
+              {newId.trim() !== '' && !idCheck.ok && (
                 <p className={styles.fieldError} role="alert">
-                  Use only letters, numbers, hyphen, or underscore.
+                  {idCheck.message}
                 </p>
               )}
-              {error && <p className={styles.fieldError} role="alert">{error}</p>}
-              <p className={styles.hint}>You&apos;ll confirm identity and the copied setup in the next step.</p>
+              <p className={styles.hint}>
+                Capitalization is kept exactly as typed — it has to match the animal token in your
+                recording filenames. You&apos;ll confirm identity and the copied setup in the next step.
+              </p>
             </div>
 
             <div className={styles.actions}>

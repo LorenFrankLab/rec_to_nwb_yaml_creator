@@ -7,9 +7,9 @@
  *
  * - **Step order + markers** ({@link WIZARD_STEPS}) — the seven steps, which is optional (only
  *   optogenetics, per the design), and which are required for a clean export.
- * - **Identity validity** ({@link validateWizardIdentity}) — reuses the DANDI predicates
- *   `isValidSpecies` / `idHasSlash` and the same case-collision / subject_id charset checks the
- *   retired AnimalCreationForm did, so the wizard and the export gate agree.
+ * - **Identity validity** ({@link validateWizardIdentity}) — reuses the DANDI predicate
+ *   `isValidSpecies` and delegates the whole subject-id rule (charset, slash, case-collision) to the
+ *   shared `validateSubjectId` boundary, so the wizard, copy-from-animal and the export gate agree.
  * - **The commit payload** ({@link buildWizardCommitPayload}) — delegates to `buildAnimalFromForm`
  *   (the shared glue), so the wizard builds an animal IDENTICAL to any other entry point.
  * - **Per-step completeness** ({@link computeStepStatuses}) — derived from the live animal record
@@ -18,11 +18,10 @@
  *
  * Pure and React-free; returns plain data only.
  */
-import { isValidSpecies, idHasSlash } from '../validation/dandiSubject';
+import { isValidSpecies } from '../validation/dandiSubject';
 import { optoFieldsPresence } from '../domain/optoCompleteness';
 import type { OptoFieldsPresence } from '../domain/optoCompleteness';
-import { buildAnimalFromForm, findAnimalIdByLookup } from '../domain/animalCreation';
-import { recordingFilenameIssue } from '../domain/recordingFilename';
+import { buildAnimalFromForm, validateSubjectId } from '../domain/animalCreation';
 import type { AnimalCreationFormData } from '../domain/animalCreation';
 import {
   getAnimalElectrodeGroups,
@@ -79,7 +78,7 @@ export const WIZARD_STEP_KEYS: WizardStepKey[] = WIZARD_STEPS.map((s) => s.key);
 
 /** The wizard's step-1 identity local state (all-string form values). */
 export interface IdentityDraft {
-  /** Subject id (lower-cased to derive the store key). */
+  /** Subject id, exactly as typed (trimmed, case preserved — it is the store key AND the identity). */
   subject_id: string;
   /** Selected species (a Latin binomial) or the literal `'other'`. */
   species: string;
@@ -106,10 +105,11 @@ export interface IdentityValidation {
 }
 
 /**
- * Validate the wizard's identity draft. Mirrors the retired AnimalCreationForm's identity checks —
- * reusing the SAME DANDI predicates (`idHasSlash` for the subject_id slash rule, `isValidSpecies`
- * for a custom species) and the SAME case-insensitive store-key collision check — but covers ONLY
- * the identity fields (experimenters/lab/institution move to the Team step).
+ * Validate the wizard's identity draft. The subject id is decided by the SHARED
+ * `validateSubjectId` boundary (trim + case preserved, recording-filename charset, DANDI slash rule,
+ * case-insensitive collision) — the same call copy-from-animal makes before it creates an animal —
+ * and the custom species by the SAME DANDI `isValidSpecies` predicate the export gate uses. Covers
+ * ONLY the identity fields (experimenters/lab/institution move to the Team step).
  *
  * Draft validity is NOT export completeness: the required set is the animal's IDENTITY (subject id,
  * species, sex, genotype). The baseline weight and the date of birth are optional here — unknown
@@ -117,7 +117,7 @@ export interface IdentityValidation {
  * blocks EXPORT, with a repair route to the animal profile) — but are format-checked when given.
  *
  * @param identity - The step-1 draft.
- * @param existingAnimals - The workspace's animals map (for the uniqueness check; keys are lower-cased).
+ * @param existingAnimals - The workspace's animals map (for the case-insensitive uniqueness check).
  * @returns The validity flag + per-field errors.
  */
 export function validateWizardIdentity(
@@ -126,28 +126,11 @@ export function validateWizardIdentity(
 ): IdentityValidation {
   const errors: Record<string, string> = {};
 
-  // Subject ID — required, no whitespace, route-/DANDI-safe charset, and no '/' (DANDI CRITICAL).
-  if (!identity.subject_id?.trim()) {
-    errors.subject_id = 'Subject ID is required';
-  } else if (idHasSlash(identity.subject_id)) {
-    errors.subject_id = 'Subject ID cannot contain "/" — DANDI rejects it';
-  } else if (/\s/.test(identity.subject_id)) {
-    errors.subject_id = 'Subject ID cannot contain spaces';
-  } else if (recordingFilenameIssue(identity.subject_id.trim())) {
-    // The converter groups `{date}_{subject}_metadata.yml` with `{date}_{subject}_{epoch}_{tag}.rec`
-    // by splitting on `_`, so an underscore (or any other unsafe character) can never be matched.
-    errors.subject_id = 'Use only letters, numbers, and hyphens (no underscores — the converter splits filenames on them)';
-  } else {
-    // The exported subject id keeps its case (it must match the recording filenames exactly), but
-    // "RS10" and "rs10" are still the SAME animal for lookup — a different-cased duplicate is a real
-    // collision, not a near-duplicate.
-    const collision = findAnimalIdByLookup(identity.subject_id, existingAnimals);
-    if (collision) {
-      errors.subject_id =
-        collision === identity.subject_id.trim()
-          ? `Animal "${identity.subject_id}" already exists`
-          : `Animal "${collision}" already exists (same ID with different capitalization)`;
-    }
+  // Subject ID — the SHARED identity boundary (the same rule copy-from-animal applies before it
+  // creates an animal, so neither entry can mint an id the other would refuse).
+  const subjectIdCheck = validateSubjectId(identity.subject_id, existingAnimals);
+  if (!subjectIdCheck.ok) {
+    errors.subject_id = subjectIdCheck.message;
   }
 
   // Species — a Latin binomial or NCBI Taxon URI (free text is rejected by DANDI).

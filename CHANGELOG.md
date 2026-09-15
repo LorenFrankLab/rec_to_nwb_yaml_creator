@@ -163,6 +163,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Copy setup from another animal keeps the new subject ID's capitalization and rejects
+  converter-incompatible IDs before creating the animal.** "Copy from another animal" used to
+  lower-case the ID you typed (so `ReviewCase` became `reviewcase`, which no longer matches the
+  animal token in the recording filenames) and to accept underscores the guided wizard then refused
+  — creating the animal first and locking you out of its now-read-only subject ID. Both screens now
+  ask the same shared rule before anything is created: the spelling is kept exactly as typed,
+  duplicates are caught whatever their capitalization (naming the animal already using the ID), and
+  an ID the converter could never match is explained under the field with the Copy button disabled.
+
 - **New animals can be saved as drafts without a baseline weight or date of birth; both are
   requested later (weight per recording day, DOB before export).** The wizard's Identity step now
   requires only the animal's identity (subject id, species, sex, genotype); the baseline weight is
