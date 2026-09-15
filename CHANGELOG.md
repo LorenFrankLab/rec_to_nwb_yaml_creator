@@ -285,6 +285,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Day editor sections are reachable with Tab; failed-channel badges and footer links meet contrast
+  and target-size guidelines.**
+
 - **Fix & Export shows a readable summary of what the file will say (weight, team, tasks and rooms,
   calibrations, failed channels, stimulation) before you download.** The page offered Download, Copy
   and a collapsed dump of raw YAML — nothing a scientist could scan to catch a value that is valid

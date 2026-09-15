@@ -481,8 +481,14 @@ a.nav-link:hover {
   margin-top: 20px;
   margin-bottom: 10px;
 
+  /* The links keep their small type, but the target grows to the 24px minimum
+     (WCAG 2.2 target size) instead of the ~15px line box the 0.8rem font gives. */
   a {
+    display: inline-block;
+    min-height: 24px;
+    line-height: 24px;
     margin: 0;
+    padding: 0 var(--spacing-xs);
   }
 }
 
