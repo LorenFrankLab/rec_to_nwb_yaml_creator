@@ -899,3 +899,106 @@ describe('ImportRepair — camera calibration conflicts (F1)', () => {
     expect(cameraSummary).toHaveTextContent('06222023_remy_metadata.yml');
   });
 });
+
+describe('ImportRepair — a recalibrated camera on an EXISTING animal (F1)', () => {
+  /** The animal already holds `arena_side`, calibrated at 0.002, and the imported rig. */
+  const existingRemyWithArenaSide = () => ({
+    remy: {
+      id: 'remy',
+      subject: { subject_id: 'remy' },
+      days: [],
+      cameras: [
+        {
+          id: 0,
+          camera_name: 'arena_side',
+          meters_per_pixel: 0.002,
+          manufacturer: 'Allied',
+          model: 'Mako',
+          lens: '8mm',
+        },
+      ],
+      devices: {
+        data_acq_device: [
+          { name: 'ImportedRig', system: 'MCU', amplifier: 'Intan', adc_circuit: 'Intan' },
+        ],
+        device: { name: ['Trodes'] },
+        electrode_groups: [],
+        ntrode_electrode_group_channel_map: [],
+      },
+      configurationHistory: [
+        {
+          version: 1,
+          devices: { electrode_groups: [], ntrode_electrode_group_channel_map: [] },
+          appliedToDays: [],
+        },
+      ],
+    },
+  });
+
+  it('asks before the day is written, and never offers to rewrite the animal’s own calibration', async () => {
+    const user = userEvent.setup();
+    renderScreen(existingRemyWithArenaSide());
+
+    // The file records `arena_side` at 0.001 — the animal's row says 0.002.
+    await user.upload(
+      screen.getByLabelText(/choose a metadata yaml file/i),
+      makeFile('06222023_remy_metadata.yml', existingCatalogGapYaml())
+    );
+    await screen.findByRole('heading', { name: /needs attention/i });
+    fireEvent.change(screen.getByLabelText(/Map camera 3 to existing camera id/i), {
+      target: { value: '0' },
+    });
+
+    // Import does not commit while a calibration disagreement is unresolved: it asks first.
+    await user.click(screen.getByRole('button', { name: /add recording day/i }));
+    const fieldset = await screen.findByRole('group', { name: /arena_side.*2 calibrations/i });
+    expect(captured.days).toEqual({});
+    expect(within(fieldset).getByText('meters_per_pixel 0.002')).toBeInTheDocument();
+    expect(within(fieldset).getByText('meters_per_pixel 0.001')).toBeInTheDocument();
+    expect(within(fieldset).getByText('Already on this animal')).toBeInTheDocument();
+
+    // The only single-calibration option is the animal's OWN row — an import adds a camera, it
+    // never re-calibrates one the animal's earlier days already export.
+    const unifyOptions = within(fieldset)
+      .getAllByRole('radio')
+      .filter((radio) => /for every day/i.test(radio.parentElement.textContent));
+    expect(unifyOptions).toHaveLength(1);
+    expect(unifyOptions[0].parentElement).toHaveTextContent('meters_per_pixel 0.002');
+
+    await user.click(screen.getByRole('button', { name: /confirm import/i }));
+    await screen.findByRole('heading', { name: /import complete/i });
+    expect(captured.animals.remy.cameras.map((c) => [c.camera_name, c.meters_per_pixel])).toEqual([
+      ['arena_side', 0.002],
+      ['arena_side_20230622', 0.001],
+    ]);
+    const day = captured.days['remy-2023-06-22'];
+    expect(day.associated_video_files[0].camera_id).toBe(
+      captured.animals.remy.cameras[1].id
+    );
+  });
+
+  it('keeps every day on the animal’s own camera when that calibration is chosen', async () => {
+    const user = userEvent.setup();
+    renderScreen(existingRemyWithArenaSide());
+
+    await user.upload(
+      screen.getByLabelText(/choose a metadata yaml file/i),
+      makeFile('06222023_remy_metadata.yml', existingCatalogGapYaml())
+    );
+    await screen.findByRole('heading', { name: /needs attention/i });
+    fireEvent.change(screen.getByLabelText(/Map camera 3 to existing camera id/i), {
+      target: { value: '0' },
+    });
+    await user.click(screen.getByRole('button', { name: /add recording day/i }));
+
+    const fieldset = await screen.findByRole('group', { name: /arena_side.*2 calibrations/i });
+    await user.click(
+      within(fieldset).getByRole('radio', { name: /meters_per_pixel 0\.002 for every day/i })
+    );
+    await user.click(screen.getByRole('button', { name: /confirm import/i }));
+
+    await screen.findByRole('heading', { name: /import complete/i });
+    expect(captured.animals.remy.cameras.map((c) => c.camera_name)).toEqual(['arena_side']);
+    expect(captured.days['remy-2023-06-22'].associated_video_files[0].camera_id).toBe(0);
+  });
+});

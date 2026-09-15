@@ -332,6 +332,12 @@ export default function ImportRepair() {
   const handleSingleImport = () => {
     const assessment = assessments[0];
     if (!assessment?.ready) return;
+    // A camera calibration disagreement is a QUESTION, and F1 requires it answered before the
+    // commit, not reported after it — so this file goes through the review screen instead.
+    if (assessment.importPlan.animals.some((animal) => animal.cameraConflicts.length > 0)) {
+      openBatchPreview();
+      return;
+    }
     const repairPlan = assessment.file.plan;
     const existing = repairPlan.decision.kind === 'existing' ? repairPlan.decision : null;
     const subjectId =
@@ -1016,6 +1022,12 @@ function CameraConflictFieldset({ conflict, onResolution }: CameraConflictFields
   const groupName = `camera-conflict-${conflict.key}`;
   const sourceOf = (candidate: CameraCalibrationConflict['candidates'][number]): string =>
     candidate.sourceNames.join(', ') || 'already on this animal';
+  // An import ADDS a camera; it never re-calibrates a row this animal's earlier days already
+  // export. So when the animal holds one of these calibrations, it is the only one that can be
+  // used for every day (see `effectiveResolution`); the rest stay available as separate cameras.
+  const existingIndex = conflict.candidates.findIndex((candidate) => candidate.fromExisting);
+  const unifiableIndexes =
+    existingIndex >= 0 ? [existingIndex] : conflict.candidates.map((_, index) => index);
 
   return (
     <fieldset className={styles.cameraConflict}>
@@ -1062,7 +1074,7 @@ function CameraConflictFieldset({ conflict, onResolution }: CameraConflictFields
             .join(', ')}
         </label>
         <p className={styles.cameraConflictChoiceLead}>Use one calibration for every day:</p>
-        {conflict.candidates.map((candidate, index) => (
+        {unifiableIndexes.map((index) => (
           <label key={`${conflict.key}-choice-${index}`}>
             <input
               type="radio"
@@ -1070,9 +1082,17 @@ function CameraConflictFieldset({ conflict, onResolution }: CameraConflictFields
               checked={unifiedIndex === index}
               onChange={() => onResolution({ kind: 'unify', candidateIndex: index })}
             />
-            {describeCalibration(candidate, fields)} for every day ({sourceOf(candidate)})
+            {describeCalibration(conflict.candidates[index], fields)} for every day (
+            {sourceOf(conflict.candidates[index])})
           </label>
         ))}
+        {existingIndex >= 0 && (
+          <p className={styles.cameraConflictIntro}>
+            This animal already has “{conflict.cameraName}”, and importing never re-calibrates a
+            camera its earlier days already use. Re-calibrating that camera is a correction, made
+            in the animal’s camera list.
+          </p>
+        )}
       </div>
       {unifiedIndex !== null && (
         <p className={styles.cameraConflictWarning} role="status">

@@ -849,3 +849,74 @@ describe('planImport — camera calibration conflicts (F1)', () => {
     expect(remy.cameras.map((c) => c.camera_name)).toEqual(['overhead_camera', 'side_camera']);
   });
 });
+
+describe('planImport — an import never rewrites an existing animal\'s camera', () => {
+  it('falls back to keeping the calibrations separate when asked to unify onto one the animal does not hold', () => {
+    // The animal's own row is authoritative for the days it already has: an import can ADD a
+    // camera, never re-calibrate one in place. So "use 0.002 for every day" is not something this
+    // import can honor — it resolves as a split rather than silently leaving the days on 0.001.
+    const ws = createDefaultWorkspace();
+    const { animal } = buildRealisticWorkspace();
+    ws.animals[animal.id] = {
+      ...animal,
+      days: [],
+      cameras: animal.cameras.map((camera) =>
+        camera.camera_name === 'overhead_camera' ? { ...camera, meters_per_pixel: 0.001 } : camera
+      ),
+    };
+    const file = makeFile({
+      subjectId: 'remy',
+      date: '2023-06-23',
+      mutateConfig: (a, day) => {
+        a.cameras = a.cameras.map((camera) =>
+          camera.camera_name === 'overhead_camera' ? { ...camera, meters_per_pixel: 0.002 } : camera
+        );
+        day.cameras_used = [0, 1];
+      },
+    });
+
+    const plan = planImport([file], ws, {
+      cameraConflictResolutions: { 'remy:overhead_camera': { kind: 'unify', candidateIndex: 1 } },
+    });
+    const remy = plan.animals.find((a) => a.subjectId === 'remy');
+
+    expect(remy.cameraConflicts[0].resolution).toEqual({ kind: 'split' });
+    expect(remy.catalogAdditions.cameras.map((c) => [c.camera_name, c.meters_per_pixel])).toEqual([
+      ['overhead_camera_20230623', 0.002],
+    ]);
+    const added = materializePlanDay(remy.days[0], 'add');
+    expect(added.cameras_used).toEqual([remy.catalogAdditions.cameras[0].id, 1]);
+  });
+
+  it('honors a unify onto the calibration the animal already holds', () => {
+    const ws = createDefaultWorkspace();
+    const { animal } = buildRealisticWorkspace();
+    ws.animals[animal.id] = {
+      ...animal,
+      days: [],
+      cameras: animal.cameras.map((camera) =>
+        camera.camera_name === 'overhead_camera' ? { ...camera, meters_per_pixel: 0.001 } : camera
+      ),
+    };
+    const file = makeFile({
+      subjectId: 'remy',
+      date: '2023-06-23',
+      mutateConfig: (a, day) => {
+        a.cameras = a.cameras.map((camera) =>
+          camera.camera_name === 'overhead_camera' ? { ...camera, meters_per_pixel: 0.002 } : camera
+        );
+        day.cameras_used = [0, 1];
+      },
+    });
+
+    const plan = planImport([file], ws, {
+      cameraConflictResolutions: { 'remy:overhead_camera': { kind: 'unify', candidateIndex: 0 } },
+    });
+    const remy = plan.animals.find((a) => a.subjectId === 'remy');
+
+    expect(remy.cameraConflicts[0].resolution).toEqual({ kind: 'unify', candidateIndex: 0 });
+    expect(remy.catalogAdditions.cameras).toEqual([]);
+    // The day stays on the animal's own camera 0 — the value it already exports.
+    expect(materializePlanDay(remy.days[0], 'add').cameras_used).toEqual([0, 1]);
+  });
+});
