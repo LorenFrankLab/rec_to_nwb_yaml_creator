@@ -138,19 +138,28 @@ export default function WorkspaceBackupPanel() {
   };
 
   const [restoreRefusal, setRestoreRefusal] = useState<string | null>(null);
+  const restoring = persistence.restoreInFlight;
   const confirmRestore = async () => {
-    if (!candidate) return;
+    if (!candidate || restoring) return;
     setRestoreRefusal(null);
     const ok = await persistence.restoreWorkspace(candidate.workspace, candidate.artifacts);
     if (ok) {
       setNotice(`Workspace restored from ${candidate.source}.`);
       setCandidate(null);
       setRefreshToken((n) => n + 1);
-    } else {
-      // The persistence layer refused (read-only tab, original not yet preserved, write failure):
-      // say so in the dialog rather than closing it silently.
+    } else if (persistence.restoreInFlight === false) {
+      // Refused or failed (read-only tab, original not yet preserved, write failure) — and the
+      // restore is atomic, so nothing was replaced. Say so in the dialog rather than closing it
+      // silently. (A cancelled restore already closed the dialog.)
       setRestoreRefusal('Nothing was replaced.');
     }
+  };
+  // Cancel / Escape / overlay: an in-flight restore is ABORTED (its continuation commits nothing),
+  // not merely hidden.
+  const dismissRestore = () => {
+    if (restoring) persistence.cancelRestore();
+    setCandidate(null);
+    setRestoreRefusal(null);
   };
 
   const summary = summarizeWorkspace(workspace);
@@ -251,26 +260,23 @@ export default function WorkspaceBackupPanel() {
 
       <Modal
         isOpen={candidate != null}
-        onClose={() => {
-          setCandidate(null);
-          setRestoreRefusal(null);
-        }}
+        onClose={dismissRestore}
         title="Replace the current workspace?"
         titleId="restore-preview-title"
         role="alertdialog"
         footer={
           candidate && (
             <div className={styles.modalActions}>
-              <Button variant="secondary" onClick={() => setCandidate(null)}>
+              <Button variant="secondary" onClick={dismissRestore}>
                 Cancel
               </Button>
               {!candidate.diff.currentIsEmpty && (
-                <Button variant="secondary" onClick={downloadBackup}>
+                <Button variant="secondary" onClick={downloadBackup} disabled={restoring}>
                   Download current first
                 </Button>
               )}
-              <Button variant="danger" onClick={confirmRestore}>
-                Replace workspace
+              <Button variant="danger" onClick={confirmRestore} disabled={restoring}>
+                {restoring ? 'Restoring…' : 'Replace workspace'}
               </Button>
             </div>
           )
@@ -281,6 +287,11 @@ export default function WorkspaceBackupPanel() {
             <p>
               Restoring from {candidate.source} replaces everything in this browser&apos;s workspace.
             </p>
+            {restoring && (
+              <p className={styles.notice} role="status">
+                Restoring… (Cancel aborts the restore; nothing is replaced until it finishes.)
+              </p>
+            )}
             {restoreRefusal && (
               <p className={styles.warning} role="alert">
                 {restoreRefusal} {persistence.saveError}

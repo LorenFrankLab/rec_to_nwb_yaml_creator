@@ -22,6 +22,7 @@
  * every test gets a fresh context by default — so the stub never leaks into other tests.
  */
 
+import { createHash } from 'node:crypto';
 import { test, expect } from '@playwright/test';
 import {
   STORAGE_KEY,
@@ -206,6 +207,77 @@ test.describe('Workspace persistence & recovery', () => {
     await expect(page.getByText(/download the unrestorable original/i).first()).toBeVisible();
     expect(await page.evaluate((key) => window.localStorage.getItem(key), STORAGE_KEY)).toBe('{the only copy');
     await expect(page.getByRole('link', { name: ANIMAL_ID })).toHaveCount(0);
+  });
+
+  test('Cancel during a delayed restore aborts it: an edit saved afterwards is never overwritten by the stale restore', async ({ page }) => {
+    // Hold every IndexedDB transaction's completion callback while `__holdTx` is set, so the
+    // restore's artifact staging stays in flight until the test releases it.
+    await page.addInitScript(() => {
+      const held = [];
+      window.__holdTx = false;
+      const desc = Object.getOwnPropertyDescriptor(IDBTransaction.prototype, 'oncomplete');
+      Object.defineProperty(IDBTransaction.prototype, 'oncomplete', {
+        configurable: true,
+        get() {
+          return desc.get.call(this);
+        },
+        set(fn) {
+          if (window.__holdTx && fn) {
+            desc.set.call(this, (ev) => held.push(() => fn.call(this, ev)));
+          } else {
+            desc.set.call(this, fn);
+          }
+        },
+      });
+      window.__releaseTx = () => {
+        while (held.length) held.shift()();
+      };
+    });
+    await seedWorkspace(page, buildConfiguredWorkspaceBlob());
+
+    // A backup of the same day at 480 g whose receipt bytes verify (so staging really writes).
+    const backup = buildConfiguredWorkspaceBlob();
+    const day = backup.workspace.days[DAY_ID];
+    day.session = { ...day.session, weight: 480 };
+    const yaml = 'weight: 480\n';
+    const filename = '20230622_remy_metadata.yml';
+    day.exportReceipt = {
+      filename,
+      exportedAt: '2023-06-22T20:00:00.000Z',
+      contentHash: createHash('sha256').update(`${filename}\n${yaml}`).digest('hex'),
+      appVersion: 'a',
+      schemaVersion: 4,
+      yamlStored: true,
+    };
+    const text = JSON.stringify({ ...backup, format: 'rec_to_nwb_workspace_backup', formatVersion: 2, artifacts: { [DAY_ID]: { filename, yaml, exportedAt: day.exportReceipt.exportedAt } } });
+
+    await page.evaluate(() => {
+      window.__holdTx = true;
+    });
+    const chooser = page.waitForEvent('filechooser');
+    await page.getByRole('button', { name: /Restore from backup/ }).click();
+    await (await chooser).setFiles({ name: 'backup.json', mimeType: 'application/json', buffer: Buffer.from(text) });
+    const dialog = page.getByRole('alertdialog');
+    await dialog.getByRole('button', { name: 'Replace workspace' }).click();
+    await expect(dialog).toContainText(/Restoring/);
+    await dialog.getByRole('button', { name: 'Cancel' }).click();
+    await expect(page.getByRole('alertdialog')).toHaveCount(0);
+
+    // Edit and save AFTER cancelling.
+    await page.evaluate(() => {
+      window.__holdTx = false;
+    });
+    await page.goto(`/#/day/${DAY_ID}`);
+    await page.getByLabel('Weight measured today (grams)').fill('777');
+    await page.keyboard.press('Control+s');
+    await expect(page.getByRole('status', { name: /^Saved/ })).toBeVisible();
+
+    // Release the held transactions: the cancelled restore must not commit.
+    await page.evaluate(() => window.__releaseTx());
+    await page.waitForTimeout(300);
+    const stored = await page.evaluate((key) => JSON.parse(window.localStorage.getItem(key)).workspace.days, STORAGE_KEY);
+    expect(stored[DAY_ID].session.weight).toBe(777);
+    await expect(page.getByLabel('Weight measured today (grams)')).toHaveValue('777');
   });
 
   test('a leftover revision stamp from a closed tab never blocks the sole writer after a discard', async ({ page }) => {

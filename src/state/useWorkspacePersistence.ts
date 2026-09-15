@@ -16,7 +16,7 @@ import {
   WORKSPACE_STORAGE_KEY,
   WorkspaceConflictError,
 } from './persistence';
-import { restoreBackupArtifacts } from './persistence';
+import { stageBackupArtifacts, commitStagedArtifacts, discardStagedArtifacts } from './persistence';
 import type { LoadDiscardReason, BackupArtifacts } from './persistence';
 import {
   acquireWriterLock,
@@ -64,6 +64,10 @@ export interface WorkspacePersistence extends PersistenceStatus {
    * user has downloaded it; call this after that download to clear the original and unblock.
    */
   acknowledgeUnpreservedOriginal: () => void;
+  /** True while a backup restore is in flight (saves and a second restore are refused meanwhile). */
+  restoreInFlight: boolean;
+  /** Abort the restore in flight: nothing it has not yet committed will be written. */
+  cancelRestore: () => void;
 }
 
 /** How often a read-only tab re-tries the writer lease (the editing tab may have closed). */
@@ -114,17 +118,27 @@ export function useWorkspacePersistence({
   const [originalUnpreserved, setOriginalUnpreserved] = useState(false);
   const originalUnpreservedRef = useRef(false);
   originalUnpreservedRef.current = originalUnpreserved;
-  // A backup restore in flight (its asynchronous artifact writes): hand-over is vetoed meanwhile.
+  // A backup restore in flight (its asynchronous artifact staging): hand-over, saves and a second
+  // restore are refused meanwhile. The token identifies the CURRENT operation — a continuation whose
+  // token is stale (cancelled, or superseded) commits nothing.
+  const [restoreInFlight, setRestoreInFlight] = useState(false);
   const restoreInFlightRef = useRef(false);
+  const restoreTokenRef = useRef(0);
 
-  /** Why a write must not happen right now, or null. Shared by autosave, Save and restore. */
-  const writeBlocker = useCallback((): string | null => {
+  /**
+   * Why a write must not happen right now, or null. Shared by autosave, Save and restore (which
+   * skips its own in-flight check).
+   */
+  const writeBlocker = useCallback((options: { forRestore?: boolean } = {}): string | null => {
     if (!isWriterRef.current) return 'This tab is read-only — another tab is editing this workspace.';
     if (preservationPendingRef.current) {
       return 'Not saved yet: keeping a copy of the unrestorable original data first (your edits are kept and will be saved).';
     }
     if (originalUnpreservedRef.current) {
       return 'Not saved: download the unrestorable original from the Workspace page first.';
+    }
+    if (!options.forRestore && restoreInFlightRef.current) {
+      return 'Not saved: a backup restore is in progress (cancel it or wait for it to finish).';
     }
     return null;
   }, []);
@@ -378,45 +392,79 @@ export function useWorkspacePersistence({
   }, []);
 
   /** Replace the in-memory workspace with a restored one and write it immediately (writer-only). */
+  /** Abort the restore in flight (its continuation sees a stale token and commits nothing). */
+  const cancelRestore = useCallback(() => {
+    if (!restoreInFlightRef.current) return;
+    restoreTokenRef.current += 1;
+    restoreInFlightRef.current = false;
+    setRestoreInFlight(false);
+    setSaveError(null);
+  }, []);
+
+  /**
+   * Replace the in-memory workspace with a restored one and write it — atomically from the user's
+   * point of view: the incoming receipt bytes are STAGED (the active ones untouched), the workspace
+   * is written to storage FIRST and only then swapped into memory and the staged bytes promoted.
+   * A failed write, a cancellation, or a guard that trips after the asynchronous phase leaves
+   * memory, storage and the active receipt bytes exactly as they were.
+   */
   const restoreWorkspace = useCallback(
     async (incoming: Workspace, artifacts: BackupArtifacts = {}): Promise<boolean> => {
       if (!enabled) {
         replaceWorkspace(incoming);
         return true;
       }
-      // The same blockers as any other write — a restore is a whole-workspace write.
-      const blocked = writeBlocker();
+      if (restoreInFlightRef.current) {
+        setSaveError('A backup restore is already in progress.');
+        return false;
+      }
+      const blocked = writeBlocker({ forRestore: true });
       if (blocked) {
         setSaveError(blocked);
         return false;
       }
-      // Hold the lease for the whole operation (hand-over is vetoed meanwhile) and re-check every
-      // guard AFTER the asynchronous artifact writes: ownership or the original's state may have
-      // changed while they were in flight, and a stale continuation must never write.
+      restoreTokenRef.current += 1;
+      const token = restoreTokenRef.current;
       restoreInFlightRef.current = true;
+      setRestoreInFlight(true);
+      let staged: Awaited<ReturnType<typeof stageBackupArtifacts>>['staged'] = {};
       try {
-        const next = await restoreBackupArtifacts(incoming, artifacts);
-        const blockedAfter = writeBlocker();
+        const stagedResult = await stageBackupArtifacts(incoming, artifacts);
+        staged = stagedResult.staged;
+        const next = stagedResult.workspace;
+        // Cancelled or superseded while staging: commit nothing.
+        if (restoreTokenRef.current !== token) {
+          void discardStagedArtifacts(staged);
+          return false;
+        }
+        const blockedAfter = writeBlocker({ forRestore: true });
         if (blockedAfter) {
+          void discardStagedArtifacts(staged);
           setSaveError(`Restore cancelled — ${blockedAfter}`);
           return false;
         }
-        replaceWorkspace(next);
+        // Storage first (synchronous, may throw) — memory and the active artifacts change only
+        // once the durable write succeeded.
         try {
-          // A restore overwrites deliberately: adopt whatever revision is stored, then write.
           syncRevisionFromStorage();
           saveWorkspace(next, { checkpoint: true });
-          lastPersistedRef.current = next;
-          setLastSaved(new Date().toISOString());
-          setSaveError(null);
-          setHasPendingWrite(false);
-          return true;
         } catch (err) {
+          void discardStagedArtifacts(staged);
           setSaveError(`Could not save the restored workspace: ${(err as Error).message}`);
           return false;
         }
+        replaceWorkspace(next);
+        lastPersistedRef.current = next;
+        setLastSaved(new Date().toISOString());
+        setSaveError(null);
+        setHasPendingWrite(false);
+        void commitStagedArtifacts(next, staged);
+        return true;
       } finally {
-        restoreInFlightRef.current = false;
+        if (restoreTokenRef.current === token) {
+          restoreInFlightRef.current = false;
+          setRestoreInFlight(false);
+        }
       }
     },
     [enabled, replaceWorkspace, writeBlocker]
@@ -442,6 +490,8 @@ export function useWorkspacePersistence({
       takeOver,
       restoreWorkspace,
       acknowledgeUnpreservedOriginal,
+      restoreInFlight,
+      cancelRestore,
     }),
     [
       enabled,
@@ -459,6 +509,8 @@ export function useWorkspacePersistence({
       takeOver,
       restoreWorkspace,
       acknowledgeUnpreservedOriginal,
+      restoreInFlight,
+      cancelRestore,
     ]
   );
 

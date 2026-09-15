@@ -83,6 +83,8 @@ export interface PersistenceStatus {
    * (or preservation failed): every write is refused meanwhile, edits are kept and written after.
    */
   preservationPending: boolean;
+  /** True while a backup restore is in flight (saves and a second restore are refused meanwhile). */
+  restoreInFlight: boolean;
   /** Clears the load notice. */
   dismissLoadNotice: () => void;
 }

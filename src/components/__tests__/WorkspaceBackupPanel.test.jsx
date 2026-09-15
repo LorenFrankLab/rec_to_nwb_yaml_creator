@@ -13,6 +13,7 @@ import { resetBlobStoreForTests } from '../../state/blobStore';
 import { resetWriterLockForTests } from '../../state/writerLock';
 import { buildRealisticWorkspace } from '../../__tests__/fixtures/workspaceBuilders';
 import { summarizeWorkspace, diffWorkspaceReplacement } from '../../domain/workspaceBackup';
+import { receiptHash } from '../../domain/exportReceipt';
 
 vi.mock('../../io/yaml', async () => {
   const actual = await vi.importActual('../../io/yaml');
@@ -129,6 +130,43 @@ describe('WorkspaceBackupPanel', () => {
     const stored = loadWorkspace();
     expect(Object.keys(stored.workspace.animals)).toEqual(['bean']);
     expect(stored.workspace.days['bean-2024-01-05'].state.draft).toBe(true);
+  });
+
+  it('Cancel while the restore is in flight aborts it: the dialog reports progress, then nothing is replaced', async () => {
+    const current = makeWorkspace();
+    const incoming = makeWorkspace({ animalId: 'bean', dayDate: '2024-01-05' });
+    incoming.days['bean-2024-01-05'].exportReceipt = { filename: 'f.yml', exportedAt: 'x', contentHash: receiptHash('f.yml', 'y'), appVersion: 'a', schemaVersion: 4, yamlStored: true };
+    const text = JSON.stringify({ format: 'rec_to_nwb_workspace_backup', schemaVersion: 3, workspace: incoming, artifacts: { 'bean-2024-01-05': { filename: 'f.yml', yaml: 'y', exportedAt: 'x' } } });
+    const file = new File([text], 'backup.json', { type: 'application/json' });
+    file.text = () => Promise.resolve(text);
+    // Hold the artifact staging write so the restore stays in flight.
+    const blobStore = await import('../../state/blobStore');
+    let release;
+    const putSpy = vi.spyOn(blobStore, 'putBlob').mockImplementation(() => new Promise((resolve) => { release = () => resolve(false); }));
+
+    render(
+      <StoreProvider initialState={{ workspace: current }}>
+        <WorkspaceBackupPanel />
+      </StoreProvider>
+    );
+    await waitFor(() => expect(screen.getByRole('button', { name: /restore from backup/i })).toBeEnabled());
+    await act(async () => {
+      fireEvent.change(screen.getByLabelText(/choose a workspace backup file/i), { target: { files: [file] } });
+    });
+    const dialog = await screen.findByRole('alertdialog');
+    await userEvent.click(screen.getByRole('button', { name: /replace workspace/i }));
+    await waitFor(() => expect(dialog).toHaveTextContent(/restoring/i));
+    expect(screen.getByRole('button', { name: /restoring/i })).toBeDisabled();
+
+    await userEvent.click(screen.getByRole('button', { name: /cancel/i }));
+    await waitFor(() => expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument());
+    await act(async () => {
+      release();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    expect(window.localStorage.getItem(WORKSPACE_STORAGE_KEY)).toBeNull();
+    expect(screen.queryByText(/workspace restored/i)).not.toBeInTheDocument();
+    putSpy.mockRestore();
   });
 
   it('rejects an unreadable file with a message and no replacement', async () => {
