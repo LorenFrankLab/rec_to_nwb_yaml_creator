@@ -45,7 +45,8 @@ describe('AppLayout — read-only tab', () => {
       wrapper: ({ children }) => <StoreProvider initialState={{ workspace: { animals: {}, days: {}, settings: {} } }}>{children}</StoreProvider>,
     });
     await waitFor(() => expect(screen.getByText(/Another tab is editing this workspace/)).toBeInTheDocument());
-    expect(screen.getByLabelText('Weight')).toBeDisabled();
+    // The routed page is a lazily-loaded chunk, so its controls appear after the shell/banner.
+    expect(await screen.findByLabelText('Weight')).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Add day' })).toBeDisabled();
     expect(screen.getByRole('button', { name: /Edit in this tab instead/ })).toBeEnabled();
     expect(screen.getByRole('button', { name: /Download workspace backup/ })).toBeEnabled();
@@ -57,6 +58,6 @@ describe('AppLayout — read-only tab', () => {
       wrapper: ({ children }) => <StoreProvider initialState={{ workspace: { animals: {}, days: {}, settings: {} } }}>{children}</StoreProvider>,
     });
     await waitFor(() => expect(screen.queryByText(/Checking whether another tab/)).not.toBeInTheDocument());
-    expect(screen.getByLabelText('Weight')).toBeEnabled();
+    expect(await screen.findByLabelText('Weight')).toBeEnabled();
   });
 });

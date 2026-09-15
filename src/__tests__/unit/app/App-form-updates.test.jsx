@@ -7,21 +7,16 @@
  * manage form state updates with proper immutability and data structures.
  */
 
-import { render, screen, fireEvent } from '@testing-library/react';
+import { screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect } from 'vitest';
-import { App } from '../../../App';
-import { StoreProvider } from '../../../state/StoreContext';
 import { defaultYMLValues } from '../../../valueList';
 import { getById, getByName } from '../../helpers/test-selectors';
+import { renderLegacyApp } from '../../helpers/render-legacy-app';
 
 describe('App Form Data Updates', () => {
   describe('updateFormData - Simple Key-Value Updates', () => {
-    it('should update top-level string fields', () => {
-      render(
-        <StoreProvider>
-          <App />
-        </StoreProvider>
-      );
+    it('should update top-level string fields', async () => {
+      await renderLegacyApp();
 
       // Find and update the lab input field
       const labInput = screen.getAllByLabelText(/^lab$/i)[0];
@@ -34,12 +29,8 @@ describe('App Form Data Updates', () => {
       expect(labInput).toHaveValue('New Lab Name');
     });
 
-    it('should update top-level text fields independently', () => {
-      render(
-        <StoreProvider>
-          <App />
-        </StoreProvider>
-      );
+    it('should update top-level text fields independently', async () => {
+      await renderLegacyApp();
 
       // Use querySelector to get by name attribute since labels may not be properly associated
       const labInput = getByName('lab')[0];
@@ -56,12 +47,8 @@ describe('App Form Data Updates', () => {
       expect(institutionInput).toHaveValue('Institution B');
     });
 
-    it('should update session_id field', () => {
-      render(
-        <StoreProvider>
-          <App />
-        </StoreProvider>
-      );
+    it('should update session_id field', async () => {
+      await renderLegacyApp();
 
       const sessionIdInput = screen.getByLabelText(/^session id$/i);
       expect(sessionIdInput).toHaveValue('');
@@ -71,12 +58,8 @@ describe('App Form Data Updates', () => {
       expect(sessionIdInput).toHaveValue('session_001');
     });
 
-    it('should update experiment_description field', () => {
-      render(
-        <StoreProvider>
-          <App />
-        </StoreProvider>
-      );
+    it('should update experiment_description field', async () => {
+      await renderLegacyApp();
 
       const descInput = screen.getByLabelText(/^experiment description$/i);
       expect(descInput).toHaveValue('');
@@ -86,12 +69,8 @@ describe('App Form Data Updates', () => {
       expect(descInput).toHaveValue('Test experiment');
     });
 
-    it('should update session_description field', () => {
-      render(
-        <StoreProvider>
-          <App />
-        </StoreProvider>
-      );
+    it('should update session_description field', async () => {
+      await renderLegacyApp();
 
       const descInput = screen.getByLabelText(/^session description$/i);
       expect(descInput).toHaveValue('');
@@ -103,12 +82,8 @@ describe('App Form Data Updates', () => {
   });
 
   describe('updateFormData - Nested Object Updates', () => {
-    it('should update subject.subject_id', () => {
-      render(
-        <StoreProvider>
-          <App />
-        </StoreProvider>
-      );
+    it('should update subject.subject_id', async () => {
+      await renderLegacyApp();
 
       const subjectIdInput = screen.getByLabelText(/^subject id$/i);
       expect(subjectIdInput).toHaveValue('');
@@ -118,12 +93,8 @@ describe('App Form Data Updates', () => {
       expect(subjectIdInput).toHaveValue('rat_001');
     });
 
-    it('should update subject.species', () => {
-      render(
-        <StoreProvider>
-          <App />
-        </StoreProvider>
-      );
+    it('should update subject.species', async () => {
+      await renderLegacyApp();
 
       // Use getElementById for the specific subject species field
       const speciesInput = getById('subject-species');
@@ -134,12 +105,8 @@ describe('App Form Data Updates', () => {
       expect(speciesInput).toHaveValue('Mus musculus');
     });
 
-    it('should update subject.description', () => {
-      render(
-        <StoreProvider>
-          <App />
-        </StoreProvider>
-      );
+    it('should update subject.description', async () => {
+      await renderLegacyApp();
 
       const descInput = getById('subject-description');
       expect(descInput).toHaveValue(defaultYMLValues.subject.description);
@@ -149,12 +116,8 @@ describe('App Form Data Updates', () => {
       expect(descInput).toHaveValue('Mouse strain');
     });
 
-    it('should update subject.genotype', () => {
-      render(
-        <StoreProvider>
-          <App />
-        </StoreProvider>
-      );
+    it('should update subject.genotype', async () => {
+      await renderLegacyApp();
 
       // genotype uses DataListElement which renders an input element
       const genotypeInput = getById('subject-genotype');
@@ -165,12 +128,8 @@ describe('App Form Data Updates', () => {
       expect(genotypeInput).toHaveValue('Wild type');
     });
 
-    it('should update subject.weight as number', () => {
-      render(
-        <StoreProvider>
-          <App />
-        </StoreProvider>
-      );
+    it('should update subject.weight as number', async () => {
+      await renderLegacyApp();
 
       const weightInput = getById('subject-weight');
       expect(weightInput).toHaveValue(defaultYMLValues.subject.weight);
@@ -180,12 +139,8 @@ describe('App Form Data Updates', () => {
       expect(weightInput).toHaveValue(250);
     });
 
-    it('should update subject.sex', () => {
-      render(
-        <StoreProvider>
-          <App />
-        </StoreProvider>
-      );
+    it('should update subject.sex', async () => {
+      await renderLegacyApp();
 
       const sexInput = screen.getByLabelText(/^sex$/i);
       expect(sexInput).toHaveValue('M');
@@ -195,12 +150,8 @@ describe('App Form Data Updates', () => {
       expect(sexInput).toHaveValue('F');
     });
 
-    it('should update multiple subject fields independently', () => {
-      render(
-        <StoreProvider>
-          <App />
-        </StoreProvider>
-      );
+    it('should update multiple subject fields independently', async () => {
+      await renderLegacyApp();
 
       const subjectIdInput = getById('subject-subjectId');
       const speciesInput = getById('subject-species');
@@ -217,12 +168,8 @@ describe('App Form Data Updates', () => {
   });
 
   describe('updateFormData - Numeric Fields', () => {
-    it('should update times_period_multiplier', () => {
-      render(
-        <StoreProvider>
-          <App />
-        </StoreProvider>
-      );
+    it('should update times_period_multiplier', async () => {
+      await renderLegacyApp();
 
       const input = screen.getByLabelText(/^times period multiplier$/i);
       expect(input).toHaveValue(defaultYMLValues.times_period_multiplier);
@@ -232,12 +179,8 @@ describe('App Form Data Updates', () => {
       expect(input).toHaveValue(1.5);
     });
 
-    it('should update raw_data_to_volts', () => {
-      render(
-        <StoreProvider>
-          <App />
-        </StoreProvider>
-      );
+    it('should update raw_data_to_volts', async () => {
+      await renderLegacyApp();
 
       const input = getByName('raw_data_to_volts')[0];
       expect(input).toHaveValue(defaultYMLValues.raw_data_to_volts);
@@ -247,12 +190,8 @@ describe('App Form Data Updates', () => {
       expect(input).toHaveValue(0.195);
     });
 
-    it('should handle numeric field updates with decimal values', () => {
-      render(
-        <StoreProvider>
-          <App />
-        </StoreProvider>
-      );
+    it('should handle numeric field updates with decimal values', async () => {
+      await renderLegacyApp();
 
       const input = screen.getByLabelText(/^times period multiplier$/i);
 
@@ -265,12 +204,8 @@ describe('App Form Data Updates', () => {
   });
 
   describe('updateFormData - Units Nested Object', () => {
-    it('should update units.analog', () => {
-      render(
-        <StoreProvider>
-          <App />
-        </StoreProvider>
-      );
+    it('should update units.analog', async () => {
+      await renderLegacyApp();
 
       // Find the analog units input
       const analogInput = screen.getByLabelText(/^analog$/i);
@@ -281,12 +216,8 @@ describe('App Form Data Updates', () => {
       expect(analogInput).toHaveValue('mV');
     });
 
-    it('should update units.behavioral_events', () => {
-      render(
-        <StoreProvider>
-          <App />
-        </StoreProvider>
-      );
+    it('should update units.behavioral_events', async () => {
+      await renderLegacyApp();
 
       const behavioralInput = screen.getByLabelText(/^behavioral events$/i);
       expect(behavioralInput).toHaveValue('');
@@ -298,12 +229,8 @@ describe('App Form Data Updates', () => {
   });
 
   describe('Immutability - State Updates', () => {
-    it('should not mutate original formData when updating', () => {
-      render(
-        <StoreProvider>
-          <App />
-        </StoreProvider>
-      );
+    it('should not mutate original formData when updating', async () => {
+      await renderLegacyApp();
 
       const labInput = screen.getAllByLabelText(/^lab$/i)[0];
       const originalValue = labInput.value;
@@ -319,12 +246,8 @@ describe('App Form Data Updates', () => {
       expect(labInput).toHaveValue('New Value');
     });
 
-    it('should handle rapid successive updates', () => {
-      render(
-        <StoreProvider>
-          <App />
-        </StoreProvider>
-      );
+    it('should handle rapid successive updates', async () => {
+      await renderLegacyApp();
 
       const labInput = screen.getAllByLabelText(/^lab$/i)[0];
 
@@ -339,12 +262,8 @@ describe('App Form Data Updates', () => {
   });
 
   describe('Edge Cases', () => {
-    it('should handle empty string updates', () => {
-      render(
-        <StoreProvider>
-          <App />
-        </StoreProvider>
-      );
+    it('should handle empty string updates', async () => {
+      await renderLegacyApp();
 
       const labInput = screen.getAllByLabelText(/^lab$/i)[0];
 
@@ -354,12 +273,8 @@ describe('App Form Data Updates', () => {
       expect(labInput).toHaveValue('');
     });
 
-    it('should handle whitespace in string fields', () => {
-      render(
-        <StoreProvider>
-          <App />
-        </StoreProvider>
-      );
+    it('should handle whitespace in string fields', async () => {
+      await renderLegacyApp();
 
       const labInput = screen.getAllByLabelText(/^lab$/i)[0];
 
@@ -368,12 +283,8 @@ describe('App Form Data Updates', () => {
       expect(labInput).toHaveValue('  spaces  ');
     });
 
-    it('should handle special characters in text fields', () => {
-      render(
-        <StoreProvider>
-          <App />
-        </StoreProvider>
-      );
+    it('should handle special characters in text fields', async () => {
+      await renderLegacyApp();
 
       const descInput = screen.getByLabelText(/^experiment description$/i);
 
@@ -383,12 +294,8 @@ describe('App Form Data Updates', () => {
       expect(descInput).toHaveValue(specialText);
     });
 
-    it('should handle very long strings', () => {
-      render(
-        <StoreProvider>
-          <App />
-        </StoreProvider>
-      );
+    it('should handle very long strings', async () => {
+      await renderLegacyApp();
 
       const descInput = screen.getByLabelText(/^experiment description$/i);
 
@@ -398,12 +305,8 @@ describe('App Form Data Updates', () => {
       expect(descInput).toHaveValue(longString);
     });
 
-    it('should handle zero values in numeric fields', () => {
-      render(
-        <StoreProvider>
-          <App />
-        </StoreProvider>
-      );
+    it('should handle zero values in numeric fields', async () => {
+      await renderLegacyApp();
 
       const weightInput = getById('subject-weight');
 
@@ -412,12 +315,8 @@ describe('App Form Data Updates', () => {
       expect(weightInput).toHaveValue(0);
     });
 
-    it('should handle negative numbers', () => {
-      render(
-        <StoreProvider>
-          <App />
-        </StoreProvider>
-      );
+    it('should handle negative numbers', async () => {
+      await renderLegacyApp();
 
       const weightInput = getById('subject-weight');
 

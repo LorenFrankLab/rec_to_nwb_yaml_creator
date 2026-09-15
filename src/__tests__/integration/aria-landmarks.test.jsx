@@ -18,23 +18,31 @@ import { makeTestWorkspace } from '../helpers/test-fixtures';
 
 describe('ARIA Landmarks', () => {
   describe('Navigation landmark', () => {
-    it('should have navigation element with role="navigation"', () => {
+    it('should have navigation element with role="navigation"', async () => {
       render(
         <StoreProvider>
           <App />
         </StoreProvider>
       );
+
+      // Route components are lazy (AppLayout code-splits them), so the landmark under test
+      // only exists once the route chunk has mounted.
+      await screen.findByRole('main');
 
       const nav = document.querySelector('[role="navigation"]');
       expect(nav).toBeTruthy();
     });
 
-    it('should have navigation element with aria-label', () => {
+    it('should have navigation element with aria-label', async () => {
       render(
         <StoreProvider>
           <App />
         </StoreProvider>
       );
+
+      // Route components are lazy (AppLayout code-splits them), so the landmark under test
+      // only exists once the route chunk has mounted.
+      await screen.findByRole('main');
 
       const nav = document.querySelector('[role="navigation"]');
       const ariaLabel = nav.getAttribute('aria-label');
@@ -44,23 +52,31 @@ describe('ARIA Landmarks', () => {
   });
 
   describe('Main content landmark', () => {
-    it('should have main element with role="main"', () => {
+    it('should have main element with role="main"', async () => {
       render(
         <StoreProvider>
           <App />
         </StoreProvider>
       );
+
+      // Route components are lazy (AppLayout code-splits them), so the landmark under test
+      // only exists once the route chunk has mounted.
+      await screen.findByRole('main');
 
       const main = document.querySelector('[role="main"]');
       expect(main).toBeTruthy();
     });
 
-    it('should have main element with aria-label', () => {
+    it('should have main element with aria-label', async () => {
       render(
         <StoreProvider>
           <App />
         </StoreProvider>
       );
+
+      // Route components are lazy (AppLayout code-splits them), so the landmark under test
+      // only exists once the route chunk has mounted.
+      await screen.findByRole('main');
 
       const main = document.querySelector('[role="main"]');
       const ariaLabel = main.getAttribute('aria-label');
@@ -70,23 +86,31 @@ describe('ARIA Landmarks', () => {
   });
 
   describe('Landmark uniqueness', () => {
-    it('should have exactly one navigation landmark', () => {
+    it('should have exactly one navigation landmark', async () => {
       const { container } = render(
         <StoreProvider>
           <App />
         </StoreProvider>
       );
+
+      // Route components are lazy (AppLayout code-splits them), so the landmark under test
+      // only exists once the route chunk has mounted.
+      await screen.findByRole('main');
 
       const navs = container.querySelectorAll('[role="navigation"]');
       expect(navs.length).toBe(1);
     });
 
-    it('should have exactly one main landmark', () => {
+    it('should have exactly one main landmark', async () => {
       const { container } = render(
         <StoreProvider>
           <App />
         </StoreProvider>
       );
+
+      // Route components are lazy (AppLayout code-splits them), so the landmark under test
+      // only exists once the route chunk has mounted.
+      await screen.findByRole('main');
 
       const mains = container.querySelectorAll('[role="main"]');
       expect(mains.length).toBe(1);
@@ -94,24 +118,32 @@ describe('ARIA Landmarks', () => {
   });
 
   describe('Landmark structure', () => {
-    it('should have navigation landmark contain navigation links', () => {
+    it('should have navigation landmark contain navigation links', async () => {
       render(
         <StoreProvider>
           <App />
         </StoreProvider>
       );
+
+      // Route components are lazy (AppLayout code-splits them), so the landmark under test
+      // only exists once the route chunk has mounted.
+      await screen.findByRole('main');
 
       const nav = document.querySelector('[role="navigation"]');
       const navLinks = nav.querySelectorAll('a.nav-link');
       expect(navLinks.length).toBeGreaterThan(0);
     });
 
-    it('should have main landmark contain form elements', () => {
+    it('should have main landmark contain form elements', async () => {
       render(
         <StoreProvider>
           <App />
         </StoreProvider>
       );
+
+      // Route components are lazy (AppLayout code-splits them), so the landmark under test
+      // only exists once the route chunk has mounted.
+      await screen.findByRole('main');
 
       const main = document.querySelector('[role="main"]');
       const form = main.querySelector('form');
@@ -120,24 +152,32 @@ describe('ARIA Landmarks', () => {
   });
 
   describe('Screen reader support', () => {
-    it('should allow screen readers to navigate by landmarks', () => {
+    it('should allow screen readers to navigate by landmarks', async () => {
       const { container } = render(
         <StoreProvider>
           <App />
         </StoreProvider>
       );
 
+      // Route components are lazy (AppLayout code-splits them), so the landmark under test
+      // only exists once the route chunk has mounted.
+      await screen.findByRole('main');
+
       // Screen readers use role attributes to find landmarks
       const landmarks = container.querySelectorAll('[role="navigation"], [role="main"]');
       expect(landmarks.length).toBeGreaterThanOrEqual(2);
     });
 
-    it('should have descriptive aria-labels for multiple landmarks of same type', () => {
+    it('should have descriptive aria-labels for multiple landmarks of same type', async () => {
       render(
         <StoreProvider>
           <App />
         </StoreProvider>
       );
+
+      // Route components are lazy (AppLayout code-splits them), so the landmark under test
+      // only exists once the route chunk has mounted.
+      await screen.findByRole('main');
 
       // If there were multiple nav elements, they should have distinct aria-labels
       const navs = document.querySelectorAll('[role="navigation"]');
@@ -163,9 +203,13 @@ describe('ARIA Landmarks', () => {
     });
 
     // makeTestWorkspace seeds animal "remy" + day "remy_20230622".
-    it('Home: one main + one #main-content, a navigation landmark, and a Workspace link', () => {
+    it('Home: one main + one #main-content, a navigation landmark, and a Workspace link', async () => {
       overrideFlags({ animalWorkspace: true });
       const { container } = renderRoute('#/home');
+
+      // Route components are lazy (AppLayout code-splits them), so the landmark under test
+      // only exists once the route chunk has mounted.
+      await screen.findByRole('main');
 
       expect(container.querySelectorAll('[role="main"]')).toHaveLength(1);
       expect(container.querySelectorAll('#main-content')).toHaveLength(1);
@@ -174,9 +218,13 @@ describe('ARIA Landmarks', () => {
       expect(screen.getByRole('link', { name: /^workspace$/i })).toBeInTheDocument();
     });
 
-    it('Workspace: one main + one #main-content, a navigation landmark with batch Validation & Export', () => {
+    it('Workspace: one main + one #main-content, a navigation landmark with batch Validation & Export', async () => {
       overrideFlags({ animalWorkspace: true });
       const { container } = renderRoute('#/workspace');
+
+      // Route components are lazy (AppLayout code-splits them), so the landmark under test
+      // only exists once the route chunk has mounted.
+      await screen.findByRole('main');
 
       expect(container.querySelectorAll('[role="main"]')).toHaveLength(1);
       expect(container.querySelectorAll('#main-content')).toHaveLength(1);
@@ -209,7 +257,7 @@ describe('ARIA Landmarks', () => {
       expect(tabBar.querySelectorAll('[aria-current="page"]')).toHaveLength(1);
     });
 
-    it('keeps the default route (#/) on the legacy form even with flags enabled', () => {
+    it('keeps the default route (#/) on the legacy form even with flags enabled', async () => {
       overrideFlags({ animalWorkspace: true, newDayEditor: true });
       window.location.hash = '#/';
       // No seeded workspace here: the legacy form reads the flat formData model, so
@@ -219,6 +267,10 @@ describe('ARIA Landmarks', () => {
           <App />
         </StoreProvider>
       );
+
+      // Route components are lazy (AppLayout code-splits them), so the landmark under test
+      // only exists once the route chunk has mounted.
+      await screen.findByRole('main');
 
       // Default stays legacy this phase (cutover flips the default in a later phase).
       expect(container.querySelector('form')).toBeTruthy();

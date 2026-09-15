@@ -11,23 +11,18 @@
  * - Multiple click interactions
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { describe, it, expect, vi, afterEach } from 'vitest';
+import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { App } from '../../../App';
-import { StoreProvider } from '../../../state/StoreContext';
 import { getById } from '../../helpers/test-selectors';
+import { renderLegacyApp } from '../../helpers/render-legacy-app';
 
 describe('App.js - clickNav()', () => {
   describe('Navigation Click Behavior', () => {
     it('should add highlight-region class to target element when nav link clicked', async () => {
       const user = userEvent.setup();
 
-      render(
-        <StoreProvider>
-          <App />
-        </StoreProvider>
-      );
+      await renderLegacyApp();
 
       // Find a navigation link
       const subjectNavLink = screen.getByRole('link', { name: /^subject$/i });
@@ -46,11 +41,7 @@ describe('App.js - clickNav()', () => {
     it('should add active-nav-link class to parent node when clicked', async () => {
       const user = userEvent.setup();
 
-      render(
-        <StoreProvider>
-          <App />
-        </StoreProvider>
-      );
+      await renderLegacyApp();
 
       // Find a navigation link
       const subjectNavLink = screen.getByRole('link', { name: /^subject$/i });
@@ -66,11 +57,7 @@ describe('App.js - clickNav()', () => {
     it('should remove previous active-nav-link classes before adding new one', async () => {
       const user = userEvent.setup();
 
-      render(
-        <StoreProvider>
-          <App />
-        </StoreProvider>
-      );
+      await renderLegacyApp();
 
       // Click first nav link
       const subjectNavLink = screen.getByRole('link', { name: /^subject$/i });
@@ -94,11 +81,7 @@ describe('App.js - clickNav()', () => {
     it('should find and target correct element based on data-id attribute', async () => {
       const user = userEvent.setup();
 
-      render(
-        <StoreProvider>
-          <App />
-        </StoreProvider>
-      );
+      await renderLegacyApp();
 
       // Click nav link and verify it targets correct section
       const subjectNavLink = screen.getByRole('link', { name: /^subject$/i });
@@ -116,21 +99,17 @@ describe('App.js - clickNav()', () => {
   });
 
   describe('Timeout Behavior', () => {
-    beforeEach(() => {
-      vi.useFakeTimers();
-    });
-
     afterEach(() => {
       vi.restoreAllMocks();
       vi.useRealTimers();
     });
 
     it('should remove highlight-region and active-nav-link classes after 1000ms timeout', async () => {
-      render(
-        <StoreProvider>
-          <App />
-        </StoreProvider>
-      );
+      // Render on the REAL clock first: the legacy form is a lazily-loaded route chunk, and waiting
+      // for it under a frozen clock would never settle. The fake clock is installed straight after,
+      // so it still governs the ONE thing this test measures — the 1000ms highlight timeout.
+      await renderLegacyApp();
+      vi.useFakeTimers();
 
       // Find and click a nav link
       const subjectNavLink = screen.getByRole('link', { name: /^subject$/i });
@@ -158,11 +137,7 @@ describe('App.js - clickNav()', () => {
     it('should handle clicking same nav item multiple times', async () => {
       const user = userEvent.setup();
 
-      render(
-        <StoreProvider>
-          <App />
-        </StoreProvider>
-      );
+      await renderLegacyApp();
 
       const subjectNavLink = screen.getByRole('link', { name: /^subject$/i });
 
@@ -189,11 +164,7 @@ describe('App.js - clickNav()', () => {
     it('should handle rapid multiple clicks on different nav items', async () => {
       const user = userEvent.setup();
 
-      render(
-        <StoreProvider>
-          <App />
-        </StoreProvider>
-      );
+      await renderLegacyApp();
 
       // Click multiple nav links rapidly
       const subjectNavLink = screen.getByRole('link', { name: /^subject$/i });
@@ -214,12 +185,8 @@ describe('App.js - clickNav()', () => {
       expect(tasksSection.classList.contains('highlight-region')).toBe(true);
     });
 
-    it('should handle missing target element gracefully', () => {
-      render(
-        <StoreProvider>
-          <App />
-        </StoreProvider>
-      );
+    it('should handle missing target element gracefully', async () => {
+      await renderLegacyApp();
 
       // Create a mock event with invalid data-id
       const mockLink = document.createElement('a');

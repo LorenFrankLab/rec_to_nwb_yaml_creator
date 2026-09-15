@@ -9,13 +9,11 @@
  * Note: Remove operations require window.confirm which we mock in tests.
  */
 
-import { render } from '@testing-library/react';
 import { getById, getMainForm } from '../../helpers/test-selectors';
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { App } from '../../../App';
-import { StoreProvider } from '../../../state/StoreContext';
 import { defaultYMLValues, arrayDefaultValues } from '../../../valueList';
 import { useWindowConfirmMock } from '../../helpers/test-hooks';
+import { renderLegacyApp } from '../../helpers/render-legacy-app';
 
 describe('App Array Item Management', () => {
   useWindowConfirmMock(beforeEach, afterEach, true);
@@ -29,12 +27,8 @@ describe('App Array Item Management', () => {
       expect(defaultYMLValues.electrode_groups).toEqual([]);
     });
 
-    it('should render add buttons for array sections', () => {
-      render(
-        <StoreProvider>
-          <App />
-        </StoreProvider>
-      );
+    it('should render add buttons for array sections', async () => {
+      await renderLegacyApp();
 
       // Check that array sections have add functionality
       // These are rendered as part of ArrayUpdateMenu components
@@ -44,57 +38,37 @@ describe('App Array Item Management', () => {
   });
 
   describe('Add Array Items - Basic Functionality', () => {
-    it('should have initial empty camera array', () => {
-      render(
-        <StoreProvider>
-          <App />
-        </StoreProvider>
-      );
+    it('should have initial empty camera array', async () => {
+      await renderLegacyApp();
 
       // Check no camera items initially
       const cameraDetails = getById('cameras-area');
       expect(cameraDetails).toBeInTheDocument();
     });
 
-    it('should have initial empty tasks array', () => {
-      render(
-        <StoreProvider>
-          <App />
-        </StoreProvider>
-      );
+    it('should have initial empty tasks array', async () => {
+      await renderLegacyApp();
 
       const tasksDetails = getById('tasks-area');
       expect(tasksDetails).toBeInTheDocument();
     });
 
-    it('should have initial empty data acquisition device array', () => {
-      render(
-        <StoreProvider>
-          <App />
-        </StoreProvider>
-      );
+    it('should have initial empty data acquisition device array', async () => {
+      await renderLegacyApp();
 
       const dataAcqDetails = getById('data_acq_device-area');
       expect(dataAcqDetails).toBeInTheDocument();
     });
 
-    it('should have initial empty behavioral events array', () => {
-      render(
-        <StoreProvider>
-          <App />
-        </StoreProvider>
-      );
+    it('should have initial empty behavioral events array', async () => {
+      await renderLegacyApp();
 
       const behavioralDetails = getById('behavioral_events-area');
       expect(behavioralDetails).toBeInTheDocument();
     });
 
-    it('should have initial empty electrode groups array', () => {
-      render(
-        <StoreProvider>
-          <App />
-        </StoreProvider>
-      );
+    it('should have initial empty electrode groups array', async () => {
+      await renderLegacyApp();
 
       const electrodeDetails = getById('electrode_groups-area');
       expect(electrodeDetails).toBeInTheDocument();
@@ -102,12 +76,8 @@ describe('App Array Item Management', () => {
   });
 
   describe('Array Section Rendering', () => {
-    it('should render all major array sections', () => {
-      render(
-        <StoreProvider>
-          <App />
-        </StoreProvider>
-      );
+    it('should render all major array sections', async () => {
+      await renderLegacyApp();
 
       // Verify all major array sections are present
       expect(getById('cameras-area')).toBeInTheDocument();
@@ -119,12 +89,8 @@ describe('App Array Item Management', () => {
       expect(getById('associated_video_files-area')).toBeInTheDocument();
     });
 
-    it('should render optogenetics array sections', () => {
-      const { container } = render(
-        <StoreProvider>
-          <App />
-        </StoreProvider>
-      );
+    it('should render optogenetics array sections', async () => {
+      const { container } = await renderLegacyApp();
 
       // Check that optogenetics sections exist (they may be in details elements)
       const detailsElements = container.querySelectorAll('details');
@@ -185,24 +151,16 @@ describe('App Array Item Management', () => {
   });
 
   describe('Form State Consistency', () => {
-    it('should maintain form structure after rendering', () => {
-      render(
-        <StoreProvider>
-          <App />
-        </StoreProvider>
-      );
+    it('should maintain form structure after rendering', async () => {
+      await renderLegacyApp();
 
       // After render, form should still be structured correctly
       const formElement = getMainForm();
       expect(formElement).toBeInTheDocument();
     });
 
-    it('should render all collapsible sections', () => {
-      const { container } = render(
-        <StoreProvider>
-          <App />
-        </StoreProvider>
-      );
+    it('should render all collapsible sections', async () => {
+      const { container } = await renderLegacyApp();
 
       const detailsElements = container.querySelectorAll('details');
       // Should have multiple details elements for collapsible sections
@@ -211,12 +169,8 @@ describe('App Array Item Management', () => {
   });
 
   describe('ArrayItemControl Component Integration', () => {
-    it('should render form without ArrayItemControl initially (empty arrays)', () => {
-      render(
-        <StoreProvider>
-          <App />
-        </StoreProvider>
-      );
+    it('should render form without ArrayItemControl initially (empty arrays)', async () => {
+      await renderLegacyApp();
 
       // ArrayItemControl only appears when array items exist
       // Initially arrays are empty, so no duplicate/remove buttons
@@ -226,24 +180,16 @@ describe('App Array Item Management', () => {
   });
 
   describe('Edge Cases - Array Operations', () => {
-    it('should handle form with all arrays empty', () => {
-      render(
-        <StoreProvider>
-          <App />
-        </StoreProvider>
-      );
+    it('should handle form with all arrays empty', async () => {
+      await renderLegacyApp();
 
       // All arrays start empty - this should work fine
       const formElement = getMainForm();
       expect(formElement).toBeInTheDocument();
     });
 
-    it('should render without errors when all sections collapsed', () => {
-      render(
-        <StoreProvider>
-          <App />
-        </StoreProvider>
-      );
+    it('should render without errors when all sections collapsed', async () => {
+      await renderLegacyApp();
 
       // Details elements can be collapsed/expanded
       const detailsElements = document.querySelectorAll('details');
@@ -254,12 +200,8 @@ describe('App Array Item Management', () => {
   });
 
   describe('Array Sections - Structural Validation', () => {
-    it('should have proper section IDs for navigation', () => {
-      render(
-        <StoreProvider>
-          <App />
-        </StoreProvider>
-      );
+    it('should have proper section IDs for navigation', async () => {
+      await renderLegacyApp();
 
       // Test key sections that we know exist
       const knownSectionIds = [

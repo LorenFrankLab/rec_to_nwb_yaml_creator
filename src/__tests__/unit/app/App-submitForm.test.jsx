@@ -10,22 +10,17 @@
  */
 
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { App } from '../../../App';
-import { StoreProvider } from '../../../state/StoreContext';
 import { getMainForm } from '../../helpers/test-selectors';
+import { renderLegacyApp } from '../../helpers/render-legacy-app';
 
 describe('App.js - submitForm()', () => {
   describe('Form Submission Behavior', () => {
     it('should call openDetailsElement when Generate YML File button clicked', async () => {
       const user = userEvent.setup();
 
-      render(
-        <StoreProvider>
-          <App />
-        </StoreProvider>
-      );
+      await renderLegacyApp();
 
       // Find some details elements (they're closed by default in some browsers)
       const detailsElements = document.querySelectorAll('details');
@@ -43,11 +38,7 @@ describe('App.js - submitForm()', () => {
     it('should trigger form submission via requestSubmit', async () => {
       const user = userEvent.setup();
 
-      render(
-        <StoreProvider>
-          <App />
-        </StoreProvider>
-      );
+      await renderLegacyApp();
 
       // Spy on form's requestSubmit method
       const form = getMainForm();
@@ -72,11 +63,7 @@ describe('App.js - submitForm()', () => {
       // Mock HTMLAnchorElement.prototype.click
       const anchorClickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
 
-      render(
-        <StoreProvider>
-          <App />
-        </StoreProvider>
-      );
+      await renderLegacyApp();
 
       // Fill in required fields to make validation pass
       const sessionIdInput = screen.getByLabelText(/session id/i);
@@ -105,11 +92,7 @@ describe('App.js - submitForm()', () => {
     it('should open all details elements before form submission', async () => {
       const user = userEvent.setup();
 
-      render(
-        <StoreProvider>
-          <App />
-        </StoreProvider>
-      );
+      await renderLegacyApp();
 
       // Find all details elements
       const detailsElements = document.querySelectorAll('details');
@@ -137,12 +120,8 @@ describe('App.js - submitForm()', () => {
   });
 
   describe('Button Type and Form Behavior', () => {
-    it('should have type="button" on Generate YML File button', () => {
-      render(
-        <StoreProvider>
-          <App />
-        </StoreProvider>
-      );
+    it('should have type="button" on Generate YML File button', async () => {
+      await renderLegacyApp();
 
       const generateButton = screen.getByRole('button', { name: /generate yml file/i });
 
@@ -154,11 +133,7 @@ describe('App.js - submitForm()', () => {
     it('should use onClick handler instead of form submit event', async () => {
       const user = userEvent.setup();
 
-      render(
-        <StoreProvider>
-          <App />
-        </StoreProvider>
-      );
+      await renderLegacyApp();
 
       const generateButton = screen.getByRole('button', { name: /generate yml file/i });
 

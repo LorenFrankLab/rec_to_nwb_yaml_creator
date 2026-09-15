@@ -62,28 +62,28 @@ describe('AppLayout', () => {
   });
 
   describe('route-based view rendering', () => {
-    it('renders legacy view by default (no hash)', () => {
+    it('renders legacy view by default (no hash)', async () => {
       window.location.hash = '';
       render(<AppLayout />);
-      expect(screen.getByTestId('legacy-view')).toBeInTheDocument();
+      expect(await screen.findByTestId('legacy-view')).toBeInTheDocument();
     });
 
-    it('renders legacy view for #/', () => {
+    it('renders legacy view for #/', async () => {
       window.location.hash = '#/';
       render(<AppLayout />);
-      expect(screen.getByTestId('legacy-view')).toBeInTheDocument();
+      expect(await screen.findByTestId('legacy-view')).toBeInTheDocument();
     });
 
-    it('renders home view for #/home', () => {
+    it('renders home view for #/home', async () => {
       window.location.hash = '#/home';
       render(<AppLayout />);
-      expect(screen.getByTestId('home-view')).toBeInTheDocument();
+      expect(await screen.findByTestId('home-view')).toBeInTheDocument();
     });
 
-    it('renders workspace view for #/workspace', () => {
+    it('renders workspace view for #/workspace', async () => {
       window.location.hash = '#/workspace';
       render(<AppLayout />);
-      expect(screen.getByTestId('workspace-view')).toBeInTheDocument();
+      expect(await screen.findByTestId('workspace-view')).toBeInTheDocument();
     });
 
     it('banner logo returns to the metadata form ONLY on the legacy route', () => {
@@ -102,23 +102,23 @@ describe('AppLayout', () => {
       expect(screen.queryByRole('link', { name: /return to metadata form/i })).not.toBeInTheDocument();
     });
 
-    it('renders day editor view for #/day/:id', () => {
+    it('renders day editor view for #/day/:id', async () => {
       window.location.hash = '#/day/remy-2023-06-22';
       render(<AppLayout />);
-      expect(screen.getByTestId('day-editor-view')).toBeInTheDocument();
+      expect(await screen.findByTestId('day-editor-view')).toBeInTheDocument();
       expect(screen.getByText(/Day Editor: remy-2023-06-22/i)).toBeInTheDocument();
     });
 
-    it('renders validation view for #/validation', () => {
+    it('renders validation view for #/validation', async () => {
       window.location.hash = '#/validation';
       render(<AppLayout />);
-      expect(screen.getByTestId('validation-view')).toBeInTheDocument();
+      expect(await screen.findByTestId('validation-view')).toBeInTheDocument();
     });
 
-    it('renders legacy view for unknown routes', () => {
+    it('renders legacy view for unknown routes', async () => {
       window.location.hash = '#/unknown';
       render(<AppLayout />);
-      expect(screen.getByTestId('legacy-view')).toBeInTheDocument();
+      expect(await screen.findByTestId('legacy-view')).toBeInTheDocument();
     });
   });
 
@@ -126,7 +126,7 @@ describe('AppLayout', () => {
     it('updates view when hash changes', async () => {
       window.location.hash = '#/';
       render(<AppLayout />);
-      expect(screen.getByTestId('legacy-view')).toBeInTheDocument();
+      expect(await screen.findByTestId('legacy-view')).toBeInTheDocument();
 
       // Change hash
       window.location.hash = '#/workspace';
@@ -160,7 +160,7 @@ describe('AppLayout', () => {
     it('handles browser back button', async () => {
       window.location.hash = '#/workspace';
       render(<AppLayout />);
-      expect(screen.getByTestId('workspace-view')).toBeInTheDocument();
+      expect(await screen.findByTestId('workspace-view')).toBeInTheDocument();
 
       // Simulate back button
       window.location.hash = '#/';
@@ -174,7 +174,7 @@ describe('AppLayout', () => {
     it('navigates from workspace to validation and back', async () => {
       window.location.hash = '#/workspace';
       render(<AppLayout />);
-      expect(screen.getByTestId('workspace-view')).toBeInTheDocument();
+      expect(await screen.findByTestId('workspace-view')).toBeInTheDocument();
 
       window.location.hash = '#/validation';
       window.dispatchEvent(new HashChangeEvent('hashchange'));
@@ -196,9 +196,9 @@ describe('AppLayout', () => {
       expect(screen.getByRole('banner')).toBeInTheDocument();
     });
 
-    it('has main landmark', () => {
+    it('has main landmark', async () => {
       render(<AppLayout />);
-      expect(screen.getByRole('main')).toBeInTheDocument();
+      expect(await screen.findByRole('main')).toBeInTheDocument();
     });
 
     it('has contentinfo landmark (footer)', () => {
@@ -206,15 +206,15 @@ describe('AppLayout', () => {
       expect(screen.getByRole('contentinfo')).toBeInTheDocument();
     });
 
-    it('main landmark has correct ID', () => {
+    it('main landmark has correct ID', async () => {
       render(<AppLayout />);
-      const main = screen.getByRole('main');
+      const main = await screen.findByRole('main');
       expect(main).toHaveAttribute('id', 'main-content');
     });
 
-    it('main landmark has tabindex for focus management', () => {
+    it('main landmark has tabindex for focus management', async () => {
       render(<AppLayout />);
-      const main = screen.getByRole('main');
+      const main = await screen.findByRole('main');
       expect(main).toHaveAttribute('tabindex', '-1');
     });
   });
@@ -290,19 +290,22 @@ describe('AppLayout', () => {
       });
     });
 
-    it('does not move focus on initial render', () => {
+    it('does not move focus on initial render', async () => {
       window.location.hash = '#/workspace';
       render(<AppLayout />);
 
       // Focus should not be on main initially (no route change yet)
-      const main = screen.getByRole('main');
+      const main = await screen.findByRole('main');
       expect(document.activeElement).not.toBe(main);
     });
   });
 
   describe('screen reader announcements', () => {
-    it('has aria-live region for route announcements', () => {
+    // The route-chunk Suspense fallback is itself a `role="status"` live region, so each of these
+    // waits for the routed view to mount first — once it has, the announcer is the only status.
+    it('has aria-live region for route announcements', async () => {
       render(<AppLayout />);
+      await screen.findByTestId('legacy-view');
       const announcer = screen.getByRole('status');
       expect(announcer).toHaveAttribute('aria-live', 'polite');
       expect(announcer).toHaveAttribute('aria-atomic', 'true');
@@ -311,6 +314,7 @@ describe('AppLayout', () => {
     it('announces route change to screen readers', async () => {
       window.location.hash = '#/';
       render(<AppLayout />);
+      await screen.findByTestId('legacy-view');
 
       const announcer = screen.getByRole('status');
       expect(announcer).toHaveTextContent('');
@@ -324,20 +328,21 @@ describe('AppLayout', () => {
       });
     });
 
-    it('aria-live region is visually hidden', () => {
+    it('aria-live region is visually hidden', async () => {
       render(<AppLayout />);
+      await screen.findByTestId('legacy-view');
       const announcer = screen.getByRole('status');
       expect(announcer).toHaveClass('visually-hidden');
     });
   });
 
   describe('accessibility', () => {
-    it('renders view content correctly', () => {
+    it('renders view content correctly', async () => {
       window.location.hash = '#/home';
       render(<AppLayout />);
 
       // Verify home view is rendered
-      expect(screen.getByTestId('home-view')).toBeInTheDocument();
+      expect(await screen.findByTestId('home-view')).toBeInTheDocument();
     });
 
     it('external links have rel="noopener noreferrer"', () => {
@@ -374,12 +379,12 @@ describe('AppLayout', () => {
   });
 
   describe('view isolation', () => {
-    it('renders only the validation view when route is validation', () => {
+    it('renders only the validation view when route is validation', async () => {
       window.location.hash = '#/validation';
       render(<AppLayout />);
 
       // Should render the validation view
-      expect(screen.getByTestId('validation-view')).toBeInTheDocument();
+      expect(await screen.findByTestId('validation-view')).toBeInTheDocument();
 
       // Should NOT render other views
       expect(screen.queryByTestId('workspace-view')).not.toBeInTheDocument();
@@ -410,16 +415,16 @@ describe('AppLayout', () => {
       });
     });
 
-    it('handles day ID with special characters', () => {
+    it('handles day ID with special characters', async () => {
       window.location.hash = '#/day/animal_2023-06-22';
       render(<AppLayout />);
-      expect(screen.getByText(/Day Editor: animal_2023-06-22/i)).toBeInTheDocument();
+      expect(await screen.findByText(/Day Editor: animal_2023-06-22/i)).toBeInTheDocument();
     });
 
-    it('falls back to legacy for malformed day routes', () => {
+    it('falls back to legacy for malformed day routes', async () => {
       window.location.hash = '#/day/';
       render(<AppLayout />);
-      expect(screen.getByTestId('legacy-view')).toBeInTheDocument();
+      expect(await screen.findByTestId('legacy-view')).toBeInTheDocument();
     });
   });
 
@@ -439,9 +444,12 @@ describe('AppLayout', () => {
   });
 
   describe('primary navigation', () => {
-    it('is hidden on the legacy route (legacy supplies its own nav)', () => {
+    it('is hidden on the legacy route (legacy supplies its own nav)', async () => {
       window.location.hash = '#/';
       render(<AppLayout />);
+      // Wait for the legacy chunk: asserting before it mounts would pass for the wrong reason
+      // (nothing routed is on screen yet).
+      await screen.findByTestId('legacy-view');
       expect(screen.queryByRole('navigation', { name: /primary/i })).not.toBeInTheDocument();
     });
 

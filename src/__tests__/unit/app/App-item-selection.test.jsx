@@ -7,21 +7,16 @@
  * changes and properly types values (string vs number).
  */
 
-import { render, fireEvent } from '@testing-library/react';
+import { fireEvent } from '@testing-library/react';
 import { describe, it, expect } from 'vitest';
-import { App } from '../../../App';
-import { StoreProvider } from '../../../state/StoreContext';
 import { defaultYMLValues } from '../../../valueList';
 import { getById, getByName } from '../../helpers/test-selectors';
+import { renderLegacyApp } from '../../helpers/render-legacy-app';
 
 describe('App Item Selection Handlers', () => {
   describe('itemSelected - Simple Selection', () => {
-    it('should handle sex selection change', () => {
-      render(
-        <StoreProvider>
-          <App />
-        </StoreProvider>
-      );
+    it('should handle sex selection change', async () => {
+      await renderLegacyApp();
 
       const sexSelect = getById('subject-sex');
       expect(sexSelect).toHaveValue(defaultYMLValues.subject.sex);
@@ -31,12 +26,8 @@ describe('App Item Selection Handlers', () => {
       expect(sexSelect).toHaveValue('F');
     });
 
-    it('should handle sex selection to different values', () => {
-      render(
-        <StoreProvider>
-          <App />
-        </StoreProvider>
-      );
+    it('should handle sex selection to different values', async () => {
+      await renderLegacyApp();
 
       const sexSelect = getById('subject-sex');
 
@@ -57,12 +48,8 @@ describe('App Item Selection Handlers', () => {
       expect(sexSelect).toHaveValue('M');
     });
 
-    it('should handle genotype DataList selection', () => {
-      render(
-        <StoreProvider>
-          <App />
-        </StoreProvider>
-      );
+    it('should handle genotype DataList selection', async () => {
+      await renderLegacyApp();
 
       const genotypeInput = getById('subject-genotype');
       expect(genotypeInput).toHaveValue('');
@@ -73,12 +60,8 @@ describe('App Item Selection Handlers', () => {
       expect(genotypeInput).toHaveValue('Wild type');
     });
 
-    it('should handle species DataList selection', () => {
-      render(
-        <StoreProvider>
-          <App />
-        </StoreProvider>
-      );
+    it('should handle species DataList selection', async () => {
+      await renderLegacyApp();
 
       const speciesInput = getById('subject-species');
       expect(speciesInput).toHaveValue(defaultYMLValues.subject.species);
@@ -88,12 +71,8 @@ describe('App Item Selection Handlers', () => {
       expect(speciesInput).toHaveValue('Mus musculus');
     });
 
-    it('should handle lab selection', () => {
-      render(
-        <StoreProvider>
-          <App />
-        </StoreProvider>
-      );
+    it('should handle lab selection', async () => {
+      await renderLegacyApp();
 
       const labInput = getByName('lab')[0];
       expect(labInput).toHaveValue(defaultYMLValues.lab);
@@ -105,12 +84,8 @@ describe('App Item Selection Handlers', () => {
   });
 
   describe('itemSelected - String Values', () => {
-    it('should preserve string values from select elements', () => {
-      render(
-        <StoreProvider>
-          <App />
-        </StoreProvider>
-      );
+    it('should preserve string values from select elements', async () => {
+      await renderLegacyApp();
 
       const sexSelect = getById('subject-sex');
 
@@ -121,12 +96,8 @@ describe('App Item Selection Handlers', () => {
       expect(typeof sexSelect.value).toBe('string');
     });
 
-    it('should handle empty string selection', () => {
-      render(
-        <StoreProvider>
-          <App />
-        </StoreProvider>
-      );
+    it('should handle empty string selection', async () => {
+      await renderLegacyApp();
 
       const genotypeInput = getById('subject-genotype');
 
@@ -136,12 +107,8 @@ describe('App Item Selection Handlers', () => {
       expect(genotypeInput).toHaveValue('');
     });
 
-    it('should preserve special characters in selections', () => {
-      render(
-        <StoreProvider>
-          <App />
-        </StoreProvider>
-      );
+    it('should preserve special characters in selections', async () => {
+      await renderLegacyApp();
 
       const genotypeInput = getById('subject-genotype');
 
@@ -153,12 +120,8 @@ describe('App Item Selection Handlers', () => {
   });
 
   describe('itemSelected - Multiple Independent Selections', () => {
-    it('should handle multiple field selections independently', () => {
-      render(
-        <StoreProvider>
-          <App />
-        </StoreProvider>
-      );
+    it('should handle multiple field selections independently', async () => {
+      await renderLegacyApp();
 
       const sexSelect = getById('subject-sex');
       const speciesInput = getById('subject-species');
@@ -173,12 +136,8 @@ describe('App Item Selection Handlers', () => {
       expect(genotypeInput).toHaveValue('Wild type');
     });
 
-    it('should handle rapid successive selections', () => {
-      render(
-        <StoreProvider>
-          <App />
-        </StoreProvider>
-      );
+    it('should handle rapid successive selections', async () => {
+      await renderLegacyApp();
 
       const sexSelect = getById('subject-sex');
 
@@ -192,12 +151,8 @@ describe('App Item Selection Handlers', () => {
   });
 
   describe('itemSelected - Edge Cases', () => {
-    it('should handle selection to same value', () => {
-      render(
-        <StoreProvider>
-          <App />
-        </StoreProvider>
-      );
+    it('should handle selection to same value', async () => {
+      await renderLegacyApp();
 
       const sexSelect = getById('subject-sex');
       const originalValue = sexSelect.value;
@@ -208,12 +163,8 @@ describe('App Item Selection Handlers', () => {
       expect(sexSelect).toHaveValue(originalValue);
     });
 
-    it('should handle DataList input with custom value', () => {
-      render(
-        <StoreProvider>
-          <App />
-        </StoreProvider>
-      );
+    it('should handle DataList input with custom value', async () => {
+      await renderLegacyApp();
 
       const genotypeInput = getById('subject-genotype');
 
@@ -224,12 +175,8 @@ describe('App Item Selection Handlers', () => {
       expect(genotypeInput).toHaveValue(customValue);
     });
 
-    it('should handle whitespace in selections', () => {
-      render(
-        <StoreProvider>
-          <App />
-        </StoreProvider>
-      );
+    it('should handle whitespace in selections', async () => {
+      await renderLegacyApp();
 
       const genotypeInput = getById('subject-genotype');
 
@@ -239,12 +186,8 @@ describe('App Item Selection Handlers', () => {
       expect(genotypeInput).toHaveValue('  spaced  ');
     });
 
-    it('should handle numeric strings in text selections', () => {
-      render(
-        <StoreProvider>
-          <App />
-        </StoreProvider>
-      );
+    it('should handle numeric strings in text selections', async () => {
+      await renderLegacyApp();
 
       const genotypeInput = getById('subject-genotype');
 
@@ -257,12 +200,8 @@ describe('App Item Selection Handlers', () => {
   });
 
   describe('itemSelected - Integration with onBlur', () => {
-    it('should work correctly when combined with blur events', () => {
-      render(
-        <StoreProvider>
-          <App />
-        </StoreProvider>
-      );
+    it('should work correctly when combined with blur events', async () => {
+      await renderLegacyApp();
 
       const genotypeInput = getById('subject-genotype');
 
@@ -277,12 +216,8 @@ describe('App Item Selection Handlers', () => {
       expect(genotypeInput).toHaveValue('Wild type');
     });
 
-    it('should handle change followed by blur on sex select', () => {
-      render(
-        <StoreProvider>
-          <App />
-        </StoreProvider>
-      );
+    it('should handle change followed by blur on sex select', async () => {
+      await renderLegacyApp();
 
       const sexSelect = getById('subject-sex');
 

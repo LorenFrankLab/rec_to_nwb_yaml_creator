@@ -3,10 +3,8 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { StoreProvider } from '../../state/StoreContext';
-import { App } from '../../App';
+import { renderLegacyApp } from '../helpers/render-legacy-app';
 
 /**
  * Integration tests for file upload keyboard accessibility (P1.1.2)
@@ -32,12 +30,8 @@ describe('File Upload Keyboard Accessibility', () => {
   });
 
   describe('Label focusability', () => {
-    it('should make file upload label keyboard focusable with tabIndex', () => {
-      render(
-        <StoreProvider>
-          <App />
-        </StoreProvider>
-      );
+    it('should make file upload label keyboard focusable with tabIndex', async () => {
+      await renderLegacyApp();
 
       // Find the button element
       const fileButton = document.querySelector('.import-button');
@@ -47,12 +41,8 @@ describe('File Upload Keyboard Accessibility', () => {
       expect(fileButton.tagName).toBe('BUTTON');
     });
 
-    it('should allow direct focus on file upload label', () => {
-      render(
-        <StoreProvider>
-          <App />
-        </StoreProvider>
-      );
+    it('should allow direct focus on file upload label', async () => {
+      await renderLegacyApp();
 
       const fileButton = document.querySelector('.import-button');
       fileButton.focus();
@@ -64,11 +54,7 @@ describe('File Upload Keyboard Accessibility', () => {
 
   describe('Enter key file upload', () => {
     it('should trigger file input click when Enter key is pressed on label', async () => {
-      render(
-        <StoreProvider>
-          <App />
-        </StoreProvider>
-      );
+      await renderLegacyApp();
 
       const fileButton = document.querySelector('.import-button');
       const fileInput = document.querySelector('#importYAMLFile');
@@ -88,11 +74,7 @@ describe('File Upload Keyboard Accessibility', () => {
     });
 
     it('should not trigger click when other keys are pressed', async () => {
-      render(
-        <StoreProvider>
-          <App />
-        </StoreProvider>
-      );
+      await renderLegacyApp();
 
       const fileButton = document.querySelector('.import-button');
       const fileInput = document.querySelector('#importYAMLFile');
@@ -113,11 +95,7 @@ describe('File Upload Keyboard Accessibility', () => {
 
   describe('Space key file upload', () => {
     it('should trigger file input click when Space key is pressed on label', async () => {
-      render(
-        <StoreProvider>
-          <App />
-        </StoreProvider>
-      );
+      await renderLegacyApp();
 
       const fileButton = document.querySelector('.import-button');
       const fileInput = document.querySelector('#importYAMLFile');
@@ -135,11 +113,7 @@ describe('File Upload Keyboard Accessibility', () => {
     });
 
     it('should prevent default Space scroll behavior', async () => {
-      render(
-        <StoreProvider>
-          <App />
-        </StoreProvider>
-      );
+      await renderLegacyApp();
 
       const fileButton = document.querySelector('.import-button');
 
@@ -157,12 +131,8 @@ describe('File Upload Keyboard Accessibility', () => {
   });
 
   describe('ARIA attributes', () => {
-    it('should have aria-label describing file upload purpose', () => {
-      render(
-        <StoreProvider>
-          <App />
-        </StoreProvider>
-      );
+    it('should have aria-label describing file upload purpose', async () => {
+      await renderLegacyApp();
 
       const fileButton = document.querySelector('.import-button');
 
@@ -172,12 +142,8 @@ describe('File Upload Keyboard Accessibility', () => {
       expect(ariaLabel).toMatch(/import|upload|yaml/i);
     });
 
-    it('should have role="button" to indicate interactive element', () => {
-      render(
-        <StoreProvider>
-          <App />
-        </StoreProvider>
-      );
+    it('should have role="button" to indicate interactive element', async () => {
+      await renderLegacyApp();
 
       const fileButton = document.querySelector('.import-button');
 
@@ -188,12 +154,8 @@ describe('File Upload Keyboard Accessibility', () => {
   });
 
   describe('File input accessibility', () => {
-    it('should hide native file input visually but keep accessible', () => {
-      render(
-        <StoreProvider>
-          <App />
-        </StoreProvider>
-      );
+    it('should hide native file input visually but keep accessible', async () => {
+      await renderLegacyApp();
 
       const fileInput = document.querySelector('#importYAMLFile');
 
@@ -204,12 +166,8 @@ describe('File Upload Keyboard Accessibility', () => {
       expect(fileInput).toBeTruthy();
     });
 
-    it('should have proper accept attribute for YAML files', () => {
-      render(
-        <StoreProvider>
-          <App />
-        </StoreProvider>
-      );
+    it('should have proper accept attribute for YAML files', async () => {
+      await renderLegacyApp();
 
       const fileInput = document.querySelector('#importYAMLFile');
 
@@ -221,12 +179,8 @@ describe('File Upload Keyboard Accessibility', () => {
   });
 
   describe('Keyboard focus indication', () => {
-    it('should have visible focus styles when label is focused', () => {
-      const { container } = render(
-        <StoreProvider>
-          <App />
-        </StoreProvider>
-      );
+    it('should have visible focus styles when label is focused', async () => {
+      const { container } = await renderLegacyApp();
 
       const fileButton = container.querySelector('.import-button');
       fileButton.focus();
@@ -241,11 +195,7 @@ describe('File Upload Keyboard Accessibility', () => {
 
   describe('Integration with file selection', () => {
     it('should allow programmatic file selection after keyboard trigger', async () => {
-      render(
-        <StoreProvider>
-          <App />
-        </StoreProvider>
-      );
+      await renderLegacyApp();
 
       const fileButton = document.querySelector('.import-button');
       const fileInput = document.querySelector('#importYAMLFile');

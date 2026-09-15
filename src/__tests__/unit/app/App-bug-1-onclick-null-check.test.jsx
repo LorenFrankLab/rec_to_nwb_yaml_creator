@@ -13,21 +13,15 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { render } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import App from '../../../App';
-import { StoreProvider } from '../../../state/StoreContext';
 import { getFileInput } from '../../helpers/test-selectors';
+import { renderLegacyApp } from '../../helpers/render-legacy-app';
 
 describe('BUG #1: App.js:933 onClick handler null check', () => {
   it('should handle file input click when e.target exists', async () => {
     // ARRANGE
     const user = userEvent.setup();
-    render(
-      <StoreProvider>
-        <App />
-      </StoreProvider>
-    );
+    await renderLegacyApp();
     const fileInput = getFileInput();
     expect(fileInput).toBeInTheDocument();
 
@@ -46,13 +40,9 @@ describe('BUG #1: App.js:933 onClick handler null check', () => {
     expect(fileInput.value).toBe(''); // Value should be reset
   });
 
-  it('should handle file input click when e.target is null (edge case)', () => {
+  it('should handle file input click when e.target is null (edge case)', async () => {
     // ARRANGE
-    render(
-      <StoreProvider>
-        <App />
-      </StoreProvider>
-    );
+    await renderLegacyApp();
     const fileInput = getFileInput();
     expect(fileInput).toBeInTheDocument();
 
@@ -70,13 +60,9 @@ describe('BUG #1: App.js:933 onClick handler null check', () => {
     }).not.toThrow();
   });
 
-  it('should handle file input click when e.target is undefined (edge case)', () => {
+  it('should handle file input click when e.target is undefined (edge case)', async () => {
     // ARRANGE
-    render(
-      <StoreProvider>
-        <App />
-      </StoreProvider>
-    );
+    await renderLegacyApp();
     const fileInput = getFileInput();
     expect(fileInput).toBeInTheDocument();
 
@@ -94,13 +80,9 @@ describe('BUG #1: App.js:933 onClick handler null check', () => {
     }).not.toThrow();
   });
 
-  it('should handle file input click when event is null (extreme edge case)', () => {
+  it('should handle file input click when event is null (extreme edge case)', async () => {
     // ARRANGE
-    render(
-      <StoreProvider>
-        <App />
-      </StoreProvider>
-    );
+    await renderLegacyApp();
     const fileInput = getFileInput();
     expect(fileInput).toBeInTheDocument();
 
@@ -115,13 +97,9 @@ describe('BUG #1: App.js:933 onClick handler null check', () => {
     }).not.toThrow();
   });
 
-  it('should not crash when resetting file input value on click', () => {
+  it('should not crash when resetting file input value on click', async () => {
     // ARRANGE
-    render(
-      <StoreProvider>
-        <App />
-      </StoreProvider>
-    );
+    await renderLegacyApp();
     const fileInput = getFileInput();
     expect(fileInput).toBeInTheDocument();
 
@@ -146,11 +124,7 @@ describe('BUG #1: App.js:933 onClick handler null check', () => {
   it('should allow re-uploading the same file after click (StackOverflow pattern)', async () => {
     // ARRANGE
     const user = userEvent.setup();
-    render(
-      <StoreProvider>
-        <App />
-      </StoreProvider>
-    );
+    await renderLegacyApp();
     const fileInput = getFileInput();
 
     const file = new File(['test: value'], 'test.yml', { type: 'text/yaml' });

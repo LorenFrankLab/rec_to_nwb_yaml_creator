@@ -17,12 +17,10 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { render } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { App } from '../../../App';
-import { StoreProvider } from '../../../state/StoreContext';
 import { selectAndWait } from '../../helpers/integration-test-helpers';
 import { getAddButton, getById } from '../../helpers/test-selectors';
+import { renderLegacyApp } from '../../helpers/render-legacy-app';
 
 describe('App.js - onMapInput()', () => {
   beforeEach(() => {
@@ -32,11 +30,7 @@ describe('App.js - onMapInput()', () => {
   describe('Empty Value Handling', () => {
     it('should set value to -1 when emptyOption is selected', async () => {
       const user = userEvent.setup();
-      const { container } = render(
-      <StoreProvider>
-        <App />
-      </StoreProvider>
-    );
+      const { container } = await renderLegacyApp();
 
       // Add an electrode group with a device type to generate ntrode maps
       const addButton = getAddButton('electrode_groups');
@@ -62,11 +56,7 @@ describe('App.js - onMapInput()', () => {
 
     it('should handle null value by setting -1', async () => {
       const user = userEvent.setup();
-      const { container } = render(
-      <StoreProvider>
-        <App />
-      </StoreProvider>
-    );
+      const { container } = await renderLegacyApp();
 
       // Add electrode group with device type
       const addButton = getAddButton('electrode_groups');
@@ -88,11 +78,7 @@ describe('App.js - onMapInput()', () => {
 
     it('should handle empty string by setting -1', async () => {
       const user = userEvent.setup();
-      const { container } = render(
-      <StoreProvider>
-        <App />
-      </StoreProvider>
-    );
+      const { container } = await renderLegacyApp();
 
       // Add electrode group with device type
       const addButton = getAddButton('electrode_groups');
@@ -120,11 +106,7 @@ describe('App.js - onMapInput()', () => {
       // race conditions or invalid state.
 
       // Test that function doesn't crash when electrode group has no ntrodes yet
-      const { container } = render(
-      <StoreProvider>
-        <App />
-      </StoreProvider>
-    );
+      const { container } = await renderLegacyApp();
 
       // Add electrode group but don't select device type (no ntrodes generated)
       const user = userEvent.setup();
@@ -143,11 +125,7 @@ describe('App.js - onMapInput()', () => {
   describe('Channel Map Updates', () => {
     it('should render channel map dropdowns after device type selected', async () => {
       const user = userEvent.setup();
-      const { container } = render(
-      <StoreProvider>
-        <App />
-      </StoreProvider>
-    );
+      const { container } = await renderLegacyApp();
 
       // Add electrode group with device type
       const addButton = getAddButton('electrode_groups');
@@ -167,11 +145,7 @@ describe('App.js - onMapInput()', () => {
 
     it('should render channel maps for multi-shank devices', async () => {
       const user = userEvent.setup();
-      const { container } = render(
-      <StoreProvider>
-        <App />
-      </StoreProvider>
-    );
+      const { container } = await renderLegacyApp();
 
       // Add electrode group with multi-shank device type
       const addButton = getAddButton('electrode_groups');
@@ -192,11 +166,7 @@ describe('App.js - onMapInput()', () => {
   describe('stringToInteger() Conversion', () => {
     it('should handle channel value selection without crashing', async () => {
       const user = userEvent.setup();
-      const { container } = render(
-      <StoreProvider>
-        <App />
-      </StoreProvider>
-    );
+      const { container } = await renderLegacyApp();
 
       // Add electrode group with device type
       const addButton = getAddButton('electrode_groups');
@@ -218,11 +188,7 @@ describe('App.js - onMapInput()', () => {
   describe('Edge Cases', () => {
     it('should handle rapid consecutive device type changes without crashing', async () => {
       const user = userEvent.setup();
-      const { container } = render(
-      <StoreProvider>
-        <App />
-      </StoreProvider>
-    );
+      const { container } = await renderLegacyApp();
 
       const addButton = getAddButton('electrode_groups');
       await user.click(addButton);
@@ -241,11 +207,7 @@ describe('App.js - onMapInput()', () => {
 
     it('should handle changing device type after channels already mapped', async () => {
       const user = userEvent.setup();
-      const { container } = render(
-      <StoreProvider>
-        <App />
-      </StoreProvider>
-    );
+      const { container } = await renderLegacyApp();
 
       const addButton = getAddButton('electrode_groups');
       await user.click(addButton);
@@ -267,11 +229,7 @@ describe('App.js - onMapInput()', () => {
 
     it('should handle multiple electrode groups independently', async () => {
       const user = userEvent.setup();
-      const { container } = render(
-      <StoreProvider>
-        <App />
-      </StoreProvider>
-    );
+      const { container } = await renderLegacyApp();
 
       // Add two electrode groups
       const addButton = getAddButton('electrode_groups');
@@ -294,11 +252,7 @@ describe('App.js - onMapInput()', () => {
   describe('Data Integrity', () => {
     it('should maintain channel maps after device type selection', async () => {
       const user = userEvent.setup();
-      const { container } = render(
-      <StoreProvider>
-        <App />
-      </StoreProvider>
-    );
+      const { container } = await renderLegacyApp();
 
       const addButton = getAddButton('electrode_groups');
       await user.click(addButton);
@@ -318,11 +272,7 @@ describe('App.js - onMapInput()', () => {
   describe('Integration with nTrodeMapSelected', () => {
     it('should render channel maps after nTrodeMapSelected generates them', async () => {
       const user = userEvent.setup();
-      const { container } = render(
-      <StoreProvider>
-        <App />
-      </StoreProvider>
-    );
+      const { container } = await renderLegacyApp();
 
       const addButton = getAddButton('electrode_groups');
       await user.click(addButton);

@@ -1,13 +1,12 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { App } from '../../App';
-import { StoreProvider } from '../../state/StoreContext';
 import YAML from 'yaml';
 import { triggerExport, importYamlFile } from '../helpers/integration-test-helpers';
 import { getAddButton, getFileInput } from '../helpers/test-selectors';
 import fs from 'fs';
 import path from 'path';
+import { renderLegacyApp } from '../helpers/render-legacy-app';
 
 /**
  * Phase 1.5 Task 1.5.1: Sample Metadata Modification Tests
@@ -78,11 +77,7 @@ describe('Sample Metadata Modification Workflow', () => {
   it('imports sample metadata through file upload', async () => {
     // ARRANGE
     const user = userEvent.setup();
-    const { container } = render(
-      <StoreProvider>
-        <App />
-      </StoreProvider>
-    );
+    const { container } = await renderLegacyApp();
 
     // ACT - Upload the file using helper
     await importYamlFile(user, screen, container, sampleYamlContent, 'minimal-complete.yml');
@@ -131,11 +126,7 @@ describe('Sample Metadata Modification Workflow', () => {
   it('modifies experimenter name after import', async () => {
     // ARRANGE
     const user = userEvent.setup();
-    const { container } = render(
-      <StoreProvider>
-        <App />
-      </StoreProvider>
-    );
+    const { container } = await renderLegacyApp();
 
     // Import first using helper
     await importYamlFile(user, screen, container, sampleYamlContent, 'minimal-complete.yml');
@@ -163,11 +154,7 @@ describe('Sample Metadata Modification Workflow', () => {
   it('modifies subject information after import', async () => {
     // ARRANGE
     const user = userEvent.setup();
-    const { container } = render(
-      <StoreProvider>
-        <App />
-      </StoreProvider>
-    );
+    const { container } = await renderLegacyApp();
 
     // Import first using helper
     await importYamlFile(user, screen, container, sampleYamlContent, 'minimal-complete.yml');
@@ -209,11 +196,7 @@ describe('Sample Metadata Modification Workflow', () => {
   it('adds new camera to imported metadata', async () => {
     // ARRANGE
     const user = userEvent.setup();
-    const { container } = render(
-      <StoreProvider>
-        <App />
-      </StoreProvider>
-    );
+    const { container } = await renderLegacyApp();
 
     // Import first using helper
     await importYamlFile(user, screen, container, sampleYamlContent, 'minimal-complete.yml');
@@ -247,11 +230,7 @@ describe('Sample Metadata Modification Workflow', () => {
   it('adds new task to imported metadata', async () => {
     // ARRANGE
     const user = userEvent.setup();
-    const { container } = render(
-      <StoreProvider>
-        <App />
-      </StoreProvider>
-    );
+    const { container } = await renderLegacyApp();
 
     // Import first using helper
     await importYamlFile(user, screen, container, sampleYamlContent, 'minimal-complete.yml');
@@ -284,11 +263,7 @@ describe('Sample Metadata Modification Workflow', () => {
   it('adds new electrode group to imported metadata', async () => {
     // ARRANGE
     const user = userEvent.setup();
-    const { container } = render(
-      <StoreProvider>
-        <App />
-      </StoreProvider>
-    );
+    const { container } = await renderLegacyApp();
 
     // Import first using helper
     await importYamlFile(user, screen, container, sampleYamlContent, 'minimal-complete.yml');
@@ -318,11 +293,7 @@ describe('Sample Metadata Modification Workflow', () => {
   it('re-exports metadata with modifications preserved', async () => {
     // ARRANGE
     const user = userEvent.setup();
-    const { container } = render(
-      <StoreProvider>
-        <App />
-      </StoreProvider>
-    );
+    const { container } = await renderLegacyApp();
 
     // Import first using helper
     await importYamlFile(user, screen, container, sampleYamlContent, 'minimal-complete.yml');
@@ -373,11 +344,7 @@ describe('Sample Metadata Modification Workflow', () => {
   it('preserves all modifications through import-modify-export-import round-trip', async () => {
     // ARRANGE
     const user = userEvent.setup();
-    render(
-      <StoreProvider>
-        <App />
-      </StoreProvider>
-    );
+    await renderLegacyApp();
 
     const yamlFile = new File([sampleYamlContent], 'minimal-complete.yml', {
       type: 'text/yaml',

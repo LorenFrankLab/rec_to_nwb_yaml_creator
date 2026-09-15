@@ -7,12 +7,10 @@
  * and that state management follows expected patterns.
  */
 
-import { render } from '@testing-library/react';
 import { getMainForm } from '../../helpers/test-selectors';
 import { describe, it, expect } from 'vitest';
-import { App } from '../../../App';
-import { StoreProvider } from '../../../state/StoreContext';
 import { defaultYMLValues, emptyFormData } from '../../../valueList';
+import { renderLegacyApp } from '../../helpers/render-legacy-app';
 
 describe('App State Initialization', () => {
   describe('Default State Values', () => {
@@ -142,43 +140,27 @@ describe('App State Initialization', () => {
   });
 
   describe('Component Rendering', () => {
-    it('should render without crashing', () => {
-      const { container } = render(
-        <StoreProvider>
-          <App />
-        </StoreProvider>
-      );
+    it('should render without crashing', async () => {
+      const { container } = await renderLegacyApp();
       expect(container).toBeInTheDocument();
     });
 
-    it('should render form element', () => {
-      render(
-        <StoreProvider>
-          <App />
-        </StoreProvider>
-      );
+    it('should render form element', async () => {
+      await renderLegacyApp();
       // Should have a form element
       const formElement = getMainForm();
       expect(formElement).toBeInTheDocument();
     });
 
-    it('should render multiple form sections', () => {
-      render(
-        <StoreProvider>
-          <App />
-        </StoreProvider>
-      );
+    it('should render multiple form sections', async () => {
+      await renderLegacyApp();
       // Should have details elements for collapsible sections
       const detailsElements = document.querySelectorAll('details');
       expect(detailsElements.length).toBeGreaterThan(0);
     });
 
-    it('should render input elements', () => {
-      render(
-        <StoreProvider>
-          <App />
-        </StoreProvider>
-      );
+    it('should render input elements', async () => {
+      await renderLegacyApp();
       // Should have multiple input elements
       const inputElements = document.querySelectorAll('input');
       expect(inputElements.length).toBeGreaterThan(10);

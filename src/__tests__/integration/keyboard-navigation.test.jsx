@@ -8,6 +8,7 @@ import userEvent from '@testing-library/user-event';
 import { StoreProvider } from '../../state/StoreContext';
 import { App } from '../../App';
 import { makeConfiguredWorkspace } from '../helpers/test-fixtures';
+import { renderLegacyApp } from '../helpers/render-legacy-app';
 
 /**
  * Integration tests for keyboard navigation accessibility (P1.1.1)
@@ -35,11 +36,7 @@ describe('Keyboard Navigation Accessibility', () => {
 
   describe('Navigation links keyboard focusability', () => {
     it('should allow navigation links to receive keyboard focus', async () => {
-      render(
-        <StoreProvider>
-          <App />
-        </StoreProvider>
-      );
+      await renderLegacyApp();
 
       // Find the first navigation link (should be "Subject")
       const navLinks = screen.getAllByRole('link', { name: /subject/i });
@@ -53,11 +50,7 @@ describe('Keyboard Navigation Accessibility', () => {
     });
 
     it('should allow tabbing between navigation links', async () => {
-      const { container } = render(
-        <StoreProvider>
-          <App />
-        </StoreProvider>
-      );
+      const { container } = await renderLegacyApp();
 
       // Get navigation links
       const navLinks = container.querySelectorAll('.nav-link');
@@ -83,11 +76,7 @@ describe('Keyboard Navigation Accessibility', () => {
 
   describe('Enter key navigation', () => {
     it('should navigate to section when Enter key is pressed on nav link', async () => {
-      render(
-        <StoreProvider>
-          <App />
-        </StoreProvider>
-      );
+      await renderLegacyApp();
 
       // Find the "Subject" navigation link
       const subjectNavLink = screen.getAllByRole('link', { name: /subject/i })[0];
@@ -107,11 +96,7 @@ describe('Keyboard Navigation Accessibility', () => {
     });
 
     it('should add active-nav-link class when Enter is pressed', async () => {
-      render(
-        <StoreProvider>
-          <App />
-        </StoreProvider>
-      );
+      await renderLegacyApp();
 
       const navLink = screen.getAllByRole('link', { name: /subject/i })[0];
       navLink.focus();
@@ -127,11 +112,7 @@ describe('Keyboard Navigation Accessibility', () => {
 
   describe('Space key navigation', () => {
     it('should navigate to section when Space key is pressed on nav link', async () => {
-      render(
-        <StoreProvider>
-          <App />
-        </StoreProvider>
-      );
+      await renderLegacyApp();
 
       const navLink = screen.getAllByRole('link', { name: /data acq device/i })[0];
       navLink.focus();
@@ -147,11 +128,7 @@ describe('Keyboard Navigation Accessibility', () => {
     });
 
     it('should prevent default scroll behavior when Space is pressed', async () => {
-      render(
-        <StoreProvider>
-          <App />
-        </StoreProvider>
-      );
+      await renderLegacyApp();
 
       const navLink = screen.getAllByRole('link', { name: /subject/i })[0];
       navLink.focus();
@@ -183,8 +160,9 @@ describe('Keyboard Navigation Accessibility', () => {
         await Promise.resolve();
       });
 
-      // Open the Failed Channels section (the electrode-group disclosures live there).
-      await user.click(screen.getByRole('button', { name: /^Failed Channels\b/ }));
+      // Open the Failed Channels section (the electrode-group disclosures live there). The Day
+      // Editor is a lazily-loaded route chunk, so its tab rail arrives after the hashchange flush.
+      await user.click(await screen.findByRole('button', { name: /^Failed Channels\b/ }));
       await screen.findByRole('heading', { name: /failed channels/i });
 
       // Each electrode group is a native <details><summary> disclosure — nested,
@@ -209,11 +187,7 @@ describe('Keyboard Navigation Accessibility', () => {
 
   describe('Keyboard navigation edge cases', () => {
     it('should handle Enter key when target element does not exist', async () => {
-      render(
-        <StoreProvider>
-          <App />
-        </StoreProvider>
-      );
+      await renderLegacyApp();
 
       const navLink = screen.getAllByRole('link', { name: /subject/i })[0];
 
@@ -235,11 +209,7 @@ describe('Keyboard Navigation Accessibility', () => {
     });
 
     it('should remove highlight-region class after timeout', async () => {
-      render(
-        <StoreProvider>
-          <App />
-        </StoreProvider>
-      );
+      await renderLegacyApp();
 
       const navLink = screen.getAllByRole('link', { name: /subject/i })[0];
       navLink.focus();
@@ -260,12 +230,8 @@ describe('Keyboard Navigation Accessibility', () => {
   });
 
   describe('ARIA and accessibility attributes', () => {
-    it('should have proper role attributes for navigation', () => {
-      const { container } = render(
-        <StoreProvider>
-          <App />
-        </StoreProvider>
-      );
+    it('should have proper role attributes for navigation', async () => {
+      const { container } = await renderLegacyApp();
 
       // All nav links should have link role (implicit from <a> tag)
       const navLinks = container.querySelectorAll('.nav-link');
@@ -274,12 +240,8 @@ describe('Keyboard Navigation Accessibility', () => {
       });
     });
 
-    it('should have href attributes for fallback navigation', () => {
-      const { container } = render(
-        <StoreProvider>
-          <App />
-        </StoreProvider>
-      );
+    it('should have href attributes for fallback navigation', async () => {
+      const { container } = await renderLegacyApp();
 
       // All nav links should have href for users who disable JavaScript
       const navLinks = container.querySelectorAll('.nav-link');

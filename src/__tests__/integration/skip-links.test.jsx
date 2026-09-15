@@ -3,9 +3,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { render } from '@testing-library/react';
-import { StoreProvider } from '../../state/StoreContext';
-import { App } from '../../App';
+import { renderLegacyApp } from '../helpers/render-legacy-app';
 
 /**
  * Integration tests for skip links accessibility (P1.1.3)
@@ -19,12 +17,8 @@ import { App } from '../../App';
 
 describe('Skip Links Accessibility', () => {
   describe('Skip link presence', () => {
-    it('should have skip to main content link', () => {
-      render(
-        <StoreProvider>
-          <App />
-        </StoreProvider>
-      );
+    it('should have skip to main content link', async () => {
+      await renderLegacyApp();
 
       // Find skip link by href
       const skipLink = document.querySelector('a[href="#main-content"]');
@@ -32,12 +26,8 @@ describe('Skip Links Accessibility', () => {
       expect(skipLink.textContent).toMatch(/skip to main/i);
     });
 
-    it('should have skip to navigation link', () => {
-      render(
-        <StoreProvider>
-          <App />
-        </StoreProvider>
-      );
+    it('should have skip to navigation link', async () => {
+      await renderLegacyApp();
 
       const skipLink = document.querySelector('a[href="#navigation"]');
       expect(skipLink).toBeTruthy();
@@ -46,12 +36,8 @@ describe('Skip Links Accessibility', () => {
   });
 
   describe('Skip link positioning', () => {
-    it('should have skip links as first focusable elements', () => {
-      const { container } = render(
-        <StoreProvider>
-          <App />
-        </StoreProvider>
-      );
+    it('should have skip links as first focusable elements', async () => {
+      const { container } = await renderLegacyApp();
 
       // Skip links should be first in DOM order
       const allLinks = container.querySelectorAll('a');
@@ -63,12 +49,8 @@ describe('Skip Links Accessibility', () => {
       expect(secondLink.getAttribute('href')).toMatch(/^#(main-content|navigation)$/);
     });
 
-    it('should have skip-link class for styling', () => {
-      render(
-        <StoreProvider>
-          <App />
-        </StoreProvider>
-      );
+    it('should have skip-link class for styling', async () => {
+      await renderLegacyApp();
 
       const skipToMain = document.querySelector('a[href="#main-content"]');
       const skipToNav = document.querySelector('a[href="#navigation"]');
@@ -79,46 +61,30 @@ describe('Skip Links Accessibility', () => {
   });
 
   describe('Skip link targets', () => {
-    it('should have main content element with id="main-content"', () => {
-      render(
-        <StoreProvider>
-          <App />
-        </StoreProvider>
-      );
+    it('should have main content element with id="main-content"', async () => {
+      await renderLegacyApp();
 
       const mainContent = document.querySelector('#main-content');
       expect(mainContent).toBeTruthy();
     });
 
-    it('should have navigation element with id="navigation"', () => {
-      render(
-        <StoreProvider>
-          <App />
-        </StoreProvider>
-      );
+    it('should have navigation element with id="navigation"', async () => {
+      await renderLegacyApp();
 
       const navigation = document.querySelector('#navigation');
       expect(navigation).toBeTruthy();
     });
 
-    it('should have main content element with tabindex="-1" for focus', () => {
-      render(
-        <StoreProvider>
-          <App />
-        </StoreProvider>
-      );
+    it('should have main content element with tabindex="-1" for focus', async () => {
+      await renderLegacyApp();
 
       const mainContent = document.querySelector('#main-content');
       // tabindex="-1" allows programmatic focus but keeps element out of tab order
       expect(mainContent.getAttribute('tabindex')).toBe('-1');
     });
 
-    it('should have navigation element with tabindex="-1" for focus', () => {
-      render(
-        <StoreProvider>
-          <App />
-        </StoreProvider>
-      );
+    it('should have navigation element with tabindex="-1" for focus', async () => {
+      await renderLegacyApp();
 
       const navigation = document.querySelector('#navigation');
       expect(navigation.getAttribute('tabindex')).toBe('-1');
@@ -126,12 +92,8 @@ describe('Skip Links Accessibility', () => {
   });
 
   describe('Skip link behavior', () => {
-    it('should navigate to main content when skip link is clicked', () => {
-      render(
-        <StoreProvider>
-          <App />
-        </StoreProvider>
-      );
+    it('should navigate to main content when skip link is clicked', async () => {
+      await renderLegacyApp();
 
       const skipLink = document.querySelector('a[href="#main-content"]');
       const mainContent = document.querySelector('#main-content');
@@ -145,12 +107,8 @@ describe('Skip Links Accessibility', () => {
       expect(mainContent).toBeTruthy();
     });
 
-    it('should navigate to navigation when skip link is clicked', () => {
-      render(
-        <StoreProvider>
-          <App />
-        </StoreProvider>
-      );
+    it('should navigate to navigation when skip link is clicked', async () => {
+      await renderLegacyApp();
 
       const skipLink = document.querySelector('a[href="#navigation"]');
       const navigation = document.querySelector('#navigation');
@@ -161,12 +119,8 @@ describe('Skip Links Accessibility', () => {
   });
 
   describe('Visual hiding CSS', () => {
-    it('should have skip links in DOM for screen readers', () => {
-      const { container } = render(
-        <StoreProvider>
-          <App />
-        </StoreProvider>
-      );
+    it('should have skip links in DOM for screen readers', async () => {
+      const { container } = await renderLegacyApp();
 
       // Skip links should be in DOM even if visually hidden
       const skipLinks = container.querySelectorAll('.skip-link');
@@ -175,12 +129,8 @@ describe('Skip Links Accessibility', () => {
   });
 
   describe('Accessibility attributes', () => {
-    it('should have descriptive text content', () => {
-      render(
-        <StoreProvider>
-          <App />
-        </StoreProvider>
-      );
+    it('should have descriptive text content', async () => {
+      await renderLegacyApp();
 
       const skipToMain = document.querySelector('a[href="#main-content"]');
       const skipToNav = document.querySelector('a[href="#navigation"]');

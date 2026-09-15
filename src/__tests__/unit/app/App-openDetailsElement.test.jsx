@@ -10,21 +10,16 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { App } from '../../../App';
-import { StoreProvider } from '../../../state/StoreContext';
+import { renderLegacyApp } from '../../helpers/render-legacy-app';
 
 describe('App.js - openDetailsElement()', () => {
   describe('Details Element Manipulation', () => {
     it('should open all details elements when called', async () => {
       const user = userEvent.setup();
 
-      render(
-        <StoreProvider>
-          <App />
-        </StoreProvider>
-      );
+      await renderLegacyApp();
 
       // Find all details elements
       const detailsElements = document.querySelectorAll('details');
@@ -53,11 +48,7 @@ describe('App.js - openDetailsElement()', () => {
     it('should set open attribute to true on each details element', async () => {
       const user = userEvent.setup();
 
-      render(
-        <StoreProvider>
-          <App />
-        </StoreProvider>
-      );
+      await renderLegacyApp();
 
       const detailsElements = document.querySelectorAll('details');
 
@@ -80,11 +71,7 @@ describe('App.js - openDetailsElement()', () => {
     it('should handle already-open details elements correctly', async () => {
       const user = userEvent.setup();
 
-      render(
-        <StoreProvider>
-          <App />
-        </StoreProvider>
-      );
+      await renderLegacyApp();
 
       const detailsElements = document.querySelectorAll('details');
 
@@ -108,11 +95,7 @@ describe('App.js - openDetailsElement()', () => {
     it('should handle querySelector finding multiple details elements', async () => {
       const user = userEvent.setup();
 
-      render(
-        <StoreProvider>
-          <App />
-        </StoreProvider>
-      );
+      await renderLegacyApp();
 
       // The form has multiple details elements for different sections
       const detailsElements = document.querySelectorAll('details');
@@ -137,11 +120,7 @@ describe('App.js - openDetailsElement()', () => {
     it('should not throw error if no validation errors exist', async () => {
       const user = userEvent.setup();
 
-      render(
-        <StoreProvider>
-          <App />
-        </StoreProvider>
-      );
+      await renderLegacyApp();
 
       // Just verify the function can be called without errors
       const generateButton = screen.getByRole('button', { name: /generate yml file/i });
@@ -157,11 +136,7 @@ describe('App.js - openDetailsElement()', () => {
     it('should be called before form validation to reveal all fields', async () => {
       const user = userEvent.setup();
 
-      render(
-        <StoreProvider>
-          <App />
-        </StoreProvider>
-      );
+      await renderLegacyApp();
 
       // The purpose of openDetailsElement is to ensure all form sections are visible
       // before validation runs, so users can see validation errors in collapsed sections

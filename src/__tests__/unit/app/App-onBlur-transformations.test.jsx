@@ -11,10 +11,8 @@
  * - String pass-through for text inputs
  */
 
-import { render, fireEvent } from '@testing-library/react';
+import { fireEvent } from '@testing-library/react';
 import { describe, it, expect } from 'vitest';
-import { App } from '../../../App';
-import { StoreProvider } from '../../../state/StoreContext';
 import { getByName, getById } from '../../helpers/test-selectors';
 import {
   commaSeparatedStringToNumber,
@@ -22,6 +20,7 @@ import {
   isInteger,
   isNumeric
 } from '../../../utils';
+import { renderLegacyApp } from '../../helpers/render-legacy-app';
 
 describe('App onBlur Transformations', () => {
   describe('Utility Functions - commaSeparatedStringToNumber', () => {
@@ -171,12 +170,8 @@ describe('App onBlur Transformations', () => {
   });
 
   describe('onBlur - Number Input Transformations', () => {
-    it('should parse float on blur for number inputs', () => {
-      render(
-        <StoreProvider>
-          <App />
-        </StoreProvider>
-      );
+    it('should parse float on blur for number inputs', async () => {
+      await renderLegacyApp();
 
       const weightInput = getById('subject-weight');
 
@@ -190,12 +185,8 @@ describe('App onBlur Transformations', () => {
       expect(weightInput.value).toBe('250.5');
     });
 
-    it('should handle integer values in number inputs', () => {
-      render(
-        <StoreProvider>
-          <App />
-        </StoreProvider>
-      );
+    it('should handle integer values in number inputs', async () => {
+      await renderLegacyApp();
 
       const weightInput = getById('subject-weight');
 
@@ -205,12 +196,8 @@ describe('App onBlur Transformations', () => {
       expect(weightInput.value).toBe('300');
     });
 
-    it('should handle decimal values with leading zero', () => {
-      render(
-        <StoreProvider>
-          <App />
-        </StoreProvider>
-      );
+    it('should handle decimal values with leading zero', async () => {
+      await renderLegacyApp();
 
       const multiplierInput = getByName('times_period_multiplier')[0];
 
@@ -220,12 +207,8 @@ describe('App onBlur Transformations', () => {
       expect(multiplierInput).toHaveValue(0.5);
     });
 
-    it('should handle very small decimal values', () => {
-      render(
-        <StoreProvider>
-          <App />
-        </StoreProvider>
-      );
+    it('should handle very small decimal values', async () => {
+      await renderLegacyApp();
 
       const multiplierInput = getByName('times_period_multiplier')[0];
 
@@ -235,12 +218,8 @@ describe('App onBlur Transformations', () => {
       expect(multiplierInput).toHaveValue(0.001);
     });
 
-    it('should handle zero values', () => {
-      render(
-        <StoreProvider>
-          <App />
-        </StoreProvider>
-      );
+    it('should handle zero values', async () => {
+      await renderLegacyApp();
 
       const weightInput = getById('subject-weight');
 
@@ -250,12 +229,8 @@ describe('App onBlur Transformations', () => {
       expect(weightInput).toHaveValue(0);
     });
 
-    it('should handle negative numbers', () => {
-      render(
-        <StoreProvider>
-          <App />
-        </StoreProvider>
-      );
+    it('should handle negative numbers', async () => {
+      await renderLegacyApp();
 
       const weightInput = getById('subject-weight');
 
@@ -267,12 +242,8 @@ describe('App onBlur Transformations', () => {
   });
 
   describe('onBlur - Text Input Pass-through', () => {
-    it('should not transform text input values', () => {
-      render(
-        <StoreProvider>
-          <App />
-        </StoreProvider>
-      );
+    it('should not transform text input values', async () => {
+      await renderLegacyApp();
 
       const labInput = getByName('lab')[0];
 
@@ -282,12 +253,8 @@ describe('App onBlur Transformations', () => {
       expect(labInput).toHaveValue('My Lab Name');
     });
 
-    it('should preserve whitespace in text inputs', () => {
-      render(
-        <StoreProvider>
-          <App />
-        </StoreProvider>
-      );
+    it('should preserve whitespace in text inputs', async () => {
+      await renderLegacyApp();
 
       const descInput = getByName('experiment_description')[0];
 
@@ -297,12 +264,8 @@ describe('App onBlur Transformations', () => {
       expect(descInput).toHaveValue('  spaced  text  ');
     });
 
-    it('should preserve special characters in text inputs', () => {
-      render(
-        <StoreProvider>
-          <App />
-        </StoreProvider>
-      );
+    it('should preserve special characters in text inputs', async () => {
+      await renderLegacyApp();
 
       const descInput = getByName('session_description')[0];
 
@@ -313,12 +276,8 @@ describe('App onBlur Transformations', () => {
       expect(descInput).toHaveValue(specialText);
     });
 
-    it('should handle empty string in text inputs', () => {
-      render(
-        <StoreProvider>
-          <App />
-        </StoreProvider>
-      );
+    it('should handle empty string in text inputs', async () => {
+      await renderLegacyApp();
 
       const labInput = getByName('lab')[0];
 
@@ -330,12 +289,8 @@ describe('App onBlur Transformations', () => {
   });
 
   describe('onBlur - Edge Cases', () => {
-    it('should handle rapid change and blur events', () => {
-      render(
-        <StoreProvider>
-          <App />
-        </StoreProvider>
-      );
+    it('should handle rapid change and blur events', async () => {
+      await renderLegacyApp();
 
       const weightInput = getById('subject-weight');
 
@@ -349,12 +304,8 @@ describe('App onBlur Transformations', () => {
       expect(weightInput).toHaveValue(300);
     });
 
-    it('should handle blur without change', () => {
-      render(
-        <StoreProvider>
-          <App />
-        </StoreProvider>
-      );
+    it('should handle blur without change', async () => {
+      await renderLegacyApp();
 
       const labInput = getByName('lab')[0];
       const originalValue = labInput.value;
@@ -365,12 +316,8 @@ describe('App onBlur Transformations', () => {
       expect(labInput).toHaveValue(originalValue);
     });
 
-    it('should handle blur on empty number input', () => {
-      render(
-        <StoreProvider>
-          <App />
-        </StoreProvider>
-      );
+    it('should handle blur on empty number input', async () => {
+      await renderLegacyApp();
 
       const weightInput = getById('subject-weight');
 

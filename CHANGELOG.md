@@ -170,6 +170,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **The app loads only the screen you open; other screens download on demand.** Every route is
+  code-split, so a visit fetches the shell plus the one screen being shown instead of the whole
+  application up front (the single 1,331 kB script is now a 427 kB entry plus per-screen chunks).
+  A screen whose code has not been fetched yet shows a brief "Loading…" status, announced to screen
+  readers, and then renders exactly as before.
+
 - **Copy setup from another animal keeps the new subject ID's capitalization and rejects
   converter-incompatible IDs before creating the animal.** "Copy from another animal" used to
   lower-case the ID you typed (so `ReviewCase` became `reviewcase`, which no longer matches the

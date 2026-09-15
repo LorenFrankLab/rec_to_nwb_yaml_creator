@@ -3,12 +3,11 @@
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';
-import { render, waitFor } from '@testing-library/react';
+import { waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import App from '../../../App';
-import { StoreProvider } from '../../../state/StoreContext';
 import { countArrayItems, getDuplicateButton, clickAddButton } from '../../helpers/test-hooks';
 import { getByClass, getById, getByName } from '../../helpers/test-selectors';
+import { renderLegacyApp } from '../../helpers/render-legacy-app';
 
 /**
  * Tests for duplicateElectrodeGroupItem() function
@@ -40,11 +39,7 @@ describe('App.js - duplicateElectrodeGroupItem()', () => {
 
   describe('Basic Duplication', () => {
     it('should duplicate electrode group when duplicate button clicked', async () => {
-      const { container } = render(
-      <StoreProvider>
-        <App />
-      </StoreProvider>
-    );
+      const { container } = await renderLegacyApp();
 
       // Add first electrode group
       await clickAddButton(user, container, "Add electrode_groups");
@@ -63,11 +58,7 @@ describe('App.js - duplicateElectrodeGroupItem()', () => {
     });
 
     it('should insert duplicated electrode group immediately after original', async () => {
-      const { container } = render(
-      <StoreProvider>
-        <App />
-      </StoreProvider>
-    );
+      const { container } = await renderLegacyApp();
 
       // Add 3 electrode groups
       await clickAddButton(user, container, "Add electrode_groups", 3);
@@ -92,11 +83,7 @@ describe('App.js - duplicateElectrodeGroupItem()', () => {
     });
 
     it('should duplicate from correct array key parameter', async () => {
-      const { container } = render(
-      <StoreProvider>
-        <App />
-      </StoreProvider>
-    );
+      const { container } = await renderLegacyApp();
 
       // The function accepts (index, key) parameters
       // In App.js, it's called with key="electrode_groups"
@@ -123,11 +110,7 @@ describe('App.js - duplicateElectrodeGroupItem()', () => {
 
   describe('ID Increment Logic', () => {
     it('should assign new ID as max existing ID + 1', async () => {
-      const { container } = render(
-      <StoreProvider>
-        <App />
-      </StoreProvider>
-    );
+      const { container } = await renderLegacyApp();
 
       // Add first electrode group (will have id: 0)
       await clickAddButton(user, container, "Add electrode_groups");
@@ -151,11 +134,7 @@ describe('App.js - duplicateElectrodeGroupItem()', () => {
     });
 
     it('should calculate max ID from ALL electrode groups', async () => {
-      const { container } = render(
-      <StoreProvider>
-        <App />
-      </StoreProvider>
-    );
+      const { container } = await renderLegacyApp();
 
       // Add 3 electrode groups (ids: 0, 1, 2)
       await clickAddButton(user, container, "Add electrode_groups", 3);
@@ -179,11 +158,7 @@ describe('App.js - duplicateElectrodeGroupItem()', () => {
     });
 
     it('should preserve all other fields except id', async () => {
-      const { container } = render(
-      <StoreProvider>
-        <App />
-      </StoreProvider>
-    );
+      const { container } = await renderLegacyApp();
 
       // Add electrode group and set some fields
       await clickAddButton(user, container, "Add electrode_groups");
@@ -216,11 +191,7 @@ describe('App.js - duplicateElectrodeGroupItem()', () => {
 
   describe('Ntrode Map Duplication', () => {
     it('should duplicate associated ntrode maps with electrode group', async () => {
-      const { container } = render(
-      <StoreProvider>
-        <App />
-      </StoreProvider>
-    );
+      const { container } = await renderLegacyApp();
 
       // Add electrode group
       await clickAddButton(user, container, "Add electrode_groups");
@@ -254,11 +225,7 @@ describe('App.js - duplicateElectrodeGroupItem()', () => {
     });
 
     it('should increment ntrode_id for duplicated ntrode maps', async () => {
-      const { container } = render(
-      <StoreProvider>
-        <App />
-      </StoreProvider>
-    );
+      const { container } = await renderLegacyApp();
 
       // Add electrode group with tetrode device (generates 1 ntrode with ntrode_id: 1)
       await clickAddButton(user, container, "Add electrode_groups");
@@ -290,11 +257,7 @@ describe('App.js - duplicateElectrodeGroupItem()', () => {
     });
 
     it('should update electrode_group_id on duplicated ntrode maps', async () => {
-      const { container } = render(
-      <StoreProvider>
-        <App />
-      </StoreProvider>
-    );
+      const { container } = await renderLegacyApp();
 
       // Add electrode group with device
       await clickAddButton(user, container, "Add electrode_groups");
@@ -329,11 +292,7 @@ describe('App.js - duplicateElectrodeGroupItem()', () => {
     });
 
     it('should duplicate multiple ntrode maps for multi-shank devices', async () => {
-      const { container } = render(
-      <StoreProvider>
-        <App />
-      </StoreProvider>
-    );
+      const { container } = await renderLegacyApp();
 
       // Add electrode group with 2-shank device
       await clickAddButton(user, container, "Add electrode_groups");
@@ -363,11 +322,7 @@ describe('App.js - duplicateElectrodeGroupItem()', () => {
     });
 
     it('should preserve map objects in duplicated ntrode maps', async () => {
-      const { container } = render(
-      <StoreProvider>
-        <App />
-      </StoreProvider>
-    );
+      const { container } = await renderLegacyApp();
 
       // Add electrode group with device
       await clickAddButton(user, container, "Add electrode_groups");
@@ -405,11 +360,7 @@ describe('App.js - duplicateElectrodeGroupItem()', () => {
 
   describe('State Management', () => {
     it('should use structuredClone for immutability', async () => {
-      const { container } = render(
-      <StoreProvider>
-        <App />
-      </StoreProvider>
-    );
+      const { container } = await renderLegacyApp();
 
       // The function clones formData at the start
       // Line 708: const form = structuredClone(formData);
@@ -435,11 +386,7 @@ describe('App.js - duplicateElectrodeGroupItem()', () => {
     });
 
     it('should update formData state after duplication', async () => {
-      const { container } = render(
-      <StoreProvider>
-        <App />
-      </StoreProvider>
-    );
+      const { container } = await renderLegacyApp();
 
       // The function calls setFormData(form) at the end
       // Line 755: setFormData(form);
@@ -463,11 +410,7 @@ describe('App.js - duplicateElectrodeGroupItem()', () => {
 
   describe('Integration', () => {
     it('should preserve other electrode groups unaffected', async () => {
-      const { container } = render(
-      <StoreProvider>
-        <App />
-      </StoreProvider>
-    );
+      const { container } = await renderLegacyApp();
 
       // Add 3 electrode groups
       await clickAddButton(user, container, "Add electrode_groups", 3);
@@ -510,11 +453,7 @@ describe('App.js - duplicateElectrodeGroupItem()', () => {
     });
 
     it('should handle complex scenario: multiple electrode groups with different devices', async () => {
-      const { container } = render(
-      <StoreProvider>
-        <App />
-      </StoreProvider>
-    );
+      const { container } = await renderLegacyApp();
 
       // Add 2 electrode groups with different devices
       await clickAddButton(user, container, "Add electrode_groups", 2);

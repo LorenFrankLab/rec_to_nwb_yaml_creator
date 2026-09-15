@@ -1,0 +1,11 @@
+/**
+ * RouteLoading — colocated styles for the route-chunk Suspense fallback (tokens only).
+ * Sized so the shell does not visibly collapse while a route chunk is in flight.
+ */
+
+.routeLoading {
+  padding: var(--spacing-xl) var(--spacing-md);
+  color: var(--color-grey-700);
+  font-size: var(--font-size-base);
+  text-align: center;
+}

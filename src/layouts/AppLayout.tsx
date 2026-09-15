@@ -7,7 +7,7 @@
  * @module layouts/AppLayout
  */
 
-import { useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import type { MouseEvent as ReactMouseEvent } from 'react';
 import { useHashRouter } from '../hooks/useHashRouter';
 import type { RouteInfo } from '../hooks/useHashRouter';
@@ -22,17 +22,43 @@ import AnimalDeleteDialog from '../components/AnimalDeleteDialog';
 import AnimalProfileDialog from '../components/AnimalProfileDialog';
 import ReadOnlyTabBanner from '../components/ReadOnlyTabBanner';
 import { getAnimalDayIds } from '../state/workspaceSelectors';
-import { Home } from '../pages/Home';
-import { AnimalWorkspace } from '../pages/AnimalWorkspace';
-import ImportRepair from '../pages/ImportRepair';
-import CopyFromAnimal from '../pages/CopyFromAnimal';
-import { RecoveryReview } from '../pages/RecoveryReview';
-import { DayEditor } from '../pages/DayEditor';
-import { ValidationSummary } from '../pages/ValidationSummary';
-import { AnimalView } from '../pages/AnimalView';
-import { LegacyFormView } from '../pages/LegacyFormView';
+import { RouteLoading } from './RouteLoading';
 import logo from '../logo.png';
 import styles from './AppLayout.module.css';
+
+// Route components are CODE-SPLIT: each page is its own chunk, fetched the first time its route is
+// opened, so a visitor downloads only the screen they are on (the whole app used to ship as one
+// ~1.3 MB script). Everything else in this file — the banner, primary nav, dialogs, footer and skip
+// links — stays a static import so the shell paints while a route chunk is still in flight.
+//
+// The `.then(m => ({ default: m.X }))` form deliberately resolves each route to the page's NAMED
+// export — the binding the eager imports used — so a route resolves to the same component in the app
+// and under a `vi.mock` factory (those factories mock the named export). ImportRepair and
+// CopyFromAnimal export ONLY a default, so they import plainly.
+const Home = lazy(() => import('../pages/Home').then((m) => ({ default: m.Home })));
+const AnimalWorkspace = lazy(() =>
+  import('../pages/AnimalWorkspace').then((m) => ({ default: m.AnimalWorkspace }))
+);
+const ImportRepair = lazy(() => import('../pages/ImportRepair'));
+const CopyFromAnimal = lazy(() => import('../pages/CopyFromAnimal'));
+const RecoveryReview = lazy(() =>
+  import('../pages/RecoveryReview').then((m) => ({ default: m.RecoveryReview }))
+);
+const DayEditor = lazy(() => import('../pages/DayEditor').then((m) => ({ default: m.DayEditor })));
+const ValidationSummary = lazy(() =>
+  import('../pages/ValidationSummary').then((m) => ({ default: m.ValidationSummary }))
+);
+const AnimalView = lazy(() => import('../pages/AnimalView').then((m) => ({ default: m.AnimalView })));
+const LegacyFormView = lazy(() =>
+  import('../pages/LegacyFormView').then((m) => ({ default: m.LegacyFormView }))
+);
+
+/**
+ * How long a route change keeps looking for the new page's `#main-content` before giving up.
+ * Generous enough for a route chunk on a slow connection, bounded so a failed load cannot leave a
+ * frame loop running.
+ */
+const ROUTE_FOCUS_DEADLINE_MS = 10000;
 
 /**
  * Get view name for screen reader announcements.
@@ -167,6 +193,7 @@ export function AppLayout() {
   // Focus management on route changes
   useEffect(() => {
     const prev = previousRoute.current;
+    previousRoute.current = currentRoute;
     // Fire on a VIEW change, AND on a same-view change to a different routed DAY. The day route
     // remounts a keyed editor (see renderView) but keeps view === 'day', so a plain view check would
     // miss #/day/A → #/day/B — leaving keyboard/SR focus + the SR announcement stranded on the prior
@@ -178,20 +205,28 @@ export function AppLayout() {
       currentRoute.view === 'day' &&
       prev.view === 'day' &&
       prev.params.id !== currentRoute.params.id;
-    if (viewChanged || dayChanged) {
-      requestAnimationFrame(() => {
-        // Move focus to main content
-        const main = document.getElementById('main-content');
-        if (main) {
-          main.focus();
+    if (!(viewChanged || dayChanged)) return undefined;
 
-          // Announce to screen readers
-          announceRouteChange(currentRoute);
-        }
-      });
-    }
+    // Announce FIRST and unconditionally: the live region belongs to the eager shell, so the
+    // announcement must not be gated on the routed page (a lazily-loaded chunk) having arrived.
+    announceRouteChange(currentRoute);
 
-    previousRoute.current = currentRoute;
+    // Then move focus to the new page's main landmark. On a route's FIRST visit that element does
+    // not exist yet — its chunk is still downloading and the Suspense fallback is on screen — so
+    // look again on later frames instead of silently skipping the focus move. The deadline keeps a
+    // route that never mounts (or a chunk that fails to load) from retrying forever.
+    let frameId = 0;
+    const deadline = Date.now() + ROUTE_FOCUS_DEADLINE_MS;
+    const focusMain = () => {
+      const main = document.getElementById('main-content');
+      if (main) {
+        main.focus();
+        return;
+      }
+      if (Date.now() < deadline) frameId = requestAnimationFrame(focusMain);
+    };
+    frameId = requestAnimationFrame(focusMain);
+    return () => cancelAnimationFrame(frameId);
   }, [currentRoute]);
 
   /**
@@ -410,13 +445,19 @@ export function AppLayout() {
           writer lease): every editing control inside is inert, so a reader cannot type observations
           that the writer's next save would replace. Links (navigation) are unaffected; the ownership
           banner above (take over, download a backup) sits outside the fieldset. */}
-      {isLegacyRoute ? (
-        renderView()
-      ) : (
-        <fieldset className={styles.editScope} disabled={readOnly}>
-          {renderView()}
-        </fieldset>
-      )}
+      {/* ONE Suspense boundary for the whole route outlet: every route component is lazy, so this is
+          what shows while the opened screen's chunk downloads. It sits OUTSIDE the read-only
+          fieldset so the boundary (and its fallback) is shared by both branches and does not remount
+          when the legacy/workspace branch changes. */}
+      <Suspense fallback={<RouteLoading />}>
+        {isLegacyRoute ? (
+          renderView()
+        ) : (
+          <fieldset className={styles.editScope} disabled={readOnly}>
+            {renderView()}
+          </fieldset>
+        )}
+      </Suspense>
 
       {/* Shared animal-delete dialog for the top object-selector (Task 4.5). Hosted once in chrome
           so a switcher row's Delete uses the SAME type-to-confirm + cascade copy as the picker/header
