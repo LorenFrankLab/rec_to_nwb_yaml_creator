@@ -48,7 +48,7 @@ describe('DayTab', () => {
         <DayTab animal={corruptAnimal} day={corruptDay} mergedDay={{}} onFieldUpdate={vi.fn()} />
       )
     ).not.toThrow();
-    expect(screen.getByRole('heading', { name: /daily setup/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /daily log/i })).toBeInTheDocument();
     expect(errorSpy).not.toHaveBeenCalled();
     errorSpy.mockRestore();
   });
@@ -60,7 +60,7 @@ describe('DayTab', () => {
         <DayTab animal={mockAnimal} day={mockDay} mergedDay={null} onFieldUpdate={vi.fn()} />
       )
     ).not.toThrow();
-    expect(screen.getByRole('heading', { name: /daily setup/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /daily log/i })).toBeInTheDocument();
     expect(errorSpy).not.toHaveBeenCalled();
     errorSpy.mockRestore();
   });
@@ -84,7 +84,7 @@ describe('DayTab', () => {
     );
   });
 
-  it('displays editable daily setup fields before collapsed read-only context', () => {
+  it('puts weight and team first, the epoch editor next, and the rarely-changed fields + read-only context collapsed below', () => {
     render(
       <DayTab
         animal={mockAnimal}
@@ -94,31 +94,31 @@ describe('DayTab', () => {
       />
     );
 
+    expect(screen.getByTestId('day-provenance')).toBeInTheDocument();
+    expect(screen.getByLabelText(/Weight measured today/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Experimenters present/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/Data folder/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/Recording-day weight/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/Session Description/i)).toBeRequired();
     expect(screen.getByLabelText(/Experiment Description/i)).toBeRequired();
     expect(screen.getByRole('heading', { name: /file location/i })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: /required descriptions/i })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: /session measurement/i })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: /search terms/i })).toBeInTheDocument();
-    expect(screen.getByText(/fields specific to this recording day/i)).toBeInTheDocument();
     expect(screen.queryByText(/start here/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/export required/i)).not.toBeInTheDocument();
 
-    const dataFolder = screen.getByLabelText(/Data folder/i);
-    const weight = screen.getByLabelText(/Recording-day weight/i);
+    const weight = screen.getByLabelText(/Weight measured today/i);
+    const team = screen.getByLabelText(/Experimenters present/i);
+    const epochs = screen.getByRole('heading', { name: /^epochs$/i });
+    const more = screen.getByText(/descriptions, data folder & search terms/i);
     const sessionDescription = screen.getByLabelText(/Session Description/i);
-    const experimentDescription = screen.getByLabelText(/Experiment Description/i);
-    const keywords = screen.getByRole('textbox', { name: /keywords/i });
     const context = screen.getByText(/session identity and animal context/i);
     const sessionId = screen.getByDisplayValue('remy_20230622');
 
-    expect(dataFolder.compareDocumentPosition(sessionDescription) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(sessionDescription.compareDocumentPosition(experimentDescription) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(experimentDescription.compareDocumentPosition(weight) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(weight.compareDocumentPosition(keywords) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(keywords.compareDocumentPosition(context) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(weight.compareDocumentPosition(team) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(team.compareDocumentPosition(epochs) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(epochs.compareDocumentPosition(more) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(more.compareDocumentPosition(sessionDescription) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(sessionDescription.compareDocumentPosition(context) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(more.closest('details')).not.toHaveAttribute('open');
     expect(context.closest('details')).not.toHaveAttribute('open');
     expect(sessionId).not.toBeVisible();
   });
@@ -167,29 +167,58 @@ describe('DayTab', () => {
       />
     );
 
-    const weight = screen.getByLabelText(/recording-day weight/i);
+    const weight = screen.getByLabelText(/weight measured today/i);
     await user.type(weight, '450');
     await user.tab();
 
     expect(onFieldUpdate).toHaveBeenCalledWith('session.weight', 450);
   });
 
-  it('identifies the animal baseline as a fallback when no day weight is set', () => {
+  it('offers the previous measurement as a DATED suggestion that must be accepted deliberately (never pre-filled)', async () => {
+    const user = userEvent.setup();
+    const onFieldUpdate = vi.fn();
     const animalWithWeight = { ...mockAnimal, subject: { ...mockAnimal.subject, weight: 450 } };
-    const dayNoWeight = { ...mockDay, session: { ...mockDay.session, weight: undefined } };
+    const dayNoWeight = { ...mockDay, id: 'remy-2023-06-22', session: { ...mockDay.session, weight: undefined } };
+    const earlier = { id: 'remy-2023-06-10', date: '2023-06-10', session: { weight: 410 } };
     render(
       <DayTab
         animal={animalWithWeight}
         day={dayNoWeight}
         mergedDay={mockMergedDay}
-        onFieldUpdate={vi.fn()}
+        animalDays={[earlier, dayNoWeight]}
+        onFieldUpdate={onFieldUpdate}
       />
     );
 
-    expect(screen.getByLabelText(/recording-day weight/i)).toHaveValue(null);
-    expect(
-      screen.getByText(/animal baseline \(450 g\) will be exported as a fallback/i)
-    ).toBeInTheDocument();
+    const weight = screen.getByLabelText(/weight measured today/i);
+    expect(weight).toHaveValue(null); // never pre-filled
+    expect(screen.getByText(/previous measurement: 410 g on 2023-06-10/i)).toBeInTheDocument();
+    expect(screen.queryByText(/will be exported as a fallback/i)).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /use 410 grams/i }));
+    expect(onFieldUpdate).toHaveBeenCalledWith('session.weight', 410);
+  });
+
+  it('falls back to the setup baseline as the suggestion when no earlier day has a weight', () => {
+    const animalWithWeight = { ...mockAnimal, subject: { ...mockAnimal.subject, weight: 450 } };
+    const dayNoWeight = { ...mockDay, session: { ...mockDay.session, weight: undefined } };
+    render(<DayTab animal={animalWithWeight} day={dayNoWeight} mergedDay={mockMergedDay} onFieldUpdate={vi.fn()} />);
+    expect(screen.getByText(/baseline at setup: 450 g/i)).toBeInTheDocument();
+  });
+
+  it('edits the DAY\u2019s team (one name per line) and writes day.experimenters', async () => {
+    const user = userEvent.setup();
+    const onFieldUpdate = vi.fn();
+    const dayWithTeam = { ...mockDay, experimenters: { experimenter_name: ['Doe, Jane'], lab: 'L', institution: 'I' } };
+    render(<DayTab animal={mockAnimal} day={dayWithTeam} mergedDay={mockMergedDay} onFieldUpdate={onFieldUpdate} />);
+    const box = screen.getByLabelText(/experimenters present/i);
+    expect(box).toHaveValue('Doe, Jane');
+    await user.type(box, '\nRoe, Richard');
+    await user.tab();
+    expect(onFieldUpdate).toHaveBeenLastCalledWith('experimenters', {
+      experimenter_name: ['Doe, Jane', 'Roe, Richard'],
+      lab: 'L',
+      institution: 'I',
+    });
   });
 
   // The merge must never read `dataFolder`, so the exported YAML is byte-identical with and without it.
@@ -252,9 +281,6 @@ describe('DayTab', () => {
       { fieldPath: 'subject.genotype', label: 'Genotype', value: 'VM_GENO', source: 'inherited', inheritedFrom: 'animal', readOnly: true },
       { fieldPath: 'subject.date_of_birth', label: 'Date of Birth', value: 'VM_DOB', source: 'inherited', inheritedFrom: 'animal', readOnly: true },
       { fieldPath: 'subject.description', label: 'Subject Description', value: 'VM_DESC', source: 'inherited', inheritedFrom: 'animal', readOnly: true },
-      { fieldPath: 'experimenters.experimenter_name', label: 'Names', value: 'VM Names', source: 'inherited', inheritedFrom: 'animal', readOnly: true },
-      { fieldPath: 'experimenters.lab', label: 'Lab', value: 'VM Lab', source: 'inherited', inheritedFrom: 'animal', readOnly: true },
-      { fieldPath: 'experimenters.institution', label: 'Institution', value: 'VM Inst', source: 'inherited', inheritedFrom: 'animal', readOnly: true },
     ];
     render(
       <DayTab
@@ -269,7 +295,7 @@ describe('DayTab', () => {
     expect(screen.getByDisplayValue('remy_VM')).toBeInTheDocument();
     expect(screen.getByText('VM session id help')).toBeInTheDocument();
     expect(screen.getByText('VM experiment help')).toBeInTheDocument();
-    for (const v of ['VM_SUBJECT', 'VM_SPECIES', 'VM_SEX', 'VM_GENO', 'VM_DOB', 'VM_DESC', 'VM Names', 'VM Lab', 'VM Inst']) {
+    for (const v of ['VM_SUBJECT', 'VM_SPECIES', 'VM_SEX', 'VM_GENO', 'VM_DOB', 'VM_DESC']) {
       expect(screen.getByDisplayValue(v)).toBeInTheDocument();
     }
   });

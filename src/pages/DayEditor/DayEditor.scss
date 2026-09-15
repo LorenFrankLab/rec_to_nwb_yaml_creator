@@ -1638,3 +1638,65 @@
   min-width: 16rem;
   max-width: 100%;
 }
+
+/* Daily log (increment 3): weight + team side by side, the epoch editor below, the rarely-changed
+   descriptions collapsed. */
+.daily-log-primary-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+  gap: 1rem;
+}
+
+.daily-log-weight-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.daily-log-weight-row input {
+  max-width: 10rem;
+}
+
+.daily-log-epochs {
+  margin-top: 0.5rem;
+}
+
+.daily-log-more {
+  padding: 0.5rem 0;
+}
+
+@media (max-width: 720px) {
+  .daily-log-primary-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Compact section selector (narrow screens): replaces the vertical rail with one native select.
+   `min-width: 0` on the grid child + the select: a long option label must not widen the page. */
+.day-editor-body .section-nav-compact {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.section-nav-compact-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-grey-700);
+}
+
+.section-nav-compact-select {
+  flex: 1 1 0;
+  min-width: 0;
+  max-width: 100%;
+  min-height: 2.5rem;
+  font: inherit;
+  padding: 0 0.5rem;
+  border: 1px solid var(--color-grey-300);
+  border-radius: 4px;
+  background-color: var(--color-white);
+}

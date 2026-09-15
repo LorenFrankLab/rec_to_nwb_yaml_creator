@@ -104,17 +104,14 @@ describe('RecordingDaysTab — day row contract (decision 12)', () => {
     expect(container.querySelector('.status-chip')).not.toBeInTheDocument();
   });
 
-  it('maps a persisted-validated (not exported) day to "Validated" (the saved fact, not live "Ready to export")', () => {
+  it('maps a saved-validated (not exported) day to "Ready to export" (a saved validation is not a separate step)', () => {
     // Scope to the row: the shared legend also lists every status word, so a global text query
     // would match the legend too.
     renderRealistic((day) => {
       day.state = { ...day.state, draft: false, validated: true, exported: false };
     });
     const row = rowFor();
-    expect(within(row).getByText('Validated')).toBeInTheDocument();
-    // A persisted-validated day shows the SAVED fact ("Validated"), not the live-readiness word
-    // ("Ready to export") — both are live-valid, but the row distinguishes saved from unsaved.
-    expect(within(row).queryByText('Ready to export')).not.toBeInTheDocument();
+    expect(within(row).getByText('Ready to export')).toBeInTheDocument();
   });
 
   it('renders "Draft — incomplete" for an incomplete (not export-ready) day', () => {
@@ -144,19 +141,19 @@ describe('RecordingDaysTab — day row contract (decision 12)', () => {
     expect(within(row).queryByText('Ready to export')).not.toBeInTheDocument();
   });
 
-  it('shows "Needs fixing — {reason}" for a live error, overriding a stale exported flag', () => {
+  it('shows "Needs attention — {reason}" for a live error, overriding a stale exported flag', () => {
     renderRealistic((day) => {
       day.state = { draft: false, validated: true, exported: true };
       day.tasks = 'not-an-array'; // corrupt shape → a live blocking issue
     });
     const row = rowFor();
-    expect(within(row).getByText(/^Needs fixing — /)).toBeInTheDocument();
+    expect(within(row).getByText(/^Needs attention — /)).toBeInTheDocument();
     // The stale "Exported" must NOT be shown on the row (the legend lists it as a reference word,
     // so scope this to the row).
     expect(within(row).queryByText(/exported/i)).not.toBeInTheDocument();
   });
 
-  it('humanizes a raw schema key in the "Needs fixing" reason (display only)', () => {
+  it('humanizes a raw schema key in the "Needs attention" reason (display only)', () => {
     // S1 audit finding: the day-row status must not leak a raw snake_case schema key.
     // Empty a required string field so its blocking message leads with the key, and assert
     // the row sentence-cases it ("Experiment description …" not "experiment_description …").
@@ -164,7 +161,7 @@ describe('RecordingDaysTab — day row contract (decision 12)', () => {
       day.state = { draft: false, validated: false, exported: false };
       day.session.experiment_description = '   '; // whitespace-only → empty-pattern violation
     });
-    const status = screen.getByText(/^Needs fixing — Experiment description/);
+    const status = screen.getByText(/^Needs attention — Experiment description/);
     expect(status).toBeInTheDocument();
     expect(status).not.toHaveTextContent('experiment_description');
   });

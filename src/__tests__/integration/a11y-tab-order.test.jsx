@@ -34,8 +34,7 @@ describe('tab order through the DayEditor frame', () => {
       (el.getAttribute('aria-label') || el.textContent).replace(/\s+[—-].+$/, '').trim()
     );
     expect(labels).toEqual([
-      'Daily Setup',
-      'Tasks & Files',
+      'Daily log',
       'Recording Setup',
       'Failed Channels',
       'DIO Wiring',

@@ -1,0 +1,28 @@
+/* "Start from a different day" picker. Tokens only. */
+
+.lede {
+  margin: 0 0 var(--spacing-md);
+  font-size: var(--font-size-sm);
+  color: var(--color-grey-700);
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+  max-height: 40vh;
+  overflow-y: auto;
+}
+
+.option {
+  display: flex;
+  gap: var(--spacing-sm);
+  align-items: baseline;
+  padding: var(--spacing-xs) 0;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--spacing-sm);
+}

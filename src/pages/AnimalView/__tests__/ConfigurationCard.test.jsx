@@ -20,7 +20,7 @@ const CARD = {
 describe('ConfigurationCard', () => {
   it('renders the version line and per-probe rows', () => {
     render(<ConfigurationCard card={CARD} />);
-    expect(screen.getByText(/v1 \(current\) · since 2023-06-22 · 10 days/)).toBeInTheDocument();
+    expect(screen.getByText(/v1 \(current\) · effective 2023-06-22 · 10 days/)).toBeInTheDocument();
     expect(screen.getByText('Probe 0 · CA1')).toBeInTheDocument();
     expect(screen.getByText('tetrode_12.5 · (3, 2.5, 2) mm')).toBeInTheDocument();
     // A probe with no coords shows just the device type (no trailing separator).

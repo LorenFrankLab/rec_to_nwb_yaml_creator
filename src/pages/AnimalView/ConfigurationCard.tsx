@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import type { AnimalConfigCardViewModel } from '../../viewModels/animalViewModel';
 import Button from '../../components/ui/Button';
 import styles from './ConfigurationCard.module.css';
@@ -8,6 +9,8 @@ interface ConfigurationCardProps {
   card: AnimalConfigCardViewModel;
   /** Open the re-implant (new-configuration) flow. When omitted, the action button is hidden. */
   onNewConfiguration?: () => void;
+  /** Record the current version's effective date (when omitted, the control is hidden). */
+  onSetEffectiveDate?: (version: number, date: string) => void;
 }
 
 /**
@@ -15,8 +18,14 @@ interface ConfigurationCardProps {
  * version + since-date + day count, the per-probe list (device type + coordinates), and the
  * re-implant action. Renders the card data it is handed.
  */
-export default function ConfigurationCard({ card, onNewConfiguration }: ConfigurationCardProps) {
-  const since = card.sinceDate ? ` · since ${card.sinceDate}` : '';
+export default function ConfigurationCard({ card, onNewConfiguration, onSetEffectiveDate }: ConfigurationCardProps) {
+  const [effectiveDate, setEffectiveDate] = useState('');
+  const dateUnknown = card.sinceDate != null && card.effectiveDateKnown === false;
+  const since = card.sinceDate
+    ? dateUnknown
+      ? ` · entered ${card.sinceDate} (effective date not recorded)`
+      : ` · effective ${card.sinceDate}`
+    : '';
   const dayNoun = pluralize(card.dayCount, 'day');
   const versionLabel =
     card.version != null
@@ -36,6 +45,31 @@ export default function ConfigurationCard({ card, onNewConfiguration }: Configur
           </Button>
         )}
       </div>
+      {dateUnknown && card.version != null && onSetEffectiveDate && (
+        <form
+          className={styles.effectiveForm}
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (/^\d{4}-\d{2}-\d{2}$/.test(effectiveDate)) onSetEffectiveDate(card.version as number, effectiveDate);
+          }}
+        >
+          <label htmlFor="config-effective-date" className={styles.effectiveLabel}>
+            When did this setup (v{card.version}) become effective? Recording days before the entry
+            date otherwise need per-day confirmation.
+          </label>
+          <span className={styles.effectiveRow}>
+            <input
+              id="config-effective-date"
+              type="date"
+              value={effectiveDate}
+              onChange={(e) => setEffectiveDate(e.target.value)}
+            />
+            <Button variant="secondary" size="small" type="submit" disabled={!/^\d{4}-\d{2}-\d{2}$/.test(effectiveDate)}>
+              Set effective date
+            </Button>
+          </span>
+        </form>
+      )}
       {card.probes.length > 0 ? (
         <ul className={styles.probes}>
           {card.probes.map((probe) => (

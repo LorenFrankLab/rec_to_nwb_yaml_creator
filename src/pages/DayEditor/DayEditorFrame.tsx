@@ -31,7 +31,6 @@ import type { DayEditorBundle } from './DayEditorContext';
 import SaveIndicator from './SaveIndicator';
 import DayTab from './DayTab';
 import { RecordingSetupSection, FailedChannelsSection } from './FailedChannelsTab';
-import TasksFilesSection from './TasksFilesSection';
 import DioTab from './DioTab';
 import ExportPreview from './ExportPreview';
 import DayEditorSectionNav from './DayEditorSectionNav';
@@ -50,8 +49,12 @@ interface FocusRequest {
 /** The frame's main-content modes: one of the six IA sections. */
 type FrameMode = DayTabKey;
 
-/** The six sections' fixed order (drives the Alt+←/→ cycle). */
-const TAB_ORDER: DayTabKey[] = ['daily', 'tasks', 'recording', 'channels', 'dio', 'export'];
+/**
+ * The sections' fixed order (drives the Alt+←/→ cycle). The epoch editor lives INSIDE the daily
+ * log (the first screen), so `tasks` is no longer a rail stop — a repair that targets it lands on
+ * `daily`, where the same editor renders.
+ */
+const TAB_ORDER: DayTabKey[] = ['daily', 'recording', 'channels', 'dio', 'export'];
 
 /**
  * An underlying step key → the tab that folds it, for routing a repair (which targets the old step
@@ -61,7 +64,7 @@ const TAB_ORDER: DayTabKey[] = ['daily', 'tasks', 'recording', 'channels', 'dio'
 const TAB_FOR_STEP: Record<string, DayTabKey | null> = {
   overview: 'daily',
   devices: 'recording',
-  epochs: 'tasks',
+  epochs: 'daily',
   behavioral: 'dio',
   validation: 'export',
   export: 'export',
@@ -77,7 +80,7 @@ function sectionForRepair(step: string | null | undefined, focusPath?: string): 
     path.includes('task') ||
     path.includes('epoch')
   ) {
-    return 'tasks';
+    return 'daily';
   }
   if (path.includes('behavioral_events') || path.includes('dio_output_name')) return 'dio';
   if (
@@ -252,6 +255,13 @@ export default function DayEditorFrame() {
         (el) => el.getAttribute('data-field-path') === focusRequest.fieldPath
       );
       if (target) {
+        // A field inside a collapsed disclosure (the daily log's "Descriptions…" group) must be
+        // revealed before it can take focus.
+        let ancestor: HTMLElement | null = target.parentElement;
+        while (ancestor) {
+          if (ancestor instanceof HTMLDetailsElement) ancestor.open = true;
+          ancestor = ancestor.parentElement;
+        }
         target.focus();
         target.classList.add('repair-target-highlight');
         highlighted = target;
@@ -425,7 +435,7 @@ export default function DayEditorFrame() {
 
   const chips = vm.chips;
   const dioCopyableSources: CopyableDioSource[] = copyableDioSources;
-  const showReadinessBar = mode !== 'daily' && mode !== 'export';
+  const showReadinessBar = mode !== 'export';
 
   return (
     <div className="day-editor-stepper">
@@ -481,7 +491,7 @@ export default function DayEditorFrame() {
           tabIndex={-1}
         >
           <DayEditorProvider value={dayEditorContextValue}>
-            {mode === 'daily' && (
+            {(mode === 'daily' || mode === 'tasks') && (
               <DayTab
                 {...dayEditorContextValue}
                 // DayTab's onRepair is typed `(issue: unknown)`; it forwards the RawCorruptionBanner's
@@ -489,10 +499,8 @@ export default function DayEditorFrame() {
                 onRepair={(issue) => handleRepair(issue as RepairableIssue)}
                 focusRequest={focusRequest}
                 overviewFields={vm.overview.fields}
+                onGoToRecordingSetup={() => goToTab('recording')}
               />
-            )}
-            {mode === 'tasks' && (
-              <TasksFilesSection {...dayEditorContextValue} focusRequest={focusRequest} />
             )}
             {mode === 'recording' && (
               <RecordingSetupSection

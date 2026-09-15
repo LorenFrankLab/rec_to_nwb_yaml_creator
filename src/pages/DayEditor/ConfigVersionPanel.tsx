@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import ReconfigWizard from './ReconfigWizard';
 import { getConfigHistory } from '../../state/workspaceSelectors';
+import { configurationChoiceStatus } from '../../domain/configurationSelection';
 import type { Animal, Day } from '../../state/workspaceTypes';
 import { pluralize } from '../../utils/pluralize';
 
@@ -51,6 +52,9 @@ export default function ConfigVersionPanel({ reconfig, day, animal, ownerKey, on
   // Selected version for the unpinned-day repair control (a day with no pin in a multi-version
   // animal). Empty string = nothing chosen yet; pinning writes day.configurationVersion.
   const [pinVersion, setPinVersion] = useState('');
+  // Dated-facts check: does the pinned version's effective date cover this recording date?
+  const choice = configurationChoiceStatus(animal, day);
+  const [rePinVersion, setRePinVersion] = useState('');
 
   return (
     <>
@@ -75,6 +79,64 @@ export default function ConfigVersionPanel({ reconfig, day, animal, ownerKey, on
           <span className="config-version-applied">
             Applied to {reconfig.appliedCount} {pluralize(reconfig.appliedCount, 'day')}
           </span>
+          {choice.status === 'unconfirmed' && (
+            <div className="config-version-warning" role="alert" data-testid="config-choice-unconfirmed">
+              <span className="config-version-warning-text">
+                {choice.reason === 'unknown-period'
+                  ? `Probe setup v${choice.version} was entered on ${choice.effectiveDate ?? 'an unknown date'}; whether it already applied on ${day.date} is not recorded.`
+                  : `Probe setup v${choice.version} became effective ${choice.effectiveDate ?? 'later'} — after this recording day (${day.date}).`}{' '}
+                Confirm that this is the setup the day was recorded with, or pin the version that was.
+                To make future backfills automatic, set the version&apos;s effective date on the animal&apos;s
+                Electrode Groups page.
+              </span>
+              <div className="config-version-pin">
+                <button
+                  type="button"
+                  className="config-version-pin-button"
+                  data-field-path="configurationVersion"
+                  onClick={() =>
+                    onFieldUpdate('provenance', {
+                      ...(day.provenance ?? {}),
+                      configuration: { source: 'explicit', confirmed: true },
+                    })
+                  }
+                >
+                  Confirm v{choice.version} applies to this day
+                </button>
+                <label htmlFor="repin-config-version">or pin:</label>
+                <select
+                  id="repin-config-version"
+                  value={rePinVersion}
+                  onChange={(e) => setRePinVersion(e.target.value)}
+                >
+                  <option value="">Choose a version…</option>
+                  {getConfigHistory(animal)
+                    .filter((snap) => snap.version !== choice.version)
+                    .map((snap) => (
+                      <option key={snap.version} value={snap.version}>
+                        v{snap.version}
+                        {snap.description ? ` — ${snap.description}` : ''}
+                        {snap.date ? ` (effective ${snap.date})` : ''}
+                      </option>
+                    ))}
+                </select>
+                <button
+                  type="button"
+                  className="config-version-pin-button"
+                  disabled={rePinVersion === ''}
+                  onClick={() => {
+                    onFieldUpdate('configurationVersion', Number(rePinVersion));
+                    onFieldUpdate('provenance', {
+                      ...(day.provenance ?? {}),
+                      configuration: { source: 'explicit', confirmed: true },
+                    });
+                  }}
+                >
+                  Pin version
+                </button>
+              </div>
+            </div>
+          )}
           {day.configurationVersion == null && getConfigHistory(animal).length > 1 && (
             <div className="config-version-warning" role="alert">
               <span className="config-version-warning-text">

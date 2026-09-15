@@ -1,0 +1,40 @@
+/* The compact "Started from … · Probe setup … · Rig …" statement. Tokens only. */
+
+.line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--spacing-xs) var(--spacing-sm);
+  margin: var(--spacing-xs) 0 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-grey-800);
+}
+
+.sep {
+  color: var(--color-grey-400);
+}
+
+.muted {
+  color: var(--color-grey-600);
+}
+
+.warn {
+  color: var(--color-warning);
+  font-weight: 600;
+}
+
+.linkButton {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--color-primary);
+  text-decoration: underline;
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--font-size-sm);
+}
+
+.linkButton:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}

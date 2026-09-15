@@ -1,5 +1,6 @@
 import type { StepStatus } from '../../domain/stepStatus';
 import type { StepViewModel } from '../../viewModels/types';
+import { useMediaQuery, COMPACT_NAV_QUERY } from '../../hooks/useMediaQuery';
 
 interface SectionNavGroup {
   /** Group heading (Session / Recording / Finish). */
@@ -30,6 +31,39 @@ interface DayEditorSectionNavProps {
  * color alone.
  */
 export default function DayEditorSectionNav({ groups, onNavigate }: DayEditorSectionNavProps) {
+  const compact = useMediaQuery(COMPACT_NAV_QUERY);
+
+  // Narrow screens: the long rail would push the day's content below the fold, so it collapses
+  // into one labelled select (same items, same status words) — a native control that is keyboard-
+  // and screen-reader-friendly without any custom widget.
+  if (compact) {
+    const active = groups.flatMap((g) => g.steps).find((s) => s.active);
+    return (
+      <nav className="section-nav section-nav-compact" aria-label="Day editor sections">
+        <label className="section-nav-compact-label" htmlFor="day-editor-section-select">
+          Section
+        </label>
+        <select
+          id="day-editor-section-select"
+          className="section-nav-compact-select"
+          value={active?.key ?? groups[0]?.steps[0]?.key ?? ''}
+          onChange={(e) => onNavigate(e.target.value)}
+        >
+          {groups.map((group) => (
+            <optgroup key={group.label} label={group.label}>
+              {group.steps.map((step) => (
+                <option key={step.key} value={step.key}>
+                  {step.label} — {step.statusLabel}
+                  {step.issueCount != null && step.issueCount > 0 ? ` (${step.issueCount} to fix)` : ''}
+                </option>
+              ))}
+            </optgroup>
+          ))}
+        </select>
+      </nav>
+    );
+  }
+
   return (
     <nav className="section-nav" aria-label="Day editor sections">
       {groups.map((group) => (

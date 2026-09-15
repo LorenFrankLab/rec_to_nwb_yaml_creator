@@ -1,5 +1,9 @@
 import { useMemo, useState } from 'react';
-import { encodeYaml, formatDeterministicFilename } from '../../io/yaml';
+import { encodeYaml } from '../../io/yaml';
+import { formatRecordingMetadataFilename } from '../../domain/recordingFilename';
+import { getAnimalSubject } from '../../state/workspaceSelectors';
+import DownloadStatusCard from './DownloadStatusCard';
+import { receiptHash } from '../../domain/exportReceipt';
 import { mergeDayMetadata } from '../../state/workspaceUtils';
 import { getAnimalDayIds } from '../../state/workspaceSelectors';
 import { exportDayFile } from '../../domain/exportDay';
@@ -64,11 +68,10 @@ export default function ExportPreview(props: ExportPreviewProps) {
       const merged = mergeDayMetadata(animal, day);
       return {
         yaml: encodeYaml(merged),
-        // mergeDayMetadata carries no EXPERIMENT_DATE_in_format_mmddYYYY (a filename-only key); inject it
-        // from the day so the filename doesn't degrade to the literal placeholder. Filename only.
-        fileName: formatDeterministicFilename({
-          ...merged,
-          EXPERIMENT_DATE_in_format_mmddYYYY: (day as { experimentDate?: string }).experimentDate,
+        // The converter-grouped name: `{YYYYMMDD}_{exact subject}_metadata.yml` (see recordingFilename).
+        fileName: formatRecordingMetadataFilename({
+          date: day.date,
+          subjectId: String(getAnimalSubject(animal).subject_id ?? ''),
         }),
         mergeError: false,
       };
@@ -231,6 +234,13 @@ export default function ExportPreview(props: ExportPreviewProps) {
           </Button>
         </div>
       )}
+
+      {/* Download history: never / current / changed since download (with what changed) / unverified. */}
+      <DownloadStatusCard
+        animal={animal}
+        day={day}
+        artifact={mergeError ? null : { filename: fileName, yaml, hash: receiptHash(fileName, yaml) }}
+      />
 
       {/* The file this day will write: deterministic name + REAL export bytes, disclosed on demand. */}
       {!mergeError && (

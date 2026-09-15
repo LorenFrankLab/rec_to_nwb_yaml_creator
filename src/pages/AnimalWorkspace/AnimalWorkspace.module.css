@@ -589,3 +589,10 @@
     min-height: 44px;
   }
 }
+
+/* "Unfinished: <dates>" — the incomplete days, surfaced above the table for a returning scientist. */
+.unfinishedNote {
+  margin: 0 0 var(--spacing-md);
+  font-size: var(--font-size-sm);
+  color: var(--color-grey-700);
+}

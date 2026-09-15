@@ -1,0 +1,64 @@
+/* Download status / changes since download (export review). Tokens only. */
+
+.card {
+  margin: var(--spacing-md) 0;
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-grey-200);
+  background-color: var(--color-white);
+  font-size: var(--font-size-sm);
+}
+
+.card p {
+  margin: 0 0 var(--spacing-xs);
+}
+
+.heading {
+  font-weight: 600;
+}
+
+.current {
+  border-color: var(--color-success-light);
+  background-color: var(--color-success-light);
+  color: var(--color-success);
+}
+
+.changed {
+  border-color: var(--color-warning);
+  background-color: var(--color-warning-light);
+  color: var(--color-warning);
+}
+
+.unverified {
+  border-color: var(--color-grey-300);
+  background-color: var(--color-grey-100);
+  color: var(--color-grey-800);
+}
+
+.muted {
+  color: var(--color-grey-600);
+}
+
+.diff {
+  margin: var(--spacing-xs) 0 0;
+  max-height: 20rem;
+  overflow: auto;
+  padding: var(--spacing-sm);
+  border-radius: var(--radius-sm);
+  background-color: var(--color-white);
+  color: var(--color-grey-900);
+  font-size: var(--font-size-sm);
+}
+
+.added {
+  background-color: var(--color-success-light);
+}
+
+.removed {
+  background-color: var(--color-error-light);
+  text-decoration: line-through;
+}
+
+.same {
+  color: var(--color-grey-600);
+}

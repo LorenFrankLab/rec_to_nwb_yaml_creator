@@ -51,6 +51,7 @@ import AnimalSetupCard from './AnimalSetupCard';
 import ExistingDataReview from './ExistingDataReview';
 import DayList from './DayList';
 import DuplicateDayModal from './DuplicateDayModal';
+import LogDayPanel, { formatShortDate } from './LogDayPanel';
 import { exportSelectedDays } from './exportSelectedDays';
 import type { BulkExportResult } from './exportSelectedDays';
 import { restoreDay } from './restoreDay';
@@ -297,7 +298,9 @@ export function RecordingDaysTab({ animalId }: RecordingDaysTabProps) {
             session_id: sessionId,
             session_description: `Recording session for ${selectedAnimalId} on ${date}`,
           },
-          { carryForwardFromDayId: carryForward && mostRecentDayId ? mostRecentDayId : undefined }
+          // ON → the nearest EARLIER day for each date (never a later day for a backfill);
+          // OFF → a blank day.
+          { carryForwardFromDayId: carryForward && mostRecentDayId ? 'auto' : null }
         );
         existingIds.add(dayId);
       } catch (error) {
@@ -305,6 +308,34 @@ export function RecordingDaysTab({ animalId }: RecordingDaysTabProps) {
         throw new Error(`Failed to create day ${date}: ${(error as Error).message}`);
       }
     }
+  }
+
+  /**
+   * Log one recording day directly (Log today / a typed date): create it with the carry policy
+   * when it does not exist yet, then open it — the routine path needs no calendar paging.
+   *
+   * @param date - ISO recording date.
+   */
+  function handleLogDate(date: string) {
+    if (!selectedAnimalId) return;
+    const dayId = `${selectedAnimalId}-${date}`;
+    if (!days[dayId]) {
+      try {
+        actions.createDay(
+          selectedAnimalId,
+          date,
+          {
+            session_id: `${selectedAnimalId}_${date.replace(/-/g, '')}`,
+            session_description: `Recording session for ${selectedAnimalId} on ${date}`,
+          },
+          { carryForwardFromDayId: carryForward ? 'auto' : null }
+        );
+      } catch (error) {
+        console.error(`Failed to create day ${date}:`, error);
+        return;
+      }
+    }
+    window.location.hash = `#/day/${dayId}`;
   }
 
   /**
@@ -393,6 +424,9 @@ export function RecordingDaysTab({ animalId }: RecordingDaysTabProps) {
   const selected = vm.selectedAnimal;
   if (!selected) return null;
   const { dayRows, setupSections, showSetupCard, daysCorrupt, review, carryForward: carryForwardVm } = selected;
+  const unfinishedRows = dayRows.filter(
+    (row) => row.recovery === 'ok' && (row.chipVariant === 'draft' || row.chipVariant === 'needs_fixing')
+  );
 
   return (
     <>
@@ -422,8 +456,8 @@ export function RecordingDaysTab({ animalId }: RecordingDaysTabProps) {
                   checked={carryForward}
                   onChange={(e) => setCarryForward(e.target.checked)}
                 />
-                Start each new day from the last day ({carryForwardVm.lastDayDate}) — review &amp;
-                adjust per day
+                Start each new day from the nearest earlier day (latest: {carryForwardVm.lastDayDate}) —
+                review &amp; adjust per day
               </label>
             )}
           </div>
@@ -433,6 +467,20 @@ export function RecordingDaysTab({ animalId }: RecordingDaysTabProps) {
             The card is the LOUD onboarding affordance for a new/under-configured animal; the
             review state is a different concern (recovered/imported review). Both read the SAME
             view-model the builder derives. */}
+        {/* The routine entry point: Log today / choose a recording date / preview of the source day
+            and the probe setup effective on that date (a backfill is as safe as today's entry). It
+            comes FIRST once the animal has days; the setup checklist leads only for a brand-new animal. */}
+        {dayRows.length > 0 && (
+          <LogDayPanel
+            animal={selectedAnimal}
+            days={days}
+            animalId={selectedAnimalId}
+            existingDates={getExistingDays()}
+            carryForward={carryForward && Boolean(mostRecentDayId)}
+            onLogDate={handleLogDate}
+          />
+        )}
+
         {showSetupCard && (
           <AnimalSetupCard
             sections={setupSections}
@@ -442,6 +490,34 @@ export function RecordingDaysTab({ animalId }: RecordingDaysTabProps) {
         )}
 
         {review && <ExistingDataReview review={review} onRepair={handleRepair} />}
+
+        {dayRows.length === 0 && (
+          <LogDayPanel
+            animal={selectedAnimal}
+            days={days}
+            animalId={selectedAnimalId}
+            existingDates={getExistingDays()}
+            carryForward={carryForward && Boolean(mostRecentDayId)}
+            onLogDate={handleLogDate}
+          />
+        )}
+
+        {/* Unfinished work first: the days that still need something before they can be downloaded.
+            Links are named "Resume <date>" so they never collide with the table's date links. */}
+        {unfinishedRows.length > 0 && (
+          <p className={styles.unfinishedNote} data-testid="unfinished-days">
+            {unfinishedRows.length} unfinished:{' '}
+            {unfinishedRows.slice(0, 8).map((row, i, arr) => (
+              <span key={row.dayId}>
+                <a href={row.href} aria-label={`Resume ${row.date || row.dayId}`}>
+                  {formatShortDate(row.date) || row.dayId}
+                </a>
+                {i < arr.length - 1 ? ', ' : ''}
+              </span>
+            ))}
+            {unfinishedRows.length > 8 ? ', …' : ''}
+          </p>
+        )}
 
         {/* Calendar for creating multiple days */}
         {showCalendar && (

@@ -85,7 +85,7 @@ describe('ValidationSummary', () => {
     expect(within(incompleteRow).getByText('Incomplete')).toBeInTheDocument();
   });
 
-  it('shows a persisted-validated day as "Validated" (distinct from merely live-valid "Ready to export")', () => {
+  it('shows a saved-validated day as "Ready to export" (a saved validation is not a separate step)', () => {
     const { workspace, ids } = makeSummaryWorkspace();
     // Persist the validation outcome onto the valid day (what "Validate All" writes).
     workspace.days[ids.validDayId].state = { draft: false, validated: true, exported: false };
@@ -94,12 +94,10 @@ describe('ValidationSummary', () => {
     render(<ValidationSummary />);
 
     const validRow = screen.getByTestId(`day-row-${ids.validDayId}`);
-    expect(within(validRow).getByText('Validated')).toBeInTheDocument();
-    // The persisted state is visually distinct from a merely live-valid (unsaved) day.
-    expect(within(validRow).queryByText('Ready to export')).not.toBeInTheDocument();
+    expect(within(validRow).getByText('Ready to export')).toBeInTheDocument();
   });
 
-  it('shows an exported day as "Exported" (export history outranks validated)', () => {
+  it('shows a downloaded day as "Downloaded"', () => {
     const { workspace, ids } = makeSummaryWorkspace();
     workspace.days[ids.validDayId].state = { draft: false, validated: true, exported: true };
     provideStore(workspace);
@@ -107,8 +105,7 @@ describe('ValidationSummary', () => {
     render(<ValidationSummary />);
 
     const validRow = screen.getByTestId(`day-row-${ids.validDayId}`);
-    expect(within(validRow).getByText('Exported')).toBeInTheDocument();
-    expect(within(validRow).queryByText('Validated')).not.toBeInTheDocument();
+    expect(within(validRow).getByText('Downloaded')).toBeInTheDocument();
   });
 
   it('reads the LIVE state, not a stale saved flag: a day saved validated but now live-error reads "Error"', () => {
@@ -305,7 +302,7 @@ describe('ValidationSummary', () => {
     // Only the single valid day is shadow-checked and downloaded.
     expect(checkShadowExport).toHaveBeenCalledTimes(1);
     expect(downloadYamlFile).toHaveBeenCalledTimes(1);
-    expect(downloadYamlFile).toHaveBeenCalledWith('06222023_remy_metadata.yml', 'yaml-bytes');
+    expect(downloadYamlFile).toHaveBeenCalledWith('20230622_remy_metadata.yml', 'yaml-bytes');
   });
 
   it('Export Valid Only: parity mismatch is skipped and reported, never downloaded', async () => {
@@ -332,7 +329,7 @@ describe('ValidationSummary', () => {
     // Reported with its diff in an alert region.
     const alert = screen.getByRole('alert');
     expect(alert).toHaveTextContent(/skipped/i);
-    expect(alert).toHaveTextContent(/06222023_remy_metadata\.yml|remy/i);
+    expect(alert).toHaveTextContent(/20230622_remy_metadata\.yml|remy/i);
     expect(within(alert).getByText(/First difference at line 3/)).toBeInTheDocument();
   });
 
@@ -356,8 +353,8 @@ describe('ValidationSummary', () => {
 
     expect(downloadYamlFile).toHaveBeenCalledTimes(2);
     // Stable order: sorted by date → 06-22 then 06-23.
-    expect(downloadYamlFile.mock.calls[0][0]).toBe('06222023_remy_metadata.yml');
-    expect(downloadYamlFile.mock.calls[1][0]).toBe('06232023_remy_metadata.yml');
+    expect(downloadYamlFile.mock.calls[0][0]).toBe('20230622_remy_metadata.yml');
+    expect(downloadYamlFile.mock.calls[1][0]).toBe('20230623_remy_metadata.yml');
   });
 
   it('Export Valid Only: with strict mode off, a parity-mismatch day is still downloaded (debug override) and reported', async () => {
@@ -380,7 +377,7 @@ describe('ValidationSummary', () => {
 
     // The override DOWNLOADS the mismatched day...
     expect(downloadYamlFile).toHaveBeenCalledTimes(1);
-    expect(downloadYamlFile).toHaveBeenCalledWith('06222023_remy_metadata.yml', 'yaml-bytes');
+    expect(downloadYamlFile).toHaveBeenCalledWith('20230622_remy_metadata.yml', 'yaml-bytes');
     // ...but never silently: the override is surfaced with its diff.
     const alert = screen.getByRole('alert');
     expect(alert).toHaveTextContent(/despite a parity mismatch/i);
@@ -411,7 +408,7 @@ describe('ValidationSummary', () => {
 
     // Only the good day downloads; the mismatched day is skipped (not downloaded).
     expect(downloadYamlFile).toHaveBeenCalledTimes(1);
-    expect(downloadYamlFile).toHaveBeenCalledWith('06222023_remy_metadata.yml', 'good');
+    expect(downloadYamlFile).toHaveBeenCalledWith('20230622_remy_metadata.yml', 'good');
 
     const alert = screen.getByRole('alert');
     expect(alert).toHaveTextContent(/skipped/i);
@@ -576,6 +573,7 @@ describe('ValidationSummary', () => {
     // Only the valid day downloads; it is then recorded as exported so it reads "Exported"
     // afterwards. `state` is display-only (never in the YAML), so byte-identity is unaffected.
     expect(updateDay).toHaveBeenCalledWith(ids.validDayId, {
+      exportReceipt: expect.objectContaining({ contentHash: expect.any(String) }),
       state: expect.objectContaining({ exported: true }),
     });
   });
@@ -635,7 +633,7 @@ describe('ValidationSummary', () => {
 
     // Only the OK valid day downloads; the orphaned (recovered-unlinked) valid record is excluded.
     expect(downloadYamlFile).toHaveBeenCalledTimes(1);
-    expect(downloadYamlFile).toHaveBeenCalledWith('06232023_remy_metadata.yml', 'yaml-bytes');
+    expect(downloadYamlFile).toHaveBeenCalledWith('20230623_remy_metadata.yml', 'yaml-bytes');
   });
 
   it('re-links an orphaned day record into its animal index when the repair is clicked', async () => {

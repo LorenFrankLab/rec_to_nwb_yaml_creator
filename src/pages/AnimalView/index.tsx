@@ -21,6 +21,8 @@ import { optoFieldsPresence } from '../../domain/optoCompleteness';
 import { buildAnimalViewModel } from '../../viewModels/animalViewModel';
 import type { AnimalConfigCardViewModel, AnimalBlastRadiusViewModel } from '../../viewModels/animalViewModel';
 import { useReconfigContext } from '../../hooks/useReconfigContext';
+import { useUnappliedDraftGuard } from '../../hooks/useUnappliedDraftGuard';
+import { useMediaQuery, COMPACT_NAV_QUERY } from '../../hooks/useMediaQuery';
 import { ConfirmDialog } from '../../components/Modal';
 import OverflowMenu from '../../components/OverflowMenu';
 import AnimalDeleteDialog from '../../components/AnimalDeleteDialog';
@@ -134,6 +136,8 @@ interface RenderPanelContext {
   onOptoAfterUpdate: () => void;
   /** Open the new-configuration (re-implant) modal — wired to the ConfigurationCard's action. */
   onNewConfiguration: () => void;
+  /** Record a configuration version's effective date. */
+  onSetEffectiveDate: (version: number, date: string) => void;
 }
 
 /** The four export-gated optogenetics fields, for the "Opto configured · N of N" meter. */
@@ -144,14 +148,14 @@ const OPTO_TOTAL_FIELDS = 4;
  * setup tabs host their extracted containers (Phase 3-2/3-3); only `export` still shows the
  * Phase-1 placeholder until its sub-phase (3-5) lands.
  */
-function renderPanel({ tab, animalId, animal, onPendingEditsChange, onFieldUpdate, configCard, blastRadius, onOptoAfterUpdate, onNewConfiguration }: RenderPanelContext) {
+function renderPanel({ tab, animalId, animal, onPendingEditsChange, onFieldUpdate, configCard, blastRadius, onOptoAfterUpdate, onNewConfiguration, onSetEffectiveDate }: RenderPanelContext) {
   switch (tab) {
     case 'days':
       return <RecordingDaysTab animalId={animalId} />;
     case 'electrode-groups':
       return (
         <>
-          <ConfigurationCard card={configCard} onNewConfiguration={onNewConfiguration} />
+          <ConfigurationCard card={configCard} onNewConfiguration={onNewConfiguration} onSetEffectiveDate={onSetEffectiveDate} />
           <ConfigVersionContext animal={animal} />
           <ElectrodeGroupsContainer animalId={animalId} onPendingEditsChange={onPendingEditsChange} />
         </>
@@ -300,6 +304,7 @@ export function AnimalView({ animalId, tab }: AnimalViewProps) {
 
   const panelRef = useRef<HTMLElement>(null);
   const isFirstRender = useRef(true);
+  const compactNav = useMediaQuery(COMPACT_NAV_QUERY);
 
   // Unsaved-edit guard (charter decision 2). A setup container reports `true` while its
   // editor/modal is open; the shell owns the section-nav, so it intercepts a link to ANOTHER tab
@@ -317,6 +322,9 @@ export function AnimalView({ animalId, tab }: AnimalViewProps) {
   // guard's decision directly). DO NOT remove because "nothing triggers it" — it is the net.
   const [pendingEdits, setPendingEdits] = useState(false);
   const [pendingNavTab, setPendingNavTab] = useState<string | null>(null);
+  // An open setup dialog is an unapplied draft: arm the leave-page prompt (never auto-flushed —
+  // only the user's Save/Cancel resolves it).
+  useUnappliedDraftGuard(pendingEdits, 'animal-setup-dialog');
 
   // Task 1.1b: AppLayout focuses #main-content on `view` change (legacy -> animal-view), but a
   // `:tab` change keeps the same view, so AppLayout won't fire. Move focus to the panel on tab
@@ -496,7 +504,35 @@ export function AnimalView({ animalId, tab }: AnimalViewProps) {
 
       <div className={styles.body}>
         <nav className={navStyles.nav} aria-label="Animal sections">
-          {vm.groups.map((group) => (
+          {compactNav ? (
+            /* Narrow screens: the grouped section list collapses into one native select so the
+               animal's content is not pushed below the fold. */
+            <div className={navStyles.compact}>
+              <label className={navStyles.compactLabel} htmlFor="animal-section-select">
+                Section
+              </label>
+              <select
+                id="animal-section-select"
+                className={navStyles.compactSelect}
+                value={tab}
+                onChange={(e) => {
+                  window.location.hash = `#/animal/${encodeURIComponent(animalId)}/${e.target.value}`;
+                }}
+              >
+                {vm.groups.map((group) => (
+                  <optgroup key={group.label} label={group.label}>
+                    {group.sections.map((section) => (
+                      <option key={section.key} value={section.key}>
+                        {section.label}
+                        {section.status === 'error' ? ' — blocks export' : section.status === 'todo' ? ' — not set up' : ''}
+                      </option>
+                    ))}
+                  </optgroup>
+                ))}
+              </select>
+            </div>
+          ) : (
+          vm.groups.map((group) => (
             <div className={navStyles.group} key={group.label}>
               <div className={navStyles.groupLabel}>{group.label}</div>
               {group.sections.map((section) => {
@@ -538,7 +574,8 @@ export function AnimalView({ animalId, tab }: AnimalViewProps) {
                 );
               })}
             </div>
-          ))}
+          ))
+          )}
         </nav>
 
         <section
@@ -564,6 +601,7 @@ export function AnimalView({ animalId, tab }: AnimalViewProps) {
               blastRadius: vm.blastRadius,
               onOptoAfterUpdate: noteEditConsequence,
               onNewConfiguration: () => setNewConfigOpen(true),
+              onSetEffectiveDate: (version, date) => actions.setConfigurationEffectiveDate(animalId, version, date),
             })}
           </div>
         </section>

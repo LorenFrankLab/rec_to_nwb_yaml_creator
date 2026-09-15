@@ -33,8 +33,8 @@ describe('Day editor repair-action navigation (integration)', () => {
   it('routes a day-surface repair from the readiness bar to the owning tab and focuses the field', async () => {
     const user = userEvent.setup();
     const { animal, day } = buildRealisticWorkspace();
-    // A blank session description is an export-blocking Daily Setup error whose field has a focusable
-    // anchor. The readiness bar is quiet on Daily Setup, then appears on work sections.
+    // A blank session description is an export-blocking daily-log error whose field has a focusable
+    // anchor (inside the collapsed "Descriptions…" group, which the focus opens).
     day.session.session_description = '';
     useDayIdFromUrl.mockReturnValue(day.id);
 
@@ -44,13 +44,13 @@ describe('Day editor repair-action navigation (integration)', () => {
       </StoreProvider>
     );
 
-    await user.click(screen.getByRole('button', { name: /^Tasks & Files\b/i }));
+    await user.click(screen.getByRole('button', { name: /^Recording Setup\b/i }));
     // The readiness bar lists the blocking issue with a "Fix" action.
     const bar = screen.getByRole('alert');
     await user.click(within(bar).getByRole('button'));
 
-    // Navigated to the Daily Setup section…
-    expect(screen.getByRole('heading', { name: /daily setup/i })).toBeInTheDocument();
+    // Navigated to the daily log…
+    expect(screen.getByRole('heading', { name: /daily log/i })).toBeInTheDocument();
     // …and focused the session-description control.
     const textarea = screen.getByRole('textbox', { name: /session description/i });
     await waitFor(() => expect(textarea).toHaveFocus());
@@ -72,7 +72,7 @@ describe('Day editor repair-action navigation (integration)', () => {
       </StoreProvider>
     );
 
-    await user.click(screen.getByRole('button', { name: /^Tasks & Files\b/i }));
+    await user.click(screen.getByRole('button', { name: /^Recording Setup\b/i }));
     // The empty-location error is one of potentially several animal-surface blockers in the
     // readiness bar; any of them hands off to the same Animal Editor route.
     const bar = screen.getByRole('alert');
@@ -98,7 +98,7 @@ describe('Day editor repair-action navigation (integration)', () => {
       </StoreProvider>
     );
 
-    await user.click(screen.getByRole('button', { name: /^Tasks & Files\b/i }));
+    await user.click(screen.getByRole('button', { name: /^Recording Setup\b/i }));
     const bar = screen.getByRole('alert');
     const [animalFix] = within(bar).getAllByRole('button');
     await user.click(animalFix);

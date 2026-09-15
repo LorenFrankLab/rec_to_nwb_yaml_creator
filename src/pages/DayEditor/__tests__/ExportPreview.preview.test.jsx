@@ -2,7 +2,8 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import ExportPreview from '../ExportPreview';
-import { encodeYaml, formatDeterministicFilename } from '../../../io/yaml';
+import { encodeYaml } from '../../../io/yaml';
+import { formatRecordingMetadataFilename } from '../../../domain/recordingFilename';
 import { mergeDayMetadata } from '../../../state/workspaceUtils';
 import { buildRealisticWorkspace } from '../../../__tests__/fixtures/workspaceBuilders';
 import { buildDayEditorViewModel } from '../../../viewModels/dayEditorViewModel';
@@ -54,11 +55,12 @@ describe('ExportPreview — YAML preview is the real export bytes', () => {
     const { animal, day } = buildRealisticWorkspace();
     renderPreview(animal, day);
 
-    const expectedFilename = formatDeterministicFilename({
-      ...mergeDayMetadata(animal, day),
-      EXPERIMENT_DATE_in_format_mmddYYYY: day.experimentDate,
+    // The converter-grouped name: `{YYYYMMDD}_{exact subject}_metadata.yml`.
+    const expectedFilename = formatRecordingMetadataFilename({
+      date: day.date,
+      subjectId: animal.subject.subject_id,
     });
-    expect(expectedFilename).toBe('06222023_remy_metadata.yml');
+    expect(expectedFilename).toBe('20230622_remy_metadata.yml');
     expect(screen.getByText(expectedFilename)).toBeInTheDocument();
   });
 });

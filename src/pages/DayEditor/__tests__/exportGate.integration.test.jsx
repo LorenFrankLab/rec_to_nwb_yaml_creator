@@ -113,7 +113,7 @@ describe('Day editor export gate (integration)', () => {
     expect(screen.getByRole('button', { name: 'Download' })).toBeDisabled();
   });
 
-  it('keeps Daily Setup quiet and shows "Ready to export" on work sections for a clean day', async () => {
+  it('shows "Ready to export" on the daily log and on work sections for a clean day', async () => {
     const user = userEvent.setup();
     const { animal, day } = buildRealisticWorkspace();
     useDayIdFromUrl.mockReturnValue(day.id);
@@ -124,11 +124,10 @@ describe('Day editor export gate (integration)', () => {
       </StoreProvider>
     );
 
-    // Daily Setup is focused on day-entry fields; export readiness appears once the user is in a
-    // work section or the Fix & Export section.
-    expect(screen.queryByText(/ready to export/i)).not.toBeInTheDocument();
+    // The daily log holds the epoch editor, so readiness is visible there too.
+    expect(screen.getAllByText(/ready to export/i).length).toBeGreaterThan(0);
 
-    await user.click(screen.getByRole('button', { name: /^Tasks & Files/ }));
-    expect(screen.getByText(/ready to export/i)).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /^Recording Setup/ }));
+    expect(screen.getAllByText(/ready to export/i).length).toBeGreaterThan(0);
   });
 });

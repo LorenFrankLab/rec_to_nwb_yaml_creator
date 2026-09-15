@@ -130,8 +130,7 @@ describe('axe-a11y (configured workspace, all routes)', () => {
 
   describe('DayEditor sections', () => {
     const sections = [
-      'Daily Setup',
-      'Tasks & Files',
+      'Daily log',
       'Recording Setup',
       'Failed Channels',
       'DIO Wiring',

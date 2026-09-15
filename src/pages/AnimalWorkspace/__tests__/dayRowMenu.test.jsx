@@ -90,7 +90,7 @@ describe('RecordingDaysTab — per-day ⋯ menu', () => {
     await user.click(screen.getByRole('menuitem', { name: /export this day/i }));
 
     expect(downloadYamlFile).toHaveBeenCalledTimes(1);
-    expect(downloadYamlFile.mock.calls[0][0]).toBe('06222023_remy_metadata.yml');
+    expect(downloadYamlFile.mock.calls[0][0]).toBe('20230622_remy_metadata.yml');
   });
 
   it('Delete day shows the undo toast (no hard confirm dialog)', async () => {

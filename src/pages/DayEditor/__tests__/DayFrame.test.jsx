@@ -121,7 +121,6 @@ describe('DayEditorFrame', () => {
   });
 
   it('clears first-run validation deferral on open so real blockers surface', async () => {
-    const user = userEvent.setup();
     const { animal, day } = buildRealisticWorkspace();
     day.tasks = 'not-an-array';
     day.state = { draft: true, validated: false, exported: false, validationDeferred: true };
@@ -130,7 +129,7 @@ describe('DayEditorFrame', () => {
       workspace: { animals: { [animal.id]: animal }, days: { [day.id]: day }, settings: {} },
     });
 
-    await user.click(screen.getByRole('button', { name: /^Tasks & Files/ }));
+    // The daily log (first screen) shows the readiness bar — the epoch editor lives there.
     await waitFor(() => expect(screen.getByText(/issues? block export/i)).toBeInTheDocument());
   });
 
@@ -166,26 +165,26 @@ describe('DayEditorFrame', () => {
   });
 
   // ── Readiness bar (issue-driven, from validateDay) ──
-  it('readiness bar stays off Daily Setup but is loud with per-issue Fix actions on work sections', async () => {
+  it('readiness bar is loud with per-issue Fix actions on the daily log and the work sections', async () => {
     const user = userEvent.setup();
     // The mock animal's species "Rat" is not DANDI-valid → a blocking error.
     renderFrame();
-    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(screen.getByRole('alert')).toHaveTextContent(/issue(s)? block export/i);
 
-    await user.click(screen.getByRole('button', { name: /^Tasks & Files/ }));
+    await user.click(screen.getByRole('button', { name: /^Recording Setup/ }));
     const alert = screen.getByRole('alert');
     expect(alert).toHaveTextContent(/issue(s)? block export/i);
     expect(within(alert).getAllByRole('button').length).toBeGreaterThan(0);
   });
 
-  it('readiness bar is quiet ("Ready to export") on work sections when nothing blocks', async () => {
+  it('readiness bar is quiet ("Ready to export") when nothing blocks', async () => {
     const user = userEvent.setup();
     useDayIdFromUrl.mockReturnValue(validState.dayId);
     renderFrame({ workspace: validState.workspace });
-    expect(screen.queryByText(/ready to export/i)).not.toBeInTheDocument();
+    expect(screen.getAllByText(/ready to export/i).length).toBeGreaterThan(0);
 
-    await user.click(screen.getByRole('button', { name: /^Tasks & Files/ }));
-    expect(screen.getByText(/ready to export/i)).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /^Recording Setup/ }));
+    expect(screen.getAllByText(/ready to export/i).length).toBeGreaterThan(0);
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 
@@ -202,20 +201,20 @@ describe('DayEditorFrame', () => {
         settings: {},
       },
     });
-    await user.click(screen.getByRole('button', { name: /^Tasks & Files/ }));
+    await user.click(screen.getByRole('button', { name: /^Recording Setup/ }));
     const slashMsg = screen.getByText(/Session ID "remy\/20230622" must not contain/i);
     expect(within(slashMsg.closest('li')).queryByRole('button')).not.toBeInTheDocument();
   });
 
   // ── Grouped vertical rail ──
-  it('renders the grouped vertical rail with the six focused sections', () => {
+  it('renders the grouped vertical rail with the five focused sections', () => {
     renderFrame();
     const nav = screen.getByRole('navigation', { name: /day editor sections/i });
     expect(within(nav).getByText('DAY')).toBeInTheDocument();
     expect(within(nav).getByText('RECORDING')).toBeInTheDocument();
     expect(within(nav).getByText('FINISH')).toBeInTheDocument();
-    expect(within(nav).getByRole('button', { name: /^Daily Setup/ })).toBeInTheDocument();
-    expect(within(nav).getByRole('button', { name: /^Tasks & Files/ })).toBeInTheDocument();
+    expect(within(nav).getByRole('button', { name: /^Daily log/ })).toBeInTheDocument();
+    expect(within(nav).queryByRole('button', { name: /^Tasks & Files/ })).not.toBeInTheDocument();
     expect(within(nav).getByRole('button', { name: /^Recording Setup/ })).toBeInTheDocument();
     expect(within(nav).getByRole('button', { name: /^Failed Channels/ })).toBeInTheDocument();
     expect(within(nav).getByRole('button', { name: /^DIO Wiring/ })).toBeInTheDocument();
@@ -225,22 +224,22 @@ describe('DayEditorFrame', () => {
   it('folds each tab status label into the accessible name', () => {
     renderFrame();
     const nav = screen.getByRole('navigation', { name: /day editor sections/i });
-    expect(within(nav).getByRole('button', { name: /Daily Setup.*Has errors/i })).toBeInTheDocument();
-    expect(within(nav).getByRole('button', { name: /Tasks & Files.*Incomplete/i })).toBeInTheDocument();
+    expect(within(nav).getByRole('button', { name: /Daily log.*Has errors/i })).toBeInTheDocument();
+    expect(within(nav).getByRole('button', { name: /Recording Setup.*(Has errors|Incomplete|Complete)/i })).toBeInTheDocument();
   });
 
-  it('opens on Daily Setup and freely navigates to any section on click', async () => {
+  it('opens on the Daily log and freely navigates to any section on click', async () => {
     const user = userEvent.setup();
     renderFrame();
-    expect(screen.getByRole('button', { name: /^Daily Setup/ })).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByRole('button', { name: /^Daily log/ })).toHaveAttribute('aria-current', 'page');
 
     await user.click(screen.getByRole('button', { name: /^Recording Setup/ }));
     expect(screen.getByRole('heading', { level: 2, name: /Recording Setup/i })).toBeInTheDocument();
     expect(screen.queryByRole('heading', { level: 2, name: /behavioral events/i })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: /^Recording Setup/ })).toHaveAttribute('aria-current', 'page');
 
-    await user.click(screen.getByRole('button', { name: /^Tasks & Files/ }));
-    expect(screen.getByRole('button', { name: /^Tasks & Files/ })).toHaveAttribute('aria-current', 'page');
+    await user.click(screen.getByRole('button', { name: /^Daily log/ }));
+    expect(screen.getByRole('button', { name: /^Daily log/ })).toHaveAttribute('aria-current', 'page');
 
     await user.click(screen.getByRole('button', { name: /^Failed Channels/ }));
     expect(screen.getByRole('heading', { level: 2, name: /Failed Channels/i })).toBeInTheDocument();
@@ -248,19 +247,19 @@ describe('DayEditorFrame', () => {
 
   it('steps tabs with the Alt+→ / Alt+← keyboard shortcuts', () => {
     renderFrame();
-    act(() => emitStepperShortcut('next')); // daily → tasks
-    expect(screen.getByRole('button', { name: /^Tasks & Files/ })).toHaveAttribute('aria-current', 'page');
-    act(() => emitStepperShortcut('next')); // → recording
+    act(() => emitStepperShortcut('next')); // daily → recording
     expect(screen.getByRole('button', { name: /^Recording Setup/ })).toHaveAttribute('aria-current', 'page');
-    act(() => emitStepperShortcut('prev')); // → tasks
-    expect(screen.getByRole('button', { name: /^Tasks & Files/ })).toHaveAttribute('aria-current', 'page');
+    act(() => emitStepperShortcut('next')); // → channels
+    expect(screen.getByRole('button', { name: /^Failed Channels/ })).toHaveAttribute('aria-current', 'page');
+    act(() => emitStepperShortcut('prev')); // → recording
+    expect(screen.getByRole('button', { name: /^Recording Setup/ })).toHaveAttribute('aria-current', 'page');
   });
 
   it('CLAMPS the Alt+ tab stepping at both ends (does not wrap)', () => {
     renderFrame();
-    expect(screen.getByRole('button', { name: /^Daily Setup/ })).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByRole('button', { name: /^Daily log/ })).toHaveAttribute('aria-current', 'page');
     act(() => emitStepperShortcut('prev'));
-    expect(screen.getByRole('button', { name: /^Daily Setup/ })).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByRole('button', { name: /^Daily log/ })).toHaveAttribute('aria-current', 'page');
 
     // Step to the last section, then Alt+→ stays there.
     for (let i = 0; i < 6; i += 1) act(() => emitStepperShortcut('next'));
@@ -292,7 +291,7 @@ describe('DayEditorFrame', () => {
     window.location.hash = '#/day/remy-2023-06-22';
     try {
       renderFrame();
-      expect(screen.getByRole('button', { name: /^Daily Setup/ })).toHaveAttribute('aria-current', 'page');
+      expect(screen.getByRole('button', { name: /^Daily log/ })).toHaveAttribute('aria-current', 'page');
 
       await act(async () => {
         window.location.hash = '#/day/remy-2023-06-22?step=behavioral&field=behavioral_events';
@@ -347,7 +346,6 @@ describe('DayEditorFrame', () => {
     renderFrame({
       workspace: { animals: { remy: mockAnimal }, days: { 'remy-2023-06-22': { ...mockDay, tasks: {} } }, settings: {} },
     });
-    await user.click(screen.getByRole('button', { name: /^Tasks & Files/ }));
     const reset = screen.getByRole('button', { name: /^reset tasks$/i });
     await user.click(reset);
     expect(screen.queryByRole('button', { name: /^reset tasks$/i })).not.toBeInTheDocument();

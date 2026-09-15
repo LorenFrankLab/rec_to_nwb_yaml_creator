@@ -63,7 +63,7 @@ describe('ExportPreview — "Export all days" batch', () => {
     // The valid day's bytes are the SAME single-day export bytes (batch === single export).
     const expectedBytes = encodeYaml(mergeDayMetadata(animal, validDay));
     expect(downloadYamlFile).toHaveBeenCalledTimes(1);
-    expect(downloadYamlFile).toHaveBeenCalledWith('06222023_remy_metadata.yml', expectedBytes);
+    expect(downloadYamlFile).toHaveBeenCalledWith('20230622_remy_metadata.yml', expectedBytes);
   });
 
   it('links each skipped day to its blocking issue via the field-level repair route (not a bare day link)', async () => {

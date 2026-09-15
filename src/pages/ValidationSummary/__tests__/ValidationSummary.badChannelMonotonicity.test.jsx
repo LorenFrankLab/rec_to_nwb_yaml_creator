@@ -131,11 +131,11 @@ describe('ValidationSummary — bad-channel monotonicity gate', () => {
     // Exactly one file downloaded, and it is day 1 — never the regressing day 2.
     expect(downloadYamlFile).toHaveBeenCalledTimes(1);
     expect(downloadYamlFile).not.toHaveBeenCalledWith(
-      expect.stringContaining('06232023'),
+      expect.stringContaining('20230623'),
       expect.anything()
     );
     expect(downloadYamlFile).toHaveBeenCalledWith(
-      expect.stringContaining('06222023'),
+      expect.stringContaining('20230622'),
       expect.anything()
     );
     void ids;

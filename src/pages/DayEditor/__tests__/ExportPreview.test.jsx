@@ -146,8 +146,8 @@ describe('ExportPreview — download & copy', () => {
     await user.click(screen.getByRole('button', { name: /download/i }));
 
     expect(downloadYamlFile).toHaveBeenCalledTimes(1);
-    expect(downloadYamlFile).toHaveBeenCalledWith('06222023_remy_metadata.yml', expect.any(String));
-    expect(await screen.findByText(/downloaded 06222023_remy_metadata\.yml/i)).toBeInTheDocument();
+    expect(downloadYamlFile).toHaveBeenCalledWith('20230622_remy_metadata.yml', expect.any(String));
+    expect(await screen.findByText(/downloaded 20230622_remy_metadata\.yml/i)).toBeInTheDocument();
   });
 
   it('marks the day exported after a successful download (display-only lifecycle, never in the YAML)', async () => {
@@ -160,6 +160,8 @@ describe('ExportPreview — download & copy', () => {
     await user.click(screen.getByRole('button', { name: /download/i }));
 
     expect(updateDay).toHaveBeenCalledWith(day.id, {
+      // The download receipt (filename + hash) travels with the lifecycle flag (finding F6).
+      exportReceipt: expect.objectContaining({ filename: '20230622_remy_metadata.yml', contentHash: expect.any(String) }),
       state: expect.objectContaining({ exported: true, deferredEpochs: [] }),
     });
   });
@@ -224,7 +226,7 @@ describe('ExportPreview — encoder-stability (parity) gate', () => {
     await user.click(screen.getByRole('button', { name: /^download$/i }));
 
     // The bytes DID ship (override), but the mismatch is surfaced loudly — not swallowed into success.
-    expect(downloadYamlFile).toHaveBeenCalledWith('06222023_remy_metadata.yml', 'shipped\n');
+    expect(downloadYamlFile).toHaveBeenCalledWith('20230622_remy_metadata.yml', 'shipped\n');
     const notice = await screen.findByText(/encoder-stability/i);
     expect(notice).toBeInTheDocument();
     expect(screen.getByText(/strict mode off/i)).toBeInTheDocument();

@@ -57,13 +57,13 @@ describe('subject/session completeness + DANDI rules', () => {
     expect(issues.some((i) => i.path === 'experiment_description')).toBe(true);
   });
 
-  it('falls back to the animal-level experiment_description when the day is blank', () => {
+  it('does NOT fall back to the animal-level experiment_description when the day is blank (the default is copied at creation; a blank day is blocked)', () => {
     const { animal, day } = buildRealisticWorkspace();
     day.session.experiment_description = '';
     animal.experiment_description = 'Chronic recording during spatial navigation';
     const merged = mergeDayMetadata(animal, day);
-    expect(merged.experiment_description).toBe('Chronic recording during spatial navigation');
-    expect(schemaValidation(merged)).toEqual([]);
+    expect(merged.experiment_description).toBe('');
+    expect(schemaValidation(merged).some((i) => i.path === 'experiment_description')).toBe(true);
   });
 
   it('blocks a missing weight (schema-required)', () => {

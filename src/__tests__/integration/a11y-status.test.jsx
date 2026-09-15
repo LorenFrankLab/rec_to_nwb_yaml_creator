@@ -43,10 +43,9 @@ describe('status conveyed without relying on color', () => {
     await renderRoute(`#/day/${DAY_ID}`);
     await screen.findByRole('heading', { name: /day editor/i });
 
-    // Daily Setup is intentionally quiet; work sections expose the issue-driven readiness bar
-    // with explicit text, not color-coded section-nav glyphs.
-    await user.click(screen.getByRole('button', { name: /^Tasks & Files\b/ }));
-    await screen.findByRole('heading', { name: /^Epochs$/i });
+    // The readiness bar (explicit text, not color-coded section-nav glyphs) is shown on the daily
+    // log and the work sections.
+    await user.click(screen.getByRole('button', { name: /^Recording Setup\b/ }));
 
     const readiness = screen.getByText(/ready to export|block(s)? export/i);
     expect(readiness).toBeInTheDocument();
