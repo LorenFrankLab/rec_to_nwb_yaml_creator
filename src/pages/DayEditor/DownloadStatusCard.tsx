@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { exportFreshness, RECEIPT_YAML_KEY_PREFIX } from '../../domain/exportReceipt';
+import { exportFreshness, receiptHash, RECEIPT_YAML_KEY_PREFIX } from '../../domain/exportReceipt';
 import type { ExportArtifact } from '../../domain/exportReceipt';
 import { diffLines, compactDiff } from '../../domain/lineDiff';
 import type { DiffLine } from '../../domain/lineDiff';
@@ -37,18 +37,23 @@ export default function DownloadStatusCard({ animal, day, artifact }: DownloadSt
     let cancelled = false;
     setPrevious(undefined);
     if (fresh.status !== 'changed' || !fresh.receipt?.yamlStored) return undefined;
+    const receiptFilename = fresh.receipt.filename;
+    const receiptContentHash = fresh.receipt.contentHash;
     getBlob<{ filename?: string; yaml?: string }>(`${RECEIPT_YAML_KEY_PREFIX}${day.id}`).then((stored) => {
       if (cancelled) return;
-      if (!stored || typeof stored.yaml !== 'string') {
+      // Only bytes that ARE this receipt's download may be shown as it: anything else under the
+      // key (leftovers of a failed restore, another day's file) is treated as unavailable.
+      const filename = String(stored?.filename ?? receiptFilename ?? '');
+      if (!stored || typeof stored.yaml !== 'string' || receiptHash(filename, stored.yaml) !== receiptContentHash) {
         setPrevious(null);
         return;
       }
-      setPrevious({ filename: String(stored.filename ?? fresh.receipt?.filename ?? ''), yaml: stored.yaml });
+      setPrevious({ filename, yaml: stored.yaml });
     });
     return () => {
       cancelled = true;
     };
-  }, [day.id, fresh.status, fresh.receipt?.yamlStored, fresh.receipt?.exportedAt, fresh.receipt?.filename]);
+  }, [day.id, fresh.status, fresh.receipt?.yamlStored, fresh.receipt?.exportedAt, fresh.receipt?.filename, fresh.receipt?.contentHash]);
 
   if (fresh.status === 'never') {
     return (
