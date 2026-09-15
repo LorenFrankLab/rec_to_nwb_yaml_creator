@@ -14,7 +14,12 @@ const animal = {
 };
 
 const day = (date: string, version: number, confirmed = false): Day =>
-  ({ id: `remy-${date}`, date, configurationVersion: version, provenance: { configuration: { confirmed } } }) as unknown as Day;
+  ({
+    id: `remy-${date}`,
+    date,
+    configurationVersion: version,
+    provenance: { configuration: confirmed ? { source: 'explicit', confirmed: true } : { source: 'effective-date', confirmed: false } },
+  }) as unknown as Day;
 
 describe('selectConfigurationForDate (F2)', () => {
   it('a June 25 backfill gets the June 1 setup, even though a July 1 setup exists (the newest)', () => {
@@ -45,6 +50,25 @@ describe('selectConfigurationForDate (F2)', () => {
   });
 });
 
+describe('selectConfigurationForDate — entry-stamped version 1', () => {
+  // The animal was created in the app on Sept 14 (v1's date is only its ENTRY stamp) and a
+  // reconfiguration effective July 1 was recorded through the wizard.
+  const entryStamped = {
+    configurationHistory: [
+      { version: 1, date: '2026-09-14', effectiveDateKnown: false, description: 'initial', devices: {}, appliedToDays: [] },
+      { version: 2, date: '2023-07-01', description: 'lowered', devices: {}, appliedToDays: [] },
+    ],
+  };
+
+  it('a June 23 day gets v1 (the earliest setup by construction), unconfirmed — never the July 1 v2', () => {
+    expect(selectConfigurationForDate(entryStamped, '2023-06-23')).toEqual({ version: 1, covered: false, effectiveDate: '2026-09-14' });
+  });
+
+  it('a July 5 day is covered by v2', () => {
+    expect(selectConfigurationForDate(entryStamped, '2023-07-05')).toEqual({ version: 2, covered: true, effectiveDate: '2023-07-01' });
+  });
+});
+
 describe('configurationChoiceStatus', () => {
   it('is confirmed when the pinned version’s effective date covers the recording date', () => {
     expect(configurationChoiceStatus(animal, day('2023-06-25', 1))).toMatchObject({ status: 'confirmed', version: 1 });
@@ -66,6 +90,20 @@ describe('configurationChoiceStatus', () => {
 
   it('an explicit user confirmation settles the choice', () => {
     expect(configurationChoiceStatus(animal, day('2023-05-20', 1, true))).toMatchObject({ status: 'confirmed' });
+    const explicit = { ...day('2023-05-20', 1, true), provenance: { configuration: { source: 'explicit', confirmed: true } } } as unknown as Day;
+    expect(configurationChoiceStatus(animal, explicit)).toMatchObject({ status: 'confirmed' });
+  });
+
+  it('an AUTOMATIC (date-selected) confirmation is re-evaluated: moving v1’s effective date after the day un-confirms it', () => {
+    const auto = { ...day('2023-06-25', 1), provenance: { configuration: { source: 'effective-date', confirmed: true } } } as unknown as Day;
+    expect(configurationChoiceStatus(animal, auto)).toMatchObject({ status: 'confirmed' });
+    const moved = {
+      configurationHistory: [
+        { version: 1, date: '2023-07-01', description: 'implant', devices: {}, appliedToDays: [] },
+        { version: 2, date: '2023-08-01', description: 'lowered', devices: {}, appliedToDays: [] },
+      ],
+    };
+    expect(configurationChoiceStatus(moved, auto)).toMatchObject({ status: 'unconfirmed', version: 1, reason: 'before-effective-date' });
   });
 
   it('reports an unpinned day', () => {

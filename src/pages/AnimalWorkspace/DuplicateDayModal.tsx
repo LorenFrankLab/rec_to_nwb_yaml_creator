@@ -56,7 +56,9 @@ export default function DuplicateDayModal({ isOpen, source = null, date, error, 
           Clone{' '}
           <strong>{source?.date || source?.dayId}</strong> to a new
           date. The new day reproduces this day&apos;s tasks, behavioral events, keywords,
-          technical settings, configuration version, and bad-channel overrides.
+          technical settings and team. It is pinned to the probe setup in effect on the NEW date
+          (bad-channel marks carry over only when that is this day&apos;s setup); the weight is
+          never copied.
         </p>
         <label htmlFor="duplicate-day-date">
           New date

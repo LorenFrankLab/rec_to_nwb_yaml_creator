@@ -7,6 +7,7 @@ import {
 import { getAnimalDayIds, getConfigHistory } from './workspaceSelectors';
 import { normalizeDevices } from '../utils/deviceNormalization';
 import { nearestEarlierDayId } from '../domain/dayCarryPolicy';
+import { subjectIdCollision } from '../domain/animalCreation';
 import {
   applyAnimalUpdates,
   createSnapshotAndApplyForward,
@@ -30,15 +31,13 @@ import type {
 } from './workspaceTypes';
 
 /**
- * The store commit primitives injected into {@link createWorkspaceActions}. `commitWorkspace` and
- * `setWorkspace` are both updater-takers; only their batching/ref-lockstep semantics differ (see
- * the factory doc). `workspaceRef` is the live committed workspace, read/assigned synchronously.
+ * The store commit primitives injected into {@link createWorkspaceActions}. `commitWorkspace` is
+ * the ONLY mutation path (ownership is enforced there); `workspaceRef` is the live committed
+ * workspace, read synchronously.
  */
 export interface WorkspaceActionPrimitives {
   /** Ref-lockstep commit (keeps `workspaceRef.current` in step for same-tick composite batches). */
   commitWorkspace: (updater: (prev: Workspace) => Workspace) => void;
-  /** Plain React state updater for the workspace slice (deferred under batching). */
-  setWorkspace: (updater: (prev: Workspace) => Workspace) => void;
   /** Live ref to the always-current committed workspace. */
   workspaceRef: { current: Workspace };
 }
@@ -81,21 +80,18 @@ export interface CreateDayOptions {
  *     LOCKSTEP, so a COMPOSITE batch (a replace-import's deleteAnimal → createAnimal →
  *     createConfigurationSnapshotAndApplyForward → updateDay, all in one tick) sees each prior
  *     step synchronously, and so a field draft flushed right before an explicit save is in the
- *     ref when the synchronous write runs. EVERY record-mutating action uses it.
- *   - `setWorkspace(updater)` is the plain React state updater (deferred under batching); only
- *     the snapshot-and-apply-forward action still pairs it with its own optimistic ref advance.
+ *     ref when the synchronous write runs. EVERY record-mutating action uses it, and it refuses
+ *     in a read-only tab (`ReadOnlyWorkspaceError`).
  *   - `workspaceRef` is the always-current committed workspace, read synchronously where an
  *     action must reserve state (e.g. the next configuration version) from authoritative state.
  *
  * @param primitives - The store commit primitives ({@link WorkspaceActionPrimitives}).
  * @param primitives.commitWorkspace - Ref-lockstep commit.
- * @param primitives.setWorkspace - React state updater for the workspace slice.
  * @param primitives.workspaceRef - Live ref to the committed workspace.
  * @returns The workspace actions object (createAnimal, updateAnimal, … updateWorkspaceSettings).
  */
 export function createWorkspaceActions({
   commitWorkspace,
-  setWorkspace,
   workspaceRef,
 }: WorkspaceActionPrimitives) {
   return {
@@ -159,7 +155,11 @@ export function createWorkspaceActions({
           configurationHistory: [
             {
               version: 1,
+              // Stamped with the ENTRY date: nobody has told us when this setup became effective,
+              // so a day before today must ask for confirmation rather than assume (the setup card
+              // lets the scientist record the real effective date).
               date: today,
+              effectiveDateKnown: false,
               description: 'Initial configuration',
               devices: {
                 electrode_groups: structuredClone(devices.electrode_groups),
@@ -196,6 +196,16 @@ export function createWorkspaceActions({
       commitWorkspace((prev) => {
         if (!prev.animals[animalId]) {
           throw new Error(`Animal "${animalId}" not found`);
+        }
+        // The subject id is the scientific identity AND the export filename token: two animals
+        // sharing one would produce identical `{date}_{subject}_metadata.yml` files and merge
+        // downstream. Refused at the mutation boundary (the profile editor also says so inline).
+        const nextSubjectId = updates.subject?.subject_id;
+        if (typeof nextSubjectId === 'string') {
+          const taken = subjectIdCollision(nextSubjectId, prev.animals, animalId);
+          if (taken) {
+            throw new Error(`Subject ID "${nextSubjectId}" is already used by animal "${taken}"`);
+          }
         }
 
         // Pure transition: applies the updates and mirrors a `devices` edit into the
@@ -277,34 +287,15 @@ export function createWorkspaceActions({
     ) => {
       const now = getCurrentTimestamp();
       const current = workspaceRef.current.animals[animalId];
-      // Reserve the version synchronously from the authoritative cached store.
+      // Reserve the version synchronously from the authoritative cached store; `commitWorkspace`
+      // advances the ref in lockstep, so a second synchronous call reserves the NEXT version (two
+      // calls in one event get distinct versions, and the second never appends a duplicate the
+      // first-match resolver would mis-pin to).
       const createdVersion = current
         ? nextConfigurationVersion(getConfigHistory(current))
         : undefined;
-      if (current) {
-        // Optimistically advance the cached workspace (animal history + day pins) so a second
-        // synchronous call reserves the NEXT version — two calls in one event get distinct
-        // versions, and the second never appends a duplicate the first-match resolver would
-        // mis-pin to. The next render overwrites this with the committed state. Invariant: this
-        // only replaces existing keys (never adds/removes one), so it can't diverge from
-        // committed state unless an animal/day-removing action is composed in the same tick.
-        const optimistic = createSnapshotAndApplyForward(
-          current,
-          workspaceRef.current.days,
-          config,
-          dayIds,
-          now,
-          createdVersion,
-          animalId // the store KEY drives the day-ownership guard, not the record's id field
-        );
-        workspaceRef.current = {
-          ...workspaceRef.current,
-          animals: { ...workspaceRef.current.animals, [animalId]: optimistic.animal },
-          days: optimistic.days,
-        };
-      }
 
-      setWorkspace((prev) => {
+      commitWorkspace((prev) => {
         if (!prev.animals[animalId]) {
           throw new Error(`Animal "${animalId}" not found`);
         }
@@ -477,10 +468,11 @@ export function createWorkspaceActions({
         const now = getCurrentTimestamp();
 
         // Carry day-owned content from the source (deep-cloned by createDayRecord), with a
-        // date-derived session id and the source's session description. A duplicate pins the
-        // SOURCE's configuration version by construction (`copied` provenance — confirmed only if
-        // that version's effective date covers the new date) and carries the source's bad-channel
-        // overrides directly (same version, so no guard needed). The weight is NOT copied.
+        // date-derived session id and the source's session description. The SOURCE of the copy and
+        // the SETUP of the new day are separate questions: the configuration is chosen by the new
+        // recording date exactly as for a created day (a July 5 duplicate of a June 22 day gets the
+        // July 1 reconfiguration), and bad-channel marks carry only when that choice is the source's
+        // version. The weight is NOT copied.
         const built = createDayRecord(
           animal,
           animalId,
@@ -491,14 +483,9 @@ export function createWorkspaceActions({
             session_description: source.session?.session_description ?? '',
           },
           now,
-          { carryFrom: source, configurationVersion: source.configurationVersion, configurationSource: 'copied' }
+          { carryFrom: source }
         );
-        const day = {
-          ...built,
-          deviceOverrides: source.deviceOverrides
-            ? structuredClone(source.deviceOverrides)
-            : built.deviceOverrides,
-        };
+        const day = built;
 
         // Sort the index by date on write (see createDay): duplicating to an EARLIER date
         // must not leave the STORED `animal.days` out of chronological order.

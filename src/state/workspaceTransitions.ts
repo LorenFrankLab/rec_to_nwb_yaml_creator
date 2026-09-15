@@ -709,9 +709,10 @@ export function createDayRecord(
 /**
  * Re-copy the carry-forward fields of an EXISTING day from a different source day ("Start from a
  * different day"). Applies the same field policy as creation — stable definitions/references are
- * copied (tasks, DIO, keywords, technical, team, opto snapshot, rig, derived data folder,
- * experiment description) while the day's own facts are kept: session id / description, the
- * measured weight, files, videos, FsGUI protocols, review/export state, and the configuration pin
+ * copied (tasks, DIO, keywords, technical, team, opto snapshot, rig, derived data folder, and the
+ * experiment description ONLY when the day has none) while the day's own facts are kept: session
+ * id / descriptions, the measured weight, files, videos, FsGUI protocols, review/export state, and
+ * the configuration pin
  * (the source's version never overrides the date-selected probe setup; bad-channel marks are
  * re-copied only when the versions match). Provenance records the new source.
  *
@@ -732,6 +733,10 @@ export function reseedDayFromSource(animal: Animal, day: Day, source: Day, now: 
     { carryFrom: source, configurationVersion: day.configurationVersion, configurationSource: 'explicit' }
   );
   const seededProvenance = seeded.provenance as DayProvenance;
+  const keepsDescription = Boolean(getDaySession(day).experiment_description);
+  // A kept description keeps its own provenance; only re-copied fields take the source's.
+  const seededFields: Record<string, DayFactSource> = { ...(seededProvenance.fields ?? {}) };
+  if (keepsDescription) delete seededFields['session.experiment_description'];
   const next: Day = {
     ...structuredClone(day),
     tasks: seeded.tasks,
@@ -741,7 +746,12 @@ export function reseedDayFromSource(animal: Animal, day: Day, source: Day, now: 
     technical: seeded.technical,
     experimenters: seeded.experimenters,
     optogenetics: seeded.optogenetics,
-    session: { ...getDaySession(day), experiment_description: seeded.session.experiment_description },
+    // The day's own recorded description is kept (the dialog promises "keeps this day's
+    // descriptions"); only an EMPTY one is filled from the source.
+    session: {
+      ...getDaySession(day),
+      experiment_description: getDaySession(day).experiment_description || seeded.session.experiment_description,
+    },
     ...(seeded.data_acq_device_name ? { data_acq_device_name: seeded.data_acq_device_name } : {}),
     ...(seeded.dataFolder !== undefined ? { dataFolder: seeded.dataFolder } : {}),
     ...(seeded.deviceOverrides ? { deviceOverrides: seeded.deviceOverrides } : {}),
@@ -751,7 +761,7 @@ export function reseedDayFromSource(animal: Animal, day: Day, source: Day, now: 
       copiedFromDayId: source.id,
       copiedFromDate: String(source.date ?? '') || null,
       configuration: day.provenance?.configuration ?? seededProvenance.configuration,
-      fields: { ...(day.provenance?.fields ?? {}), ...seededProvenance.fields },
+      fields: { ...(day.provenance?.fields ?? {}), ...seededFields },
     },
     lastModified: now,
   };
@@ -820,6 +830,18 @@ export function applyDayUpdates(day: Day, updates: DayUpdates, now: string): Day
       configuration: { ...current.configuration, ...updates.provenance.configuration } as DayProvenance['configuration'],
       fields: { ...current.fields, ...updates.provenance.fields },
     };
+  }
+  // Entering a weight IS the correction the `weight_from_baseline` review asks for: the value is
+  // now the scientist's, so the flag (and the migration source) no longer apply.
+  if (updates.session && updates.session.weight !== undefined && isPlainRecordValue(updated.provenance)) {
+    const review = Array.isArray(updated.provenance.review) ? updated.provenance.review : [];
+    if (review.includes('weight_from_baseline')) {
+      updated.provenance = {
+        ...updated.provenance,
+        review: review.filter((flag) => flag !== 'weight_from_baseline'),
+        fields: { ...updated.provenance.fields, 'session.weight': 'entered' },
+      };
+    }
   }
   applyReplacements(updated, updates as Partial<Day>, DAY_REPLACE_KEYS);
 

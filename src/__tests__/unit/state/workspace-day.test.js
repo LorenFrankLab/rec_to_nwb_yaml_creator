@@ -1162,7 +1162,7 @@ describe('Day State Management', () => {
       expect(source.tasks[0].task_name).toBe('W-track');
     });
 
-    it('pins the SOURCE configuration version, not the latest', () => {
+    it('pins the version effective on the NEW date (the source’s, when that still applies), not the latest', () => {
       const { result } = renderHook(() => useStore());
       createTestAnimal(result);
       // Source day is created against version 1.
@@ -1172,11 +1172,11 @@ describe('Day State Management', () => {
           session_description: 'Day 1',
         });
       });
-      // Add a version 2 (applied to no days) so the animal's LATEST is now 2,
-      // while the source day stays pinned to 1.
+      // Add a version 2 effective LATER (July 1) so the animal's LATEST is 2 while June 23 is
+      // still covered by version 1.
       act(() => {
         result.current.actions.createConfigurationSnapshotAndApplyForward('remy', {
-          date: '2023-06-15',
+          date: '2023-07-01',
           description: 'Adjusted probes',
           devices: {
             electrode_groups: [
@@ -1195,7 +1195,7 @@ describe('Day State Management', () => {
         result.current.actions.duplicateDay('remy-2023-06-22', '2023-06-23');
       });
 
-      // The duplicate is the SAME version as its source (1), NOT the latest (2).
+      // June 23 is covered by version 1 (version 2 only becomes effective July 1).
       expect(result.current.model.workspace.days['remy-2023-06-23'].configurationVersion).toBe(1);
     });
 
@@ -1209,10 +1209,11 @@ describe('Day State Management', () => {
         });
       });
       seedSourceDay(result);
-      // Fork a later version so the source is non-latest.
+      // Fork a later version (effective July 1) so the source is non-latest but still the
+      // version in effect on June 23.
       act(() => {
         result.current.actions.createConfigurationSnapshotAndApplyForward('remy', {
-          date: '2023-06-15',
+          date: '2023-07-01',
           description: 'Adjusted probes',
           devices: {
             electrode_groups: [
@@ -1246,7 +1247,8 @@ describe('Day State Management', () => {
           session_description: 'Day 1',
         });
       });
-      // Source pins NON-latest version 1 and owns a bad-channel override on ntrode 1.
+      // Source pins NON-latest version 1 (version 2 is effective July 1, after the duplicate's
+      // date) and owns a bad-channel override on ntrode 1.
       act(() => {
         result.current.actions.updateDay('remy-2023-06-22', {
           deviceOverrides: { bad_channels: { 1: [2] } },
@@ -1254,7 +1256,7 @@ describe('Day State Management', () => {
       });
       act(() => {
         result.current.actions.createConfigurationSnapshotAndApplyForward('remy', {
-          date: '2023-06-15',
+          date: '2023-07-01',
           description: 'Adjusted probes',
           devices: {
             electrode_groups: [

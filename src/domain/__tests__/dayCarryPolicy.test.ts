@@ -52,6 +52,21 @@ describe('deriveDataFolderForDate', () => {
     expect(deriveDataFolderForDate('/data/20230702/', '2023-07-02', '2023-06-25').dataFolder).toBe('/data/20230625/');
     expect(deriveDataFolderForDate('/data/20230702/', '2023-06-30', '2023-06-25')).toEqual({ kind: 'stale-date', dataFolder: undefined });
   });
+  it('rewrites an ISO-dated folder (the review’s /data/remy/2023-06-22/ case) instead of copying it unchanged', () => {
+    expect(deriveDataFolderForDate('/data/remy/2023-06-22/', '2023-06-22', '2023-06-23')).toEqual({
+      kind: 'derived',
+      dataFolder: '/data/remy/2023-06-23/',
+    });
+    expect(deriveDataFolderForDate('/data/remy/2023-06-22/', '2023-06-30', '2023-06-23')).toEqual({ kind: 'stale-date', dataFolder: undefined });
+  });
+  it('does not treat an unrecognized date-like token as stable: a 6-digit or dotted date needs entry', () => {
+    expect(deriveDataFolderForDate('/data/remy/230622/', '2023-06-22', '2023-06-23')).toEqual({ kind: 'stale-date', dataFolder: undefined });
+    expect(deriveDataFolderForDate('/data/remy/2023.06.22/', '2023-06-22', '2023-06-23')).toEqual({ kind: 'stale-date', dataFolder: undefined });
+    expect(deriveDataFolderForDate('/data/remy/06-22-2023/', '2023-06-22', '2023-06-23')).toEqual({ kind: 'stale-date', dataFolder: undefined });
+  });
+  it('a folder whose digits are not a date (a rig number, an animal id) is still a shared folder', () => {
+    expect(deriveDataFolderForDate('/data/rig2/remy_1234/', '2023-06-22', '2023-06-23')).toEqual({ kind: 'copied', dataFolder: '/data/rig2/remy_1234/' });
+  });
   it('yields nothing for a blank source', () => {
     expect(deriveDataFolderForDate('', '2023-06-22', '2023-06-25').kind).toBe('none');
     expect(deriveDataFolderForDate(undefined, '2023-06-22', '2023-06-25').kind).toBe('none');

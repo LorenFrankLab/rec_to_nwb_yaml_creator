@@ -152,6 +152,91 @@ describe('#8 copying a day follows the field rules', () => {
   });
 });
 
+describe('#5b duplicating a day selects the setup by the TARGET date, like creation', () => {
+  it('forward: duplicating June 22 (v1) to July 5 pins v2 (effective July 1) as confirmed and does not carry v1 bad channels', () => {
+    const { result } = renderHook(() => useStore(seed()));
+    act(() => {
+      result.current.actions.duplicateDay('remy-2023-06-22', '2023-07-05');
+    });
+    const day = result.current.model.workspace.days['remy-2023-07-05'];
+    expect(day.configurationVersion).toBe(2);
+    expect(day.provenance.configuration).toEqual({ source: 'effective-date', confirmed: true });
+    expect(day.deviceOverrides).toBeUndefined();
+    const animal = result.current.model.workspace.animals.remy;
+    expect(validateDay(day, mergeDayMetadata(animal, day), animal).some((i) => i.code === 'configuration_effective_date_unconfirmed')).toBe(false);
+  });
+
+  it('backward: duplicating July 2 (v2) to June 25 pins v1 (effective June 1), still copying July 2’s team', () => {
+    const { result } = renderHook(() => useStore(seed()));
+    act(() => {
+      result.current.actions.duplicateDay('remy-2023-07-02', '2023-06-25');
+    });
+    const day = result.current.model.workspace.days['remy-2023-06-25'];
+    expect(day.configurationVersion).toBe(1);
+    expect(day.experimenters.experimenter_name).toEqual(['Doe, Jane', 'Roe, Richard']);
+    expect(day.provenance.copiedFromDayId).toBe('remy-2023-07-02');
+  });
+
+  it('same setup: duplicating June 22 (v1) to June 23 keeps v1 and carries its bad channels', () => {
+    const { result } = renderHook(() => useStore(seed()));
+    act(() => {
+      result.current.actions.duplicateDay('remy-2023-06-22', '2023-06-23');
+    });
+    const day = result.current.model.workspace.days['remy-2023-06-23'];
+    expect(day.configurationVersion).toBe(1);
+    expect(day.deviceOverrides.bad_channels['1']).toEqual([2]);
+  });
+});
+
+describe('#8b "Change source" re-copies the carry fields but keeps the day’s own recorded facts', () => {
+  it('keeps a recorded experiment description (the dialog promises to), while copying team and tasks', () => {
+    const { result } = renderHook(() => useStore(seed()));
+    act(() => {
+      result.current.actions.updateDay('remy-2023-06-22', { session: { experiment_description: 'TARGET recorded protocol' } });
+      result.current.actions.updateDay('remy-2023-07-02', { session: { experiment_description: 'SOURCE protocol' } });
+    });
+    act(() => {
+      result.current.actions.reseedDayFrom('remy-2023-06-22', 'remy-2023-07-02');
+    });
+    const day = result.current.model.workspace.days['remy-2023-06-22'];
+    expect(day.session.experiment_description).toBe('TARGET recorded protocol');
+    expect(day.session.weight).toBe(480);
+    expect(day.experimenters.experimenter_name).toEqual(['Doe, Jane', 'Roe, Richard']);
+    expect(day.provenance.copiedFromDayId).toBe('remy-2023-07-02');
+  });
+
+  it('fills an EMPTY description from the source (nothing recorded is overwritten)', () => {
+    const { result } = renderHook(() => useStore(seed()));
+    act(() => {
+      result.current.actions.updateDay('remy-2023-06-22', { session: { experiment_description: '' } });
+      result.current.actions.updateDay('remy-2023-07-02', { session: { experiment_description: 'SOURCE protocol' } });
+    });
+    act(() => {
+      result.current.actions.reseedDayFrom('remy-2023-06-22', 'remy-2023-07-02');
+    });
+    expect(result.current.model.workspace.days['remy-2023-06-22'].session.experiment_description).toBe('SOURCE protocol');
+  });
+});
+
+describe('#5c correcting a setup’s effective date re-evaluates the days it covered', () => {
+  it('a June 25 day auto-pinned to v1 (effective June 1) becomes unconfirmed when v1 is corrected to July 1 — its geometry is not re-pinned', () => {
+    const { result } = renderHook(() => useStore(seed()));
+    act(() => {
+      result.current.actions.createDay('remy', '2023-06-25', { session_id: 'remy_20230625', session_description: 'x' }, { carryForwardFromDayId: 'auto' });
+    });
+    const before = result.current.model.workspace.days['remy-2023-06-25'];
+    expect(before.provenance.configuration).toEqual({ source: 'effective-date', confirmed: true });
+    act(() => {
+      result.current.actions.setConfigurationEffectiveDate('remy', 1, '2023-07-01');
+    });
+    const { animals, days } = result.current.model.workspace;
+    const after = days['remy-2023-06-25'];
+    expect(after.configurationVersion).toBe(1);
+    const issue = validateDay(after, mergeDayMetadata(animals.remy, after), animals.remy).find((i) => i.code === 'configuration_effective_date_unconfirmed');
+    expect(issue).toBeTruthy();
+  });
+});
+
 describe('#9 a correction or a filename change makes a previous download stale', () => {
   /**
    * Export June 22 through the real export core (download mocked).

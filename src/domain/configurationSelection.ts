@@ -35,8 +35,17 @@ const isIsoDate = (value: unknown): value is string =>
   typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value);
 
 /**
- * Snapshots with a usable integer version and ISO effective date, sorted by effective date then
- * version (ties broken by version so a same-day reconfiguration resolves to the later version).
+ * A snapshot whose `date` is only its ENTRY stamp (`effectiveDateKnown === false`): the setup was
+ * in place when it was entered, but nobody recorded when it became effective. Only an animal's
+ * initial setup is created this way, so such a snapshot is the EARLIEST setup by construction —
+ * it sorts first regardless of its stamp, and its stamp covers no earlier day with certainty.
+ */
+const dateUnknown = (s: ConfigurationSnapshot): boolean => s.effectiveDateKnown === false;
+
+/**
+ * Snapshots with a usable integer version and ISO date, sorted by effective date then version
+ * (ties broken by version so a same-day reconfiguration resolves to the later version); entry-
+ * stamped snapshots (unknown effective date) come first, in version order.
  *
  * @param animalOrHistory - The animal record or a bare history array (any shape).
  * @returns Sorted usable snapshots.
@@ -45,9 +54,13 @@ function usableSnapshots(animalOrHistory: unknown): ConfigurationSnapshot[] {
   const history = Array.isArray(animalOrHistory)
     ? (animalOrHistory as ConfigurationSnapshot[])
     : getConfigHistory(animalOrHistory);
+  const sortKey = (s: ConfigurationSnapshot) => (dateUnknown(s) ? '' : s.date);
   return history
     .filter((s) => s && Number.isInteger(s.version) && isIsoDate(s.date))
-    .sort((a, b) => (a.date === b.date ? a.version - b.version : a.date.localeCompare(b.date)));
+    .sort((a, b) => {
+      const [ka, kb] = [sortKey(a), sortKey(b)];
+      return ka === kb ? a.version - b.version : ka.localeCompare(kb);
+    });
 }
 
 /**
@@ -60,12 +73,14 @@ function usableSnapshots(animalOrHistory: unknown): ConfigurationSnapshot[] {
 export function selectConfigurationForDate(animalOrHistory: unknown, date: string): ConfigurationChoice {
   const snapshots = usableSnapshots(animalOrHistory);
   if (snapshots.length === 0) return { version: null, covered: false, effectiveDate: null };
+  // A snapshot covers the date when its KNOWN effective date is on/before it, or — for an entry-
+  // stamped snapshot — when the day is on/after the entry (the setup was in place by then).
   const covering = snapshots.filter((s) => s.date <= date);
   if (covering.length > 0) {
     const chosen = covering[covering.length - 1];
     return { version: chosen.version, covered: true, effectiveDate: chosen.date };
   }
-  // Before every known effective date: the earliest version is the candidate, unconfirmed.
+  // Before every known effective date: the earliest setup is the candidate, unconfirmed.
   const earliest = snapshots[0];
   return { version: earliest.version, covered: false, effectiveDate: earliest.date };
 }
@@ -78,7 +93,11 @@ export type ConfigurationChoiceStatus =
 
 /**
  * Whether a day's pinned version is settled: its snapshot's effective date covers the recording
- * date, OR the user explicitly confirmed the choice (`provenance.configuration.confirmed`).
+ * date, OR the user EXPLICITLY confirmed the choice (`provenance.configuration.source ===
+ * 'explicit'`). Every other confirmation (date-selected, copied, migrated) was derived from the
+ * effective dates and is only as good as they are, so it is re-evaluated here every time — correcting a
+ * setup's effective date to after a day it covered un-confirms that day (its geometry is never
+ * silently re-pinned; the scientist confirms or re-pins).
  *
  * @param animal - The owning animal.
  * @param day - The recording day.
@@ -89,7 +108,11 @@ export function configurationChoiceStatus(animal: unknown, day: Day): Configurat
   const version = day.configurationVersion;
   const snapshot = usableSnapshots(animal).find((s) => s.version === version);
   const effectiveDate = snapshot?.date ?? null;
-  if (day.provenance?.configuration?.confirmed) return { status: 'confirmed', version, effectiveDate };
+  const choice = day.provenance?.configuration;
+  // Only a scientist's own assertion is conclusive; `copied` / `migration` / `effective-date`
+  // confirmations were all derived from effective dates and are re-derived below.
+  const explicitlyConfirmed = Boolean(choice?.confirmed) && choice?.source === 'explicit';
+  if (explicitlyConfirmed) return { status: 'confirmed', version, effectiveDate };
   if (!snapshot) return { status: 'confirmed', version, effectiveDate };
   if (isIsoDate(day.date) && snapshot.date <= day.date) return { status: 'confirmed', version, effectiveDate };
   return {
