@@ -285,6 +285,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Fix & Export shows a readable summary of what the file will say (weight, team, tasks and rooms,
+  calibrations, failed channels, stimulation) before you download.** The page offered Download, Copy
+  and a collapsed dump of raw YAML — nothing a scientist could scan to catch a value that is valid
+  but wrong. The same read-only review the per-animal Validation summary shows now sits between the
+  readiness line and the Download button, captioned "Check these values before downloading"; a
+  blocked day still leads with its repair list. The summary itself gained the day's measured weight
+  in grams (or "not recorded" — never the animal's baseline) beside the experimenters who ran it,
+  and now names each task with its epochs and the room it ran in rather than counting them.
+
 - **The daily log names the data folder right where file names are generated and shows statescripts
   as expected / linked / not expected instead of a red "missing" count.** The "Data folder missing"
   notice pointed at a section that does not exist while the field itself sat in a collapsed
