@@ -17,6 +17,7 @@ import {
   resetPersistenceForTests,
 } from '../persistence';
 import { createDefaultWorkspace } from '../workspaceUtils';
+import { makeTestWorkspace } from '../../__tests__/helpers/test-fixtures';
 
 const seedMeta = (revision) =>
   window.localStorage.setItem(WORKSPACE_META_KEY, JSON.stringify({ revision, writerId: 'closed-tab', savedAt: 'x' }));
@@ -68,5 +69,34 @@ describe('discarding an unusable workspace', () => {
     expect(loadWorkspace()).toBeNull();
     expect(() => saveWorkspace(createDefaultWorkspace())).not.toThrow();
     expect(readWorkspaceRevision()).toBe(10);
+  });
+});
+
+describe('saveWorkspace writes its two keys as one outcome', () => {
+  const failOn = (key) => {
+    const real = window.localStorage.setItem.bind(window.localStorage);
+    vi.spyOn(window.localStorage, 'setItem').mockImplementation((k, v) => {
+      if (k === key) throw new Error(`Quota full on ${k}`);
+      real(k, v);
+    });
+  };
+
+  it('when the revision-marker write fails, the blob is NOT left replaced (a fresh tab reads the old workspace)', () => {
+    saveWorkspace(createDefaultWorkspace());
+    const before = { blob: window.localStorage.getItem(WORKSPACE_STORAGE_KEY), meta: window.localStorage.getItem(WORKSPACE_META_KEY) };
+    failOn(WORKSPACE_META_KEY);
+    expect(() => saveWorkspace(makeTestWorkspace())).toThrow(/Quota full/);
+    expect(window.localStorage.getItem(WORKSPACE_STORAGE_KEY)).toBe(before.blob);
+    expect(window.localStorage.getItem(WORKSPACE_META_KEY)).toBe(before.meta);
+    expect(readWorkspaceRevision()).toBe(1);
+  });
+
+  it('when the blob write fails, the revision marker is NOT left advanced', () => {
+    saveWorkspace(createDefaultWorkspace());
+    const before = window.localStorage.getItem(WORKSPACE_META_KEY);
+    failOn(WORKSPACE_STORAGE_KEY);
+    expect(() => saveWorkspace(makeTestWorkspace())).toThrow(/Quota full/);
+    expect(window.localStorage.getItem(WORKSPACE_META_KEY)).toBe(before);
+    expect(JSON.parse(window.localStorage.getItem(WORKSPACE_STORAGE_KEY)).workspace.animals).toEqual({});
   });
 });

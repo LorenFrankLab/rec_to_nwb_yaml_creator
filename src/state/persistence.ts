@@ -16,7 +16,7 @@ import { createDefaultWorkspace } from './workspaceUtils';
 import { migrateWorkspace, WORKSPACE_SCHEMA_VERSION } from './workspaceMigrations';
 import { WRITER_ID } from './writerLock';
 import { getBlob, putBlob, deleteBlob } from './blobStore';
-import { receiptHash, RECEIPT_YAML_KEY_PREFIX } from '../domain/exportReceipt';
+import { receiptHash, receiptYamlKey, RECEIPT_YAML_KEY_PREFIX } from '../domain/exportReceipt';
 
 // Re-exported so consumers keep importing the current schema version from the persistence layer
 // (its public home), while the migration registry owns its definition + the forward migrators.
@@ -458,10 +458,31 @@ export function saveWorkspace(workspace: object, options: { checkpoint?: boolean
   // never changed a byte (proved by persistence.saveNormalization.test.js). Load is the single
   // repair point; a blob that somehow persisted un-normalized is normalized on its next hydrate.
   const blob = JSON.stringify({ schemaVersion: WORKSPACE_SCHEMA_VERSION, workspace });
-  window.localStorage.setItem(WORKSPACE_STORAGE_KEY, blob);
   const revision = lastSeenRevision + 1;
   const meta: WorkspaceMeta = { revision, writerId: WRITER_ID, savedAt: new Date().toISOString() };
+  // Two keys, ONE outcome. The small marker goes first (it is the write least likely to hit the
+  // quota); if the blob then fails, the marker is rolled back so a fresh tab never sees a new
+  // revision over old bytes — and a caller that catches the throw can trust that nothing durable
+  // changed. (Should the rollback itself fail, the leftover is a marker of THIS writer over the
+  // old bytes: harmless, since this tab's own revisions never count as unseen.)
+  let previousMeta: string | null = null;
+  try {
+    previousMeta = window.localStorage.getItem(WORKSPACE_META_KEY);
+  } catch {
+    previousMeta = null;
+  }
   window.localStorage.setItem(WORKSPACE_META_KEY, JSON.stringify(meta));
+  try {
+    window.localStorage.setItem(WORKSPACE_STORAGE_KEY, blob);
+  } catch (err) {
+    try {
+      if (previousMeta == null) window.localStorage.removeItem(WORKSPACE_META_KEY);
+      else window.localStorage.setItem(WORKSPACE_META_KEY, previousMeta);
+    } catch {
+      // see above: a leftover marker of this writer is inert
+    }
+    throw err;
+  }
   lastSeenRevision = revision;
   // An explicit save is a deliberate "this is good" — refresh the last-known-good checkpoint.
   if (options.checkpoint) writeCheckpoint(blob, WORKSPACE_SCHEMA_VERSION);
@@ -505,7 +526,7 @@ async function collectReceiptArtifacts(workspace: object): Promise<BackupArtifac
     const receipt = (day as DayWithReceipt)?.exportReceipt;
     if (!receipt || receipt.yamlStored !== true || typeof receipt.contentHash !== 'string') continue;
     // eslint-disable-next-line no-await-in-loop
-    const stored = await getBlob<unknown>(`${RECEIPT_YAML_KEY_PREFIX}${dayId}`);
+    const stored = await getBlob<unknown>(receiptYamlKey(dayId, receipt as { yamlKey?: unknown }));
     if (isArtifact(stored) && receiptHash(stored.filename, stored.yaml) === receipt.contentHash) {
       artifacts[dayId] = { filename: stored.filename, yaml: stored.yaml, exportedAt: stored.exportedAt };
     }
@@ -557,26 +578,26 @@ export function serializeWorkspaceBackup(
   );
 }
 
-/** Where an incoming artifact sits while its restore has not committed. */
-export const RECEIPT_STAGING_KEY_PREFIX = 'receipt-staging:';
-
-/** The staged artifacts of a restore in progress, keyed by day id. */
-export type StagedArtifacts = Record<string, { stagingKey: string; durable: boolean }>;
+/** The keys a restore operation wrote its incoming artifacts to (its own, unique to the attempt). */
+export type StagedArtifacts = Record<string, { key: string; durable: boolean }>;
 
 /**
- * STAGE a backup's receipt artifacts: verify each against its day's receipt hash and write the
- * verified bytes under a staging key — never over the active workspace's artifacts — and return
- * the workspace with truthful `yamlStored` flags (true only when the store durably accepted the
- * staged bytes). A restore that is cancelled or fails then discards the staging keys and the
- * active receipts' bytes are exactly as before.
+ * STAGE a backup's receipt artifacts for one restore attempt: verify each against its day's
+ * receipt hash and write the verified bytes ONCE, to a key unique to this attempt
+ * (`receipt:<dayId>:<opId>`) that the restored receipt then names (`yamlKey`). The active
+ * workspace's artifacts are never touched, there is no later promotion step that could lose the
+ * bytes, and two attempts (a cancelled one and its retry) can never share a key. `yamlStored` is
+ * true only when the store durably acknowledged the write.
  *
  * @param workspace - The hydrated workspace about to be restored.
  * @param artifacts - The artifacts carried by the backup (from `parseWorkspaceBackup`).
- * @returns The flagged workspace (a new object; input not mutated) and the staged keys.
+ * @param opId - This restore attempt's identity (unique per attempt).
+ * @returns The flagged workspace (a new object; input not mutated) and the keys written.
  */
 export async function stageBackupArtifacts<T extends { days?: Record<string, unknown> }>(
   workspace: T,
-  artifacts: BackupArtifacts
+  artifacts: BackupArtifacts,
+  opId: string
 ): Promise<{ workspace: T; staged: StagedArtifacts }> {
   const days = isPlainObject(workspace.days) ? workspace.days : {};
   const nextDays: Record<string, unknown> = { ...days };
@@ -586,74 +607,74 @@ export async function stageBackupArtifacts<T extends { days?: Record<string, unk
     if (!isPlainObject(receipt)) continue;
     const artifact = artifacts[dayId];
     let stored = false;
+    const key = `${RECEIPT_YAML_KEY_PREFIX}${dayId}:${opId}`;
     if (artifact && receiptHash(artifact.filename, artifact.yaml) === receipt.contentHash) {
-      const stagingKey = `${RECEIPT_STAGING_KEY_PREFIX}${dayId}`;
       // eslint-disable-next-line no-await-in-loop
-      stored = await putBlob(stagingKey, artifact);
-      staged[dayId] = { stagingKey, durable: stored };
+      stored = await putBlob(key, artifact);
+      staged[dayId] = { key, durable: stored };
     }
-    nextDays[dayId] = { ...(day as object), exportReceipt: { ...receipt, yamlStored: stored } };
+    nextDays[dayId] = {
+      ...(day as object),
+      exportReceipt: { ...receipt, yamlStored: stored, ...(stored ? { yamlKey: key } : {}) },
+    };
   }
   return { workspace: { ...workspace, days: nextDays }, staged };
 }
 
 /**
- * COMMIT staged artifacts after the restored workspace was durably written: every restored day
- * with a receipt gets exactly its staged bytes (or none — leftovers from the previous workspace
- * under the same day id are removed), and the staging keys are cleared.
+ * Drop the artifacts a restore attempt wrote (cancelled, refused or failed): only ITS keys, so a
+ * retry that already staged its own bytes is untouched.
  *
- * @param workspace - The restored workspace (as written).
- * @param workspace.days - Its days map.
- * @param staged - The staged keys from {@link stageBackupArtifacts}.
- */
-export async function commitStagedArtifacts(
-  workspace: { days?: Record<string, unknown> },
-  staged: StagedArtifacts
-): Promise<void> {
-  const days = isPlainObject(workspace.days) ? workspace.days : {};
-  for (const [dayId, day] of Object.entries(days)) {
-    if (!isPlainObject((day as DayWithReceipt)?.exportReceipt)) continue;
-    const key = `${RECEIPT_YAML_KEY_PREFIX}${dayId}`;
-    // eslint-disable-next-line no-await-in-loop
-    await deleteBlob(key);
-    const entry = staged[dayId];
-    if (!entry) continue;
-    // eslint-disable-next-line no-await-in-loop
-    const bytes = await getBlob<ReceiptArtifact>(entry.stagingKey);
-    // eslint-disable-next-line no-await-in-loop
-    if (bytes) await putBlob(key, bytes);
-    // eslint-disable-next-line no-await-in-loop
-    await deleteBlob(entry.stagingKey);
-  }
-}
-
-/**
- * Drop the staged artifacts of a restore that was cancelled or failed (the active keys were never
- * touched).
- *
- * @param staged - The staged keys from {@link stageBackupArtifacts}.
+ * @param staged - The keys from {@link stageBackupArtifacts}.
  */
 export async function discardStagedArtifacts(staged: StagedArtifacts): Promise<void> {
   for (const entry of Object.values(staged)) {
     // eslint-disable-next-line no-await-in-loop
-    await deleteBlob(entry.stagingKey);
+    await deleteBlob(entry.key);
   }
 }
 
 /**
- * Restore a backup's artifacts in one step (stage + commit): for callers that have ALREADY
- * durably written the restored workspace, or tests of the transfer itself.
+ * Best-effort cleanup after a COMMITTED restore: the artifacts the replaced workspace's receipts
+ * referred to are no longer reachable from any receipt (a leftover would be harmless — every
+ * reader verifies bytes against the receipt hash — but wastes space).
+ *
+ * @param replaced - The workspace that was replaced.
+ * @param replaced.days - Its days map.
+ * @param restored - The workspace that replaced it (its keys are kept).
+ * @param restored.days - Its days map.
+ */
+export async function releaseReplacedArtifacts(
+  replaced: { days?: Record<string, unknown> },
+  restored: { days?: Record<string, unknown> }
+): Promise<void> {
+  const keep = new Set<string>();
+  for (const [dayId, day] of Object.entries(isPlainObject(restored.days) ? restored.days : {})) {
+    const receipt = (day as DayWithReceipt)?.exportReceipt;
+    if (isPlainObject(receipt)) keep.add(receiptYamlKey(dayId, receipt as { yamlKey?: unknown }));
+  }
+  for (const [dayId, day] of Object.entries(isPlainObject(replaced.days) ? replaced.days : {})) {
+    const receipt = (day as DayWithReceipt)?.exportReceipt;
+    if (!isPlainObject(receipt)) continue;
+    const key = receiptYamlKey(dayId, receipt as { yamlKey?: unknown });
+    // eslint-disable-next-line no-await-in-loop
+    if (!keep.has(key)) await deleteBlob(key);
+  }
+}
+
+/**
+ * Restore a backup's artifacts in one step: for tests of the transfer itself and callers that
+ * have ALREADY durably written the restored workspace.
  *
  * @param workspace - The hydrated workspace.
  * @param artifacts - The artifacts carried by the backup.
- * @returns The workspace with truthful `yamlStored` flags.
+ * @returns The workspace with truthful `yamlStored` flags and `yamlKey` references.
  */
 export async function restoreBackupArtifacts<T extends { days?: Record<string, unknown> }>(
   workspace: T,
   artifacts: BackupArtifacts
 ): Promise<T> {
-  const { workspace: flagged, staged } = await stageBackupArtifacts(workspace, artifacts);
-  await commitStagedArtifacts(flagged, staged);
+  const { workspace: flagged } = await stageBackupArtifacts(workspace, artifacts, `restore-${Date.now().toString(36)}`);
   return flagged;
 }
 

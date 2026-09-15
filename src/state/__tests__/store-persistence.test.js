@@ -12,6 +12,7 @@ import { renderHook, act, waitFor } from '@testing-library/react';
 import { useStore } from '../store';
 import {
   WORKSPACE_STORAGE_KEY,
+  WORKSPACE_META_KEY,
   WORKSPACE_QUARANTINE_KEY,
   WORKSPACE_SCHEMA_VERSION,
   resetPersistenceForTests,
@@ -230,7 +231,10 @@ describe('useStore persistence', () => {
     });
     expect(result.current.persistence.saveError).toBeNull();
     expect(result.current.persistence.hasPendingWrite).toBe(false);
-    expect(blobWrites(setItem)).toBe(2); // one failed attempt + one successful retry
+    // The failed attempt died on its FIRST key (the revision marker goes before the blob, so a
+    // failure never leaves new bytes without a marker); the retry wrote both.
+    expect(blobWrites(setItem)).toBe(1);
+    expect(setItem.mock.calls.filter(([key]) => key === WORKSPACE_META_KEY)).toHaveLength(2);
   });
 
   it('hydrates a structurally-empty blob and surfaces a recovery notice naming the missing sections', () => {
