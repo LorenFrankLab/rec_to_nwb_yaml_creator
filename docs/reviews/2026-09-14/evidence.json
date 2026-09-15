@@ -1,0 +1,205 @@
+{
+  "review_date": "2026-09-14",
+  "revisions": {
+    "app": "57b3b41b",
+    "trodes_to_nwb": "6603412",
+    "spyglass": "c65a5098"
+  },
+  "inventory": {
+    "collected_metadata_yamls": {
+      "files": 1814,
+      "parsed": 1799,
+      "subject_metadata": 1799,
+      "new_unique_content": 1681,
+      "parse_errors": 15,
+      "duplicate_content": 118
+    },
+    "all_rat_metadata_yaml": {
+      "files": 325,
+      "parsed": 325,
+      "subject_metadata": 325,
+      "duplicate_content": 325
+    },
+    "trodes_to_nwb_test_data": {
+      "files": 8,
+      "parsed": 8,
+      "not_subject_metadata": 5,
+      "subject_metadata": 3,
+      "new_unique_content": 3
+    }
+  },
+  "exploratory_variation": {
+    "method": "Exact subject IDs; byte-identical contents deduplicated; date from filename; raw values, not inferred physical changes. Includes three converter test metadata files. Source identity/correction ambiguities remain.",
+    "subject_ids_with_dates": 149,
+    "subject_ids_with_multiple_dates": 128,
+    "fields": {
+      "experimenter_name": 16,
+      "weight": 47,
+      "date_of_birth": 18,
+      "genotype": 13,
+      "experiment_description": 24,
+      "session_description": 52,
+      "cameras": 50,
+      "tasks": 122,
+      "behavioral_events": 33,
+      "raw_data_to_volts": 0,
+      "opto_setup": 10,
+      "probe_geometry": 33,
+      "bad_channels": 27
+    }
+  },
+  "import_sweep": {
+    "method": "YAML.parse; exact content SHA256 deduplication; buildImportRepairPlan; applyImportRepairs with no accepted resolutions (benign normalization only); planImport per file into an empty workspace. Ready requires no repair items/blockers and no planner rejection. Categories overlap.",
+    "counts": {
+      "files": 1814,
+      "parseErrors": 15,
+      "duplicates": 118,
+      "uniqueParsed": 1681,
+      "readyWithoutReview": 442,
+      "needsFieldRepairs": 1208,
+      "hasFixInFileBlockers": 779,
+      "plannerRejectedAfterBenign": 1192
+    },
+    "repair_item_counts": {
+      "type": 1541,
+      "required": 5866,
+      "enum": 933,
+      "invalid_species": 939,
+      "placeholder_camera_name": 469,
+      "missing_recording_date": 15,
+      "volume_shim_conflict": 100,
+      "camera_meters_per_pixel_nonpositive": 16,
+      "duplicate_associated_file_path": 10,
+      "pattern": 15,
+      "duplicate_associated_file_name": 2,
+      "empty_location": 58,
+      "empty_targeted_location": 33
+    },
+    "source_file_blocker_counts": {
+      "type": 492,
+      "enum": 2250,
+      "required": 36,
+      "bad_channel_out_of_range": 6,
+      "multishank_bad_channels_ignored": 186,
+      "channel_row_count_mismatch": 3,
+      "partial_configuration": 3,
+      "fs_gui_requires_optogenetics": 1,
+      "missing_opto_reference": 3,
+      "duplicate_behavioral_event_description": 40,
+      "divergent_camera_identity": 2,
+      "dangling_electrode_group_ref": 1,
+      "channel_partition_invalid": 15,
+      "orphaned_video": 3,
+      "dangling_camera_ref": 25,
+      "orphaned_file": 2,
+      "duplicate_task_epoch": 4,
+      "duplicate_ntrode_id": 1,
+      "channel_key_out_of_range": 64
+    },
+    "planner_throws": 0
+  },
+  "verification": {
+    "vitest": {
+      "files_passed": 361,
+      "tests_passed": 5294
+    },
+    "typecheck": "passed",
+    "lint_ci": "passed",
+    "build": "passed",
+    "build_js_bytes_reported_kb": 1240.63,
+    "build_js_gzip_kb": 330.94,
+    "build_css_kb": 160.27,
+    "selected_playwright_tests_passed": 22,
+    "schema_equal_ignoring_version": true,
+    "browser": "Chromium",
+    "viewports": [
+      {
+        "width": 1440,
+        "height": 1000
+      },
+      {
+        "width": 390,
+        "height": 844
+      }
+    ],
+    "axe_flag": {
+      "rule": "target-size",
+      "target": "a[href$=\"www.ucsf.edu\"]",
+      "note": "Check inline-text exception before a conformance conclusion."
+    },
+    "full_nwb_conversion_run": false,
+    "live_spyglass_insertion_run": false
+  },
+  "reproductions": {
+    "filename_grouping": [
+      {
+        "file": "20230622_Sample_01_a1.rec",
+        "scanner_group": [
+          20230622,
+          "Sample"
+        ]
+      },
+      {
+        "file": "06222023_sample_metadata.yml",
+        "scanner_group": [
+          6222023,
+          "sample"
+        ]
+      },
+      {
+        "file": "20230622_sample_metadata.yml",
+        "scanner_group": [
+          20230622,
+          "sample"
+        ]
+      },
+      {
+        "file": "20230622_Sample_metadata.yml",
+        "scanner_group": [
+          20230622,
+          "Sample"
+        ]
+      }
+    ],
+    "backfill": {
+      "recording_date": "2023-06-25",
+      "selected_configuration_version": 2,
+      "selected_configuration_effective_date": "2023-07-01",
+      "copy_source_date": "2023-07-02",
+      "copied_weight": 520,
+      "copied_data_folder": "/data/20230702/",
+      "copied_rig_reference": null,
+      "source_rig_reference": "Second rig",
+      "export_resolution": "First catalog entry"
+    },
+    "focused_autosave": {
+      "dom_description": "UNSAVED REVIEW DESCRIPTION",
+      "persisted_description": "Day 45 of chronic recording, W-track alternation",
+      "save_indicator": "Saved just now",
+      "cmd_s_pressed": true,
+      "beforeunload_guarded": false,
+      "reload_result": "Old description restored"
+    },
+    "multi_tab": {
+      "tab_a_saved_description": "TAB ONE NEW DESCRIPTION",
+      "tab_b_weight": 511,
+      "final_description": "Day 45 of chronic recording, W-track alternation",
+      "final_weight": 511
+    },
+    "export_staleness": {
+      "before_weight": 520,
+      "after_weight": 530,
+      "after_state": {
+        "validated": true,
+        "exported": true,
+        "validationDeferred": false
+      }
+    },
+    "experimenter_import": {
+      "valid_files": 2,
+      "different_teams": true,
+      "rejected_files": 0,
+      "result": "Later team becomes animal experimenters; divergence reported, original per-day team not represented"
+    }
+  }
+}

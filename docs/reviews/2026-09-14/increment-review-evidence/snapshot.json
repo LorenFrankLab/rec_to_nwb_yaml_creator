@@ -1,0 +1,19 @@
+{
+  "capturedAt": "2026-09-14T16:12:42.398652-07:00",
+  "base": "57b3b41b05f2435e27ba2cd5d142ecc2989ab9f8",
+  "sha256": {
+    "src/state/writerLock.ts": "ca84f8922245a06cc76755a257e7b2f3ed51e0049c07e9bb80471fbcb80301e8",
+    "src/state/useWorkspacePersistence.ts": "d4c3fad189d29bc00b8e4d1c942977fd12f039f33b902c14f84ee96bb88530a3",
+    "src/state/blobStore.ts": "bcdb11dd09981a479a71b1a3148b95fa45cdcdcab455c91d39a4485c4a736143",
+    "src/state/persistence.ts": "354f6009dd7790bfbfd1c53bf2f90fc72269d725d94c9eadfffa37bf1dbfffab",
+    "src/state/workspaceActions.ts": "0ef637f452efeecfb332f199997e5a5ad1c41b2e0a4459cece51bd2e27668783",
+    "src/state/datedFactsMigration.ts": "d6751c94720cfaf0169240d8e5433f0d89fd14193effa618590ad768a6d45df3",
+    "src/domain/datedFactsValidation.ts": "3ed9a8c33b7aea97449ee8a0c3cc582a48f7dd1cde48d05e8226f56fbb599acb",
+    "src/domain/configurationSelection.ts": "285917a5e415df7c21eab7203cc84f605bbf7a1618257ec1b0951b3e41fdbfaa",
+    "src/domain/dayCarryPolicy.ts": "b2cbaa514acac0d7b137f75bc250f0bfb0059bf1fec986fc2071ed9de257a46b",
+    "src/components/WorkspaceBackupPanel.tsx": "a5bcc1b6f2386107aa9fae5b2d58c8d434b2ef5d91bd85e081b24a808e917c1a",
+    "src/state/workspaceUtils.ts": "21178b0a68a6d39ceeecbce7e7babf0675723543e37a5b5acca3ad6d6c5c3bc4",
+    "src/pages/DayEditor/DayTab.tsx": "54c2d0a8dd40aad28d16d974b142171b5866c676865f96a91dc69d39413a5349",
+    "src/viewModels/dayEditorViewModel.ts": "64aedf4141b728437dc619a97734b623a68d96f93f80134388802b4bb6cea841"
+  }
+}

@@ -1,0 +1,193 @@
+**************************************************
+NWBInspector Report Summary
+
+Timestamp: 2026-09-14 17:26:53.682158-07:00
+Platform: macOS-26.5.2-arm64-arm-64bit
+NWBInspector version: 0.7.2
+
+Found 59 issues across 1 file(s):
+       2 - CRITICAL
+      57 - BEST_PRACTICE_SUGGESTION
+**************************************************
+
+
+0  /private/tmp/claude-501/-Users-edeno-Documents-GitHub-rec-to-nwb-yaml-creator/def84f85-d121-4c66-b7bf-818e7fca7017/scratchpad/convert/out/sample20230622.nwb
+===============================================================================================================================================================
+
+0.0  Importance.CRITICAL: check_image_series_external_file_valid - 'ImageSeries' object at location '/processing/video_files/video/20230622_sample_02_a1.1.h264'
+       Message: The external file '20230622_sample_02_a1.1.h264' does not exist. Please confirm the relative location to the NWBFile.
+
+0.1  Importance.CRITICAL: check_image_series_external_file_valid - 'ImageSeries' object at location '/processing/video_files/video/20230622_sample_01_a1.1.h264'
+       Message: The external file '20230622_sample_01_a1.1.h264' does not exist. Please confirm the relative location to the NWBFile.
+
+0.2  Importance.BEST_PRACTICE_SUGGESTION: check_description - 'DeviceModel' object with name 'model1'
+       Message: Description is missing.
+
+0.3  Importance.BEST_PRACTICE_SUGGESTION: check_description - 'Probe' object at location '/general/devices/probe 9'
+       Message: Description is missing.
+
+0.4  Importance.BEST_PRACTICE_SUGGESTION: check_description - 'Probe' object at location '/general/devices/probe 8'
+       Message: Description is missing.
+
+0.5  Importance.BEST_PRACTICE_SUGGESTION: check_description - 'Probe' object at location '/general/devices/probe 7'
+       Message: Description is missing.
+
+0.6  Importance.BEST_PRACTICE_SUGGESTION: check_description - 'Probe' object at location '/general/devices/probe 6'
+       Message: Description is missing.
+
+0.7  Importance.BEST_PRACTICE_SUGGESTION: check_description - 'Probe' object at location '/general/devices/probe 5'
+       Message: Description is missing.
+
+0.8  Importance.BEST_PRACTICE_SUGGESTION: check_description - 'Probe' object at location '/general/devices/probe 4'
+       Message: Description is missing.
+
+0.9  Importance.BEST_PRACTICE_SUGGESTION: check_description - 'Probe' object at location '/general/devices/probe 31'
+       Message: Description is missing.
+
+0.10  Importance.BEST_PRACTICE_SUGGESTION: check_description - 'Probe' object at location '/general/devices/probe 30'
+        Message: Description is missing.
+
+0.11  Importance.BEST_PRACTICE_SUGGESTION: check_description - 'Probe' object at location '/general/devices/probe 3'
+        Message: Description is missing.
+
+0.12  Importance.BEST_PRACTICE_SUGGESTION: check_description - 'Probe' object at location '/general/devices/probe 29'
+        Message: Description is missing.
+
+0.13  Importance.BEST_PRACTICE_SUGGESTION: check_description - 'Probe' object at location '/general/devices/probe 28'
+        Message: Description is missing.
+
+0.14  Importance.BEST_PRACTICE_SUGGESTION: check_description - 'Probe' object at location '/general/devices/probe 27'
+        Message: Description is missing.
+
+0.15  Importance.BEST_PRACTICE_SUGGESTION: check_description - 'Probe' object at location '/general/devices/probe 26'
+        Message: Description is missing.
+
+0.16  Importance.BEST_PRACTICE_SUGGESTION: check_description - 'Probe' object at location '/general/devices/probe 25'
+        Message: Description is missing.
+
+0.17  Importance.BEST_PRACTICE_SUGGESTION: check_description - 'Probe' object at location '/general/devices/probe 24'
+        Message: Description is missing.
+
+0.18  Importance.BEST_PRACTICE_SUGGESTION: check_description - 'Probe' object at location '/general/devices/probe 23'
+        Message: Description is missing.
+
+0.19  Importance.BEST_PRACTICE_SUGGESTION: check_description - 'Probe' object at location '/general/devices/probe 22'
+        Message: Description is missing.
+
+0.20  Importance.BEST_PRACTICE_SUGGESTION: check_description - 'Probe' object at location '/general/devices/probe 21'
+        Message: Description is missing.
+
+0.21  Importance.BEST_PRACTICE_SUGGESTION: check_description - 'Probe' object at location '/general/devices/probe 20'
+        Message: Description is missing.
+
+0.22  Importance.BEST_PRACTICE_SUGGESTION: check_description - 'Probe' object at location '/general/devices/probe 2'
+        Message: Description is missing.
+
+0.23  Importance.BEST_PRACTICE_SUGGESTION: check_description - 'Probe' object at location '/general/devices/probe 19'
+        Message: Description is missing.
+
+0.24  Importance.BEST_PRACTICE_SUGGESTION: check_description - 'Probe' object at location '/general/devices/probe 18'
+        Message: Description is missing.
+
+0.25  Importance.BEST_PRACTICE_SUGGESTION: check_description - 'Probe' object at location '/general/devices/probe 17'
+        Message: Description is missing.
+
+0.26  Importance.BEST_PRACTICE_SUGGESTION: check_description - 'Probe' object at location '/general/devices/probe 16'
+        Message: Description is missing.
+
+0.27  Importance.BEST_PRACTICE_SUGGESTION: check_description - 'Probe' object at location '/general/devices/probe 15'
+        Message: Description is missing.
+
+0.28  Importance.BEST_PRACTICE_SUGGESTION: check_description - 'Probe' object at location '/general/devices/probe 14'
+        Message: Description is missing.
+
+0.29  Importance.BEST_PRACTICE_SUGGESTION: check_description - 'Probe' object at location '/general/devices/probe 13'
+        Message: Description is missing.
+
+0.30  Importance.BEST_PRACTICE_SUGGESTION: check_description - 'Probe' object at location '/general/devices/probe 12'
+        Message: Description is missing.
+
+0.31  Importance.BEST_PRACTICE_SUGGESTION: check_description - 'Probe' object at location '/general/devices/probe 11'
+        Message: Description is missing.
+
+0.32  Importance.BEST_PRACTICE_SUGGESTION: check_description - 'Probe' object at location '/general/devices/probe 10'
+        Message: Description is missing.
+
+0.33  Importance.BEST_PRACTICE_SUGGESTION: check_description - 'Probe' object at location '/general/devices/probe 1'
+        Message: Description is missing.
+
+0.34  Importance.BEST_PRACTICE_SUGGESTION: check_description - 'Probe' object at location '/general/devices/probe 0'
+        Message: Description is missing.
+
+0.35  Importance.BEST_PRACTICE_SUGGESTION: check_description - 'HeaderDevice' object at location '/general/devices/header_device'
+        Message: Description is missing.
+
+0.36  Importance.BEST_PRACTICE_SUGGESTION: check_description - 'DataAcqDevice' object at location '/general/devices/dataacq_device0'
+        Message: Description is missing.
+
+0.37  Importance.BEST_PRACTICE_SUGGESTION: check_description - 'CameraDevice' object at location '/general/devices/camera_device 1'
+        Message: Description is missing.
+
+0.38  Importance.BEST_PRACTICE_SUGGESTION: check_description - 'CameraDevice' object at location '/general/devices/camera_device 0'
+        Message: Description is missing.
+
+0.39  Importance.BEST_PRACTICE_SUGGESTION: check_description - 'ExcitationSource' object at location '/general/devices/Omicron LuxX+ Blue'
+        Message: Description is missing.
+
+0.40  Importance.BEST_PRACTICE_SUGGESTION: check_description - 'DynamicTable' object with name 'task_1'
+        Message: Description is missing.
+
+0.41  Importance.BEST_PRACTICE_SUGGESTION: check_description - 'DynamicTable' object with name 'task_0'
+        Message: Description is missing.
+
+0.42  Importance.BEST_PRACTICE_SUGGESTION: check_description - 'TimeSeries' object at location '/processing/position_frame_index/series_2'
+        Message: Description ('no description') is a placeholder.
+
+0.43  Importance.BEST_PRACTICE_SUGGESTION: check_description - 'TimeSeries' object at location '/processing/position_frame_index/series_1'
+        Message: Description ('no description') is a placeholder.
+
+0.44  Importance.BEST_PRACTICE_SUGGESTION: check_description - 'TimeSeries' object at location '/processing/non_repeat_timestamp_labels/series_2'
+        Message: Description ('no description') is a placeholder.
+
+0.45  Importance.BEST_PRACTICE_SUGGESTION: check_description - 'TimeSeries' object at location '/processing/non_repeat_timestamp_labels/series_1'
+        Message: Description ('no description') is a placeholder.
+
+0.46  Importance.BEST_PRACTICE_SUGGESTION: check_description - 'ElectricalSeries' object at location '/acquisition/e-series'
+        Message: Description ('no description') is a placeholder.
+
+0.47  Importance.BEST_PRACTICE_SUGGESTION: check_small_dataset_compression - 'ElectricalSeries' object at location '/acquisition/e-series'
+        Message: data is not compressed. Consider enabling compression when writing a dataset.
+
+0.48  Importance.BEST_PRACTICE_SUGGESTION: check_keywords - 'NWBFile' object at location '/'
+        Message: Metadata /general/keywords is missing.
+
+0.49  Importance.BEST_PRACTICE_SUGGESTION: check_processing_module_name - 'ProcessingModule' object with name 'video_files'
+        Message: Processing module is named video_files. It is recommended to use the schema module names: ophys, ecephys, icephys, behavior, misc, ogen, retinotopy
+
+0.50  Importance.BEST_PRACTICE_SUGGESTION: check_processing_module_name - 'ProcessingModule' object with name 'tasks'
+        Message: Processing module is named tasks. It is recommended to use the schema module names: ophys, ecephys, icephys, behavior, misc, ogen, retinotopy
+
+0.51  Importance.BEST_PRACTICE_SUGGESTION: check_processing_module_name - 'ProcessingModule' object with name 'sample_count'
+        Message: Processing module is named sample_count. It is recommended to use the schema module names: ophys, ecephys, icephys, behavior, misc, ogen, retinotopy
+
+0.52  Importance.BEST_PRACTICE_SUGGESTION: check_processing_module_name - 'ProcessingModule' object with name 'position_frame_index'
+        Message: Processing module is named position_frame_index. It is recommended to use the schema module names: ophys, ecephys, icephys, behavior, misc, ogen, retinotopy
+
+0.53  Importance.BEST_PRACTICE_SUGGESTION: check_processing_module_name - 'ProcessingModule' object with name 'non_repeat_timestamp_labels'
+        Message: Processing module is named non_repeat_timestamp_labels. It is recommended to use the schema module names: ophys, ecephys, icephys, behavior, misc, ogen, retinotopy
+
+0.54  Importance.BEST_PRACTICE_SUGGESTION: check_processing_module_name - 'ProcessingModule' object with name 'associated_files'
+        Message: Processing module is named associated_files. It is recommended to use the schema module names: ophys, ecephys, icephys, behavior, misc, ogen, retinotopy
+
+0.55  Importance.BEST_PRACTICE_SUGGESTION: check_processing_module_name - 'ProcessingModule' object with name 'analog'
+        Message: Processing module is named analog. It is recommended to use the schema module names: ophys, ecephys, icephys, behavior, misc, ogen, retinotopy
+
+0.56  Importance.BEST_PRACTICE_SUGGESTION: check_single_row - 'OptogeneticSitesTable' object with name 'optogenetic_sites_table'
+        Message: This table has only a single row; it may be better represented by another data type.
+
+0.57  Importance.BEST_PRACTICE_SUGGESTION: check_single_row - 'DynamicTable' object with name 'task_1'
+        Message: This table has only a single row; it may be better represented by another data type.
+
+0.58  Importance.BEST_PRACTICE_SUGGESTION: check_single_row - 'DynamicTable' object with name 'task_0'
+        Message: This table has only a single row; it may be better represented by another data type.
+

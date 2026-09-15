@@ -1,0 +1,56 @@
+{
+  "readonly": {
+    "disabled": false,
+    "editable": true,
+    "readerValueBefore": "Reader entered observations",
+    "readerValueAfterWriterSave": "Writer saved observations",
+    "storedValue": "Writer saved observations"
+  },
+  "failedHandover": {
+    "oldWriterValue": "New writer adds more data",
+    "newWriterValue": "New writer adds more data"
+  },
+  "recovery": {
+    "beforeReload": {
+      "main": null,
+      "quarantine": {
+        "savedAt": "2026-09-14T23:13:23.007Z",
+        "reason": "parse-error",
+        "raw": "ORIGINAL UNREADABLE SCIENTIFIC DATA"
+      }
+    },
+    "afterReload": {
+      "main": "{\"schemaVersion\":4,\"workspace\":{\"version\":\"1.0.0\",\"lastModified\":\"2026-09-14T23:13:23.006Z\",\"animals\":{},\"days\":{},\"settings\":{\"defaultLab\":\"\",\"defaultInstitution\":\"\",\"defaultExperimenters\":[],\"autoSaveInterval\":30000,\"shadowExportEnabled\":true}}}",
+      "quarantine": null
+    }
+  },
+  "domain": {
+    "normalBackfillVersion": 1,
+    "duplicateVersion": 1,
+    "duplicateStatus": {
+      "status": "confirmed",
+      "version": 1,
+      "effectiveDate": "2023-06-01"
+    },
+    "isoFolder": {
+      "kind": "copied",
+      "dataFolder": "/data/remy/2023-06-22/"
+    },
+    "baselineMigration": {
+      "weight": 485,
+      "review": [
+        {
+          "code": "weight_from_baseline",
+          "severity": "warning",
+          "step": "overview",
+          "repairSurface": "day",
+          "field": "session.weight",
+          "focusPath": "session.weight",
+          "path": "session.weight",
+          "actionLabel": "Confirm or correct the weight",
+          "message": "This day’s weight was filled from the animal baseline when the workspace was upgraded, because that is the value its earlier download contained — it may not be a measurement. Confirm it or enter the weight measured that day."
+        }
+      ]
+    }
+  }
+}

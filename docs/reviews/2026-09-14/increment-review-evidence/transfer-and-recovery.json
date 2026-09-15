@@ -1,0 +1,28 @@
+{
+  "backupTransfer": {
+    "yamlStoredFlag": true,
+    "exactExportAvailable": false
+  },
+  "migratedValidation": {
+    "weight": 485,
+    "errors": [],
+    "warnings": [
+      {
+        "code": "weight_from_baseline",
+        "severity": "warning",
+        "step": "overview",
+        "repairSurface": "day",
+        "field": "session.weight",
+        "focusPath": "session.weight",
+        "path": "session.weight",
+        "actionLabel": "Confirm or correct the weight",
+        "message": "This day’s weight was filled from the animal baseline when the workspace was upgraded, because that is the value its earlier download contained — it may not be a measurement. Confirm it or enter the weight measured that day.",
+        "ownerSurface": "day"
+      }
+    ]
+  },
+  "afterCorruption": {
+    "saved": false,
+    "error": "Another tab has saved a newer version of this workspace; this tab did not overwrite it."
+  }
+}
