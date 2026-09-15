@@ -65,6 +65,28 @@ function makeBundle(overrides = {}, animalOverrides = {}) {
 }
 
 /**
+ * A prior day of the same animal and probe configuration that linked a statescript to its sleep
+ * epoch — the precedent that makes this animal's later sleep epochs expect one.
+ */
+const PRIOR_SLEEP_DAY = {
+  id: 'r-2023-06-21',
+  animalId: 'r',
+  date: '2023-06-21',
+  taskInstances: [{ taskTypeId: 'tasktype-0', task_epochs: [1] }],
+  associated_files: [
+    {
+      name: 'statescript_s1',
+      description: 'Statescript Log',
+      path: '/data/r/20230621/20230621_r_01_s1.stateScriptLog',
+      task_epochs: 1,
+    },
+  ],
+  associated_video_files: [],
+  fs_gui_yamls: [],
+  state: {},
+};
+
+/**
  * Stateful wrapper for tests that need the day patch to be applied and rendered back into EpochsTab.
  *
  * @param {{ bundle: ReturnType<typeof makeBundle> }} props - Test bundle to render.
@@ -842,10 +864,11 @@ describe('EpochsTab — statescript naming', () => {
     await waitFor(() => expect(input).toHaveFocus());
   });
 
-  it('generates all missing statescripts and offers Undo', async () => {
+  it('generates every expected statescript and offers Undo', async () => {
     const user = userEvent.setup();
     const bundle = makeBundle();
-    render(<EpochsTab {...bundle} />);
+    // A prior day logged a sleep statescript, so all three epochs expect one here.
+    render(<EpochsTab {...bundle} animalDays={[PRIOR_SLEEP_DAY, bundle.day]} />);
 
     await user.click(screen.getByRole('button', { name: /Statescripts \(3\)/i }));
 
@@ -910,25 +933,6 @@ describe('EpochsTab — accessibility', () => {
 });
 
 describe('EpochsTab — statescript expectation + the data-folder prerequisite (F6)', () => {
-  /** A prior same-configuration day that linked a statescript to its sleep epoch 1. */
-  const priorSleepDay = {
-    id: 'r-2023-06-21',
-    animalId: 'r',
-    date: '2023-06-21',
-    taskInstances: [{ taskTypeId: 'tasktype-0', task_epochs: [1] }],
-    associated_files: [
-      {
-        name: 'statescript_s1',
-        description: 'Statescript Log',
-        path: '/data/r/20230621/20230621_r_01_s1.stateScriptLog',
-        task_epochs: 1,
-      },
-    ],
-    associated_video_files: [],
-    fs_gui_yamls: [],
-    state: {},
-  };
-
   it('counts only EXPECTED statescripts and shows them as a warning, never an error', () => {
     render(<EpochsTab {...makeBundle()} />);
     const chip = screen.getByRole('button', { name: /1 statescript expected/i });
@@ -939,7 +943,7 @@ describe('EpochsTab — statescript expectation + the data-folder prerequisite (
 
   it('expects sleep statescripts once an earlier same-configuration day logged one', () => {
     const bundle = makeBundle();
-    render(<EpochsTab {...bundle} animalDays={[priorSleepDay, bundle.day]} />);
+    render(<EpochsTab {...bundle} animalDays={[PRIOR_SLEEP_DAY, bundle.day]} />);
     expect(screen.getByRole('button', { name: /3 statescripts expected/i })).toBeInTheDocument();
     expect(screen.getAllByText(/Statescript:\s*Expected/i)).toHaveLength(3);
   });
@@ -973,6 +977,29 @@ describe('EpochsTab — statescript expectation + the data-folder prerequisite (
     expect(screen.queryByText(/Statescript:\s*Expected/i)).not.toBeInTheDocument();
   });
 
+  it('never bulk-generates a statescript for an epoch that expects none', async () => {
+    const user = userEvent.setup();
+    const bundle = makeBundle();
+    render(<EpochsTab {...bundle} />);
+
+    // Only the run epoch expects one; the two sleep epochs have no precedent on this animal.
+    await user.click(screen.getByRole('button', { name: /^Statescripts \(1\)$/ }));
+
+    expect(lastPatch(bundle.onFieldUpdate, 'associated_files')).toEqual([
+      {
+        name: '20230622_r_02_r1.stateScriptLog',
+        description: '',
+        path: '/data/r/20230622/20230622_r_02_r1.stateScriptLog',
+        task_epochs: 2,
+      },
+    ]);
+  });
+
+  it('has no axe violations while the data-folder prompt is showing', async () => {
+    const { container } = render(<EpochsTab {...makeBundle({ dataFolder: '' })} />);
+    expect(await axe(container)).toHaveNoViolations();
+  });
+
   it('asks for the data folder where the files are generated, never by naming another section', async () => {
     const user = userEvent.setup();
     const bundle = makeBundle({ dataFolder: '' });
@@ -982,7 +1009,7 @@ describe('EpochsTab — statescript expectation + the data-folder prerequisite (
     expect(
       screen.getByText(/Set the data folder to generate statescript and video file names\./i)
     ).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /^Statescripts \(3\)$/ })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /^Statescripts \(1\)$/ })).toBeDisabled();
 
     const input = screen.getByLabelText(/^Data folder$/i);
     await user.type(input, '/data/r/20230622');
@@ -992,7 +1019,7 @@ describe('EpochsTab — statescript expectation + the data-folder prerequisite (
       expect(bundle.onFieldUpdate).toHaveBeenCalledWith('dataFolder', '/data/r/20230622')
     );
     await waitFor(() =>
-      expect(screen.getByRole('button', { name: /^Statescripts \(3\)$/ })).toBeEnabled()
+      expect(screen.getByRole('button', { name: /^Statescripts \(1\)$/ })).toBeEnabled()
     );
     // Once the folder is known the prompt is gone — it is a prerequisite, not a permanent field.
     expect(

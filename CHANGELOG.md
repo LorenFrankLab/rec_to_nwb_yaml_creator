@@ -293,6 +293,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   warning, never an error: the summary chip counts only the epochs that actually expect one — always
   a run epoch, and a sleep epoch only once an earlier day on the same probe configuration logged a
   sleep statescript — and the row cell reads "Expected" / "Not expected" or names the linked file.
+  "Generate missing" follows the same definition, so it no longer writes a statescript row for an
+  epoch the same screen calls "Not expected"; a deliberately wanted one is still added per epoch
+  from the epoch's details panel.
   When the export gate is open with advisory issues left, the readiness line reads "Ready to export
   · N warnings to review" instead of a bare green tick beside an amber badge. Repair buttons now say
   "Fix in Daily log", the name the section rail actually shows.

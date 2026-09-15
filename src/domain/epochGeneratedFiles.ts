@@ -3,6 +3,7 @@ import {
   deriveStatescriptPath,
   deriveVideoName,
 } from './fileNaming';
+import type { StatescriptState } from './statescriptExpectation';
 import type { AssociatedFile, AssociatedVideoFile, Camera } from '../state/workspaceTypes';
 
 interface GeneratedFileRef {
@@ -16,6 +17,8 @@ interface GeneratedFileRow {
   tag: string;
   cameras: Array<number | string>;
   statescript: unknown | null;
+  /** Whether a statescript is linked, expected, or not expected for this epoch. */
+  statescriptState: StatescriptState;
   videos: GeneratedFileRef[];
   videoPresence: 'present' | 'missing' | 'absent';
 }
@@ -92,8 +95,21 @@ function missingVideoCameraIds(row: GeneratedFileRow, known: Set<number>): numbe
   return expectedCameraIds(row, known).filter((id) => !existing.has(id));
 }
 
+/**
+ * Rows the bulk generator answers: those that EXPECT a statescript and have none linked. A sleep
+ * epoch this animal has never logged a statescript for is not missing one — generating a file for
+ * it would force a nonexistent recording into the metadata. The per-epoch "Add" in the drill-in
+ * stays the way to write one deliberately.
+ *
+ * @param grid - The epoch grid.
+ * @returns The rows a bulk generation would write for.
+ */
+function expectedStatescriptRows(grid: GeneratedFileGrid): GeneratedFileRow[] {
+  return grid.rows.filter((row) => row.statescriptState === 'expected');
+}
+
 export function countMissingGeneratedStatescripts(grid: GeneratedFileGrid): number {
-  return grid.rows.filter((row) => row.statescript == null).length;
+  return expectedStatescriptRows(grid).length;
 }
 
 export function countMissingGeneratedVideos(grid: GeneratedFileGrid, cameras: Camera[]): number {
@@ -105,8 +121,7 @@ export function addMissingGeneratedStatescripts(
   grid: GeneratedFileGrid,
   currentFiles: AssociatedFile[]
 ): AssociatedFile[] {
-  const additions = grid.rows
-    .filter((row) => row.statescript == null)
+  const additions = expectedStatescriptRows(grid)
     .map((row) => {
       const name = deriveStatescriptName({
         date: grid.date,

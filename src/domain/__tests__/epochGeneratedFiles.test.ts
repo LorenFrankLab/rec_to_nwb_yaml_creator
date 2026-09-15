@@ -23,6 +23,7 @@ const grid = {
       tag: 's1',
       cameras: [0, 1],
       statescript: null,
+      statescriptState: 'expected' as const,
       videos: [],
       videoPresence: 'missing' as const,
     },
@@ -31,6 +32,7 @@ const grid = {
       tag: 'r1',
       cameras: [1],
       statescript: { entry: {}, index: 0 },
+      statescriptState: 'linked' as const,
       videos: [{ entry: { camera_id: 1 } }],
       videoPresence: 'present' as const,
     },
@@ -39,6 +41,7 @@ const grid = {
       tag: 's2',
       cameras: [0],
       statescript: null,
+      statescriptState: 'expected' as const,
       videos: [],
       videoPresence: 'absent' as const,
     },
@@ -63,6 +66,42 @@ describe('epoch generated file helpers', () => {
         task_epochs: 3,
       },
     ]);
+  });
+
+  it('neither counts nor generates a statescript for an epoch that expects none', () => {
+    // A sleep epoch this animal has never logged a statescript for is NOT missing one. The bulk
+    // generator must not force a file onto every recording — the per-epoch "Add" stays the way in.
+    const withUnexpected = {
+      ...grid,
+      rows: [
+        grid.rows[0],
+        { ...grid.rows[2], statescriptState: 'not_expected' as const },
+      ],
+    };
+
+    expect(countMissingGeneratedStatescripts(withUnexpected)).toBe(1);
+    expect(addMissingGeneratedStatescripts(withUnexpected, [])).toEqual([
+      {
+        name: '20230622_remy_01_s1.stateScriptLog',
+        description: '',
+        path: '/data/remy/20230622/20230622_remy_01_s1.stateScriptLog',
+        task_epochs: 1,
+      },
+    ]);
+  });
+
+  it('returns the array unchanged when every unlinked epoch expects no statescript', () => {
+    const noneExpected = {
+      ...grid,
+      rows: grid.rows.map((row) => ({
+        ...row,
+        statescriptState: row.statescript ? ('linked' as const) : ('not_expected' as const),
+      })),
+    };
+    const current = [{ name: 'manual.stateScriptLog', description: '', path: '/p', task_epochs: 9 }];
+
+    expect(countMissingGeneratedStatescripts(noneExpected)).toBe(0);
+    expect(addMissingGeneratedStatescripts(noneExpected, current)).toBe(current);
   });
 
   it('generates one missing video per expected camera and skips no-video epochs', () => {
@@ -110,6 +149,7 @@ describe('epoch generated file helpers', () => {
           {
             epoch: 4,
             tag: 'r2',
+            statescriptState: 'expected' as const,
             cameras: [7],
             statescript: null,
             videos: [],
@@ -129,6 +169,7 @@ describe('epoch generated file helpers', () => {
           {
             epoch: 5,
             tag: 'r3',
+            statescriptState: 'expected' as const,
             cameras: [1, 7],
             statescript: null,
             videos: [],
@@ -154,6 +195,7 @@ describe('epoch generated file helpers', () => {
           {
             epoch: 6,
             tag: 'r4',
+            statescriptState: 'expected' as const,
             cameras: [],
             statescript: null,
             videos: [],
