@@ -115,7 +115,7 @@ export function stepIdForIssue(issue: RepairableIssue): RoutableStep {
  * substrate; the labels name the Phase 15 sections users can actually navigate to.
  */
 export const STEP_LABELS: Record<string, string> = {
-  overview: 'Daily Setup',
+  overview: 'Daily log',
   devices: 'Recording Setup',
   epochs: 'Tasks & Files',
   behavioral: 'DIO Wiring',
@@ -133,7 +133,7 @@ export const DAY_SECTIONS = {
   dio: 'DIO Wiring',
   channels: 'Failed Channels',
   recording: 'Recording Setup',
-  daily: 'Daily Setup',
+  daily: 'Daily log',
 } as const;
 
 export type DaySectionKey = keyof typeof DAY_SECTIONS;

@@ -1,7 +1,7 @@
 /**
  * Day Editor View — recording-session metadata editor (`#/day/:id`).
  *
- * Renders the sectioned {@link DayEditorFrame} (Daily Setup / Tasks & Files /
+ * Renders the sectioned {@link DayEditorFrame} (Daily log / Tasks & Files /
  * Recording Setup / Failed Channels / DIO Wiring / Fix & Export). This replaced the legacy
  * multi-step `DayEditorStepper`; the per-section content now lives in the frame.
  */

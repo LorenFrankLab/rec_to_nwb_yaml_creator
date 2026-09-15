@@ -831,7 +831,7 @@ describe('buildDayEditorViewModel — grouped section rail model', () => {
     expect(vm.sectionGroups.map((group) => group.label)).toEqual(['DAY', 'RECORDING', 'FINISH']);
   });
 
-  it('marks the requested section active (default is Daily Setup)', () => {
+  it('marks the requested section active (default is the Daily log)', () => {
     const { animal, day } = loadRealistic();
     const ws = wrap(animal, day);
     const activeKey = (vm: ReturnType<typeof buildDayEditorViewModel>) =>

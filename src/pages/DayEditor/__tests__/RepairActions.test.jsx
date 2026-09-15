@@ -49,7 +49,7 @@ describe('RepairActions', () => {
       />
     );
 
-    const button = screen.getByRole('button', { name: /fix in daily setup/i });
+    const button = screen.getByRole('button', { name: /fix in daily log/i });
     await user.click(button);
     expect(onNavigate).toHaveBeenCalledWith('overview', 'session_description');
   });

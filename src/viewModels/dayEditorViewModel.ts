@@ -179,7 +179,7 @@ const STEP_STATUS_LABEL: Record<StepStatus, string> = {
 
 /** The six section rows rendered by the grouped vertical rail. */
 const TAB_ORDER: ReadonlyArray<{ key: DayTabKey; label: string; steps: string[] }> = [
-  { key: 'daily', label: 'Daily Setup', steps: ['overview'] },
+  { key: 'daily', label: 'Daily log', steps: ['overview'] },
   { key: 'tasks', label: 'Tasks & Files', steps: ['epochs'] },
   { key: 'recording', label: 'Recording Setup', steps: ['devices'] },
   { key: 'channels', label: 'Failed Channels', steps: ['devices'] },
@@ -352,7 +352,7 @@ function buildSectionItems(
     {
       key: 'daily',
       label: 'Daily log',
-      // The daily log holds the epoch editor too, so its status rolls up Daily Setup + Tasks & Files.
+      // The daily log holds the epoch editor too, so its status rolls up its own fields + Tasks & Files.
       status: rollupStepStatus([
         splitSectionStatus(stepStatus.overview ?? 'incomplete', issues, isDailySetupIssue),
         splitSectionStatus(stepStatus.epochs ?? 'incomplete', issues, isTasksFilesIssue),

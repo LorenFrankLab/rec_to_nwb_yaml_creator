@@ -23,7 +23,7 @@ describe('DayEditorSectionNav', () => {
     {
       label: 'DAY',
       steps: [
-        step('daily', 'Daily Setup', 'valid', active === 'daily'),
+        step('daily', 'Daily log', 'valid', active === 'daily'),
         step('tasks', 'Tasks & Files', 'incomplete', active === 'tasks'),
       ],
     },
@@ -69,8 +69,8 @@ describe('DayEditorSectionNav', () => {
     const recording = screen.getByRole('button', { name: /Recording Setup/i });
     expect(recording).toHaveAttribute('aria-current', 'page');
     expect(recording).toHaveAttribute('tabindex', '0');
-    expect(screen.getByRole('button', { name: /^Daily Setup/i })).not.toHaveAttribute('aria-current');
-    expect(screen.getByRole('button', { name: /^Daily Setup/i })).toHaveAttribute('tabindex', '-1');
+    expect(screen.getByRole('button', { name: /^Daily log/i })).not.toHaveAttribute('aria-current');
+    expect(screen.getByRole('button', { name: /^Daily log/i })).toHaveAttribute('tabindex', '-1');
   });
 
   it('calls onNavigate for ANY section clicked — including Fix & Export (no gating)', async () => {
@@ -85,7 +85,7 @@ describe('DayEditorSectionNav', () => {
 
   it('folds the status into each accessible name', () => {
     render(<DayEditorSectionNav groups={makeGroups()} onNavigate={vi.fn()} />);
-    expect(screen.getByRole('button', { name: /Daily Setup.*Complete/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Daily log.*Complete/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Tasks & Files.*Incomplete/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Fix & Export.*Incomplete/i })).toBeInTheDocument();
   });
