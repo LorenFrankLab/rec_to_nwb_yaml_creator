@@ -770,3 +770,132 @@ describe('ImportRepair — repair rows and catalog additions', () => {
     expect(screen.getByRole('button', { name: /import as new animal/i })).toBeDisabled();
   });
 });
+
+describe('ImportRepair — camera calibration conflicts (F1)', () => {
+  /**
+   * A clean remy day file whose `overhead_camera` carries the given calibration.
+   *
+   * @param {string} dateDigits - The recording date as `YYYYMMDD`.
+   * @param {number} metersPerPixel - The calibration recorded for `overhead_camera`.
+   * @returns {string} YAML text.
+   */
+  function recalibratedYaml(dateDigits, metersPerPixel) {
+    const model = decodeYaml(cleanYaml);
+    model.session_id = `remy_${dateDigits}`;
+    model.cameras = model.cameras.map((camera) =>
+      camera.camera_name === 'overhead_camera'
+        ? { ...camera, meters_per_pixel: metersPerPixel }
+        : camera
+    );
+    return encodeYaml(model);
+  }
+
+  /**
+   * Upload two remy days whose overhead camera was recalibrated between them and open the preview.
+   *
+   * @param {object} user - userEvent session.
+   * @returns {Promise<HTMLElement>} The conflict fieldset.
+   */
+  async function openConflictPreview(user) {
+    await user.upload(screen.getByLabelText(/choose a metadata yaml file/i), [
+      makeFile('06222023_remy_metadata.yml', recalibratedYaml('20230622', 0.001)),
+      makeFile('06232023_remy_metadata.yml', recalibratedYaml('20230623', 0.002)),
+    ]);
+    await user.click(await screen.findByRole('button', { name: /review 2 ready files/i }));
+    return screen.getByRole('group', { name: /overhead_camera.*2 calibrations/i });
+  }
+
+  it('shows both calibrations with their source files and dates before anything is written', async () => {
+    const user = userEvent.setup();
+    renderScreen();
+    const fieldset = await openConflictPreview(user);
+
+    expect(within(fieldset).getByText('meters_per_pixel 0.001')).toBeInTheDocument();
+    expect(within(fieldset).getByText('meters_per_pixel 0.002')).toBeInTheDocument();
+    expect(within(fieldset).getByText('06222023_remy_metadata.yml')).toBeInTheDocument();
+    expect(within(fieldset).getByText('06232023_remy_metadata.yml')).toBeInTheDocument();
+    expect(within(fieldset).getByText('2023-06-22')).toBeInTheDocument();
+    expect(within(fieldset).getByText('2023-06-23')).toBeInTheDocument();
+    // Splitting is the default, and the name each calibration will take is shown.
+    const keepBoth = within(fieldset).getByRole('radio', { name: /keep as separate cameras/i });
+    expect(keepBoth).toBeChecked();
+    expect(within(fieldset).getAllByText(/overhead_camera_20230623/).length).toBeGreaterThan(0);
+    // Nothing is written by previewing.
+    expect(captured.animals).toEqual({});
+  });
+
+  it('warns which calibration will NOT be imported when one is chosen for every day', async () => {
+    const user = userEvent.setup();
+    renderScreen();
+    const fieldset = await openConflictPreview(user);
+
+    await user.click(
+      within(fieldset).getByRole('radio', { name: /meters_per_pixel 0\.002 for every day/i })
+    );
+
+    const warning = within(fieldset).getByRole('status');
+    expect(warning).toHaveTextContent(/not imported/i);
+    expect(warning).toHaveTextContent('meters_per_pixel 0.001');
+    expect(warning).toHaveTextContent('06222023_remy_metadata.yml');
+  });
+
+  it('imports each day under the calibration its own file recorded (default)', async () => {
+    const user = userEvent.setup();
+    renderScreen();
+    await openConflictPreview(user);
+    await user.click(screen.getByRole('button', { name: /confirm import/i }));
+
+    await screen.findByRole('heading', { name: /import complete/i });
+    const cameras = captured.animals.remy.cameras;
+    expect(cameras.map((camera) => [camera.camera_name, camera.meters_per_pixel])).toEqual([
+      ['overhead_camera', 0.001],
+      ['side_camera', 0.0009],
+      ['overhead_camera_20230623', 0.002],
+    ]);
+    const idOf = (name) => cameras.find((camera) => camera.camera_name === name).id;
+    const overheadOf = (dayId) =>
+      captured.days[dayId].associated_video_files.find((video) =>
+        video.name.startsWith('overhead')
+      ).camera_id;
+    expect(overheadOf('remy-2023-06-22')).toBe(idOf('overhead_camera'));
+    expect(overheadOf('remy-2023-06-23')).toBe(idOf('overhead_camera_20230623'));
+
+    // The result reports the camera the split created, with its calibration and dates.
+    const success = screen.getByRole('region', { name: /import complete/i });
+    const cameraSummary = within(success).getByRole('region', { name: /camera calibrations/i });
+    expect(cameraSummary).toHaveTextContent('overhead_camera_20230623');
+    expect(cameraSummary).toHaveTextContent('meters_per_pixel 0.002');
+    expect(cameraSummary).toHaveTextContent('2023-06-23');
+  });
+
+  it('applies the chosen single calibration to every day, and reports the discarded value', async () => {
+    const user = userEvent.setup();
+    renderScreen();
+    const fieldset = await openConflictPreview(user);
+    await user.click(
+      within(fieldset).getByRole('radio', { name: /meters_per_pixel 0\.002 for every day/i })
+    );
+    await user.click(screen.getByRole('button', { name: /confirm import/i }));
+
+    await screen.findByRole('heading', { name: /import complete/i });
+    const cameras = captured.animals.remy.cameras;
+    expect(cameras.map((camera) => [camera.camera_name, camera.meters_per_pixel])).toEqual([
+      ['overhead_camera', 0.002],
+      ['side_camera', 0.0009],
+    ]);
+    const overheadId = cameras[0].id;
+    for (const dayId of ['remy-2023-06-22', 'remy-2023-06-23']) {
+      expect(
+        captured.days[dayId].associated_video_files.find((video) =>
+          video.name.startsWith('overhead')
+        ).camera_id
+      ).toBe(overheadId);
+    }
+
+    const success = screen.getByRole('region', { name: /import complete/i });
+    const cameraSummary = within(success).getByRole('region', { name: /camera calibrations/i });
+    expect(cameraSummary).toHaveTextContent(/not imported/i);
+    expect(cameraSummary).toHaveTextContent('meters_per_pixel 0.001');
+    expect(cameraSummary).toHaveTextContent('06222023_remy_metadata.yml');
+  });
+});

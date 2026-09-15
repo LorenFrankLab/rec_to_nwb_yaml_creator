@@ -22,6 +22,14 @@ import type {
 } from '../../state/importRepair';
 import { planImport } from '../../state/yamlImportPlan';
 import type { ImportPlan, ImportPlanAnimal } from '../../state/yamlImportPlan';
+import {
+  describeCalibration,
+  differingCalibrationFields,
+} from '../../state/cameraCalibrationConflicts';
+import type {
+  CameraCalibrationConflict,
+  CameraConflictResolution,
+} from '../../state/cameraCalibrationConflicts';
 import { applyImportPlan } from '../../state/yamlImportApply';
 import type { ApplyImportOptions } from '../../state/yamlImportApply';
 import Button from '../../components/ui/Button';
@@ -56,6 +64,8 @@ interface ExcludedFile {
 }
 
 interface BatchPreview {
+  /** The exact inputs the plan was built from, so a changed resolution can RE-plan them. */
+  inputs: Array<{ sourceName: string; sourceKey: string; flatModel: object }>;
   plan: ImportPlan;
   excluded: ExcludedFile[];
 }
@@ -66,6 +76,8 @@ interface ImportResult {
   animalIds: string[];
   /** Files that never reached the executor (unreadable, unrepaired, or rejected by the planner). */
   excluded: ExcludedFile[];
+  /** What each written animal's camera calibration conflicts resolved to (F1). */
+  cameraConflicts: Array<{ subjectId: string; conflicts: CameraCalibrationConflict[] }>;
   summary: ReturnType<typeof applyImportPlan>;
 }
 
@@ -148,6 +160,23 @@ function plannedCatalogAdditions(plan: ImportPlan): NonNullable<ApplyImportOptio
   );
 }
 
+/**
+ * The camera calibration conflicts of the animals this import actually WROTE — what the result
+ * screen reports (the cameras a split created, and the values a unify did not import).
+ *
+ * @param plan - The plan that was applied.
+ * @param wasWritten - Whether an animal's days were written (default: all of them).
+ * @returns One entry per animal that had a conflict.
+ */
+function writtenCameraConflicts(
+  plan: ImportPlan,
+  wasWritten: (animal: ImportPlanAnimal) => boolean = () => true
+): ImportResult['cameraConflicts'] {
+  return plan.animals
+    .filter((animal) => animal.cameraConflicts.length > 0 && wasWritten(animal))
+    .map((animal) => ({ subjectId: animal.subjectId, conflicts: animal.cameraConflicts }));
+}
+
 /** Suggestions in a file the user has neither accepted nor overridden. */
 function unansweredSuggestions(file: RepairFile): RepairItem[] {
   return file.plan.items.filter(
@@ -175,6 +204,11 @@ export default function ImportRepair() {
   const [preview, setPreview] = useState<BatchPreview | null>(null);
   const [conflictResolutions, setConflictResolutions] = useState<
     Record<string, ConflictResolution>
+  >({});
+  // Camera calibration conflicts (F1) are resolved by RE-PLANNING: `planImport` is pure, so the
+  // preview a user confirms is always the plan built from the choices they can see.
+  const [cameraConflictResolutions, setCameraConflictResolutions] = useState<
+    Record<string, CameraConflictResolution>
   >({});
   const [result, setResult] = useState<ImportResult | null>(null);
 
@@ -233,6 +267,7 @@ export default function ImportRepair() {
     setActiveIndex(firstNeedingWork >= 0 ? firstNeedingWork : 0);
     setPreview(null);
     setConflictResolutions({});
+    setCameraConflictResolutions({});
     setResult(null);
     setPhase('repair');
   };
@@ -257,6 +292,7 @@ export default function ImportRepair() {
     setPickError(null);
     setPreview(null);
     setConflictResolutions({});
+    setCameraConflictResolutions({});
     setResult(null);
   };
 
@@ -319,6 +355,7 @@ export default function ImportRepair() {
       animalIds: animalId ? [animalId] : [],
       // Only one file decoded, so everything else the user picked was unreadable.
       excluded: parseFailures,
+      cameraConflicts: summary.failed.length > 0 ? [] : writtenCameraConflicts(assessment.importPlan),
       summary,
     });
     setPhase('result');
@@ -328,16 +365,16 @@ export default function ImportRepair() {
   const openBatchPreview = () => {
     const ready = assessments.filter((assessment) => assessment.ready);
     if (ready.length === 0) return;
-    const batchPlan = planImport(
-      ready.map((assessment) => ({
-        sourceName: assessment.file.decoded.sourceName,
-        // The file's own identity, so a planned day can be matched back to it by more than a
-        // basename (two selected files may share one).
-        sourceKey: assessment.file.key,
-        flatModel: assessment.repaired,
-      })),
-      model.workspace
-    );
+    const inputs = ready.map((assessment) => ({
+      sourceName: assessment.file.decoded.sourceName,
+      // The file's own identity, so a planned day can be matched back to it by more than a
+      // basename (two selected files may share one).
+      sourceKey: assessment.file.key,
+      flatModel: assessment.repaired,
+    }));
+    const batchPlan = planImport(inputs, model.workspace, {
+      cameraConflictResolutions: {},
+    });
     const excluded: ExcludedFile[] = [
       ...parseFailures,
       ...assessments
@@ -348,9 +385,27 @@ export default function ImportRepair() {
         })),
       ...batchPlan.unimportable,
     ];
-    setPreview({ plan: batchPlan, excluded });
+    setPreview({ inputs, plan: batchPlan, excluded });
     setConflictResolutions({});
+    setCameraConflictResolutions({});
     setPhase('preview');
+  };
+
+  /**
+   * Re-plan the frozen batch with a changed camera-conflict resolution. The plan is pure, so this
+   * shows exactly what a confirm would write — no separate "what if" path.
+   *
+   * @param key - The conflict key.
+   * @param resolution - The chosen resolution.
+   */
+  const setCameraConflictResolution = (key: string, resolution: CameraConflictResolution) => {
+    if (preview === null) return;
+    const next = { ...cameraConflictResolutions, [key]: resolution };
+    setCameraConflictResolutions(next);
+    setPreview({
+      ...preview,
+      plan: planImport(preview.inputs, model.workspace, { cameraConflictResolutions: next }),
+    });
   };
 
   const confirmBatch = () => {
@@ -371,7 +426,16 @@ export default function ImportRepair() {
           ? animal.subjectId
           : animal.existingAnimalId ?? animal.subjectId
       );
-    setResult({ mode: 'batch', animalIds, excluded: preview.excluded, summary });
+    setResult({
+      mode: 'batch',
+      animalIds,
+      excluded: preview.excluded,
+      cameraConflicts: writtenCameraConflicts(preview.plan, (animal) => {
+        const resolution = conflictResolutions[animal.subjectId];
+        return resolution !== 'skip' && !failedIds.has(animal.subjectId);
+      }),
+      summary,
+    });
     setPhase('result');
   };
 
@@ -440,6 +504,9 @@ export default function ImportRepair() {
             ))}
           </ul>
         )}
+        {result.cameraConflicts.length > 0 && (
+          <CameraConflictSummary entries={result.cameraConflicts} />
+        )}
         {result.summary.failed.length > 0 && result.mode === 'batch' && (
           <IssueList
             label="Import failures"
@@ -496,6 +563,7 @@ export default function ImportRepair() {
                   [animal.subjectId]: resolution,
                 }))
               }
+              onCameraConflictResolution={setCameraConflictResolution}
             />
           ))}
         </div>
@@ -856,10 +924,16 @@ interface AnimalPreviewCardProps {
   animal: ImportPlanAnimal;
   resolution?: ConflictResolution;
   onResolution: (resolution: ConflictResolution) => void;
+  onCameraConflictResolution: (key: string, resolution: CameraConflictResolution) => void;
 }
 
 /** One animal in the final, read-only batch preview. */
-function AnimalPreviewCard({ animal, resolution, onResolution }: AnimalPreviewCardProps) {
+function AnimalPreviewCard({
+  animal,
+  resolution,
+  onResolution,
+  onCameraConflictResolution,
+}: AnimalPreviewCardProps) {
   return (
     <section className={styles.animalCard} aria-labelledby={`preview-animal-${animal.subjectId}`}>
       <h2 id={`preview-animal-${animal.subjectId}`}>{animal.subjectId}</h2>
@@ -888,6 +962,13 @@ function AnimalPreviewCard({ animal, resolution, onResolution }: AnimalPreviewCa
           </ul>
         </div>
       )}
+      {animal.cameraConflicts.map((conflict) => (
+        <CameraConflictFieldset
+          key={conflict.key}
+          conflict={conflict}
+          onResolution={(next) => onCameraConflictResolution(conflict.key, next)}
+        />
+      ))}
       {animal.conflict === 'exists' && (
         <fieldset className={styles.resolution}>
           <legend>“{animal.subjectId}” already exists. What should happen?</legend>
@@ -908,6 +989,158 @@ function AnimalPreviewCard({ animal, resolution, onResolution }: AnimalPreviewCa
           ))}
         </fieldset>
       )}
+    </section>
+  );
+}
+
+
+interface CameraConflictFieldsetProps {
+  conflict: CameraCalibrationConflict;
+  onResolution: (resolution: CameraConflictResolution) => void;
+}
+
+/**
+ * One same-name/different-calibration conflict, with the choice that resolves it (finding F1).
+ * `meters_per_pixel` IS the position scale a day is converted with, so both values are shown with
+ * the file and date that recorded them — and neither is discarded without the user saying so.
+ *
+ * @param props - Component props.
+ * @param props.conflict - The conflict to resolve.
+ * @param props.onResolution - Called with the chosen resolution.
+ * @returns The fieldset.
+ */
+function CameraConflictFieldset({ conflict, onResolution }: CameraConflictFieldsetProps) {
+  const fields = differingCalibrationFields(conflict);
+  const unifiedIndex =
+    conflict.resolution.kind === 'unify' ? conflict.resolution.candidateIndex : null;
+  const groupName = `camera-conflict-${conflict.key}`;
+  const sourceOf = (candidate: CameraCalibrationConflict['candidates'][number]): string =>
+    candidate.sourceNames.join(', ') || 'already on this animal';
+
+  return (
+    <fieldset className={styles.cameraConflict}>
+      <legend>
+        Camera “{conflict.cameraName}” has {conflict.candidates.length} calibrations across the
+        files
+      </legend>
+      <p className={styles.cameraConflictIntro}>
+        The calibration is the scale each day’s positions are converted with, so a recalibrated
+        camera is a different camera.
+      </p>
+      <table className={styles.cameraConflictTable}>
+        <thead>
+          <tr>
+            <th scope="col">Calibration</th>
+            <th scope="col">First file</th>
+            <th scope="col">First date</th>
+            <th scope="col">Days</th>
+          </tr>
+        </thead>
+        <tbody>
+          {conflict.candidates.map((candidate, index) => (
+            <tr key={`${conflict.key}-${index}`}>
+              <td>{describeCalibration(candidate, fields)}</td>
+              <td>{candidate.firstSourceName || 'Already on this animal'}</td>
+              <td>{candidate.firstDate || '—'}</td>
+              <td>{candidate.dates.length}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <div className={styles.cameraConflictOptions}>
+        <label>
+          <input
+            type="radio"
+            name={groupName}
+            checked={unifiedIndex === null}
+            onChange={() => onResolution({ kind: 'split' })}
+          />
+          Keep as separate cameras (recommended) — later calibrations become{' '}
+          {conflict.candidates
+            .slice(1)
+            .map((candidate) => candidate.splitName)
+            .join(', ')}
+        </label>
+        <p className={styles.cameraConflictChoiceLead}>Use one calibration for every day:</p>
+        {conflict.candidates.map((candidate, index) => (
+          <label key={`${conflict.key}-choice-${index}`}>
+            <input
+              type="radio"
+              name={groupName}
+              checked={unifiedIndex === index}
+              onChange={() => onResolution({ kind: 'unify', candidateIndex: index })}
+            />
+            {describeCalibration(candidate, fields)} for every day ({sourceOf(candidate)})
+          </label>
+        ))}
+      </div>
+      {unifiedIndex !== null && (
+        <p className={styles.cameraConflictWarning} role="status">
+          Not imported:{' '}
+          {conflict.candidates
+            .filter((_, index) => index !== unifiedIndex)
+            .map((candidate) => `${describeCalibration(candidate, fields)} (${sourceOf(candidate)})`)
+            .join('; ')}
+          . The source files keep those values.
+        </p>
+      )}
+    </fieldset>
+  );
+}
+
+interface CameraConflictSummaryProps {
+  entries: ImportResult['cameraConflicts'];
+}
+
+/**
+ * What the import did with each camera calibration conflict: the cameras a split created (with
+ * their calibration and dates), or the values a unify did not import (with their source files).
+ *
+ * @param props - Component props.
+ * @param props.entries - The written animals' conflicts.
+ * @returns The summary section.
+ */
+function CameraConflictSummary({ entries }: CameraConflictSummaryProps) {
+  return (
+    <section className={styles.section} aria-label="Camera calibrations">
+      <h2 className={styles.sectionHeading}>Camera calibrations</h2>
+      <ul className={styles.blockerList}>
+        {entries.flatMap(({ subjectId, conflicts }) =>
+          conflicts.map((conflict) => {
+            const fields = differingCalibrationFields(conflict);
+            const unifiedIndex =
+              conflict.resolution.kind === 'unify' ? conflict.resolution.candidateIndex : null;
+            return (
+              <li key={`${subjectId}-${conflict.key}`}>
+                <strong>
+                  {subjectId} — “{conflict.cameraName}”
+                </strong>
+                <ul>
+                  {conflict.candidates.map((candidate, index) => {
+                    const calibration = describeCalibration(candidate, fields);
+                    const sources = candidate.sourceNames.join(', ') || 'already on this animal';
+                    if (unifiedIndex === null) {
+                      return (
+                        <li key={`${conflict.key}-${index}`}>
+                          {candidate.splitName} — {calibration} —{' '}
+                          {candidate.dates.join(', ') || 'already on this animal'}
+                        </li>
+                      );
+                    }
+                    return (
+                      <li key={`${conflict.key}-${index}`}>
+                        {index === unifiedIndex
+                          ? `Every day uses ${calibration}`
+                          : `Not imported: ${calibration} (${sources})`}
+                      </li>
+                    );
+                  })}
+                </ul>
+              </li>
+            );
+          })
+        )}
+      </ul>
     </section>
   );
 }

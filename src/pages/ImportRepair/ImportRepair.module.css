@@ -408,3 +408,63 @@
     display: none;
   }
 }
+
+/* Camera calibration conflict (F1): both values, their provenance, and the choice that resolves it. */
+.cameraConflict {
+  display: grid;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-md);
+  margin-top: var(--spacing-md);
+  border: 1px solid var(--color-warning);
+  border-radius: var(--radius-sm);
+}
+
+.cameraConflict legend {
+  padding: 0 var(--spacing-xs);
+  font-weight: 700;
+}
+
+.cameraConflictIntro {
+  margin: 0;
+  color: var(--color-grey-700);
+  font-size: var(--font-size-sm);
+}
+
+.cameraConflictTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--font-size-sm);
+}
+
+.cameraConflictTable th,
+.cameraConflictTable td {
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-bottom: 1px solid var(--color-grey-200);
+  text-align: left;
+}
+
+.cameraConflictOptions {
+  display: grid;
+  gap: var(--spacing-xs);
+}
+
+.cameraConflictOptions label {
+  display: flex;
+  gap: var(--spacing-xs);
+  align-items: baseline;
+  min-height: 36px;
+}
+
+.cameraConflictChoiceLead {
+  margin: var(--spacing-xs) 0 0;
+  font-weight: 700;
+}
+
+.cameraConflictWarning {
+  padding: var(--spacing-sm) var(--spacing-md);
+  margin: 0;
+  border-radius: var(--radius-sm);
+  background: var(--color-warning-light);
+  color: var(--color-warning);
+  font-size: var(--font-size-sm);
+}
