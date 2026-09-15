@@ -79,6 +79,9 @@ const isExempt = (file) =>
   // catalog; `domain/stepStatus` (extracted from the exempt `domain/validation.js` in Phase 9a)
   // inspects the raw day shape to compute step status. All DETECT/PRODUCE, never plain consumers.
   file.endsWith('taskCatalogMigration.ts') ||
+  // The v3→v4 dated-facts migration likewise rewrites RAW pre-migration records (it must read the
+  // stored shape, not the canonical selectors, to preserve it).
+  file.endsWith('datedFactsMigration.ts') ||
   file.endsWith(`state${path.sep}taskCatalog.ts`) ||
   file.endsWith(`domain${path.sep}stepStatus.ts`) ||
   VALIDATION_RAW_SHAPE_DETECTORS.some((suffix) => file.endsWith(suffix)) ||

@@ -343,27 +343,27 @@ describe('getDayRowStatus', () => {
     });
   });
 
-  it('maps a persisted-validated (not yet exported) day to "Validated" (the saved state, distinct from live "Ready to export")', () => {
+  it('maps a saved-validated (not yet exported) day to "Ready to export" (a saved validation is not a separate step)', () => {
     const { animal, day } = videoCompleteRealistic();
     day.state = { draft: false, validated: true, exported: false };
     const merged = mergeDayMetadata(animal, day);
     expect(getDayRowStatus(animal, day, merged)).toEqual({
-      variant: 'validated',
-      label: 'Validated',
+      variant: 'ready',
+      label: 'Ready to export',
     });
   });
 
-  it('maps an exported day to "Exported"', () => {
+  it('maps a downloaded day to "Downloaded"', () => {
     const { animal, day } = videoCompleteRealistic();
     day.state = { draft: false, validated: true, exported: true };
     const merged = mergeDayMetadata(animal, day);
     expect(getDayRowStatus(animal, day, merged)).toEqual({
       variant: 'exported',
-      label: 'Exported',
+      label: 'Downloaded',
     });
   });
 
-  it('does NOT show "Validated"/"Exported" when a step-only blocker (no validation error) currently closes export', () => {
+  it('does NOT show "Downloaded" when a step-only blocker (no validation error) currently closes export', () => {
     // A saved-validated day with a step-only blocker that validateDay does NOT flag as an error
     // (e.g. all channels bad → Devices "error"): the live gate is closed, so the row must read the
     // honest "Needs fixing", never the stale "Validated" — the live gate wins over persisted flags.
@@ -380,7 +380,7 @@ describe('getDayRowStatus', () => {
     });
     const status = getDayRowStatus(animal, day, merged);
     expect(status.variant).toBe('needs_fixing');
-    expect(status.label).toMatch(/^Needs fixing/);
+    expect(status.label).toMatch(/^Needs attention/);
   });
 
   it('falls back to "Needs fixing" (not "Draft") when readiness computation throws on a non-blocked day', () => {
@@ -394,7 +394,7 @@ describe('getDayRowStatus', () => {
     });
     const status = getDayRowStatus(animal, day, merged);
     expect(status.variant).toBe('needs_fixing');
-    expect(status.label).toMatch(/^Needs fixing — /);
+    expect(status.label).toMatch(/^Needs attention — /);
   });
 
   it('treats a passing day with no state flags as ready (live readiness, unsaved)', () => {
@@ -421,7 +421,7 @@ describe('getDayRowStatus', () => {
     const merged = mergeDayMetadata(animal, day);
     const status = getDayRowStatus(animal, day, merged);
     expect(status.variant).toBe('needs_fixing');
-    expect(status.label).toMatch(/^Needs fixing — /);
+    expect(status.label).toMatch(/^Needs attention — /);
     // The reason is the live blocking issue's own message (reused, not re-derived).
     expect(status.label.toLowerCase()).toContain('corrupt');
   });
@@ -431,6 +431,6 @@ describe('getDayRowStatus', () => {
     day.state = { validated: true };
     const status = getDayRowStatus(animal, day, null);
     expect(status.variant).toBe('needs_fixing');
-    expect(status.label).toMatch(/^Needs fixing — /);
+    expect(status.label).toMatch(/^Needs attention — /);
   });
 });

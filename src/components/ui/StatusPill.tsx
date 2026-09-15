@@ -8,8 +8,8 @@ type DayLifecycleVariant = (typeof DAY_LIFECYCLE)[keyof typeof DAY_LIFECYCLE];
 const VARIANT_CLASS: Record<DayLifecycleVariant, string> = {
   draft: styles.draft,
   ready: styles.ready,
-  validated: styles.validated,
   exported: styles.exported,
+  changed_since_export: styles.changedSinceExport,
   needs_fixing: styles.needsFixing,
 };
 

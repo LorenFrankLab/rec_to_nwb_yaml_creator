@@ -90,12 +90,12 @@ describe('buildValidationSummaryViewModel — parity (all animals)', () => {
 
     const vVm = buildValidationSummaryViewModel(wrap(animal, validated)).days[0];
     expect(vVm.status).toBe('ready');
-    expect(vVm.statusLabel).toBe('Validated');
-    expect(vVm.lifecycle).toBe('validated');
+    expect(vVm.statusLabel).toBe('Ready to export');
+    expect(vVm.lifecycle).toBe('ready');
 
     const eVm = buildValidationSummaryViewModel(wrap(animal, exported)).days[0];
     expect(eVm.status).toBe('ready');
-    expect(eVm.statusLabel).toBe('Exported');
+    expect(eVm.statusLabel).toBe('Downloaded');
     expect(eVm.lifecycle).toBe('exported');
   });
 

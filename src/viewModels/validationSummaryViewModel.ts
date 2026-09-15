@@ -13,6 +13,7 @@
  * the builder leaves `batchExport.preflight` and `reports` null. Pure and React-free.
  */
 
+import { exportFreshnessStatus } from '../domain/exportReceipt';
 import {
   buildRows,
   buildAnimalRows,
@@ -102,6 +103,7 @@ function toDayStatusRow(row: SummaryRow): DayStatusRowViewModel {
     unreadable: row.unreadable,
     missingRecord: row.missingRecord,
     orphaned: row.orphaned,
+    freshness: row.chip === 'valid' ? exportFreshnessStatus(row.animal, row.day) : 'current',
   });
   const base = buildDayRowViewModel({
     dayId: typeof day?.id === 'string' ? day.id : '',

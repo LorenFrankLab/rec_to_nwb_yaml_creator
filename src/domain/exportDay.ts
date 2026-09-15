@@ -13,15 +13,19 @@
  * valid, in-place recording day and performs the download.
  */
 
-import { mergeDayMetadata } from '../state/workspaceUtils';
-import type { Animal, Day } from '../state/workspaceTypes';
+import type { Animal, Day, ExportReceipt } from '../state/workspaceTypes';
 import { checkShadowExport } from './shadowExport';
-import { formatDeterministicFilename, downloadYamlFile } from '../io/yaml';
+import { downloadYamlFile } from '../io/yaml';
+import { formatRecordingMetadataFilename } from './recordingFilename';
+import { buildExportReceipt, RECEIPT_YAML_KEY_PREFIX } from './exportReceipt';
+import { getAnimalSubject } from '../state/workspaceSelectors';
+import { putBlob } from '../state/blobStore';
+import { WORKSPACE_SCHEMA_VERSION } from '../state/workspaceMigrations';
 import { isRecord } from '../utils/records';
 
-/** The store write the export needs (marking the day exported in its lifecycle state). */
+/** The store write the export needs (the lifecycle flag + the download receipt). */
 export interface ExportDayActions {
-  updateDay: (dayId: string, patch: { state: Record<string, unknown> }) => void;
+  updateDay: (dayId: string, patch: { state: Record<string, unknown>; exportReceipt?: ExportReceipt }) => void;
 }
 
 /** Options controlling the export gate. */
@@ -63,20 +67,36 @@ export function exportDayFile(animal: Animal, day: Day, { actions, strict }: Exp
     // Parity mismatch in strict mode: skip and report, never download.
     if (!ok && strict) return { kind: 'skipped', diff: diff as string };
 
-    // ok, or the debug override (strict off): inject the filename-only EXPERIMENT_DATE key the merge
-    // does not carry, then download the canonical bytes.
-    const fileName = formatDeterministicFilename({
-      ...mergeDayMetadata(animal, day),
-      EXPERIMENT_DATE_in_format_mmddYYYY: (day as { experimentDate?: string }).experimentDate as string,
+    // ok, or the debug override (strict off): name the file the way the converter's scanner groups it
+    // with the recording (`{YYYYMMDD}_{exact subject}_metadata.yml`), then download the canonical bytes.
+    const fileName = formatRecordingMetadataFilename({
+      date: day.date,
+      subjectId: String(getAnimalSubject(animal).subject_id ?? ''),
     });
     downloadYamlFile(fileName, yaml);
 
-    // Persist the export into the day's lifecycle state (display-only — `state` is never part of the
-    // exported YAML, so byte-identity holds). Guarded so a failed write does not lose the download.
+    // Persist the download RECEIPT (filename + timestamp + content hash; the exact bytes go to the
+    // IndexedDB side store for inspection) plus the lifecycle flag. "Changed since download" is later
+    // derived by comparing the current effective export with this receipt (finding F6). Display-only
+    // — neither reaches the YAML. Guarded so a failed write does not lose the download.
     try {
+      const now = new Date().toISOString();
+      const yamlBytes = yaml as string;
+      void putBlob(`${RECEIPT_YAML_KEY_PREFIX}${day.id}`, { filename: fileName, yaml: yamlBytes, exportedAt: now });
+      const receipt = buildExportReceipt({
+        filename: fileName,
+        yaml: yamlBytes,
+        now,
+        schemaVersion: WORKSPACE_SCHEMA_VERSION,
+        yamlStored: true,
+        // Cache stamps (`applyDayUpdates` re-stamps `dayLastModified` to the post-update value).
+        dayLastModified: day.lastModified,
+        animalLastModified: animal.lastModified,
+      });
       const prevState = isRecord(day.state) ? day.state : {};
       actions.updateDay(day.id as string, {
-        state: { ...prevState, validationDeferred: false, deferredEpochs: [], exported: true },
+        state: { ...prevState, validationDeferred: false, deferredEpochs: [], exported: true, exportedAt: now },
+        exportReceipt: receipt,
       });
     } catch (persistErr) {
       // eslint-disable-next-line no-console

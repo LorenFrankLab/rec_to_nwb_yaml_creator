@@ -29,7 +29,7 @@ describe('StatusPill (day-lifecycle vocabulary wrapper)', () => {
     const classes = [
       classFor(DAY_LIFECYCLE.DRAFT),
       classFor(DAY_LIFECYCLE.READY),
-      classFor(DAY_LIFECYCLE.VALIDATED),
+      classFor(DAY_LIFECYCLE.CHANGED_SINCE_EXPORT),
       classFor(DAY_LIFECYCLE.EXPORTED),
       classFor(DAY_LIFECYCLE.NEEDS_FIXING),
     ];

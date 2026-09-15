@@ -21,6 +21,7 @@
 import { computeStepStatus, validateDay, STEP_STATUS } from './validation';
 import { isExportEnabled } from './stepGate';
 import { DAY_LIFECYCLE, DAY_LIFECYCLE_LABEL, lifecycleForValidDay } from './dayLifecycle';
+import { exportFreshnessStatus } from './exportReceipt';
 import {
   allBlockingIssuesDeferred,
   isDayValidationDeferred,
@@ -475,12 +476,15 @@ export function getDayRowStatus(
     // Currently passes the full gate → refine by persisted history. Reuse the shared resolver so the
     // `exported > validated > ready` precedence lives in ONE place (the same one the readiness bar /
     // export-preview / ValidationSummary use), not a second inline copy that could drift.
-    const persisted = lifecycleForValidDay(day?.state);
+    // "Downloaded" only while the current effective export equals the last download (finding F6):
+    // the freshness check hashes the merged model against the receipt (skipped via cache stamps
+    // when nothing changed, and entirely when there is no receipt).
+    const persisted = lifecycleForValidDay(day?.state, exportFreshnessStatus(animal, day, mergedDay));
     if (persisted === DAY_LIFECYCLE.EXPORTED) {
       return { variant: DAY_LIFECYCLE.EXPORTED, label: DAY_LIFECYCLE_LABEL.exported };
     }
-    if (persisted === DAY_LIFECYCLE.VALIDATED) {
-      return { variant: DAY_LIFECYCLE.VALIDATED, label: DAY_LIFECYCLE_LABEL.validated };
+    if (persisted === DAY_LIFECYCLE.CHANGED_SINCE_EXPORT) {
+      return { variant: DAY_LIFECYCLE.CHANGED_SINCE_EXPORT, label: DAY_LIFECYCLE_LABEL.changed_since_export };
     }
     return { variant: DAY_LIFECYCLE.READY, label: DAY_LIFECYCLE_LABEL.ready };
   }

@@ -26,6 +26,7 @@
  */
 
 import { migrateTasksToCatalogV2ToV3 } from './taskCatalogMigration';
+import { migrateDatedFactsV3ToV4 } from './datedFactsMigration';
 
 /**
  * Whether `value` is a plain object record (not null, not an array).
@@ -56,10 +57,15 @@ function migrateV1ToV2(workspace: object): object {
  *   `taskTypes[]` catalog + per-day `taskInstances[]` (Phase 8C activation, C3 dedup algorithm).
  *   Non-destructive: a reused `task_name` with a divergent definition is normalized to the
  *   first-occurrence canonical and recorded as a `task_definition_reconciled` issue on the day.
+ * - `3`: {@link migrateDatedFactsV3ToV4} — copies the animal-level team / opto / experiment
+ *   description onto each day (what the v3 export emitted), stamps provenance + unverified download
+ *   receipts, flags entry-stamped v1 snapshots as effective-date-unknown. Reproduces every v3
+ *   export byte-for-byte; leaves review flags where a historical fact cannot be verified.
  */
 const MIGRATORS: Record<number, (workspace: object) => object> = {
   1: migrateV1ToV2,
   2: migrateTasksToCatalogV2ToV3,
+  3: migrateDatedFactsV3ToV4,
 };
 
 /**
@@ -67,7 +73,7 @@ const MIGRATORS: Record<number, (workspace: object) => object> = {
  * `max(registered source version) + 1` (enforced by a unit test), so it cannot advance without
  * a registered migrator.
  */
-export const WORKSPACE_SCHEMA_VERSION = 3;
+export const WORKSPACE_SCHEMA_VERSION = 4;
 
 /**
  * The `schemaVersion`s a stored blob can be migrated FROM — the registry's source versions.

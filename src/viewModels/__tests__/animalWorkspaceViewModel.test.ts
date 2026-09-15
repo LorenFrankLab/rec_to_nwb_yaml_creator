@@ -188,7 +188,7 @@ describe('buildAnimalWorkspaceViewModel — day rows parity', () => {
     const vm = buildAnimalWorkspaceViewModel(wrap(animal, exported), animal.id);
     const row = vm.selectedAnimal!.dayRows[0];
     expect(row.status).toBe('ready');
-    expect(row.statusLabel).toBe('Exported');
+    expect(row.statusLabel).toBe('Downloaded');
     expect(row.lifecycle).toBe('exported');
     // A downloaded day's delete carries the downstream-not-deleted caveat.
     const del = row.actions.find((a) => a.command?.id === 'deleteDay');

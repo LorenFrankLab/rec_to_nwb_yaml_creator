@@ -93,9 +93,9 @@ describe('view-model vocabulary — core types', () => {
       date: '2023-06-22',
       href: '#/day/remy-2023-06-22',
       status: 'ready',
-      statusLabel: 'Validated',
-      chipVariant: 'validated',
-      lifecycle: 'validated',
+      statusLabel: 'Downloaded',
+      chipVariant: 'exported',
+      lifecycle: 'exported',
       exportEligibility: 'eligible',
       recovery: 'ok',
       actions: [{ label: 'Duplicate', command: { id: 'duplicateDay', target: { dayId: 'remy-2023-06-22' } } }],
@@ -104,7 +104,7 @@ describe('view-model vocabulary — core types', () => {
       dayId: 'x', date: '2023-06-23', status: 'todo', statusLabel: 'Re-link to export', chipVariant: 'draft',
       exportEligibility: 'blocked-needs-relink', recovery: 'recovered_unlinked', recoveryDetail, actions: [],
     };
-    expect(row.lifecycle).toBe('validated');
+    expect(row.lifecycle).toBe('exported');
     expect(orphan.exportEligibility).toBe('blocked-needs-relink');
     expect(orphan.recoveryDetail?.ownerDescription).toBe('Belongs to bean');
   });

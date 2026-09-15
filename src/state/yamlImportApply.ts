@@ -505,5 +505,20 @@ function dayOwnedUpdates(day: ImportPlanDay): Record<string, any> {
     // them immediately — no reliance on the load-time base→day migration. Undefined
     // when the source carried no marks; `applyDayUpdates` ignores a falsy value.
     deviceOverrides: day.deviceOverrides,
+    // Per-file dated facts (finding F5): each imported day keeps its own file's team and opto
+    // setup; the animal-level values are only the defaults for days created later.
+    experimenters: day.experimenters,
+    optogenetics: day.optogenetics,
+    provenance: {
+      copiedFromDayId: null,
+      copiedFromDate: null,
+      configuration: { source: 'import', confirmed: true },
+      fields: {
+        experimenters: 'import',
+        optogenetics: 'import',
+        'session.experiment_description': 'import',
+        ...(day.session?.weight !== undefined ? { 'session.weight': 'import' } : {}),
+      },
+    },
   };
 }

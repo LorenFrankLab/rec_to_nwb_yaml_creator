@@ -135,7 +135,9 @@ export function buildRealisticWorkspace() {
       session_id: 'remy_20230622',
       session_description: 'Day 45 of chronic recording, W-track alternation',
       experiment_description: 'Chronic tetrode recording during spatial navigation',
-      weight: undefined, // inherit animal weight (485)
+      // The weight MEASURED on this day. The export reads the day's measurement only — the animal
+      // `subject.weight` (485, the baseline at setup) is never substituted for it.
+      weight: 485,
     },
     // The two 'sleep' tasks share ONE task_description — Spyglass treats task_name
     // as an identity with one description per name (designs.md / Spyglass

@@ -18,13 +18,18 @@
 import { formatExperimentDate } from './workspaceUtils';
 import {
   getAnimalDevices,
+  getAnimalExperimenters,
   getConfigHistory,
   getDayTasks,
   getDayTaskInstances,
   getDayKeywords,
   getDayBehavioralEvents,
   getDayBadChannelOverrides,
+  getDayDataAcqDeviceName,
+  getDaySession,
 } from './workspaceSelectors';
+import { selectConfigurationForDate } from '../domain/configurationSelection';
+import { deriveDataFolderForDate } from '../domain/dayCarryPolicy';
 import {
   normalizeDeviceOverrides,
   normalizeDevices,
@@ -51,6 +56,9 @@ import type {
   FsGuiYaml,
   DeviceOverrides,
   DayState,
+  DayProvenance,
+  DayFactSource,
+  ExportReceipt,
 } from './workspaceTypes';
 
 /**
@@ -102,6 +110,14 @@ export interface DayUpdates {
   cameras_used?: Array<number | string>;
   /** Day-level data folder (off-export; replaced on `!== undefined`). */
   dataFolder?: string;
+  /** The day's actual team (+ lab / institution). */
+  experimenters?: ExperimenterInfo;
+  /** The day's optogenetics setup snapshot (`null` = none). PRESENCE-gated: an explicit `null` persists. */
+  optogenetics?: OptogeneticsConfig | null;
+  /** Off-export provenance (deep-merged). */
+  provenance?: Partial<DayProvenance>;
+  /** The last download receipt (off-export; replaced). */
+  exportReceipt?: ExportReceipt;
 }
 
 /**
@@ -112,6 +128,9 @@ export interface DayUpdates {
  *   - `present` — `key in updates`: an explicit `undefined` is itself a write (clears the field).
  */
 type UpdateGate = 'defined' | 'nonNull' | 'present';
+
+const isPlainRecordValue = (value: unknown): value is Record<string, unknown> =>
+  value !== null && typeof value === 'object' && !Array.isArray(value);
 
 function isGiven(updates: object, key: PropertyKey, gate: UpdateGate): boolean {
   if (gate === 'present') return key in updates;
@@ -145,10 +164,16 @@ export const DAY_REPLACE_KEYS = {
   cameras_used: 'defined',
   // Off-export data folder; `''` persists (the user explicitly cleared it).
   dataFolder: 'defined',
+  // The day-owned team copy (the exported experimenter list).
+  experimenters: 'defined',
+  // The day-owned opto snapshot: `null` ("none used") is a real write, so PRESENCE.
+  optogenetics: 'present',
+  // The last download receipt.
+  exportReceipt: 'defined',
 } as const satisfies Partial<Record<keyof DayUpdates, UpdateGate>>;
 
 /** Day keys `applyDayUpdates` merges/normalizes by name rather than replacing. */
-const DAY_MERGED_KEYS = ['session', 'technical', 'deviceOverrides', 'state'] as const;
+const DAY_MERGED_KEYS = ['session', 'technical', 'deviceOverrides', 'state', 'provenance'] as const;
 
 // Every `DayUpdates` key is either replaced by the table or merged by name — or this fails to compile.
 type UnroutedDayKey = Exclude<keyof DayUpdates, keyof typeof DAY_REPLACE_KEYS | (typeof DAY_MERGED_KEYS)[number]>;
@@ -464,34 +489,50 @@ export function rebuildConfigurationHistoryForAnimal(animal: Animal, now: string
   return updated;
 }
 
+/** Options for {@link createDayRecord}. */
+export interface CreateDayRecordOptions {
+  /** A prior day record to seed day-owned content from, or null (blank day). */
+  carryFrom?: Day | null;
+  /**
+   * Pin this configuration version instead of the one effective on `date` (a duplicate-day copies
+   * its source's pin; an import pins the inferred version). When given, the choice is recorded as
+   * `copied` / `import` provenance and treated as confirmed only if the snapshot covers the date.
+   */
+  configurationVersion?: number;
+  /** Provenance source for an explicitly supplied version (default `copied`). */
+  configurationSource?: 'copied' | 'import' | 'explicit';
+}
+
 /**
- * Build a new recording-day record pinned to the animal's LATEST configuration version, with
- * `technical` seeded from the animal's technical defaults. The caller owns id generation and
- * the existence check.
+ * Build a new recording-day record.
  *
- * When `carryFrom` (a prior day record) is supplied, the day-owned content is SEEDED from it —
- * deep-cloned so the new record never aliases the source.
+ * **Configuration pin (finding F2):** the version whose effective date most recently precedes the
+ * recording date (`selectConfigurationForDate`), never simply the newest. A date before every known
+ * effective date is pinned to the earliest version with `provenance.configuration.confirmed: false`
+ * — an export blocker until the user confirms the setup or extends its effective date.
  *
- * Carried from `carryFrom`: tasks, behavioral_events, keywords, technical,
- * session.experiment_description, session.weight (each session field overridable by the caller's
- * `session`), AND `deviceOverrides.bad_channels` — but ONLY when the source pins the SAME (latest)
- * configuration version the new day pins. Bad channels are ntrode-id-keyed; if the source pins an
- * OLDER version the probe was reconfigured since, so those marks would target the WRONG electrodes
- * on the new config and are dropped as stale. ONLY `bad_channels` is carried — never a whole-map
- * `electrode_groups` / `ntrode_electrode_group_channel_map` override — and an empty bad-channel map
- * adds NO `deviceOverrides` container (a blank day stays byte-identical to today's output).
+ * **Carry policy (finding F7)** when `carryFrom` is supplied — deep-cloned so the new record never
+ * aliases the source:
+ *  - copied: tasks (by shape: catalog `taskInstances` or legacy inline `tasks`), behavioral_events,
+ *    keywords, technical, session.experiment_description, the chosen recording system
+ *    (`data_acq_device_name`), the team (`experimenters`), the optogenetics snapshot;
+ *  - NOT copied: `session.weight` (a measurement — shown as a dated suggestion instead),
+ *    `session_id` / `session_description` (date-derived, from the caller), associated_files,
+ *    associated_video_files, fs_gui_yamls, cameras_used, and every review/export state flag;
+ *  - derived: `dataFolder` — the source date token rewritten to the new date, an undated folder
+ *    copied, a folder dated for some OTHER day left blank (`deriveDataFolderForDate`);
+ *  - guarded: `deviceOverrides.bad_channels` — carried ONLY when the source pins the SAME version
+ *    the new day pins (marks are ntrode-keyed; a reconfiguration in between makes them stale).
+ * Without `carryFrom`, the team / opto / experiment description are copied from the animal's
+ * defaults. Every copied field's source is recorded in `provenance`.
  *
- * Never carried: session_id / session_description (date-derived, always from the caller),
- * associated_files / associated_video_files / fs_gui_yamls / cameras_used (session-specific, left
- * unset/empty).
- *
- * @param animal - The owning animal (for technicalDefaults + the latest pin).
+ * @param animal - The owning animal (defaults, technicalDefaults, configuration history).
  * @param animalId - The owning animal id.
  * @param dayId - The (already-validated) new day id.
- * @param date - Date in YYYY-MM-DD.
- * @param session - Session metadata (session_id, session_description, etc.).
- * @param now - Timestamp for created/lastModified.
- * @param carryFrom - A prior day record to seed day-owned content from, or null.
+ * @param date - Recording date, YYYY-MM-DD.
+ * @param session - Session metadata (session_id, session_description, optional weight/description).
+ * @param now - Timestamp for created/lastModified (the metadata-ENTRY time).
+ * @param options - Carry source and/or an explicit configuration pin.
  * @returns The new day record.
  */
 export function createDayRecord(
@@ -501,15 +542,44 @@ export function createDayRecord(
   date: string,
   session: SessionMetadata,
   now: string,
-  carryFrom: Day | null = null
+  options: CreateDayRecordOptions | Day | null = null
 ): Day {
-  // Pin to the latest snapshot's ACTUAL version, not the count. An imported/repaired
-  // history can be non-contiguous (e.g. [1, 3]) — there the count (2) names no real
-  // snapshot, and `resolveDayConfig` (which matches by `version`) would fail closed on a
-  // brand-new day. The last element is the latest snapshot everywhere else in the model
-  // (mirroring in applyAnimalUpdates, the reconfig latest in DevicesStep).
+  // Back-compat: the 7th argument used to be the carry source itself (a day record). An options
+  // bag is recognized by its own keys; anything else object-shaped is a source day.
+  const OPTION_KEYS = ['carryFrom', 'configurationVersion', 'configurationSource'];
+  const isOptionsBag = (value: object): value is CreateDayRecordOptions =>
+    Object.keys(value).every((key) => OPTION_KEYS.includes(key));
+  const opts: CreateDayRecordOptions =
+    options && typeof options === 'object'
+      ? isOptionsBag(options)
+        ? options
+        : { carryFrom: options as Day }
+      : {};
+  const carryFrom = opts.carryFrom ?? null;
+  const fields: Record<string, DayFactSource> = {};
+
+  // --- Configuration pin: by recording date, or the caller's explicit version. ---
   const history = getConfigHistory(animal);
-  const latestVersion = history.length > 0 ? history[history.length - 1].version : 0;
+  const byDate = selectConfigurationForDate(animal, date);
+  let pinnedVersion: number;
+  let configurationSource: DayProvenance['configuration']['source'];
+  let confirmed: boolean;
+  if (opts.configurationVersion != null) {
+    pinnedVersion = opts.configurationVersion;
+    configurationSource = opts.configurationSource ?? 'copied';
+    const snapshot = history.find((c) => c.version === pinnedVersion);
+    confirmed = configurationSource === 'explicit' || (snapshot ? snapshot.date <= date : false);
+  } else if (byDate.version != null) {
+    pinnedVersion = byDate.version;
+    configurationSource = 'effective-date';
+    confirmed = byDate.covered;
+  } else {
+    // No usable history (a brand-new animal without electrodes yet): the legacy latest-pin (0 when
+    // empty) keeps the record shape stable; `unpinned_configuration` / resolveDayConfig gate it.
+    pinnedVersion = history.length > 0 ? history[history.length - 1].version : 0;
+    configurationSource = 'latest';
+    confirmed = true;
+  }
 
   // Animal-defaults technical seed: the no-carry path, and the fallback when carryFrom has no
   // technical record. Kept verbatim so a blank day stays byte-identical to today's output.
@@ -527,30 +597,68 @@ export function createDayRecord(
     typeof carryFrom.technical === 'object' &&
     !Array.isArray(carryFrom.technical);
 
-  // Bad-channel carry-forward, guarded by config version. Bad channels are MONOTONIC across a
-  // study and ntrode-id-keyed. They are safe to carry ONLY when the source pins the SAME version
-  // the new day pins (this latest one): the marks then still name the same electrodes. If the
-  // source pins an older version the probe was reconfigured in between, so its marks are STALE
-  // and must NOT be carried. We carry ONLY bad_channels (never a whole-map override), and skip an
-  // empty map so a no-op carry stays byte-identical to a hand-entered/blank day.
+  // Bad-channel carry-forward, guarded by config version (see the function doc).
   const carriedBadChannels: Record<string, number[]> =
-    carryFrom && carryFrom.configurationVersion === latestVersion
+    carryFrom && carryFrom.configurationVersion === pinnedVersion
       ? getDayBadChannelOverrides(carryFrom)
       : {};
   const deviceOverrides =
     Object.keys(carriedBadChannels).length > 0
       ? { bad_channels: structuredClone(carriedBadChannels) }
       : undefined;
+  if (deviceOverrides) fields['deviceOverrides.bad_channels'] = 'copied';
 
   // Task carry-forward by SHAPE: a catalog source day carries its `taskInstances` (references into
   // the shared animal task-type catalog), with NO inline `tasks`; a legacy inline source carries its
-  // `tasks`. A new (no-carry) day starts empty. Without this, carry-forward / Duplicate Day of a
-  // migrated v3 day (taskInstances, no tasks) silently produced a blank-task day.
+  // `tasks`. A new (no-carry) day starts empty.
   const carriedInstances = carryFrom ? getDayTaskInstances(carryFrom) : null;
   const taskCarry =
     carriedInstances !== null
       ? { tasks: [], taskInstances: structuredClone(carriedInstances) }
       : { tasks: carryFrom ? structuredClone(getDayTasks(carryFrom)) : [] };
+  if (carryFrom) fields.tasks = 'copied';
+
+  // --- Team / opto / experiment description: the source day's copy, else the animal default. ---
+  const sourceTeam = carryFrom && isPlainRecordValue(carryFrom.experimenters) ? carryFrom.experimenters : null;
+  const experimenters: ExperimenterInfo = structuredClone(
+    sourceTeam ? getAnimalExperimenters({ experimenters: sourceTeam }) : getAnimalExperimenters(animal)
+  );
+  fields.experimenters = sourceTeam ? 'copied' : 'animal-default';
+  const optogenetics: OptogeneticsConfig | null =
+    carryFrom && 'optogenetics' in carryFrom
+      ? structuredClone(carryFrom.optogenetics ?? null)
+      : structuredClone(animal.optogenetics ?? null);
+  fields.optogenetics = carryFrom && 'optogenetics' in carryFrom ? 'copied' : 'animal-default';
+  let experimentDescription: string;
+  if (session.experiment_description !== undefined) {
+    experimentDescription = session.experiment_description;
+    fields['session.experiment_description'] = 'entered';
+  } else if (carryFrom?.session?.experiment_description) {
+    experimentDescription = carryFrom.session.experiment_description;
+    fields['session.experiment_description'] = 'copied';
+  } else {
+    experimentDescription = animal.experiment_description ?? '';
+    fields['session.experiment_description'] = 'animal-default';
+  }
+
+  // --- Recording system: preserve the source day's rig choice (finding F7). ---
+  const carriedRig = carryFrom ? getDayDataAcqDeviceName(carryFrom) : undefined;
+  if (carriedRig) fields.data_acq_device_name = 'copied';
+
+  // --- Data folder: date-aware derivation, never a silent copy of another day's dated folder. ---
+  const folder = carryFrom
+    ? deriveDataFolderForDate(carryFrom.dataFolder, String(carryFrom.date ?? ''), date)
+    : { kind: 'none' as const, dataFolder: undefined };
+  if (folder.kind === 'derived') fields.dataFolder = 'derived';
+  if (folder.kind === 'copied') fields.dataFolder = 'copied';
+
+  const provenance: DayProvenance = {
+    enteredAt: now,
+    copiedFromDayId: carryFrom ? String(carryFrom.id) : null,
+    copiedFromDate: carryFrom ? String(carryFrom.date ?? '') || null : null,
+    configuration: { source: configurationSource, confirmed },
+    fields,
+  };
 
   return {
     id: dayId,
@@ -561,13 +669,12 @@ export function createDayRecord(
       // Always date-derived from the caller — never carried.
       session_id: session.session_id,
       session_description: session.session_description,
-      // Prefer the caller's value when defined, else the carried value (else undefined).
-      experiment_description:
-        session.experiment_description !== undefined
-          ? session.experiment_description
-          : carryFrom?.session?.experiment_description,
-      weight: session.weight !== undefined ? session.weight : carryFrom?.session?.weight,
+      experiment_description: experimentDescription,
+      // A MEASUREMENT: only the caller's explicit value, never the source day's.
+      ...(session.weight !== undefined ? { weight: session.weight } : {}),
     },
+    experimenters,
+    optogenetics,
     keywords: carryFrom ? structuredClone(getDayKeywords(carryFrom)) : [],
     ...taskCarry,
     behavioral_events: carryFrom ? structuredClone(getDayBehavioralEvents(carryFrom)) : [],
@@ -577,28 +684,80 @@ export function createDayRecord(
     // `carryTechnical` truthy ⇒ `carryFrom` is a non-null record (the non-null assertion is a
     // type-level no-op; the runtime guard is `carryTechnical` itself).
     technical: carryTechnical ? structuredClone(carryFrom!.technical) : defaultTechnical,
+    ...(carriedRig ? { data_acq_device_name: carriedRig } : {}),
     // Only present when guarded bad-channel carry produced a non-empty map (see above); a blank
     // day omits the key entirely so it stays byte-identical to today's output.
     ...(deviceOverrides ? { deviceOverrides } : {}),
-    // Data folder carries forward unconditionally (it is stable across a block of days — unlike the
-    // date-derived filenames, which never carry). Off-export, so this can't move a baseline. The key
-    // stays ABSENT when the source has none, keeping a no-carry/blank day's persisted shape unchanged.
-    ...(carryFrom?.dataFolder !== undefined ? { dataFolder: carryFrom.dataFolder } : {}),
+    ...(folder.dataFolder !== undefined ? { dataFolder: folder.dataFolder } : {}),
     // `state.badChannelRemovalAcks` (off-export acknowledgments of deliberate bad-channel
     // un-marks) is intentionally ABSENT on a fresh day: the monotonicity helpers and the
     // acknowledge repair command treat an absent container as "no acks" and create it on demand
-    // via `applyDayUpdates`'s `state` deep-merge. Keeping it absent leaves a new day's persisted
-    // shape unchanged. `mergeDayMetadata` never reads `state`, so it is invisible to the export.
+    // via `applyDayUpdates`'s `state` deep-merge. `mergeDayMetadata` never reads `state`.
     state: {
       draft: true,
       validated: false,
       exported: false,
       validationDeferred: carryFrom == null,
     },
+    provenance,
     created: now,
     lastModified: now,
-    configurationVersion: latestVersion,
+    configurationVersion: pinnedVersion,
   };
+}
+
+/**
+ * Re-copy the carry-forward fields of an EXISTING day from a different source day ("Start from a
+ * different day"). Applies the same field policy as creation — stable definitions/references are
+ * copied (tasks, DIO, keywords, technical, team, opto snapshot, rig, derived data folder,
+ * experiment description) while the day's own facts are kept: session id / description, the
+ * measured weight, files, videos, FsGUI protocols, review/export state, and the configuration pin
+ * (the source's version never overrides the date-selected probe setup; bad-channel marks are
+ * re-copied only when the versions match). Provenance records the new source.
+ *
+ * @param animal - The owning animal.
+ * @param day - The day being re-seeded.
+ * @param source - The day to copy from.
+ * @param now - Timestamp to stamp.
+ * @returns The next day record.
+ */
+export function reseedDayFromSource(animal: Animal, day: Day, source: Day, now: string): Day {
+  const seeded = createDayRecord(
+    animal,
+    day.animalId,
+    day.id,
+    day.date,
+    { session_id: getDaySession(day).session_id ?? '', session_description: getDaySession(day).session_description ?? '' },
+    now,
+    { carryFrom: source, configurationVersion: day.configurationVersion, configurationSource: 'explicit' }
+  );
+  const seededProvenance = seeded.provenance as DayProvenance;
+  const next: Day = {
+    ...structuredClone(day),
+    tasks: seeded.tasks,
+    ...(seeded.taskInstances ? { taskInstances: seeded.taskInstances } : {}),
+    behavioral_events: seeded.behavioral_events,
+    keywords: seeded.keywords,
+    technical: seeded.technical,
+    experimenters: seeded.experimenters,
+    optogenetics: seeded.optogenetics,
+    session: { ...getDaySession(day), experiment_description: seeded.session.experiment_description },
+    ...(seeded.data_acq_device_name ? { data_acq_device_name: seeded.data_acq_device_name } : {}),
+    ...(seeded.dataFolder !== undefined ? { dataFolder: seeded.dataFolder } : {}),
+    ...(seeded.deviceOverrides ? { deviceOverrides: seeded.deviceOverrides } : {}),
+    provenance: {
+      ...(day.provenance ?? seededProvenance),
+      enteredAt: day.provenance?.enteredAt ?? seededProvenance.enteredAt,
+      copiedFromDayId: source.id,
+      copiedFromDate: String(source.date ?? '') || null,
+      configuration: day.provenance?.configuration ?? seededProvenance.configuration,
+      fields: { ...(day.provenance?.fields ?? {}), ...seededProvenance.fields },
+    },
+    lastModified: now,
+  };
+  // A taskInstances-less legacy source must not leave a stale catalog reference behind.
+  if (!seeded.taskInstances) delete next.taskInstances;
+  return next;
 }
 
 /**
@@ -653,8 +812,23 @@ export function applyDayUpdates(day: Day, updates: DayUpdates, now: string): Day
   if (clearsValidationDeferral && updated.state) {
     updated.state.validationDeferred = false;
   }
+  if (updates.provenance) {
+    const current = isPlainRecordValue(updated.provenance) ? updated.provenance : ({} as DayProvenance);
+    updated.provenance = {
+      ...current,
+      ...updates.provenance,
+      configuration: { ...current.configuration, ...updates.provenance.configuration } as DayProvenance['configuration'],
+      fields: { ...current.fields, ...updates.provenance.fields },
+    };
+  }
   applyReplacements(updated, updates as Partial<Day>, DAY_REPLACE_KEYS);
 
   updated.lastModified = now;
+  // A receipt written in this update describes THIS state of the day: stamp it with the same
+  // `lastModified` so the freshness fast path (`exportReceipt.dayLastModified === day.lastModified`)
+  // holds until the next real edit. The content hash stays authoritative.
+  if (updates.exportReceipt && isPlainRecordValue(updated.exportReceipt)) {
+    updated.exportReceipt = { ...updated.exportReceipt, dayLastModified: now };
+  }
   return updated;
 }

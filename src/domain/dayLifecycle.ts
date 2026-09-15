@@ -10,7 +10,8 @@
  * states once and distinguishing two axes that were previously conflated:
  *
  *   - LIVE readiness — does the day pass every check **right now**? ("Ready to export")
- *   - PERSISTED history — was the validation/export **saved**? ("Validated" / "Exported")
+ *   - DOWNLOAD history — was it downloaded, and does the current export still match that download?
+ *     ("Downloaded" / "Changed since download", derived from the export receipt)
  *
  * Live state always wins when it conflicts with a saved flag (a day saved as "validated" that is
  * now live-broken reads the honest "Needs fixing"); that precedence lives in the consuming
@@ -21,22 +22,25 @@
  */
 
 /**
- * The five day-lifecycle variants. Frozen to the closed-enum convention used across the
- * domain/state layers.
+ * The five day-lifecycle variants — Draft · Ready to export · Downloaded · Changed since download ·
+ * Needs attention. Frozen to the closed-enum convention used across the domain/state layers. (The
+ * former `validated` word is retired: a saved validation is not a step scientists perform, so it
+ * reads as ready.)
  */
 export const DAY_LIFECYCLE = Object.freeze({
   NEEDS_FIXING: 'needs_fixing',
   DRAFT: 'draft',
   READY: 'ready',
-  VALIDATED: 'validated',
   EXPORTED: 'exported',
+  /** Downloaded before, but the current effective export differs from that download (F6). */
+  CHANGED_SINCE_EXPORT: 'changed_since_export',
 } as const);
 
 /** The closed set of day-lifecycle values. */
 export type DayLifecycle = typeof DAY_LIFECYCLE[keyof typeof DAY_LIFECYCLE];
 
 /** The valid/exportable lifecycle subset returned by {@link lifecycleForValidDay}. */
-export type ValidDayLifecycle = (typeof DAY_LIFECYCLE)['READY' | 'VALIDATED' | 'EXPORTED'];
+export type ValidDayLifecycle = (typeof DAY_LIFECYCLE)['READY' | 'EXPORTED' | 'CHANGED_SINCE_EXPORT'];
 
 /**
  * The canonical plain-language label for each variant — the word every surface shows. Kept short
@@ -44,11 +48,11 @@ export type ValidDayLifecycle = (typeof DAY_LIFECYCLE)['READY' | 'VALIDATED' | '
  * validated" to the Draft label) without re-coining the base word.
  */
 export const DAY_LIFECYCLE_LABEL = Object.freeze({
-  needs_fixing: 'Needs fixing',
+  needs_fixing: 'Needs attention',
   draft: 'Draft',
   ready: 'Ready to export',
-  validated: 'Validated',
-  exported: 'Exported',
+  exported: 'Downloaded',
+  changed_since_export: 'Changed since download',
 }) satisfies Readonly<Record<DayLifecycle, string>>;
 
 /**
@@ -59,9 +63,9 @@ export const DAY_LIFECYCLE_LABEL = Object.freeze({
 export const DAY_LIFECYCLE_DESCRIPTION = Object.freeze({
   needs_fixing: 'Has a blocking issue — resolve it before exporting.',
   draft: 'Not yet ready — still missing required information.',
-  ready: 'Passes every check right now, but the result has not been saved yet.',
-  validated: 'Validation was saved, and the day still passes every check.',
-  exported: 'Its YAML has been downloaded; it still passes every check.',
+  ready: 'Passes every check right now.',
+  exported: 'Its YAML has been downloaded and nothing has changed since. A download is not proof the conversion succeeded.',
+  changed_since_export: 'Its YAML was downloaded, but the export (content or filename) has changed since — download it again.',
 }) satisfies Readonly<Record<DayLifecycle, string>>;
 
 /**
@@ -71,8 +75,8 @@ export const DAY_LIFECYCLE_DESCRIPTION = Object.freeze({
 export const DAY_LIFECYCLE_ORDER = Object.freeze([
   DAY_LIFECYCLE.DRAFT,
   DAY_LIFECYCLE.READY,
-  DAY_LIFECYCLE.VALIDATED,
   DAY_LIFECYCLE.EXPORTED,
+  DAY_LIFECYCLE.CHANGED_SINCE_EXPORT,
   DAY_LIFECYCLE.NEEDS_FIXING,
 ] as const) satisfies ReadonlyArray<DayLifecycle>;
 
@@ -93,11 +97,22 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
  * persisted validation is visually distinct from live-valid readiness.
  *
  * @param state - The day's persisted `state` (may be malformed).
- * @returns The lifecycle variant (`'ready'` | `'validated'` | `'exported'`) for a live-valid day.
+ * @param freshness - The download freshness from `exportFreshness` (`current` when the last
+ *   download equals the current effective export; anything else demotes "Downloaded").
+ * @returns The lifecycle variant for a live-valid day.
  */
-export function lifecycleForValidDay(state: unknown): ValidDayLifecycle {
+export function lifecycleForValidDay(
+  state: unknown,
+  freshness: 'never' | 'current' | 'changed' | 'unverified' = 'current'
+): ValidDayLifecycle {
   const s: Record<string, unknown> = isRecord(state) ? state : {};
-  if (s.exported) return DAY_LIFECYCLE.EXPORTED;
-  if (s.validated) return DAY_LIFECYCLE.VALIDATED;
+  if (s.exported) {
+    // "Downloaded" while the current effective export still equals the last download. A download
+    // whose content cannot be compared (pre-receipt data) is still a download — it reads Downloaded,
+    // with the unverifiable receipt surfaced separately as a review note.
+    return freshness === 'changed' ? DAY_LIFECYCLE.CHANGED_SINCE_EXPORT : DAY_LIFECYCLE.EXPORTED;
+  }
+  // `state.validated` (a saved validation) is not a separate step scientists perform; it reads as
+  // ready — live readiness is what matters.
   return DAY_LIFECYCLE.READY;
 }

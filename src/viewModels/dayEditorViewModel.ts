@@ -71,6 +71,8 @@ import { classifyDeviceOverrides } from '../domain/deviceOverrides';
 import { validateRawDay, validateRawAnimal } from '../validation/rawShape';
 import type { Animal, Day } from '../state/workspaceTypes';
 import { isRecord } from '../utils/records';
+import { previousWeightSuggestion } from '../domain/dayCarryPolicy';
+import { exportFreshnessStatus } from '../domain/exportReceipt';
 import { isBlockingIssue, blockingIssues } from '../validation/issueTypes';
 import type {
   BadChannelMarkViewModel,
@@ -348,8 +350,12 @@ function buildSectionItems(
   const specs: Array<{ key: DayTabKey; label: string; status: StepStatus; issueCount?: number }> = [
     {
       key: 'daily',
-      label: 'Daily Setup',
-      status: splitSectionStatus(stepStatus.overview ?? 'incomplete', issues, isDailySetupIssue),
+      label: 'Daily log',
+      // The daily log holds the epoch editor too, so its status rolls up Daily Setup + Tasks & Files.
+      status: rollupStepStatus([
+        splitSectionStatus(stepStatus.overview ?? 'incomplete', issues, isDailySetupIssue),
+        splitSectionStatus(stepStatus.epochs ?? 'incomplete', issues, isTasksFilesIssue),
+      ]),
     },
     {
       key: 'tasks',
@@ -400,8 +406,9 @@ function buildSectionGroups(
 ): DayEditorSectionGroupViewModel[] {
   const sections = buildSectionItems(stepStatus, toFixCount, activeStep, issues);
   const byKey = Object.fromEntries(sections.map((section) => [section.key, section]));
+  // The epoch editor is part of the daily log (the first screen), so `tasks` is not a separate stop.
   return [
-    { label: 'DAY', steps: [byKey.daily as StepViewModel, byKey.tasks as StepViewModel] },
+    { label: 'DAY', steps: [byKey.daily as StepViewModel] },
     {
       label: 'RECORDING',
       steps: [
@@ -570,7 +577,8 @@ function buildOverviewFields(
   ownerKey: string | null,
   day: Record<string, unknown>,
   animal: Animal,
-  merged: Record<string, unknown>
+  merged: Record<string, unknown>,
+  workspaceDays: unknown = {}
 ): FieldValueViewModel[] {
   const daySession = getDaySession(day);
   const subject = getAnimalSubject(animal);
@@ -601,46 +609,56 @@ function buildOverviewFields(
       : 'default',
   });
 
-  // Experiment Description — day value preferred, else inherited from the animal's
-  // experiment_description (the Overview defaultValue fallback), else unset default.
+  // Experiment Description — a DAY fact: the animal default was copied in at creation, and the
+  // export reads only the day's value (no live fallback — editing the default never changes a past
+  // day). Set → 'day'; empty → 'default' with the animal default offered as a suggestion.
   const dayExperimentDesc = daySession.experiment_description;
   const animalExperimentDesc = (animal as { experiment_description?: unknown }).experiment_description;
-  fields.push(
-    fieldFromDayOrAnimal({
-      fieldPath: 'session.experiment_description',
-      label: 'Experiment Description',
-      effective: merged.experiment_description,
-      dayValue: dayExperimentDesc,
-      animalValue: animalExperimentDesc,
-      helpText:
-        'Describes the overall experiment. Required for export and written to the NWB file.',
-    })
-  );
+  const hasDayExperimentDesc = typeof dayExperimentDesc === 'string' && dayExperimentDesc !== '';
+  fields.push({
+    fieldPath: 'session.experiment_description',
+    label: 'Experiment Description',
+    value: asDisplay(merged.experiment_description),
+    source: hasDayExperimentDesc ? 'day' : 'default',
+    ...(typeof animalExperimentDesc === 'string' && animalExperimentDesc !== '' && !hasDayExperimentDesc
+      ? { fallbackValue: animalExperimentDesc }
+      : {}),
+    helpText: hasDayExperimentDesc
+      ? 'Describes the overall experiment. Required for export and written to the NWB file.'
+      : typeof animalExperimentDesc === 'string' && animalExperimentDesc !== ''
+        ? `Required for export. Nothing entered for this day — use the animal default ("${animalExperimentDesc}") or describe this day's experiment.`
+        : 'Required for export. Describes the overall experiment; written to the NWB file.',
+  });
 
-  // Recording-day weight — the day value is exported when set; otherwise the animal baseline weight
-  // is the inherited fallback; otherwise unset. The merge prefers the day weight over the baseline
-  // and emits the effective value under `subject.weight` (the export nests weight in the subject).
+  // Recording-day weight — a MEASUREMENT. The export reads the day's value only; a day without one
+  // is not exportable (the animal baseline is never substituted). The previous measurement (or the
+  // setup baseline) is offered as a DATED suggestion the scientist must accept deliberately.
   const dayWeight = daySession.weight;
-  const animalWeight = subject.weight;
   const mergedSubject = isRecord(merged.subject) ? merged.subject : {};
-  fields.push(
-    fieldFromDayOrAnimal({
-      fieldPath: 'session.weight',
-      label: 'Recording-day weight (grams)',
-      effective: mergedSubject.weight,
-      dayValue: dayWeight,
-      animalValue: animalWeight,
-      fallbackValue:
-        typeof animalWeight === 'number' ? `${animalWeight} (animal baseline)` : undefined,
-      helpText:
-        dayWeight !== undefined
-          ? 'Weight recorded for this session — the value exported for this day.'
-          : typeof animalWeight === 'number'
-            ? `No weight set for this day — the animal baseline (${animalWeight} g) will be `
-              + `exported as a fallback. Enter this session's weight to set it for this day.`
-            : 'Enter the weight recorded for this session (exported for this day).',
-    })
+  const suggestion = previousWeightSuggestion(
+    animal,
+    workspaceDays,
+    String((day as { date?: unknown }).date ?? '')
   );
+  const suggestionText = suggestion
+    ? suggestion.source === 'previous-day'
+      ? `${suggestion.weight} g on ${suggestion.date}`
+      : `${suggestion.weight} g (baseline at setup)`
+    : null;
+  fields.push({
+    fieldPath: 'session.weight',
+    label: 'Recording-day weight (grams)',
+    value: asDisplay(mergedSubject.weight),
+    source: dayWeight !== undefined ? 'day' : 'default',
+    ...(suggestionText && dayWeight === undefined ? { fallbackValue: suggestionText } : {}),
+    helpText:
+      dayWeight !== undefined
+        ? 'Weight measured on this day — the value exported for this day.'
+        : suggestionText
+          ? `No weight entered for this day — required for export. Previous: ${suggestionText}. ` +
+            'Enter today\u2019s measurement (the previous value is a suggestion, not a measurement).'
+          : 'No weight entered for this day — required for export. Enter today\u2019s measurement.',
+  });
 
   // Read-only inherited subject identity facts (always animal-owned / inherited on this surface).
   fields.push(readOnlyInherited('subject.subject_id', 'Subject ID', subject.subject_id));
@@ -660,42 +678,6 @@ function buildOverviewFields(
   );
 
   return fields;
-}
-
-/**
- * Build a field whose effective value may be day-set or inherited from the animal: a present day
- * value is `source: 'day'`; else a present animal value is `source: 'inherited'`
- * (inheritedFrom: 'animal'); else `source: 'default'`. The effective `value` is taken from the
- * merge so the merge rules stay authoritative.
- */
-function fieldFromDayOrAnimal(opts: {
-  fieldPath: string;
-  label: string;
-  effective: unknown;
-  dayValue: unknown;
-  animalValue: unknown;
-  fallbackValue?: string;
-  helpText?: string;
-}): FieldValueViewModel {
-  const { fieldPath, label, effective, dayValue, animalValue, fallbackValue, helpText } = opts;
-  const dayHas = dayValue !== undefined && dayValue !== null && dayValue !== '';
-  const animalHas = animalValue !== undefined && animalValue !== null && animalValue !== '';
-
-  let source: FieldValueViewModel['source'];
-  if (dayHas) source = 'day';
-  else if (animalHas) source = 'inherited';
-  else source = 'default';
-
-  const field: FieldValueViewModel = {
-    fieldPath,
-    label,
-    value: asDisplay(effective),
-    source,
-  };
-  if (source === 'inherited') field.inheritedFrom = 'animal';
-  if (fallbackValue != null) field.fallbackValue = fallbackValue;
-  if (helpText != null) field.helpText = helpText;
-  return field;
 }
 
 /** A read-only inherited animal fact (subject identity / experimenters): always inherited. */
@@ -849,19 +831,19 @@ function buildRepairAction(
  * (`DAY_LIFECYCLE_LABEL`), and the full readiness sentence the Validation summary shows. The prose
  * is read verbatim from the lifecycle label so it can never drift from the other day surfaces.
  */
-function buildReadiness(dayState: unknown): {
+function buildReadiness(dayState: unknown, freshness: 'never' | 'current' | 'changed' | 'unverified' = 'current'): {
   lifecycle: ValidDayLifecycle;
   lifecycleStatusLabel: string;
   readyMessage: string;
 } {
-  const lifecycle = lifecycleForValidDay(dayState);
+  const lifecycle = lifecycleForValidDay(dayState, freshness);
   let readyMessage: string;
   switch (lifecycle) {
     case 'exported':
-      readyMessage = `${DAY_LIFECYCLE_LABEL.exported} — all checks still pass. This day’s YAML has been downloaded.`;
+      readyMessage = `${DAY_LIFECYCLE_LABEL.exported} — all checks still pass and nothing has changed since the download.`;
       break;
-    case 'validated':
-      readyMessage = `${DAY_LIFECYCLE_LABEL.validated} — all checks pass. This validation has been saved.`;
+    case 'changed_since_export':
+      readyMessage = `${DAY_LIFECYCLE_LABEL.changed_since_export} — all checks pass, but the export differs from the file you downloaded. Download it again.`;
       break;
     default:
       readyMessage = `${DAY_LIFECYCLE_LABEL.ready} — all checks pass.`;
@@ -878,8 +860,10 @@ function buildExportGate(opts: {
   dayExportable: boolean;
   merged: Record<string, unknown>;
   dayState: unknown;
+  /** Download freshness of the day (`exportFreshnessStatus`). */
+  freshness?: 'never' | 'current' | 'changed' | 'unverified';
 }): ExportGateViewModel {
-  const { mergeFailed, dayId, ownerKey, stepStatus, errorIssues, dayExportable, merged, dayState } = opts;
+  const { mergeFailed, dayId, ownerKey, stepStatus, errorIssues, dayExportable, merged, dayState, freshness = 'current' } = opts;
 
   const gateOpen = isExportEnabled(stepStatus);
   const open = errorIssues.length === 0 && gateOpen && dayExportable && !mergeFailed;
@@ -895,7 +879,7 @@ function buildExportGate(opts: {
   if (open) {
     // An exportable day's persisted lifecycle (live-ready / saved-validated / downloaded-exported),
     // surfaced so the readiness surfaces render the persisted-history word without re-deriving it.
-    const { lifecycle, lifecycleStatusLabel, readyMessage } = buildReadiness(dayState);
+    const { lifecycle, lifecycleStatusLabel, readyMessage } = buildReadiness(dayState, freshness);
     return {
       open: true,
       blockingIssues: [],
@@ -1404,7 +1388,7 @@ export function buildDayEditorViewModel(
   // ── Overview fields ── empty on a merge failure (no effective values to show).
   const overviewFields = mergeFailed
     ? []
-    : buildOverviewFields(ownerKey, day, animal as Animal, merged);
+    : buildOverviewFields(ownerKey, day, animal as Animal, merged, (workspace as { days?: unknown })?.days);
 
   // ── Bad channels ──
   const marks = mergeFailed ? [] : buildBadChannelMarks(animal as Animal, day, animalDays, merged);
@@ -1432,6 +1416,7 @@ export function buildDayEditorViewModel(
     dayExportable,
     merged,
     dayState: (day as { state?: unknown }).state,
+    freshness: mergeFailed ? 'never' : exportFreshnessStatus(animal, day, merged),
   });
 
   return {

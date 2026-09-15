@@ -151,10 +151,10 @@ describe('migrateTasksToCatalogV2ToV3 — non-destructive workspace→workspace 
 });
 
 describe('Phase 8C registers the catalog migrator in the persisted-migration registry', () => {
-  it('bumps WORKSPACE_SCHEMA_VERSION to 3 and registers the v2→v3 migrator', () => {
-    // 8B built this utility inert; 8C activates it. The registry-level migration behavior (a v2 blob
-    // hydrating to the catalog shape) is pinned in workspaceMigrations.test.js with the v3 fixture.
-    expect(WORKSPACE_SCHEMA_VERSION).toBe(3);
-    expect([...MIGRATABLE_SCHEMA_VERSIONS].sort((a, b) => a - b)).toEqual([1, 2]);
+  it('registers the v2→v3 migrator (the schema version has since moved on to v4)', () => {
+    // 8B built this utility inert; 8C activated it. The registry-level migration behavior (a v2 blob
+    // hydrating to the catalog shape) is pinned in workspaceMigrations.test.js with the fixtures.
+    expect(WORKSPACE_SCHEMA_VERSION).toBeGreaterThanOrEqual(3);
+    expect([...MIGRATABLE_SCHEMA_VERSIONS]).toContain(2);
   });
 });

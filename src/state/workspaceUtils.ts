@@ -322,10 +322,14 @@ function resolveDayTasks(animal: Animal, day: Day): Task[] {
  * EXACTLY the same YAML structure as the legacy single-session exporter. Any deviation
  * will corrupt the trodes_to_nwb pipeline and Spyglass database ingestion.
  *
- * Inheritance Rules:
- * - Animal provides: subject, devices, cameras, experimenters, optogenetics (if present)
- * - Day provides: session, tasks, epochs, files, technical parameters
- * - Day OVERRIDES: weight, experiment_description, cameras, electrode_groups (if specified)
+ * Ownership rules (fix plan, increment 2 — "reuse definitions, preserve what was recorded"):
+ * - Animal provides: subject identity, the device/camera/recording-system/task-type CATALOGS
+ *   (Spyglass identity-locked definitions the day references by id/name).
+ * - Day provides: session (incl. THIS day's measured weight and its own experiment description),
+ *   the actual team (`day.experimenters`), the optogenetics setup as it applied that day
+ *   (`day.optogenetics`), tasks, epochs, files, technical parameters, the chosen recording system.
+ * - The animal-level team / opto / experiment-description are only DEFAULTS copied into a new day;
+ *   the merge falls back to them solely for un-migrated records.
  * - Configuration versions: Day references specific probe configuration from animal history
  *   (resolved by {@link resolveDayConfig}).
  *
@@ -379,8 +383,14 @@ export function mergeDayMetadata(animal: Animal, day: Day): Record<string, unkno
   // `id`, so dropping unreferenced cameras is safe. Pass the resolved tasks (a catalog day has none
   // inline) so a task-type camera is inferred from the export-shaped task, not the empty raw list.
   const dayCameras = resolveDayCameraUsage(animal, { ...day, tasks: resolvedTasks });
-  const opto = animal.optogenetics || null;
-  const experimenters = getAnimalExperimenters(animal);
+  // Day-owned dated facts (fix plan, increment 2): the optogenetics setup and the team are exported
+  // from the DAY's copy. The animal's values are only the defaults for new days — reading them here
+  // would let a later default edit silently rewrite an earlier session. The animal fallback covers
+  // un-migrated records only (the v3→v4 migration copies the values onto every day).
+  const opto = 'optogenetics' in day ? day.optogenetics || null : animal.optogenetics || null;
+  const experimenters = isPlainRecord(day.experimenters)
+    ? getAnimalExperimenters({ experimenters: day.experimenters })
+    : getAnimalExperimenters(animal);
   const session = getDaySession(day);
   const technical = (isPlainRecord(day.technical) ? day.technical : {}) as TechnicalParameters;
   const subject = getAnimalSubject(animal);
@@ -395,19 +405,22 @@ export function mergeDayMetadata(animal: Animal, day: Day): Record<string, unkno
     institution: experimenters.institution,
 
     // === From Day: Session ===
-    // Per-day value wins; fall back to the animal-level default (what the
-    // OverviewStep "leave blank to use animal's default" hint promises).
-    experiment_description:
-      session.experiment_description || animal.experiment_description || '',
+    // The day's own value only. The animal-level description is the DEFAULT copied into a day when
+    // it is created (never a live fallback — that would let a default edit change a past day).
+    experiment_description: session.experiment_description ?? '',
     session_description: session.session_description,
     session_id: session.session_id,
     keywords: getDayKeywords(day),
 
-    // === From Animal: Subject (with day weight override) ===
+    // === From Animal: Subject identity, with THIS DAY's measured weight ===
+    // The exported weight is the day's measurement only. The animal `subject.weight` is a baseline
+    // shown as a dated suggestion in the editor and is never substituted for a measurement: a day
+    // with no weight has no `weight` key, which the schema rejects (export blocked) — never a
+    // silently invented number.
     subject: reorderKeys(
       {
         ...subject,
-        weight: session.weight !== undefined ? session.weight : subject.weight,
+        ...(session.weight !== undefined ? { weight: session.weight } : {}),
       },
       SUBJECT_ORDER
     ),
@@ -496,6 +509,11 @@ export function mergeDayMetadata(animal: Animal, day: Day): Record<string, unkno
 
   // Return owned data: the assignments above alias nested animal/config arrays and
   // objects. Cloning ensures downstream mutation cannot corrupt animal/config state.
+  // The animal baseline weight never reaches the export (see the subject block above).
+  if (session.weight === undefined && isPlainRecord(merged.subject)) {
+    delete (merged.subject as Record<string, unknown>).weight;
+  }
+
   return structuredClone(merged);
 }
 

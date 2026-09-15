@@ -67,7 +67,7 @@ function makeMultiConfig() {
   };
   const mkDay = (id, ver) => ({
     id, animalId: 'a', date: '2023-06-22', experimentDate: '06222023',
-    session: { session_id: id, session_description: 'desc', experiment_description: 'exp' },
+    session: { session_id: id, session_description: 'desc', experiment_description: 'exp', weight: 400 },
     tasks: [], behavioral_events: [], associated_files: [], associated_video_files: [],
     technical: { times_period_multiplier: 1.5, raw_data_to_volts: 0.195, default_header_file_path: '', units: undefined },
     state: { draft: true, validated: false, exported: false }, created: TS, lastModified: TS, configurationVersion: ver,

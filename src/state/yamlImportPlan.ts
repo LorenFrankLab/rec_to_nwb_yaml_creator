@@ -223,6 +223,13 @@ export interface ImportPlanDay {
   deviceOverrides: { bad_channels: Record<string, number[]> } | undefined;
   /** Which configVersion this day pins. */
   configurationVersion: number;
+  /**
+   * THIS FILE's team (experimenter names + lab + institution) — a day-owned fact preserved per
+   * file (finding F5); the animal-level value is only the default for new days.
+   */
+  experimenters: Record<string, any>;
+  /** THIS FILE's optogenetics setup (`null` when the file had none) — preserved per file. */
+  optogenetics: Record<string, any> | null;
 }
 
 /** A planned animal for import: resolved facts, configuration versions, days, and divergences. */
@@ -579,25 +586,26 @@ function resolveAnimalFacts(entries: FileEntry[], existing: unknown = null): Res
     });
   }
 
-  // --- experimenters: latest-date-wins, flag differences ---
+  // --- experimenters: PRESERVED PER DAY (each planned day carries its own file's team); the
+  // animal-level default for NEW days is the latest file's. Differences are informational. ---
   const experimenterKeys = new Set(
     entries.map(({ animalFacts }) => canonicalJson(animalFacts.experimenters ?? null))
   );
   if (experimenterKeys.size > 1) {
     divergences.push({
       field: 'experimenters',
-      detail: 'Experimenters differ across files (latest date wins).',
+      detail: 'Experimenters differ across files; each day keeps its own file\u2019s team (the latest file\u2019s becomes the default for new days).',
     });
   }
 
-  // --- optogenetics: latest-date-wins, flag differences ---
+  // --- optogenetics: PRESERVED PER DAY likewise; the latest file's setup is the default. ---
   const optoKeys = new Set(
     entries.map(({ animalFacts }) => canonicalJson(animalFacts.optogenetics ?? null))
   );
   if (optoKeys.size > 1) {
     divergences.push({
       field: 'optogenetics',
-      detail: 'Optogenetics metadata differs across files (latest date wins).',
+      detail: 'Optogenetics setup differs across files; each day keeps its own file\u2019s setup (the latest file\u2019s becomes the default for new days).',
     });
   }
 
@@ -631,12 +639,15 @@ function buildPlanDay(
   configurationVersion: number,
   cameraIdRemap: ImportPlanDay['cameraIdRemap']
 ): ImportPlanDay {
-  const { dayFacts } = entry;
+  const { dayFacts, animalFacts } = entry;
   return {
     date: entry.date,
     sourceName: entry.sourceName,
     sourceKey: entry.sourceKey,
     cameraIdRemap,
+    // Per-file dated facts (finding F5): the team and opto setup as THIS file recorded them.
+    experimenters: structuredClone(animalFacts.experimenters ?? {}),
+    optogenetics: animalFacts.optogenetics ? structuredClone(animalFacts.optogenetics) : null,
     session: structuredClone(dayFacts.session),
     keywords: structuredClone(dayFacts.keywords ?? []),
     tasks: structuredClone(dayFacts.tasks ?? []),

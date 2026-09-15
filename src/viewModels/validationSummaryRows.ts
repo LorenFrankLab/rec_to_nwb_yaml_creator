@@ -110,7 +110,17 @@ export const CHIP_LABEL: Record<ChipType, string> = { valid: 'Valid', error: 'Er
 export function dayChipDisplay(
   chip: ChipType,
   state: unknown,
-  { unreadable = false, missingRecord = false, orphaned = false }: { unreadable?: boolean; missingRecord?: boolean; orphaned?: boolean } = {}
+  {
+    unreadable = false,
+    missingRecord = false,
+    orphaned = false,
+    freshness = 'current',
+  }: {
+    unreadable?: boolean;
+    missingRecord?: boolean;
+    orphaned?: boolean;
+    freshness?: 'never' | 'current' | 'changed' | 'unverified';
+  } = {}
 ): { variant: string; label: string } {
   if (unreadable) return { variant: 'error', label: 'Error — cannot read' };
   if (missingRecord) return { variant: 'error', label: 'Error — missing day record' };
@@ -119,7 +129,7 @@ export function dayChipDisplay(
     // "not ready", which is honest; the linkage is the blocker). "Re-link to export" is the action,
     // distinct from the row's "not in day list" state note.
     if (orphaned) return { variant: 'incomplete', label: 'Re-link to export' };
-    const variant = lifecycleForValidDay(state); // 'ready' | 'validated' | 'exported'
+    const variant = lifecycleForValidDay(state, freshness); // ready | validated | exported | changed_since_export
     return { variant, label: DAY_LIFECYCLE_LABEL[variant] };
   }
   return { variant: chip, label: CHIP_LABEL[chip] };

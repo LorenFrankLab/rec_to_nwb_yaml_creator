@@ -602,7 +602,7 @@ describe('planImport — subject_id must be a route-safe animal id', () => {
 
       expect(plan.animals).toEqual([]);
       expect(plan.unimportable).toHaveLength(1);
-      expect(plan.unimportable[0].reason).toMatch(/aren't allowed in an animal id|letters, numbers/i);
+      expect(plan.unimportable[0].reason).toMatch(/aren't allowed in an animal id|letters, numbers|letters, digits and hyphens/i);
     }
   );
 

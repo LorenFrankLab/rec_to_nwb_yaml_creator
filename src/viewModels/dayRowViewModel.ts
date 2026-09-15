@@ -37,6 +37,8 @@ export interface DayRowInput {
   valid: boolean;
   /** Persisted `day.state` (for the ready → validated/exported lifecycle refinement). */
   state?: unknown;
+  /** Download freshness (`exportFreshnessStatus`); a downloaded day whose export changed reads accordingly. */
+  freshness?: 'never' | 'current' | 'changed' | 'unverified';
   /** The animal key the day is listed under (repair-command target + editor link owner). */
   animalKey: string;
   /** For a wrong-owner row: the record's declared owner id (for the owner description). */
@@ -54,6 +56,7 @@ export function variantToSeverity(variant: string): WorkflowSeverity {
     case 'ready':
     case 'validated':
     case 'exported':
+    case 'changed_since_export':
       return 'ready';
     case 'error':
     case 'needs_fixing':
@@ -85,7 +88,7 @@ export function buildDayRowViewModel(input: DayRowInput): DayRowViewModel {
   // Lifecycle + export-eligibility are meaningful only for a metadata-valid day. A valid day in its
   // normal place is exportable and carries the ready/validated/exported word; a valid recovered day is
   // valid metadata but blocked until it is re-linked into its animal's day list.
-  const lifecycle = valid && recovery === 'ok' ? lifecycleForValidDay(state) : undefined;
+  const lifecycle = valid && recovery === 'ok' ? lifecycleForValidDay(state, input.freshness ?? 'current') : undefined;
   const exportEligibility = valid
     ? recovery === 'recovered_unlinked'
       ? ('blocked-needs-relink' as const)

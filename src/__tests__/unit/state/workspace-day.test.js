@@ -1152,7 +1152,8 @@ describe('Day State Management', () => {
       expect(dup.technical.times_period_multiplier).toBe(2.5);
       expect(dup.technical.raw_data_to_volts).toBe(0.42);
       expect(dup.session.experiment_description).toBe('Chronic recording');
-      expect(dup.session.weight).toBe(485);
+      // A measurement is never duplicated onto another day.
+      expect(dup.session.weight).toBeUndefined();
 
       // Cloned, not aliased: mutating the duplicate must not touch the source.
       expect(dup.tasks).not.toBe(source.tasks);

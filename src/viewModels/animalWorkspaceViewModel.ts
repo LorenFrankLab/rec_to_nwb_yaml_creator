@@ -38,6 +38,7 @@ import {
 import type { DayClassificationRow } from '../domain/dayRecovery';
 import { getDayRowStatus } from '../domain/workflowStatus';
 import { optoFieldsPresence } from '../domain/optoCompleteness';
+import { exportFreshnessStatus } from '../domain/exportReceipt';
 import { DAY_LIFECYCLE } from '../domain/dayLifecycle';
 import type { DayLifecycle } from '../domain/dayLifecycle';
 import { humanizeValidationMessage } from '../domain/humanizeValidationMessage';
@@ -286,8 +287,8 @@ function buildDayRow(
   // Needs fixing / is Draft keeps that (more urgent) status.
   const claimsExportReady =
     rowStatus.variant === DAY_LIFECYCLE.READY ||
-    rowStatus.variant === DAY_LIFECYCLE.VALIDATED ||
-    rowStatus.variant === DAY_LIFECYCLE.EXPORTED;
+    rowStatus.variant === DAY_LIFECYCLE.EXPORTED ||
+    rowStatus.variant === DAY_LIFECYCLE.CHANGED_SINCE_EXPORT;
   const displayStatus =
     isOrphan && claimsExportReady
       ? { variant: DAY_LIFECYCLE.DRAFT, label: 'Re-link to export' }
@@ -303,6 +304,7 @@ function buildDayRow(
     // export-eligibility, which the orphan label override must not change.
     valid: claimsExportReady,
     state: rec.state,
+    freshness: exportFreshnessStatus(animal, rec, mergedDay),
     animalKey: animalId,
   });
 

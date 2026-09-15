@@ -137,7 +137,7 @@ function buildReconfigWorkspace() {
       session_id: 'reconfig_20230622',
       session_description: 'Recording on v1 config',
       experiment_description: 'Chronic tetrode recording',
-      weight: undefined,
+      weight: 485, // the day's own measurement (the export never substitutes the animal baseline)
     },
     keywords: ['spatial'],
     tasks: [
@@ -221,7 +221,7 @@ function buildMinimalWorkspace() {
       session_id: 'mini_20230622',
       session_description: 'Minimal session',
       experiment_description: 'Minimal experiment',
-      weight: undefined,
+      weight: 400,
     },
     keywords: ['spatial'],
     tasks: [
@@ -355,7 +355,7 @@ function buildOptoWorkspace() {
       session_id: 'opto_20230622',
       session_description: 'Opto session',
       experiment_description: 'Opto experiment',
-      weight: undefined,
+      weight: 420,
     },
     keywords: ['opto'],
     tasks: [

@@ -166,7 +166,7 @@ export function buildEquivalentWorkspace() {
       session_id: 'rat1_20230101',
       session_description: 'W-track alternation, day 1',
       experiment_description: 'Chronic tetrode recording during spatial navigation',
-      weight: undefined, // inherit animal weight (450)
+      weight: 450, // the day's own measurement (the animal baseline is never substituted)
     },
     keywords: structuredClone(KEYWORDS),
     tasks: structuredClone(TASKS),

@@ -117,6 +117,11 @@ export interface AnimalConfigCardViewModel {
   version: number | null;
   /** Date the current configuration became active; omitted when unknown. */
   sinceDate?: string;
+  /**
+   * Whether `sinceDate` is a KNOWN effective date. False when it is only the date the animal was
+   * entered (a backfill before it needs per-day confirmation until the real date is set).
+   */
+  effectiveDateKnown?: boolean;
   /** Present-day count (OK + recovered). */
   dayCount: number;
   /** One row per probe in the current configuration. */
@@ -299,7 +304,10 @@ function buildConfigCard(
     probes,
     newConfigurationLabel: NEW_CONFIGURATION_LABEL,
   };
-  if (latest?.date) card.sinceDate = latest.date;
+  if (latest?.date) {
+    card.sinceDate = latest.date;
+    card.effectiveDateKnown = latest.effectiveDateKnown !== false;
+  }
   return card;
 }
 

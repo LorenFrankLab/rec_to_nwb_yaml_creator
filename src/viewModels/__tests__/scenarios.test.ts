@@ -274,14 +274,14 @@ describe('scenario: ready vs validated vs exported', () => {
     }
 
     expect(buildDayEditorViewModel(ready.workspace, ready.dayId).export.lifecycle).toBe('ready');
-    expect(buildDayEditorViewModel(validated.workspace, validated.dayId).export.lifecycle).toBe('validated');
+    expect(buildDayEditorViewModel(validated.workspace, validated.dayId).export.lifecycle).toBe('ready');
     expect(buildDayEditorViewModel(exported.workspace, exported.dayId).export.lifecycle).toBe('exported');
 
     // The day-list label distinguishes a live-ready from a downloaded day.
     const readyLabel = vsRow(ready.workspace, ready.animalId, ready.dayId)?.statusLabel;
     const exportedLabel = vsRow(exported.workspace, exported.animalId, exported.dayId)?.statusLabel;
     expect(readyLabel).toBe('Ready to export');
-    expect(exportedLabel).toBe('Exported');
+    expect(exportedLabel).toBe('Downloaded');
     expect(readyLabel).not.toBe(exportedLabel);
   });
 });

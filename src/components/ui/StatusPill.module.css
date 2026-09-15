@@ -78,6 +78,17 @@
   background-color: var(--color-lifecycle-needs-fixing);
 }
 
+/* Downloaded before, but the current export differs (F6): the warning palette — it is not an
+   error, but the downloaded file is no longer what the app would produce. */
+.changedSinceExport {
+  color: var(--color-warning);
+  background-color: var(--color-warning-light);
+}
+
+.changedSinceExport .dot {
+  background-color: var(--color-warning);
+}
+
 /* Epoch-row scope — its own classes (never reuse a lifecycle class). */
 .complete {
   color: var(--color-success);

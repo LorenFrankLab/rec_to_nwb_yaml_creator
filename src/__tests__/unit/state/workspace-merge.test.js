@@ -341,13 +341,15 @@ describe('mergeDayMetadata', () => {
   });
 
   describe('Inheritance', () => {
-    it('uses animal weight if day does not override', () => {
+    it('never substitutes the animal baseline weight for a missing day weight', () => {
       const animal = createTestAnimal({ subject: { weight: 485 } });
       const day = createTestDay();
 
       const merged = mergeDayMetadata(animal, day);
 
-      expect(merged.subject.weight).toBe(485);
+      // No measurement on this day → no exported weight (the schema then blocks the export).
+      expect(merged.subject.weight).toBeUndefined();
+      expect('weight' in merged.subject).toBe(false);
     });
 
     it('uses day weight if specified (override)', () => {
@@ -778,7 +780,7 @@ describe('mergeDayMetadata', () => {
       const merged = mergeDayMetadata(animal, day);
 
       expect(merged.experiment_description).toBe('');
-      expect(merged.subject.weight).toBe(450); // From animal
+      expect(merged.subject.weight).toBeUndefined(); // never the animal baseline
     });
 
     it('handles empty arrays correctly', () => {

@@ -394,8 +394,30 @@ describe('createDayRecord', () => {
     expect(day.tasks).toEqual([]);
     expect(day.keywords).toEqual([]);
     expect(day.behavioral_events).toEqual([]);
-    expect(day.session.experiment_description).toBeUndefined();
+    // The animal default is COPIED at creation ('' when the animal has none) — never a live fallback.
+    expect(day.session.experiment_description).toBe('');
     expect(day.technical.times_period_multiplier).toBe(1.5);
+  });
+
+  it('copies the animal default experiment description, team and opto snapshot into a blank day', () => {
+    const animal = {
+      configurationHistory: [],
+      experiment_description: 'Chronic recording',
+      experimenters: { experimenter_name: ['Doe, J'], lab: 'Frank', institution: 'UCSF' },
+      optogenetics: { opto_excitation_source: [], optical_fiber: [], virus_injection: [], optogenetic_stimulation_software: 'fsgui' },
+    };
+    const day = createDayRecord(animal, 'remy', 'd', '2023-06-22', { session_id: 's' }, NOW);
+    expect(day.session.experiment_description).toBe('Chronic recording');
+    expect(day.experimenters).toEqual(animal.experimenters);
+    expect(day.experimenters).not.toBe(animal.experimenters);
+    expect(day.optogenetics).toEqual(animal.optogenetics);
+    expect(day.provenance.fields).toMatchObject({
+      experimenters: 'animal-default',
+      optogenetics: 'animal-default',
+      'session.experiment_description': 'animal-default',
+    });
+    expect(day.provenance.enteredAt).toBe(NOW);
+    expect(day.provenance.copiedFromDayId).toBeNull();
   });
 
   describe('carry-forward from a prior day', () => {
@@ -428,10 +450,13 @@ describe('createDayRecord', () => {
       expect(carryFrom.technical.raw_data_to_volts).toBe(0.42);
     });
 
-    it('carries experiment_description and weight from the source when the caller omits them', () => {
+    it('carries experiment_description but NEVER the weight (a measurement) when the caller omits them', () => {
       const day = createDayRecord(animal, 'remy', 'd', '2023-06-23', session, NOW, carryFrom);
       expect(day.session.experiment_description).toBe('Chronic recording');
-      expect(day.session.weight).toBe(485);
+      expect(day.session.weight).toBeUndefined();
+      expect('weight' in day.session).toBe(false);
+      expect(day.provenance.copiedFromDate).toBeNull(); // the source fixture has no date
+      expect(day.provenance.fields['session.experiment_description']).toBe('copied');
     });
 
     it('prefers the caller experiment_description/weight over the source when provided', () => {
@@ -683,5 +708,23 @@ describe('update allow-list tables', () => {
     const animal = { id: 'a1', cameras: [{ id: 0 }] };
     expect(applyAnimalUpdates(animal, { cameras: null }, NOW).cameras).toEqual([{ id: 0 }]);
     expect(applyAnimalUpdates(animal, { optogenetics: null }, NOW).optogenetics).toBeNull();
+  });
+});
+
+describe('optogenetics-only edits do not touch probe revisions or bad-channel carry-forward', () => {
+  it('applyAnimalUpdates({ optogenetics }) leaves configurationHistory untouched and a later day still carries marks', () => {
+    const animal = {
+      configurationHistory: [{ version: 1, date: '2023-06-01', description: 'implant', devices: { electrode_groups: [], ntrode_electrode_group_channel_map: [] }, appliedToDays: [] }],
+      optogenetics: null,
+    };
+    const opto = { opto_excitation_source: [], optical_fiber: [], virus_injection: [], optogenetic_stimulation_software: 'fsgui' };
+    const updated = applyAnimalUpdates(animal, { optogenetics: opto }, NOW);
+    expect(updated.configurationHistory).toEqual(animal.configurationHistory);
+    expect(updated.optogenetics).toEqual(opto);
+
+    const source = { id: 's', date: '2023-06-22', configurationVersion: 1, deviceOverrides: { bad_channels: { 1: [2] } } };
+    const day = createDayRecord(updated, 'remy', 'd', '2023-06-23', { session_id: 's', session_description: 'x' }, NOW, { carryFrom: source });
+    expect(day.configurationVersion).toBe(1);
+    expect(day.deviceOverrides.bad_channels).toEqual({ 1: [2] });
   });
 });

@@ -29,6 +29,8 @@ import {
 import { repairTargetForIssue, REPAIR_SURFACES } from './repairRouting';
 import type { RepairableIssue } from './repairRouting';
 import { epochVideoUndeclared } from './epochVideoValidation';
+import { recordingFilenameIssues } from './recordingFilename';
+import { configurationChoiceIssues, provenanceReviewIssues } from './datedFactsValidation';
 import type { ValidationModel } from '../validation/issueTypes';
 
 /**
@@ -96,6 +98,14 @@ export function validateDay(
     // merged YAML — so it adds a day-readiness blocker without touching export (a flagged epoch's
     // row reads `Needs video`). Deliberately NOT in `validate(mergedDay)`, which is export-shaped.
     ...epochVideoUndeclared(day),
+    // The converter filename contract (`{YYYYMMDD}_{subject_id}_metadata.yml`): a subject id the
+    // scanner cannot group with the recordings blocks export. Owned here (the workspace export path
+    // names its download by this contract), not in the shared rule set the legacy form uses.
+    ...recordingFilenameIssues(mergedDay),
+    // Dated facts: an unconfirmed configuration choice (a backfill before every known setup, or a
+    // pin to a version effective AFTER the day) blocks export; migration review flags are advisory.
+    ...configurationChoiceIssues(day, animal),
+    ...provenanceReviewIssues(day),
   ].map(normalizeIssue);
 }
 

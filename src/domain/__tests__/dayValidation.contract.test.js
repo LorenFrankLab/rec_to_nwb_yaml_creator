@@ -186,3 +186,14 @@ describe('domain validation module preserves the issue list', () => {
     });
   });
 });
+
+describe('recording-filename contract in the day composer', () => {
+  it('promotes an underscore subject id to an animal-owned EXPORT BLOCKER for a workspace day', async () => {
+    const { validateDay } = await import('../dayValidationComposer');
+    const issues = validateDay({}, { subject: { subject_id: 'my_rat' } });
+    const issue = issues.find((i) => i.code === 'subject_id_not_recording_compatible');
+    expect(issue).toBeDefined();
+    expect(issue.severity).toBe('error');
+    expect(issue.ownerSurface).toBe('animal');
+  });
+});

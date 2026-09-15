@@ -1,11 +1,10 @@
 /**
- * @file Tests for the shared day-lifecycle vocabulary (Phase 8A-1).
+ * @file Tests for the shared day-lifecycle vocabulary.
  *
- * ONE source of truth for the words every surface uses to describe where a recording day is in
- * the validate → export lifecycle, so Animal Days, Day Validation, Day Export, and the Validation
- * Summary never describe the same state with contradictory phrases. The module also resolves a
- * LIVE-valid day's persisted history (validated / exported) into the distinct lifecycle variant,
- * so "Validated" (saved) reads differently from "Ready to export" (passing now, not yet saved).
+ * ONE source of truth for the words every surface uses to describe where a recording day is:
+ * Draft · Ready to export · Downloaded · Changed since download · Needs attention. The module also
+ * resolves a LIVE-valid day's download history (the export receipt's freshness) into the lifecycle
+ * variant, so a downloaded day whose export has since changed never keeps reading "Downloaded".
  */
 
 import { describe, it, expect } from 'vitest';
@@ -23,8 +22,8 @@ describe('DAY_LIFECYCLE vocabulary', () => {
       NEEDS_FIXING: 'needs_fixing',
       DRAFT: 'draft',
       READY: 'ready',
-      VALIDATED: 'validated',
       EXPORTED: 'exported',
+      CHANGED_SINCE_EXPORT: 'changed_since_export',
     });
   });
 
@@ -35,15 +34,13 @@ describe('DAY_LIFECYCLE vocabulary', () => {
 
   it('gives each variant a distinct, plain-language label', () => {
     expect(DAY_LIFECYCLE_LABEL).toEqual({
-      needs_fixing: 'Needs fixing',
+      needs_fixing: 'Needs attention',
       draft: 'Draft',
       ready: 'Ready to export',
-      validated: 'Validated',
-      exported: 'Exported',
+      exported: 'Downloaded',
+      changed_since_export: 'Changed since download',
     });
-    // The persisted-validated label must NOT collide with the live readiness label — that
-    // collision (both "Ready to export") is exactly what this phase removes.
-    expect(DAY_LIFECYCLE_LABEL.validated).not.toBe(DAY_LIFECYCLE_LABEL.ready);
+    expect(new Set(Object.values(DAY_LIFECYCLE_LABEL)).size).toBe(Object.keys(DAY_LIFECYCLE_LABEL).length);
   });
 
   it('provides a one-line description for every variant', () => {
@@ -78,12 +75,19 @@ describe('lifecycleForValidDay', () => {
     );
   });
 
-  it('reads a persisted-validated day as "validated"', () => {
-    expect(lifecycleForValidDay({ validated: true })).toBe(DAY_LIFECYCLE.VALIDATED);
+  it('reads a saved-validated day as "ready" (a saved validation is not a separate step)', () => {
+    expect(lifecycleForValidDay({ validated: true })).toBe(DAY_LIFECYCLE.READY);
   });
 
-  it('reads an exported day as "exported" (export history wins over validated)', () => {
+  it('reads a downloaded day as "exported" while its export is current or unverifiable', () => {
     expect(lifecycleForValidDay({ validated: true, exported: true })).toBe(DAY_LIFECYCLE.EXPORTED);
+    expect(lifecycleForValidDay({ exported: true }, 'current')).toBe(DAY_LIFECYCLE.EXPORTED);
+    expect(lifecycleForValidDay({ exported: true }, 'unverified')).toBe(DAY_LIFECYCLE.EXPORTED);
+    expect(lifecycleForValidDay({ exported: true }, 'never')).toBe(DAY_LIFECYCLE.EXPORTED);
+  });
+
+  it('reads a downloaded day whose current export differs as "changed_since_export" (F6)', () => {
+    expect(lifecycleForValidDay({ exported: true }, 'changed')).toBe(DAY_LIFECYCLE.CHANGED_SINCE_EXPORT);
   });
 
   it('tolerates a missing or malformed state, reading it as "ready"', () => {

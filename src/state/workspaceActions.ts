@@ -6,11 +6,13 @@ import {
 } from './workspaceUtils';
 import { getAnimalDayIds, getConfigHistory } from './workspaceSelectors';
 import { normalizeDevices } from '../utils/deviceNormalization';
+import { nearestEarlierDayId } from '../domain/dayCarryPolicy';
 import {
   applyAnimalUpdates,
   createSnapshotAndApplyForward,
   rebuildConfigurationHistoryForAnimal,
   createDayRecord,
+  reseedDayFromSource,
   applyDayUpdates,
   nextConfigurationVersion,
   sortDayIdsByDate,
@@ -60,25 +62,28 @@ export interface CreateAnimalMetadata {
 /** Options for `createDay`. */
 export interface CreateDayOptions {
   /**
-   * If set, seed the new day's day-owned content (tasks, behavioral_events, keywords, technical,
-   * session.experiment_description / weight) from this prior day. An unknown id resolves to a
-   * blank day (no throw).
+   * Explicit carry-forward source: seed the new day's stable day-owned content (tasks, DIO events,
+   * keywords, technical, experiment description, team, opto snapshot, rig choice; NOT the weight,
+   * files, or review state — see `createDayRecord`) from this prior day. `'auto'` uses the nearest
+   * EARLIER day (never a later one); omitted / `null` starts blank (the import path creates days
+   * without options and then writes each file's own facts). An unknown id resolves to blank.
    */
-  carryForwardFromDayId?: string;
+  carryForwardFromDayId?: string | null | 'auto';
 }
 
 /**
  * Builds the workspace mutation actions (animal/day management) as a pure factory over the
- * store's commit primitives. Extracted verbatim from the former inline `useWorkspace` memo so
- * the action bodies — and their exact `throw` timing — are unchanged; only their home moved.
+ * store's commit primitives. Extracted from the former inline `useWorkspace` memo; the action
+ * bodies are unchanged, only their home moved.
  *
  * The same-tick contract is preserved by the injected primitives, NOT by this factory:
  *   - `commitWorkspace(updater)` applies an updater while keeping `workspaceRef.current` in
  *     LOCKSTEP, so a COMPOSITE batch (a replace-import's deleteAnimal → createAnimal →
- *     createConfigurationSnapshotAndApplyForward, all in one tick) sees each prior step
- *     synchronously. Used by the actions that participate in such a batch.
- *   - `setWorkspace(updater)` is the plain React state updater (deferred under batching) for
- *     actions that don't need a same-tick read.
+ *     createConfigurationSnapshotAndApplyForward → updateDay, all in one tick) sees each prior
+ *     step synchronously, and so a field draft flushed right before an explicit save is in the
+ *     ref when the synchronous write runs. EVERY record-mutating action uses it.
+ *   - `setWorkspace(updater)` is the plain React state updater (deferred under batching); only
+ *     the snapshot-and-apply-forward action still pairs it with its own optimistic ref advance.
  *   - `workspaceRef` is the always-current committed workspace, read synchronously where an
  *     action must reserve state (e.g. the next configuration version) from authoritative state.
  *
@@ -186,7 +191,9 @@ export function createWorkspaceActions({
      * @throws If animal does not exist
      */
     updateAnimal: (animalId: string, updates: AnimalUpdates) => {
-      setWorkspace((prev) => {
+      // commitWorkspace (ref-lockstep) so a draft flushed right before an explicit save is visible to
+      // the synchronous write that follows (persistence's saveNow reads `workspaceRef.current`).
+      commitWorkspace((prev) => {
         if (!prev.animals[animalId]) {
           throw new Error(`Animal "${animalId}" not found`);
         }
@@ -340,7 +347,7 @@ export function createWorkspaceActions({
      * @param animalId - Animal identifier.
      */
     rebuildConfigurationHistory: (animalId: string) => {
-      setWorkspace((prev) => {
+      commitWorkspace((prev) => {
         if (!prev.animals[animalId]) return prev;
 
         const now = getCurrentTimestamp();
@@ -378,7 +385,7 @@ export function createWorkspaceActions({
       session: SessionMetadata,
       options: CreateDayOptions = {}
     ) => {
-      setWorkspace((prev) => {
+      commitWorkspace((prev) => {
         if (!prev.animals[animalId]) {
           throw new Error(`Animal "${animalId}" not found`);
         }
@@ -395,14 +402,16 @@ export function createWorkspaceActions({
         const animal = prev.animals[animalId];
         const now = getCurrentTimestamp();
 
-        // Resolve the optional carry-forward source. An unknown id → null → blank day.
-        const carryFrom = options.carryForwardFromDayId
-          ? prev.days[options.carryForwardFromDayId] || null
-          : null;
+        // Resolve the carry-forward source: an explicit day id, `null` for a blank start, or the
+        // nearest EARLIER day (never the latest day overall — a backfill must not inherit a later
+        // session's facts; finding F2). An unknown id → blank day (no throw).
+        const requested = options.carryForwardFromDayId ?? null;
+        const sourceId = requested === 'auto' ? nearestEarlierDayId(animal, prev.days, date) : requested;
+        const carryFrom = sourceId ? prev.days[sourceId] || null : null;
 
-        // Pure transition: builds the day pinned to the latest configuration version,
-        // technical seeded from the animal defaults (see workspaceTransitions.createDayRecord).
-        const day = createDayRecord(animal, animalId, dayId, date, session, now, carryFrom);
+        // Pure transition: pins the configuration effective on `date`, applies the field-specific
+        // carry policy and records provenance (see workspaceTransitions.createDayRecord).
+        const day = createDayRecord(animal, animalId, dayId, date, session, now, { carryFrom });
 
         // Build the next days map first, then sort the index by date so the STORED
         // `animal.days` is canonically date-ordered (a day created out of chronological
@@ -445,7 +454,7 @@ export function createWorkspaceActions({
      * @throws If the source day or its animal does not exist, or the target day already exists.
      */
     duplicateDay: (sourceDayId: string, newDate: string) => {
-      setWorkspace((prev) => {
+      commitWorkspace((prev) => {
         const source = prev.days[sourceDayId];
         if (!source) {
           throw new Error(`Day "${sourceDayId}" not found`);
@@ -468,7 +477,10 @@ export function createWorkspaceActions({
         const now = getCurrentTimestamp();
 
         // Carry day-owned content from the source (deep-cloned by createDayRecord), with a
-        // date-derived session id and the source's session description.
+        // date-derived session id and the source's session description. A duplicate pins the
+        // SOURCE's configuration version by construction (`copied` provenance — confirmed only if
+        // that version's effective date covers the new date) and carries the source's bad-channel
+        // overrides directly (same version, so no guard needed). The weight is NOT copied.
         const built = createDayRecord(
           animal,
           animalId,
@@ -479,14 +491,10 @@ export function createWorkspaceActions({
             session_description: source.session?.session_description ?? '',
           },
           now,
-          source
+          { carryFrom: source, configurationVersion: source.configurationVersion, configurationSource: 'copied' }
         );
-        // A duplicate is the SAME configuration version as its source by construction, so we
-        // override createDayRecord's latest-pin with the source's version and carry the
-        // source's bad-channel overrides directly (no version guard needed).
         const day = {
           ...built,
-          configurationVersion: source.configurationVersion,
           deviceOverrides: source.deviceOverrides
             ? structuredClone(source.deviceOverrides)
             : built.deviceOverrides,
@@ -513,6 +521,103 @@ export function createWorkspaceActions({
     },
 
     /**
+     * EXPLICIT correction: copy the animal's current default team / optogenetics setup / experiment
+     * description onto the named days. Editing an animal default never reaches existing days on its
+     * own (they own their copies); this is the one deliberate path that does, and it names the days
+     * it touches. Each day's provenance records the field as `animal-default`.
+     *
+     * @param animalId - Animal identifier.
+     * @param dayIds - The days to update (unknown / foreign ids are skipped).
+     * @param fields - Which defaults to apply.
+     */
+    applyAnimalDefaultsToDays: (
+      animalId: string,
+      dayIds: string[],
+      fields: Array<'experimenters' | 'optogenetics' | 'experiment_description'>
+    ) => {
+      commitWorkspace((prev) => {
+        const animal = prev.animals[animalId];
+        if (!animal) return prev;
+        const now = getCurrentTimestamp();
+        const nextDays = { ...prev.days };
+        let changed = false;
+        for (const dayId of new Set(dayIds)) {
+          const day = prev.days[dayId];
+          if (!day || (day.animalId != null && day.animalId !== animalId)) continue;
+          const updates: DayUpdates = { provenance: { fields: {} } };
+          if (fields.includes('experimenters')) {
+            updates.experimenters = structuredClone(animal.experimenters);
+            updates.provenance!.fields!.experimenters = 'animal-default';
+          }
+          if (fields.includes('optogenetics')) {
+            updates.optogenetics = structuredClone(animal.optogenetics ?? null);
+            updates.provenance!.fields!.optogenetics = 'animal-default';
+          }
+          if (fields.includes('experiment_description')) {
+            updates.session = { experiment_description: animal.experiment_description ?? '' };
+            updates.provenance!.fields!['session.experiment_description'] = 'animal-default';
+          }
+          nextDays[dayId] = applyDayUpdates(day, updates, now);
+          changed = true;
+        }
+        return changed ? { ...prev, days: nextDays, lastModified: now } : prev;
+      });
+    },
+
+    /**
+     * Record WHEN a probe configuration version became effective (the setup effective date — distinct
+     * from any recording date and from the entry timestamp). Marks the date as known, so days from that
+     * date on select it automatically and earlier days no longer need per-day confirmation.
+     *
+     * @param animalId - Animal identifier.
+     * @param version - The configuration version.
+     * @param date - The effective date, ISO `YYYY-MM-DD`.
+     * @throws If the animal or version does not exist, or the date is not ISO.
+     */
+    setConfigurationEffectiveDate: (animalId: string, version: number, date: string) => {
+      commitWorkspace((prev) => {
+        const animal = prev.animals[animalId];
+        if (!animal) throw new Error(`Animal "${animalId}" not found`);
+        assertIsoDate(date);
+        const history = getConfigHistory(animal);
+        if (!history.some((s) => s.version === version)) {
+          throw new Error(`Configuration version "${version}" not found for animal "${animalId}"`);
+        }
+        const now = getCurrentTimestamp();
+        const updated = {
+          ...animal,
+          configurationHistory: history.map((s) =>
+            s.version === version ? { ...s, date, effectiveDateKnown: true } : s
+          ),
+          lastModified: now,
+        };
+        return { ...prev, animals: { ...prev.animals, [animalId]: updated }, lastModified: now };
+      });
+    },
+
+    /**
+     * "Start from a different day": re-copy the carry-forward fields of an existing day from another
+     * day of the same animal (see `reseedDayFromSource` for exactly what is and is not copied).
+     *
+     * @param dayId - The day to re-seed.
+     * @param sourceDayId - The day to copy from.
+     * @throws If either day (or the animal) does not exist, or they belong to different animals.
+     */
+    reseedDayFrom: (dayId: string, sourceDayId: string) => {
+      commitWorkspace((prev) => {
+        const day = prev.days[dayId];
+        const source = prev.days[sourceDayId];
+        if (!day) throw new Error(`Day "${dayId}" not found`);
+        if (!source) throw new Error(`Day "${sourceDayId}" not found`);
+        const animal = prev.animals[day.animalId];
+        if (!animal) throw new Error(`Animal "${day.animalId}" not found`);
+        if (source.animalId !== day.animalId) throw new Error('Days belong to different animals');
+        const now = getCurrentTimestamp();
+        return { ...prev, days: { ...prev.days, [dayId]: reseedDayFromSource(animal, day, source, now) }, lastModified: now };
+      });
+    },
+
+    /**
      * Updates day metadata
      *
      * @param dayId - Day identifier
@@ -520,7 +625,8 @@ export function createWorkspaceActions({
      * @throws If day does not exist
      */
     updateDay: (dayId: string, updates: DayUpdates) => {
-      setWorkspace((prev) => {
+      // commitWorkspace (ref-lockstep): see updateAnimal.
+      commitWorkspace((prev) => {
         if (!prev.days[dayId]) {
           throw new Error(`Day "${dayId}" not found`);
         }
@@ -555,7 +661,7 @@ export function createWorkspaceActions({
      * @throws If day does not exist.
      */
     deleteDay: (dayId: string, ownerAnimalId?: string) => {
-      setWorkspace((prev) => {
+      commitWorkspace((prev) => {
         if (!prev.days[dayId]) {
           throw new Error(`Day "${dayId}" not found`);
         }
@@ -604,7 +710,7 @@ export function createWorkspaceActions({
      * @param dayId - The dangling day id to remove.
      */
     removeDayReference: (animalId: string, dayId: string) => {
-      setWorkspace((prev) => {
+      commitWorkspace((prev) => {
         const animal = prev.animals[animalId];
         if (!animal) return prev;
 
@@ -640,7 +746,7 @@ export function createWorkspaceActions({
      * @param dayId - The orphaned day record's id to re-link.
      */
     relinkDayReference: (animalId: string, dayId: string) => {
-      setWorkspace((prev) => {
+      commitWorkspace((prev) => {
         const animal = prev.animals[animalId];
         if (!animal) return prev;
         const daysIsRecord =
@@ -677,7 +783,7 @@ export function createWorkspaceActions({
      * @param dayId - The day id to unlink (the record is preserved).
      */
     unlinkDayReference: (animalId: string, dayId: string) => {
-      setWorkspace((prev) => {
+      commitWorkspace((prev) => {
         const animal = prev.animals[animalId];
         if (!animal) return prev;
         const current = getAnimalDayIds(animal);
@@ -709,7 +815,7 @@ export function createWorkspaceActions({
      * @param settings - Partial settings updates
      */
     updateWorkspaceSettings: (settings: Partial<WorkspaceSettings>) => {
-      setWorkspace((prev) => ({
+      commitWorkspace((prev) => ({
         ...prev,
         settings: {
           ...prev.settings,

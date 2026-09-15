@@ -241,29 +241,29 @@ describe('buildDayEditorViewModel — overview field sources', () => {
     expect(fields['session.session_description'].source).toBe('day');
   });
 
-  it('experiment_description set on the day reads "day"; unset-but-on-animal reads "inherited"', () => {
+  it('experiment_description set on the day reads "day"; an empty day value reads "default" with the animal default as a suggestion (never a live fallback)', () => {
     const { animal, day } = loadRealistic();
     // The realistic day sets experiment_description → 'day'.
     expect(fieldsByPath(animal, day)['session.experiment_description'].source).toBe('day');
 
-    // Clear the day value but keep an animal-level one → inherited from animal.
-    const inheritedAnimal = clone(animal);
-    inheritedAnimal.experiment_description = 'Animal-wide experiment';
-    const inheritedDay = clone(day);
-    (inheritedDay.session as Record<string, unknown>).experiment_description = '';
-    const f = fieldsByPath(inheritedAnimal, inheritedDay)['session.experiment_description'];
-    expect(f.source).toBe('inherited');
-    expect(f.inheritedFrom).toBe('animal');
+    // Clear the day value but keep an animal-level one → NOT inherited: the export reads the day
+    // only (the animal value was a creation-time default), so the field is empty + suggested.
+    const withDefault = clone(animal);
+    withDefault.experiment_description = 'Animal-wide experiment';
+    const emptyDay = clone(day);
+    (emptyDay.session as Record<string, unknown>).experiment_description = '';
+    const f = fieldsByPath(withDefault, emptyDay)['session.experiment_description'];
+    expect(f.source).toBe('default');
+    expect(f.fallbackValue).toBe('Animal-wide experiment');
+    expect(f.helpText).toMatch(/use the animal default/i);
 
-    // The effective value matches the merge (the animal value flows through).
-    const merged = mergeDayMetadata(
-      inheritedAnimal as unknown as Animal,
-      inheritedDay as unknown as Day
-    );
-    expect(f.value).toBe(String(merged.experiment_description));
+    // The effective (merged) value is the day's own — empty here, so export is blocked.
+    const merged = mergeDayMetadata(withDefault as unknown as Animal, emptyDay as unknown as Day);
+    expect(merged.experiment_description).toBe('');
+    expect(f.value).toBe('');
   });
 
-  it('weight set on the day reads "day"; unset-but-with-animal-baseline reads "inherited"', () => {
+  it('weight set on the day reads "day"; an unset weight reads "default" with the previous measurement as a DATED suggestion', () => {
     const { animal, day } = loadRealistic();
 
     // Day weight set → 'day'.
@@ -273,14 +273,17 @@ describe('buildDayEditorViewModel — overview field sources', () => {
     expect(setVm.source).toBe('day');
     expect(setVm.value).toBe('500');
 
-    // No day weight, animal baseline present (realistic animal weight is 485) → inherited.
-    const f = fieldsByPath(animal, day)['session.weight'];
-    expect(f.source).toBe('inherited');
-    expect(f.inheritedFrom).toBe('animal');
-    expect(f.fallbackValue).toContain('485');
-    // The merge exports the effective weight under subject.weight (the animal baseline here).
-    const merged = mergeDayMetadata(animal as unknown as Animal, day as unknown as Day);
-    expect(f.value).toBe(String((merged.subject as Record<string, unknown>).weight));
+    // No day weight: the animal baseline (485) is a suggestion, NOT an inherited/exported value.
+    const noWeightDay = clone(day);
+    delete (noWeightDay.session as Record<string, unknown>).weight;
+    const f = fieldsByPath(animal, noWeightDay)['session.weight'];
+    expect(f.source).toBe('default');
+    expect(f.fallbackValue).toBe('485 g (baseline at setup)');
+    expect(f.helpText).toMatch(/required for export/i);
+    // The merge exports NO weight for this day (never the baseline).
+    const merged = mergeDayMetadata(animal as unknown as Animal, noWeightDay as unknown as Day);
+    expect((merged.subject as Record<string, unknown>).weight).toBeUndefined();
+    expect(f.value).toBe('');
   });
 
   it('a field unset on both day and animal reads "default"', () => {
@@ -517,9 +520,9 @@ describe('buildDayEditorViewModel — issues / repair / export', () => {
     validated.state = { ...(validated.state as Record<string, unknown>), validated: true };
     const vm = buildDayEditorViewModel(wrap(animal, validated), validated.id);
     expect(vm.export.open).toBe(true);
-    expect(vm.export.lifecycle).toBe('validated');
-    expect(vm.export.lifecycleStatusLabel).toBe('Validated');
-    expect(vm.export.readyMessage).toBe('Validated — all checks pass. This validation has been saved.');
+    expect(vm.export.lifecycle).toBe('ready');
+    expect(vm.export.lifecycleStatusLabel).toBe('Ready to export');
+    expect(vm.export.readyMessage).toBe('Ready to export — all checks pass.');
   });
 
   it('a downloaded-exported day reads the exported lifecycle + readiness sentence', () => {
@@ -528,9 +531,9 @@ describe('buildDayEditorViewModel — issues / repair / export', () => {
     exported.state = { ...(exported.state as Record<string, unknown>), exported: true };
     const vm = buildDayEditorViewModel(wrap(animal, exported), exported.id);
     expect(vm.export.lifecycle).toBe('exported');
-    expect(vm.export.lifecycleStatusLabel).toBe('Exported');
+    expect(vm.export.lifecycleStatusLabel).toBe('Downloaded');
     expect(vm.export.readyMessage).toBe(
-      'Exported — all checks still pass. This day’s YAML has been downloaded.'
+      'Downloaded — all checks still pass and nothing has changed since the download.'
     );
   });
 
@@ -800,14 +803,13 @@ describe('buildDayEditorViewModel — day chips', () => {
 });
 
 describe('buildDayEditorViewModel — grouped section rail model', () => {
-  it('exposes exactly the six focused sections in order', () => {
+  it('exposes exactly the five focused sections in order (the epoch editor lives inside the daily log)', () => {
     const { animal, day } = loadRealistic();
     const vm = buildDayEditorViewModel(wrap(animal, day), day.id);
     const sections = vm.sectionGroups.flatMap((group) => group.steps);
-    expect(sections.map((t) => t.key)).toEqual(['daily', 'tasks', 'recording', 'channels', 'dio', 'export']);
+    expect(sections.map((t) => t.key)).toEqual(['daily', 'recording', 'channels', 'dio', 'export']);
     expect(sections.map((t) => t.label)).toEqual([
-      'Daily Setup',
-      'Tasks & Files',
+      'Daily log',
       'Recording Setup',
       'Failed Channels',
       'DIO Wiring',
@@ -834,8 +836,11 @@ describe('buildDayEditorViewModel — grouped section rail model', () => {
     const byKey = Object.fromEntries(
       vm.sectionGroups.flatMap((group) => group.steps).map((t) => [t.key, t.status])
     );
-    expect(byKey.daily).toBe(stepStatus.overview);
-    expect(byKey.tasks).toBe(stepStatus.epochs);
+    // The daily log rolls up the overview + epochs substrate (the epoch editor is embedded there).
+    const dailyPair = [stepStatus.overview, stepStatus.epochs];
+    expect(byKey.daily).toBe(
+      dailyPair.includes('error') ? 'error' : dailyPair.includes('incomplete') ? 'incomplete' : 'valid'
+    );
     expect(byKey.recording).toBe(stepStatus.devices);
     expect(byKey.dio).toBe(stepStatus.behavioral);
     expect(byKey.export).toBe(
