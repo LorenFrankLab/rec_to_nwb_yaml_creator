@@ -81,8 +81,10 @@ function describeWeightAndTeam(subject: unknown, experimenterNames: unknown): st
   const weight = (subject as { weight?: unknown } | null | undefined)?.weight;
   const weightValue = weight == null || weight === '' ? 'not recorded' : `${weight} g`;
   const names = Array.isArray(experimenterNames) ? experimenterNames : [];
-  const team = names.filter((name) => typeof name === 'string' && name.trim() !== '').join(', ');
-  return `${weightValue} — ${team || '—'}`;
+  // Separated with '; ', NOT ', ': an experimenter name is "Last, First", so a comma-joined list of
+  // two reads as four people.
+  const team = names.filter((name) => typeof name === 'string' && name.trim() !== '').join('; ');
+  return `${weightValue} — ${team || 'team not recorded'}`;
 }
 
 /**

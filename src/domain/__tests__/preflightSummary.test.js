@@ -42,7 +42,8 @@ describe('buildPreflightSummary — weight & team row', () => {
       experimenter_name: ['Guidera, Jennifer', 'Comrie, Alison'],
     };
     const value = rowValue(buildPreflightSummary(merged, {}), 'Weight & team');
-    expect(value).toBe('485 g — Guidera, Jennifer, Comrie, Alison');
+    // Separated with '; ' — a "Last, First" name already contains a comma, so ', ' would read as four people.
+    expect(value).toBe('485 g — Guidera, Jennifer; Comrie, Alison');
   });
 
   it('says "not recorded" rather than inventing a weight when the day measured none', () => {
@@ -51,9 +52,9 @@ describe('buildPreflightSummary — weight & team row', () => {
     expect(value).toBe('not recorded — Comrie, Alison');
   });
 
-  it('marks an empty experimenter list as unknown instead of rendering a blank team', () => {
+  it('says the team is not recorded instead of rendering a blank or a bare dash', () => {
     const value = rowValue(buildPreflightSummary({ subject: { weight: 500 } }, {}), 'Weight & team');
-    expect(value).toBe('500 g — —');
+    expect(value).toBe('500 g — team not recorded');
   });
 });
 

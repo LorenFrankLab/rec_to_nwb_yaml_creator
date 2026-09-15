@@ -128,7 +128,7 @@ describe('ExportPreview — readiness gate', () => {
     const review = screen.getByRole('group', { name: /effective setup for this day/i });
     // The values a plausible-but-wrong day gets caught by: the weight THIS day measured, who ran it,
     // the calibration each camera was on, and the room each task ran in (per-day overrides included).
-    expect(within(review).getByText('485 g — Guidera, Jennifer, Comrie, Alison')).toBeInTheDocument();
+    expect(within(review).getByText('485 g — Guidera, Jennifer; Comrie, Alison')).toBeInTheDocument();
     expect(within(review).getByText(/overhead_camera \(0\.00085 m\/px\)/)).toBeInTheDocument();
     expect(within(review).getByText(/w_alternation \(2, 4\) — elevated W-track \(180cm arms\)/)).toBeInTheDocument();
     expect(within(review).getByText(/sleep \(1\) — home cage/)).toBeInTheDocument();
