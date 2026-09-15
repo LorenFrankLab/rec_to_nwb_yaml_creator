@@ -30,7 +30,7 @@ import {
   resolveDayOptogenetics,
 } from '../state/workspaceSelectors';
 import { resolveDayCatalogView } from '../state/dayTaskCatalog';
-import { resolveTaskInstances } from '../state/taskCatalog';
+import { deepEqual, hasOwn, resolveTaskInstances } from '../state/taskCatalog';
 import { duplicateTaskEpochs } from '../validation/taskEpochs';
 import { getIndexedStatescriptFiles } from '../domain/associatedFiles';
 import { isDerivedStatescript } from '../domain/fileNaming';
@@ -83,8 +83,12 @@ export interface EpochGridRow {
   taskTypeId: string;
   /** The owning task's name. */
   taskName: string;
-  /** The owning task's environment. */
+  /** The owning task's environment — the day's own value when it recorded one. */
   taskEnvironment: string;
+  /** Whether `taskEnvironment` is THIS day's own value, differing from the task type's default. */
+  taskEnvironmentOverridden: boolean;
+  /** Whether `cameras` are THIS day's own set, differing from the task type's default. */
+  camerasOverridden: boolean;
   /** Derived display/derivation tag (`s1`, `r2`, etc.) — never stored. */
   tag: string;
   /** The owning task's cameras (`camera_id`). */
@@ -195,6 +199,18 @@ export function buildEpochGrid(animal: unknown, day: unknown): EpochGrid {
   // The resolved task at index i corresponds to taskInstances[i] (the write-back target).
   const tasks: Task[] = resolveTaskInstances(view.taskTypes, view.taskInstances);
   const instanceTypeIds = view.taskInstances.map((i) => i?.taskTypeId ?? '');
+  // Whether each occurrence RECORDED a context value of its own that differs from what its task
+  // type currently defaults to — the "differs from task default" marker. An override equal to the
+  // default is not a difference (that is exactly the state a pinned day is left in).
+  const overriddenByInstance = view.taskInstances.map((instance) => {
+    const type = view.taskTypes.find((t) => t?.id === instance?.taskTypeId) as
+      | Record<string, unknown>
+      | undefined;
+    const recorded = instance as unknown as Record<string, unknown> | null;
+    const differs = (field: 'task_environment' | 'camera_id'): boolean =>
+      recorded != null && hasOwn(recorded, field) && !deepEqual(recorded[field], type?.[field]);
+    return { task_environment: differs('task_environment'), camera_id: differs('camera_id') };
+  });
 
   const videos = getDayAssociatedVideos(day);
   const files = getIndexedStatescriptFiles(getDayAssociatedFiles(day));
@@ -280,6 +296,8 @@ export function buildEpochGrid(animal: unknown, day: unknown): EpochGrid {
       taskTypeId: taskIndex >= 0 ? instanceTypeIds[taskIndex] ?? '' : '',
       taskName,
       taskEnvironment,
+      taskEnvironmentOverridden: taskIndex >= 0 && (overriddenByInstance[taskIndex]?.task_environment ?? false),
+      camerasOverridden: taskIndex >= 0 && (overriddenByInstance[taskIndex]?.camera_id ?? false),
       tag,
       cameras,
       statescript,

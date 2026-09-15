@@ -65,7 +65,7 @@ export const TASK_CONTEXT_FIELDS = ['task_environment', 'camera_id'] as const;
 export type TaskContextField = (typeof TASK_CONTEXT_FIELDS)[number];
 
 /** Day-owned context values for a task occurrence (present keys only). */
-export type TaskContextOverrides = Partial<Record<TaskContextField, unknown>>;
+export type TaskContextOverrides = Pick<TaskInstance, TaskContextField>;
 
 /** A reconciliation record as produced by {@link deriveAnimalTaskCatalog} (carries its source day). */
 export interface TaskReconciliationRecord extends TaskDefinitionReconciliation {
@@ -158,7 +158,9 @@ export function taskContextOverrides(
   definition: Record<string, unknown>,
   canonical: Record<string, unknown>
 ): TaskContextOverrides | null {
-  const overrides: TaskContextOverrides = {};
+  // Collected untyped, because `definition` is a tolerant read of arbitrary task shapes (a corrupt
+  // import can carry anything); the cast at the end matches how this module constructs a TaskType.
+  const overrides: Record<string, unknown> = {};
   for (const key of new Set([...Object.keys(definition), ...Object.keys(canonical)])) {
     const inBoth = hasOwn(definition, key) && hasOwn(canonical, key);
     if (inBoth && deepEqual(definition[key], canonical[key])) continue;
@@ -166,7 +168,7 @@ export function taskContextOverrides(
     if (!hasOwn(definition, key)) return null;
     overrides[key] = structuredClone(definition[key]);
   }
-  return overrides;
+  return overrides as TaskContextOverrides;
 }
 
 /** A usable catalog key: a non-empty, non-whitespace string `task_name`. */

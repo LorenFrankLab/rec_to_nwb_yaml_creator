@@ -153,6 +153,47 @@ export function setEpochTask(instances: unknown, epoch: number, taskTypeId: stri
   );
 }
 
+/** A day-owned context patch: a value RECORDS it for this day, `null` goes back to the task default. */
+export interface TaskContextPatch {
+  /** The room/apparatus this day's occurrence ran in (`null` ⇒ use the task type's). */
+  task_environment?: string | null;
+  /** The cameras this day's occurrence used (`null` ⇒ use the task type's). */
+  camera_id?: Array<number | string> | null;
+}
+
+/**
+ * Record (or clear) the room / cameras THIS day's occurrence of `epoch`'s task used — the
+ * "edit for this day" write-back. Only the fields the patch names are touched, so clearing the
+ * environment does not disturb a camera the day recorded. A no-op for an epoch no instance owns.
+ * Immutable.
+ *
+ * @param instances - The day's task instances.
+ * @param epoch - An epoch of the occurrence being edited.
+ * @param context - The values to record, or `null` per field to follow the task default again.
+ * @returns The next instance array.
+ */
+export function setEpochTaskContext(
+  instances: unknown,
+  epoch: number,
+  context: TaskContextPatch
+): TaskInstance[] {
+  const list = asInstances(instances);
+  const index = ownerIndexOf(list, Number(epoch));
+  if (index < 0) return list;
+
+  return list.map((instance, k) => {
+    if (k !== index) return instance;
+    const next = { ...instance } as Record<string, unknown>;
+    for (const field of ['task_environment', 'camera_id'] as const) {
+      if (!Object.prototype.hasOwnProperty.call(context, field)) continue;
+      const value = context[field];
+      if (value === null || value === undefined) delete next[field];
+      else next[field] = structuredClone(value);
+    }
+    return next as unknown as TaskInstance;
+  });
+}
+
 /**
  * Swap which task owns epoch `a` and epoch `b` (the "move up / move down" reorder — epoch numbers ARE
  * the temporal order, so reordering swaps ownership of the two adjacent numbers). Immutable.

@@ -287,3 +287,59 @@ describe('buildEpochGrid — grid metadata', () => {
     expect(grid.isOpto).toBe(false);
   });
 });
+
+describe('buildEpochGrid — day-owned task context (F3)', () => {
+  const animal = {
+    id: 'sc38',
+    subject: { subject_id: 'sc38' },
+    taskTypes: [
+      {
+        id: 'tasktype-0',
+        task_name: 'forkTrack',
+        task_description: 'Handle alternation',
+        task_environment: 'HaightRight',
+        camera_id: [0],
+      },
+    ],
+  };
+  const dayWith = (instance: Record<string, unknown>) => ({
+    id: 'sc38-2023-06-13',
+    animalId: 'sc38',
+    date: '2023-06-13',
+    taskInstances: [instance],
+    associated_files: [],
+    associated_video_files: [],
+    fs_gui_yamls: [],
+    state: {},
+  });
+
+  it('shows the environment/cameras THIS day recorded, flagged as differing from the default', () => {
+    const grid = buildEpochGrid(
+      animal,
+      dayWith({ taskTypeId: 'tasktype-0', task_environment: 'HaightLeft', camera_id: [1], task_epochs: [2] })
+    );
+    const row = grid.rows[0];
+    expect(row.taskEnvironment).toBe('HaightLeft');
+    expect(row.cameras).toEqual([1]);
+    expect(row.taskEnvironmentOverridden).toBe(true);
+    expect(row.camerasOverridden).toBe(true);
+  });
+
+  it('shows the task-type default, unflagged, when the day recorded nothing of its own', () => {
+    const grid = buildEpochGrid(animal, dayWith({ taskTypeId: 'tasktype-0', task_epochs: [2] }));
+    const row = grid.rows[0];
+    expect(row.taskEnvironment).toBe('HaightRight');
+    expect(row.cameras).toEqual([0]);
+    expect(row.taskEnvironmentOverridden).toBe(false);
+    expect(row.camerasOverridden).toBe(false);
+  });
+
+  it('does not flag an override that matches the current default (nothing differs)', () => {
+    const grid = buildEpochGrid(
+      animal,
+      dayWith({ taskTypeId: 'tasktype-0', task_environment: 'HaightRight', camera_id: [0], task_epochs: [2] })
+    );
+    expect(grid.rows[0].taskEnvironmentOverridden).toBe(false);
+    expect(grid.rows[0].camerasOverridden).toBe(false);
+  });
+});

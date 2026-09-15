@@ -15,12 +15,23 @@
  *    the day) on the first edit, so an imported/legacy day becomes consistent without a separate
  *    migration step.
  *
+ * A name match whose ONLY difference is the room or the cameras (`TASK_CONTEXT_FIELDS`) is not a
+ * divergence at all: it is what that day recorded, so it becomes an instance override on the day and
+ * the shared task type is left alone. A `divergence` is reserved for a real identity conflict (a
+ * different `task_description`), which the user still resolves explicitly.
+ *
  * Pure; reuses the tested `addTaskType` id-minting so a converted day's new types never collide.
  */
 
 import { getAnimalTaskTypes, getDayTasks } from './workspaceSelectors';
 import { addTaskType } from './taskCatalogActions';
-import { deepEqual, taskDefinition, usableTaskName as usableName } from './taskCatalog';
+import {
+  deepEqual,
+  taskContextOverrides,
+  taskDefinition,
+  usableTaskName as usableName,
+} from './taskCatalog';
+import type { TaskContextOverrides } from './taskCatalog';
 import type { TaskType, TaskInstance } from './workspaceTypes';
 import { isRecord as isPlainRecord } from '../utils/records';
 
@@ -59,6 +70,23 @@ function taskTypeDefinition(type: Record<string, unknown>): Record<string, unkno
 /** Whether an inline task would export different definition bytes than the matched catalog type. */
 function taskDefinitionsDiverge(task: Record<string, unknown>, type: TaskType): boolean {
   return !deepEqual(taskDefinition(task), taskTypeDefinition(type as unknown as Record<string, unknown>));
+}
+
+/**
+ * The day-owned context (room / cameras) that reproduces this inline task from the catalog type, or
+ * null when the difference is a genuine IDENTITY divergence the user must resolve. A day that ran
+ * the catalog's task somewhere else is not a conflict — it is what that day recorded — so it
+ * becomes an instance override and never a divergence or a forked task type.
+ *
+ * @param task - The inline task.
+ * @param type - The catalog task type matched by name.
+ * @returns Context overrides (possibly empty), or null for an identity divergence.
+ */
+function contextOverridesFor(task: Record<string, unknown>, type: TaskType): TaskContextOverrides | null {
+  return taskContextOverrides(
+    taskDefinition(task),
+    taskTypeDefinition(type as unknown as Record<string, unknown>)
+  );
 }
 
 /** Existing task-type names, for creating a valid distinct catalog definition. */
@@ -125,16 +153,22 @@ export function resolveDayCatalogView(animal: unknown, day: unknown): DayCatalog
     if (!isPlainRecord(task)) continue;
     const name = task.task_name;
     let type: TaskType;
+    let overrides: TaskContextOverrides = {};
     if (usableName(name) && byName.has(name)) {
       type = byName.get(name)!;
       if (taskDefinitionsDiverge(task, type)) {
-        divergences.push({
-          taskName: name,
-          inline: taskDefinition(task),
-          catalog: taskTypeDefinition(type as unknown as Record<string, unknown>),
-          inlineTaskIndex: index,
-          catalogTaskTypeId: type.id,
-        });
+        const context = contextOverridesFor(task, type);
+        if (context) {
+          overrides = context;
+        } else {
+          divergences.push({
+            taskName: name,
+            inline: taskDefinition(task),
+            catalog: taskTypeDefinition(type as unknown as Record<string, unknown>),
+            inlineTaskIndex: index,
+            catalogTaskTypeId: type.id,
+          });
+        }
       }
     } else {
       taskTypes = addTaskType(taskTypes, taskDefinition(task) as never);
@@ -143,6 +177,7 @@ export function resolveDayCatalogView(animal: unknown, day: unknown): DayCatalog
     }
     taskInstances.push({
       taskTypeId: type.id,
+      ...overrides,
       task_epochs: Array.isArray(task.task_epochs) ? structuredClone(task.task_epochs) : [],
     });
   }
@@ -153,9 +188,11 @@ export function resolveDayCatalogView(animal: unknown, day: unknown): DayCatalog
 /**
  * Convert an inline day to catalog form while preserving the day's own task definitions.
  *
- * For a name collision with divergent metadata, this mints a valid day-specific task type name
- * (`Run (day-id)`) instead of creating a duplicate catalog `task_name`. Non-divergent matches still
- * reuse the catalog type, and unseen names follow the normal mint-new path.
+ * For a name collision with a divergent IDENTITY, this mints a valid day-specific task type name
+ * (`Run (day-id)`) instead of creating a duplicate catalog `task_name`. A difference that is only
+ * the day's room/cameras is preserved as an instance override on the shared type instead (one task
+ * run in two places is still one task). Non-divergent matches reuse the catalog type, and unseen
+ * names follow the normal mint-new path.
  *
  * @param animal - The owning animal (its `taskTypes` catalog).
  * @param day - The inline recording day.
@@ -182,10 +219,18 @@ export function preserveInlineTaskDefinitions(
     const name = task.task_name;
     const definition = taskDefinition(task);
     let type: TaskType;
+    let overrides: TaskContextOverrides = {};
 
     if (usableName(name) && byName.has(name)) {
       const catalogType = byName.get(name)!;
-      if (taskDefinitionsDiverge(task, catalogType)) {
+      const context = contextOverridesFor(task, catalogType);
+      if (context) {
+        // Identical, or the same task in a different room / with different cameras: keep the day's
+        // values ON THE DAY. Forking a `sleep (2023-06-22)` task type for a room difference would
+        // invent a second Spyglass task identity for one task.
+        type = catalogType;
+        overrides = context;
+      } else {
         const existing = preserved.find(
           (record) => record.originalName === name && deepEqual(record.definition, definition)
         );
@@ -201,8 +246,6 @@ export function preserveInlineTaskDefinitions(
           preserved.push({ originalName: name, definition, type });
           if (usableName(type.task_name)) byName.set(type.task_name, type);
         }
-      } else {
-        type = catalogType;
       }
     } else {
       taskTypes = addTaskType(taskTypes, definition as never);
@@ -212,6 +255,7 @@ export function preserveInlineTaskDefinitions(
 
     taskInstances.push({
       taskTypeId: type.id,
+      ...overrides,
       task_epochs: Array.isArray(task.task_epochs) ? structuredClone(task.task_epochs) : [],
     });
   }

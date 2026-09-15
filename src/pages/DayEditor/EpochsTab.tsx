@@ -21,6 +21,7 @@ import {
   removeEpoch,
   duplicateEpoch,
   setEpochTask,
+  setEpochTaskContext,
   swapEpochs,
   insertEpochAfter,
   swapEpochRemap,
@@ -31,7 +32,7 @@ import {
   epochsOrphanedBy,
   nextEpochNumber,
 } from '../../domain/epochOperations';
-import type { OrphanedReferences } from '../../domain/epochOperations';
+import type { OrphanedReferences, TaskContextPatch } from '../../domain/epochOperations';
 import {
   deriveStatescriptName,
   deriveStatescriptPath,
@@ -90,6 +91,12 @@ function epochFromFocusPath(fieldPath: string | undefined): number | null {
 function associatedFileIndexFromFocusPath(fieldPath: string | undefined): number | null {
   const match = /^associated_files\[(\d+)]/.exec(fieldPath ?? '');
   return match ? Number(match[1]) : null;
+}
+
+/** Which part of a row's task context this day recorded for itself ("environment", "cameras", …). */
+function contextDifferenceLabel(row: EpochGridRow): string {
+  if (row.taskEnvironmentOverridden && row.camerasOverridden) return 'environment and cameras';
+  return row.taskEnvironmentOverridden ? 'environment' : 'cameras';
 }
 
 /** Resolve a camera id to its display name (falls back to "camera <id>"). */
@@ -310,6 +317,18 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
     commit(setEpochTask(view.taskInstances, epoch, taskTypeId));
   };
   const onDuplicate = (epoch: number) => commit(duplicateEpoch(view.taskInstances, epoch));
+  /**
+   * Record what THIS day's occurrence actually used (or clear it back to the task default). Writes
+   * only the day's `taskInstances` — the shared task type, and therefore every other day, is
+   * untouched.
+   *
+   * @param epoch - An epoch of the occurrence being edited.
+   * @param context - Values to record, or `null` per field to follow the task default again.
+   */
+  const setTaskContext = (epoch: number, context: TaskContextPatch) => {
+    clearDeferredEpoch(epoch);
+    commit(setEpochTaskContext(view.taskInstances, epoch, context));
+  };
 
   // A renumber (insert / move) shifts epoch numbers, so the day's bound file/video/fs_gui refs are
   // remapped in LOCKSTEP — each follows its task content to the new epoch number instead of being
@@ -798,6 +817,7 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
               manualVideoKeys={manualVideo}
               onClose={() => setActiveEpoch(null)}
               onReassignTask={(taskTypeId) => reassignTask(activeRow.epoch, taskTypeId)}
+              onSetTaskContext={(context) => setTaskContext(activeRow.epoch, context)}
               onNewTaskType={() => {
                 setQuickAddError(null);
                 setQuickAddEpoch(activeRow.epoch);
@@ -985,6 +1005,7 @@ interface EpochDetailsPanelProps {
   manualVideoKeys: Set<string>;
   onClose: () => void;
   onReassignTask: (taskTypeId: string) => void;
+  onSetTaskContext: (context: TaskContextPatch) => void;
   onNewTaskType: () => void;
   onOpto: (field: 'power_in_mW' | 'pulseLength', value: string) => void;
   statescriptDerivedName: string;
@@ -1049,6 +1070,14 @@ function EpochRowBlock(p: EpochRowProps) {
                 {row.duplicate && (
                   <span className={styles.duplicateBadge} title="This epoch is claimed by more than one task">
                     duplicate
+                  </span>
+                )}
+                {(row.taskEnvironmentOverridden || row.camerasOverridden) && (
+                  <span
+                    className={styles.contextBadge}
+                    title={`This day recorded its own ${contextDifferenceLabel(row)} for this task`}
+                  >
+                    differs from task default
                   </span>
                 )}
               </span>
@@ -1137,6 +1166,9 @@ function EpochDetailsPanel(p: EpochDetailsPanelProps) {
   const { row, panelId, hasOpto, cameras, taskTypes, grid } = p;
   const panelRef = useRef<HTMLDivElement | null>(null);
   const ownerTypeId = row.taskTypeId ?? '';
+  const ownerType = taskTypes.find((t) => t?.id === ownerTypeId) ?? null;
+  // "Edit for this day" is a disclosure, not a mode: the read-only context stays visible above it.
+  const [editingContext, setEditingContext] = useState(false);
   const hasManualVideo = row.videos.some((v) => p.manualVideoKeys.has(`e${row.epoch}-v${v.index}`));
   const generatedFilesNeedReview =
     !row.statescript ||
@@ -1397,17 +1429,46 @@ function EpochDetailsPanel(p: EpochDetailsPanelProps) {
             </div>
             <div>
               <dt>Environment</dt>
-              <dd>{row.taskEnvironment || '—'}</dd>
+              <dd>
+                {row.taskEnvironment || '—'}
+                {row.taskEnvironmentOverridden && <span className={styles.contextBadge}>this day</span>}
+              </dd>
             </div>
             <div>
-              <dt>Expected cameras</dt>
+              <dt>Cameras</dt>
               <dd>
                 {row.cameras.length === 0
                   ? <span className={styles.derivedNote}>none</span>
                   : row.cameras.map((id) => <span key={String(id)} className={styles.cam}>{cameraName(cameras, id)}</span>)}
+                {row.camerasOverridden && <span className={styles.contextBadge}>this day</span>}
               </dd>
             </div>
           </dl>
+          {editingContext ? (
+            <TaskContextForm
+              row={row}
+              cameras={cameras}
+              taskType={ownerType}
+              onSave={(context) => {
+                p.onSetTaskContext(context);
+                setEditingContext(false);
+              }}
+              onUseTaskDefault={() => {
+                p.onSetTaskContext({ task_environment: null, camera_id: null });
+                setEditingContext(false);
+              }}
+              onCancel={() => setEditingContext(false)}
+            />
+          ) : (
+            <div className={styles.taskContextActions}>
+              <Button variant="secondary" size="small" onClick={() => setEditingContext(true)}>
+                Edit for this day
+              </Button>
+              <span className={styles.groupNote}>
+                Where this task ran and which cameras recorded it, for this recording day only.
+              </span>
+            </div>
+          )}
         </section>
 
         {hasOpto && (
@@ -1434,5 +1495,105 @@ function EpochDetailsPanel(p: EpochDetailsPanelProps) {
       </div>
       </div>
     </>
+  );
+}
+
+/** Props for the per-day task-context editor ("Edit for this day"). */
+interface TaskContextFormProps {
+  /** The epoch row being edited (its EFFECTIVE environment / cameras). */
+  row: EpochGridRow;
+  /** The animal's cameras (the checklist). */
+  cameras: Camera[];
+  /** The owning task type, for the "task default" placeholder/hint. */
+  taskType: TaskType | null;
+  /** Save the day's values (only the fields that actually differ are recorded). */
+  onSave: (context: TaskContextPatch) => void;
+  /** Drop this day's values and follow the task type again. */
+  onUseTaskDefault: () => void;
+  /** Close without writing. */
+  onCancel: () => void;
+}
+
+/**
+ * Inline editor for what THIS day's occurrence of the task actually used — its room and its
+ * cameras. Prefilled with the effective values (the day's own if it recorded any, else the task
+ * type's), so the common case is confirm-or-tweak rather than retype. Saving records only what
+ * genuinely differs from the task default, so a day that matches the default stays "following the
+ * default" rather than silently pinning today's value forever.
+ */
+function TaskContextForm({ row, cameras, taskType, onSave, onUseTaskDefault, onCancel }: TaskContextFormProps) {
+  const defaultEnvironment = (taskType?.task_environment as string | undefined) ?? '';
+  const defaultCameras = Array.isArray(taskType?.camera_id) ? taskType.camera_id : [];
+  const [environment, setEnvironment] = useState(row.taskEnvironment);
+  const [selected, setSelected] = useState<string[]>(row.cameras.map((id) => String(id)));
+
+  const toggleCamera = (id: number | string) => {
+    const key = String(id);
+    setSelected((prev) => (prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]));
+  };
+
+  const handleSave = () => {
+    // Keep catalog order for the ids, and keep each camera's ORIGINAL id type (they are integers
+    // downstream) — never the string keys the checkboxes track.
+    const nextCameras = cameras.filter((camera) => selected.includes(String(camera?.id))).map((c) => c.id);
+    const trimmed = environment.trim();
+    onSave({
+      task_environment: trimmed === defaultEnvironment ? null : trimmed,
+      camera_id:
+        nextCameras.length === defaultCameras.length &&
+        nextCameras.every((id, i) => String(id) === String(defaultCameras[i]))
+          ? null
+          : nextCameras,
+    });
+  };
+
+  return (
+    <div className={styles.taskContextForm}>
+      <label className={styles.stackedField}>
+        <span className={styles.fieldLabel}>Environment for this day</span>
+        <input
+          type="text"
+          value={environment}
+          placeholder={defaultEnvironment || 'e.g. HaightLeft'}
+          onChange={(e) => setEnvironment(e.target.value)}
+        />
+      </label>
+      <fieldset className={styles.stackedField}>
+        <legend className={styles.fieldLabel}>Cameras used this day</legend>
+        {cameras.length === 0 ? (
+          <span className={styles.derivedNote}>This animal has no cameras yet.</span>
+        ) : (
+          <div className={styles.taskContextCameras}>
+            {cameras.map((camera) => (
+              <label key={String(camera.id)} className={styles.taskContextCamera}>
+                <input
+                  type="checkbox"
+                  checked={selected.includes(String(camera.id))}
+                  onChange={() => toggleCamera(camera.id)}
+                />
+                {camera.camera_name || `camera ${camera.id}`}
+              </label>
+            ))}
+          </div>
+        )}
+      </fieldset>
+      <p className={styles.groupNote}>
+        Task default: {defaultEnvironment || '(none)'}
+        {defaultCameras.length > 0
+          ? ` · ${defaultCameras.map((id) => cameraName(cameras, id)).join(', ')}`
+          : ' · no cameras'}
+      </p>
+      <div className={styles.taskContextActions}>
+        <Button variant="primary" size="small" onClick={handleSave}>
+          Save for this day
+        </Button>
+        <Button variant="secondary" size="small" onClick={onUseTaskDefault}>
+          Use task default
+        </Button>
+        <Button variant="neutral" size="small" onClick={onCancel}>
+          Cancel
+        </Button>
+      </div>
+    </div>
   );
 }

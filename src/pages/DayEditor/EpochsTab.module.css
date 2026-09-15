@@ -917,3 +917,52 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* "differs from task default" — this day recorded its own room/cameras for the task. Informational
+   (not an error): the primary tone, matching the other catalog-vs-day markers. */
+.contextBadge {
+  color: var(--color-primary, #1565c0);
+  background: var(--color-primary-light, #e3f2fd);
+  border-radius: var(--radius-sm, 4px);
+  padding: 1px var(--spacing-xs, 6px);
+  font-size: var(--font-size-xs, 0.75rem);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.taskContextActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spacing-xs, 6px) var(--spacing-sm, 8px);
+  margin-top: var(--spacing-sm, 8px);
+}
+
+.taskContextForm {
+  display: grid;
+  gap: var(--spacing-sm, 8px);
+  margin-top: var(--spacing-sm, 8px);
+  padding: var(--spacing-sm, 8px);
+  border: 1px solid var(--color-grey-200, #e0e0e0);
+  border-radius: var(--radius-md, 8px);
+}
+
+.taskContextForm fieldset {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+}
+
+.taskContextCameras {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-xs, 6px) var(--spacing-md, 12px);
+}
+
+.taskContextCamera {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--font-size-xs, 0.75rem);
+}

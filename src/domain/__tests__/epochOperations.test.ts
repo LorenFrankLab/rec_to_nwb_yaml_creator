@@ -13,6 +13,7 @@ import {
   removeEpoch,
   duplicateEpoch,
   setEpochTask,
+  setEpochTaskContext,
   swapEpochs,
   insertEpochAfter,
   epochsOrphanedBy,
@@ -207,5 +208,44 @@ describe('day-owned task context survives every epoch transform (F3)', () => {
       { taskTypeId: 'a', task_environment: 'HaightLeft', camera_id: [1], task_epochs: [3] },
       { taskTypeId: 'b', task_epochs: [1, 2] },
     ]);
+  });
+});
+
+describe('setEpochTaskContext — "edit for this day"', () => {
+  const base = () => [
+    { taskTypeId: 'a', task_epochs: [1, 3] },
+    { taskTypeId: 'b', task_epochs: [2] },
+  ];
+
+  it('records the room and cameras on the instance owning that epoch', () => {
+    const next = setEpochTaskContext(base(), 3, {
+      task_environment: 'HaightLeft',
+      camera_id: [1],
+    });
+    expect(next).toEqual([
+      { taskTypeId: 'a', task_epochs: [1, 3], task_environment: 'HaightLeft', camera_id: [1] },
+      { taskTypeId: 'b', task_epochs: [2] },
+    ]);
+  });
+
+  it('null clears an override, so the occurrence follows the task default again', () => {
+    const pinned = [{ taskTypeId: 'a', task_environment: 'HaightLeft', camera_id: [1], task_epochs: [1] }];
+    expect(setEpochTaskContext(pinned, 1, { task_environment: null, camera_id: null })).toEqual([
+      { taskTypeId: 'a', task_epochs: [1] },
+    ]);
+  });
+
+  it('leaves a field alone when the patch does not name it', () => {
+    const pinned = [{ taskTypeId: 'a', task_environment: 'HaightLeft', task_epochs: [1] }];
+    expect(setEpochTaskContext(pinned, 1, { camera_id: [2] })).toEqual([
+      { taskTypeId: 'a', task_environment: 'HaightLeft', camera_id: [2], task_epochs: [1] },
+    ]);
+  });
+
+  it('is a no-op for an unowned epoch and never mutates its input', () => {
+    const input = base();
+    const snapshot = structuredClone(input);
+    expect(setEpochTaskContext(input, 99, { task_environment: 'x' })).toEqual(snapshot);
+    expect(input).toEqual(snapshot);
   });
 });

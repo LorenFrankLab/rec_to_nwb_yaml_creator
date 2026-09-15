@@ -294,6 +294,80 @@ describe('EpochsTab — write-back patches', () => {
     ]);
   });
 
+  describe('editing a task occurrence for THIS day (F3)', () => {
+    /**
+     * An animal whose Sleep task type has a default room, plus a day that ran it.
+     * @param dayOverrides
+     */
+    const contextBundle = (dayOverrides = {}) =>
+      makeBundle(
+        {
+          taskInstances: [{ taskTypeId: 'tasktype-0', task_epochs: [1], ...dayOverrides }],
+          associated_video_files: [],
+        },
+        {
+          taskTypes: [
+            { id: 'tasktype-0', task_name: 'Sleep', task_description: 'sleep', task_environment: 'HaightRight', camera_id: [0] },
+          ],
+        }
+      );
+
+    it('records the room and cameras THIS day used, without touching the task type', async () => {
+      const user = userEvent.setup();
+      const bundle = contextBundle();
+      render(<EpochsTab {...bundle} />);
+
+      await user.click(screen.getByRole('button', { name: /Show epoch 1 details/i }));
+      await user.click(screen.getByRole('button', { name: /Edit for this day/i }));
+
+      const environment = screen.getByLabelText(/Environment for this day/i);
+      expect(environment).toHaveValue('HaightRight'); // prefilled with the effective value
+      await user.clear(environment);
+      await user.type(environment, 'HaightLeft');
+      await user.click(screen.getByRole('checkbox', { name: /cam1/i }));
+      await user.click(screen.getByRole('button', { name: /Save for this day/i }));
+
+      expect(lastPatch(bundle.onFieldUpdate, 'taskInstances')).toEqual([
+        { taskTypeId: 'tasktype-0', task_epochs: [1], task_environment: 'HaightLeft', camera_id: [0, 1] },
+      ]);
+      // The shared task type is untouched — other days keep their default.
+      expect(bundle.actions.updateAnimal).not.toHaveBeenCalled();
+    });
+
+    it('marks the row when this day differs from the task default', () => {
+      render(<EpochsTab {...contextBundle({ task_environment: 'HaightLeft' })} />);
+      const row = screen.getByRole('button', { name: /Show epoch 1 details/i }).closest('tr');
+      expect(within(row).getByText(/differs from task default/i)).toBeInTheDocument();
+    });
+
+    it('shows no marker when the day follows the task default', () => {
+      render(<EpochsTab {...contextBundle()} />);
+      expect(screen.queryByText(/differs from task default/i)).not.toBeInTheDocument();
+    });
+
+    it('has no axe violations with the per-day editor open', async () => {
+      const user = userEvent.setup();
+      const { container } = render(<EpochsTab {...contextBundle()} />);
+      await user.click(screen.getByRole('button', { name: /Show epoch 1 details/i }));
+      await user.click(screen.getByRole('button', { name: /Edit for this day/i }));
+      expect(await axe(container)).toHaveNoViolations();
+    });
+
+    it('"Use task default" clears the day overrides', async () => {
+      const user = userEvent.setup();
+      const bundle = contextBundle({ task_environment: 'HaightLeft', camera_id: [1] });
+      render(<EpochsTab {...bundle} />);
+
+      await user.click(screen.getByRole('button', { name: /Show epoch 1 details/i }));
+      await user.click(screen.getByRole('button', { name: /Edit for this day/i }));
+      await user.click(screen.getByRole('button', { name: /Use task default/i }));
+
+      expect(lastPatch(bundle.onFieldUpdate, 'taskInstances')).toEqual([
+        { taskTypeId: 'tasktype-0', task_epochs: [1] },
+      ]);
+    });
+  });
+
   it('deleting an epoch with no bound refs writes taskInstances + offers Undo (no confirm)', async () => {
     const user = userEvent.setup();
     const bundle = makeBundle();

@@ -109,3 +109,54 @@ describe('resolveDayCatalogView', () => {
     expect(resolved.taskInstances).toEqual([{ taskTypeId: 'tasktype-1', task_epochs: [3] }]);
   });
 });
+
+describe('an inline day that ran a catalog task somewhere else (F3)', () => {
+  const animal = {
+    taskTypes: [
+      { id: 'tasktype-0', task_name: 'sleep', task_description: 'Rest', task_environment: 'home', camera_id: [0] },
+    ],
+  };
+
+  it('resolves an environment-only difference to an instance override, NOT a divergence', () => {
+    const day = { id: 'remy-2023-06-22', tasks: [T({ task_environment: 'quiet room', task_epochs: [3] })] };
+    const view = resolveDayCatalogView(animal, day);
+    expect(view.divergences).toEqual([]); // nothing is lost, so nothing to ask the user about
+    expect(view.taskTypes).toHaveLength(1); // no forked task type
+    expect(view.taskInstances).toEqual([
+      { taskTypeId: 'tasktype-0', task_environment: 'quiet room', task_epochs: [3] },
+    ]);
+  });
+
+  it('resolves a camera-only difference to an instance override', () => {
+    const day = { id: 'remy-2023-06-22', tasks: [T({ camera_id: [1], task_epochs: [3] })] };
+    const view = resolveDayCatalogView(animal, day);
+    expect(view.divergences).toEqual([]);
+    expect(view.taskInstances).toEqual([
+      { taskTypeId: 'tasktype-0', camera_id: [1], task_epochs: [3] },
+    ]);
+  });
+
+  it('preserveInlineTaskDefinitions keeps an environment difference as an override, not a fork', () => {
+    // "Keep this day's values" for a room difference must not mint `sleep (remy-2023-06-22)` — that
+    // would be a second Spyglass task identity for what is one task run in another room.
+    const day = { id: 'remy-2023-06-22', tasks: [T({ task_environment: 'quiet room', task_epochs: [3] })] };
+    const preserved = preserveInlineTaskDefinitions(animal, day);
+    expect(preserved.taskTypes).toHaveLength(1);
+    expect(preserved.taskInstances).toEqual([
+      { taskTypeId: 'tasktype-0', task_environment: 'quiet room', task_epochs: [3] },
+    ]);
+  });
+
+  it('still forks the type for a description difference, carrying the day values (unchanged)', () => {
+    const day = { id: 'remy-2023-06-22', tasks: [T({ task_description: 'Rest B', task_environment: 'quiet room', task_epochs: [3] })] };
+    const view = resolveDayCatalogView(animal, day);
+    expect(view.divergences).toHaveLength(1);
+    const preserved = preserveInlineTaskDefinitions(animal, day);
+    expect(preserved.taskTypes).toHaveLength(2);
+    expect(preserved.taskTypes[1]).toMatchObject({
+      task_name: 'sleep (remy-2023-06-22)',
+      task_description: 'Rest B',
+      task_environment: 'quiet room',
+    });
+  });
+});
