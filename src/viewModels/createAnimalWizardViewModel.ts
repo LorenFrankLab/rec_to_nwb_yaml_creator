@@ -21,7 +21,8 @@
 import { isValidSpecies, idHasSlash } from '../validation/dandiSubject';
 import { optoFieldsPresence } from '../domain/optoCompleteness';
 import type { OptoFieldsPresence } from '../domain/optoCompleteness';
-import { buildAnimalFromForm } from '../domain/animalCreation';
+import { buildAnimalFromForm, findAnimalIdByLookup } from '../domain/animalCreation';
+import { recordingFilenameIssue } from '../domain/recordingFilename';
 import type { AnimalCreationFormData } from '../domain/animalCreation';
 import {
   getAnimalElectrodeGroups,
@@ -127,14 +128,20 @@ export function validateWizardIdentity(
     errors.subject_id = 'Subject ID cannot contain "/" — DANDI rejects it';
   } else if (/\s/.test(identity.subject_id)) {
     errors.subject_id = 'Subject ID cannot contain spaces';
-  } else if (!/^[a-zA-Z0-9_-]+$/.test(identity.subject_id)) {
-    errors.subject_id = 'Use only letters, numbers, underscores, and hyphens';
+  } else if (recordingFilenameIssue(identity.subject_id.trim())) {
+    // The converter groups `{date}_{subject}_metadata.yml` with `{date}_{subject}_{epoch}_{tag}.rec`
+    // by splitting on `_`, so an underscore (or any other unsafe character) can never be matched.
+    errors.subject_id = 'Use only letters, numbers, and hyphens (no underscores — the converter splits filenames on them)';
   } else {
-    // The store key lower-cases the subject id, so "RS10" and "rs10" are the SAME animal — a
-    // different-cased duplicate is a real collision, not a near-duplicate.
-    const normalized = identity.subject_id.toLowerCase().trim();
-    if (Object.keys(existingAnimals).includes(normalized)) {
-      errors.subject_id = `Animal "${identity.subject_id}" already exists`;
+    // The exported subject id keeps its case (it must match the recording filenames exactly), but
+    // "RS10" and "rs10" are still the SAME animal for lookup — a different-cased duplicate is a real
+    // collision, not a near-duplicate.
+    const collision = findAnimalIdByLookup(identity.subject_id, existingAnimals);
+    if (collision) {
+      errors.subject_id =
+        collision === identity.subject_id.trim()
+          ? `Animal "${identity.subject_id}" already exists`
+          : `Animal "${collision}" already exists (same ID with different capitalization)`;
     }
   }
 

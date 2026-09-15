@@ -45,6 +45,7 @@ export const WORKFLOW_COMMAND_CATALOG = Object.freeze({
   removeBadChannelOverrideKey: 'repair',
   acknowledgeBadChannelRemovals: 'repair',
   resetDaySession: 'repair',
+  confirmConfigurationChoice: 'repair',
   acknowledgeBadChannelRemoval: 'repair',
   repairAnimalCollection: 'repair',
 

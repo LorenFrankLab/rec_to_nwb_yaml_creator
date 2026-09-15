@@ -111,12 +111,25 @@ describe('validateWizardIdentity — identity validity', () => {
     expect(result.errors.subject_id).toMatch(/\//);
   });
 
-  it('rejects a subject_id that collides with an existing animal (case-insensitive store key)', () => {
+  it('rejects a subject_id that collides with an existing animal (case-insensitive lookup)', () => {
     const result = validateWizardIdentity(validIdentity({ subject_id: 'Laurent' }), {
       laurent: {},
     });
     expect(result.valid).toBe(false);
     expect(result.errors.subject_id).toMatch(/already exists/i);
+    expect(result.errors.subject_id).toMatch(/capitalization/i);
+  });
+
+  it('rejects an underscore in the subject_id (the converter splits filenames on it)', () => {
+    const result = validateWizardIdentity(validIdentity({ subject_id: 'my_rat' }), {});
+    expect(result.valid).toBe(false);
+    expect(result.errors.subject_id).toMatch(/underscore/i);
+  });
+
+  it('keeps the exact case of the subject_id in the created animal', () => {
+    const result = validateWizardIdentity(validIdentity({ subject_id: 'BS28' }), {});
+    expect(result.valid).toBe(true);
+    expect(buildWizardCommitPayload(validIdentity({ subject_id: 'BS28' })).subject.subject_id).toBe('BS28');
   });
 
   it('flags missing required identity fields', () => {
@@ -147,7 +160,7 @@ describe('buildWizardCommitPayload — the createAnimal payload', () => {
   it('delegates to buildAnimalFromForm so the wizard builds an IDENTICAL animal to any other entry', () => {
     const identity = validIdentity({ subject_id: 'Laurent', weight: '450', description: '' });
     const payload = buildWizardCommitPayload(identity);
-    // Same shape the shared glue produces from an AnimalCreationForm payload (lower-cased key,
+    // Same shape the shared glue produces from an AnimalCreationForm payload (exact-case key,
     // numeric weight, derived description). Experimenters seed from defaults later (Team step).
     const expected = buildAnimalFromForm({
       subject_id: 'Laurent',
@@ -162,7 +175,7 @@ describe('buildWizardCommitPayload — the createAnimal payload', () => {
       institution: '',
       experiment_description: '',
     });
-    expect(payload.animalId).toBe('laurent');
+    expect(payload.animalId).toBe('Laurent');
     expect(payload.subject).toEqual(expected.subject);
   });
 

@@ -5,7 +5,7 @@
  * (no fork). These pin the exact shapes `createAnimal` is called with.
  */
 import { describe, it, expect } from 'vitest';
-import { buildAnimalFromForm, getDefaultExperimenters } from '../animalCreation';
+import { buildAnimalFromForm, getDefaultExperimenters, subjectLookupKey, findAnimalIdByLookup } from '../animalCreation';
 
 /** A fully-processed form payload (AnimalCreationForm trims/filters/numbers before onSubmit). */
 const baseForm = {
@@ -23,10 +23,19 @@ const baseForm = {
 };
 
 describe('buildAnimalFromForm', () => {
-  it('lower-cases/trims the subject_id into the store key and subject_id', () => {
+  it('trims the subject_id into the store key and subject_id, preserving its case', () => {
+    // The exported subject_id must match the recording filenames' animal token exactly (the
+    // converter scanner is case-sensitive), so creation never case-folds it.
     const { animalId, subject } = buildAnimalFromForm({ ...baseForm, subject_id: '  Remy  ' });
-    expect(animalId).toBe('remy');
-    expect(subject.subject_id).toBe('remy');
+    expect(animalId).toBe('Remy');
+    expect(subject.subject_id).toBe('Remy');
+  });
+
+  it('subjectLookupKey / findAnimalIdByLookup match case-insensitively without changing identity', () => {
+    expect(subjectLookupKey('  Remy ')).toBe('remy');
+    expect(findAnimalIdByLookup('REMY', { Remy: {} })).toBe('Remy');
+    expect(findAnimalIdByLookup('Remy', { Remy: {}, remy: {} })).toBe('Remy');
+    expect(findAnimalIdByLookup('bean', { Remy: {} })).toBeNull();
   });
 
   it('carries species, sex, genotype, dob and weight straight onto the subject', () => {

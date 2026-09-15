@@ -61,16 +61,49 @@ interface DefaultExperimenters {
 }
 
 /**
+ * Normalize a subject id for LOOKUP only (duplicate detection, matching an import to an existing
+ * animal). Never used for the exported identity or the store key: the converter's scanner matches
+ * the metadata filename's animal token to the recording's token case-sensitively, so the exported
+ * `subject_id` must keep the exact spelling the recordings use.
+ *
+ * @param subjectId - A subject id in any spelling.
+ * @returns The trimmed, lower-cased lookup key.
+ */
+export function subjectLookupKey(subjectId: unknown): string {
+  return typeof subjectId === 'string' ? subjectId.trim().toLowerCase() : '';
+}
+
+/**
+ * Find the existing animal whose id matches `subjectId` under {@link subjectLookupKey} (an exact
+ * match wins; otherwise the first case-insensitive match).
+ *
+ * @param subjectId - The candidate subject id.
+ * @param animals - The workspace `animals` map (keys are the store ids).
+ * @returns The matching store key, or null.
+ */
+export function findAnimalIdByLookup(subjectId: unknown, animals: Record<string, unknown>): string | null {
+  if (typeof subjectId === 'string' && Object.prototype.hasOwnProperty.call(animals, subjectId)) {
+    return subjectId;
+  }
+  const target = subjectLookupKey(subjectId);
+  if (!target) return null;
+  return Object.keys(animals).find((id) => subjectLookupKey(id) === target) ?? null;
+}
+
+/**
  * Build the `{ animalId, subject, metadata }` triple a creation form submits into `createAnimal`.
- * The store key + subject_id are the lower-cased/trimmed subject id; `description` is schema-required
- * (non-empty), so it auto-generates a `genotype species` label when left blank. Devices are seeded
- * empty with the legacy `device.name: ['Trodes']` default (schema minItems: 1).
+ * The store key + subject_id are the TRIMMED subject id with its case preserved — the exported
+ * `subject_id` is the scientific identity and must match the recording filenames' animal token
+ * exactly (see `domain/recordingFilename`); duplicate detection is case-insensitive via
+ * {@link subjectLookupKey}. `description` is schema-required (non-empty), so it auto-generates a
+ * `genotype species` label when left blank. Devices are seeded empty with the legacy
+ * `device.name: ['Trodes']` default (schema minItems: 1).
  *
  * @param formData - The processed AnimalCreationForm payload (already trimmed/numbered).
  * @returns
  */
 export function buildAnimalFromForm(formData: AnimalCreationFormData) {
-  const animalId = formData.subject_id.toLowerCase().trim();
+  const animalId = formData.subject_id.trim();
 
   const subject = {
     subject_id: animalId,

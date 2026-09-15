@@ -115,6 +115,8 @@ export const CATEGORY_BY_CODE: Readonly<Record<string, WorkflowCategory>> = Obje
   invalid_species: WORKFLOW_CATEGORY.ANIMAL_SETUP,
   subject_genotype_strain: WORKFLOW_CATEGORY.ANIMAL_SETUP,
   placeholder_subject_id: WORKFLOW_CATEGORY.ANIMAL_SETUP,
+  subject_id_not_recording_compatible: WORKFLOW_CATEGORY.ANIMAL_SETUP,
+  subject_id_missing: WORKFLOW_CATEGORY.ANIMAL_SETUP,
   experimenter_name_shape: WORKFLOW_CATEGORY.ANIMAL_SETUP,
   subject_id_slash: WORKFLOW_CATEGORY.ANIMAL_SETUP,
   session_id_slash: WORKFLOW_CATEGORY.ANIMAL_SETUP,
@@ -165,6 +167,10 @@ export const CATEGORY_BY_CODE: Readonly<Record<string, WorkflowCategory>> = Obje
   // A recovered/imported day with no pinned configuration version — repaired by pinning a
   // version in the Day Devices step.
   unpinned_configuration: WORKFLOW_CATEGORY.EXISTING_DATA,
+  // The pinned version's effective date does not cover the recording date — confirm / re-pin.
+  configuration_effective_date_unconfirmed: WORKFLOW_CATEGORY.EXISTING_DATA,
+  // A migration-filled weight the scientist should confirm as a measurement.
+  weight_from_baseline: WORKFLOW_CATEGORY.DAY_METADATA,
 });
 
 /**

@@ -51,10 +51,20 @@ describe('AnimalProfileDialog', () => {
     expect(container).toBeEmptyDOMElement();
   });
 
-  it('exposes subject_id as a read-only identity (recreate to change), not an input', () => {
+  it('exposes the exported subject_id as an editable recording token, with the converter\u2019s filename rule', async () => {
     renderOpen();
-    expect(screen.queryByLabelText(/^subject id$/i)).not.toBeInTheDocument();
-    expect(screen.getByText('remy')).toBeInTheDocument();
+    const input = screen.getByLabelText(/subject id \(exact spelling/i);
+    expect(input).toHaveValue('remy');
+    // An underscore can never be grouped with the recordings — blocked inline.
+    await user.clear(input);
+    await user.type(input, 'my_rat');
+    expect(screen.getByRole('alert')).toHaveTextContent(/underscore/i);
+    // Correcting the capitalization to match the .rec files is allowed and saved as subject_id only.
+    await user.clear(input);
+    await user.type(input, 'Remy');
+    await user.click(screen.getByRole('button', { name: /save profile changes/i }));
+    await user.click(screen.getByRole('button', { name: /^update profile$/i }));
+    expect(onSave).toHaveBeenCalledWith({ subject_id: 'Remy' });
   });
 
   it('shows species guidance (Latin binomial / NCBI URI) and DOB ISO expectation at the edit point', () => {

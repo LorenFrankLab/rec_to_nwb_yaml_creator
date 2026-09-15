@@ -1,6 +1,7 @@
 import { useId, useMemo, useState, useEffect } from 'react';
 import { getAnimalSubject } from '../state/workspaceSelectors';
 import { isValidSpecies } from '../validation/dandiSubject';
+import { recordingFilenameIssue } from '../domain/recordingFilename';
 import Modal from './Modal/Modal';
 import { ConfirmDialog } from './Modal';
 import BlastRadiusChip from './ui/BlastRadiusChip';
@@ -10,6 +11,8 @@ import { pluralize } from '../utils/pluralize';
 
 /** The editable constant subject facts held by this dialog's form. */
 interface ProfileForm {
+  /** The exported subject id — the EXACT animal token used in the recording filenames. */
+  subject_id: string;
   species: string;
   sex: string;
   date_of_birth: string;
@@ -64,17 +67,21 @@ export default function AnimalProfileDialog({
   // (YYYY-MM-DD) and converted back to ISO-8601 on save (matching the creation/Overview flow).
   const initial = useMemo(
     () => ({
+      subject_id: subject.subject_id || '',
       species: subject.species || '',
       sex: subject.sex || '',
       date_of_birth: (subject.date_of_birth || '').split('T')[0],
       genotype: subject.genotype || '',
       description: subject.description || '',
     }),
-    [subject.species, subject.sex, subject.date_of_birth, subject.genotype, subject.description]
+    [subject.subject_id, subject.species, subject.sex, subject.date_of_birth, subject.genotype, subject.description]
   );
 
   const [form, setForm] = useState(initial);
   const [speciesError, setSpeciesError] = useState('');
+  const subjectIdError = form.subject_id.trim() === ''
+    ? 'Subject ID is required.'
+    : (recordingFilenameIssue(form.subject_id.trim())?.message ?? '');
   const [confirmOpen, setConfirmOpen] = useState(false);
 
   // Reseed the form whenever the dialog (re)opens or the subject changes (e.g. after a save commits),
@@ -102,6 +109,7 @@ export default function AnimalProfileDialog({
   // Only the changed fields are saved (the store shallow-merges subject), with DOB re-encoded.
   const changedFields = useMemo(() => {
     const out: Partial<ProfileForm> = {};
+    if (form.subject_id.trim() !== initial.subject_id) out.subject_id = form.subject_id.trim();
     if (form.species.trim() !== (initial.species || '').trim()) out.species = form.species.trim();
     if (form.sex !== initial.sex) out.sex = form.sex;
     if (form.date_of_birth !== initial.date_of_birth) {
@@ -118,6 +126,9 @@ export default function AnimalProfileDialog({
   const blastRadius = `this animal and all ${dayCountText}, including any already exported`;
 
   const handleSaveClick = () => {
+    // The exported subject id must be spellable in a recording filename (the converter matches it
+    // to the `.rec` files exactly).
+    if (subjectIdError) return;
     // Species is the only DANDI gate — block a non-binomial/URI value before the animal-wide write.
     const species = form.species.trim();
     if (species !== '' && !isValidSpecies(species)) {
@@ -163,11 +174,28 @@ export default function AnimalProfileDialog({
 
         <div className="form-grid">
           <div className="form-field">
-            <span className="field-label">Subject ID</span>
-            <span className="readonly-value">{subject.subject_id || '—'}</span>
-            <span className="field-help-text">
-              Identity — set at animal creation. Recreate the animal to change it.
+            <label htmlFor="profile-subject-id">Subject ID (exact spelling in the recording filenames)</label>
+            <input
+              id="profile-subject-id"
+              type="text"
+              data-field-path="subject.subject_id"
+              value={form.subject_id}
+              aria-invalid={!!subjectIdError}
+              aria-describedby={subjectIdError ? 'profile-subject-id-error' : 'profile-subject-id-hint'}
+              onChange={(e) => setField('subject_id', e.target.value)}
+            />
+            <span id="profile-subject-id-hint" className="field-help-text">
+              The converter matches <code>{`{date}_{subject}_metadata.yml`}</code> to{' '}
+              <code>{`{date}_{subject}_{epoch}_{tag}.rec`}</code> by this exact token (case-sensitive).
+              If this animal was entered in a different capitalization than its recordings use, correct it
+              here — the workspace key ({String((animal as { id?: unknown } | undefined)?.id ?? subject.subject_id)}) stays the same. Letters, digits and
+              hyphens only.
             </span>
+            {subjectIdError && (
+              <span id="profile-subject-id-error" className="validation-error" role="alert">
+                {subjectIdError}
+              </span>
+            )}
           </div>
 
           <div className="form-field">

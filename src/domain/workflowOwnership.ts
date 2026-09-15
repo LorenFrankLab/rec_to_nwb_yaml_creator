@@ -224,6 +224,7 @@ export const PATTERN_REFINEMENT_BY_CODE: Readonly<Record<string, string>> = Obje
   // existing_data → configuration_version: a recovered/unpinned day is repaired by pinning a
   // version (not a generic "clean up corrupt shape" repair).
   unpinned_configuration: OWNERSHIP_PATTERN.CONFIGURATION_VERSION,
+  configuration_effective_date_unconfirmed: OWNERSHIP_PATTERN.CONFIGURATION_VERSION,
 });
 
 /**

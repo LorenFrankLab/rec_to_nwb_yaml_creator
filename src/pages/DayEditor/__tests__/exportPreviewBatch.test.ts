@@ -50,8 +50,8 @@ describe('firstBlockingRepairLink', () => {
 
   it('routes a DAY-owned blocking issue to the day editor with a field deep-link', () => {
     // Weight is a day-owned exported value even though the schema nests it under subject.weight.
-    const { workspace, animalKey, dayId } = oneAnimal((animal) => {
-      (animal.subject as { weight: number }).weight = -50;
+    const { workspace, animalKey, dayId } = oneAnimal((_animal, day) => {
+      (day.session as { weight: number }).weight = -50;
     });
 
     const link = firstBlockingRepairLink(workspace, animalKey, dayId);
@@ -99,7 +99,7 @@ describe('exportAllDays', () => {
 
     // remy has a valid day + an incomplete day → exactly one exported file.
     expect(result.exported).toHaveLength(1);
-    expect(result.exported[0].filename).toBe('06222023_remy_metadata.yml');
+    expect(result.exported[0].filename).toBe('20230622_remy_metadata.yml');
 
     // The bytes are the SAME single-day bytes (batch === single export): the golden encoder over the merge.
     const ws = workspace as { animals: Record<string, LooseAnimal>; days: Record<string, LooseDay> };
@@ -107,7 +107,7 @@ describe('exportAllDays', () => {
       mergeDayMetadata(ws.animals.remy as never, ws.days['remy-2023-06-22'] as never)
     );
     expect(downloadYamlFile).toHaveBeenCalledTimes(1);
-    expect(downloadYamlFile).toHaveBeenCalledWith('06222023_remy_metadata.yml', expectedBytes);
+    expect(downloadYamlFile).toHaveBeenCalledWith('20230622_remy_metadata.yml', expectedBytes);
   });
 
   it('skips the incomplete day with a (fallback) reason and a fix link', () => {

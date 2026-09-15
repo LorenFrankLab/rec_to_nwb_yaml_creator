@@ -17,8 +17,8 @@ import { mergeDayMetadata } from '../../state/workspaceUtils';
 import { validateDay } from '../../domain/dayValidationComposer';
 import { repairTargetForIssue, animalSetupTabForFieldPath } from '../../domain/repairRouting';
 import type { RepairableIssue } from '../../domain/repairRouting';
-import { getAnimalDayIds, getAnimalDays } from '../../state/workspaceSelectors';
-import { formatDeterministicFilename } from '../../io/yaml';
+import { getAnimalDayIds, getAnimalDays, getAnimalSubject } from '../../state/workspaceSelectors';
+import { formatRecordingMetadataFilename } from '../../domain/recordingFilename';
 import { exportSelectedDays } from '../AnimalWorkspace/exportSelectedDays';
 import type { ExportDayActions } from '../../domain/exportDay';
 import type { Animal, Day } from '../../state/workspaceTypes';
@@ -159,9 +159,9 @@ export function exportAllDays(
     const day = days[dayId];
     if (!isRecord(day) || !isRecord(animal)) return dayId;
     try {
-      return formatDeterministicFilename({
-        ...mergeDayMetadata(animal as unknown as Animal, day as unknown as Day),
-        EXPERIMENT_DATE_in_format_mmddYYYY: day.experimentDate as string,
+      return formatRecordingMetadataFilename({
+        date: String(day.date),
+        subjectId: String(getAnimalSubject(animal).subject_id ?? ''),
       });
     } catch {
       return dayId;

@@ -69,6 +69,7 @@ export const REPAIR_COMMAND_TYPES: readonly string[] = Object.freeze([
   'removeBadChannelOverrideKey',
   'acknowledgeBadChannelRemovals',
   'resetDaySession',
+  'confirmConfigurationChoice',
 ]);
 
 /**
@@ -87,6 +88,7 @@ const COMMAND_SURFACE: Readonly<Record<string, 'day' | 'animal'>> = Object.freez
   removeBadChannelOverrideKey: 'day',
   acknowledgeBadChannelRemovals: 'day',
   resetDaySession: 'day',
+  confirmConfigurationChoice: 'day',
   resetAnimalCameras: 'animal',
   resetDataAcqDevice: 'animal',
   rebuildConfigurationHistory: 'animal',
@@ -226,6 +228,13 @@ export function applyRepairCommand(command: RepairCommand, ctx: RepairCommandCon
       const sessionDate = ctx.day?.date ?? dayIdDate;
       const sessionId = `${sessionAnimalId}_${String(sessionDate).replace(/-/g, '')}`;
       actions.updateDay(dayId, { session: { session_id: sessionId } });
+      return;
+    }
+    case 'confirmConfigurationChoice': {
+      // The user asserts the pinned probe configuration IS the setup this day recorded, even though
+      // its effective date does not cover the day (a backfill before the first entered setup). An
+      // explicit, off-export provenance fact — never an invented effective date.
+      actions.updateDay(dayId, { provenance: { configuration: { source: 'explicit', confirmed: true } } });
       return;
     }
     default:

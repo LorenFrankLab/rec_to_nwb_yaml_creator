@@ -234,6 +234,10 @@ export const SURFACE_BY_CODE: Record<string, RepairSurface> = {
   invalid_species: 'animal',
   subject_genotype_strain: 'animal',
   placeholder_subject_id: 'animal',
+  // Converter filename contract: `{YYYYMMDD}_{subject_id}_metadata.yml` cannot be grouped with the
+  // recordings when the subject id carries an underscore / unsafe character. Edited on the profile.
+  subject_id_not_recording_compatible: 'animal',
+  subject_id_missing: 'animal',
   experimenter_name_shape: 'animal',
   // Editable in the Day Editor (task/video/event re-picks, day bad-channel overrides,
   // session metadata, day-owned technical fields, optogenetics completeness).
@@ -274,6 +278,10 @@ export const SURFACE_BY_CODE: Record<string, RepairSurface> = {
   malformed_day_collection: 'day',
   malformed_day_session: 'day',
   unpinned_configuration: 'day',
+  // Dated facts (increment 2): the pinned version's effective date does not cover the recording
+  // date (confirm / re-pin in the Recording Setup section); a migration-filled weight to confirm.
+  configuration_effective_date_unconfirmed: 'day',
+  weight_from_baseline: 'day',
   malformed_animal_collection: 'animal',
   missing_configuration_history: 'animal',
   missing_camera: 'day',
