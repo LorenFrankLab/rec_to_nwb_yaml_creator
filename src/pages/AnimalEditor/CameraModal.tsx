@@ -1,3 +1,4 @@
+import { RequiredMark, FieldRequirements, MissingFields } from '../../components/ui/FieldRequirements';
 import { useState, useRef } from 'react';
 import type { ChangeEvent } from 'react';
 import Modal from '../../components/Modal/Modal';
@@ -163,6 +164,7 @@ function CameraForm({ mode, camera = null, existingCameras, onSave, onCancel, di
       }
     >
       <form className="camera-modal-form">
+        <FieldRequirements />
         {/* Camera ID (read-only, auto-assigned) */}
       <div className="form-group">
         <label htmlFor="camera_id">Camera ID</label>
@@ -172,7 +174,7 @@ function CameraForm({ mode, camera = null, existingCameras, onSave, onCancel, di
 
       {/* Camera Name */}
       <div className="form-group">
-        <label htmlFor="camera_name">Camera Name</label>
+        <label htmlFor="camera_name">Camera Name <RequiredMark /></label>
         <input
           id="camera_name"
           type="text"
@@ -193,14 +195,13 @@ function CameraForm({ mode, camera = null, existingCameras, onSave, onCancel, di
         {/* Proactive Spyglass identity guidance (the divergence alert below is the reactive
             catch). camera_name is the CameraDevice primary key downstream. */}
         <span id="camera_name_help" className="help-text">
-          Same name means the same camera. A camera with a different zoom, calibration, lens,
-          model, or id is a different camera — give it a different name.
+          Reuse a name only for the same hardware and calibration. Use a new camera name when either changes.
         </span>
       </div>
 
       {/* Manufacturer */}
       <div className="form-group">
-        <label htmlFor="manufacturer">Manufacturer</label>
+        <label htmlFor="manufacturer">Manufacturer <RequiredMark /></label>
         <input
           id="manufacturer"
           type="text"
@@ -214,7 +215,7 @@ function CameraForm({ mode, camera = null, existingCameras, onSave, onCancel, di
 
       {/* Model */}
       <div className="form-group">
-        <label htmlFor="model">Model</label>
+        <label htmlFor="model">Model <RequiredMark /></label>
         <input
           id="model"
           type="text"
@@ -228,7 +229,7 @@ function CameraForm({ mode, camera = null, existingCameras, onSave, onCancel, di
 
       {/* Lens (schema-required) */}
       <div className="form-group">
-        <label htmlFor="lens">Lens</label>
+        <label htmlFor="lens">Lens <RequiredMark /></label>
         <input
           id="lens"
           type="text"
@@ -242,7 +243,7 @@ function CameraForm({ mode, camera = null, existingCameras, onSave, onCancel, di
 
       {/* Meters per Pixel */}
       <div className="form-group">
-        <label htmlFor="meters_per_pixel">Meters per Pixel</label>
+        <label htmlFor="meters_per_pixel">Meters per Pixel <RequiredMark /></label>
         <input
           id="meters_per_pixel"
           type="number"
@@ -276,7 +277,7 @@ function CameraForm({ mode, camera = null, existingCameras, onSave, onCancel, di
           </p>
           <table className="identity-divergence-table">
             <thead>
-              <tr><th>Field</th><th>Existing</th><th>This camera</th></tr>
+              <tr><th scope="col">Field</th><th scope="col">Existing</th><th scope="col">This camera</th></tr>
             </thead>
             <tbody>
               {divergence.differingFields.map((field) => (
@@ -293,6 +294,11 @@ function CameraForm({ mode, camera = null, existingCameras, onSave, onCancel, di
           </Button>
         </div>
       )}
+        <MissingFields fields={[
+          !formData.camera_name.trim() && 'camera name', !formData.manufacturer.trim() && 'manufacturer',
+          !formData.model.trim() && 'model', !formData.lens.trim() && 'lens',
+          !(Number(formData.meters_per_pixel) > 0) && 'a calibration greater than zero',
+        ].filter(Boolean) as string[]} />
       </form>
     </Modal>
   );

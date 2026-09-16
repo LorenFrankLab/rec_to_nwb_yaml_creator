@@ -43,8 +43,8 @@ const renderWithStore = (ui, workspace = { animals: {}, days: {} }) =>
 
 const fill = async (user) => {
   await user.type(screen.getByLabelText(/Task name/i), 'w-track');
-  await user.type(screen.getByLabelText('Description'), 'Alternation');
-  await user.type(screen.getByLabelText('Environment'), 'W maze');
+  await user.type(screen.getByRole('textbox', { name: 'Description' }), 'Alternation');
+  await user.type(screen.getByRole('textbox', { name: 'Environment' }), 'W maze');
 };
 
 describe('TaskTypesContainer', () => {
@@ -92,7 +92,7 @@ describe('TaskTypesContainer', () => {
     renderWithStore(<TaskTypesContainer animal={animal} onFieldUpdate={onFieldUpdate} />);
 
     await user.click(screen.getByRole('button', { name: /Edit task type sleep/i }));
-    const desc = screen.getByLabelText('Description');
+    const desc = screen.getByRole('textbox', { name: 'Description' });
     await user.clear(desc);
     await user.type(desc, 'new description');
     await user.click(screen.getByRole('button', { name: /Save task type/i }));
@@ -110,7 +110,8 @@ describe('TaskTypesContainer', () => {
     };
     renderWithStore(<TaskTypesContainer animal={animal} onFieldUpdate={onFieldUpdate} />);
 
-    await user.click(screen.getByRole('button', { name: /Delete task type sleep/i }));
+    await user.click(screen.getByRole('button', { name: /Actions for task type sleep/i }));
+    await user.click(screen.getByRole('menuitem', { name: /Delete task type sleep/i }));
     // ConfirmDialog
     await user.click(screen.getByRole('button', { name: /^Delete$/i }));
     expect(onFieldUpdate).toHaveBeenCalledWith('taskTypes', []);
@@ -178,7 +179,7 @@ describe('TaskTypesContainer — changing a task default that recording days alr
    */
   const editEnvironment = async (next) => {
     await user.click(screen.getByRole('button', { name: /Edit task type forkTrack/i }));
-    const environment = screen.getByLabelText('Environment');
+    const environment = screen.getByRole('textbox', { name: 'Environment' });
     await user.clear(environment);
     await user.type(environment, next);
     await user.click(screen.getByRole('button', { name: /Save task type/i }));
@@ -305,7 +306,7 @@ describe('TaskTypesContainer — changing a task default that recording days alr
     await user.click(screen.getByRole('button', { name: /^Cancel$/i }));
 
     expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
-    expect(screen.getByLabelText('Environment')).toHaveValue('HaightLeft');
+    expect(screen.getByRole('textbox', { name: 'Environment' })).toHaveValue('HaightLeft');
     expect(onFieldUpdate).not.toHaveBeenCalled();
   });
 
@@ -325,7 +326,7 @@ describe('TaskTypesContainer — changing a task default that recording days alr
 
       await editEnvironment('HaightLeft');
       await user.click(screen.getByRole('button', { name: /^Cancel$/i }));
-      expect(screen.getByLabelText('Environment')).toHaveValue('HaightLeft');
+      expect(screen.getByRole('textbox', { name: 'Environment' })).toHaveValue('HaightLeft');
 
       // Save the very same draft again, unchanged.
       await user.click(screen.getByRole('button', { name: /Save task type/i }));
@@ -354,7 +355,7 @@ describe('TaskTypesContainer — changing a task default that recording days alr
 
       // First edit: a new room AND a different camera.
       await user.click(screen.getByRole('button', { name: /Edit task type forkTrack/i }));
-      const environment = screen.getByLabelText('Environment');
+      const environment = screen.getByRole('textbox', { name: 'Environment' });
       await user.clear(environment);
       await user.type(environment, 'HaightLeft');
       await user.click(screen.getByRole('checkbox', { name: /overhead/i })); // off
@@ -363,8 +364,8 @@ describe('TaskTypesContainer — changing a task default that recording days alr
       await user.click(screen.getByRole('button', { name: /^Cancel$/i }));
 
       // Back in the form with the draft intact; edit it further and save for real this time.
-      expect(screen.getByLabelText('Environment')).toHaveValue('HaightLeft');
-      const reopened = screen.getByLabelText('Environment');
+      expect(screen.getByRole('textbox', { name: 'Environment' })).toHaveValue('HaightLeft');
+      const reopened = screen.getByRole('textbox', { name: 'Environment' });
       await user.clear(reopened);
       await user.type(reopened, 'ThirdRoom');
       await user.click(screen.getByRole('button', { name: /Save task type/i }));
@@ -470,7 +471,7 @@ describe('TaskTypesContainer — changing a task default that recording days alr
       );
 
       await user.click(screen.getByRole('button', { name: /Edit task type forkTrack/i }));
-      const description = screen.getByLabelText('Description');
+      const description = screen.getByRole('textbox', { name: 'Description' });
       await user.clear(description);
       await user.type(description, 'Handle alternation, two second delay');
       await user.click(screen.getByRole('button', { name: /Save task type/i }));
@@ -498,7 +499,7 @@ describe('TaskTypesContainer — changing a task default that recording days alr
       );
 
       await user.click(screen.getByRole('button', { name: /Edit task type forkTrack/i }));
-      await user.type(screen.getByLabelText('Environment'), 'HaightLeft');
+      await user.type(screen.getByRole('textbox', { name: 'Environment' }), 'HaightLeft');
       await user.click(screen.getByRole('button', { name: /Save task type/i }));
 
       const dialog = screen.getByRole('alertdialog');
@@ -523,7 +524,7 @@ describe('TaskTypesContainer — changing a task default that recording days alr
       );
 
       await user.click(screen.getByRole('button', { name: /Edit task type forkTrack/i }));
-      const environment = screen.getByLabelText('Environment');
+      const environment = screen.getByRole('textbox', { name: 'Environment' });
       await user.clear(environment);
       await user.type(environment, 'HaightLeft');
       await user.click(screen.getByRole('checkbox', { name: /overhead/i }));
@@ -569,7 +570,7 @@ describe('TaskTypesContainer — changing a task default that recording days alr
     );
 
     await user.click(screen.getByRole('button', { name: /Edit task type forkTrack/i }));
-    const description = screen.getByLabelText('Description');
+    const description = screen.getByRole('textbox', { name: 'Description' });
     await user.clear(description);
     await user.type(description, 'Handle alternation, two second delay');
     await user.click(screen.getByRole('button', { name: /Save task type/i }));

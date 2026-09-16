@@ -1,3 +1,6 @@
+import { SPECIES_OPTIONS } from '../../domain/subjectOptions';
+import { RequiredMark, FieldRequirements } from '../../components/ui/FieldRequirements';
+import { useMediaQuery } from '../../hooks/useMediaQuery';
 /**
  * CreateAnimalWizard — the guided new-animal "deliberate setup" journey.
  *
@@ -18,6 +21,9 @@
  * payload) live in {@link module:viewModels/createAnimalWizardViewModel}; this component is a thin
  * renderer + the store-write wiring.
  */
+import { DraftTextInput } from '../../components/ui/DraftFields';
+import { getCurrentDate } from '../../state/workspaceUtils';
+import { getConfigHistory } from '../../state/workspaceSelectors';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useStoreContext } from '../../state/StoreContext';
 import { getDefaultExperimenters } from '../../domain/animalCreation';
@@ -31,6 +37,7 @@ import {
 import type { IdentityDraft, WizardStepKey } from '../../viewModels/createAnimalWizardViewModel';
 import {
   getAnimalCameras,
+  getAnimalElectrodeGroups,
   getAnimalExperimenters,
   getAnimalSubject,
   getExperimenterNames,
@@ -47,13 +54,7 @@ import styles from './CreateAnimalWizard.module.css';
 import PageShell from '../../components/PageShell';
 
 /** The species options offered in step 1 (a Latin binomial each, plus the custom escape). */
-const SPECIES_OPTIONS = [
-  { value: 'Rattus norvegicus', label: 'Rat (Rattus norvegicus)' },
-  { value: 'Mus musculus', label: 'Mouse (Mus musculus)' },
-  { value: 'Callithrix jacchus', label: 'Marmoset (Callithrix jacchus)' },
-  { value: 'Macaca mulatta', label: 'Rhesus macaque (Macaca mulatta)' },
-  { value: 'other', label: 'Other (specify)…' },
-];
+
 
 /** The initial identity draft (the same valid defaults the retired form seeded). */
 const INITIAL_IDENTITY: IdentityDraft = {
@@ -186,16 +187,17 @@ function TeamStep({
 
   return (
     <div className={styles.panel}>
-      <h2>Team</h2>
+      <h2>Experiment &amp; team</h2>
+      <FieldRequirements when="export" />
       <p className={styles.panelDesc}>
-        Who works on this animal. This seeds each recording day&apos;s &ldquo;who ran it&rdquo;
-        (editable per day).
+        Enter the experiment description and usual experimenters once. New recordings reuse these defaults.
       </p>
 
       <div className={styles.field}>
-        <label htmlFor="team-experiment-description">Experiment description</label>
+        <label htmlFor="team-experiment-description">Experiment description <RequiredMark /></label>
         <textarea
           id="team-experiment-description"
+                  aria-required="true"
           value={draft.experiment_description}
           aria-invalid={!!errors.experiment_description}
           onChange={(e) => updateDraft({ experiment_description: e.target.value })}
@@ -212,7 +214,7 @@ function TeamStep({
       </div>
 
       <div className={styles.field}>
-        <label id="team-names-label">Experimenter names</label>
+        <label id="team-names-label">Experimenter names <RequiredMark /></label>
         <div role="group" aria-labelledby="team-names-label">
           {draft.names.map((name, idx) => (
             <div className={styles.teamRow} key={idx}>
@@ -221,6 +223,7 @@ function TeamStep({
                 className={styles.teamNameInput}
                 value={name}
                 aria-label={`Experimenter ${idx + 1}`}
+                aria-required={idx === 0}
                 placeholder="Last, First (e.g. Doe, Jane)"
                 onChange={(e) =>
                   updateDraft({ names: draft.names.map((n, i) => (i === idx ? e.target.value : n)) })
@@ -254,11 +257,14 @@ function TeamStep({
         </div>
       </div>
 
+      <details open={!draft.lab.trim() || !draft.institution.trim() || !!errors.lab || !!errors.institution || undefined}>
+        <summary>{draft.lab || 'Lab missing'} · {draft.institution || 'Institution missing'} · Edit</summary>
       <div className={styles.two}>
         <div className={styles.field}>
-          <label htmlFor="team-lab">Lab</label>
+          <label htmlFor="team-lab">Lab <RequiredMark /></label>
           <input
             id="team-lab"
+                  aria-required="true"
             type="text"
             value={draft.lab}
             aria-invalid={!!errors.lab}
@@ -272,9 +278,10 @@ function TeamStep({
           )}
         </div>
         <div className={styles.field}>
-          <label htmlFor="team-institution">Institution</label>
+          <label htmlFor="team-institution">Institution <RequiredMark /></label>
           <input
             id="team-institution"
+                  aria-required="true"
             type="text"
             value={draft.institution}
             aria-invalid={!!errors.institution}
@@ -288,6 +295,7 @@ function TeamStep({
           )}
         </div>
       </div>
+      </details>
     </div>
   );
 }
@@ -307,9 +315,14 @@ export default function CreateAnimalWizard() {
     adoptedAnimalId ? seedIdentityFromAnimal(existingAnimals[adoptedAnimalId]) : INITIAL_IDENTITY
   );
   const [identityErrors, setIdentityErrors] = useState<Record<string, string>>({});
-  const [currentStepKey, setCurrentStepKey] = useState<WizardStepKey>('identity');
+  const [currentStepKey, setCurrentStepKey] = useState<WizardStepKey>(() => {
+    const requested = new URLSearchParams(window.location.hash.split('?')[1]).get('step');
+    return adoptedAnimalId && WIZARD_STEP_KEYS.includes(requested as WizardStepKey) ? requested as WizardStepKey : 'identity';
+  });
+  const compact = useMediaQuery('(max-width: 600px)');
+  const [stepsOpen, setStepsOpen] = useState(false);
   const [createdAnimalId, setCreatedAnimalId] = useState<string | null>(adoptedAnimalId);
-  const [behaviorOnly, setBehaviorOnly] = useState(false);
+
   const [draftSaved, setDraftSaved] = useState(false);
   const [teamErrors, setTeamErrors] = useState<Record<string, string>>({});
   const draftSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -392,10 +405,11 @@ export default function CreateAnimalWizard() {
     identity,
     existingAnimals,
     animal,
-    behaviorOnly,
+    behaviorOnly: animal?.recordingModalities?.ephys === false,
   });
 
-  const currentIndex = WIZARD_STEP_KEYS.indexOf(currentStepKey);
+  const stepKeys = vm.steps.map((step) => step.key);
+  const currentIndex = stepKeys.indexOf(currentStepKey);
   const isCreated = createdAnimalId != null;
 
   // Roving-tabindex focus index for the tablist (follows the active step on a programmatic change).
@@ -502,17 +516,20 @@ export default function CreateAnimalWizard() {
   const handleNext = () => {
     if (vm.isLastStep) {
       const id = createdAnimalId ?? tryCommitIdentity();
-      if (id && validateAndCommitTeam()) goToAnimal(id);
+      if (id) {
+        if (validateAndCommitTeam()) goToAnimal(id);
+        else setCurrentStepKey('team');
+      }
       return;
     }
     // Leaving Identity forward goes through the commit gate, which blocks + surfaces errors on an
     // invalid draft (so an invalid edit is never silently dropped).
     if (currentStepKey === 'identity' && !tryCommitIdentity()) return;
-    setCurrentStepKey(WIZARD_STEP_KEYS[currentIndex + 1]);
+    setCurrentStepKey(stepKeys[currentIndex + 1]);
   };
 
   const handleBack = () => {
-    if (currentIndex > 0) setCurrentStepKey(WIZARD_STEP_KEYS[currentIndex - 1]);
+    if (currentIndex > 0) setCurrentStepKey(stepKeys[currentIndex - 1]);
   };
 
   /** Save draft: commit the (valid) animal and leave; the partial draft persists. */
@@ -539,13 +556,13 @@ export default function CreateAnimalWizard() {
 
   /** Declare a behavior-only animal: skip electrodes and move on. */
   const handleBehaviorOnly = () => {
-    setBehaviorOnly(true);
+    handleFieldUpdate('recordingModalities', { ...animal?.recordingModalities, ephys: false });
     setCurrentStepKey('cameras');
   };
 
   /** Tablist roving-focus keyboard handling (Left/Right/Up/Down/Home/End move focus). */
   const handleTabKeyDown = (e: React.KeyboardEvent) => {
-    const last = WIZARD_STEP_KEYS.length - 1;
+    const last = stepKeys.length - 1;
     let next = focusIndex;
     if (e.key === 'ArrowRight' || e.key === 'ArrowDown') next = focusIndex === last ? 0 : focusIndex + 1;
     else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') next = focusIndex === 0 ? last : focusIndex - 1;
@@ -560,24 +577,32 @@ export default function CreateAnimalWizard() {
   return (
     <PageShell
       headingId="wizard-heading"
-      heading="New animal — guided setup"
-      crumb="New animal"
-      lede="Enter once what stays the same for this animal across every recording day. Recording days reuse all of this; you'll only revisit it on a re-implant."
+      heading={adoptedAnimalId ? `Animal setup — ${adoptedAnimalId}` : "New animal — guided setup"}
+      crumb={adoptedAnimalId ? `Setup: ${adoptedAnimalId}` : "New animal"}
+      lede={currentStepKey === 'identity' && !compact ? "Set animal facts and reusable defaults." : undefined}
       maxWidth={860}
     >
-        <p className={styles.startOptions}>
+        {currentStepKey === 'identity' && !isCreated && <details className={styles.startOptions} open={!compact || undefined}>
+          <summary>Import or copy existing setup</summary>
+          <p>
           Starting fresh below, or{' '}
           <a href="#/import">Import a YAML…</a> ·{' '}
           <a href="#/copy-from-animal">Copy from another animal…</a>
-        </p>
+          </p>
+        </details>}
 
+        {compact && <Button variant="secondary" className={styles.compactStep} aria-expanded={stepsOpen} aria-controls="setup-step-list" onClick={() => setStepsOpen(!stepsOpen)}>
+          Step {currentIndex + 1} of {stepKeys.length} — {vm.steps[currentIndex].label} ▾
+        </Button>}
         {/* Stepper — a WAI-ARIA tablist over the seven steps; the active step's panel follows. */}
         <div
           className={styles.stepper}
+          id="setup-step-list"
+          hidden={compact && !stepsOpen}
           role="tablist"
           aria-label="Setup steps"
           data-testid="wizard-stepper"
-          data-layout="single-row-scroll"
+          data-layout="wrapping-steps"
         >
           {vm.steps.map((step, index) => {
             const done = step.status === 'complete' || step.status === 'skipped' || step.status === 'prefilled';
@@ -599,7 +624,7 @@ export default function CreateAnimalWizard() {
                 aria-label={`${step.label}${
                   step.status === 'prefilled' ? ': Pre-filled — review' : ''
                 }`}
-                onClick={() => handleTabActivate(step.key)}
+                onClick={() => { handleTabActivate(step.key); setStepsOpen(false); }}
                 onKeyDown={handleTabKeyDown}
               >
                 <span className={styles.stepNum} aria-hidden="true">
@@ -624,16 +649,16 @@ export default function CreateAnimalWizard() {
           {currentStepKey === 'identity' && (
             <div className={styles.panel}>
               <h2>Identity</h2>
+              <FieldRequirements when="export" />
               <p className={styles.panelDesc}>
-                Who this animal is. Fixed for the animal&apos;s life — set carefully; it can&apos;t
-                drift day to day. Anything you don&apos;t know yet can be left blank and filled in
-                later on the animal&apos;s profile.
+                Use the identity recorded in your animal and recording records.
               </p>
 
               <div className={styles.field}>
-                <label htmlFor="wizard-subject_id">Subject ID</label>
+                <label htmlFor="wizard-subject_id">Subject ID <RequiredMark /></label>
                 <input
                   id="wizard-subject_id"
+                  aria-required="true"
                   type="text"
                   value={identity.subject_id}
                   readOnly={isCreated}
@@ -643,7 +668,7 @@ export default function CreateAnimalWizard() {
                   onBlur={() => handleIdentityBlur('subject_id')}
                 />
                 <span className={styles.hint}>
-                  Must be unique. Case folds to one key (RS10 = rs10). No slashes (DANDI).
+                  Required to save. Use the exact animal ID in recording filenames, including capitalization. Letters, numbers and hyphens; must be unique.
                   {isCreated && ' Locked once the animal is created.'}
                 </span>
                 {identityErrors.subject_id && (
@@ -655,9 +680,10 @@ export default function CreateAnimalWizard() {
 
               <div className={styles.two}>
                 <div className={styles.field}>
-                  <label htmlFor="wizard-species">Species</label>
+                  <label htmlFor="wizard-species">Species <RequiredMark /></label>
                   <select
                     id="wizard-species"
+                  aria-required="true"
                     value={identity.species}
                     onChange={(e) => handleIdentityChange('species', e.target.value, true)}
                     onBlur={() => handleIdentityBlur('species')}
@@ -668,14 +694,13 @@ export default function CreateAnimalWizard() {
                       </option>
                     ))}
                   </select>
-                  <span className={styles.hint}>
-                    Latin binomial — DANDI rejects free text like &ldquo;Rat&rdquo;.
-                  </span>
+
                 </div>
                 <div className={styles.field}>
-                  <label htmlFor="wizard-sex">Sex</label>
+                  <label htmlFor="wizard-sex">Sex <RequiredMark /></label>
                   <select
                     id="wizard-sex"
+                  aria-required="true"
                     value={identity.sex}
                     onChange={(e) => handleIdentityChange('sex', e.target.value, true)}
                   >
@@ -683,15 +708,16 @@ export default function CreateAnimalWizard() {
                     <option value="F">Female (F)</option>
                     <option value="U">Unknown (U)</option>
                   </select>
-                  <span className={styles.hint}>Single letter (NWB/DANDI), not &ldquo;Male&rdquo;.</span>
+
                 </div>
               </div>
 
               {identity.species === 'other' && (
                 <div className={styles.field}>
-                  <label htmlFor="wizard-speciesCustom">Custom species</label>
+                  <label htmlFor="wizard-speciesCustom">Custom species <RequiredMark /></label>
                   <input
                     id="wizard-speciesCustom"
+                  aria-required="true"
                     type="text"
                     value={identity.speciesCustom}
                     placeholder="Enter scientific name (e.g. Homo sapiens)"
@@ -712,9 +738,10 @@ export default function CreateAnimalWizard() {
 
               <div className={styles.two}>
                 <div className={styles.field}>
-                  <label htmlFor="wizard-genotype">Genotype</label>
+                  <label htmlFor="wizard-genotype">Genotype <RequiredMark /></label>
                   <input
                     id="wizard-genotype"
+                  aria-required="true"
                     type="text"
                     value={identity.genotype}
                     placeholder="e.g. Wild-type, PV-Cre"
@@ -731,43 +758,22 @@ export default function CreateAnimalWizard() {
                     </span>
                   )}
                 </div>
-                <div className={styles.field}>
-                  <label htmlFor="wizard-weight">Baseline weight (grams, optional)</label>
-                  <input
-                    id="wizard-weight"
-                    type="number"
-                    min="0"
-                    step="any"
-                    value={identity.weight}
-                    placeholder="e.g. 450"
-                    aria-invalid={!!identityErrors.weight}
-                    onChange={(e) => handleIdentityChange('weight', e.target.value)}
-                    onBlur={() => handleIdentityBlur('weight')}
-                  />
-                  <span className={styles.hint}>
-                    Only a suggestion for the first recording day — each recording day records its
-                    own measured weight.
-                  </span>
-                  {identityErrors.weight && (
-                    <span className={styles.error} role="alert">
-                      {identityErrors.weight}
-                    </span>
-                  )}
-                </div>
+
               </div>
 
               <div className={styles.field}>
-                <label htmlFor="wizard-dob">Date of birth</label>
+                <label htmlFor="wizard-dob">Date of birth <RequiredMark /></label>
                 <input
                   id="wizard-dob"
+                  aria-required="true"
                   type="date"
                   value={identity.date_of_birth}
-                  max={new Date().toISOString().split('T')[0]}
+                  max={getCurrentDate()}
                   aria-invalid={!!identityErrors.date_of_birth}
                   onChange={(e) => handleIdentityChange('date_of_birth', e.target.value)}
                   onBlur={() => handleIdentityBlur('date_of_birth')}
                 />
-                <span className={styles.hint}>Needed before export; can be filled in later.</span>
+                <span className={styles.hint}>Required before export — you can save a draft without it.</span>
                 {identityErrors.date_of_birth && (
                   <span className={styles.error} role="alert">
                     {identityErrors.date_of_birth}
@@ -776,7 +782,7 @@ export default function CreateAnimalWizard() {
               </div>
 
               <div className={styles.field}>
-                <label htmlFor="wizard-description">Description</label>
+                <label htmlFor="wizard-description">Description (optional)</label>
                 <input
                   id="wizard-description"
                   type="text"
@@ -797,20 +803,30 @@ export default function CreateAnimalWizard() {
               <h2>Electrodes / probes</h2>
               <p className={styles.panelDesc}>
                 One group per probe (or tetrode). Channel maps and geometry come from the device type
-                automatically.
+                automatically. Verify the Trodes ntrode IDs and electrode order using the mapping editor below.
               </p>
-              {behaviorOnly && (
+              {animal?.recordingModalities?.ephys === false && (
                 <p className={styles.behaviorOnlyNote} role="status">
                   Behavior-only animal — electrodes skipped. Add a probe here if that changes.
                 </p>
               )}
-              <ElectrodeGroupsContainer animalId={createdAnimalId} />
+              {getAnimalElectrodeGroups(animal).length === 0 && <>
               <p className={styles.skip}>
                 No electrophysiology?{' '}
                 <button type="button" className={styles.skipButton} onClick={handleBehaviorOnly}>
                   This is a behavior-only animal — skip electrodes.
                 </button>
               </p>
+              </>}
+              <ElectrodeGroupsContainer animalId={createdAnimalId} />
+              {animal && getAnimalElectrodeGroups(animal).length > 0 && getConfigHistory(animal).length > 0 && <div className={styles.field}>
+                <label htmlFor="wizard-setup-date">Probe setup effective date</label>
+                <DraftTextInput id="wizard-setup-date" type="date" name="configuration.effectiveDate"
+                  value={getConfigHistory(animal)[0].effectiveDateKnown !== false ? getConfigHistory(animal)[0].date : ''}
+                  onCommit={(date) => actions.setConfigurationEffectiveDate(createdAnimalId, getConfigHistory(animal)[0].version, date || null)} />
+                <span className={styles.hint}>When this implant or probe arrangement first applied. If unknown, leave it blank and confirm the configuration for each recording date.</span>
+              </div>}
+
             </div>
           )}
 
@@ -836,12 +852,11 @@ export default function CreateAnimalWizard() {
                 Optogenetics <span className={styles.stepOptional}>optional</span>
               </h2>
               <p className={styles.panelDesc}>
-                Only if this animal is stimulated. It&apos;s all-or-nothing: include every section or
-                none — a partial setup silently drops all opto downstream.
+                Complete this setup if the animal receives optogenetic stimulation.
               </p>
               {vm.opto.count > 0 && (
                 <p className={styles.meter} data-testid="wizard-opto-meter">
-                  Opto configured · {vm.opto.count} of 4
+                  {vm.opto.count} of 4 optogenetics sections complete
                 </p>
               )}
               <OptogeneticsContainer animalId={createdAnimalId} />
@@ -851,9 +866,6 @@ export default function CreateAnimalWizard() {
           {currentStepKey === 'tasks' && animal && (
             <div className={styles.panel}>
               <h2>Tasks</h2>
-              <p className={styles.panelDesc}>
-                Define task types once. Each recording day&apos;s epochs pick from these.
-              </p>
               <TaskTypesContainer animal={animal} onFieldUpdate={handleFieldUpdate} />
             </div>
           )}
@@ -861,11 +873,25 @@ export default function CreateAnimalWizard() {
           {currentStepKey === 'recording-system' && animal && (
             <div className={styles.panel}>
               <h2>Recording system</h2>
-              <p className={styles.panelDesc}>
-                The acquisition hardware. Usually the same across the lab — change only if this animal
-                used a different rig.
-              </p>
               <RecordingSystemContainer animal={animal} onFieldUpdate={handleFieldUpdate} />
+              <fieldset className={styles.modalities}>
+                <legend>Setup used in this experiment</legend>
+                <p>Only applicable setup steps will be shown.</p>
+                <label><input type="checkbox" checked={animal.recordingModalities?.ephys !== false}
+                  disabled={getAnimalElectrodeGroups(animal).length > 0}
+                  onChange={(event) => handleFieldUpdate('recordingModalities', { ...animal.recordingModalities, ephys: event.target.checked })} /> Electrophysiology</label>
+                <label><input type="checkbox" checked={animal.recordingModalities?.video !== false}
+                  disabled={getAnimalCameras(animal).length > 0}
+                  onChange={(event) => handleFieldUpdate('recordingModalities', { ...animal.recordingModalities, video: event.target.checked })} /> Video</label>
+                <label><input type="checkbox" checked={Boolean(animal.optogenetics)} onChange={(event) => {
+                  if (event.target.checked) {
+                    handleFieldUpdate('optogenetics', animal.optogeneticsDraft ?? { opto_excitation_source: [{}], optical_fiber: [], virus_injection: [], optogenetic_stimulation_software: 'fsgui' });
+                  } else {
+                    handleFieldUpdate('optogeneticsDraft', animal.optogenetics);
+                    handleFieldUpdate('optogenetics', null);
+                  }
+                }} /> Optogenetics</label>
+              </fieldset>
             </div>
           )}
 
@@ -890,7 +916,7 @@ export default function CreateAnimalWizard() {
           </Button>
           <div className={styles.footerRight}>
             <Button variant="secondary" onClick={handleSaveDraft}>
-              Save draft
+              Save draft &amp; exit
             </Button>
             {draftSaved && (
               <span className={styles.draftStatus} role="status" aria-live="polite">

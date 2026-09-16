@@ -1,18 +1,17 @@
-import {
-  optoExcitationModelNames,
-  opticalFiberModelNames,
-  virusNames,
-} from '../../valueList';
+import { EXCITATION_FIELDS, FIBER_FIELDS, VIRUS_FIELDS, optoSetupCompleteness } from '../../domain/optoEditorFields';
+import type { OptoFieldDef } from '../../domain/optoEditorFields';
 import Button from '../../components/ui/Button';
+import { useState } from 'react';
+import type { ReactNode } from 'react';
+import ConfirmDialog from '../../components/Modal/ConfirmDialog';
 
-/** A single configurable optogenetics field (drives {@link renderField}). */
-interface OptoFieldDef {
-  name: string;
-  label: string;
-  type: string;
-  options?: string[];
-  placeholder?: string;
-  help?: string;
+/** Completed records can be folded away; typing never closes the record automatically. */
+function OptoRecord({ label, complete, children }: { label: string; complete: boolean; children: ReactNode }) {
+  const [expanded, setExpanded] = useState(!complete);
+  return <details className="opto-record" open={expanded} onToggle={(event) => setExpanded(event.currentTarget.open)}>
+    <summary>{label} <span>{complete ? 'Complete' : 'To finish'}</span></summary>
+    <div className="opto-record-fields">{children}</div>
+  </details>;
 }
 
 /**
@@ -46,83 +45,10 @@ interface OptoBlock {
  * `onUpdate({ optogenetics })`, mirroring the other Animal Editor sections.
  */
 
-// These names are EXACT lookup keys into trodes_to_nwb's device metadata (a miss raises
-// a ValueError). The bundled catalogs are offered as suggestions (datalist) for
-// discoverability, but free entry is preserved because a lab may add a custom device file.
-const EXCITATION_FIELDS: OptoFieldDef[] = [
-  { name: 'name', label: 'Setup name', type: 'text' },
-  { name: 'model_name', label: 'Hardware model name', type: 'datalist', options: optoExcitationModelNames() },
-  { name: 'description', label: 'Description', type: 'text' },
-  { name: 'wavelength_in_nm', label: 'Wavelength (nm)', type: 'number', placeholder: 'e.g. 473' },
-  { name: 'power_in_W', label: 'Source power (W)', type: 'number', placeholder: 'e.g. 0.01 (= 10 mW)' },
-  { name: 'intensity_in_W_per_m2', label: 'Intensity (W/m²)', type: 'number', placeholder: 'e.g. 1.0' },
-];
-
-const FIBER_FIELDS: OptoFieldDef[] = [
-  { name: 'name', label: 'Fiber implant name', type: 'text' },
-  { name: 'hardware_name', label: 'Fiber hardware model', type: 'datalist', options: opticalFiberModelNames() },
-  { name: 'implanted_fiber_description', label: 'Implant description', type: 'text' },
-  { name: 'hemisphere', label: 'Hemisphere', type: 'select', options: ['left', 'right'] },
-  { name: 'location', label: 'Location', type: 'text' },
-  { name: 'ap_in_mm', label: 'AP (mm)', type: 'number' },
-  { name: 'ml_in_mm', label: 'ML (mm)', type: 'number' },
-  { name: 'dv_in_mm', label: 'DV (mm)', type: 'number' },
-  { name: 'roll_in_deg', label: 'Roll (deg)', type: 'number' },
-  { name: 'pitch_in_deg', label: 'Pitch (deg)', type: 'number' },
-  { name: 'yaw_in_deg', label: 'Yaw (deg)', type: 'number' },
-  // Coordinate reference — required by trodes_to_nwb (read unconditionally).
-  {
-    name: 'reference',
-    label: 'Coordinate reference',
-    type: 'text',
-    placeholder: 'e.g. bregma',
-    help: 'Stereotaxic reference for the AP/ML/DV coordinates.',
-  },
-];
-
-const VIRUS_FIELDS: OptoFieldDef[] = [
-  { name: 'name', label: 'Injection name', type: 'text' },
-  { name: 'description', label: 'Description', type: 'text' },
-  { name: 'virus_name', label: 'Virus name', type: 'datalist', options: virusNames() },
-  // volume_in_uL is the converter spelling; the export also emits volume_in_ul.
-  { name: 'volume_in_uL', label: 'Volume (µL)', type: 'number' },
-  { name: 'titer_in_vg_per_ml', label: 'Titer (vg/mL)', type: 'number' },
-  { name: 'hemisphere', label: 'Hemisphere', type: 'select', options: ['left', 'right'] },
-  { name: 'location', label: 'Location', type: 'text' },
-  { name: 'ap_in_mm', label: 'AP (mm)', type: 'number' },
-  { name: 'ml_in_mm', label: 'ML (mm)', type: 'number' },
-  { name: 'dv_in_mm', label: 'DV (mm)', type: 'number' },
-  { name: 'roll_in_deg', label: 'Roll (deg)', type: 'number' },
-  { name: 'pitch_in_deg', label: 'Pitch (deg)', type: 'number' },
-  { name: 'yaw_in_deg', label: 'Yaw (deg)', type: 'number' },
-  // Coordinate reference — required by trodes_to_nwb (read unconditionally).
-  {
-    name: 'reference',
-    label: 'Coordinate reference',
-    type: 'text',
-    placeholder: 'e.g. bregma',
-    help: 'Stereotaxic reference for the AP/ML/DV coordinates.',
-  },
-];
-
 /** Empty item for a section, with every field defaulted to a controllable value. */
 function emptyItem(fields: OptoFieldDef[]): Record<string, unknown> {
   // Every field starts as '' so the input is controlled and the required check fires.
   return Object.fromEntries(fields.map((f): [string, string] => [f.name, '']));
-}
-
-/** True when a value is a non-empty scalar (0 counts as filled; '' / null / undefined do not). */
-function isFilled(value: unknown): boolean {
-  return value !== undefined && value !== null && String(value).trim() !== '';
-}
-
-/**
- * True when an array has at least one item with EVERY one of `fields` filled in. Used for
- * the completeness checklist so it reflects export-readiness (all converter/schema-required
- * fields present), not merely that a row was added.
- */
-function hasCompleteItem(items: unknown, fields: OptoFieldDef[]): boolean {
-  return Array.isArray(items) && items.some((it) => fields.every((f) => isFilled(it?.[f.name])));
 }
 
 /** A fresh, enabled-but-empty optogenetics block (one excitation source, no fibers/viruses). */
@@ -144,16 +70,17 @@ function parseFieldValue(type: string, raw: string): string | number {
 }
 
 interface OptogeneticsStepProps {
-  /** The owning animal; only `optogenetics` is read (tolerant of corrupt/absent shapes). */
-  animal?: { optogenetics?: unknown } | null;
+  /** The owning animal; `optogenetics` and its disabled draft are read (tolerant of corrupt/absent shapes). */
+  animal?: { optogenetics?: unknown; optogeneticsDraft?: unknown } | null;
   /** Commit callback — receives `{ optogenetics }` (a block, or null when disabled). */
-  onUpdate: (update: { optogenetics: unknown }) => void;
+  onUpdate: (update: { optogenetics: unknown; optogeneticsDraft?: unknown }) => void;
 }
 
 /**
  * Workspace optogenetics editor — see the module header for the enabled/off contract.
  */
 export default function OptogeneticsStep({ animal, onUpdate }: OptogeneticsStepProps) {
+  const [pendingRemoval, setPendingRemoval] = useState<{ key: 'optical_fiber' | 'virus_injection'; index: number } | null>(null);
   // Treat opto as ENABLED only when it is a real record. A corrupt persisted/imported scalar
   // (e.g. `optogenetics: "x"`) reads as OFF — the safe default — rather than crashing. When
   // enabled, coerce the three nested lists to arrays so a malformed shape (e.g.
@@ -180,7 +107,12 @@ export default function OptogeneticsStep({ animal, onUpdate }: OptogeneticsStepP
 
   const commit = (next: Record<string, unknown> | null) => onUpdate({ optogenetics: next });
 
-  const setEnabled = (on: boolean) => commit(on ? defaultOptogenetics() : null);
+  const saved = animal?.optogeneticsDraft;
+  const savedSetup = saved && typeof saved === 'object' && !Array.isArray(saved)
+    ? saved as Record<string, unknown> : null;
+  const setEnabled = (on: boolean) => onUpdate(on
+    ? { optogenetics: savedSetup ?? defaultOptogenetics(), optogeneticsDraft: null }
+    : { optogenetics: null, optogeneticsDraft: optoRecord });
 
   // Update a scalar field on the (single) excitation source.
   const updateSource = (field: OptoFieldDef, value: string) => {
@@ -200,7 +132,11 @@ export default function OptogeneticsStep({ animal, onUpdate }: OptogeneticsStepP
 
   const removeItem = (key: 'optical_fiber' | 'virus_injection', index: number) => {
     if (!opto) return;
-    commit({ ...opto, [key]: opto[key].filter((_, i) => i !== index) });
+    if (Object.values(opto[key][index] ?? {}).some((value) => value != null && String(value).trim() !== '')) {
+      setPendingRemoval({ key, index });
+    } else {
+      commit({ ...opto, [key]: opto[key].filter((_, i) => i !== index) });
+    }
   };
 
   const updateItem = (key: 'optical_fiber' | 'virus_injection', index: number, field: OptoFieldDef, value: string) => {
@@ -222,8 +158,8 @@ export default function OptogeneticsStep({ animal, onUpdate }: OptogeneticsStepP
     if (field.type === 'datalist') {
       const listId = `${id}-list`;
       return (
-        <label key={field.name} htmlFor={id} className="opto-field">
-          <span>{field.label}</span>
+        <label key={field.name} htmlFor={id} className="opto-field form-field-label">
+          <span>{field.label} <span className="required-marker" aria-hidden="true">*</span></span>
           <input
             id={id}
             type="text"
@@ -232,6 +168,7 @@ export default function OptogeneticsStep({ animal, onUpdate }: OptogeneticsStepP
             value={(value as string | number | undefined) ?? ''}
             onChange={(e) => onChange(field, e.target.value)}
             aria-describedby={helpId}
+            aria-required="true"
           />
           <datalist id={listId}>
             {field.options!.map((opt) => (
@@ -244,13 +181,14 @@ export default function OptogeneticsStep({ animal, onUpdate }: OptogeneticsStepP
     }
     if (field.type === 'select') {
       return (
-        <label key={field.name} htmlFor={id} className="opto-field">
-          <span>{field.label}</span>
+        <label key={field.name} htmlFor={id} className="opto-field form-field-label">
+          <span>{field.label} <span className="required-marker" aria-hidden="true">*</span></span>
           <select
             id={id}
             value={(value as string | number | undefined) ?? ''}
             onChange={(e) => onChange(field, e.target.value)}
             aria-describedby={helpId}
+            aria-required="true"
           >
             <option value="">— select —</option>
             {field.options!.map((opt) => (
@@ -262,8 +200,8 @@ export default function OptogeneticsStep({ animal, onUpdate }: OptogeneticsStepP
       );
     }
     return (
-      <label key={field.name} htmlFor={id} className="opto-field">
-        <span>{field.label}</span>
+      <label key={field.name} htmlFor={id} className="opto-field form-field-label">
+        <span>{field.label} <span className="required-marker" aria-hidden="true">*</span></span>
         <input
           id={id}
           type={field.type}
@@ -272,6 +210,7 @@ export default function OptogeneticsStep({ animal, onUpdate }: OptogeneticsStepP
           value={(value as string | number | undefined) ?? ''}
           onChange={(e) => onChange(field, e.target.value)}
           aria-describedby={helpId}
+            aria-required="true"
         />
         {helpNode}
       </label>
@@ -279,18 +218,13 @@ export default function OptogeneticsStep({ animal, onUpdate }: OptogeneticsStepP
   };
 
   // Completeness mirrors the converter gate (and the partial_configuration export rule).
-  const completeness = opto
-    ? {
-        // "Complete" means a fully-filled row (every required field), not just an added /
-        // named one — so the checklist doesn't read done while required fields are blank.
-        source: hasCompleteItem(opto.opto_excitation_source, EXCITATION_FIELDS),
-        fiber: hasCompleteItem(opto.optical_fiber, FIBER_FIELDS),
-        virus: hasCompleteItem(opto.virus_injection, VIRUS_FIELDS),
-        software:
-          typeof opto.optogenetic_stimulation_software === 'string' &&
-          opto.optogenetic_stimulation_software.trim() !== '',
-      }
-    : null;
+  const sectionReadiness = optoSetupCompleteness(opto);
+  const completeness = opto ? {
+    source: sectionReadiness.opto_excitation_source,
+    fiber: sectionReadiness.optical_fiber,
+    virus: sectionReadiness.virus_injection,
+    software: sectionReadiness.optogenetic_stimulation_software,
+  } : null;
   const isComplete = completeness && Object.values(completeness).every(Boolean);
 
   return (
@@ -302,12 +236,9 @@ export default function OptogeneticsStep({ animal, onUpdate }: OptogeneticsStepP
           actually STIMULATED is recorded per recording day in that day's Epochs step (FsGUI
           protocols), scoped to selected epochs — and is OPTIONAL: an opto-implanted animal can run
           no stimulation on a day, or only during some epochs, and that is a normal, valid state. */}
-      <p className="help-text">
-        This is the animal&apos;s <strong>implanted opto setup</strong> (excitation source, optical
-        fiber, virus injection, stimulation software) — set it once here. What was actually
-        stimulated is recorded per recording day in that day&apos;s Epochs step, scoped to the epochs
-        it ran; a day or epoch with no stimulation needs nothing here.
-      </p>
+      {enabled && <p className="help-text">
+        Animal default. Existing recordings keep their saved setup. Enter the implanted source, fibers, virus injections and stimulation software; starred fields are required before export.
+      </p>}
 
       <label className="opto-enable" htmlFor="opto-enabled">
         <input
@@ -321,8 +252,7 @@ export default function OptogeneticsStep({ animal, onUpdate }: OptogeneticsStepP
 
       {!enabled && (
         <p className="help-text">
-          Optogenetics is off. No optogenetics metadata will be exported. Turn it on only
-          if this animal’s recordings include optogenetic stimulation.
+          {savedSetup ? 'Saved setup retained; enable to restore it.' : 'No stimulation setup.'} Existing recordings keep their saved setup.
         </p>
       )}
 
@@ -330,24 +260,21 @@ export default function OptogeneticsStep({ animal, onUpdate }: OptogeneticsStepP
         <>
           {completeness && !isComplete && (
             <p className="opto-incomplete" role="status">
-              This app blocks export until every optogenetics section below is complete; still
-              missing: {' '}
+              Complete before export: {' '}
               {[
                 !completeness.source && 'a complete excitation source',
                 !completeness.fiber && 'a complete optical fiber',
                 !completeness.virus && 'a complete virus injection',
                 !completeness.software && 'the stimulation software name',
               ].filter(Boolean).join(', ')}.
-              {' '}
-              Separately, if a partial file like this were fed straight to the conversion tool, it
-              would silently drop the <strong>entire</strong> optogenetics block with no error — which
-              is exactly what this export gate prevents.
+
             </p>
           )}
 
           {/* Excitation source — exactly one (trodes_to_nwb rejects more than one). */}
-          <fieldset className="opto-section">
+          <fieldset className="opto-section form-field-group">
             <legend>Excitation source</legend>
+            <OptoRecord label={String(opto.opto_excitation_source[0]?.name || 'Source details')} complete={sectionReadiness.opto_excitation_source}>
             <div className="form-container">
               {EXCITATION_FIELDS.map((field) =>
                 renderField(
@@ -358,23 +285,23 @@ export default function OptogeneticsStep({ animal, onUpdate }: OptogeneticsStepP
                 )
               )}
             </div>
+            </OptoRecord>
           </fieldset>
 
           {/* Optical fibers — one or more. */}
-          <fieldset className="opto-section">
+          <fieldset className="opto-section form-field-group">
             <legend>Optical fibers</legend>
             {opto.optical_fiber.map((item, index) => (
               <div key={`fiber-${index}`} className="opto-item">
-                <div className="form-container">
-                  {FIBER_FIELDS.map((field) =>
-                    renderField(
-                      field,
-                      item[field.name],
-                      (f, v) => updateItem('optical_fiber', index, f, v),
-                      `opto-fiber-${index}`
-                    )
-                  )}
-                </div>
+                <OptoRecord label={String(item.name || `Fiber ${index + 1}`)} complete={optoSetupCompleteness({ optical_fiber: [item] }).optical_fiber}>
+                {['Identity & location', 'Coordinates & angles'].map((group, groupIndex) => <fieldset key={group} className="form-field-group">
+                  <legend>{group}</legend>
+                  <div className="form-container">
+                    {FIBER_FIELDS.filter((field) => /_in_mm$|_in_deg$|^reference$/.test(field.name) === (groupIndex === 1)).map((field) =>
+                      renderField(field, item[field.name], (f, v) => updateItem('optical_fiber', index, f, v), `opto-fiber-${index}`)
+                    )}
+                  </div>
+                </fieldset>)}
                 <Button
                   variant="secondary"
                   onClick={() => removeItem('optical_fiber', index)}
@@ -382,6 +309,7 @@ export default function OptogeneticsStep({ animal, onUpdate }: OptogeneticsStepP
                 >
                   Remove fiber
                 </Button>
+                </OptoRecord>
               </div>
             ))}
             <Button
@@ -393,20 +321,19 @@ export default function OptogeneticsStep({ animal, onUpdate }: OptogeneticsStepP
           </fieldset>
 
           {/* Virus injections — one or more. */}
-          <fieldset className="opto-section">
+          <fieldset className="opto-section form-field-group">
             <legend>Virus injections</legend>
             {opto.virus_injection.map((item, index) => (
               <div key={`virus-${index}`} className="opto-item">
-                <div className="form-container">
-                  {VIRUS_FIELDS.map((field) =>
-                    renderField(
-                      field,
-                      item[field.name],
-                      (f, v) => updateItem('virus_injection', index, f, v),
-                      `opto-virus-${index}`
-                    )
-                  )}
-                </div>
+                <OptoRecord label={String(item.name || `Injection ${index + 1}`)} complete={optoSetupCompleteness({ virus_injection: [item] }).virus_injection}>
+                {['Identity & location', 'Coordinates & angles'].map((group, groupIndex) => <fieldset key={group} className="form-field-group">
+                  <legend>{group}</legend>
+                  <div className="form-container">
+                    {VIRUS_FIELDS.filter((field) => /_in_mm$|_in_deg$|^reference$/.test(field.name) === (groupIndex === 1)).map((field) =>
+                      renderField(field, item[field.name], (f, v) => updateItem('virus_injection', index, f, v), `opto-virus-${index}`)
+                    )}
+                  </div>
+                </fieldset>)}
                 <Button
                   variant="secondary"
                   onClick={() => removeItem('virus_injection', index)}
@@ -414,6 +341,7 @@ export default function OptogeneticsStep({ animal, onUpdate }: OptogeneticsStepP
                 >
                   Remove injection
                 </Button>
+                </OptoRecord>
               </div>
             ))}
             <Button
@@ -425,13 +353,14 @@ export default function OptogeneticsStep({ animal, onUpdate }: OptogeneticsStepP
           </fieldset>
 
           {/* Stimulation software (converter gate key). */}
-          <fieldset className="opto-section">
+          <fieldset className="opto-section form-field-group">
             <legend>Stimulation software</legend>
-            <label htmlFor="opto-software" className="opto-field">
-              <span>Optogenetic stimulation software</span>
+            <label htmlFor="opto-software" className="opto-field form-field-label">
+              <span>Optogenetic stimulation software <span className="required-marker" aria-hidden="true">*</span></span>
               <input
                 id="opto-software"
                 type="text"
+                aria-required="true"
                 value={(opto.optogenetic_stimulation_software as string | undefined) ?? ''}
                 onChange={(e) =>
                   commit({ ...opto, optogenetic_stimulation_software: e.target.value })
@@ -441,6 +370,19 @@ export default function OptogeneticsStep({ animal, onUpdate }: OptogeneticsStepP
           </fieldset>
         </>
       )}
+      <ConfirmDialog
+        isOpen={pendingRemoval !== null}
+        title={pendingRemoval?.key === 'optical_fiber' ? 'Remove this optical fiber?' : 'Remove this virus injection?'}
+        message="This removes the entered record from the animal’s setup. Existing recording days keep their own setup."
+        confirmLabel="Remove record"
+        cancelLabel="Keep record"
+        destructive
+        onCancel={() => setPendingRemoval(null)}
+        onConfirm={() => {
+          if (opto && pendingRemoval) commit({ ...opto, [pendingRemoval.key]: opto[pendingRemoval.key].filter((_, i) => i !== pendingRemoval.index) });
+          setPendingRemoval(null);
+        }}
+      />
     </section>
   );
 }

@@ -86,8 +86,7 @@ export default function DayList({
           )
         }
       >
-        Add the first recording day to log what the animal did and where the files are — the next
-        day will pre-fill from it, so you only edit what changed.
+        Choose a recording date above to begin. Unfinished days will appear here.
       </EmptyState>
     );
   }
@@ -135,7 +134,7 @@ export default function DayList({
                   <span className={styles.dayDate}>{dayId}</span>
                   <span className={styles.daySessionId}>
                     Saved record missing or corrupt —{' '}
-                    <a href={`#/animal/${animalId}/export`}>review in this animal&apos;s Validation &amp; Export</a>.
+                    <a href={`#/animal/${animalId}/export`}>review in this animal&apos;s Review &amp; export</a>.
                   </span>
                 </td>
                 <td className={styles.statusCell}>
@@ -199,7 +198,7 @@ export default function DayList({
                   {row.date || dayId}
                 </a>
                 {isOrphan && <span className={styles.dayOrphanNote}> ⚠ not in day list</span>}
-                {row.sessionDescription && (
+                {row.sessionDescription && !row.sessionDescription.startsWith('Recording session for ') && (
                   <span
                     className={styles.daySessionDesc}
                     data-testid="day-session-desc"

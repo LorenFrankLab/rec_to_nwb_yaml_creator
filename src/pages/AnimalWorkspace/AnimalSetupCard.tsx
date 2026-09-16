@@ -4,10 +4,12 @@ import Button from '../../components/ui/Button';
 
 /**
  * The static per-section hints, keyed by the setup-section key. They state honestly WHEN a section
- * applies — none is mandatory, because a behavior-only day needs no electrodes (overview decision 7).
+ * applies — animal facts and team are required for export; hardware depends on the experiment.
  * The section list + its status/verb now come from the view-model; only this advisory copy is local.
  */
 const SECTION_HINTS: Record<string, string> = {
+  identity: 'required before export',
+  team: 'defaults for new days',
   'electrode-groups': 'if ephys',
   'recording-system': 'data acquisition',
   cameras: 'if video',
@@ -21,6 +23,7 @@ interface AnimalSetupCardProps {
   hasOtherAnimals: boolean;
   /** Opens the copy-from-animal dialog. */
   onCopyFromAnimal: () => void;
+  resumeHref: string;
 }
 
 /**
@@ -30,15 +33,48 @@ interface AnimalSetupCardProps {
  * the card can't tell the user a section is fine while the nav shows it red. The parent decides
  * WHETHER to render it (it disappears once the animal is established).
  */
-export default function AnimalSetupCard({ sections, hasOtherAnimals, onCopyFromAnimal }: AnimalSetupCardProps) {
+export default function AnimalSetupCard({ sections, hasOtherAnimals, onCopyFromAnimal, resumeHref }: AnimalSetupCardProps) {
+  const renderSection = (section: SectionViewModel) => {
+    // Three honest states that AGREE with the section-nav (decision 11): a section that holds
+    // an export-BLOCKING error reads "Needs fixing" (never "Done"), so the onboarding card
+    // can't tell the user a section is fine while the nav shows it red. The view-model already
+    // mapped the status; `done` (ready) is the default green pill and contributes no modifier.
+    const itemModifier =
+      section.status === 'error'
+        ? styles.setupCardItemBlocking
+        : section.status === 'todo'
+          ? styles.setupCardItemTodo
+          : '';
+    return (
+      <li key={section.key} className={`${styles.setupCardItem} ${itemModifier}`}>
+        <span className={styles.setupCardItemName}>{section.label}</span>
+        <span className={styles.setupCardItemHint}>{SECTION_HINTS[section.key]}</span>
+        <span className={styles.setupCardItemState}>{section.summary}</span>
+        <a
+          className={styles.setupCardItemAction}
+          href={section.action?.href}
+          // A links-list reader hears six actions; name each by its section
+          // ("Set up Cameras", not a non-unique "Set up →"). The arrow is decorative.
+          aria-label={`${section.action?.label} ${section.label}`}
+        >
+          {section.action?.label} <span aria-hidden="true">→</span>
+        </a>
+      </li>
+    );
+  };
+  const hardware = sections.filter((section) => !['identity', 'team', 'recording-system'].includes(section.key));
+  const hardwareIssues = hardware.filter((section) => section.status === 'error').length;
+  const remaining = sections.filter((section) => section.status === 'error' ||
+    (['identity', 'team', 'recording-system'].includes(section.key) && section.status === 'todo'));
   return (
-    <section className={styles.setupCard} aria-label="Set up this animal">
+    <details className={styles.setupReminder} aria-label="Set up this animal">
+      <summary>Setup to finish: {remaining.map((section) => section.label).join(', ') || 'Review applicable hardware'}</summary>
+      <div className={styles.setupCard}>
       <h3 className={styles.setupCardHeading}>Set up this animal</h3>
       <p className={styles.setupCardIntro}>
-        Configure the shared hardware this animal&apos;s recording days will
-        reference. Add only what your recordings use — a behavior-only day needs no
-        electrodes, and each section is referenced per day.
+        Finish animal facts and reusable defaults when you have them. You can log recording days while setup is incomplete.
       </p>
+      <p><a href={resumeHref} className={styles.setupCardItemAction}>Resume setup</a></p>
       {hasOtherAnimals && (
         <Button
           variant="secondary"
@@ -50,35 +86,13 @@ export default function AnimalSetupCard({ sections, hasOtherAnimals, onCopyFromA
         </Button>
       )}
       <ul className={styles.setupCardList}>
-        {sections.map((section) => {
-          // Three honest states that AGREE with the section-nav (decision 11): a section that holds
-          // an export-BLOCKING error reads "Needs fixing" (never "Done"), so the onboarding card
-          // can't tell the user a section is fine while the nav shows it red. The view-model already
-          // mapped the status; `done` (ready) is the default green pill and contributes no modifier.
-          const itemModifier =
-            section.status === 'error'
-              ? styles.setupCardItemBlocking
-              : section.status === 'todo'
-                ? styles.setupCardItemTodo
-                : '';
-          return (
-            <li key={section.key} className={`${styles.setupCardItem} ${itemModifier}`}>
-              <span className={styles.setupCardItemName}>{section.label}</span>
-              <span className={styles.setupCardItemHint}>{SECTION_HINTS[section.key]}</span>
-              <span className={styles.setupCardItemState}>{section.summary}</span>
-              <a
-                className={styles.setupCardItemAction}
-                href={section.action?.href}
-                // A links-list reader hears six actions; name each by its section
-                // ("Set up Cameras", not a non-unique "Set up →"). The arrow is decorative.
-                aria-label={`${section.action?.label} ${section.label}`}
-              >
-                {section.action?.label} <span aria-hidden="true">→</span>
-              </a>
-            </li>
-          );
-        })}
+        {sections.filter((section) => ['identity', 'team', 'recording-system'].includes(section.key) && section.status !== 'ready').map(renderSection)}
       </ul>
-    </section>
+      <details className={styles.setupHardware}>
+        <summary>Hardware setup{hardwareIssues > 0 ? ` · ${hardwareIssues} to review` : ' · as needed'}</summary>
+        <ul className={styles.setupCardList}>{hardware.map(renderSection)}</ul>
+      </details>
+      </div>
+    </details>
   );
 }

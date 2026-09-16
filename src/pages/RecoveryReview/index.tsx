@@ -116,7 +116,7 @@ export function RecoveryReview() {
       heading="Review recovered data"
       crumb="Review recovered data"
       lede={
-        discardedLoad ? (
+        vm.allClear && !discardedLoad ? null : discardedLoad ? (
           <>
             When the workspace loaded, the saved data <strong>could not be restored and was discarded</strong>.
             The app started with an empty workspace, so there may be no recovered records to review.

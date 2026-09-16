@@ -126,7 +126,7 @@ describe('AnimalView — electrode-groups tab (Phase 3-2)', () => {
     ).toBeInTheDocument();
   });
 
-  it('regenerates channel maps to local ids when device_type changes via the tab', async () => {
+  it('requires an explicit replacement when a device change would destroy the acquisition mapping', async () => {
     const user = userEvent.setup();
     renderView('electrode-groups');
 
@@ -137,12 +137,9 @@ describe('AnimalView — electrode-groups tab (Phase 3-2)', () => {
     await user.selectOptions(screen.getByLabelText(/device type/i), FOUR_SHANK_DEVICE);
     await user.click(screen.getByRole('button', { name: /save electrode group configuration/i }));
 
-    const maps = ntrodeMaps();
-    expect(maps).toHaveLength(4); // 4-shank probe → 4 ntrodes, old tetrode map replaced
-    expect(maps.every((m) => String(m.electrode_group_id) === '0')).toBe(true);
-    expect(new Set(maps.map((m) => m.ntrode_id)).size).toBe(4);
-    // Each shank's map resets to LOCAL electrode ids (keys 0..N-1), not global hardware channels.
-    expect(Object.keys(maps[0].map)).toEqual(expect.arrayContaining(['0', '1', '2', '3']));
+    expect(ntrodeMaps()).toHaveLength(1);
+    expect(ntrodeMaps()[0].ntrode_id).toBe(1);
+    expect(screen.getByText(/different channel layout/)).toBeInTheDocument();
   });
 });
 

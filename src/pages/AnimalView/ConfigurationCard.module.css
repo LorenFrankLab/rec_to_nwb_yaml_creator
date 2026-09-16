@@ -10,6 +10,7 @@
 
 .head {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: var(--spacing-md);
@@ -17,6 +18,9 @@
 }
 
 .title {
+  flex: 1 1 14rem;
+  min-width: 0;
+  overflow-wrap: anywhere;
   margin: 0;
   font-size: var(--font-size-lg);
 }

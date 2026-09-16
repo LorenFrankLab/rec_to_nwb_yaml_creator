@@ -53,7 +53,7 @@ describe('Animals home — table', () => {
       '#/animal/laurent/days'
     );
     // Status rollups are surfaced (ready for the valid day; no-days for the fresh animal).
-    expect(screen.getByText('1 ready')).toBeInTheDocument();
+    expect(screen.getByText('1 to download')).toBeInTheDocument();
     expect(screen.getByText('No recording days')).toBeInTheDocument();
   });
 

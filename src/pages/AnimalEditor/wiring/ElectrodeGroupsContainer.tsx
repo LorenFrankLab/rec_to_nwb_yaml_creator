@@ -1,8 +1,8 @@
 /**
  * ElectrodeGroupsContainer — the versioned electrode-group section + its wiring.
  *
- * Owns add/edit/delete of electrode groups (including the channel-map AUTO-REGENERATION when a
- * group's device_type changes), copy-from-animal, and the group modals. Hosted by the tabbed
+ * Owns electrode-group edits, generated maps for new probes, explicit mapping corrections,
+ * copy-from-animal, and the group modals. Hosted by the tabbed
  * Animal View's electrode-groups tab. (Originally extracted from the legacy Animal Editor stepper so
  * both hosts shared one implementation; the stepper was removed in Phase 5.)
  */
@@ -11,10 +11,11 @@ import type { MutableRefObject } from 'react';
 import { useStoreContext } from '../../../state/StoreContext';
 import {
   getAnimalDevices,
+  getConfigHistory,
   getAnimalElectrodeGroups,
   getAnimalNtrodeMaps,
 } from '../../../state/workspaceSelectors';
-import type { ElectrodeGroup, NtrodeMap } from '../../../state/workspaceTypes';
+import type { Day, ElectrodeGroup, NtrodeMap } from '../../../state/workspaceTypes';
 import { ConfirmDialog } from '../../../components/Modal';
 import { generateChannelMapsForGroup, nextNtrodeId } from '../../../utils/channelMapUtils';
 import {
@@ -22,6 +23,8 @@ import {
   normalizeIdKey,
   normalizeNtrodeMapWithDefaults,
 } from '../../../utils/deviceNormalization';
+import ChannelMappingModal from '../ChannelMappingModal';
+import Button from '../../../components/ui/Button';
 import ElectrodeGroupsStep from '../ElectrodeGroupsStep';
 import ElectrodeGroupModal from '../ElectrodeGroupModal';
 import type { ElectrodeGroupSaveData } from '../ElectrodeGroupModal';
@@ -62,6 +65,7 @@ export default function ElectrodeGroupsContainer({ animalId, addRef, onPendingEd
   const { model, actions } = useStoreContext();
   const animal = animalId ? model.workspace.animals[animalId] : null;
 
+  const [mappingOpen, setMappingOpen] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<'add' | 'edit'>('add');
   const [editingGroup, setEditingGroup] = useState<ElectrodeGroup | null>(null);
@@ -75,9 +79,9 @@ export default function ElectrodeGroupsContainer({ animalId, addRef, onPendingEd
   // Report "has pending edits" (the add/edit modal being open) to a host that guards navigation.
   // Cleanup resets to false on unmount so a host doesn't hold a stale `true` after the tab is left.
   useEffect(() => {
-    onPendingEditsChange?.(modalOpen);
+    onPendingEditsChange?.(modalOpen || mappingOpen);
     return () => onPendingEditsChange?.(false);
-  }, [modalOpen, onPendingEditsChange]);
+  }, [modalOpen, mappingOpen, onPendingEditsChange]);
 
   // Register the "add group" handler with the host's Alt+N shortcut ref while mounted. The
   // handler only calls stable setState setters, so a one-time registration is sufficient.
@@ -116,7 +120,8 @@ export default function ElectrodeGroupsContainer({ animalId, addRef, onPendingEd
   }
 
   /**
-   * Save electrode group (add or edit). Auto-generates channel maps if device_type changed.
+   * Save a new group or a compatible edit. New groups get generated maps; existing acquisition
+   * IDs and electrode order are preserved. A different channel layout requires explicit replacement.
    * Supports bulk creation via the `count` parameter (add mode only).
    */
   function handleSaveGroup(groupData: ElectrodeGroupSaveData) {
@@ -159,7 +164,14 @@ export default function ElectrodeGroupsContainer({ animalId, addRef, onPendingEd
       // Check if device_type changed.
       const deviceTypeChanged = editingGroup!.device_type !== normalizedGroup.device_type;
       if (deviceTypeChanged) {
-        groupsToGenerateMapsFor.push(normalizedGroup);
+        const previousMaps = ntrodeMaps.filter((map) => map.electrode_group_id === groupId);
+        const proposed = generateChannelMapsForGroup(normalizedGroup);
+        if (previousMaps.length !== proposed.length || previousMaps.some((map, index) => Object.keys(map.map).length !== Object.keys(proposed[index].map).length)) {
+          showAlert('This probe has a different channel layout. For replacement hardware, create a new configuration, remove this group, and add its replacement. To correct a setup mistake, remove and recreate this group after reviewing affected days.', 'error');
+          return;
+        }
+        // Compatible geometry: retain the exact acquisition IDs, electrode order and failures.
+        // Anatomy/device-name edits must never silently regenerate a verified mapping.
       }
     }
 
@@ -287,6 +299,22 @@ export default function ElectrodeGroupsContainer({ animalId, addRef, onPendingEd
         onDelete={handleDeleteGroup}
         onCopy={handleCopyFromAnimal}
       />
+
+      {ntrodeMaps.length > 0 && <p>Generated channel maps need verification against the recording’s Trodes IDs and your probe wiring records.</p>}
+      {ntrodeMaps.length > 0 && <Button variant="neutral" data-field-path="ntrode_electrode_group_channel_map" onClick={() => setMappingOpen(true)}>
+        Edit / verify Trodes channel mapping
+      </Button>}
+      {mappingOpen && <ChannelMappingModal
+        maps={ntrodeMaps}
+        groups={electrodeGroups}
+        version={getConfigHistory(animal).slice(-1)[0]?.version}
+        dayCount={(Object.values(model.workspace.days) as Day[]).filter((day) => day.animalId === animalId && day.configurationVersion === getConfigHistory(animal).slice(-1)[0]?.version).length}
+        onClose={() => setMappingOpen(false)}
+        onSave={(maps) => {
+          try { actions.correctChannelMaps(animalId, maps); setMappingOpen(false); }
+          catch (error) { showAlert(error instanceof Error ? error.message : 'Could not save channel mapping.', 'error'); }
+        }}
+      />}
 
       <ElectrodeGroupModal
         isOpen={modalOpen}

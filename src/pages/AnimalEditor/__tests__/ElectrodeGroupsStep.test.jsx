@@ -186,7 +186,7 @@ describe('ElectrodeGroupsStep', () => {
   it('has Delete button for each group', () => {
     render(<ElectrodeGroupsStep animal={mockAnimal} onFieldUpdate={mockOnFieldUpdate} />);
 
-    const deleteButtons = screen.getAllByText('Delete');
+    const deleteButtons = screen.getAllByRole('button', { name: /Actions for electrode group/i });
     expect(deleteButtons).toHaveLength(2);
   });
 
@@ -202,8 +202,9 @@ describe('ElectrodeGroupsStep', () => {
       />
     );
 
-    const deleteButtons = screen.getAllByText('Delete');
+    const deleteButtons = screen.getAllByRole('button', { name: /Actions for electrode group/i });
     await user.click(deleteButtons[0]);
+    await user.click(screen.getByRole('menuitem', { name: /Delete electrode group 0/i }));
 
     expect(mockOnDelete).toHaveBeenCalledWith(
       expect.objectContaining({ id: 0 })
@@ -218,7 +219,7 @@ describe('ElectrodeGroupsStep', () => {
       />
     );
 
-    const button = screen.getByLabelText(/Delete electrode group 0/i);
+    const button = screen.getByLabelText(/Actions for electrode group 0/i);
     expect(button).toBeInTheDocument();
   });
 

@@ -7,6 +7,8 @@ import { pluralize } from '../../utils/pluralize';
 interface ConfigurationCardProps {
   /** The current-configuration card data built by the animal view-model. */
   card: AnimalConfigCardViewModel;
+  /** Hide the duplicate list when the group editor follows this card. */
+  showProbes?: boolean;
   /** Open the re-implant (new-configuration) flow. When omitted, the action button is hidden. */
   onNewConfiguration?: () => void;
   /** Record the current version's effective date (when omitted, the control is hidden). */
@@ -18,7 +20,7 @@ interface ConfigurationCardProps {
  * version + since-date + day count, the per-probe list (device type + coordinates), and the
  * re-implant action. Renders the card data it is handed.
  */
-export default function ConfigurationCard({ card, onNewConfiguration, onSetEffectiveDate }: ConfigurationCardProps) {
+export default function ConfigurationCard({ card, onNewConfiguration, onSetEffectiveDate, showProbes = true }: ConfigurationCardProps) {
   const [effectiveDate, setEffectiveDate] = useState('');
   const dateUnknown = card.sinceDate != null && card.effectiveDateKnown === false;
   const since = card.sinceDate
@@ -70,7 +72,7 @@ export default function ConfigurationCard({ card, onNewConfiguration, onSetEffec
           </span>
         </form>
       )}
-      {card.probes.length > 0 ? (
+      {showProbes && (card.probes.length > 0 ? (
         <ul className={styles.probes}>
           {card.probes.map((probe) => (
             <li key={probe.label} className={styles.probe}>
@@ -82,8 +84,8 @@ export default function ConfigurationCard({ card, onNewConfiguration, onSetEffec
           ))}
         </ul>
       ) : (
-        <p className={styles.noProbes}>No probes configured (behavior-only animal).</p>
-      )}
+        <p className={styles.noProbes}>No probes configured.</p>
+      ))}
     </section>
   );
 }

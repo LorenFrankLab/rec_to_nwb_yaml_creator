@@ -6,6 +6,7 @@ import type { Camera, TaskType } from '../../state/workspaceTypes';
 import type { TaskTypeDefinitionInput } from '../../state/taskCatalogActions';
 import './TaskTypeModal.scss';
 import Button from '../../components/ui/Button';
+import { RequiredMark, FieldRequirements, MissingFields } from '../../components/ui/FieldRequirements';
 
 /** Local form state for the task-type editor (scalars as strings, cameras as string keys). */
 interface TaskTypeFormData {
@@ -114,8 +115,9 @@ function TaskTypeForm({ mode, taskType = null, cameras, nameError = null, onSave
       }
     >
       <form className="task-type-modal-form">
+        <FieldRequirements />
         <div className="form-group">
-        <label htmlFor="task_name">Task name</label>
+        <label htmlFor="task_name">Task name <RequiredMark /></label>
         <input
           id="task_name"
           type="text"
@@ -139,7 +141,7 @@ function TaskTypeForm({ mode, taskType = null, cameras, nameError = null, onSave
       </div>
 
       <div className="form-group">
-        <label htmlFor="task_description">Description</label>
+        <label htmlFor="task_description">Description <RequiredMark /></label>
         <input
           id="task_description"
           type="text"
@@ -152,7 +154,7 @@ function TaskTypeForm({ mode, taskType = null, cameras, nameError = null, onSave
       </div>
 
       <div className="form-group">
-        <label htmlFor="task_environment">Environment</label>
+        <label htmlFor="task_environment">Environment <RequiredMark /></label>
         <input
           id="task_environment"
           type="text"
@@ -165,7 +167,7 @@ function TaskTypeForm({ mode, taskType = null, cameras, nameError = null, onSave
       </div>
 
       <fieldset className="form-group task-type-cameras">
-        <legend>Cameras used</legend>
+        <legend>Cameras used (optional)</legend>
         {cameras.length === 0 ? (
           <span className="help-text">No cameras defined on this animal yet (optional).</span>
         ) : (
@@ -191,6 +193,11 @@ function TaskTypeForm({ mode, taskType = null, cameras, nameError = null, onSave
         </span>
       </fieldset>
 
+        <MissingFields fields={[
+          !formData.task_name.trim() && 'task name',
+          !formData.task_description.trim() && 'description',
+          !formData.task_environment.trim() && 'environment',
+        ].filter(Boolean) as string[]} />
       </form>
     </Modal>
   );

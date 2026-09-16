@@ -80,16 +80,15 @@ describe('CamerasSection', () => {
       // Check table headers
       expect(screen.getByText(/^ID$/i)).toBeInTheDocument();
       expect(screen.getByText(/Name/i)).toBeInTheDocument();
-      expect(screen.getByText(/Manufacturer/i)).toBeInTheDocument();
-      expect(screen.getByText(/Model/i)).toBeInTheDocument();
-      expect(screen.getByText(/Meters per Pixel/i)).toBeInTheDocument();
+      expect(screen.getByRole('columnheader', { name: 'Hardware' })).toBeInTheDocument();
+      expect(screen.getByText(/Calibration \(m\/px\)/i)).toBeInTheDocument();
       expect(screen.getByText(/Status/i)).toBeInTheDocument();
 
       // Check camera data is displayed
       expect(screen.getByText('HomeBox_camera')).toBeInTheDocument();
       expect(screen.getByText('LinearTrack_camera')).toBeInTheDocument();
-      expect(screen.getAllByText('Manta').length).toBeGreaterThan(0); // Multiple cameras can have same manufacturer
-      expect(screen.getAllByText('G-146B').length).toBeGreaterThan(0); // Multiple cameras can have same model
+      expect(screen.getAllByText(/Manta · G-146B/).length).toBeGreaterThan(0); // Multiple cameras can have same manufacturer
+      expect(screen.getAllByText(/Manta · G-146B/).length).toBeGreaterThan(0); // Multiple cameras can have same model
       expect(screen.getByText('0.000842')).toBeInTheDocument();
       expect(screen.getByText('0.001')).toBeInTheDocument();
     });
@@ -101,9 +100,9 @@ describe('CamerasSection', () => {
 
       const table = screen.getByRole('table');
       const headers = within(table).getAllByRole('columnheader').map((h) => h.textContent);
-      expect(headers).toContain('Lens');
+      expect(headers).toContain('Hardware');
       // Both fixture cameras use a 16mm lens — the value is rendered in the rows.
-      expect(within(table).getAllByText('16mm').length).toBe(2);
+      expect(within(table).getAllByText('Lens: 16mm').length).toBe(2);
     });
   });
 
@@ -220,11 +219,12 @@ describe('CamerasSection', () => {
       );
 
       // Find all delete buttons
-      const deleteButtons = screen.getAllByRole('button', { name: /Delete camera 0/i });
+      const deleteButtons = screen.getAllByRole('button', { name: /Actions for camera 0/i });
       expect(deleteButtons.length).toBeGreaterThan(0);
 
       // Click first delete button
       await user.click(deleteButtons[0]);
+      await user.click(screen.getByRole('menuitem', { name: /Delete camera 0/i }));
 
       // Should call onDelete with camera
       expect(mockOnDelete).toHaveBeenCalledWith(
@@ -247,8 +247,9 @@ describe('CamerasSection', () => {
       expect(screen.getByText('HomeBox_camera')).toBeInTheDocument();
 
       // Find and click delete button
-      const deleteButtons = screen.getAllByRole('button', { name: /Delete camera 0/i });
+      const deleteButtons = screen.getAllByRole('button', { name: /Actions for camera 0/i });
       await user.click(deleteButtons[0]);
+      await user.click(screen.getByRole('menuitem', { name: /Delete camera 0/i }));
 
       // onDelete handler was called
       expect(mockOnDelete).toHaveBeenCalledTimes(1);

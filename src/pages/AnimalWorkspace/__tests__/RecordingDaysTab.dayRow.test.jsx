@@ -64,11 +64,11 @@ describe('RecordingDaysTab — day row contract (decision 12)', () => {
     expect(screen.getByRole('link', { name: /^2023-06-22$/ })).toBeInTheDocument();
   });
 
-  it('exposes the "Add Recording Days" button by its VISIBLE name (label parity, no hidden aria-label)', () => {
+  it('exposes the "Add multiple dates…" button by its VISIBLE name (label parity, no hidden aria-label)', () => {
     renderRealistic();
     // The accessible name must equal the visible text so voice control / screen readers find the
     // control by what it says — not a hidden "Show calendar" aria-label. (aria-expanded conveys state.)
-    const button = screen.getByRole('button', { name: 'Add Recording Days' });
+    const button = screen.getByRole('button', { name: 'Add multiple dates…' });
     expect(button).toHaveAttribute('aria-expanded', 'false');
     expect(screen.queryByRole('button', { name: /show calendar/i })).not.toBeInTheDocument();
   });
@@ -153,7 +153,7 @@ describe('RecordingDaysTab — day row contract (decision 12)', () => {
     expect(within(row).queryByText(/exported/i)).not.toBeInTheDocument();
   });
 
-  it('humanizes a raw schema key in the "Needs attention" reason (display only)', () => {
+  it('shows missing entry as Incomplete without exposing schema keys', () => {
     // S1 audit finding: the day-row status must not leak a raw snake_case schema key.
     // Empty a required string field so its blocking message leads with the key, and assert
     // the row sentence-cases it ("Experiment description …" not "experiment_description …").
@@ -161,7 +161,7 @@ describe('RecordingDaysTab — day row contract (decision 12)', () => {
       day.state = { draft: false, validated: false, exported: false };
       day.session.experiment_description = '   '; // whitespace-only → empty-pattern violation
     });
-    const status = screen.getByText(/^Needs attention — Experiment description/);
+    const status = screen.getByText('Not yet ready — still missing required information.', { exact: true });
     expect(status).toBeInTheDocument();
     expect(status).not.toHaveTextContent('experiment_description');
   });

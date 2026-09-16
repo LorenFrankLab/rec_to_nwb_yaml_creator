@@ -76,16 +76,18 @@ describe('DataAcqSection — catalog list', () => {
 
   it('deletes a system from the catalog (when more than one remains)', async () => {
     render(<DataAcqSection animal={animalWith([sg, np])} onFieldUpdate={onFieldUpdate} />);
-    await user.click(screen.getByRole('button', { name: /delete recording system Neuropixels_rig/i }));
+    await user.click(screen.getByRole('button', { name: /Actions for recording system Neuropixels_rig/i }));
+    await user.click(screen.getByRole('menuitem', { name: /delete recording system Neuropixels_rig/i }));
     expect(onFieldUpdate).toHaveBeenCalledWith('data_acq_device', [sg]);
   });
 
-  it('shows the Delete button for the last system but DISABLED (schema requires at least one)', () => {
+  it('disables deleting the last system in its action menu (schema requires at least one)', async () => {
     render(<DataAcqSection animal={animalWith([sg])} onFieldUpdate={onFieldUpdate} />);
     // Consistent with Electrode Groups / Cameras (Delete always present), but disabled for the last
     // entry so the catalog can't drop below the schema's minItems:1.
-    const del = screen.getByRole('button', { name: /delete recording system/i });
-    expect(del).toBeDisabled();
+    await user.click(screen.getByRole('button', { name: /Actions for recording system/i }));
+    const del = screen.getByRole('menuitem', { name: /delete recording system/i });
+    expect(del).toHaveAttribute('aria-disabled', 'true');
   });
 
   it('blocks adding a second system with a name already in the catalog', async () => {
@@ -130,7 +132,7 @@ describe('DataAcqSection — technical defaults (animal-level)', () => {
   it('edits raw_data_to_volts via technicalDefaults (not technical)', async () => {
     render(<DataAcqSection animal={animalWith([sg])} onFieldUpdate={onFieldUpdate} />);
     await user.click(screen.getByText(/Advanced Settings/i));
-    const rawData = screen.getByLabelText(/Raw Data to Volts/i);
+    const rawData = screen.getByLabelText(/Voltage conversion/i);
     await user.clear(rawData);
     await user.type(rawData, '0.25');
     await user.tab();
@@ -144,8 +146,8 @@ describe('DataAcqSection — technical defaults (animal-level)', () => {
 
   it('frames the catalog as the animal default a day can override (per-day recording system)', () => {
     render(<DataAcqSection animal={animalWith([sg])} onFieldUpdate={onFieldUpdate} />);
-    expect(screen.getByText(/recording systems this animal was recorded on/i)).toBeInTheDocument();
-    expect(screen.getByText(/each recording day uses one/i)).toBeInTheDocument();
+    expect(screen.getByText(/Add the systems used for this animal/i)).toBeInTheDocument();
+    expect(screen.getByText(/New recordings start with the default system/i)).toBeInTheDocument();
     // The old "future capability / no per-day version" framing is gone.
     expect(screen.queryByText(/future capability/i)).not.toBeInTheDocument();
   });

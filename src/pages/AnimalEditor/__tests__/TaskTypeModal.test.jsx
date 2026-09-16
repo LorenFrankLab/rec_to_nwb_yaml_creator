@@ -41,9 +41,10 @@ describe('TaskTypeModal', () => {
     expect(save).toBeDisabled();
 
     await user.type(screen.getByLabelText(/Task name/i), 'w-track');
-    await user.type(screen.getByLabelText('Description'), 'Alternation');
+    await user.type(screen.getByRole('textbox', { name: 'Description' }), 'Alternation');
     expect(save).toBeDisabled(); // environment still empty
-    await user.type(screen.getByLabelText('Environment'), 'W maze');
+    expect(screen.getByRole('status')).toHaveTextContent('To save: complete environment.');
+    await user.type(screen.getByRole('textbox', { name: 'Environment' }), 'W maze');
     expect(save).toBeEnabled();
   });
 
@@ -51,8 +52,8 @@ describe('TaskTypeModal', () => {
     const onSave = vi.fn();
     renderModal({ onSave });
     await user.type(screen.getByLabelText(/Task name/i), 'w-track');
-    await user.type(screen.getByLabelText('Description'), 'Alternation');
-    await user.type(screen.getByLabelText('Environment'), 'W maze');
+    await user.type(screen.getByRole('textbox', { name: 'Description' }), 'Alternation');
+    await user.type(screen.getByRole('textbox', { name: 'Environment' }), 'W maze');
     await user.click(screen.getByLabelText(/0 · box/));
     await user.click(screen.getByLabelText(/1 · track/));
     await user.click(screen.getByRole('button', { name: /Save task type/i }));

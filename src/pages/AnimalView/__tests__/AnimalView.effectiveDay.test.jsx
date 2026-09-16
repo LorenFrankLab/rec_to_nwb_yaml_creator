@@ -1,6 +1,6 @@
 /**
  * Tests for the dated config legibility + effective-setup-for-THIS-day review on the per-animal
- * Validation & Export tab (Phase 3-5, Tasks 3.4 + 3.3a — the valid-but-wrong defense).
+ * Review & export tab (Phase 3-5, Tasks 3.4 + 3.3a — the valid-but-wrong defense).
  *
  * A day pinned to an OLDER configuration version must show, read-only, what THAT day actually used
  * (dated config context + electrode groups from its pinned version) — labelled distinct from the
@@ -103,7 +103,7 @@ describe('AnimalView export tab — dated config legibility + effective-day revi
     const review = within(screen.getByTestId(`effective-${dayId}`)).getByRole('group', {
       name: /effective setup for this day/i,
     });
-    expect(within(review).getByText(/^Non-blocking warnings$/i).parentElement).toHaveTextContent(
+    expect(within(review).getByText(/^Validation warnings$/i).parentElement).toHaveTextContent(
       /2 warnings to review \(does not block export\)/i
     );
   });

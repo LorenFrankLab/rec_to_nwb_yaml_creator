@@ -1,3 +1,4 @@
+import { completeOptogenetics } from '../../../__tests__/fixtures/completeOptogenetics';
 /**
  * Tests for the section-nav optogenetics COUNT slot honesty (QA fix).
  *
@@ -17,12 +18,7 @@ import { buildRealisticWorkspace } from '../../../__tests__/fixtures/workspaceBu
 import { AnimalView } from '../index';
 
 /** All four export-gated opto fields present — a COMPLETE setup. */
-const COMPLETE_OPTO = {
-  opto_excitation_source: [{ name: 'laser_473' }],
-  optical_fiber: [{ name: 'fiber_A' }],
-  virus_injection: [{ name: 'AAV5' }],
-  optogenetic_stimulation_software: 'fsgui',
-};
+const COMPLETE_OPTO = completeOptogenetics();
 
 /** Only one of the four fields present — a PARTIAL setup (export-blocking). */
 const PARTIAL_OPTO = {
@@ -89,9 +85,9 @@ describe('AnimalView — section-nav optogenetics count honesty', () => {
     expect(within(link).queryByText('incomplete')).not.toBeInTheDocument();
   });
 
-  it('shows the hollow-○ "not set up" (no count) for a never-configured opto row', () => {
+  it('labels unused optogenetics honestly without an incomplete marker', () => {
     renderWithOpto(undefined);
-    const link = screen.getByRole('link', { name: /optogenetics — not set up/i });
+    const link = screen.getByRole('link', { name: /^optogenetics$/i });
     expect(link).toBeInTheDocument();
     // The TODO row shows the ○ ring instead of a count word.
     expect(within(link).queryByText('used')).not.toBeInTheDocument();

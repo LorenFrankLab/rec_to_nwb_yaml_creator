@@ -50,7 +50,7 @@ describe('AnimalView — configuration card', () => {
     renderView('electrode-groups');
     const card = screen.getByRole('region', { name: 'Configuration' });
     expect(within(card).getByText(/v1 \(current\) · effective 2023-06-22 · 1 day/)).toBeInTheDocument();
-    expect(within(card).getByText('Probe 0 · CA1')).toBeInTheDocument();
+    expect(within(card).queryByText('Probe 0 · CA1')).not.toBeInTheDocument(); // The editable groups table owns the probe list.
   });
 
   it('does not render the configuration card on the Days tab', () => {

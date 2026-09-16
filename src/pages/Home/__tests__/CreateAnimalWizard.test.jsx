@@ -82,9 +82,6 @@ function renderWizard(options = {}) {
  */
 async function fillIdentity(user, { subjectId = 'laurent' } = {}) {
   await user.type(screen.getByRole('textbox', { name: /Subject ID/i }), subjectId);
-  const weight = screen.getByLabelText(/Weight/i);
-  await user.clear(weight);
-  await user.type(weight, '450');
   // jsdom date inputs don't reliably accept segmented userEvent typing — set the value directly.
   fireEvent.change(screen.getByLabelText(/Date of Birth/i), { target: { value: '2025-01-02' } });
 }
@@ -95,13 +92,8 @@ describe('CreateAnimalWizard — structure', () => {
     const tablist = screen.getByRole('tablist', { name: /setup steps/i });
     const tabs = within(tablist).getAllByRole('tab');
     expect(tabs.map((t) => t.textContent)).toEqual([
-      expect.stringMatching(/Identity/),
-      expect.stringMatching(/Electrodes/),
-      expect.stringMatching(/Cameras/),
-      expect.stringMatching(/Optogenetics/),
-      expect.stringMatching(/Tasks/),
-      expect.stringMatching(/Recording system/),
-      expect.stringMatching(/Team/),
+      expect.stringMatching(/Identity/), expect.stringMatching(/Experiment & team/), expect.stringMatching(/Recording system/),
+      expect.stringMatching(/Electrodes/), expect.stringMatching(/Cameras/), expect.stringMatching(/Tasks/),
     ]);
     expect(within(tablist).getByRole('tab', { name: /Identity/ })).toHaveAttribute(
       'aria-selected',
@@ -109,13 +101,13 @@ describe('CreateAnimalWizard — structure', () => {
     );
   });
 
-  it('keeps the 7-step tablist on a single scroll row', () => {
+  it('keeps every setup step visible with wrapping navigation', () => {
     renderWizard();
     const tablist = screen.getByTestId('wizard-stepper');
-    expect(tablist).toHaveAttribute('data-layout', 'single-row-scroll');
-    expect(within(tablist).getAllByRole('tab')).toHaveLength(7);
+    expect(tablist).toHaveAttribute('data-layout', 'wrapping-steps');
+    expect(within(tablist).getAllByRole('tab')).toHaveLength(6);
     expect(cssRule('.stepper')).toMatch(/display:\s*flex/);
-    expect(cssRule('.stepper')).toMatch(/flex-wrap:\s*nowrap/);
+    expect(cssRule('.stepper')).toMatch(/flex-wrap:\s*wrap/);
     expect(cssRule('.stepper')).toMatch(/overflow-x:\s*auto/);
     expect(cssRule('.step')).toMatch(/flex:\s*0 0 auto/);
     expect(cssRule('.step')).toMatch(/white-space:\s*nowrap/);
@@ -123,8 +115,8 @@ describe('CreateAnimalWizard — structure', () => {
 
   it('shows the DANDI identity guidance (binomial species + single-letter sex)', () => {
     renderWizard();
-    expect(screen.getByText(/Latin binomial/i)).toBeInTheDocument();
-    expect(screen.getByText(/free text like/i)).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'Rat (Rattus norvegicus)' })).toHaveValue('Rattus norvegicus');
+    expect(screen.getByRole('option', { name: /Male/ })).toHaveValue('M');
   });
 });
 
@@ -148,7 +140,8 @@ describe('CreateAnimalWizard — step navigation + commit', () => {
     // The animal now exists in the store (proves createAnimal committed)…
     expect(captured.animals.laurent).toBeTruthy();
     // …and the Electrodes step renders the real ElectrodeGroupsStep (not a reimplementation).
-    expect(screen.getByRole('tab', { name: /Electrodes/ })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('tab', { name: /Experiment & team/ })).toHaveAttribute('aria-selected', 'true');
+    await user.click(screen.getByRole('tab', { name: /Electrodes/ }));
     expect(screen.getByText(/No Electrode Groups Configured/i)).toBeInTheDocument();
   });
 
@@ -167,6 +160,7 @@ describe('CreateAnimalWizard — step navigation + commit', () => {
     await fillIdentity(user);
     await user.click(screen.getByRole('button', { name: /Next/i }));
     // The behavior-only affordance is present on the electrodes step.
+    await user.click(screen.getByRole('tab', { name: /Electrodes/ }));
     expect(screen.getByRole('button', { name: /behavior-only/i })).toBeInTheDocument();
   });
 
@@ -188,6 +182,8 @@ describe('CreateAnimalWizard — step navigation + commit', () => {
     expect(screen.getByText(/No Cameras Configured/i)).toBeInTheDocument();
     expect(screen.queryByText(/placeholder value silently/i)).not.toBeInTheDocument();
 
+    await user.click(screen.getByRole('tab', { name: /Recording system/ }));
+    await user.click(screen.getByRole('checkbox', { name: /Optogenetics/ }));
     await user.click(screen.getByRole('tab', { name: /Optogenetics/ }));
     expect(screen.getByText(/This animal has optogenetics/i)).toBeInTheDocument();
 
@@ -204,12 +200,13 @@ describe('CreateAnimalWizard — step navigation + commit', () => {
     renderWizard();
     await fillIdentity(user);
     await user.click(screen.getByRole('button', { name: /Next/i }));
-    await user.click(screen.getByRole('tab', { name: /Team/ }));
+    await user.click(screen.getByRole('tab', { name: /Experiment & team/ }));
     await user.type(
       screen.getByRole('textbox', { name: /Experiment description/i }),
       'Chronic tetrode recording during spatial navigation'
     );
-    await user.click(screen.getByRole('button', { name: /Create animal/i }));
+    await user.click(screen.getByRole('tab', { name: /Tasks/ }));
+    await user.click(screen.getByRole('button', { name: /Finish setup/i }));
     expect(window.location.hash).toBe('#/animal/laurent/days');
   });
 
@@ -218,11 +215,12 @@ describe('CreateAnimalWizard — step navigation + commit', () => {
     renderWizard();
     await fillIdentity(user);
     await user.click(screen.getByRole('button', { name: /Next/i }));
-    await user.click(screen.getByRole('tab', { name: /Team/ }));
-    await user.click(screen.getByRole('button', { name: /Create animal/i }));
+    await user.click(screen.getByRole('tab', { name: /Experiment & team/ }));
+    await user.click(screen.getByRole('tab', { name: /Tasks/ }));
+    await user.click(screen.getByRole('button', { name: /Finish setup/i }));
 
     expect(window.location.hash).not.toBe('#/animal/laurent/days');
-    expect(screen.getByRole('tab', { name: /Team/ })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('tab', { name: /Experiment & team/ })).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByText(/Experiment description is required/i)).toBeInTheDocument();
   });
 
@@ -231,8 +229,9 @@ describe('CreateAnimalWizard — step navigation + commit', () => {
     renderWizard();
     await fillIdentity(user);
     await user.click(screen.getByRole('button', { name: /Next/i }));
-    await user.click(screen.getByRole('tab', { name: /Team/ }));
+    await user.click(screen.getByRole('tab', { name: /Experiment & team/ }));
 
+    await user.click(screen.getByLabelText(/^Lab/i).closest('details').querySelector('summary'));
     const labField = screen.getByRole('textbox', { name: /^Lab/i });
     await user.clear(labField);
     await user.type(labField, 'Frank Lab');
@@ -246,12 +245,13 @@ describe('CreateAnimalWizard — step navigation + commit', () => {
     renderWizard();
     await fillIdentity(user);
     await user.click(screen.getByRole('button', { name: /Next/i }));
-    await user.click(screen.getByRole('tab', { name: /Team/ }));
+    await user.click(screen.getByRole('tab', { name: /Experiment & team/ }));
     await user.type(
       screen.getByRole('textbox', { name: /Experiment description/i }),
       'Chronic tetrode recording during spatial navigation'
     );
-    await user.click(screen.getByRole('button', { name: /Create animal/i }));
+    await user.click(screen.getByRole('tab', { name: /Tasks/ }));
+    await user.click(screen.getByRole('button', { name: /Finish setup/i }));
 
     act(() => {
       capturedActions.createDay('laurent', '2026-01-02', {
@@ -336,23 +336,19 @@ describe('CreateAnimalWizard — post-create identity edits (the fragile create-
     expect('date_of_birth' in captured.animals.laurent.subject).toBe(false);
   });
 
-  it('clearing the baseline weight after create removes it from the stored subject', async () => {
+  it('does not seed a baseline measurement during setup', async () => {
     const user = userEvent.setup();
     renderWizard();
     await createThenEditIdentity(user);
-    expect(captured.animals.laurent.subject.weight).toBe(450);
-
-    await user.clear(screen.getByLabelText(/Baseline weight/i));
-    await user.tab();
-
-    expect('weight' in captured.animals.laurent.subject).toBe(false);
+    expect(screen.queryByLabelText(/Baseline weight/i)).not.toBeInTheDocument();
+    expect(captured.animals.laurent.subject).not.toHaveProperty('weight');
   });
 
   it('persists a Sex change (the select must commit, not just update local state)', async () => {
     const user = userEvent.setup();
     renderWizard();
     await createThenEditIdentity(user);
-    await user.selectOptions(screen.getByLabelText('Sex'), 'F');
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Sex' }), 'F');
     expect(captured.animals.laurent.subject.sex).toBe('F');
   });
 
@@ -362,7 +358,7 @@ describe('CreateAnimalWizard — post-create identity edits (the fragile create-
     await createThenEditIdentity(user);
     // Switch to a custom species but leave it blank → the draft is invalid; the prior valid
     // species must be kept (never overwritten with an empty string).
-    await user.selectOptions(screen.getByLabelText('Species'), 'other');
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Species' }), 'other');
     await user.tab();
     expect(captured.animals.laurent.subject.species).not.toBe('');
     expect(captured.animals.laurent.subject.species).toBe('Rattus norvegicus');
@@ -372,7 +368,7 @@ describe('CreateAnimalWizard — post-create identity edits (the fragile create-
     const user = userEvent.setup();
     renderWizard();
     await createThenEditIdentity(user);
-    await user.selectOptions(screen.getByLabelText('Species'), 'other'); // custom left blank → invalid
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Species' }), 'other'); // custom left blank → invalid
     await user.click(screen.getByRole('button', { name: /Next/i }));
     // The user's invalid edit is not silently dropped: the wizard stays on Identity and surfaces
     // the error, rather than navigating on with the edit lost.
@@ -390,7 +386,7 @@ describe('CreateAnimalWizard — post-create identity edits (the fragile create-
     await user.click(screen.getByRole('button', { name: /Next/i }));
     // Advances to the next step (the self-collision against the just-created animal must be excluded),
     // and the edit is persisted.
-    expect(screen.getByRole('tab', { name: /Electrodes/ })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('tab', { name: /Experiment & team/ })).toHaveAttribute('aria-selected', 'true');
     expect(captured.animals.laurent.subject.genotype).toBe('scn2a');
   });
 });
@@ -403,7 +399,7 @@ describe('CreateAnimalWizard — Team step', () => {
   async function createThenOpenTeam(user) {
     await fillIdentity(user);
     await user.click(screen.getByRole('button', { name: /Next/i }));
-    await user.click(screen.getByRole('tab', { name: /Team/ }));
+    await user.click(screen.getByRole('tab', { name: /Experiment & team/ }));
   }
 
   it('persists removing an experimenter immediately (not only when another field commits)', async () => {
@@ -451,7 +447,7 @@ describe('CreateAnimalWizard — Team step', () => {
     renderWizard({ animals: inheritedAnimals, settings: inheritedSettings });
     await fillIdentity(user, { subjectId: 'remy' });
     await user.click(screen.getByRole('button', { name: /Next/i }));
-    await user.click(screen.getByRole('tab', { name: /Team/ }));
+    await user.click(screen.getByRole('tab', { name: /Experiment & team/ }));
 
     expect(screen.getByRole('textbox', { name: /^Lab/i })).toHaveValue('Custom Lab');
     expect(screen.getByRole('textbox', { name: /^Institution/i })).toHaveValue('Custom University');
@@ -498,14 +494,10 @@ describe('CreateAnimalWizard — Save draft', () => {
     expect(screen.getByRole('tab', { name: /Identity/ }).className).toMatch(/stepDone/);
   });
 
-  it('labels the baseline weight optional and says when each fact is actually needed', () => {
+  it('asks for DOB before export and leaves measured weight to the recording day', () => {
     renderWizard();
-    expect(screen.getByLabelText(/Baseline weight \(grams, optional\)/i)).toBeInTheDocument();
-    expect(screen.queryByText(/Weight is required/i)).not.toBeInTheDocument();
-    expect(
-      screen.getByText(/each recording day records its own measured weight/i)
-    ).toBeInTheDocument();
-    expect(screen.getByText(/Needed before export; can be filled in later\./i)).toBeInTheDocument();
+    expect(screen.queryByLabelText(/weight/i)).not.toBeInTheDocument();
+    expect(screen.getByText(/Required before export — you can save a draft without it/)).toBeInTheDocument();
   });
 
   it('blocks Save draft on an invalid identity', async () => {

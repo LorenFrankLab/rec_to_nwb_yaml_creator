@@ -126,9 +126,9 @@ describe('AnimalView — section-nav status (Task 1.1c)', () => {
 
   it('shows a "not set up" todo ring on never-configured setup sections (the bare remy fixture)', () => {
     renderView('days'); // remy has empty devices / cameras / behavioral_events
-    expect(screen.getByRole('link', { name: /electrode groups — not set up/i })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /cameras — not set up/i })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /optogenetics — not set up/i })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /electrode groups — not set up/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /cameras — not set up/i })).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /^optogenetics$/i })).toBeInTheDocument();
   });
 
   it('does not mark the day-work sections as todo', () => {
@@ -180,16 +180,16 @@ describe('AnimalView — section-nav count + chevron affordance (decision 10)', 
     const nav = screen.getByRole('navigation', { name: /animal sections/i });
     expect(within(within(nav).getByRole('link', { name: /^recording days\b/i })).getByText('1')).toBeInTheDocument();
     expect(
-      within(within(nav).getByRole('link', { name: /validation & export/i })).getByText(/\d+ ready/i)
+      within(within(nav).getByRole('link', { name: /review & export/i })).getByText(/\d+ to download/i)
     ).toBeInTheDocument();
   });
 
   it('never-configured setup sections keep the ○ ring (no numeric count)', () => {
     renderView('days'); // bare remy
-    const eg = screen.getByRole('link', { name: /electrode groups — not set up/i });
+    const eg = screen.getByRole('link', { name: /^electrode groups/i });
     // The todo ring stands in for the count; no "0" is shown.
-    expect(within(eg).queryByText('0')).not.toBeInTheDocument();
-    expect(within(eg).getByText('○')).toBeInTheDocument();
+    expect(within(eg).getByText('0')).toBeInTheDocument();
+    expect(within(eg).queryByText('○')).not.toBeInTheDocument();
     // The chevron is still present on a todo row.
     expect(within(eg).getByText('›')).toBeInTheDocument();
   });
@@ -198,15 +198,15 @@ describe('AnimalView — section-nav count + chevron affordance (decision 10)', 
 describe('AnimalView — tab panels (Task 1.2)', () => {
   it('hosts the Recording Days pane in the days tab', () => {
     renderView('days');
-    expect(screen.getByRole('heading', { name: /recording days for remy/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /^recording days$/i })).toBeInTheDocument();
   });
 
-  it('hosts the per-animal Validation & Export surface in the export tab (Phase 3-5)', () => {
+  it('hosts the per-animal Review & export surface in the export tab (Phase 3-5)', () => {
     // All tabs are extracted now; `export` renders the scoped ValidationSummary, not a placeholder.
     renderView('export');
-    expect(screen.queryByRole('heading', { name: /recording days for remy/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: /^recording days$/i })).not.toBeInTheDocument();
     expect(screen.queryByText(/this section moves here in a later phase/i)).not.toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: /this animal — readiness & export/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /Review & export — remy/i })).toBeInTheDocument();
   });
 });
 

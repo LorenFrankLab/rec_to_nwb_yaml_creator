@@ -465,7 +465,7 @@ export default function CopyFromAnimalDialog({
                       checked={isChecked(section)}
                       onChange={() => toggleSection(section)}
                     />
-                    <span>{SECTION_LABELS[section]}</span>
+                    <span>{SECTION_LABELS[section]} · {section === 'electrode_groups' ? selectedAnimal.electrodeGroups.length : section === 'cameras' ? selectedAnimal.cameras.length : selectedAnimal.dataAcqDevices.length}</span>
                   </label>
                 ))}
               </fieldset>

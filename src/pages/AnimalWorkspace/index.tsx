@@ -159,7 +159,7 @@ export function AnimalWorkspace() {
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
-              <label className={styles.homeFilterLabel}>
+              {(genotypeOptions.length > 1 || genotypeFilter !== 'all') && <label className={styles.homeFilterLabel}>
                 <span className={styles.homeFilterLabelText}>Genotype</span>
                 <select
                   className={styles.homeFilterSelect}
@@ -173,7 +173,7 @@ export function AnimalWorkspace() {
                     </option>
                   ))}
                 </select>
-              </label>
+              </label>}
               <label className={styles.homeFilterLabel}>
                 <span className={styles.homeFilterLabelText}>Status</span>
                 <select
@@ -215,13 +215,11 @@ export function AnimalWorkspace() {
             <thead>
               <tr>
                 <th scope="col">Animal</th>
+                <th scope="col">Status</th>
+                <th scope="col">Last recording</th>
+                <th scope="col" className={styles.numCol}>Days</th>
                 <th scope="col">Genotype</th>
                 <th scope="col">Species</th>
-                <th scope="col" className={styles.numCol}>
-                  Days
-                </th>
-                <th scope="col">Last recording</th>
-                <th scope="col">Status</th>
                 <th scope="col">
                   <span className="visually-hidden">Actions</span>
                 </th>
@@ -236,13 +234,11 @@ export function AnimalWorkspace() {
                     </a>
                     {a.isOpto && <span className={styles.optoTag}>opto</span>}
                   </td>
+                  <td><StatusPill variant={a.statusRollup.variant} label={a.statusRollup.label} /></td>
+                  <td className={styles.muted}>{a.lastRecording ?? '—'}</td>
+                  <td className={styles.numCol}>{a.dayCount}</td>
                   <td>{a.genotype || '—'}</td>
                   <td className={styles.muted}>{a.species || '—'}</td>
-                  <td className={styles.numCol}>{a.dayCount}</td>
-                  <td className={styles.muted}>{a.lastRecording ?? '—'}</td>
-                  <td>
-                    <StatusPill variant={a.statusRollup.variant} label={a.statusRollup.label} />
-                  </td>
                   <td className={styles.actionsCell}>
                     <OverflowMenu
                       label={`Actions for ${a.id}`}

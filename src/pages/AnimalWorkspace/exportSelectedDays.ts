@@ -10,7 +10,7 @@
  * Validation Summary's "Export Valid Only" path uses. Valid days with no outstanding warnings
  * download byte-identically; not-exportable / invalid / unstable days — AND valid days with
  * unacknowledged warnings — are skipped with a linked reason for the inline "Exported N · Skipped M"
- * result. (The warning gate matches the Validation & Export surface, which requires acknowledgement
+ * result. (The warning gate matches the Review & export surface, which requires acknowledgement
  * before export; the Days-tab quick export has no acknowledgement step, so it routes warning-bearing
  * days there rather than shipping them unacknowledged.)
  */
@@ -100,7 +100,7 @@ export function exportSelectedDays(
       continue;
     }
 
-    // Validity: the SAME live chip + warning set the Validation & Export path uses. A merge throw
+    // Validity: the SAME live chip + warning set the Review & export path uses. A merge throw
     // means the day is unreadable (corrupt config), reported honestly rather than crashing the batch.
     let chip: string;
     let warningCount = 0;
@@ -131,7 +131,7 @@ export function exportSelectedDays(
       skipped.push({
         dayId,
         date,
-        reason: 'Has warnings to review — acknowledge and export in Validation & Export.',
+        reason: 'Has warnings to review — acknowledge and export in Review & export.',
         href: `#/animal/${animalKey}/export`,
       });
       continue;

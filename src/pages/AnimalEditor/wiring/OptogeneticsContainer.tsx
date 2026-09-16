@@ -25,9 +25,8 @@ interface OptogeneticsContainerProps {
   /** The animal whose optogenetics setup to edit. */
   animalId: string;
   /**
-   * Called after an optogenetics write commits. The host uses it to surface the animal-static
-   * re-export consequence (opto is shared by every recording day). Optional — the legacy host
-   * doesn't pass it.
+   * Optional notification after a default edit or application to selected days.
+   * A default edit alone does not change existing recording snapshots.
    */
   onAfterUpdate?: () => void;
 }

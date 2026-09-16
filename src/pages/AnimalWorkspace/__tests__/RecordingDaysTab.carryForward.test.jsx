@@ -84,8 +84,9 @@ const animalNoDays = {
 describe('Carry-forward day creation toggle', () => {
   it('renders a default-checked toggle naming the most-recent day when a prior day exists', () => {
     renderPane('remy', { remy: animalWithDay }, { 'remy-2023-06-22': priorDay });
+    fireEvent.click(screen.getByText('Copy prior epochs · Change'));
     const toggle = screen.getByRole('checkbox', {
-      name: /start each new day from the nearest earlier day \(latest: 2023-06-22\)/i,
+      name: /start each new day from the nearest earlier day/i,
     });
     expect(toggle).toBeChecked();
   });
@@ -125,7 +126,7 @@ describe('Carry-forward day creation toggle', () => {
    * @returns {Promise<string>} The id of the day that creation will produce (`remy-YYYY-MM-DD`).
    */
   async function createTodayViaCalendar() {
-    fireEvent.click(screen.getByRole('button', { name: /add recording days/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Add multiple dates/i }));
     // The timeline-aware calendar opens on the existing day's month; jump to today first.
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: /^today$/i }));
@@ -151,8 +152,9 @@ describe('Carry-forward day creation toggle', () => {
   it('with the toggle OFF, creating a day via the calendar UI starts blank (no carried tasks)', async () => {
     renderPane('remy', { remy: animalWithDay }, { 'remy-2023-06-22': priorDay });
     // Flip the carry-forward checkbox OFF through the rendered control.
+    fireEvent.click(screen.getByText('Copy prior epochs · Change'));
     const toggle = screen.getByRole('checkbox', {
-      name: /start each new day from the nearest earlier day \(latest: 2023-06-22\)/i,
+      name: /start each new day from the nearest earlier day/i,
     });
     expect(toggle).toBeChecked();
     fireEvent.click(toggle);
@@ -172,7 +174,7 @@ describe('Carry-forward day creation toggle', () => {
     // Default ON; create through the same real UI path without touching the store action.
     expect(
       screen.getByRole('checkbox', {
-        name: /start each new day from the nearest earlier day \(latest: 2023-06-22\)/i,
+        name: /start each new day from the nearest earlier day/i,
       })
     ).toBeChecked();
 
@@ -203,7 +205,7 @@ describe('Carry-forward day creation toggle', () => {
     );
     expect(
       screen.getByRole('checkbox', {
-        name: /start each new day from the nearest earlier day \(latest: 2023-06-22\)/i,
+        name: /start each new day from the nearest earlier day/i,
       })
     ).toBeChecked();
 

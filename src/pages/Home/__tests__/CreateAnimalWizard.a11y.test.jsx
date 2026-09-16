@@ -33,7 +33,7 @@ describe('CreateAnimalWizard — accessibility', () => {
     renderWizard();
     const tablist = screen.getByRole('tablist', { name: /setup steps/i });
     const tabs = within(tablist).getAllByRole('tab');
-    expect(tabs).toHaveLength(7);
+    expect(tabs).toHaveLength(6);
 
     // Exactly one tab is selected; its panel is the labelled tabpanel.
     const selected = tabs.filter((t) => t.getAttribute('aria-selected') === 'true');
@@ -57,11 +57,9 @@ describe('CreateAnimalWizard — accessibility', () => {
     const user = userEvent.setup();
     const { container } = renderWizard();
     await user.type(screen.getByRole('textbox', { name: /Subject ID/i }), 'laurent');
-    await user.clear(screen.getByLabelText(/Weight/i));
-    await user.type(screen.getByLabelText(/Weight/i), '450');
     fireEvent.change(screen.getByLabelText(/Date of Birth/i), { target: { value: '2025-01-02' } });
     await user.click(screen.getByRole('button', { name: /Next/i }));
-    expect(screen.getByRole('tab', { name: /Electrodes/ })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('tab', { name: /Experiment & team/ })).toHaveAttribute('aria-selected', 'true');
     expect(await axe(container)).toHaveNoViolations();
   });
 });

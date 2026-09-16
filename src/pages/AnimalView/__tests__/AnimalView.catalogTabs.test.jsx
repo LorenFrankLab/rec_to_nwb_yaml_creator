@@ -157,8 +157,8 @@ describe('AnimalView — catalog containers persist edits to the store (GAP-A)',
 
     await user.click(screen.getByRole('button', { name: /Add First Task Type/i }));
     await user.type(screen.getByLabelText(/Task name/i), 'w-track');
-    await user.type(screen.getByLabelText('Description'), 'Continuous alternation');
-    await user.type(screen.getByLabelText('Environment'), 'elevated W-track');
+    await user.type(screen.getByRole('textbox', { name: 'Description' }), 'Continuous alternation');
+    await user.type(screen.getByRole('textbox', { name: 'Environment' }), 'elevated W-track');
     await user.click(screen.getByRole('button', { name: /Save task type/i }));
 
     const taskTypes = JSON.parse(screen.getByTestId('task-types').textContent);
@@ -178,14 +178,14 @@ describe('AnimalView — catalog tab scope descriptors (Phase 3-3)', () => {
 
   it('recording-system scope: animal-wide catalog, each day uses one', () => {
     renderView('recording-system');
-    expect(screen.getByText(/animal-wide catalog.*each recording day uses one/i)).toBeInTheDocument();
+    expect(screen.getByText(/New recordings start with the default system/i)).toBeInTheDocument();
     // No longer the false "no per-day version" framing.
     expect(screen.queryByText(/no per-day version/i)).not.toBeInTheDocument();
   });
 
   it('cameras scope descriptor', () => {
     renderView('cameras');
-    expect(screen.getByText(/catalog — referenced per day/i)).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /Cameras/i })).toBeInTheDocument();
   });
 
 });

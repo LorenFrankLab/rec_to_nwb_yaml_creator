@@ -54,7 +54,7 @@
 
 .body {
   display: grid;
-  grid-template-columns: 230px 1fr;
+  grid-template-columns: 230px minmax(0, 1fr);
   align-items: start;
 }
 
@@ -112,7 +112,7 @@
    with the nav into SectionNav.module.css. */
 @media (max-width: 1040px) {
   .body {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
@@ -124,4 +124,10 @@
   outline: 3px solid #f9a825;
   outline-offset: 2px;
   border-radius: 3px;
+}
+
+.profileSummary {
+  margin: var(--spacing-xs) var(--spacing-md);
+  font-size: var(--font-size-sm);
+  color: var(--color-grey-700);
 }

@@ -3,6 +3,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import OptogeneticsStep from '../OptogeneticsStep';
+import { completeOptogenetics } from '../../../__tests__/fixtures/completeOptogenetics';
 
 /**
  * Stateful harness mirroring the store round-trip: the step commits via `onUpdate`,
@@ -12,21 +13,57 @@ import OptogeneticsStep from '../OptogeneticsStep';
  * @param root0.initial
  */
 function Harness({ initial = null }) {
-  const [optogenetics, setOptogenetics] = useState(initial);
+  const [animal, setAnimal] = useState({ optogenetics: initial });
   return (
     <OptogeneticsStep
-      animal={{ optogenetics }}
-      onUpdate={({ optogenetics: next }) => setOptogenetics(next)}
+      animal={animal}
+      onUpdate={(update) => setAnimal((previous) => ({ ...previous, ...update }))}
     />
   );
 }
 
 describe('OptogeneticsStep', () => {
+  it('restores entered source and fiber after switching off and on', async () => {
+    const user = userEvent.setup();
+    render(<Harness initial={{ opto_excitation_source: [{ name: 'Blue source', wavelength_in_nm: 470 }], optical_fiber: [{ name: 'Left CA1' }], virus_injection: [], optogenetic_stimulation_software: 'fsgui' }} />);
+    await user.click(screen.getByRole('checkbox', { name: /has optogenetics/i }));
+    expect(screen.getByText(/Saved setup retained/)).toBeInTheDocument();
+    await user.click(screen.getByRole('checkbox', { name: /has optogenetics/i }));
+    expect(screen.getByLabelText(/setup name/i)).toHaveValue('Blue source');
+    expect(screen.getByLabelText(/Wavelength/)).toHaveValue(470);
+    expect(screen.getByLabelText(/fiber implant name/i)).toHaveValue('Left CA1');
+  });
+
+  it.each([['optical_fiber', 'optical fiber', 'fiber implant name'], ['virus_injection', 'virus injection', 'injection name']])('protects removal of a populated %s', async (key, label, inputLabel) => {
+    const user = userEvent.setup();
+    render(<Harness initial={{ [key]: [{ name: 'Keep my record' }] }} />);
+    await user.click(screen.getByRole('button', { name: `Remove ${label} 1` }));
+    expect(screen.getByRole('alertdialog')).toHaveTextContent('Existing recording days keep their own setup');
+    await user.click(screen.getByRole('button', { name: 'Keep record' }));
+    expect(screen.getByLabelText(new RegExp(inputLabel, 'i'))).toHaveValue('Keep my record');
+    await user.click(screen.getByRole('button', { name: `Remove ${label} 1` }));
+    await user.click(screen.getByRole('button', { name: 'Remove record', exact: true }));
+    expect(screen.queryByLabelText(new RegExp(inputLabel, 'i'))).not.toBeInTheDocument();
+  });
+
+  it('folds completed records on load, but leaves a record open when its last field is entered', async () => {
+    const user = userEvent.setup();
+    const opto = completeOptogenetics();
+    opto.opto_excitation_source[0].description = '';
+    render(<Harness initial={opto} />);
+    const source = screen.getByLabelText(/setup name/i).closest('details');
+    expect(source).toHaveAttribute('open');
+    expect(screen.getByLabelText(/fiber implant name/i).closest('details')).not.toHaveAttribute('open');
+    await user.type(screen.getAllByLabelText(/Description/)[0], 'Blue light');
+    expect(source).toHaveAttribute('open');
+    expect(screen.queryByText(/Complete before export/i)).not.toBeInTheDocument();
+  });
+
   it('is OFF by default: no opto sections, explicit off explanation', () => {
     render(<Harness />);
 
     expect(screen.getByRole('checkbox', { name: /has optogenetics/i })).not.toBeChecked();
-    expect(screen.getByText(/no optogenetics metadata will be exported/i)).toBeInTheDocument();
+    expect(screen.getByText(/No stimulation setup/i)).toBeInTheDocument();
     expect(screen.queryByRole('group', { name: /excitation source/i })).not.toBeInTheDocument();
   });
 
@@ -59,7 +96,7 @@ describe('OptogeneticsStep', () => {
     render(<Harness />);
 
     await user.click(screen.getByRole('checkbox', { name: /has optogenetics/i }));
-    expect(screen.getByText(/blocks export until every optogenetics section/i)).toBeInTheDocument();
+    expect(screen.getByText(/Complete before export/i)).toBeInTheDocument();
 
     // Naming the rows is NOT enough — the converter/schema-required fields are still blank,
     // so the checklist must NOT read complete (no false "done" signal).
@@ -69,7 +106,7 @@ describe('OptogeneticsStep', () => {
     await user.click(screen.getByRole('button', { name: /add virus injection/i }));
     await user.type(screen.getByLabelText(/injection name/i), 'Injection 1');
 
-    expect(screen.getByText(/blocks export until every optogenetics section/i)).toBeInTheDocument();
+    expect(screen.getByText(/Complete before export/i)).toBeInTheDocument();
   });
 
   it('clears the incomplete notice once every required field is filled', () => {
@@ -98,7 +135,7 @@ describe('OptogeneticsStep', () => {
       />
     );
 
-    expect(screen.queryByText(/blocks export until every optogenetics section/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Complete before export/i)).not.toBeInTheDocument();
   });
 
   it('commits edits to the excitation source and software through onUpdate', async () => {
@@ -149,7 +186,7 @@ describe('OptogeneticsStep', () => {
     await user.click(screen.getByRole('checkbox', { name: /has optogenetics/i }));
 
     // Must commit explicit null so updateAnimal CLEARS the block (truthiness wouldn't).
-    expect(onUpdate).toHaveBeenCalledWith({ optogenetics: null });
+    expect(onUpdate).toHaveBeenCalledWith(expect.objectContaining({ optogenetics: null, optogeneticsDraft: expect.objectContaining({ optical_fiber: [{ name: 'F' }] }) }));
   });
 
   it('structurally allows exactly one excitation source (no add control, renders only the first)', () => {

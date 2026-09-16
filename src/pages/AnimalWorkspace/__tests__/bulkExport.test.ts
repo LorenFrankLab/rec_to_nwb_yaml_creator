@@ -61,7 +61,7 @@ describe('exportSelectedDays — bulk Export selected', () => {
     );
   });
 
-  it('skips a VALID day with outstanding warnings, routing it to Validation & Export (no unacknowledged export)', () => {
+  it('skips a VALID day with outstanding warnings, routing it to Review & export (no unacknowledged export)', () => {
     const { workspace, ids } = makeSummaryWorkspace();
     // Give the valid day a non-blocking warning (a task-definition reconciliation to review) — the
     // same kind the Export-Valid-Only preflight makes the user acknowledge before download.

@@ -246,6 +246,8 @@ function ElectrodeGroupForm({ mode, group = null, knownRegions = [], onSave, onC
         </span>
       </div>
 
+      <details className="optional-probe-details">
+        <summary>Histology &amp; description (optional)</summary>
       {/* Location (actual, post-histology). Optional here — defaults to the target
           until the confirmed location is known. */}
       <div className="form-group">
@@ -278,6 +280,8 @@ function ElectrodeGroupForm({ mode, group = null, knownRegions = [], onSave, onC
           one from the device type and target.
         </span>
       </div>
+
+      </details>
 
       {/*
         Coordinates. Values are in the unit selected below (mm by default).
@@ -350,7 +354,7 @@ function ElectrodeGroupForm({ mode, group = null, knownRegions = [], onSave, onC
 
       {/* Bad channels are not set here — they vary per recording day. */}
       <p className="help-text">
-        Failed channels are marked per recording day in the Day Editor (Devices step),
+        Failed channels are marked per recording day in the Daily log’s Failed Channels section,
         not here, since channels fail over time.
       </p>
 

@@ -1,3 +1,4 @@
+import Button from '../../components/ui/Button';
 /**
  * AnimalView — the tabbed animal shell (Phase 1 — tabbed-workspace-ia).
  *
@@ -17,9 +18,9 @@ import { useStoreContext } from '../../state/StoreContext';
 import type { Animal } from '../../state/workspaceTypes';
 import { getAnimalDayIds } from '../../state/workspaceSelectors';
 import { getAnimalOptoCompleteness, OPTO_COMPLETENESS } from '../../domain/sectionStatus';
-import { optoFieldsPresence } from '../../domain/optoCompleteness';
+import { optoSetupCompleteness } from '../../domain/optoEditorFields';
 import { buildAnimalViewModel } from '../../viewModels/animalViewModel';
-import type { AnimalConfigCardViewModel, AnimalBlastRadiusViewModel } from '../../viewModels/animalViewModel';
+import type { AnimalConfigCardViewModel } from '../../viewModels/animalViewModel';
 import { useReconfigContext } from '../../hooks/useReconfigContext';
 import { useUnappliedDraftGuard } from '../../hooks/useUnappliedDraftGuard';
 import { useMediaQuery, COMPACT_NAV_QUERY } from '../../hooks/useMediaQuery';
@@ -37,7 +38,6 @@ import CamerasContainer from '../AnimalEditor/wiring/CamerasContainer';
 import TaskTypesContainer from '../AnimalEditor/wiring/TaskTypesContainer';
 import OptogeneticsContainer from '../AnimalEditor/wiring/OptogeneticsContainer';
 import { useAnimalFieldUpdate } from '../AnimalEditor/wiring/useAnimalFieldUpdate';
-import BlastRadiusChip from '../../components/ui/BlastRadiusChip';
 import { useUndoToast } from '../../components/ui/UndoToast';
 import ConfigVersionContext from './ConfigVersionContext';
 import AnimalScopeChips from './AnimalScopeChips';
@@ -130,10 +130,6 @@ interface RenderPanelContext {
   onFieldUpdate: (field: string, value: unknown) => void;
   /** The current-configuration card data, rendered above the Electrode Groups editor. */
   configCard: AnimalConfigCardViewModel;
-  /** The blast radius (chip day count) for the re-export-forcing setup tabs (cameras / opto). */
-  blastRadius: AnimalBlastRadiusViewModel;
-  /** Called after an optogenetics write commits, so the host can surface the re-export consequence. */
-  onOptoAfterUpdate: () => void;
   /** Open the new-configuration (re-implant) modal — wired to the ConfigurationCard's action. */
   onNewConfiguration: () => void;
   /** Record a configuration version's effective date. */
@@ -148,14 +144,14 @@ const OPTO_TOTAL_FIELDS = 4;
  * setup tabs host their extracted containers (Phase 3-2/3-3); only `export` still shows the
  * Phase-1 placeholder until its sub-phase (3-5) lands.
  */
-function renderPanel({ tab, animalId, animal, onPendingEditsChange, onFieldUpdate, configCard, blastRadius, onOptoAfterUpdate, onNewConfiguration, onSetEffectiveDate }: RenderPanelContext) {
+function renderPanel({ tab, animalId, animal, onPendingEditsChange, onFieldUpdate, configCard, onNewConfiguration, onSetEffectiveDate }: RenderPanelContext) {
   switch (tab) {
     case 'days':
       return <RecordingDaysTab animalId={animalId} />;
     case 'electrode-groups':
       return (
         <>
-          <ConfigurationCard card={configCard} onNewConfiguration={onNewConfiguration} onSetEffectiveDate={onSetEffectiveDate} />
+          <ConfigurationCard showProbes={false} card={configCard} onNewConfiguration={onNewConfiguration} onSetEffectiveDate={onSetEffectiveDate} />
           <ConfigVersionContext animal={animal} />
           <ElectrodeGroupsContainer animalId={animalId} onPendingEditsChange={onPendingEditsChange} />
         </>
@@ -169,8 +165,6 @@ function renderPanel({ tab, animalId, animal, onPendingEditsChange, onFieldUpdat
     case 'cameras':
       return (
         <>
-          {/* Cameras are animal-static — an edit forces affected days to re-export. */}
-          <BlastRadiusChip dayCount={blastRadius.totalDays} />
           <CamerasContainer
             animal={animal}
             onFieldUpdate={onFieldUpdate}
@@ -187,14 +181,12 @@ function renderPanel({ tab, animalId, animal, onPendingEditsChange, onFieldUpdat
         />
       );
     case 'optogenetics': {
-      // Optogenetics is animal-static — an edit forces affected days to re-export. When configured,
-      // a completeness meter ("Opto configured · N of N") replaces the never-used chip.
-      const optoPresent = optoFieldsPresence(
-        (animal as { optogenetics?: unknown }).optogenetics as Parameters<typeof optoFieldsPresence>[0]
+      // The editable setup is the animal default; existing days keep their own snapshot.
+      const optoPresent = optoSetupCompleteness(
+        (animal as { optogenetics?: unknown }).optogenetics as Parameters<typeof optoSetupCompleteness>[0]
       );
       return (
         <>
-          <BlastRadiusChip dayCount={blastRadius.totalDays} />
           {getAnimalOptoCompleteness(animal) === OPTO_COMPLETENESS.NONE ? (
             // A NEVER-configured opto tab is a VALID state, not an error — a neutral chip says so, so
             // the empty section doesn't read as missing setup (charter tab→content map). Keyed to the
@@ -206,10 +198,10 @@ function renderPanel({ tab, animalId, animal, onPendingEditsChange, onFieldUpdat
             </p>
           ) : (
             <p className={styles.optoMeter} data-testid="opto-meter">
-              Opto configured · {optoPresent.count} of {OPTO_TOTAL_FIELDS}
+              {optoPresent.count} of {OPTO_TOTAL_FIELDS} optogenetics sections complete
             </p>
           )}
-          <OptogeneticsContainer animalId={animalId} onAfterUpdate={onOptoAfterUpdate} />
+          <OptogeneticsContainer animalId={animalId}  />
         </>
       );
     }
@@ -294,7 +286,7 @@ export function AnimalView({ animalId, tab }: AnimalViewProps) {
   };
 
   // The setup containers' field-update path. A write to an animal-static, re-export-forcing section
-  // (cameras here; opto routes through its own onAfterUpdate; identity through the profile save) also
+  // (cameras here; identity through the profile save) also
   // surfaces the consequence. Recording-system writes (`data_acq_device`) are NOT re-export-forcing,
   // so they fall through without a consequence.
   const handleStaticFieldUpdate = (field: string, value: unknown) => {
@@ -447,7 +439,6 @@ export function AnimalView({ animalId, tab }: AnimalViewProps) {
     <main id="main-content" tabIndex={-1} role="main" aria-labelledby="animal-view-heading">
       <header className={styles.header} data-testid="animal-view-header">
         <h1 id="animal-view-heading">{animal.id}</h1>
-        <span className={styles.idbadge}>animal ID</span>
         {facts && <span className={styles.facts}>{facts}</span>}
         {/* Save-confidence cue — the SAME shared SaveIndicator the Day Editor shows, reading the
             SAME workspace persistence state (`useStoreContext().persistence`), so an animal-level
@@ -459,6 +450,7 @@ export function AnimalView({ animalId, tab }: AnimalViewProps) {
         </div>
         {/* Per-animal lifecycle ⋮ — the SAME reusable menu + type-to-confirm dialog as the picker
             card, so animal delete reads one truth from either surface (Task 4.1). */}
+        <Button variant="neutral" size="small" onClick={() => setProfileOpen(true)}>Edit profile</Button>
         <div className={styles.headerActions}>
           <OverflowMenu
             label={`Actions for ${animal.id}`}
@@ -480,7 +472,10 @@ export function AnimalView({ animalId, tab }: AnimalViewProps) {
 
       {/* The read-only animal-static scope (identity · probes · config · team · opto), shared by
           every recording day. Surfaces the "what's fixed for this animal" context on every tab. */}
-      <AnimalScopeChips summary={vm.summary} />
+      <details className={styles.profileSummary}>
+        <summary>Animal facts &amp; setup summary</summary>
+        <AnimalScopeChips summary={vm.summary} />
+      </details>
 
       {/* Reconfiguration context belongs in the header band (NOT a tab — Phase 3-4): visible
           regardless of which setup tab is open. The animal-wide subject-facts EDITOR moved off the
@@ -584,7 +579,7 @@ export function AnimalView({ animalId, tab }: AnimalViewProps) {
           tabIndex={-1}
           ref={panelRef}
         >
-          {vm.activePanel.scope && (
+          {tab === 'electrode-groups' && vm.activePanel.scope && (
             <p className={styles.panelScope} data-testid={`panel-scope-${tab}`}>
               {vm.activePanel.scope}
             </p>
@@ -598,8 +593,6 @@ export function AnimalView({ animalId, tab }: AnimalViewProps) {
               onPendingEditsChange: setPendingEdits,
               onFieldUpdate: handleStaticFieldUpdate,
               configCard: vm.configCard,
-              blastRadius: vm.blastRadius,
-              onOptoAfterUpdate: noteEditConsequence,
               onNewConfiguration: () => setNewConfigOpen(true),
               onSetEffectiveDate: (version, date) => actions.setConfigurationEffectiveDate(animalId, version, date),
             })}

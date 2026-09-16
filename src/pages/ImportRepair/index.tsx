@@ -677,6 +677,16 @@ export default function ImportRepair() {
         </p>
       </div>
 
+      {activeAssessment.importPlan.animals.map((planned) => <section key={planned.subjectId} className={styles.card} aria-label="Planned recording import">
+        <strong>{planned.subjectId}</strong>
+        <ul>{planned.days.map((recording) => {
+          const exists = Object.values(model.workspace.days).some((day) => day != null && typeof day === 'object' && 'animalId' in day && 'date' in day && day.animalId === (planned.existingAnimalId ?? planned.subjectId) && day.date === recording.date);
+          return <li key={recording.sourceKey}>{recording.date} · {exists
+            ? 'This recording date already exists. Adding it will be blocked; review the conflict options before importing.'
+            : planned.conflict === 'exists' ? 'Add recording to existing animal' : 'Create animal and recording'}</li>;
+        })}</ul>
+      </section>)}
+
       {activeAssessment.ready && plan.items.length === 0 && (
         <p className={styles.readyNotice} role="status">No repairs needed. This file is ready.</p>
       )}
@@ -947,6 +957,7 @@ function AnimalPreviewCard({
         {animal.configVersions.length}{' '}
         {pluralize(animal.configVersions.length, 'hardware configuration')}
       </p>
+      <p>Recording dates: {Array.from(animal.days).map((recording) => recording.date).join(', ')}</p>
       {animal.configVersions.length > 0 && (
         <ul className={styles.configList}>
           {animal.configVersions.map((configuration) => (

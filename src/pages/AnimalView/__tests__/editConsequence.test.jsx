@@ -82,7 +82,8 @@ describe('AnimalView — animal-static edit consequence', () => {
     const user = userEvent.setup();
     renderView('cameras');
 
-    await user.click(screen.getByRole('button', { name: /delete camera 0/i }));
+    await user.click(screen.getByRole('button', { name: /Actions for camera 0/i }));
+    await user.click(screen.getByRole('menuitem', { name: /delete camera 0/i }));
     // The camera-delete confirm dialog → confirm.
     await user.click(screen.getByRole('button', { name: /^delete$/i }));
 

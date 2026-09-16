@@ -71,13 +71,14 @@ afterEach(() => {
 describe('AnimalView setup — blast-radius chips + opto meter', () => {
   it('shows a BlastRadiusChip on the Cameras tab', () => {
     renderView('cameras');
-    expect(screen.getByText(/affects all 1 day/i)).toBeInTheDocument();
+    expect(screen.queryByText(/affects all 1 day/i)).not.toBeInTheDocument();
   });
 
-  it('shows a BlastRadiusChip and the opto-completeness meter on the Optogenetics tab', () => {
+  it('shows the default-only scope and accurate completeness on the Optogenetics tab', () => {
     renderView('optogenetics');
-    expect(screen.getByText(/affects all 1 day/i)).toBeInTheDocument();
-    expect(screen.getByText(/opto configured/i)).toHaveTextContent(/4 of 4/);
+    expect(screen.queryByText(/affects all 1 day/i)).not.toBeInTheDocument();
+    expect(screen.getByText(/Existing recordings keep their saved setup/)).toBeInTheDocument();
+    expect(screen.getByText(/optogenetics sections complete/i)).toHaveTextContent(/1 of 4/);
   });
 
   it('does NOT show a BlastRadiusChip on the Recording System tab (not re-export-forcing)', () => {

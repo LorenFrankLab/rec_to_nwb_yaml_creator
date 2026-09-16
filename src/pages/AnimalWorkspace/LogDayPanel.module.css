@@ -65,6 +65,15 @@
   color: var(--color-warning);
 }
 
+.options {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--spacing-sm) var(--spacing-md);
+  margin-top: var(--spacing-sm);
+  font-size: var(--font-size-sm);
+}
+
 @media (max-width: 640px) {
   .row {
     flex-direction: column;
@@ -72,7 +81,17 @@
   }
 
   .dateForm {
-    flex-direction: column;
-    align-items: stretch;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 10rem), 1fr));
+  }
+
+  .dateLabel {
+    grid-column: 1 / -1;
+  }
+
+  .dateInput {
+    min-width: 0;
+    width: 100%;
+    box-sizing: border-box;
   }
 }

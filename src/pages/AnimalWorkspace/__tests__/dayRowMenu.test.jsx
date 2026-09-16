@@ -82,15 +82,15 @@ describe('RecordingDaysTab — per-day ⋯ menu', () => {
     expect(screen.getByLabelText(/new date/i)).toBeInTheDocument();
   });
 
-  it('Export this day downloads exactly that day via the shared export path', async () => {
+  it('Export this day selects exactly that day in the shared review', async () => {
     const user = userEvent.setup();
     renderPane();
 
     await user.click(screen.getByRole('button', { name: /actions for 2023-06-22/i }));
     await user.click(screen.getByRole('menuitem', { name: /export this day/i }));
 
-    expect(downloadYamlFile).toHaveBeenCalledTimes(1);
-    expect(downloadYamlFile.mock.calls[0][0]).toBe('20230622_remy_metadata.yml');
+    expect(downloadYamlFile).not.toHaveBeenCalled();
+    expect(window.location.hash).toBe('#/animal/remy/export?day=remy-2023-06-22');
   });
 
   it('Delete day shows the undo toast (no hard confirm dialog)', async () => {

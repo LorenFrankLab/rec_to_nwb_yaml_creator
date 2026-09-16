@@ -1,3 +1,4 @@
+import OverflowMenu from '../../components/OverflowMenu';
 import {
   getAnimalElectrodeGroups,
   getConfigHistory,
@@ -146,10 +147,10 @@ export default function ElectrodeGroupsStep({ animal, onFieldUpdate, onEdit, onA
         <div className="empty-state-icon" aria-hidden="true">🔌</div>
         <h3>No Electrode Groups Configured</h3>
         <p>
-          Electrode groups define your recording hardware: brain regions, device types, and stereotaxic coordinates.
+          Add a probe or tetrode, or copy the setup from another animal.
         </p>
         <p className="empty-state-hint">
-          After adding electrode groups, you'll configure channel maps to match your Trodes hardware setup.
+          Then verify its channel mapping against the Trodes recording configuration.
         </p>
         <Button onClick={handleAddClick}>
           Add First Electrode Group
@@ -223,14 +224,7 @@ export default function ElectrodeGroupsStep({ animal, onFieldUpdate, onEdit, onA
                 >
                   Edit
                 </Button>
-                <Button
-                  variant="dangerSubtle"
-                  size="small"
-                  onClick={() => handleDeleteClick(group)}
-                  aria-label={`Delete electrode group ${group.id}`}
-                >
-                  Delete
-                </Button>
+                <OverflowMenu label={`Actions for electrode group ${group.id}`} items={[{ key: 'delete', label: `Delete electrode group ${group.id}`, onSelect: () => handleDeleteClick(group), }]} />
               </td>
             </tr>
           ))}

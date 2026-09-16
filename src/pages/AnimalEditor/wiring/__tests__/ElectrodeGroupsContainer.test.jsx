@@ -172,7 +172,8 @@ describe('ElectrodeGroupsContainer — delete cascade', () => {
     expect(groups()).toHaveLength(2);
     expect(maps()).toHaveLength(2);
 
-    await user.click(screen.getByRole('button', { name: /delete electrode group 0/i }));
+    await user.click(screen.getByRole('button', { name: /Actions for electrode group 0/i }));
+    await user.click(screen.getByRole('menuitem', { name: /delete electrode group 0/i }));
     // Destructive confirm, then confirm.
     const dialog = screen.getByRole('alertdialog');
     await user.click(within(dialog).getByRole('button', { name: /^delete$/i }));

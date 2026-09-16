@@ -59,7 +59,7 @@ const configuredAnimal = {
 describe('AnimalWorkspace existing-data review state', () => {
   it('does NOT show a review state for a clean established animal with recording days', async () => {
     // A clean animal with a present, non-corrupt recording day has nothing to review — the banner
-    // must not linger and compete with "Add Recording Days" forever after the first day.
+    // must not linger and compete with "Add multiple dates…" forever after the first day.
     const animal = { ...newAnimal, days: ['newbie-2024-01-02'] };
     const days = { 'newbie-2024-01-02': { id: 'newbie-2024-01-02', date: '2024-01-02', session: { session_id: 's' }, state: {} } };
     renderPane('newbie', { newbie: animal }, days);
@@ -122,7 +122,7 @@ describe('AnimalWorkspace existing-data review state', () => {
     // The date link (distinct from the row's trailing "Open …" chevron link, which shares the date).
     expect(screen.getByRole('link', { name: /^2024-02-02$/ })).toBeInTheDocument();
     expect(screen.queryByText(/no recording days yet/i)).not.toBeInTheDocument();
-    // The review state appears and points to THIS animal's own Validation & Export tab to re-link
+    // The review state appears and points to THIS animal's own Review & export tab to re-link
     // (not the cross-animal batch screen) — "go review this" stays within the animal you're in.
     const review = screen.getByRole('region', { name: /existing data review/i });
     within(review)

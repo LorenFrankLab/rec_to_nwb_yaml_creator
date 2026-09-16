@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { useMemo, useState } from 'react';
 import { getCurrentDate } from '../../state/workspaceUtils';
 import { selectConfigurationForDate } from '../../domain/configurationSelection';
@@ -18,6 +19,7 @@ interface LogDayPanelProps {
   carryForward: boolean;
   /** Create a day for `date` (with the carry policy) and open it; or just open an existing one. */
   onLogDate: (date: string) => void;
+  options?: ReactNode;
 }
 
 /** ISO date → "Jun 22, 2023" (locale-independent month names, deterministic). */
@@ -41,6 +43,7 @@ export default function LogDayPanel({
   existingDates,
   carryForward,
   onLogDate,
+  options,
 }: LogDayPanelProps) {
   const today = getCurrentDate();
   const [date, setDate] = useState('');
@@ -59,7 +62,7 @@ export default function LogDayPanel({
 
   return (
     <section className={styles.panel} aria-labelledby="log-day-heading">
-      <h3 id="log-day-heading" className={styles.heading}>
+      <h3 id="log-day-heading" className="visually-hidden">
         Log a recording day
       </h3>
       <div className={styles.row}>
@@ -121,9 +124,10 @@ export default function LogDayPanel({
             </>
           )
         ) : (
-          <>Today logs the current date; type any past date to backfill — it starts from the nearest earlier day and the setup in effect then.</>
+          existingDates.length === 0 ? <>Choose the recording date, even when entering metadata later.</> : null
         )}
       </p>
+      <div className={styles.options}>{options}</div>
     </section>
   );
 }

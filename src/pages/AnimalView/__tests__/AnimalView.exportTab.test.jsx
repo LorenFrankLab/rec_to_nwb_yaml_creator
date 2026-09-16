@@ -1,5 +1,5 @@
 /**
- * Tests for the per-animal Validation & Export tab mounted into AnimalView (Phase 3-5).
+ * Tests for the per-animal Review & export tab mounted into AnimalView (Phase 3-5).
  *
  * The `export` tab renders <ValidationSummary animalKey={id}> — the SAME component as the standalone
  * page, scoped by a filter (buildAnimalRows) to ONE animal, without a second #main-content. These
@@ -38,7 +38,7 @@ function renderExportTab(animalId, workspace) {
   );
 }
 
-describe('AnimalView — Validation & Export tab (Phase 3-5)', () => {
+describe('AnimalView — Review & export tab (Phase 3-5)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     checkShadowExport.mockReturnValue({ ok: true, yaml: 'metadata: ok\n', diff: '' });
@@ -61,7 +61,7 @@ describe('AnimalView — Validation & Export tab (Phase 3-5)', () => {
     expect(screen.queryByTestId('day-row-totoro-2023-06-22')).not.toBeInTheDocument();
   });
 
-  it('links up to the cross-animal batch Validation & Export screen (Task 4.4)', () => {
+  it('links up to the cross-animal batch Review & export screen (Task 4.4)', () => {
     const { workspace } = makeSummaryWorkspace();
     renderExportTab('remy', workspace);
     // The per-animal tab handles ONE animal; it makes the batch screen explicit by linking to it.
@@ -80,11 +80,11 @@ describe('AnimalView — Validation & Export tab (Phase 3-5)', () => {
     const { workspace } = makeSummaryWorkspace();
     renderExportTab('remy', workspace);
 
-    await user.click(screen.getByRole('button', { name: /export valid only/i }));
+    await user.click(screen.getByRole('button', { name: /Review \d+ selected recordings?/i }));
     // Preflight lists only the valid day (the incomplete day is not export-eligible).
     const preflight = screen.getByRole('region', { name: /batch export preflight/i });
-    expect(within(preflight).getByText(/confirm export \(1\)/i)).toBeInTheDocument();
-    await user.click(within(preflight).getByRole('button', { name: /confirm export \(1\)/i }));
+    expect(within(preflight).getByText(/Download 1 YAML files/i)).toBeInTheDocument();
+    await user.click(within(preflight).getByRole('button', { name: /Download 1 YAML files/i }));
 
     // The single valid day downloaded; the incomplete day was never exported.
     expect(downloadYamlFile).toHaveBeenCalledTimes(1);

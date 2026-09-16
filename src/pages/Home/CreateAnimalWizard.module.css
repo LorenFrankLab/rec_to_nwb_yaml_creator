@@ -16,7 +16,7 @@
 /* Stepper (tablist) */
 .stepper {
   display: flex;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
   gap: var(--spacing-xs);
   margin-bottom: var(--spacing-lg);
   padding: 0;
@@ -91,7 +91,7 @@
 
 .stepOptional {
   font-size: 0.6875rem;
-  color: var(--color-grey-500);
+  color: var(--color-grey-700);
 }
 
 /* Panel */
@@ -117,6 +117,7 @@
 /* Identity fields */
 .field {
   margin-bottom: var(--spacing-md);
+  min-width: 0;
 }
 
 .field > label {
@@ -128,13 +129,14 @@
 }
 
 .field input,
-.field select {
+.field select,
+.field textarea {
   font: inherit;
   border: 1px solid var(--color-grey-300);
   border-radius: var(--radius-sm);
   padding: var(--spacing-xs) var(--spacing-sm);
   width: 100%;
-  max-width: 420px;
+  max-width: 620px;
 }
 
 /* The locked subject_id (read-only once the animal is created) reads as non-editable. */
@@ -145,9 +147,9 @@
 
 .two {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--spacing-md);
-  max-width: 420px;
+  max-width: 620px;
 }
 
 .hint {
@@ -246,3 +248,79 @@
   color: var(--color-success);
   white-space: nowrap;
 }
+
+.panel :global(.section-header) { display: none; }
+
+.panel :global(.cameras-section),
+.panel :global(.electrode-groups-step),
+.panel :global(.task-types-section),
+.panel :global(.data-acq-section) {
+  padding: 0;
+  background: transparent;
+}
+.panel :global(.opto-step) > h2 { display: none; }
+
+
+@media (max-width: 480px) {
+  .two { grid-template-columns: minmax(0, 1fr); }
+  .panel { padding: var(--spacing-md); }
+}
+
+/* The step already explains the task; an empty section needs only its entry actions. */
+.panel :global(.empty-state) {
+  min-height: 0;
+  padding: var(--spacing-md);
+  margin-block: var(--spacing-md);
+}
+
+.panel :global(.empty-state-icon),
+.panel :global(.empty-state) h3,
+.panel :global(.empty-state) > p { display: none; }
+
+@media (max-width: 480px) {
+  .footer {
+    flex-wrap: wrap;
+    gap: var(--spacing-sm);
+  }
+
+  .footerRight {
+    flex-wrap: wrap;
+    max-width: 100%;
+  }
+  .draftStatus { white-space: normal; }
+}
+
+.stepper[hidden] { display: none; }
+
+.compactStep {
+  width: 100%;
+  margin-bottom: var(--spacing-md);
+  text-align: left;
+}
+
+.startOptions > summary { cursor: pointer; }
+
+@media (min-width: 601px) {
+  .startOptions > summary { display: none; }
+}
+
+@media (max-width: 600px) {
+  .startOptions { margin-bottom: var(--spacing-md); }
+  .startOptions > summary { padding-block: var(--spacing-sm); }
+}
+
+.modalities {
+  margin-top: var(--spacing-md);
+  display: grid;
+  gap: var(--spacing-sm);
+}
+
+.modalities label {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  min-height: 44px;
+}
+
+/* The wizard supplies the step heading; shared editors supply their fields and guidance. */
+.panel :global(.section-header) h2 { display: none; }

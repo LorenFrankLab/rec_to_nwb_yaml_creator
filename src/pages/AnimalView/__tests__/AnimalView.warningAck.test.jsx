@@ -1,5 +1,5 @@
 /**
- * Tests for the pre-export warning acknowledgement on the per-animal Validation & Export tab
+ * Tests for the pre-export warning acknowledgement on the per-animal Review & export tab
  * (Phase 3-6 — close the warning-escape on export).
  *
  * The export gate keys on error severity only, so non-blocking WARNINGS can ride a valid-only /
@@ -57,7 +57,7 @@ async function openPreflight(workspace) {
       <AnimalView animalId="remy" tab="export" />
     </StoreProvider>
   );
-  await user.click(screen.getByRole('button', { name: /export valid only/i }));
+  await user.click(screen.getByRole('button', { name: /Review \d+ selected recordings?/i }));
   return user;
 }
 
@@ -80,13 +80,13 @@ describe('AnimalView export tab — warning acknowledgement (Phase 3-6)', () => 
 
   it('blocks the download until the acknowledgement is checked', async () => {
     const user = await openPreflight(buildWarningWorkspace());
-    const confirm = screen.getByRole('button', { name: /confirm export/i });
+    const confirm = screen.getByRole('button', { name: /Download \d+ YAML files/i });
     // Gated: clicking while unacknowledged downloads nothing.
     await user.click(confirm);
     expect(downloadYamlFile).not.toHaveBeenCalled();
     // Acknowledge, then the same confirm proceeds.
     await user.click(screen.getByRole('checkbox', { name: /reviewed these warnings/i }));
-    await user.click(screen.getByRole('button', { name: /confirm export/i }));
+    await user.click(screen.getByRole('button', { name: /Download \d+ YAML files/i }));
     expect(downloadYamlFile).toHaveBeenCalledTimes(1); // warning day still exportable once acknowledged
   });
 
@@ -100,7 +100,7 @@ describe('AnimalView export tab — warning acknowledgement (Phase 3-6)', () => 
   it('no outstanding warnings → no acknowledgement step, export proceeds', async () => {
     const user = await openPreflight(buildCleanWorkspace());
     expect(screen.queryByRole('group', { name: /outstanding warnings to review/i })).not.toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: /confirm export/i }));
+    await user.click(screen.getByRole('button', { name: /Download \d+ YAML files/i }));
     expect(downloadYamlFile).toHaveBeenCalledTimes(1);
   });
 });

@@ -1,7 +1,9 @@
+import OverflowMenu from '../../components/OverflowMenu';
 import { getAnimalCameras } from '../../state/workspaceSelectors';
 import type { Camera } from '../../state/workspaceTypes';
 import Button from '../../components/ui/Button';
 import './CamerasSection.scss';
+import '../../components/ui/SetupTable.css';
 
 interface CamerasSectionProps {
   /** Animal record with cameras array; read through the tolerant selector. */
@@ -147,25 +149,23 @@ export default function CamerasSection({ animal, onFieldUpdate, onEdit, onAdd, o
       </header>
 
       <div className="table-actions">
-        <Button variant="primary" onClick={handleAddClick}>
+        <Button variant="secondary" onClick={handleAddClick}>
           + Add Camera
         </Button>
       </div>
 
       {/* Horizontal-scroll container so the Actions column (Edit/Delete) stays reachable when
           long camera/lens names would otherwise push it off-screen at desktop widths. */}
-      <div className="cameras-table-scroll">
-        <table className="cameras-table" role="table">
+      <div className="setup-table-scroll">
+        <table className="setup-table" role="table">
         <thead>
           <tr>
-            <th>ID</th>
-            <th>Name</th>
-            <th>Manufacturer</th>
-            <th>Model</th>
-            <th>Lens</th>
-            <th>Meters per Pixel</th>
-            <th>Status</th>
-            <th className="cameras-actions-cell">Actions</th>
+            <th scope="col">ID</th>
+            <th scope="col">Name</th>
+            <th scope="col">Hardware</th>
+            <th scope="col">Calibration (m/px)</th>
+            <th scope="col">Status</th>
+            <th scope="col">Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -174,9 +174,10 @@ export default function CamerasSection({ animal, onFieldUpdate, onEdit, onAdd, o
               <td data-label="ID">{camera.id}</td>
               {/* title= surfaces the full value when the cell truncates with an ellipsis. */}
               <td data-label="Name" title={camera.camera_name || ''}>{camera.camera_name || ''}</td>
-              <td data-label="Manufacturer" title={camera.manufacturer || ''}>{camera.manufacturer || ''}</td>
-              <td data-label="Model" title={camera.model || ''}>{camera.model || ''}</td>
-              <td data-label="Lens" title={camera.lens || ''}>{camera.lens || ''}</td>
+              <td data-label="Hardware">
+                <span>{camera.manufacturer} · {camera.model}</span>
+                <small>Lens: {camera.lens}</small>
+              </td>
               <td data-label="Meters per Pixel">{camera.meters_per_pixel}</td>
               <td data-label="Status">
                 {(() => {
@@ -194,7 +195,7 @@ export default function CamerasSection({ animal, onFieldUpdate, onEdit, onAdd, o
                   );
                 })()}
               </td>
-              <td data-label="Actions" className="cameras-actions-cell">
+              <td data-label="Actions">
                 <Button
                   variant="neutral"
                   size="small"
@@ -203,14 +204,7 @@ export default function CamerasSection({ animal, onFieldUpdate, onEdit, onAdd, o
                 >
                   Edit
                 </Button>
-                <Button
-                  variant="dangerSubtle"
-                  size="small"
-                  onClick={() => handleDeleteClick(camera)}
-                  aria-label={`Delete camera ${camera.id}`}
-                >
-                  Delete
-                </Button>
+                <OverflowMenu label={`Actions for camera ${camera.id}`} items={[{ key: 'delete', label: `Delete camera ${camera.id}`, onSelect: () => handleDeleteClick(camera), }]} />
               </td>
             </tr>
           ))}

@@ -127,7 +127,7 @@ describe('RecoveryReview', () => {
       </StoreProvider>
     );
     expect(await screen.findByText(/missing required sections/i)).toBeInTheDocument();
-    expect(screen.getByText(/nothing was discarded/i)).toBeInTheDocument();
+    expect(screen.queryByText(/some saved records didn.t fit/i)).not.toBeInTheDocument();
     expect(screen.getByText(/every recovered record is in good shape/i)).toBeInTheDocument();
   });
 

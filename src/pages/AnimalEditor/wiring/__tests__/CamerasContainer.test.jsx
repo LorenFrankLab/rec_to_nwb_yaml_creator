@@ -38,7 +38,7 @@ describe('CamerasContainer — add + persist', () => {
     renderSeeded({ animals: { remy: animal }, days: {} }, animal, onFieldUpdate);
 
     await user.click(screen.getByRole('button', { name: /add (first )?camera/i }));
-    await user.type(screen.getByLabelText(/^camera name$/i), 'overhead');
+    await user.type(screen.getByLabelText(/^camera name/i), 'overhead');
     await user.clear(screen.getByLabelText(/manufacturer/i));
     await user.type(screen.getByLabelText(/manufacturer/i), 'Allied');
     await user.clear(screen.getByLabelText(/model/i));
@@ -63,7 +63,7 @@ describe('CamerasContainer — identity safety', () => {
     renderSeeded({ animals: { remy, jaq }, days: {} }, remy, onFieldUpdate);
 
     await user.click(screen.getByRole('button', { name: /add (first )?camera/i }));
-    await user.type(screen.getByLabelText(/^camera name$/i), 'overhead');
+    await user.type(screen.getByLabelText(/^camera name/i), 'overhead');
     await user.clear(screen.getByLabelText(/manufacturer/i));
     await user.type(screen.getByLabelText(/manufacturer/i), 'Allied');
     await user.clear(screen.getByLabelText(/model/i));
@@ -137,7 +137,7 @@ describe('CamerasContainer — identity safety', () => {
     renderSeeded({ animals: { remy }, days: {} }, remy, onFieldUpdate);
 
     await user.click(screen.getByRole('button', { name: /^edit camera/i }));
-    const name = screen.getByLabelText(/^camera name$/i);
+    const name = screen.getByLabelText(/^camera name/i);
     await user.clear(name);
     await user.type(name, 'overhead_zoomed');
     const metersPerPixel = screen.getByLabelText(/meters per pixel/i);
@@ -170,7 +170,7 @@ describe('CamerasContainer — immutable-once-referenced cameras', () => {
    */
   async function editReferencedCamera(user) {
     await user.click(screen.getByRole('button', { name: /^edit camera/i }));
-    const name = screen.getByLabelText(/^camera name$/i);
+    const name = screen.getByLabelText(/^camera name/i);
     await user.clear(name);
     await user.type(name, 'overhead_zoomed');
     const mpp = screen.getByLabelText(/meters per pixel/i);

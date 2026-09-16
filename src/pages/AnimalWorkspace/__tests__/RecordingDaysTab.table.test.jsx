@@ -81,13 +81,13 @@ describe('RecordingDaysTab — days table', () => {
     renderTwoDay();
 
     // Hidden before any selection.
-    expect(screen.queryByRole('button', { name: /export selected/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /review selected recordings/i })).not.toBeInTheDocument();
 
     await user.click(screen.getByRole('checkbox', { name: /select 2023-06-22/i }));
 
     // The bar appears with the count + the two bulk actions.
     expect(screen.getByText(/1 selected/i)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /export selected/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /review selected recordings/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /^delete$/i })).toBeInTheDocument();
   });
 
@@ -102,6 +102,6 @@ describe('RecordingDaysTab — days table', () => {
 
     await user.click(screen.getByRole('checkbox', { name: /select all recording days/i }));
     expect(screen.getByRole('checkbox', { name: /select 2023-06-22/i })).not.toBeChecked();
-    expect(screen.queryByRole('button', { name: /export selected/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /review selected recordings/i })).not.toBeInTheDocument();
   });
 });

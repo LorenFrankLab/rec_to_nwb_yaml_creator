@@ -100,16 +100,15 @@ describe('AnimalView — subject profile in the header (Phase 3-4)', () => {
     renderView('days');
 
     expect(screen.getByRole('dialog', { name: /edit animal profile/i })).toBeInTheDocument();
-    await waitFor(() => expect(screen.getByLabelText(/^species$/i)).toHaveFocus());
+    await waitFor(() => expect(screen.getByLabelText(/^species/i)).toHaveFocus());
   });
 
   it('editing + confirming the blast-radius writes the subject via updateAnimal', async () => {
     const user = userEvent.setup();
     renderView('electrode-groups');
     await openProfile(user);
-    const speciesInput = screen.getByLabelText(/^species$/i);
-    await user.clear(speciesInput);
-    await user.type(speciesInput, 'Mus musculus');
+    const speciesInput = screen.getByLabelText(/^species/i);
+    await user.selectOptions(speciesInput, 'Mus musculus');
     await user.click(screen.getByRole('button', { name: /save profile changes/i }));
     // Blast-radius confirm fires because the animal has recording days.
     const confirm = screen.getByRole('dialog', { name: /update animal profile/i });

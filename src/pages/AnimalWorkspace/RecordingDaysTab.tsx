@@ -36,7 +36,6 @@ import {
   normalizeNtrodeMapWithDefaults,
 } from '../../utils/deviceNormalization';
 import type { NtrodeMap } from '../../state/workspaceTypes';
-import { isFeatureEnabled } from '../../featureFlags';
 import CopyFromAnimalDialog from '../AnimalEditor/CopyFromAnimalDialog';
 import type { CopyPayload } from '../AnimalEditor/CopyFromAnimalDialog';
 import { buildAnimalWorkspaceViewModel } from '../../viewModels/animalWorkspaceViewModel';
@@ -52,8 +51,6 @@ import ExistingDataReview from './ExistingDataReview';
 import DayList from './DayList';
 import DuplicateDayModal from './DuplicateDayModal';
 import LogDayPanel, { formatShortDate } from './LogDayPanel';
-import { exportSelectedDays } from './exportSelectedDays';
-import type { BulkExportResult } from './exportSelectedDays';
 import { restoreDay } from './restoreDay';
 import type { CapturedDay } from './restoreDay';
 import styles from './AnimalWorkspace.module.css';
@@ -95,7 +92,6 @@ export function RecordingDaysTab({ animalId }: RecordingDaysTabProps) {
   // The most recent bulk/single "Export selected" result ("Exported N · Skipped M"), or null. Skipped
   // days are linked to their issue (the day editor) — the inline batch-result pattern (Phase 5 adds
   // the full preview screen).
-  const [exportResult, setExportResult] = useState<BulkExportResult | null>(null);
   // Undo toast host (Phase 0): per-day delete is reversible — delete immediately + offer Undo.
   const undo = useUndoToast();
 
@@ -158,18 +154,10 @@ export function RecordingDaysTab({ animalId }: RecordingDaysTabProps) {
    * valid days download byte-identically, invalid/not-exportable days are skipped with a linked
    * reason. Surfaces the inline "Exported N · Skipped M" result and clears the selection.
    */
-  const handleExportDays = useCallback(
-    (ids: string[]) => {
-      const strict = isFeatureEnabled('shadowExportStrict');
-      const result = exportSelectedDays(model.workspace, selectedAnimalId, ids, {
-        actions: actions as unknown as Parameters<typeof exportSelectedDays>[3]['actions'],
-        strict,
-      });
-      setSelectedDayIds(new Set());
-      setExportResult(result);
-    },
-    [model.workspace, selectedAnimalId, actions]
-  );
+  const handleExportDays = useCallback((ids: string[]) => {
+    const query = new URLSearchParams(ids.map((id) => ['day', id]));
+    window.location.hash = `#/animal/${encodeURIComponent(selectedAnimalId)}/export?${query}`;
+  }, [selectedAnimalId]);
 
   /**
    * Delete the given days (row or bulk) and offer Undo. Captures each record BEFORE deleting so the
@@ -434,73 +422,32 @@ export function RecordingDaysTab({ animalId }: RecordingDaysTabProps) {
       <div>
         <header className={styles.dayListHeader}>
           <h2 id="day-list-heading">
-            Recording Days for {selectedAnimal.id}
+            Recording Days
           </h2>
-          <div className={styles.dayActions}>
-            {/* No aria-label: the visible text IS the accessible name (label parity), so voice
-                control / screen readers find the control by what it says. `aria-expanded` conveys
-                the open/closed state; the visible text already flips Add Recording Days ↔ Hide
-                Calendar for sighted users. */}
-            {dayRows.length > 0 && (
-              <Button
-                onClick={handleToggleCalendar}
-                aria-expanded={showCalendar}
-              >
-                {showCalendar ? 'Hide Calendar' : 'Add Recording Days'}
-              </Button>
-            )}
-            {carryForwardVm.available && (
-              <label className={styles.carryForwardToggle}>
-                <input
-                  type="checkbox"
-                  checked={carryForward}
-                  onChange={(e) => setCarryForward(e.target.checked)}
-                />
-                Start each new day from the nearest earlier day (latest: {carryForwardVm.lastDayDate}) —
-                review &amp; adjust per day
-              </label>
-            )}
-          </div>
         </header>
 
-        {/* First-run "Set up this animal" card + the (separate) existing-data review state.
-            The card is the LOUD onboarding affordance for a new/under-configured animal; the
-            review state is a different concern (recovered/imported review). Both read the SAME
-            view-model the builder derives. */}
-        {/* The routine entry point: Log today / choose a recording date / preview of the source day
-            and the probe setup effective on that date (a backfill is as safe as today's entry). It
-            comes FIRST once the animal has days; the setup checklist leads only for a brand-new animal. */}
-        {dayRows.length > 0 && (
-          <LogDayPanel
-            animal={selectedAnimal}
-            days={days}
-            animalId={selectedAnimalId}
-            existingDates={getExistingDays()}
-            carryForward={carryForward && Boolean(mostRecentDayId)}
-            onLogDate={handleLogDate}
-          />
-        )}
-
-        {showSetupCard && (
-          <AnimalSetupCard
-            sections={setupSections}
-            hasOtherAnimals={hasOtherAnimals}
-            onCopyFromAnimal={() => setCopyDialogOpen(true)}
-          />
-        )}
-
+        <LogDayPanel
+          animal={selectedAnimal} days={days} animalId={selectedAnimalId}
+          existingDates={getExistingDays()}
+          carryForward={carryForward && Boolean(mostRecentDayId)} onLogDate={handleLogDate}
+          options={<>
+            <Button variant="neutral" size="small" onClick={handleToggleCalendar} aria-expanded={showCalendar}>
+              {showCalendar ? 'Hide calendar' : 'Add multiple dates…'}
+            </Button>
+            {carryForwardVm.available && <details>
+              <summary>{carryForward ? 'Copy prior epochs' : 'Start with a blank day'} · Change</summary>
+              <label className={styles.carryForwardToggle}>
+                <input type="checkbox" checked={carryForward} onChange={(event) => setCarryForward(event.target.checked)} />
+                Start each new day from the nearest earlier day
+              </label>
+              <p>Copies epochs and recording settings. Enter a new measured weight for each date.</p>
+            </details>}
+          </>}
+        />
+        {showSetupCard && <AnimalSetupCard sections={setupSections}
+          resumeHref={`#/home?animal=${encodeURIComponent(selectedAnimalId)}&step=${setupSections.find((section) => section.status === 'todo' || section.status === 'error')?.key.replace('electrode-groups', 'electrodes') ?? 'identity'}`}
+          hasOtherAnimals={hasOtherAnimals} onCopyFromAnimal={() => setCopyDialogOpen(true)} />}
         {review && <ExistingDataReview review={review} onRepair={handleRepair} />}
-
-        {dayRows.length === 0 && (
-          <LogDayPanel
-            animal={selectedAnimal}
-            days={days}
-            animalId={selectedAnimalId}
-            existingDates={getExistingDays()}
-            carryForward={carryForward && Boolean(mostRecentDayId)}
-            onLogDate={handleLogDate}
-          />
-        )}
 
         {/* Unfinished work first: the days that still need something before they can be downloaded.
             Links are named "Resume <date>" so they never collide with the table's date links. */}
@@ -537,7 +484,7 @@ export function RecordingDaysTab({ animalId }: RecordingDaysTabProps) {
           <div className={styles.bulkBar} role="region" aria-label="Selected days actions">
             <span className={styles.bulkCount}>{selectedDayIds.size} selected</span>
             <Button variant="primary" size="small" onClick={() => handleExportDays([...selectedDayIds])}>
-              ⬇ Export selected
+              Review selected recordings
             </Button>
             {/* dangerSubtle: a low-commitment, repeated destructive action (delete is undo-able). */}
             <Button variant="dangerSubtle" size="small" onClick={() => handleDeleteDays([...selectedDayIds])}>
@@ -546,36 +493,15 @@ export function RecordingDaysTab({ animalId }: RecordingDaysTabProps) {
           </div>
         )}
 
-        {/* Inline "Exported N · Skipped M" result — skipped days link to where their issue is fixed. */}
-        {exportResult && (
-          <div className={styles.exportResult} role="status">
-            <p>
-              Exported {exportResult.exported.length}{' '}
-              {pluralize(exportResult.exported.length, 'file')}
-              {exportResult.skipped.length > 0 ? ` · Skipped ${exportResult.skipped.length}` : ''}.
-            </p>
-            {exportResult.skipped.length > 0 && (
-              <ul className={styles.exportSkipped}>
-                {exportResult.skipped.map((skip) => (
-                  <li key={skip.dayId}>
-                    {skip.href ? <a href={skip.href}>{skip.date}</a> : skip.date} — {skip.reason}
-                  </li>
-                ))}
-              </ul>
-            )}
-            <button type="button" className={styles.btnSecondaryText} onClick={() => setExportResult(null)}>
-              Dismiss
-            </button>
-          </div>
-        )}
-
         {/* One shared legend for the day-row status words, reused from the Validation Summary so
             the lifecycle vocabulary is defined once. Shown only when there are day rows to triage;
             collapsed by default so it never crowds the list. */}
-        {dayRows.length > 0 && <DayLifecycleLegend />}
 
         <DayList
-          rows={dayRows}
+          rows={[...dayRows].sort((a, b) => {
+            const pending = (row: typeof a) => row.chipVariant === 'draft' || row.chipVariant === 'needs_fixing';
+            return Number(pending(b)) - Number(pending(a)) || String(b.date).localeCompare(String(a.date));
+          })}
           daysCorrupt={daysCorrupt}
           animalId={selectedAnimalId}
           selectedDayIds={selectedDayIds}
@@ -587,8 +513,8 @@ export function RecordingDaysTab({ animalId }: RecordingDaysTabProps) {
           onDuplicateDay={openDuplicateDay}
           onExportDay={(dayId) => handleExportDays([dayId])}
           onDeleteDay={(dayId) => handleDeleteDays([dayId])}
-          onAddDay={() => setShowCalendar(true)}
         />
+        {dayRows.length > 0 && <DayLifecycleLegend />}
       </div>
 
       <DuplicateDayModal

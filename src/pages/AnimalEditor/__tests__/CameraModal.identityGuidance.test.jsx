@@ -16,11 +16,11 @@ describe('CameraModal identity guidance', () => {
       <CameraModal isOpen mode="add" existingCameras={[]} onSave={() => {}} onCancel={() => {}} />
     );
     const guidance = screen.getByText(
-      /a different zoom, calibration, lens, model, or id is a different camera/i
+      /Reuse a name only for the same hardware and calibration/i
     );
     expect(guidance).toBeInTheDocument();
     // Associated with the Camera Name field for assistive tech.
-    expect(screen.getByLabelText(/^camera name$/i)).toHaveAttribute(
+    expect(screen.getByLabelText(/^camera name/i)).toHaveAttribute(
       'aria-describedby',
       'camera_name_help'
     );

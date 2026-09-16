@@ -211,7 +211,10 @@ export default function CopyFromAnimal() {
                         checked={isChecked(section)}
                         onChange={() => toggle(section)}
                       />
-                      <span>{SECTION_LABELS[section]}</span>
+                      <span>{SECTION_LABELS[section]} · {section === 'probes' ? getAnimalElectrodeGroups(source).length
+                        : section === 'cameras' ? getAnimalCameras(source).length
+                        : section === 'task-types' ? getAnimalTaskTypes(source).length
+                        : section === 'recording-system' ? getDataAcqDevices(source).length : 'implanted setup'}</span>
                     </label>
                   ))}
                 </fieldset>

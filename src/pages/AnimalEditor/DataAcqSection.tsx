@@ -1,3 +1,7 @@
+import OverflowMenu from '../../components/OverflowMenu';
+import { FieldRequirements } from '../../components/ui/FieldRequirements';
+import { recordingSystemReviewed, recordingSystemSignature } from '../../domain/animalSetupProgress';
+import { RIG_FALLBACK } from '../../domain/rigConstants';
 import { useState, useId } from 'react';
 import { findIdentityDivergence, DATA_ACQ_DEPENDENT_FIELDS, IDENTITY_FIELD_LABELS } from './identitySafety';
 import type { IdentityDivergence, IdentityRegistryEntry } from './identitySafety';
@@ -6,7 +10,7 @@ import type { Animal, TechnicalDefaults } from '../../state/workspaceTypes';
 import Modal from '../../components/Modal/Modal';
 import Button from '../../components/ui/Button';
 import './DataAcqSection.scss';
-
+import '../../components/ui/SetupTable.css';
 /** The four string fields that define a recording-system catalog entry. */
 interface DeviceFields {
   name: string;
@@ -87,7 +91,7 @@ export default function DataAcqSection({ animal, onFieldUpdate, dataAcqRegistry 
 
   // Technical defaults: local state committed on blur (independent of the device editor).
   const [tech, setTech] = useState<TechState>({
-    raw_data_to_volts: defaults.raw_data_to_volts ?? 0.195,
+    raw_data_to_volts: defaults.raw_data_to_volts ?? RIG_FALLBACK.raw_data_to_volts,
     times_period_multiplier: defaults.times_period_multiplier ?? 1.5,
   });
   const commitTech = (next: TechState) =>
@@ -159,33 +163,33 @@ export default function DataAcqSection({ animal, onFieldUpdate, dataAcqRegistry 
       <div className="advanced-content">
         <p className="help-text">
           These seed the technical defaults for new recording days and can be overridden per day.
-          Typical values are 0.195 (raw data to volts) and 1.5 (times period multiplier); change them
+          The voltage default is 1.95e-7 V/count (0.195 µV/count); the legacy period multiplier is 1.5. Change them
           only if instructed by your recording-system vendor or pipeline maintainer — incorrect values
           can corrupt data.
         </p>
 
         <div className="form-group">
-          <label htmlFor="raw_data_to_volts">Raw Data to Volts (V/bit)</label>
+          <label htmlFor="raw_data_to_volts">Voltage conversion (V/count)</label>
           <input
             type="number"
             id="raw_data_to_volts"
             value={Number.isFinite(tech.raw_data_to_volts) ? tech.raw_data_to_volts : ''}
             onChange={(e) => setTech((p) => ({ ...p, raw_data_to_volts: parseFloat(e.target.value) }))}
             onBlur={() => commitTech(tech)}
-            step="0.0001"
+            step="any"
             min="0"
             aria-invalid={!isValidPositive(tech.raw_data_to_volts)}
             aria-describedby="raw-data-help"
           />
           <small id="raw-data-help" className="help-text">
             Conversion factor applied to each raw ADC sample to get volts (must be &gt; 0).
-            Default 0.195 for SpikeGadgets/Intan rigs — do not change without pipeline-maintainer
+            Default 1.95e-7 V/count = 0.195 µV/count for SpikeGadgets/Intan. Verify against acquisition
             guidance.
           </small>
         </div>
 
         <div className="form-group">
-          <label htmlFor="times_period_multiplier">Timestamp Scaling Factor</label>
+          <label htmlFor="times_period_multiplier">Legacy times period multiplier</label>
           <input
             type="number"
             id="times_period_multiplier"
@@ -198,8 +202,8 @@ export default function DataAcqSection({ animal, onFieldUpdate, dataAcqRegistry 
             aria-describedby="times-help"
           />
           <small id="times-help" className="help-text">
-            Scales the hardware clock period to derive absolute timestamps (must be &gt; 0).
-            Default 1.5 for SpikeGadgets rigs — do not change without guidance.
+            Retained for older metadata. The current converter derives timestamps from the
+            recording; this field does not rescale them. Default 1.5.
           </small>
         </div>
       </div>
@@ -226,6 +230,7 @@ export default function DataAcqSection({ animal, onFieldUpdate, dataAcqRegistry 
       }
     >
       <form className="data-acq-form" aria-label="Recording system editor">
+        <FieldRequirements />
         <div className="form-group">
           <label htmlFor="data_acq_name">
             Name <span className="required">*</span>
@@ -303,7 +308,7 @@ export default function DataAcqSection({ animal, onFieldUpdate, dataAcqRegistry 
             </p>
             <table className="identity-divergence-table">
               <thead>
-                <tr><th>Field</th><th>Existing</th><th>This device</th></tr>
+                <tr><th scope="col">Field</th><th scope="col">Existing</th><th scope="col">This device</th></tr>
               </thead>
               <tbody>
                 {divergence.differingFields.map((field) => (
@@ -333,7 +338,7 @@ export default function DataAcqSection({ animal, onFieldUpdate, dataAcqRegistry 
             The recording systems this animal was recorded on. Each recording day uses one; the first
             is the default a day inherits when it hasn&apos;t chosen its own.
           </p>
-          <Button className="add-recording-system" onClick={openAdd}>
+          <Button variant="secondary" className="add-recording-system" onClick={openAdd}>
             Add First Recording System
           </Button>
         </div>
@@ -348,28 +353,26 @@ export default function DataAcqSection({ animal, onFieldUpdate, dataAcqRegistry 
       <header className="section-header">
         <h2>Recording System</h2>
         <p>
-          The recording systems this animal was recorded on. Each recording day uses one (chosen in
-          the day&apos;s setup); the first here is the default a day inherits when it hasn&apos;t
-          chosen its own. A single .rec session is recorded by one acquisition system — an animal
-          recorded on different rigs over time is captured by different days, each using one of these.
+          Add the systems used for this animal. New recordings start with the default system; change it in a recording’s setup when needed.
         </p>
       </header>
 
       <div className="table-actions">
-        <Button className="add-recording-system" onClick={openAdd}>
+        <Button variant="secondary" className="add-recording-system" onClick={openAdd}>
           + Add Recording System
         </Button>
       </div>
 
-      <table className="data-acq-table cameras-table" role="table">
+      <div className="setup-table-scroll">
+      <table className="setup-table" role="table">
         <thead>
           <tr>
-            <th>Name</th>
-            <th>System</th>
-            <th>Amplifier</th>
-            <th>ADC Circuit</th>
-            <th>Role</th>
-            <th>Actions</th>
+            <th scope="col">Name</th>
+            <th scope="col">System</th>
+            <th scope="col">Amplifier</th>
+            <th scope="col">ADC Circuit</th>
+            <th scope="col">Role</th>
+            <th scope="col">Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -395,26 +398,24 @@ export default function DataAcqSection({ animal, onFieldUpdate, dataAcqRegistry 
                   </Button>
                   {/* Always present (consistent with the Electrode Groups / Cameras tabs), but
                       disabled for the last system — the schema requires at least one. */}
-                  <Button
-                    variant="dangerSubtle"
-                    size="small"
-                    onClick={() => deleteAt(index)}
-                    disabled={catalog.length <= 1}
-                    title={catalog.length <= 1 ? 'The animal must have at least one recording system' : undefined}
-                    aria-label={`Delete recording system ${d.name}`}
-                  >
-                    Delete
-                  </Button>
+                  <OverflowMenu label={`Actions for recording system ${d.name}`} items={[{ key: 'delete', label: `Delete recording system ${d.name}`, onSelect: () => deleteAt(index), disabled: catalog.length <= 1, }]} />
                 </td>
               </tr>
             );
           })}
         </tbody>
       </table>
+      </div>
+
+      <div className="recording-system-review">
+        {recordingSystemReviewed(animal) ? <p>Recording system reviewed.</p> : <>
+          <p>Check that this default matches the recording hardware.</p>
+          <Button variant="primary" onClick={() => onFieldUpdate('recordingSystemReviewed', recordingSystemSignature(animal))}>Confirm recording system</Button>
+        </>}
+      </div>
 
       {technicalDefaults}
       {editorModal}
     </div>
   );
 }
-

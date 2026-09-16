@@ -42,7 +42,7 @@ describe('CameraModal', () => {
 
       // Check all form fields are present
       expect(screen.getByLabelText(/camera id/i)).toBeInTheDocument();
-      expect(screen.getByLabelText(/^camera name$/i)).toBeInTheDocument();
+      expect(screen.getByLabelText(/^camera name/i)).toBeInTheDocument();
       expect(screen.getByLabelText(/manufacturer/i)).toBeInTheDocument();
       expect(screen.getByLabelText(/model/i)).toBeInTheDocument();
       expect(screen.getByLabelText(/lens/i)).toBeInTheDocument();
@@ -66,7 +66,7 @@ describe('CameraModal', () => {
         />
       );
 
-      expect(screen.getByLabelText(/^camera name$/i)).toHaveValue('');
+      expect(screen.getByLabelText(/^camera name/i)).toHaveValue('');
       expect(screen.getByLabelText(/manufacturer/i)).toHaveValue('Allied Vision');
       expect(screen.getByLabelText(/model/i)).toHaveValue('Manta G-158C');
       expect(screen.getByLabelText(/lens/i)).toHaveValue('Theia SL183M');
@@ -84,7 +84,7 @@ describe('CameraModal', () => {
         />
       );
 
-      const nameInput = screen.getByLabelText(/^camera name$/i);
+      const nameInput = screen.getByLabelText(/^camera name/i);
       expect(nameInput).toHaveAttribute('list', 'camera-name-suggestions');
       const datalist = document.getElementById('camera-name-suggestions');
       expect(Array.from(datalist.querySelectorAll('option')).map((option) => option.value)).toEqual([
@@ -155,7 +155,7 @@ describe('CameraModal', () => {
       expect(saveButton).toBeDisabled();
 
       // Fill in camera_name only
-      await user.type(screen.getByLabelText(/^camera name$/i), 'Test Camera');
+      await user.type(screen.getByLabelText(/^camera name/i), 'Test Camera');
       expect(saveButton).toBeDisabled();
 
       // Fill in meters_per_pixel
@@ -183,7 +183,7 @@ describe('CameraModal', () => {
       );
 
       // Fill required fields
-      await user.type(screen.getByLabelText(/^camera name$/i), 'Test Camera');
+      await user.type(screen.getByLabelText(/^camera name/i), 'Test Camera');
 
       const metersPerPixelInput = screen.getByLabelText(/meters per pixel/i);
 
@@ -268,7 +268,7 @@ describe('CameraModal', () => {
       expect(saveButton).toBeDisabled();
 
       // Fill all required fields
-      await user.type(screen.getByLabelText(/^camera name$/i), 'Test Camera');
+      await user.type(screen.getByLabelText(/^camera name/i), 'Test Camera');
       await user.type(screen.getByLabelText(/meters per pixel/i), '0.001');
 
       await waitFor(() => {
@@ -293,7 +293,7 @@ describe('CameraModal', () => {
       );
 
       // Fill some fields
-      await user.type(screen.getByLabelText(/^camera name$/i), 'Test Camera');
+      await user.type(screen.getByLabelText(/^camera name/i), 'Test Camera');
 
       // Click cancel
       await user.click(screen.getByRole('button', { name: /cancel/i }));
@@ -329,7 +329,7 @@ describe('CameraModal', () => {
 
       // Check all fields are pre-populated
       expect(screen.getByLabelText(/camera id/i)).toHaveValue('1');
-      expect(screen.getByLabelText(/^camera name$/i)).toHaveValue('Existing Camera');
+      expect(screen.getByLabelText(/^camera name/i)).toHaveValue('Existing Camera');
       expect(screen.getByLabelText(/manufacturer/i)).toHaveValue('Manta');
       expect(screen.getByLabelText(/model/i)).toHaveValue('G-146B');
       expect(screen.getByLabelText(/lens/i)).toHaveValue('16mm');
@@ -352,7 +352,7 @@ describe('CameraModal', () => {
       );
 
       // Fill all required fields
-      await user.type(screen.getByLabelText(/^camera name$/i), 'New Camera');
+      await user.type(screen.getByLabelText(/^camera name/i), 'New Camera');
       await user.type(screen.getByLabelText(/meters per pixel/i), '0.000842');
 
       // Click save
@@ -389,7 +389,7 @@ describe('CameraModal', () => {
 
       // Camera name should be focused (first editable field)
       await waitFor(() => {
-        expect(screen.getByLabelText(/^camera name$/i)).toHaveFocus();
+        expect(screen.getByLabelText(/^camera name/i)).toHaveFocus();
       });
     });
 
@@ -405,7 +405,7 @@ describe('CameraModal', () => {
       );
 
       // Fill required fields to enable Save button
-      await user.type(screen.getByLabelText(/^camera name$/i), 'Test');
+      await user.type(screen.getByLabelText(/^camera name/i), 'Test');
       await user.type(screen.getByLabelText(/meters per pixel/i), '0.001');
 
       // Wait for Save button to be enabled
@@ -422,7 +422,7 @@ describe('CameraModal', () => {
       await user.tab();
 
       await waitFor(() => {
-        expect(screen.getByLabelText(/^camera name$/i)).toHaveFocus();
+        expect(screen.getByLabelText(/^camera name/i)).toHaveFocus();
       });
     });
 
@@ -438,7 +438,7 @@ describe('CameraModal', () => {
       );
 
       // Fill required fields to enable Save button
-      await user.type(screen.getByLabelText(/^camera name$/i), 'Test');
+      await user.type(screen.getByLabelText(/^camera name/i), 'Test');
       await user.type(screen.getByLabelText(/meters per pixel/i), '0.001');
 
       // Wait for Save button to be enabled
@@ -447,7 +447,7 @@ describe('CameraModal', () => {
       });
 
       // Explicitly focus first element (Camera Name input)
-      const cameraNameInput = screen.getByLabelText(/^camera name$/i);
+      const cameraNameInput = screen.getByLabelText(/^camera name/i);
       cameraNameInput.focus();
       expect(cameraNameInput).toHaveFocus();
 

@@ -8,7 +8,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, waitFor } from '@testing-library/react';
 import { StoreProvider } from '../../../state/StoreContext';
 import { AnimalView } from '../index';
 
@@ -95,7 +95,7 @@ describe('AnimalView — ?field= repair-landing highlight (Phase 3a.3)', () => {
     window.location = { hash: '#/animal/remy/cameras?field=electrode_groups' };
     renderView('cameras');
     // The cameras anchor is present but never highlighted; no crash.
-    await waitFor(() => expect(screen.getByTestId('panel-scope-cameras')).toBeInTheDocument());
+    await waitFor(() => expect(document.querySelector('[data-field-path="cameras"]')).toBeInTheDocument());
     expect(document.querySelector('.repair-target-highlight')).toBeNull();
   });
 });

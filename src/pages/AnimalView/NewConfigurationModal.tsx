@@ -1,3 +1,4 @@
+import HardwareChangeChoice from '../../components/HardwareChangeChoice';
 /**
  * NewConfigurationModal — the animal-page re-implant flow.
  *
@@ -39,7 +40,7 @@ interface NewConfigurationModalProps {
   actions: {
     createConfigurationSnapshotAndApplyForward: (
       animalKey: string,
-      snapshot: { date: string; description: string; devices: unknown },
+      snapshot: { date: string; description: string; devices: unknown; failurePolicy?: 'same-hardware' | 'replacement' },
       orderedIds: string[]
     ) => number | undefined;
   };
@@ -63,6 +64,7 @@ export default function NewConfigurationModal({
 
   const [effectiveDate, setEffectiveDate] = useState('');
   const [copyFromCurrent, setCopyFromCurrent] = useState(true);
+  const [failurePolicy, setFailurePolicy] = useState<'same-hardware' | 'replacement'>('replacement');
   const [description, setDescription] = useState('');
   const [error, setError] = useState('');
 
@@ -74,6 +76,7 @@ export default function NewConfigurationModal({
       setEffectiveDate('');
       setCopyFromCurrent(true);
       setDescription('');
+      setFailurePolicy('replacement');
       setError('');
     }
   }, [isOpen]);
@@ -121,16 +124,21 @@ export default function NewConfigurationModal({
     const devices = copyFromCurrent
       ? structuredClone(latestDevices)
       : { electrode_groups: [], ntrode_electrode_group_channel_map: [] };
-    actions.createConfigurationSnapshotAndApplyForward(
-      animalKey,
-      {
-        date: effectiveDate,
-        description: description.trim() || `Configuration v${nextVersion}`,
-        devices,
-      },
-      movingDays.map((d) => d.id as string)
-    );
-    onClose();
+    try {
+      actions.createConfigurationSnapshotAndApplyForward(
+        animalKey,
+        {
+          date: effectiveDate,
+          description: description.trim() || `Configuration v${nextVersion}`,
+          devices,
+          failurePolicy: copyFromCurrent ? failurePolicy : 'replacement',
+        },
+        movingDays.map((d) => d.id as string)
+      );
+      onClose();
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Could not create the configuration.');
+    }
   };
 
   if (!isOpen) return null;
@@ -139,7 +147,7 @@ export default function NewConfigurationModal({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="New configuration (re-implant)?"
+      title="New probe configuration"
       titleId={titleId}
       // A consequential action — it forks a new configuration version across a day range.
       role="alertdialog"
@@ -158,7 +166,7 @@ export default function NewConfigurationModal({
       <p id={summaryId}>
         Use this when the implant physically changes — new probes, repositioning, or a re-surgery. It
         creates <strong>configuration v{nextVersion}</strong>; existing days keep the version they were
-        recorded under.
+        recorded under until the effective date. Days on or after that date move to the new version.
       </p>
 
       <form
@@ -190,6 +198,8 @@ export default function NewConfigurationModal({
           Copy current probes into the new configuration (then adjust geometry)
         </label>
 
+        {copyFromCurrent && <HardwareChangeChoice value={failurePolicy} onChange={setFailurePolicy} />}
+
         <label className={styles.field}>
           <span>Change description</span>
           <input
@@ -206,8 +216,9 @@ export default function NewConfigurationModal({
             {effectiveDate ? ` (${movingDays.length} ${pluralize(movingDays.length, 'day')})` : ''}.
           </li>
           <li>
-            <strong>Bad-channel marks reset</strong> for v{nextVersion} — v
-            {nextVersion - 1} failures don&apos;t carry across configurations.
+            {failurePolicy === 'same-hardware' && copyFromCurrent
+              ? 'Recorded failed channels stay with the same physical probes.'
+              : 'Bad-channel marks reset for replacement hardware; earlier configurations keep their history.'}
           </li>
         </ul>
 

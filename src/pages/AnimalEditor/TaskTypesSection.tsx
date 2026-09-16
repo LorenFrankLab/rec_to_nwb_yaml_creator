@@ -1,3 +1,4 @@
+import OverflowMenu from '../../components/OverflowMenu';
 import { getAnimalTaskTypes, getAnimalCameras } from '../../state/workspaceSelectors';
 import { duplicateTaskTypeNames } from '../../validation/taskCatalogValidation';
 import type { TaskType } from '../../state/workspaceTypes';
@@ -93,8 +94,7 @@ export default function TaskTypesSection({ animal, onFieldUpdate, onAdd, onEdit,
       <header className="section-header">
         <h2>Task Types</h2>
         <p>
-          Define each task once; recording days select and order them. Defined on the animal — the
-          epochs that ran each day are set per day in the Day Editor.
+          Define task defaults here; record their occurrences in each day’s Daily log.
         </p>
       </header>
 
@@ -146,14 +146,7 @@ export default function TaskTypesSection({ animal, onFieldUpdate, onAdd, onEdit,
                     >
                       Edit
                     </Button>
-                    <Button
-                      variant="dangerSubtle"
-                      size="small"
-                      onClick={() => onDelete?.(type)}
-                      aria-label={`Delete task type ${type?.task_name || ''}`}
-                    >
-                      Delete
-                    </Button>
+                    <OverflowMenu label={`Actions for task type ${type?.task_name || ''}`} items={[{ key: 'delete', label: `Delete task type ${type?.task_name || ''}`, onSelect: () => onDelete?.(type), }]} />
                   </td>
                 </tr>
               );

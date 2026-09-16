@@ -81,7 +81,8 @@ describe('TaskTypesSection', () => {
     await user.click(screen.getByRole('button', { name: /Edit task type sleep/i }));
     expect(onEdit).toHaveBeenCalledWith('tasktype-0');
 
-    await user.click(screen.getByRole('button', { name: /Delete task type w-track/i }));
+    await user.click(screen.getByRole('button', { name: /Actions for task type w-track/i }));
+    await user.click(screen.getByRole('menuitem', { name: /Delete task type w-track/i }));
     expect(onDelete).toHaveBeenCalledWith(animal.taskTypes[1]);
   });
 

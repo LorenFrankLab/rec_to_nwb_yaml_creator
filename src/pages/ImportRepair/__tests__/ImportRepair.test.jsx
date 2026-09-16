@@ -253,7 +253,7 @@ describe('ImportRepair — commit', () => {
     await uploadNonconforming(user);
 
     // The decision routes to the existing animal.
-    expect(screen.getByText(/already exists/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/already exists/i)[0]).toBeInTheDocument();
 
     for (const btn of screen.getAllByRole('button', { name: /^accept /i })) {
       await user.click(btn);
@@ -622,7 +622,7 @@ describe('ImportRepair — honest reporting of files that never made it', () => 
       screen.getByLabelText(/choose a metadata yaml file/i),
       makeFile('06222023_remy_metadata.yml', cleanYaml)
     );
-    await screen.findByText(/already exists/i);
+    await screen.findAllByText(/already exists/i);
     await user.click(screen.getByRole('button', { name: /add recording day/i }));
 
     await screen.findByRole('heading', { name: /import failed/i });

@@ -1,3 +1,4 @@
+import { recordingSystemSignature } from '../../../domain/animalSetupProgress';
 /**
  * First-run "Set up this animal" card (Phase 2 — tabbed-workspace-ia, Task 2.3 / decision 8).
  *
@@ -10,7 +11,7 @@
  * separate "Review existing data" state is a different concern and stays.
  */
 import { describe, it, expect, afterEach } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
+import { render, screen, within, fireEvent } from '@testing-library/react';
 import { StoreProvider } from '../../../state/StoreContext';
 import { buildRealisticWorkspace } from '../../../__tests__/fixtures/workspaceBuilders';
 import { RecordingDaysTab } from '../RecordingDaysTab';
@@ -49,7 +50,9 @@ const newAnimal = {
 /** A partly-configured animal (electrodes + cameras), still no days. */
 const configuredAnimal = {
   id: 'remy',
-  subject: { subject_id: 'remy', species: 'Rattus norvegicus', sex: 'M' },
+  subject: { subject_id: 'remy', species: 'Rattus norvegicus', sex: 'M', genotype: 'WT', date_of_birth: '2023-01-01T00:00:00' },
+  experiment_description: 'Spatial navigation experiment',
+  experimenters: { experimenter_name: ['Scientist, A'], lab: 'Frank', institution: 'UCSF' },
   devices: {
     electrode_groups: [{ id: 0, location: 'CA1', device_type: 'tetrode_12.5', targeted_location: 'CA1' }],
     ntrode_electrode_group_channel_map: [{ ntrode_id: 0, electrode_group_id: 0, map: { 0: 0 } }],
@@ -61,10 +64,14 @@ const configuredAnimal = {
   days: [],
 };
 
+configuredAnimal.recordingSystemReviewed = recordingSystemSignature(configuredAnimal);
+
 describe('Set up this animal card — first-run onboarding', () => {
   it('leads a new animal with a "Set up this animal" card listing the five setup sections', () => {
     renderPane('newbie', { newbie: newAnimal });
-    const card = screen.getByRole('region', { name: /set up this animal/i });
+    const card = screen.getByLabelText(/set up this animal/i);
+    fireEvent.click(card.querySelector('summary'));
+    fireEvent.click(within(card).getByText(/Hardware setup/));
     expect(within(card).getByText('Electrode Groups')).toBeInTheDocument();
     expect(within(card).getByText('Recording System')).toBeInTheDocument();
     expect(within(card).getByText('Cameras')).toBeInTheDocument();
@@ -73,7 +80,9 @@ describe('Set up this animal card — first-run onboarding', () => {
 
   it('links each section to its setup TAB (not the legacy stepper route)', () => {
     renderPane('newbie', { newbie: newAnimal });
-    const card = screen.getByRole('region', { name: /set up this animal/i });
+    const card = screen.getByLabelText(/set up this animal/i);
+    fireEvent.click(card.querySelector('summary'));
+    fireEvent.click(within(card).getByText(/Hardware setup/));
     const links = within(card).getAllByRole('link');
     const hrefs = links.map((a) => a.getAttribute('href'));
     expect(hrefs).toContain('#/animal/newbie/electrode-groups');
@@ -85,18 +94,20 @@ describe('Set up this animal card — first-run onboarding', () => {
 
   it('gives each section action a distinct accessible name including the section (not a bare "Set up →")', () => {
     renderPane('newbie', { newbie: newAnimal });
-    const card = screen.getByRole('region', { name: /set up this animal/i });
+    const card = screen.getByLabelText(/set up this animal/i);
+    fireEvent.click(card.querySelector('summary'));
+    fireEvent.click(within(card).getByText(/Hardware setup/));
     // A screen-reader links list must distinguish the actions, so the section is in the name.
-    expect(within(card).getByRole('link', { name: /set up electrode groups/i })).toBeInTheDocument();
-    expect(within(card).getByRole('link', { name: /set up cameras/i })).toBeInTheDocument();
-    expect(within(card).getByRole('link', { name: /set up optogenetics/i })).toBeInTheDocument();
+    expect(within(card).getByRole('link', { name: /review electrode groups/i })).toBeInTheDocument();
+    expect(within(card).getByRole('link', { name: /review cameras/i })).toBeInTheDocument();
+    expect(within(card).getByRole('link', { name: /review optogenetics/i })).toBeInTheDocument();
   });
 
   it('hides the setup card for a fully configured animal with zero days', () => {
     renderPane('remy', { remy: configuredAnimal });
     expect(screen.queryByRole('region', { name: /set up this animal/i })).not.toBeInTheDocument();
     expect(screen.getByRole('heading', { name: /no recording days yet/i })).toBeInTheDocument();
-    expect(screen.getAllByRole('button', { name: /add recording day/i })).toHaveLength(1);
+    expect(screen.getAllByRole('button', { name: /log today/i })).toHaveLength(1);
   });
 
   it('marks a configured section "Needs fixing" (NOT "Done") when it holds an export-blocking error', () => {
@@ -114,7 +125,9 @@ describe('Set up this animal card — first-run onboarding', () => {
     animal.configurationHistory[0].devices.electrode_groups[0].location = '';
     renderPane('remy', { remy: animal }, { [day.id]: day });
 
-    const card = screen.getByRole('region', { name: /set up this animal/i });
+    const card = screen.getByLabelText(/set up this animal/i);
+    fireEvent.click(card.querySelector('summary'));
+    fireEvent.click(within(card).getByText(/Hardware setup/));
     const eg = within(card).getByText('Electrode Groups').closest('li');
     expect(within(eg).getByText(/needs fixing/i)).toBeInTheDocument();
     expect(within(eg).queryByText(/^done$/i)).not.toBeInTheDocument();
@@ -122,7 +135,9 @@ describe('Set up this animal card — first-run onboarding', () => {
 
   it('frames optional sections honestly (if ephys / if video), never as a gate', () => {
     renderPane('newbie', { newbie: newAnimal });
-    const card = screen.getByRole('region', { name: /set up this animal/i });
+    const card = screen.getByLabelText(/set up this animal/i);
+    fireEvent.click(card.querySelector('summary'));
+    fireEvent.click(within(card).getByText(/Hardware setup/));
     // "if ephys" applies to Electrode Groups.
     expect(within(card).getAllByText(/if ephys/i).length).toBeGreaterThan(0);
     expect(within(card).getByText(/if video/i)).toBeInTheDocument();
@@ -140,13 +155,11 @@ describe('Set up this animal card — first-run onboarding', () => {
 
 describe('Set up this animal card — established animals (absent)', () => {
   it('hides the card once the animal has complete required setup and at least one recording day', () => {
-    const animal = { ...newAnimal, days: ['newbie-2024-01-02'] };
-    animal.devices = configuredAnimal.devices;
-    animal.cameras = configuredAnimal.cameras;
-    const days = {
-      'newbie-2024-01-02': { id: 'newbie-2024-01-02', animalId: 'newbie', date: '2024-01-02', session: { session_id: 's' }, state: {} },
-    };
-    renderPane('newbie', { newbie: animal }, days);
+    const { animal, day } = buildRealisticWorkspace();
+    animal.devices = { ...animal.devices, ...animal.configurationHistory[0].devices };
+    animal.experiment_description = 'Spatial navigation experiment';
+    animal.recordingSystemReviewed = recordingSystemSignature(animal);
+    renderPane(animal.id, { [animal.id]: animal }, { [day.id]: day });
     expect(screen.queryByRole('region', { name: /set up this animal/i })).not.toBeInTheDocument();
   });
 
@@ -156,6 +169,6 @@ describe('Set up this animal card — established animals (absent)', () => {
       'newbie-2024-01-02': { id: 'newbie-2024-01-02', animalId: 'newbie', date: '2024-01-02', session: { session_id: 's' }, state: {} },
     };
     renderPane('newbie', { newbie: animal }, days);
-    expect(screen.getByRole('region', { name: /set up this animal/i })).toBeInTheDocument();
+    expect(screen.getByLabelText(/set up this animal/i)).toBeInTheDocument();
   });
 });
