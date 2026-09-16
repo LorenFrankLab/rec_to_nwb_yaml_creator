@@ -218,7 +218,7 @@ export default function ExportPreview(props: ExportPreviewProps) {
           <p className={styles.reviewCaption} id={reviewCaptionId}>
             Check these values before downloading.
           </p>
-          <EffectiveDayReview animal={animal} day={day} />
+          <EffectiveDayReview animal={animal} day={day} warningCount={warningCount} />
         </section>
       )}
 

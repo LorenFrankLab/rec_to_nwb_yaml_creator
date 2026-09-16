@@ -85,4 +85,26 @@ describe('AnimalView export tab — dated config legibility + effective-day revi
     // The pinned v1 group count (8) — NOT the current v2 count (9) — sourced from buildPreflightSummary.
     expect(within(review).getByText(new RegExp(`${v1GroupCount} electrode groups`, 'i'))).toBeInTheDocument();
   });
+
+  it('reports the day\'s real non-blocking warning count, not a reassuring "None"', () => {
+    // Same review component as the export gate, so it must count the same warnings: two statescript
+    // logs whose description omits the keyword Spyglass needs. Neither blocks export.
+    const { workspace, dayId } = buildTwoVersionWorkspace();
+    workspace.days[dayId].associated_files.push(
+      { name: 'statescript_epoch2', description: 'Log for epoch 2', path: '/data/remy/20230622/e2.stateScriptLog', task_epochs: 2 },
+      { name: 'statescript_epoch4', description: 'Log for epoch 4', path: '/data/remy/20230622/e4.stateScriptLog', task_epochs: 4 }
+    );
+    render(
+      <StoreProvider initialState={{ workspace }}>
+        <AnimalView animalId="remy" tab="export" />
+      </StoreProvider>
+    );
+
+    const review = within(screen.getByTestId(`effective-${dayId}`)).getByRole('group', {
+      name: /effective setup for this day/i,
+    });
+    expect(within(review).getByText(/^Non-blocking warnings$/i).parentElement).toHaveTextContent(
+      /2 warnings to review \(does not block export\)/i
+    );
+  });
 });

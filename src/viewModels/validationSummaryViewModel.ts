@@ -54,6 +54,9 @@ export interface DayStatusRowViewModel extends DayRowViewModel {
   cameraCalibration?: string;
   /** Day-protocol optogenetics state label; absent when no scan. */
   opto?: string;
+  /** The day's non-blocking (advisory) warning count — the SAME count the Day Editor's export gate
+   *  shows, so the row's effective-day review agrees with it. Absent when the row has no scan. */
+  warningCount?: number;
 }
 
 /** The full ValidationSummary page view-model. */
@@ -136,6 +139,7 @@ function toDayStatusRow(row: SummaryRow): DayStatusRowViewModel {
     out.cameras = row.scan.cameras;
     out.cameraCalibration = row.scan.cameraCalibration;
     out.opto = row.scan.opto;
+    out.warningCount = row.scan.warnings;
   }
   return out;
 }

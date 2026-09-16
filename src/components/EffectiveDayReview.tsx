@@ -17,8 +17,22 @@ import styles from './EffectiveDayReview.module.css';
  * {@link buildPreflightSummary} + {@link resolveRigConstant}), never re-derived — and labels them
  * explicitly as "what this day used", distinct from the live setup tabs, so a scientist reviewing
  * readiness can't mistake a historical day for one using the latest config.
+ *
+ * `warningCount` is REQUIRED and comes from the caller's authoritative issue list (the export gate's
+ * advisory issues, or the validation summary's per-day count): the review and the gate sit on one
+ * screen, so a review that derived — or defaulted — its own count would reassure with "None" exactly
+ * when the scientist is being asked to review warnings.
  */
-export default function EffectiveDayReview({ animal, day }: { animal: Animal; day: Day }) {
+export default function EffectiveDayReview({
+  animal,
+  day,
+  warningCount,
+}: {
+  animal: Animal;
+  day: Day;
+  /** Non-blocking warnings the caller's gate counts for this day. */
+  warningCount: number;
+}) {
   let merged: Record<string, unknown>;
   try {
     merged = mergeDayMetadata(animal, day);
@@ -39,6 +53,7 @@ export default function EffectiveDayReview({ animal, day }: { animal: Animal; da
     date: day.date,
     configurationVersion: workflow.configurationVersion ?? undefined,
     isHistorical: workflow.isHistoricalConfiguration,
+    warningCount,
   });
 
   const raw = resolveRigConstant(day.technical, animal.technicalDefaults, 'raw_data_to_volts');

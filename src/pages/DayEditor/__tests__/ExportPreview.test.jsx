@@ -112,6 +112,31 @@ describe('ExportPreview — readiness gate', () => {
     expect(screen.getByRole('button', { name: /download/i })).toBeEnabled();
   });
 
+  it('the scientific review reports the SAME warnings the gate counts', () => {
+    // The readiness line and the review sit on one screen: a review that says "None" while the gate
+    // asks for two warnings to be reviewed is a false reassurance at the download gate.
+    const { animal, day } = buildRealisticWorkspace();
+    day.associated_files.push(
+      { name: 'statescript_epoch2', description: 'Log for epoch 2', path: '/data/remy/20230622/e2.stateScriptLog', task_epochs: 2 },
+      { name: 'statescript_epoch4', description: 'Log for epoch 4', path: '/data/remy/20230622/e4.stateScriptLog', task_epochs: 4 }
+    );
+    renderPreview(animal, day);
+
+    expect(screen.getByRole('status')).toHaveTextContent(/Ready to export\s*·\s*2 warnings to review/i);
+    const review = screen.getByRole('group', { name: /effective setup for this day/i });
+    expect(within(review).getByText(/^Non-blocking warnings$/i).parentElement).toHaveTextContent(
+      /2 warnings to review \(does not block export\)/i
+    );
+  });
+
+  it('the scientific review says "None" only when the gate counts no warnings', () => {
+    const { animal, day } = buildRealisticWorkspace();
+    renderPreview(animal, day);
+
+    const review = screen.getByRole('group', { name: /effective setup for this day/i });
+    expect(within(review).getByText(/^Non-blocking warnings$/i).parentElement).toHaveTextContent(/None/);
+  });
+
   it('stays a bare "Ready to export" when nothing is left to review', () => {
     const { animal, day } = buildRealisticWorkspace();
     renderPreview(animal, day);

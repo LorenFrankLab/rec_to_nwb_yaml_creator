@@ -13,6 +13,8 @@ import { mergeDayMetadata } from '../state/workspaceUtils';
 import { getAnimalSubject } from '../state/workspaceSelectors';
 import type { Animal, Day } from '../state/workspaceTypes';
 import { computeStepStatus, validateDay } from '../domain/validation';
+import { isAdvisoryIssue } from '../validation/issueTypes';
+import type { RepairableIssue } from '../domain/repairRouting';
 import { getDayWorkflowStatus } from '../domain/workflowStatus';
 import { allBlockingIssuesDeferred, isDayValidationDeferred } from '../domain/validationPresentation';
 import { DAY_LIFECYCLE_LABEL, lifecycleForValidDay } from '../domain/dayLifecycle';
@@ -31,6 +33,8 @@ export interface DayScan {
   cameras: number;
   cameraCalibration: string;
   opto: string;
+  /** Count of the day's non-blocking (advisory) issues. */
+  warnings: number;
 }
 
 /** One flattened Validation Summary row (a classified day decorated with its chip + scan). */
@@ -66,20 +70,12 @@ export function deriveChip(stepStatus: Record<string, string>): ChipType {
 function deriveDisplayChip(
   stepStatus: Record<string, string>,
   day: Record<string, unknown>,
-  merged: Record<string, unknown>,
-  animal: Record<string, unknown>,
-  animalDays: Array<Record<string, unknown>>
+  issues: RepairableIssue[]
 ): ChipType {
   const chip = deriveChip(stepStatus);
   if (chip !== 'error') return chip;
   if (isDayValidationDeferred(day)) return 'incomplete';
-  try {
-    return allBlockingIssuesDeferred(validateDay(day, merged, animal, animalDays), day)
-      ? 'incomplete'
-      : chip;
-  } catch {
-    return chip;
-  }
+  return allBlockingIssuesDeferred(issues, day) ? 'incomplete' : chip;
 }
 
 export const CHIP_LABEL: Record<ChipType, string> = { valid: 'Valid', error: 'Error', incomplete: 'Incomplete' };
@@ -265,8 +261,12 @@ export function buildRows(workspace: unknown, onlyAnimalKey?: string): SummaryRo
     const animalDays = animalDaysByKey[key] || [];
     try {
       const merged = mergeDayMetadata(animal as unknown as Animal, dayRecord as unknown as Day);
-      const stepStatus = computeStepStatus(dayRecord, merged, animal, animalDays);
-      const chip = deriveDisplayChip(stepStatus, dayRecord, merged, animal, animalDays);
+      // The day's authoritative issue list, computed ONCE and threaded into everything that reads
+      // it (the step status, the display chip, and the row's advisory-warning count), so the table,
+      // the chip and the day's scientific review can never disagree about the same day.
+      const issues = validateDay(dayRecord, merged, animal, animalDays);
+      const stepStatus = computeStepStatus(dayRecord, merged, animal, animalDays, issues);
+      const chip = deriveDisplayChip(stepStatus, dayRecord, issues);
       // Batch-row scan fields (Task 10): the configuration version pinned, the camera count, and
       // the day-protocol opto state — so days can be compared before opening each editor. Computed
       // here (where the merge already succeeded) so the table reads, never re-derives.
@@ -288,6 +288,10 @@ export function buildRows(workspace: unknown, onlyAnimalKey?: string): SummaryRo
         // is derived from, so a re-calibrated camera is visible without opening the editor.
         cameraCalibration: describeCameraCalibration(merged.cameras),
         opto: describeDayOptoState(merged).label,
+        // Non-blocking warnings this day still carries — the SAME count the Day Editor's export gate
+        // shows, so the row's effective-day review can't reassure with "None" while the gate asks
+        // for warnings to be reviewed.
+        warnings: issues.filter(isAdvisoryIssue).length,
       };
       rows.push({ animal, animalKey: key, day: dayRecord, chip, status, orphaned, scan });
     } catch (err) {

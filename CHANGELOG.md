@@ -291,6 +291,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **The scientific review no longer reports "None" for warnings the export gate is asking you to
+  review.** The read-only "what this day used" review counted no warnings of its own, so it said
+  "Non-blocking warnings — None" on the same screen as "Ready to export · 2 warnings to review". It
+  now shows the count from the gate's own issue list, on both the day's export screen and the
+  per-animal Validation & Export table.
+
 - **Editing a recording day's room no longer reorders its cameras.** Saving "Edit for this day" in
   the epoch drill-in rebuilt the task's camera list in animal-catalog order, so a day recorded as
   `[1, 0]` silently became `[0, 1]`. The converter reads the FIRST task camera's calibration for the

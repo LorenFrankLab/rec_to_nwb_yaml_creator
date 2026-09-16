@@ -146,7 +146,13 @@ export default function DayStatusTable({
                     scoped ? (
                       <details className={styles.effective} data-testid={`effective-${row.dayId}`}>
                         <summary className={styles.scan}>{scanSummary}</summary>
-                        {records && <EffectiveDayReview animal={records.animal} day={records.day} />}
+                        {records && (
+                          <EffectiveDayReview
+                            animal={records.animal}
+                            day={records.day}
+                            warningCount={row.warningCount ?? 0}
+                          />
+                        )}
                       </details>
                     ) : (
                       <span className={styles.scan}>{scanSummary}</span>
