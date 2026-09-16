@@ -7,19 +7,19 @@ import DioTab from '../DioTab';
  * DioTab is the Day Editor's DIO Wiring section. It opens on a
  * read-only carry-forward SUMMARY of the named Din/Dout channels and reveals the full ECU channel
  * editor only when the user clicks
- * "Edit · rewired the rig". The grid editing itself is covered at the BehavioralEventsDisplay level;
+ * "Edit event names / wiring". The grid editing itself is covered at the BehavioralEventsDisplay level;
  * here we cover the summary/edit toggle, the carry-forward provenance line, and the collision gate.
  */
 describe('DioTab', () => {
-  it('renders the Behavioral events heading', () => {
+  it('renders the DIO Wiring heading', () => {
     render(<DioTab day={{ behavioral_events: [] }} onFieldUpdate={vi.fn()} />);
-    expect(screen.getByRole('heading', { level: 2, name: /behavioral events/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 2, name: 'DIO Wiring' })).toBeInTheDocument();
   });
 
   it('opens an empty day straight in the editor (so the first naming / bootstrap is immediate)', () => {
     render(<DioTab day={{ behavioral_events: [] }} onFieldUpdate={vi.fn()} />);
     // Empty days skip the summary and open on the focused used-lines editor.
-    expect(screen.getByRole('heading', { level: 4, name: /named dio lines/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 3, name: /named dio lines/i })).toBeInTheDocument();
     expect(screen.getByLabelText('New DIO event name')).toBeInTheDocument();
     expect(screen.getByText(/advanced: show all ECU lines/i)).toBeInTheDocument();
     expect(screen.queryByLabelText('Event for Din1')).not.toBeInTheDocument();
@@ -40,10 +40,10 @@ describe('DioTab', () => {
     // The carry-forward provenance line.
     expect(screen.getByText(/carried from 2023-06-21 · unchanged/i)).toBeInTheDocument();
     // The reveal affordance.
-    expect(screen.getByRole('button', { name: /edit · rewired the rig/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /edit event names \/ wiring/i })).toBeInTheDocument();
   });
 
-  it('reveals the editor on "Edit · rewired the rig" and writes changes through onFieldUpdate', async () => {
+  it('reveals the editor on "Edit event names / wiring" and writes changes through onFieldUpdate', async () => {
     const user = userEvent.setup();
     const onFieldUpdate = vi.fn();
     render(
@@ -53,7 +53,7 @@ describe('DioTab', () => {
       />
     );
 
-    await user.click(screen.getByRole('button', { name: /edit · rewired the rig/i }));
+    await user.click(screen.getByRole('button', { name: /edit event names \/ wiring/i }));
 
     // Now the editable grid is visible (the existing channel pre-filled).
     expect(screen.getByLabelText('Event for Dout7')).toHaveValue('Pump1');

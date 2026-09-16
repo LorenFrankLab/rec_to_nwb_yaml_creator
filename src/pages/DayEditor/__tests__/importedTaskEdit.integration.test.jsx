@@ -65,7 +65,8 @@ async function importDay(user, yaml, existingAnimal = false) {
  */
 async function editRoom(user, dayId, room) {
   await navigate(`#/day/${dayId}`);
-  await user.click(await screen.findByRole('button', { name: 'Show epoch 2 details' }));
+  // The first visit loads the day-editor route; allow that chunk to resolve in the full suite.
+  await user.click(await screen.findByRole('button', { name: 'Show epoch 2 details' }, { timeout: 5000 }));
   await user.click(screen.getByRole('button', { name: 'Edit for this day' }));
   const field = screen.getByLabelText('Environment for this day');
   await user.clear(field);

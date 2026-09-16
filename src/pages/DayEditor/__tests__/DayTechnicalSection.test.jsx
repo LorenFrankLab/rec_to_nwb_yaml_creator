@@ -83,8 +83,8 @@ describe('DayTechnicalSection', () => {
       expect(screen.getByText('0.195')).toBeInTheDocument();
       expect(screen.getByText('1.5')).toBeInTheDocument();
       expect(screen.getAllByText(/using recording-system default/i).length).toBe(2);
-      // Not editable here — there is no number input for the rig constants.
-      expect(screen.queryByRole('spinbutton')).not.toBeInTheDocument();
+      // The former default has an explicit day-only correction, with its units visible.
+      expect(screen.getByRole('spinbutton', { name: /Voltage conversion for this recording/ })).toHaveValue(0.195);
     });
 
     it('labels a day value that no longer matches the current default (no silent retroactive)', () => {

@@ -134,7 +134,7 @@ describe('exportAllDays', () => {
 
     const result = exportAllDays(workspace, animal.id, { actions: { updateDay: vi.fn() }, strict: true });
 
-    // The day is NOT shipped unacknowledged — it is skipped with a link to Validation & Export (the ack flow).
+    // The day is NOT shipped unacknowledged — it is skipped with a link to Review & export (the ack flow).
     expect(result.exported).toHaveLength(0);
     expect(result.skipped).toHaveLength(1);
     expect(result.skipped[0].fixHref).toBe(`#/animal/${animal.id}/export`);

@@ -6,6 +6,18 @@ import SaveIndicator from '../SaveIndicator';
 // internally (the field mapping lives in one place). These tests drive it through that single
 // `persistence` prop, mirroring what both call sites pass.
 describe('SaveIndicator', () => {
+  it('describes an open Save/Cancel editor without claiming edits have already been made', () => {
+    render(<SaveIndicator persistence={{ enabled: true, hasPendingDrafts: true, hasUnappliedDrafts: true, lastSaved: new Date().toISOString() }} />);
+    expect(screen.getByRole('status')).toHaveTextContent('Editing — Save or Cancel');
+    expect(screen.queryByText('Unsaved edits')).not.toBeInTheDocument();
+    expect(screen.queryByText(/^Saved /)).not.toBeInTheDocument();
+  });
+
+  it('keeps persistence failure visible while a Save/Cancel editor is open', () => {
+    render(<SaveIndicator persistence={{ enabled: true, hasUnappliedDrafts: true, saveError: 'Could not save workspace' }} />);
+    expect(screen.getByRole('alert')).toHaveTextContent('Could not save workspace');
+  });
+
   describe('persistence disabled', () => {
     it('never claims "Saved" when disabled, even with a lastSaved timestamp', () => {
       render(

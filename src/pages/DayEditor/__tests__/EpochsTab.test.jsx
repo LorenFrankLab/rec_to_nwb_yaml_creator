@@ -148,12 +148,12 @@ function lastPatch(onFieldUpdate, field) {
 describe('EpochsTab — grid render + collapsed state cells', () => {
   it('renders one row per epoch with a task disclosure <button aria-expanded>', () => {
     render(<EpochsTab {...makeBundle()} />);
-    expect(screen.getByText(/Confirm what happened/i)).toBeInTheDocument();
+    expect(screen.getByText(/List epochs in recording order/i)).toBeInTheDocument();
     expect(screen.getByText('Show')).toBeInTheDocument();
     expect(screen.getByText('Generate missing')).toBeInTheDocument();
     expect(screen.getByLabelText(/epoch status summary/i)).toHaveTextContent(/3 epochs/i);
     expect(screen.getByLabelText(/epoch status summary/i)).toHaveTextContent(/2 videos needed/i);
-    expect(screen.getByLabelText(/epoch status summary/i)).toHaveTextContent(/1 statescript expected/i);
+    expect(screen.getByLabelText(/epoch status summary/i)).toHaveTextContent(/1 statescript missing/i);
     expect(screen.getByLabelText(/epoch status summary/i)).toHaveTextContent(/1 custom filename/i);
     const edit = screen.getByRole('button', { name: /Show epoch 1 details/i });
     expect(edit.tagName).toBe('BUTTON');
@@ -210,7 +210,7 @@ describe('EpochsTab — grid render + collapsed state cells', () => {
     const rowActions = within(edit.closest('tr'));
     expect(rowActions.getByRole('button', { name: /Move epoch 1 up/i })).toBeInTheDocument();
     expect(rowActions.getByRole('button', { name: /Move epoch 1 down/i })).toBeInTheDocument();
-    expect(rowActions.getByRole('button', { name: /Delete epoch 1/i })).toBeInTheDocument();
+    expect(rowActions.getByRole('button', { name: /More actions for epoch 1/i })).toBeInTheDocument();
     expect(screen.queryByText(/Epoch structure actions/i)).not.toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: /Show epoch 2 details/i }));
@@ -296,16 +296,17 @@ describe('EpochsTab — no-epochs onboarding empty state (Phase 8)', () => {
 });
 
 describe('EpochsTab — write-back patches', () => {
-  it('per-epoch opto power writes a fs_gui_yamls patch', async () => {
+  it('edits protocol power without changing its epoch scope', async () => {
     const user = userEvent.setup();
-    const bundle = makeBundle();
+    const bundle = makeBundle({ fs_gui_yamls: [{ name: 'stim.yaml', epochs: [1, 3], power_in_mW: 10 }] });
     render(<EpochsTab {...bundle} />);
-    await user.click(screen.getByRole('button', { name: /Show epoch 1 details/i }));
-    const input = screen.getByRole('spinbutton', { name: /Epoch 1 power/i });
+    await user.click(screen.getByText('Stimulation protocols · 1'));
+    await user.click(screen.getByRole('button', { name: 'Edit protocol 1' }));
+    const input = screen.getByRole('spinbutton', { name: /Power \(mW\)/i });
+    await user.clear(input);
     await user.type(input, '5');
-    input.blur();
-    const patch = lastPatch(bundle.onFieldUpdate, 'fs_gui_yamls');
-    expect(patch).toEqual([{ name: '', epochs: [1], power_in_mW: 5 }]);
+    await user.tab();
+    expect(lastPatch(bundle.onFieldUpdate, 'fs_gui_yamls')).toEqual([{ name: 'stim.yaml', epochs: [1, 3], power_in_mW: 5 }]);
   });
 
   it('reassigning a task writes a taskInstances patch (moves the epoch)', async () => {
@@ -603,7 +604,8 @@ describe('EpochsTab — write-back patches', () => {
     const user = userEvent.setup();
     const bundle = makeBundle();
     render(<EpochsTab {...bundle} />);
-    await user.click(screen.getByRole('button', { name: /Delete epoch 1/i }));
+    await user.click(screen.getByRole('button', { name: /More actions for epoch 1/i }));
+    await user.click(screen.getByRole('menuitem', { name: /Delete epoch 1/i }));
     expect(lastPatch(bundle.onFieldUpdate, 'taskInstances')).toEqual([
       { taskTypeId: 'tasktype-0', task_epochs: [3] },
       { taskTypeId: 'tasktype-1', task_epochs: [2] },
@@ -616,7 +618,8 @@ describe('EpochsTab — write-back patches', () => {
     const user = userEvent.setup();
     const bundle = makeBundle({ state: { draft: true, videolessEpochs: [1, 3] } });
     render(<EpochsTab {...bundle} />);
-    await user.click(screen.getByRole('button', { name: /Delete epoch 1/i }));
+    await user.click(screen.getByRole('button', { name: /More actions for epoch 1/i }));
+    await user.click(screen.getByRole('menuitem', { name: /Delete epoch 1/i }));
 
     expect(lastPatch(bundle.onFieldUpdate, 'taskInstances')).toEqual([
       { taskTypeId: 'tasktype-0', task_epochs: [3] },
@@ -713,7 +716,8 @@ describe('EpochsTab — confirm-before-orphan (never auto-scrub)', () => {
     const bundle = makeBundle();
     render(<EpochsTab {...bundle} />);
     // Epoch 2 owns the only video; deleting it would orphan that video.
-    await user.click(screen.getByRole('button', { name: /Delete epoch 2/i }));
+    await user.click(screen.getByRole('button', { name: /More actions for epoch 2/i }));
+    await user.click(screen.getByRole('menuitem', { name: /Delete epoch 2/i }));
     expect(screen.getByText(/Repair affected files\?/i)).toBeInTheDocument();
     // Nothing written yet (no auto-scrub).
     expect(lastPatch(bundle.onFieldUpdate, 'taskInstances')).toBeUndefined();
@@ -725,7 +729,8 @@ describe('EpochsTab — confirm-before-orphan (never auto-scrub)', () => {
     const user = userEvent.setup();
     const bundle = makeBundle();
     render(<EpochsTab {...bundle} />);
-    await user.click(screen.getByRole('button', { name: /Delete epoch 2/i }));
+    await user.click(screen.getByRole('button', { name: /More actions for epoch 2/i }));
+    await user.click(screen.getByRole('menuitem', { name: /Delete epoch 2/i }));
     await user.click(screen.getByRole('button', { name: /Clear references/i }));
     expect(lastPatch(bundle.onFieldUpdate, 'taskInstances')).toEqual([
       { taskTypeId: 'tasktype-0', task_epochs: [1, 3] },
@@ -739,7 +744,8 @@ describe('EpochsTab — confirm-before-orphan (never auto-scrub)', () => {
     const user = userEvent.setup();
     const bundle = makeBundle({ state: { draft: true, videolessEpochs: [2, 3] } });
     render(<EpochsTab {...bundle} />);
-    await user.click(screen.getByRole('button', { name: /Delete epoch 2/i }));
+    await user.click(screen.getByRole('button', { name: /More actions for epoch 2/i }));
+    await user.click(screen.getByRole('menuitem', { name: /Delete epoch 2/i }));
 
     expect(screen.getByText(/Repair affected files\?/i)).toBeInTheDocument();
     expect(lastPatch(bundle.onFieldUpdate, 'state')).toBeUndefined();
@@ -969,7 +975,7 @@ describe('EpochsTab — statescript naming', () => {
     expect(lastPatch(bundle.onFieldUpdate, 'associated_files')).toEqual([
       {
         name: '20230622_r_01_s1.stateScriptLog',
-        description: '',
+        description: 'statescript log',
         path: '/data/r/20230622/20230622_r_01_s1.stateScriptLog',
         task_epochs: 1,
       },
@@ -987,7 +993,7 @@ describe('EpochsTab — statescript naming', () => {
     expect(lastPatch(bundle.onFieldUpdate, 'associated_files')).toEqual([
       {
         name: '20230622_r_01_s1.stateScriptLog',
-        description: '',
+        description: 'statescript log',
         path: '/data/r/20230622/20230622_r_01_s1.stateScriptLog',
         task_epochs: 1,
       },
@@ -1008,19 +1014,19 @@ describe('EpochsTab — statescript naming', () => {
     expect(lastPatch(bundle.onFieldUpdate, 'associated_files')).toEqual([
       {
         name: '20230622_r_01_s1.stateScriptLog',
-        description: '',
+        description: 'statescript log',
         path: '/data/r/20230622/20230622_r_01_s1.stateScriptLog',
         task_epochs: 1,
       },
       {
         name: '20230622_r_02_r1.stateScriptLog',
-        description: '',
+        description: 'statescript log',
         path: '/data/r/20230622/20230622_r_02_r1.stateScriptLog',
         task_epochs: 2,
       },
       {
         name: '20230622_r_03_s2.stateScriptLog',
-        description: '',
+        description: 'statescript log',
         path: '/data/r/20230622/20230622_r_03_s2.stateScriptLog',
         task_epochs: 3,
       },
@@ -1044,7 +1050,7 @@ describe('EpochsTab — statescript naming', () => {
     expect(lastPatch(bundle.onFieldUpdate, 'associated_files')).toEqual([
       {
         name: '20230622_r_01_s1.stateScriptLog',
-        description: '',
+        description: 'statescript log',
         path: '/data/r/20230622/20230622_r_01_s1.stateScriptLog',
         task_epochs: 1,
       },
@@ -1068,16 +1074,16 @@ describe('EpochsTab — accessibility', () => {
 describe('EpochsTab — statescript expectation + the data-folder prerequisite (F6)', () => {
   it('counts only EXPECTED statescripts and shows them as a warning, never an error', () => {
     render(<EpochsTab {...makeBundle()} />);
-    const chip = screen.getByRole('button', { name: /1 statescript expected/i });
+    const chip = screen.getByRole('button', { name: /1 statescript missing/i });
     expect(chip).toHaveClass(styles.summaryReview);
     expect(chip).not.toHaveClass(styles.summaryNeedsAttention);
-    expect(screen.queryByText(/statescripts? missing/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/statescripts? expected/i)).not.toBeInTheDocument();
   });
 
   it('expects sleep statescripts once an earlier same-configuration day logged one', () => {
     const bundle = makeBundle();
     render(<EpochsTab {...bundle} animalDays={[PRIOR_SLEEP_DAY, bundle.day]} />);
-    expect(screen.getByRole('button', { name: /3 statescripts expected/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /3 statescripts missing/i })).toBeInTheDocument();
     expect(screen.getAllByText(/Statescript:\s*Expected/i)).toHaveLength(3);
   });
 
@@ -1085,7 +1091,7 @@ describe('EpochsTab — statescript expectation + the data-folder prerequisite (
     const user = userEvent.setup();
     render(<EpochsTab {...makeBundle()} />);
 
-    await user.click(screen.getByRole('button', { name: /1 statescript expected/i }));
+    await user.click(screen.getByRole('button', { name: /1 statescript missing/i }));
     expect(screen.queryByRole('button', { name: /Show epoch 1 details/i })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Show epoch 2 details/i })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Show epoch 3 details/i })).not.toBeInTheDocument();
@@ -1121,7 +1127,7 @@ describe('EpochsTab — statescript expectation + the data-folder prerequisite (
     expect(lastPatch(bundle.onFieldUpdate, 'associated_files')).toEqual([
       {
         name: '20230622_r_02_r1.stateScriptLog',
-        description: '',
+        description: 'statescript log',
         path: '/data/r/20230622/20230622_r_02_r1.stateScriptLog',
         task_epochs: 2,
       },
@@ -1140,7 +1146,7 @@ describe('EpochsTab — statescript expectation + the data-folder prerequisite (
 
     expect(screen.queryByText(/Daily Setup/i)).not.toBeInTheDocument();
     expect(
-      screen.getByText(/Set the data folder to generate statescript and video file names\./i)
+      screen.getByText(/Folder containing this recording’s files/i)
     ).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /^Statescripts \(1\)$/ })).toBeDisabled();
 
@@ -1156,7 +1162,7 @@ describe('EpochsTab — statescript expectation + the data-folder prerequisite (
     );
     // Once the folder is known the prompt is gone — it is a prerequisite, not a permanent field.
     expect(
-      screen.queryByText(/Set the data folder to generate statescript and video file names\./i)
-    ).not.toBeInTheDocument();
+      screen.getByText(/Folder containing this recording’s files/i)
+    ).not.toBeVisible();
   });
 });

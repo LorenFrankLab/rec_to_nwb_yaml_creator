@@ -20,8 +20,8 @@ interface TasksFilesSectionProps extends DayEditorBundle {
 /**
  * Tasks & Files — the day editor's main recording-day work surface.
  *
- * Epochs/videos/statescripts stay in the grid. Supplemental `associated_files` stay visible below
- * the epoch workspace so day-specific extras are discoverable without crowding each epoch row.
+ * Epochs/videos/statescripts stay in the grid. Supplemental files sit in a labelled disclosure
+ * below it, open when files are present or a repair targets them.
  */
 export default function TasksFilesSection(props: TasksFilesSectionProps) {
   const { day, mergedDay, onFieldUpdate } = useDayEditorContext(props);
@@ -29,25 +29,13 @@ export default function TasksFilesSection(props: TasksFilesSectionProps) {
   const tasks = Array.isArray(mergedDay?.tasks) ? (mergedDay.tasks as Task[]) : [];
   const files = getDayAssociatedFiles(day);
   const supplementalFileCount = getIndexedSupplementalFiles(files).length;
-  const scrollToSection = (id: string) => {
-    const section = document.getElementById(id);
-    section?.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
-    section?.focus({ preventScroll: true });
-  };
 
   return (
     <div className="tasks-files-step">
-      <nav className="tasks-files-subnav" aria-label="Tasks and files sections">
-        <button type="button" onClick={() => scrollToSection('epochs-workspace')}>
-          Epochs
-        </button>
-        <button type="button" onClick={() => scrollToSection('other-associated-files')}>
-          Supplemental files <span>{supplementalFileCount}</span>
-        </button>
-      </nav>
-
       <EpochsTab {...props} focusRequest={focusRequest} />
 
+      <details className="supplemental-disclosure" open={supplementalFileCount > 0 || focusRequest?.fieldPath.startsWith('associated_files') || undefined}>
+        <summary>Supplemental files (optional) · {supplementalFileCount} {pluralize(supplementalFileCount, 'file')}</summary>
       <section
         id="other-associated-files"
         className="day-editor-section supplemental-files-section"
@@ -72,6 +60,7 @@ export default function TasksFilesSection(props: TasksFilesSectionProps) {
           onChange={(nextFiles) => onFieldUpdate('associated_files', nextFiles)}
         />
       </section>
+      </details>
     </div>
   );
 }

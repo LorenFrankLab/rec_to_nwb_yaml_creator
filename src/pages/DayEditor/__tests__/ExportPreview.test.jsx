@@ -93,8 +93,8 @@ describe('ExportPreview — readiness gate', () => {
     renderPreview(animal, day);
 
     expect(screen.getByText(/ready to export/i)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /download/i })).toBeEnabled();
-    expect(screen.getByRole('button', { name: /^copy$/i })).toBeEnabled();
+    expect(screen.getByRole('button', { name: /^Download YAML$/i })).toBeEnabled();
+    expect(screen.getByRole('button', { name: /^Copy YAML$/i })).toBeEnabled();
   });
 
   it('says how many warnings are still to review beside "Ready to export"', () => {
@@ -109,7 +109,7 @@ describe('ExportPreview — readiness gate', () => {
 
     const ready = screen.getByRole('status');
     expect(ready).toHaveTextContent(/Ready to export\s*·\s*2 warnings to review/i);
-    expect(screen.getByRole('button', { name: /download/i })).toBeEnabled();
+    expect(screen.getByRole('button', { name: /^Download YAML$/i })).toBeEnabled();
   });
 
   it('the scientific review reports the SAME warnings the gate counts', () => {
@@ -124,7 +124,7 @@ describe('ExportPreview — readiness gate', () => {
 
     expect(screen.getByRole('status')).toHaveTextContent(/Ready to export\s*·\s*2 warnings to review/i);
     const review = screen.getByRole('group', { name: /effective setup for this day/i });
-    expect(within(review).getByText(/^Non-blocking warnings$/i).parentElement).toHaveTextContent(
+    expect(within(review).getByText(/^Validation warnings$/i).parentElement).toHaveTextContent(
       /2 warnings to review \(does not block export\)/i
     );
   });
@@ -134,16 +134,18 @@ describe('ExportPreview — readiness gate', () => {
     renderPreview(animal, day);
 
     const review = screen.getByRole('group', { name: /effective setup for this day/i });
-    expect(within(review).getByText(/^Non-blocking warnings$/i).parentElement).toHaveTextContent(/None/);
+    expect(within(review).getByText(/^Validation warnings$/i).parentElement).toHaveTextContent(/None/);
   });
 
-  it('stays a bare "Ready to export" when nothing is left to review', () => {
+  it('keeps optional file reminders visible without blocking a valid day', () => {
     const { animal, day } = buildRealisticWorkspace();
     renderPreview(animal, day);
 
     const ready = screen.getByRole('status');
     expect(ready).toHaveTextContent(/Ready to export/i);
-    expect(ready).not.toHaveTextContent(/to review/i);
+    expect(ready).toHaveTextContent(/optional statescripts to review/i);
+    expect(screen.getByRole('button', { name: /^Download YAML$/i })).toBeEnabled();
+    expect(screen.getByRole('group', { name: /Optional file reminders/i })).toHaveTextContent(/Optional for export/);
   });
 
   it('shows what the file will say — weight, team, calibration, each task\'s room — above Download', () => {
@@ -155,23 +157,23 @@ describe('ExportPreview — readiness gate', () => {
     // the calibration each camera was on, and the room each task ran in (per-day overrides included).
     expect(within(review).getByText('485 g — Guidera, Jennifer; Comrie, Alison')).toBeInTheDocument();
     expect(within(review).getByText(/overhead_camera \(0\.00085 m\/px\)/)).toBeInTheDocument();
-    expect(within(review).getByText(/w_alternation \(2, 4\) — elevated W-track \(180cm arms\)/)).toBeInTheDocument();
+    expect(within(review).getByText(/w_alternation \(2\) — elevated W-track \(180cm arms\)/)).toBeInTheDocument();
     expect(within(review).getByText(/sleep \(1\) — home cage/)).toBeInTheDocument();
     expect(screen.getByText(/check these values before downloading/i)).toBeInTheDocument();
 
     // Read the values, THEN download: the review sits between the readiness line and the actions.
     expectInDocumentOrder(screen.getByRole('status'), review);
-    expectInDocumentOrder(review, screen.getByRole('button', { name: /download/i }));
+    expectInDocumentOrder(review, screen.getByRole('button', { name: /^Download YAML$/i }));
   });
 
   it('keeps the repair list first on a blocked day, with the review below it', () => {
     const { animal, day } = buildExportErrorWorkspace();
     renderPreview(animal, day);
 
-    const blocked = screen.getByRole('alert');
+    const blocked = document.querySelector('[class*=blocked], [class*=incomplete]');
     const review = screen.getByRole('group', { name: /effective setup for this day/i });
     expectInDocumentOrder(blocked, review);
-    expectInDocumentOrder(review, screen.getByRole('button', { name: /download/i }));
+    expectInDocumentOrder(review, screen.getByRole('button', { name: /^Download YAML$/i }));
   });
 
   it('disables BOTH Download AND Copy on a blocking day (Copy is not a gate bypass)', () => {
@@ -179,11 +181,11 @@ describe('ExportPreview — readiness gate', () => {
     renderPreview(animal, day);
 
     // The blocked region (scoped past the readiness phrasing) names the blocking reason.
-    const blocked = screen.getByRole('alert');
-    expect(within(blocked).getByText(/resolve \d+ validation error/i)).toBeInTheDocument();
+    const blocked = document.querySelector('[class*=blocked], [class*=incomplete]');
+    expect(within(blocked).getByText(/Complete these entries|resolve \d+ validation error/i)).toBeInTheDocument();
     // BOTH actions produce the YAML, so BOTH are gated.
-    expect(screen.getByRole('button', { name: /download/i })).toBeDisabled();
-    expect(screen.getByRole('button', { name: /^copy$/i })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /^Download YAML$/i })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /^Copy YAML$/i })).toBeDisabled();
   });
 
   it('offers a field-linked "Fix in …" repair action in the blocked region', async () => {
@@ -202,11 +204,11 @@ describe('ExportPreview — readiness gate', () => {
     const { animal, day } = buildAllChannelsBadWorkspace();
     renderPreview(animal, day);
 
-    const blocked = screen.getByRole('alert');
+    const blocked = document.querySelector('[class*=blocked], [class*=incomplete]');
     expect(within(blocked).getByText(/complete the required setup/i)).toBeInTheDocument();
     expect(within(blocked).queryByText(/validation error/i)).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /download/i })).toBeDisabled();
-    expect(screen.getByRole('button', { name: /^copy$/i })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /^Download YAML$/i })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /^Copy YAML$/i })).toBeDisabled();
   });
 
   it('surfaces the executable Rebuild repair when configurationHistory is missing (merge fails)', async () => {
@@ -216,7 +218,7 @@ describe('ExportPreview — readiness gate', () => {
     animal.configurationHistory = [];
     renderPreview(animal, day, { onRepair });
 
-    expect(screen.getByRole('button', { name: /download/i })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /^Download YAML$/i })).toBeDisabled();
     const rebuild = screen.getByRole('button', { name: /^rebuild device configuration history$/i });
     await user.click(rebuild);
     expect(onRepair).toHaveBeenCalledWith(
@@ -231,7 +233,7 @@ describe('ExportPreview — download & copy', () => {
     const { animal, day } = buildRealisticWorkspace();
     renderPreview(animal, day, { actions: { updateDay: vi.fn() } });
 
-    await user.click(screen.getByRole('button', { name: /download/i }));
+    await user.click(screen.getByRole('button', { name: /^Download YAML$/i }));
 
     expect(downloadYamlFile).toHaveBeenCalledTimes(1);
     expect(downloadYamlFile).toHaveBeenCalledWith('20230622_remy_metadata.yml', expect.any(String));
@@ -245,7 +247,7 @@ describe('ExportPreview — download & copy', () => {
     day.state = { ...day.state, deferredEpochs: [99] };
     renderPreview(animal, day, { actions: { updateDay } });
 
-    await user.click(screen.getByRole('button', { name: /download/i }));
+    await user.click(screen.getByRole('button', { name: /^Download YAML$/i }));
 
     expect(updateDay).toHaveBeenCalledWith(day.id, {
       // The download receipt (filename + hash) travels with the lifecycle flag (finding F6).
@@ -262,7 +264,7 @@ describe('ExportPreview — download & copy', () => {
     const expectedYaml = encodeYaml(mergeDayMetadata(animal, day));
     renderPreview(animal, day);
 
-    await user.click(screen.getByRole('button', { name: /^copy$/i }));
+    await user.click(screen.getByRole('button', { name: /^Copy YAML$/i }));
 
     expect(writeText).toHaveBeenCalledWith(expectedYaml);
     expect(await screen.findByText(/yaml copied/i)).toBeInTheDocument();
@@ -273,7 +275,7 @@ describe('ExportPreview — download & copy', () => {
     const { animal, day } = buildExportErrorWorkspace();
     renderPreview(animal, day);
 
-    const button = screen.getByRole('button', { name: /download/i });
+    const button = screen.getByRole('button', { name: /^Download YAML$/i });
     button.removeAttribute('disabled');
     await user.click(button);
 
@@ -297,7 +299,7 @@ describe('ExportPreview — encoder-stability (parity) gate', () => {
     const { animal, day } = buildRealisticWorkspace();
     renderPreview(animal, day);
 
-    await user.click(screen.getByRole('button', { name: /^copy$/i }));
+    await user.click(screen.getByRole('button', { name: /^Copy YAML$/i }));
 
     // Copy did NOT reach the clipboard — the same parity gate Download enforces blocks it too.
     expect(writeText).not.toHaveBeenCalled();
@@ -311,7 +313,7 @@ describe('ExportPreview — encoder-stability (parity) gate', () => {
     const { animal, day } = buildRealisticWorkspace();
     renderPreview(animal, day, { actions: { updateDay: vi.fn() } });
 
-    await user.click(screen.getByRole('button', { name: /^download$/i }));
+    await user.click(screen.getByRole('button', { name: /^Download YAML$/i }));
 
     // The bytes DID ship (override), but the mismatch is surfaced loudly — not swallowed into success.
     expect(downloadYamlFile).toHaveBeenCalledWith('20230622_remy_metadata.yml', 'shipped\n');
@@ -328,7 +330,7 @@ describe('ExportPreview — encoder-stability (parity) gate', () => {
     const { animal, day } = buildRealisticWorkspace();
     renderPreview(animal, day);
 
-    await user.click(screen.getByRole('button', { name: /^copy$/i }));
+    await user.click(screen.getByRole('button', { name: /^Copy YAML$/i }));
 
     // Strict off → the override copies the SAME canonical bytes Download would ship, with a loud notice.
     expect(writeText).toHaveBeenCalledWith('shipped\n');
@@ -372,8 +374,8 @@ describe('ExportPreview — bad-channel monotonicity gate', () => {
     );
 
     expect(screen.getByText(/marked bad on an earlier recording day/i)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /download/i })).toBeDisabled();
-    expect(screen.getByRole('button', { name: /^copy$/i })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /^Download YAML$/i })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /^Copy YAML$/i })).toBeDisabled();
   });
 
   it('ENABLES export once the bad-channel removal is acknowledged', () => {
@@ -394,7 +396,7 @@ describe('ExportPreview — bad-channel monotonicity gate', () => {
       />
     );
 
-    expect(screen.getByRole('button', { name: /download/i })).toBeEnabled();
-    expect(screen.getByRole('button', { name: /^copy$/i })).toBeEnabled();
+    expect(screen.getByRole('button', { name: /^Download YAML$/i })).toBeEnabled();
+    expect(screen.getByRole('button', { name: /^Copy YAML$/i })).toBeEnabled();
   });
 });

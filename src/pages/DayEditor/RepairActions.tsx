@@ -56,8 +56,22 @@ export default function RepairActions({
   // across category groups so a fix shown in one group isn't re-buttoned in another. Every message
   // still renders.
   const seenTargets = new Set<string>();
+  const missingVideos = issues.filter((issue) => issue.code === 'epoch_video_undeclared');
 
   const renderItem = (issue: IssueViewModel, index: number, keyPrefix: string) => {
+    if (missingVideos.length > 1 && issue.code === 'epoch_video_undeclared') {
+      if (issue !== missingVideos[0]) return null;
+      return <li key="missing-videos" className="repair-action-item repair-action-video-group">
+        <div><strong>{missingVideos.length} epochs need video files</strong>
+          <p>Add the recorded videos, or mark the epochs with no video.</p></div>
+        <button type="button" className="repair-action-button" onClick={() => onNavigate('epochs', 'epochs-workspace')}>Review epoch files</button>
+        <details><summary>Review an individual epoch</summary><div className="repair-epoch-links">
+          {missingVideos.map((entry, i) => <RepairActionButton key={entry.repairFocusPath ?? i}
+            issue={{ ...entry, repair: entry.repair ? { ...entry.repair, label: `Review epoch ${entry.message.match(/^Epoch (\d+)/)?.[1] ?? i + 1}` } : undefined }} onNavigate={onNavigate} animalId={animalId} onRepair={onRepair} />)}
+        </div></details>
+      </li>;
+    }
+
     let showButton = issue.repair != null;
     if (showButton && issue.repairDedupKey != null) {
       if (seenTargets.has(issue.repairDedupKey)) showButton = false;
@@ -66,7 +80,7 @@ export default function RepairActions({
     return (
       <li key={`${keyPrefix}${issue.fieldPath ?? ''}-${index}`} className="repair-action-item">
         <span className="repair-action-message">{issue.message}</span>
-        <IssueOwnershipHint issue={issue} />
+        {issue.reachesBeyondDay && <IssueOwnershipHint issue={issue} />}
         {showButton && (
           <RepairActionButton issue={issue} onNavigate={onNavigate} animalId={animalId} onRepair={onRepair} />
         )}

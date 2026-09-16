@@ -38,7 +38,7 @@ describe('DayEditorSectionNav', () => {
     {
       label: 'FINISH',
       steps: [
-        step('export', 'Fix & Export', validationStatus, active === 'export', validationCount),
+        step('export', 'Review & export', validationStatus, active === 'export', validationCount),
       ],
     },
   ];
@@ -61,7 +61,7 @@ describe('DayEditorSectionNav', () => {
     const icons = Array.from(
       container.querySelectorAll('.section-nav-status-icon')
     ).map((el) => el.textContent);
-    expect(icons).toEqual(['✓', '⚠', '✓', '✓', '⚠', '⚠']);
+    expect(icons).toEqual(['✓', '○', '✓', '✓', '○', '○']);
   });
 
   it('marks the active section with aria-current="page"', () => {
@@ -93,7 +93,7 @@ describe('DayEditorSectionNav', () => {
       /^Recording Setup/i,
       /^Failed Channels/i,
       /^DIO Wiring/i,
-      /^Fix & Export/i,
+      /^Review & export/i,
     ];
     for (const name of order) {
       // eslint-disable-next-line no-await-in-loop -- Tab moves focus one stop at a time.
@@ -102,11 +102,11 @@ describe('DayEditorSectionNav', () => {
     }
   });
 
-  it('calls onNavigate for ANY section clicked — including Fix & Export (no gating)', async () => {
+  it('calls onNavigate for ANY section clicked — including Review & export (no gating)', async () => {
     const user = userEvent.setup();
     const onNavigate = vi.fn();
     render(<DayEditorSectionNav groups={makeGroups()} onNavigate={onNavigate} />);
-    const exportButton = screen.getByRole('button', { name: /^Fix & Export/i });
+    const exportButton = screen.getByRole('button', { name: /^Review & export/i });
     expect(exportButton).not.toHaveAttribute('aria-disabled', 'true');
     await user.click(exportButton);
     expect(onNavigate).toHaveBeenCalledWith('export');
@@ -116,7 +116,7 @@ describe('DayEditorSectionNav', () => {
     render(<DayEditorSectionNav groups={makeGroups()} onNavigate={vi.fn()} />);
     expect(screen.getByRole('button', { name: /Daily log.*Complete/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Tasks & Files.*Incomplete/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Fix & Export.*Incomplete/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Review & export.*Incomplete/i })).toBeInTheDocument();
   });
 
   it('shows the to-fix count on the Validation item when provided', () => {
@@ -124,7 +124,7 @@ describe('DayEditorSectionNav', () => {
       <DayEditorSectionNav groups={makeGroups({ validationCount: 3 })} onNavigate={vi.fn()} />
     );
     expect(
-      screen.getByRole('button', { name: /Fix & Export.*3 to fix/i })
+      screen.getByRole('button', { name: /Review & export.*3 remaining/i })
     ).toBeInTheDocument();
   });
 

@@ -46,9 +46,9 @@ export default function ChangeSourceDialog({ isOpen, day, animalDays, onConfirm,
       }
     >
       <p className={styles.lede}>
-        Copies the epoch plan, DIO events, search terms, technical parameters, team, optogenetics
+        Copies the epoch plan, DIO events, search terms, technical parameters, optogenetics
         setup and rig choice from the chosen day (its data folder is re-dated). Keeps this day&apos;s
-        measured weight, descriptions, files, videos and probe setup.
+        measured weight, experimenters, descriptions, files, videos and probe setup.
       </p>
       <div className={styles.list} role="radiogroup" aria-label="Source day">
         {ordered.length === 0 && <p>No other recording day to copy from.</p>}

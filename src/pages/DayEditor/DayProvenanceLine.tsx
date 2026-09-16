@@ -31,12 +31,12 @@ export default function DayProvenanceLine({ animal, day, onChangeSource, onChang
   const choice = configurationChoiceStatus(animal, day);
   const history = getConfigHistory(animal);
   const rigName = getDayDataAcqDeviceName(day) || getDataAcqDevices(animal)[0]?.name || null;
-  const entered = provenance?.enteredAt ? shortDate(provenance.enteredAt.slice(0, 10)) : null;
+  const entered = provenance?.enteredAt ? new Date(provenance.enteredAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : null;
 
   const source =
     provenance?.copiedFromDate
       ? `Started from ${shortDate(provenance.copiedFromDate)}`
-      : provenance?.configuration?.source === 'import'
+      : provenance?.origin === 'import' || provenance?.configuration?.source === 'import' || Object.values(provenance?.fields ?? {}).includes('import')
         ? 'Imported from a YAML file'
         : 'Started blank';
 
@@ -44,7 +44,10 @@ export default function DayProvenanceLine({ animal, day, onChangeSource, onChang
   if (choice.status === 'unpinned') {
     setup = history.length > 0 ? 'Probe setup not pinned' : 'No probe setup (behavior-only is fine)';
   } else {
-    const eff = choice.effectiveDate ? ` (effective ${shortDate(choice.effectiveDate)})` : '';
+    const snapshot = history.find((entry) => entry.version === choice.version);
+    const eff = snapshot?.effectiveDateKnown === false
+      ? ' (effective date unknown)'
+      : choice.effectiveDate ? ` (effective ${shortDate(choice.effectiveDate)})` : '';
     setup = `Probe setup v${choice.version}${eff}`;
   }
 

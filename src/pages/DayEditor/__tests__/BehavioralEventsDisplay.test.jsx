@@ -68,7 +68,7 @@ describe('BehavioralEventsDisplay - focused named-lines editor', () => {
     const user = userEvent.setup();
     render(<BehavioralEventsDisplay dayEvents={[]} onDayEventsChange={vi.fn()} />);
 
-    expect(screen.getByRole('heading', { level: 4, name: /named dio lines/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 3, name: /named dio lines/i })).toBeInTheDocument();
     expect(screen.getByLabelText('New DIO event name')).toBeInTheDocument();
     expect(screen.queryByRole('table', { name: /inputs \(din\)/i })).not.toBeInTheDocument();
     expect(screen.queryByLabelText('Advanced event for Din1')).not.toBeInTheDocument();

@@ -36,7 +36,7 @@
 
 .day-editor-body {
   display: grid;
-  grid-template-columns: 230px 1fr;
+  grid-template-columns: 210px minmax(0, 1fr);
   align-items: start;
 }
 
@@ -174,7 +174,7 @@
 }
 
 .daily-setup-section {
-  max-width: 920px;
+  max-width: none;
 }
 
 .daily-setup-header h2 {
@@ -410,6 +410,8 @@
 }
 
 .inherited-metadata-toggle {
+  box-sizing: border-box;
+  min-width: 0;
   display: flex;
   align-items: center;
   gap: var(--spacing-sm);
@@ -1646,7 +1648,8 @@
    descriptions collapsed. */
 .daily-log-primary-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  align-items: start;
   gap: 1rem;
 }
 
@@ -1671,7 +1674,7 @@
 
 @media (max-width: 720px) {
   .daily-log-primary-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 

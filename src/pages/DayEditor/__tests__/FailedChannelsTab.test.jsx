@@ -89,8 +89,8 @@ describe('FailedChannelsTab', () => {
   };
 
   const openOtherGroups = async (user) => {
-    const summary = screen.queryByText(/other groups/i)?.closest('summary');
-    if (summary) await user.click(summary);
+    const summary = screen.queryByText(/Electrode groups without recorded failures/i)?.closest('summary');
+    if (summary && !summary.closest('details').open) await user.click(summary);
   };
 
   it('per-day recording-system selector writes day.data_acq_device_name (2+ systems)', async () => {
@@ -153,9 +153,8 @@ describe('FailedChannelsTab', () => {
           onFieldUpdate={mockOnFieldUpdate}
         />
       );
-      const referenced = screen.getByRole('checkbox', { name: /track/i });
-      expect(referenced).toBeChecked();
-      expect(referenced).toBeDisabled();
+      expect(screen.getByText(/track · linked to this day/i)).toBeInTheDocument();
+      expect(screen.queryByRole('checkbox', { name: /track/i })).not.toBeInTheDocument();
     });
 
     it('shows a CATALOG task-type camera (resolved via mergedDay) as checked and disabled', () => {
@@ -172,9 +171,8 @@ describe('FailedChannelsTab', () => {
           onFieldUpdate={mockOnFieldUpdate}
         />
       );
-      const referenced = screen.getByRole('checkbox', { name: /track/i });
-      expect(referenced).toBeChecked();
-      expect(referenced).toBeDisabled();
+      expect(screen.getByText(/track · linked to this day/i)).toBeInTheDocument();
+      expect(screen.queryByRole('checkbox', { name: /track/i })).not.toBeInTheDocument();
     });
 
     it('locks the camera THIS day recorded with when the occurrence overrides the task default', () => {
@@ -195,9 +193,8 @@ describe('FailedChannelsTab', () => {
           onFieldUpdate={mockOnFieldUpdate}
         />
       );
-      const used = screen.getByRole('checkbox', { name: /overhead/i });
-      expect(used).toBeChecked();
-      expect(used).toBeDisabled();
+      expect(screen.getByText(/overhead · linked to this day/i)).toBeInTheDocument();
+      expect(screen.queryByRole('checkbox', { name: /overhead/i })).not.toBeInTheDocument();
       expect(screen.getByRole('checkbox', { name: /track/i })).not.toBeChecked();
     });
 
@@ -260,9 +257,8 @@ describe('FailedChannelsTab', () => {
           onFieldUpdate={mockOnFieldUpdate}
         />
       );
-      const referencedA = screen.getByRole('checkbox', { name: /box/i });
-      expect(referencedA).toBeChecked();
-      expect(referencedA).toBeDisabled();
+      expect(screen.getByText(/box · linked to this day/i)).toBeInTheDocument();
+      expect(screen.queryByRole('checkbox', { name: /box/i })).not.toBeInTheDocument();
       await user.click(screen.getByRole('checkbox', { name: /overhead/i }));
       expect(mockOnFieldUpdate).toHaveBeenCalledWith('cameras_used', [2]);
     });
@@ -374,13 +370,13 @@ describe('FailedChannelsTab', () => {
     // Should be collapsed by default - details element exists but open attribute is false
     const detailsElements = screen.getAllByRole('group');
     detailsElements.forEach(details => {
-      if (details.tagName === 'DETAILS') {
+      if (details.classList.contains('electrode-group-details')) {
         expect(details).not.toHaveAttribute('open');
       }
     });
   });
 
-  it('shows status badge "All channels OK" when no bad channels', () => {
+  it('shows status badge "No failures recorded" when no bad channels', () => {
     const dayWithNoFailures = {
       ...mockDay,
       deviceOverrides: {
@@ -400,7 +396,7 @@ describe('FailedChannelsTab', () => {
       />
     );
 
-    const statusBadges = screen.getAllByText(/all channels ok/i);
+    const statusBadges = screen.getAllByText(/no failures recorded/i);
     expect(statusBadges.length).toBeGreaterThan(0);
   });
 
@@ -751,7 +747,7 @@ describe('FailedChannelsTab', () => {
       />
     );
 
-    const statusBadge = screen.getByLabelText(/status: all channels ok/i);
+    const statusBadge = screen.getByLabelText(/status: no failures recorded/i);
     expect(statusBadge).toBeInTheDocument();
   });
 

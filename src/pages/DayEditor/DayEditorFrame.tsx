@@ -1,5 +1,5 @@
+import { DAY_LIFECYCLE_LABEL } from '../../domain/dayLifecycle';
 import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
-import type { ComponentProps } from 'react';
 import { useStoreContext } from '../../state/StoreContext';
 import { useStepperShortcut } from '../../hooks/stepperShortcuts';
 import { useDayIdFromUrl } from '../../hooks/useDayIdFromUrl';
@@ -16,15 +16,10 @@ import type { RepairableIssue } from '../../domain/repairRouting';
 import { validateDay } from '../../domain/dayValidationComposer';
 import {
   isDayValidationDeferred,
-  presentValidationIssues,
 } from '../../domain/validationPresentation';
 import { buildDayEditorViewModel } from '../../viewModels/dayEditorViewModel';
 import type { DayTabKey } from '../../viewModels/dayEditorViewModel';
-import { buildAnimalViewModel } from '../../viewModels/animalViewModel';
 import Breadcrumb from './Breadcrumb';
-import StatusPill from '../../components/ui/StatusPill';
-import AnimalScopeCard from '../../components/AnimalScopeCard';
-import type { AnimalScopeSummary } from '../../components/AnimalScopeCard';
 import ReadinessBar from '../../components/ReadinessBar';
 import { DayEditorProvider } from './DayEditorContext';
 import type { DayEditorBundle } from './DayEditorContext';
@@ -37,8 +32,6 @@ import DayEditorSectionNav from './DayEditorSectionNav';
 import type { CopyableDioSource } from './BehavioralEventsDisplay';
 import ErrorState from './ErrorState';
 import styles from './DayEditorFrame.module.css';
-import Button from '../../components/ui/Button';
-import { pluralize } from '../../utils/pluralize';
 
 /** A repair-routed focus request: the target field path + a monotonic token to retrigger the effect. */
 interface FocusRequest {
@@ -118,26 +111,11 @@ function focusPathForSection(path?: string): string | undefined {
   return path;
 }
 
-/** Map the animal-static summary view-model to the AnimalScopeCard's render contract. */
-function toScopeSummary(summary: ReturnType<typeof buildAnimalViewModel>['summary']): AnimalScopeSummary {
-  const identity =
-    [summary.genotype, summary.sex, summary.species].filter(Boolean).join(' · ') || summary.id;
-  const probes =
-    summary.probeCount > 0
-      ? `${summary.probeCount} ${pluralize(summary.probeCount, 'probe')}` +
-        (summary.probeSummary ? ` · ${summary.probeSummary}` : '')
-      : 'No probes';
-  const config = summary.configVersion != null ? `v${summary.configVersion}` : '—';
-  return { identity, probes, config, team: summary.team || '—' };
-}
-
 /**
- * DayEditorFrame — the day editor's chrome and six-section navigation.
+ * DayEditorFrame — the day editor's chrome and section navigation.
  *
- * The header carries the Workspace › Animal › Day breadcrumb, the date title, the day chips
- * (configuration version · opto · "carried from <date>" · the lifecycle StatusPill), the autosave
- * indicator, the read-only {@link AnimalScopeCard} (the animal-static scope boundary), and the
- * issue-driven {@link ReadinessBar} (fed the authoritative `validateDay` issues — never a local
+ * The compact header identifies the animal and recording date, shows persistence/download status,
+ * and offers review of outstanding entries through the authoritative validator (never a local
  * check). The body is a grouped vertical rail — DAY / RECORDING / FINISH — with free navigation
  * and Alt+←/→; the panels read their data through {@link DayEditorProvider} (NOT props), so the
  * provider must wrap them. A header **Export** action opens the Fix & Export section (the
@@ -186,13 +164,6 @@ export default function DayEditorFrame() {
     [model.workspace, dayId, mode]
   );
 
-  // The animal-static scope summary (read-only scope card). Built from the animal view-model so the
-  // card can never disagree with the animal page.
-  const scopeSummary = useMemo(
-    () => (ownerKey != null ? toScopeSummary(buildAnimalViewModel(model.workspace, ownerKey, 'days').summary) : null),
-    [model.workspace, ownerKey]
-  );
-
   // The issue-driven readiness bar's input: the AUTHORITATIVE `validateDay` (never a local re-check).
   // Mirrors the view-model exactly — on a merge failure (null mergedDay) it validates the empty
   // merged model, so the raw-shape animal blockers (e.g. a missing configuration history with its
@@ -207,7 +178,7 @@ export default function DayEditorFrame() {
         animal,
         animalDays
       ) as RepairableIssue[];
-      return presentValidationIssues(issues, day) as RepairableIssue[];
+      return issues;
     } catch (err) {
       // eslint-disable-next-line no-console
       console.error(`[day-editor] could not validate day "${dayId}":`, err);
@@ -330,7 +301,7 @@ export default function DayEditorFrame() {
     if (tab) goToTab(tab, focusPathForSection(field ?? undefined));
   }, [dayId, day, animal, repairQuery, goToTab]);
 
-  // Alt+←/→ steps through the six sections and CLAMPS at the ends (it does not wrap), matching the
+  // Alt+←/→ steps through the sections and CLAMPS at the ends (it does not wrap), matching the
   // former stepper's section pager.
   const stepTab = useCallback((direction: 'next' | 'prev') => {
     setMode((cur) => {
@@ -441,42 +412,23 @@ export default function DayEditorFrame() {
     <div className="day-editor-stepper">
       {/* Plain div, not <header>: a <header> here maps to the banner landmark, duplicating AppLayout's. */}
       <div className={styles.frameHeader}>
+        <Breadcrumb items={vm.breadcrumb.items.slice(0, 2)} />
         <div className={styles.topRow}>
-          <Breadcrumb items={vm.breadcrumb.items} />
-          <div className={styles.headerActions}>
-            <SaveIndicator persistence={persistence} />
-            <Button
-              variant="secondary"
-              onClick={() => setMode('export')}
-              aria-pressed={mode === 'export'}
-            >
-              Export
-            </Button>
+          <div>
+            <h1 className={styles.title}>{ownerKey} · {day.date}</h1>
+            <div className={styles.saveRow}>
+              <SaveIndicator persistence={persistence} />
+              {(chips.lifecycle === 'exported' || chips.lifecycle === 'changed_since_export') && (
+                <span className={styles.downloadStatus}>{DAY_LIFECYCLE_LABEL[chips.lifecycle]}</span>
+              )}
+            </div>
           </div>
+
         </div>
-
-        <h1 className={styles.title}>Day Editor: {ownerKey} - {day.date}</h1>
-
-        <div className={styles.chips}>
-          {chips.configVersion != null && (
-            <span className={styles.chip}>Configuration v{chips.configVersion}</span>
-          )}
-          {chips.isOpto && <span className={`${styles.chip} ${styles.chipOpto}`}>◑ Optogenetics</span>}
-          {chips.carriedFrom && (
-            <span className={`${styles.chip} ${styles.chipCarry}`}>↩ carried from {chips.carriedFrom}</span>
-          )}
-          <StatusPill
-            variant={chips.lifecycle as ComponentProps<typeof StatusPill>['variant']}
-            label={chips.lifecycle === 'ready' ? 'Ready' : undefined}
-          />
-        </div>
-
-        {scopeSummary && mode !== 'export' && (
-          <AnimalScopeCard summary={scopeSummary} editHref={`#/animal/${ownerKey}/days`} />
-        )}
 
         {showReadinessBar && (
-          <ReadinessBar issues={readinessIssues} onFix={handleFix} canFix={canFixIssue} />
+          <ReadinessBar issues={readinessIssues} onFix={handleFix} canFix={canFixIssue}
+            exportGate={vm.export} onReview={() => goToTab('export')} />
         )}
       </div>
 

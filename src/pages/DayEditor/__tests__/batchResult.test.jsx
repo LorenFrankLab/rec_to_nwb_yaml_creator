@@ -1,9 +1,7 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { render, screen } from '@testing-library/react';
 import ExportPreview from '../ExportPreview';
-import { encodeYaml, downloadYamlFile } from '../../../io/yaml';
-import { mergeDayMetadata } from '../../../state/workspaceUtils';
+import { downloadYamlFile } from '../../../io/yaml';
 import { buildRealisticWorkspace } from '../../../__tests__/fixtures/workspaceBuilders';
 import { buildDayEditorViewModel } from '../../../viewModels/dayEditorViewModel';
 
@@ -35,61 +33,15 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-describe('ExportPreview — "Export all days" batch', () => {
-  it('exports the valid day, skips the error day, and reports the counts', async () => {
-    const user = userEvent.setup();
+describe('ExportPreview — bulk review entry', () => {
+  it('routes this animal’s other recordings through selection and preflight before any download', () => {
     const { animal, validDay, workspace } = buildTwoDayAnimal();
     const vm = buildDayEditorViewModel(workspace, validDay.id);
-    render(
-      <ExportPreview
-        animal={animal}
-        day={validDay}
-        animalKey={animal.id}
-        animalDays={[validDay]}
-        workspace={workspace}
-        issues={vm.issues}
-        exportGate={vm.export}
-        onNavigate={vi.fn()}
-        actions={{ updateDay: vi.fn() }}
-      />
-    );
-
-    await user.click(screen.getByRole('button', { name: /export all 2 days/i }));
-
-    const result = await screen.findByRole('status', { name: /batch export result/i });
-    expect(result).toHaveTextContent(/exported 1/i);
-    expect(result).toHaveTextContent(/skipped 1/i);
-
-    // The valid day's bytes are the SAME single-day export bytes (batch === single export).
-    const expectedBytes = encodeYaml(mergeDayMetadata(animal, validDay));
-    expect(downloadYamlFile).toHaveBeenCalledTimes(1);
-    expect(downloadYamlFile).toHaveBeenCalledWith('20230622_remy_metadata.yml', expectedBytes);
-  });
-
-  it('links each skipped day to its blocking issue via the field-level repair route (not a bare day link)', async () => {
-    const user = userEvent.setup();
-    const { animal, validDay, errorDay, workspace } = buildTwoDayAnimal();
-    const vm = buildDayEditorViewModel(workspace, validDay.id);
-    render(
-      <ExportPreview
-        animal={animal}
-        day={validDay}
-        animalKey={animal.id}
-        animalDays={[validDay]}
-        workspace={workspace}
-        issues={vm.issues}
-        exportGate={vm.export}
-        onNavigate={vi.fn()}
-        actions={{ updateDay: vi.fn() }}
-      />
-    );
-
-    await user.click(screen.getByRole('button', { name: /export all 2 days/i }));
-
-    const result = await screen.findByRole('status', { name: /batch export result/i });
-    // The skipped day's link resolves through repairRouting to the issue's OWNER (Daily log), carrying
-    // the field as a ?field= deep-link — not a bare "open this day" link.
-    const fix = within(result).getByRole('link', { name: /fix in daily log/i });
-    expect(fix.getAttribute('href')).toMatch(new RegExp(`^#/day/${errorDay.id}\\?field=`));
+    render(<ExportPreview animal={animal} day={validDay} animalKey={animal.id}
+      animalDays={[validDay]} workspace={workspace} issues={vm.issues} exportGate={vm.export}
+      onNavigate={vi.fn()} actions={{ updateDay: vi.fn() }} />);
+    expect(screen.getByRole('link', { name: /Review other recordings for remy/i })).toHaveAttribute('href', '#/animal/remy/export');
+    expect(screen.queryByRole('button', { name: /Download all/i })).not.toBeInTheDocument();
+    expect(downloadYamlFile).not.toHaveBeenCalled();
   });
 });

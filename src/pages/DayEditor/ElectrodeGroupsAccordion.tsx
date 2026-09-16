@@ -102,8 +102,8 @@ export default function ElectrodeGroupsAccordion({
       };
     }
     return {
-      text: 'All channels OK',
-      ariaLabel: 'Status: All channels OK',
+      text: 'No failures recorded',
+      ariaLabel: 'Status: No failures recorded',
       className: 'status-clean',
     };
   };
@@ -174,7 +174,6 @@ export default function ElectrodeGroupsAccordion({
             <div className="electrode-group-content">
               {/* Explanatory header */}
               <div className="electrode-group-header">
-                <h3>Electrode Group {group.id}: {group.location}</h3>
                 <p className="field-help-text">
                   This {group.device_type} has {ntrodeCount} {pluralize(ntrodeCount, 'shank')}.
                   Mark individual channels that have failed on each shank.
@@ -217,31 +216,15 @@ export default function ElectrodeGroupsAccordion({
         </strong>
         <span>
           {activeGroupCount === 0
-            ? 'All electrode groups are currently clean.'
+            ? 'Expand an electrode group to mark any failed channels.'
             : `${activeGroupCount} ${activeGroupCount === 1 ? 'group has' : 'groups have'} failed channels.`}
         </span>
       </div>
 
       {priorityRows.map(renderRow)}
 
-      {cleanRows.length > 0 && (
-        <details className="clean-electrode-groups">
-          <summary className="clean-electrode-groups-summary">
-            <span className="toggle-icon" aria-hidden="true">▶</span>
-            Other groups
-            <span
-              className="status-badge status-clean"
-              role="status"
-              aria-label={`Status: ${cleanRows.length} clean ${pluralize(cleanRows.length, 'group')}`}
-            >
-              {cleanRows.length} clean {pluralize(cleanRows.length, 'group')}
-            </span>
-          </summary>
-          <div className="clean-electrode-groups-content">
-            {cleanRows.map(renderRow)}
-          </div>
-        </details>
-      )}
+      {cleanRows.map(renderRow)}
+
     </section>
   );
 }

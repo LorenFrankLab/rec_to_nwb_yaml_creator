@@ -80,7 +80,7 @@ export default function DownloadStatusCard({ animal, day, artifact }: DownloadSt
       <div className={`${styles.card} ${styles.current}`} data-testid="download-status" data-status="current">
         <p>
           Downloaded as <code>{receipt.filename}</code> on {formatWhen(receipt.exportedAt)}; nothing has changed since.
-          (A download is not proof that the conversion succeeded — see the pilot runbook for the converter check.)
+
         </p>
       </div>
     );

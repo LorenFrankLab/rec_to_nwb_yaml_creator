@@ -1,4 +1,5 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
+import Button from '../../components/ui/Button';
 import ReadOnlyField from './ReadOnlyField';
 import KeywordsEditor from './KeywordsEditor';
 import MalformedCollectionNotice from './MalformedCollectionNotice';
@@ -21,7 +22,6 @@ import type { FieldValueViewModel } from '../../viewModels/types';
 import type { ExperimenterInfo } from '../../state/workspaceTypes';
 import { pluralize } from '../../utils/pluralize';
 import { DraftTextInput, DraftTextArea, DraftNumberInput } from '../../components/ui/DraftFields';
-import Button from '../../components/ui/Button';
 
 interface DayTabProps extends DayEditorBundle {
   /** A repair request focusing a field in this section (or the embedded epoch editor). */
@@ -77,6 +77,13 @@ export default function DayTab(props: DayTabProps) {
       ? getAnimalExperimenters({ experimenters: day.experimenters })
       : getAnimalExperimenters(animal);
   const teamNames = Array.isArray(team.experimenter_name) ? team.experimenter_name.map(String) : [];
+  const usualTeam = getAnimalExperimenters(animal).experimenter_name;
+  const usualNames = Array.isArray(usualTeam) ? usualTeam : [];
+  const teamException = teamNames.join(';') !== usualNames.join(';');
+  const [teamOpen, setTeamOpen] = useState(teamNames.length === 0);
+  useEffect(() => {
+    if (props.focusRequest?.fieldPath.includes('experimenter_name')) setTeamOpen(true);
+  }, [props.focusRequest]);
   const keywords = getDayKeywords(day);
   const dayDateKey = String(day.date ?? '').replace(/-/g, '');
 
@@ -147,23 +154,16 @@ export default function DayTab(props: DayTabProps) {
       <section className="day-editor-section daily-setup-section" aria-labelledby="daily-log-heading">
         <div className="daily-setup-header">
           <h2 id="daily-log-heading">Daily log</h2>
-          <DayProvenanceLine
-            animal={animal}
-            day={day}
-            onChangeSource={animalDays.length > 1 ? () => setChangeSourceOpen(true) : undefined}
-            onChangeSetup={onGoToRecordingSetup}
-          />
+          <p className="daily-setup-lede">Enter this recording’s measurement, then review its epochs and files. Changes save automatically.</p>
+
         </div>
 
         <div className="daily-setup-stack">
           <div className="daily-log-primary-grid">
             <div className="daily-setup-group daily-setup-group-primary">
-              <div className="daily-setup-group-header">
-                <h3>Weight</h3>
-              </div>
               <div className="form-field">
                 <label htmlFor="session-weight" className="required">
-                  Weight measured today (grams)
+                  Weight measured on {day.date} (grams)
                 </label>
                 <div className="daily-log-weight-row">
                   <DraftNumberInput
@@ -178,75 +178,30 @@ export default function DayTab(props: DayTabProps) {
                     aria-required="true"
                     placeholder="e.g. 450"
                   />
-                  {session.weight === undefined && suggestion && (
-                    <Button
-                      variant="secondary"
-                      size="small"
-                      onClick={() => onFieldUpdate('session.weight', suggestion.weight)}
-                      aria-label={`Use ${suggestion.weight} grams (${
-                        suggestion.source === 'previous-day' ? `measured ${suggestion.date}` : 'the baseline at setup'
-                      }) as today's weight`}
-                    >
-                      Use {suggestion.weight} g
-                    </Button>
-                  )}
+
                 </div>
                 <span id="session-weight-help" className="field-help-text">
-                  {session.weight === undefined && suggestion
+                  {suggestion
                     ? suggestion.source === 'previous-day'
-                      ? `Previous measurement: ${suggestion.weight} g on ${suggestion.date}. Enter today’s measurement — the previous value is a suggestion, not a measurement.`
-                      : `Baseline at setup: ${suggestion.weight} g. Enter today’s measurement.`
+                      ? `Previous measurement: ${suggestion.weight} g on ${suggestion.date}. Enter the measurement for ${day.date}.`
+                      : `Baseline at setup: ${suggestion.weight} g. Enter the measurement for ${day.date}.`
                     : weightHelp}
                 </span>
               </div>
             </div>
 
-            <div className="daily-setup-group daily-setup-group-primary">
-              <div className="daily-setup-group-header">
-                <h3>Team</h3>
-              </div>
-              <div className="form-field">
-                <label htmlFor="day-team-names" className="required">
-                  Experimenters present (one per line, &quot;Last, First&quot;)
-                </label>
-                <DraftTextArea
-                  id="day-team-names"
-                  name="experimenters.experimenter_name"
-                  data-field-path="experimenter_name"
-                  rows={Math.min(6, Math.max(2, teamNames.length + 1))}
-                  value={teamNames.join('\n')}
-                  onCommit={(text) =>
-                    commitTeam({
-                      experimenter_name: text
-                        .split('\n')
-                        .map((n) => n.trim())
-                        .filter((n) => n !== ''),
-                    })
-                  }
-                  aria-describedby="day-team-help"
-                  aria-required="true"
-                />
-                <span id="day-team-help" className="field-help-text">
-                  {day?.provenance?.fields?.experimenters === 'copied' && day.provenance.copiedFromDate
-                    ? `Copied from ${day.provenance.copiedFromDate}; edit for this day only.`
-                    : 'This day’s actual team. Changing it here affects this day only.'}
-                </span>
-              </div>
-            </div>
+
           </div>
+
+
 
           {/* The epoch sequence editor — the same component as the Tasks & Files section. */}
           <div className="daily-log-epochs">
             <TasksFilesSection {...props} focusRequest={props.focusRequest ?? null} />
           </div>
 
-          <details className="daily-setup-group daily-log-more">
-            <summary className="inherited-metadata-toggle">
-              <span className="toggle-icon" aria-hidden="true">▶</span>
-              Descriptions, data folder &amp; search terms
-            </summary>
-            <div className="daily-setup-stack">
-              <div className="form-grid daily-setup-description-grid">
+          <details className="daily-setup-group" open={!session.session_description || undefined}>
+            <summary>Session description / notes</summary>
                 <div className="form-field">
                   <label htmlFor="session-description" className="required">
                     Session Description
@@ -274,6 +229,55 @@ export default function DayTab(props: DayTabProps) {
                   )}
                 </div>
 
+          </details>
+
+          <details className="daily-log-context" open={teamNames.length === 0 || teamOpen || undefined}>
+            <summary>Recording details{teamNames.length === 0 ? ' · experimenters to enter' : teamException ? ' · experimenter exception' : ''}</summary>
+          <DayProvenanceLine
+            animal={animal}
+            day={day}
+            onChangeSource={animalDays.length > 1 ? () => setChangeSourceOpen(true) : undefined}
+            onChangeSetup={onGoToRecordingSetup}
+          />
+            <details className="daily-setup-group" open={teamOpen} onToggle={(event) => setTeamOpen(event.currentTarget.open)}>
+              <summary>Experimenters: {teamNames.join('; ') || 'To enter'}{teamException && teamNames.length > 0 ? ' · differs from usual team' : ''}</summary>
+              <div className="form-field">
+                <label htmlFor="day-team-names" className="required">
+                  Experimenters present (one per line, &quot;Last, First&quot;)
+                </label>
+                <DraftTextArea
+                  id="day-team-names"
+                  name="experimenters.experimenter_name"
+                  data-field-path="experimenter_name"
+                  rows={Math.min(6, Math.max(2, teamNames.length + 1))}
+                  value={teamNames.join('\n')}
+                  onCommit={(text) =>
+                    commitTeam({
+                      experimenter_name: text
+                        .split('\n')
+                        .map((n) => n.trim())
+                        .filter((n) => n !== ''),
+                    })
+                  }
+                  aria-describedby="day-team-help"
+                  aria-required="true"
+                />
+                <span id="day-team-help" className="field-help-text">
+                  {day?.provenance?.fields?.experimenters === 'copied' && day.provenance.copiedFromDate
+                    ? `Copied from ${day.provenance.copiedFromDate}; edit for this day only.`
+                    : 'This day’s actual team. Changing it here affects this day only.'}
+                </span>
+              </div>
+            </details>
+          </details>
+
+          <details className="daily-setup-group daily-log-more" open={!session.experiment_description || !team.lab || !team.institution || undefined}>
+            <summary className="inherited-metadata-toggle">
+              <span className="toggle-icon" aria-hidden="true">▶</span>
+              Experiment details &amp; search terms
+            </summary>
+            <div className="daily-setup-stack">
+              <div className="form-grid daily-setup-description-grid">
                 <div className="form-field">
                   <label htmlFor="experiment-description" className="required">
                     Experiment Description
@@ -314,31 +318,6 @@ export default function DayTab(props: DayTabProps) {
               </div>
 
               <div className="daily-setup-secondary-grid">
-                <div className="daily-setup-group">
-                  <div className="daily-setup-group-header">
-                    <h3>File location</h3>
-                  </div>
-                  <div className="form-field">
-                    <label htmlFor="day-data-folder">Data folder</label>
-                    <DraftTextInput
-                      id="day-data-folder"
-                      type="text"
-                      name="dataFolder"
-                      data-field-path="dataFolder"
-                      value={day.dataFolder ?? ''}
-                      onCommit={(value) => onFieldUpdate('dataFolder', value)}
-                      placeholder="e.g. /stelmo/denisse/Laurent/20260514/"
-                      aria-describedby="day-data-folder-help"
-                    />
-                    <span id="day-data-folder-help" className="field-help-text">
-                      Where this day&apos;s files live. Epoch file names derive inside it.
-                      {day?.provenance?.fields?.dataFolder === 'derived' && day.provenance.copiedFromDate
-                        ? ` Derived from ${day.provenance.copiedFromDate}’s folder with today’s date.`
-                        : ''}
-                    </span>
-                  </div>
-                </div>
-
                 <div className="daily-setup-group">
                   <div className="daily-setup-group-header">
                     <h3>Search terms</h3>

@@ -35,7 +35,7 @@ describe('RepairActions', () => {
         onNavigate={vi.fn()}
       />
     );
-    expect(screen.getByText(/Fix this day.s recording facts/i)).toBeInTheDocument();
+    expect(screen.queryByText(/Fix this day.s recording facts/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/affects more than this day/i)).not.toBeInTheDocument();
   });
 

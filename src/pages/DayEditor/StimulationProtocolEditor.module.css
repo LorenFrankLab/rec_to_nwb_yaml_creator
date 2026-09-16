@@ -1,0 +1,51 @@
+.form {
+  display: grid;
+  gap: var(--spacing-md);
+  min-width: 0;
+}
+
+.form label {
+  display: grid;
+  gap: var(--spacing-xs);
+}
+
+.form > p {
+  margin: 0;
+}
+
+.form input:not([type='checkbox']),
+.form select {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+}
+
+.epochs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-md);
+}
+
+.epochs label {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+}
+
+.hint {
+  font-size: var(--font-size-sm, 0.875rem);
+}
+
+.confirm {
+  border: 1px solid currentcolor;
+  padding: var(--spacing-md);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--spacing-sm);
+  padding-top: var(--spacing-md);
+}

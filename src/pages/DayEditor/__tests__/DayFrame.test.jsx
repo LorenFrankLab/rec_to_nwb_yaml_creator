@@ -107,7 +107,7 @@ describe('DayEditorFrame', () => {
         settings: {},
       },
     });
-    expect(screen.getByRole('heading', { level: 1, name: /Day Editor: remy - 2023-06-22/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1, name: /remy · 2023-06-22/i })).toBeInTheDocument();
   });
 
   it('does not crash when the animal has a corrupt configurationHistory (merge throws by design)', () => {
@@ -117,7 +117,7 @@ describe('DayEditorFrame', () => {
         workspace: { ...mockInitialState.workspace, animals: { remy: { ...mockAnimal, configurationHistory: 'corrupt' } } },
       })
     ).not.toThrow();
-    expect(screen.getByRole('heading', { level: 1, name: /Day Editor:/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1, name: /remy · /i })).toBeInTheDocument();
   });
 
   it('clears first-run validation deferral on open so real blockers surface', async () => {
@@ -130,12 +130,12 @@ describe('DayEditorFrame', () => {
     });
 
     // The daily log (first screen) shows the readiness bar — the epoch editor lives there.
-    await waitFor(() => expect(screen.getByText(/issues? block export/i)).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText(/issues? to correct/i)).toBeInTheDocument());
   });
 
   it('renders the level-1 heading with animal and date', () => {
     renderFrame();
-    expect(screen.getByRole('heading', { level: 1, name: /Day Editor: remy - 2023-06-22/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1, name: /remy · 2023-06-22/i })).toBeInTheDocument();
   });
 
   // ── Header: breadcrumb, scope card, chips, autosave ──
@@ -145,15 +145,13 @@ describe('DayEditorFrame', () => {
     expect(screen.getByRole('link', { name: /Animal: remy/i })).toHaveAttribute('href', '#/animal/remy/days');
   });
 
-  it('renders the read-only animal scope card with an Edit animal setup link', () => {
+  it('keeps animal setup and recording provenance available without repeating the scope card', async () => {
+    const user = userEvent.setup();
     renderFrame();
-    const scope = screen.getByRole('complementary', { name: /animal setup/i });
-    expect(within(scope).getByRole('link', { name: /edit animal setup/i })).toHaveAttribute('href', '#/animal/remy/days');
-  });
-
-  it('renders the day configuration chip', () => {
-    renderFrame();
-    expect(screen.getByText(/Configuration v1/i)).toBeInTheDocument();
+    expect(screen.queryByRole('complementary', { name: /animal setup/i })).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Animal: remy/i })).toHaveAttribute('href', '#/animal/remy/days');
+    await user.click(screen.getByText('Recording details'));
+    expect(screen.getByText(/Probe setup v1/i)).toBeVisible();
   });
 
   it('does not optimistically show "Saved" when a field is edited', async () => {
@@ -169,11 +167,11 @@ describe('DayEditorFrame', () => {
     const user = userEvent.setup();
     // The mock animal's species "Rat" is not DANDI-valid → a blocking error.
     renderFrame();
-    expect(screen.getByRole('alert')).toHaveTextContent(/issue(s)? block export/i);
+    expect(screen.getByRole('alert')).toHaveTextContent(/issue(s)? to correct/i);
 
     await user.click(screen.getByRole('button', { name: /^Recording Setup/ }));
     const alert = screen.getByRole('alert');
-    expect(alert).toHaveTextContent(/issue(s)? block export/i);
+    expect(alert).toHaveTextContent(/issue(s)? to correct/i);
     expect(within(alert).getAllByRole('button').length).toBeGreaterThan(0);
   });
 
@@ -218,14 +216,24 @@ describe('DayEditorFrame', () => {
     expect(within(nav).getByRole('button', { name: /^Recording Setup/ })).toBeInTheDocument();
     expect(within(nav).getByRole('button', { name: /^Failed Channels/ })).toBeInTheDocument();
     expect(within(nav).getByRole('button', { name: /^DIO Wiring/ })).toBeInTheDocument();
-    expect(within(nav).getByRole('button', { name: /^Fix & Export/ })).toBeInTheDocument();
+    expect(within(nav).getByRole('button', { name: /^Review & export/ })).toBeInTheDocument();
   });
 
   it('folds each tab status label into the accessible name', () => {
     renderFrame();
     const nav = screen.getByRole('navigation', { name: /day editor sections/i });
-    expect(within(nav).getByRole('button', { name: /Daily log.*Has errors/i })).toBeInTheDocument();
-    expect(within(nav).getByRole('button', { name: /Recording Setup.*(Has errors|Incomplete|Complete)/i })).toBeInTheDocument();
+    expect(within(nav).getByRole('button', { name: /Daily log.*To enter/i })).toBeInTheDocument();
+    expect(within(nav).getByRole('button', { name: /Recording Setup.*(Has errors|To enter|Complete)/i })).toBeInTheDocument();
+  });
+
+  it('keeps missing recording-system entry neutral while the export gate stays closed', async () => {
+    const { animal, day } = buildRealisticWorkspace();
+    animal.devices.data_acq_device = [];
+    renderFrame({ workspace: { animals: { [animal.id]: animal }, days: { [day.id]: day }, settings: {} } });
+    const nav = screen.getByRole('navigation', { name: /day editor sections/i });
+    const review = within(nav).getByRole('button', { name: /Review & export.*To enter/i });
+    await userEvent.setup().click(review);
+    expect(screen.getByRole('button', { name: 'Download YAML', exact: true })).toBeDisabled();
   });
 
   it('opens on the Daily log and freely navigates to any section on click', async () => {
@@ -263,9 +271,9 @@ describe('DayEditorFrame', () => {
 
     // Step to the last section, then Alt+→ stays there.
     for (let i = 0; i < 6; i += 1) act(() => emitStepperShortcut('next'));
-    expect(screen.getByRole('button', { name: /^Fix & Export/ })).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByRole('button', { name: /^Review & export/ })).toHaveAttribute('aria-current', 'page');
     act(() => emitStepperShortcut('next'));
-    expect(screen.getByRole('button', { name: /^Fix & Export/ })).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByRole('button', { name: /^Review & export/ })).toHaveAttribute('aria-current', 'page');
   });
 
   it('routes to the owning tab when arriving with a ?field= repair deep-link', async () => {
@@ -334,10 +342,10 @@ describe('DayEditorFrame', () => {
   it('reveals the export-preview surface via the header Export action, with the download disabled while invalid', async () => {
     const user = userEvent.setup();
     renderFrame();
-    await user.click(screen.getByRole('button', { name: /^Export$/ }));
-    expect(screen.getByRole('heading', { name: /Fix & Export — 2023-06-22/ })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /^Review & export$/ }));
+    expect(screen.getByRole('heading', { name: /Review & export — 2023-06-22/ })).toBeInTheDocument();
     // The mock animal's species "Rat" is not DANDI-valid → the export gate blocks the download.
-    expect(screen.getByRole('button', { name: /^Download$/ })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /^Download YAML$/ })).toBeDisabled();
   });
 
   // ── Repair flows (executable repairs surface on the readiness bar / Overview section) ──

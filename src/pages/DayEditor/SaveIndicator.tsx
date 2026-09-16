@@ -31,6 +31,7 @@ export default function SaveIndicator({ persistence }: SaveIndicatorProps) {
     saveError = null,
     hasPendingWrite = false,
     hasPendingDrafts = false,
+    hasUnappliedDrafts = false,
   } = persistence ?? {};
   const error = saveError;
   const pending = hasPendingWrite;
@@ -61,6 +62,10 @@ export default function SaveIndicator({ persistence }: SaveIndicatorProps) {
 
   // A field is mid-edit: its newest text is NOT in storage yet. Say so rather than "Saved" (it
   // commits when typing pauses, on blur, or on Ctrl/Cmd+S).
+  if (hasUnappliedDrafts) {
+    return <div className={styles.saveIndicator} role="status">Editing — Save or Cancel</div>;
+  }
+
   if (hasPendingDrafts) {
     return (
       <div

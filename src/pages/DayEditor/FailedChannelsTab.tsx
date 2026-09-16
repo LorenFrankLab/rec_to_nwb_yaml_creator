@@ -439,9 +439,9 @@ export default function FailedChannelsTab(props: FailedChannelsTabProps) {
           <h2>Failed Channels</h2>
           {overrideCleanupSection}
           <div className="empty-state">
-            <p>No electrodes are set up for {ownerKey} yet.</p>
+            <p>{animal.recordingModalities?.ephys === false ? 'Not applicable — this animal has no electrophysiology recordings.' : `No electrodes are set up for ${ownerKey} yet.`}</p>
             <p className="empty-state-hint">
-              Failed-channel editing appears here after the animal has electrode groups.
+              Set up electrodes if this recording includes electrophysiology.
             </p>
             <p className="empty-state-hint">
               <a href={`#/animal/${ownerKey}/electrode-groups?field=electrode_groups`}>
@@ -458,7 +458,7 @@ export default function FailedChannelsTab(props: FailedChannelsTabProps) {
         <h2>Devices &amp; Failed Channels</h2>
         {recordingSetup()}
         <div className="empty-state">
-          <p>No electrodes are set up for {ownerKey} yet.</p>
+          <p>{animal.recordingModalities?.ephys === false ? 'Not applicable — this animal has no electrophysiology recordings.' : `No electrodes are set up for ${ownerKey} yet.`}</p>
           <p className="empty-state-hint">
             Electrodes/probes are shared animal setup. Failed-channel editing appears here after
             the animal has electrode groups.

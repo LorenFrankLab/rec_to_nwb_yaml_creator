@@ -58,7 +58,7 @@ export default function DayEditorSectionNav({ groups, onNavigate }: DayEditorSec
               {group.steps.map((step) => (
                 <option key={step.key} value={step.key}>
                   {step.label} — {step.statusLabel}
-                  {step.issueCount != null && step.issueCount > 0 ? ` (${step.issueCount} to fix)` : ''}
+                  {step.issueCount != null && step.issueCount > 0 ? ` (${step.issueCount} remaining)` : ''}
                 </option>
               ))}
             </optgroup>
@@ -75,10 +75,10 @@ export default function DayEditorSectionNav({ groups, onNavigate }: DayEditorSec
           <div className="section-nav-group-label">{group.label}</div>
           {group.steps.map((step) => {
             // The to-fix count is information scent on the Validation step only, and only when there
-            // is something to fix (the view-model sets `issueCount` then). The status glyph carries
+            // is something remaining (the view-model sets `issueCount` then). The status glyph carries
             // the meaning everywhere else.
             const countLabel =
-              step.issueCount != null && step.issueCount > 0 ? `${step.issueCount} to fix` : null;
+              step.issueCount != null && step.issueCount > 0 ? `${step.issueCount} remaining` : null;
             return (
               <button
                 key={step.key}
@@ -115,7 +115,7 @@ export default function DayEditorSectionNav({ groups, onNavigate }: DayEditorSec
 function getStatusIcon(status: StepStatus): string {
   switch (status) {
     case 'valid': return '✓';
-    case 'incomplete': return '⚠';
+    case 'incomplete': return '○';
     case 'error': return '✗';
     default: return '○';
   }

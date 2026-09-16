@@ -1,3 +1,4 @@
+import HardwareChangeChoice from '../../components/HardwareChangeChoice';
 import { useId, useMemo, useState } from 'react';
 import Modal from '../../components/Modal/Modal';
 import {
@@ -34,7 +35,7 @@ interface ReconfigWizardProps {
   actions: {
     createConfigurationSnapshotAndApplyForward: (
       animalKey: string,
-      snapshot: { date: string; description: string; devices: unknown },
+      snapshot: { date: string; description: string; devices: unknown; failurePolicy?: 'same-hardware' | 'replacement' },
       orderedIds: string[]
     ) => number;
   };
@@ -95,6 +96,7 @@ export default function ReconfigWizard({
     };
   }, [animal]);
 
+  const [failurePolicy, setFailurePolicy] = useState<'same-hardware' | 'replacement'>('same-hardware');
   const [description, setDescription] = useState('');
   const [date, setDate] = useState(day.date);
   const [error, setError] = useState('');
@@ -146,18 +148,23 @@ export default function ReconfigWizard({
     // Target the resolved `ownerKey` (the store key — order `animalKey ?? day.animalId ?? animal.id`,
     // defined above) in preference to the possibly-stale `animal.id` record field, so a stale record
     // id can't misroute the write.
-    const newVersion = actions.createConfigurationSnapshotAndApplyForward(
-      ownerKey,
-      {
-        date,
-        description: description.trim(),
-        devices: structuredClone(latestDevices),
-      },
-      orderedIds
-    );
+    try {
+      const newVersion = actions.createConfigurationSnapshotAndApplyForward(
+        ownerKey,
+        {
+          date,
+          description: description.trim(),
+          devices: structuredClone(latestDevices),
+          failurePolicy,
+        },
+        orderedIds
+      );
 
-    onClose();
-    navigateToAnimalEditor(newVersion);
+      onClose();
+      navigateToAnimalEditor(newVersion);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Could not create the configuration.');
+    }
   };
 
   if (!isOpen) return null;
@@ -210,6 +217,7 @@ export default function ReconfigWizard({
           handleApply();
         }}
       >
+        <HardwareChangeChoice value={failurePolicy} onChange={setFailurePolicy} />
         <label className="reconfig-field">
           <span>Change description</span>
           <input

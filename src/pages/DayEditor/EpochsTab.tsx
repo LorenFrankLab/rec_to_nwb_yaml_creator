@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { DraftTextInput } from '../../components/ui/DraftFields';
+import { STATESCRIPT_DESCRIPTION } from '../../domain/associatedFiles';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faArrowDown, faArrowUp, faTrash } from '@fortawesome/free-solid-svg-icons';
+import { faArrowDown, faArrowUp } from '@fortawesome/free-solid-svg-icons';
 import { ConfirmDialog, useDialogBehavior } from '../../components/Modal';
 import { useUndoToast } from '../../components/ui/UndoToast';
 import { EpochStatusPill } from '../../components/ui/StatusPill';
@@ -10,6 +11,9 @@ import Button from '../../components/ui/Button';
 import OverflowMenu from '../../components/OverflowMenu';
 import type { OverflowMenuHandle } from '../../components/OverflowMenu';
 import EmptyState from '../../components/ui/EmptyState';
+import { changedTaskContext, restoreCopiedTaskContext } from '../../domain/copiedTaskContext';
+import TaskTemplateDialog from './TaskTemplateDialog';
+import StimulationProtocolEditor from './StimulationProtocolEditor';
 import TaskTypeModal from '../AnimalEditor/TaskTypeModal';
 import { useStepperShortcut } from '../../hooks/stepperShortcuts';
 import { useDayEditorContext } from './DayEditorContext';
@@ -53,6 +57,7 @@ import {
   getDayAssociatedFiles,
   getDayDeferredEpochs,
   getDayFsGuiYamls,
+  getDayBehavioralEvents,
   getDayVideolessEpochs,
 } from '../../state/workspaceSelectors';
 import { preserveInlineTaskDefinitions, resolveDayCatalogView } from '../../state/dayTaskCatalog';
@@ -166,9 +171,13 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
   const grid = useMemo(() => buildEpochGrid(animal, day, siblingDays), [animal, day, siblingDays]);
   const view = useMemo(() => resolveDayCatalogView(animal, day), [animal, day]);
   const cameras = getAnimalCameras(animal);
+  const hasRecordedTaskContext = view.taskInstances.some((instance) => instance.task_environment !== undefined || instance.camera_id !== undefined);
   const unresolvedTaskCatalogDivergence = view.derived && view.divergences.length > 0;
 
+  const [pendingTemplate, setPendingTemplate] = useState<'sleep' | 'wtrack' | null>(null);
   const [activeEpoch, setActiveEpoch] = useState<number | null>(null);
+  const [protocolIndex, setProtocolIndex] = useState<number | null>(null);
+  const protocols = getDayFsGuiYamls(day);
   const [pendingOrphan, setPendingOrphan] = useState<PendingOrphan | null>(null);
   const [quickAddEpoch, setQuickAddEpoch] = useState<number | null>(null);
   const [quickAddError, setQuickAddError] = useState<string | null>(null);
@@ -186,6 +195,12 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
 
   // Repair landing: open the targeted epoch panel (the frame's focus effect then focuses the control).
   useEffect(() => {
+    const protocolMatch = /^fs_gui_yamls\[(\d+)]/.exec(focusRequest?.fieldPath ?? '');
+    if (protocolMatch) {
+      setActiveEpoch(null);
+      setProtocolIndex(Number(protocolMatch[1]));
+      return;
+    }
     const epoch = epochFromFocusPath(focusRequest?.fieldPath);
     if (epoch != null) {
       setActiveEpoch(epoch);
@@ -309,14 +324,16 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
    * video/file ref. Confirm-before-orphan; never auto-scrubs.
    */
   const commit = useCallback(
-    (nextInstances: TaskInstance[], nextTaskTypes: TaskType[] = view.taskTypes) => {
+    (nextInstances: TaskInstance[], nextTaskTypes: TaskType[] = view.taskTypes, after?: () => void) => {
       if (unresolvedTaskCatalogDivergence) return;
       const { videos, files } = epochsOrphanedBy(day, nextInstances);
       if (videos.length === 0 && files.length === 0) {
         applyCommit(nextInstances, nextTaskTypes, false);
+        after?.();
         return;
       }
       // The pending edit may also extend the catalog (a quick-add type); stash it for the confirm.
+      pendingAfterRef.current = after ?? null;
       pendingTypesRef.current = nextTaskTypes;
       setPendingOrphan({ nextInstances, videos, files });
     },
@@ -476,17 +493,14 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
     }
   };
 
-  // ── Opto (fs_gui) per-epoch power / pulse ──
-  const setOpto = (row: EpochGridRow, field: 'power_in_mW' | 'pulseLength', value: string) => {
+  const openProtocol = (index?: number, epoch?: number) => {
     if (unresolvedTaskCatalogDivergence) return;
-    clearDeferredEpoch(row.epoch);
-    const fsgui = getDayFsGuiYamls(day);
-    const parsed = value === '' ? '' : Number(value);
-    if (row.opto) {
-      const next = fsgui.map((g, i) => (i === row.opto!.index ? { ...g, [field]: parsed } : g));
-      onFieldUpdate('fs_gui_yamls', next);
-    } else if (value !== '') {
-      onFieldUpdate('fs_gui_yamls', [...fsgui, { name: '', epochs: [row.epoch], [field]: parsed }]);
+    if (epoch !== undefined) clearDeferredEpoch(epoch);
+    setActiveEpoch(null);
+    if (index !== undefined) setProtocolIndex(index);
+    else {
+      setProtocolIndex(protocols.length);
+      onFieldUpdate('fs_gui_yamls', [...protocols, { name: '', epochs: epoch === undefined ? [] : [epoch] }]);
     }
   };
 
@@ -514,7 +528,7 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
     const path = deriveStatescriptPath(grid.dataFolder, name);
     onFieldUpdate('associated_files', [
       ...getDayAssociatedFiles(day),
-      { name, description: '', path, task_epochs: row.epoch },
+      { name, description: STATESCRIPT_DESCRIPTION, path, task_epochs: row.epoch },
     ]);
   };
 
@@ -635,11 +649,37 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
   };
 
   return (
-    <div id="epochs-workspace" className={`day-editor-section ${styles.root}`} tabIndex={-1}>
+    <div data-field-path="epochs-workspace" id="epochs-workspace" className={`day-editor-section ${styles.root}`} tabIndex={-1}>
+      {day.provenance?.taskContextReset?.length ? (
+        <section className={styles.contextReview} tabIndex={-1} data-field-path="task-context-review" aria-labelledby="task-context-review-title">
+          <h3 id="task-context-review-title">Check the room and cameras</h3>
+          <p>The previous recording used a different room or cameras. Choose what applies to this recording.</p>
+          <ul className={styles.contextComparison}>{groupCopiedContexts(day.provenance.taskContextReset).map((previous, index) => {
+            const type = view.taskTypes.find((candidate) => candidate.id === previous.taskTypeId);
+            return <li key={index}>
+              <strong>{type?.task_name ?? previous.taskTypeId}, epochs {previous.task_epochs.join(', ')}</strong>
+              <span><b>Previous:</b> {previous.task_environment ?? type?.task_environment ?? 'No room entered'} · {(previous.camera_id ?? type?.camera_id ?? []).map((id) => cameraName(cameras, id)).join(', ') || 'No cameras'}</span>
+              {hasRecordedTaskContext ? view.taskInstances.filter((instance) => instance.taskTypeId === previous.taskTypeId && instance.task_epochs.some((epoch) => previous.task_epochs.includes(epoch))).map((instance, currentIndex) => (
+                <span key={currentIndex}><b>Current (epochs {instance.task_epochs.filter((epoch) => previous.task_epochs.includes(epoch)).join(', ')}):</b> {instance.task_environment ?? type?.task_environment ?? 'No room entered'} · {(instance.camera_id ?? type?.camera_id ?? []).map((id) => cameraName(cameras, id)).join(', ') || 'No cameras'}</span>
+              )) : <span><b>Task defaults:</b> {type?.task_environment || 'No room entered'} · {(type?.camera_id ?? []).map((id) => cameraName(cameras, id)).join(', ') || 'No cameras'}</span>}
+            </li>;
+          })}</ul>
+          <div className="form-actions">
+            <Button onClick={() => {
+              commit(restoreCopiedTaskContext(view.taskInstances, day.provenance!.taskContextReset!), view.taskTypes, () => {
+                onFieldUpdate('provenance', { ...day.provenance, taskContextReset: undefined });
+              });
+            }}>Use previous context</Button>
+            <Button variant="neutral" onClick={() => onFieldUpdate('provenance', { ...day.provenance, taskContextReset: undefined })}>
+              {hasRecordedTaskContext ? 'Keep current context for this recording' : 'Keep defaults for this recording'}
+            </Button>
+          </div>
+        </section>
+      ) : null}
       <div className={styles.workspaceHeader}>
         <div>
           <h2>Epochs</h2>
-          <p className={styles.workspaceIntro}>Confirm what happened, then resolve expected statescript and video files.</p>
+          <p className={styles.workspaceIntro}>List epochs in recording order. Add the files recorded for each epoch.</p>
           {epochCount > 0 && (
             <div className={styles.epochToolbar}>
               <div className={styles.toolbarGroup}>
@@ -653,6 +693,7 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
                   >
                     {epochCount} {pluralize(epochCount, 'epoch')}
                   </button>
+                  {(missingVideoCount > 0 || epochFilter === 'needs-video') && (
                   <button
                     type="button"
                     className={filterButtonClass(
@@ -663,7 +704,8 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
                     onClick={() => changeFilter('needs-video')}
                   >
                     {missingVideoCount} {pluralize(missingVideoCount, 'video')} needed
-                  </button>
+                  </button>)}
+                  {(expectedStatescriptCount > 0 || epochFilter === 'expected-statescript') && (
                   <button
                     type="button"
                     className={filterButtonClass(
@@ -673,8 +715,9 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
                     aria-pressed={epochFilter === 'expected-statescript'}
                     onClick={() => changeFilter('expected-statescript')}
                   >
-                    {expectedStatescriptCount} {pluralize(expectedStatescriptCount, 'statescript')} expected
-                  </button>
+                    {expectedStatescriptCount} {pluralize(expectedStatescriptCount, 'statescript')} missing
+                  </button>)}
+                  {(customFilenameCount > 0 || epochFilter === 'custom-filenames') && (
                   <button
                     type="button"
                     className={filterButtonClass(
@@ -685,11 +728,11 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
                     onClick={() => changeFilter('custom-filenames')}
                   >
                     {customFilenameCount} custom {pluralize(customFilenameCount, 'filename')}
-                  </button>
+                  </button>)}
                 </div>
               </div>
-              {!grid.dataFolder && (
-                <div className={`${styles.toolbarGroup} ${styles.dataFolderGroup}`}>
+              <details className={`${styles.toolbarGroup} ${styles.dataFolderGroup}`} open={!grid.dataFolder || focusRequest?.fieldPath === 'dataFolder' || undefined}>
+                <summary>Data folder{grid.dataFolder ? ` · ${grid.dataFolder}` : ' · enter for statescript paths'}</summary>
                   <label className={styles.toolbarLabel} htmlFor="epochs-data-folder">
                     Data folder
                   </label>
@@ -697,6 +740,7 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
                     id="epochs-data-folder"
                     type="text"
                     name="dataFolder"
+                    data-field-path="dataFolder"
                     className={styles.dataFolderInput}
                     value={grid.dataFolder}
                     onCommit={(value) => onFieldUpdate('dataFolder', value)}
@@ -704,10 +748,9 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
                     aria-describedby="epochs-data-folder-help"
                   />
                   <span id="epochs-data-folder-help" className={styles.dataFolderHelp}>
-                    Set the data folder to generate statescript and video file names.
+                    Folder containing this recording’s files. Statescript paths are generated inside it.
                   </span>
-                </div>
-              )}
+              </details>
               {(generatedStatescriptCount > 0 || generatedVideoCount > 0) && (
                 <div className={`${styles.toolbarGroup} ${styles.bulkGroup}`}>
                   <span className={styles.toolbarLabel}>Generate missing</span>
@@ -739,6 +782,7 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
           )}
         </div>
         <div className={styles.templateMenu}>
+          <Button onClick={() => applyTemplate('blank')}>Add epoch</Button>
           <OverflowMenu
             ref={templateMenuRef}
             label="Epoch templates"
@@ -749,7 +793,6 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
               ...(priorDayInstances()
                 ? [{ key: 'copy', label: 'Copy structure from prior day', description: 'same epochs; files re-derive', onSelect: () => applyTemplate('copy') }]
                 : []),
-              { key: 'blank', label: 'Blank', description: 'add one epoch to start', separatorBefore: true, onSelect: () => applyTemplate('blank') },
             ]}
           />
         </div>
@@ -844,6 +887,7 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
               cameras={cameras}
               taskTypes={view.taskTypes}
               grid={grid}
+              repairFocus={focusRequest}
               fileFocus={pendingFileFocus?.epoch === activeRow.epoch ? pendingFileFocus : null}
               manualStatescript={manualStatescript.has(activeRow.epoch)}
               manualVideoKeys={manualVideo}
@@ -858,7 +902,7 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
                 // form closes or saves.
                 setActiveEpoch(null);
               }}
-              onOpto={(field, value) => setOpto(activeRow, field, value)}
+              onEditProtocol={() => openProtocol(activeRow.opto?.index, activeRow.epoch)}
               statescriptDerivedName={statescriptDerivedName(activeRow)}
               onStatescriptOverride={() => setStatescriptManual(activeRow.epoch, true)}
               onStatescriptRevert={() => {
@@ -866,6 +910,12 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
                 writeStatescriptPath(activeRow, deriveStatescriptPath(grid.dataFolder, statescriptDerivedName(activeRow)));
               }}
               onStatescriptChange={(path) => writeStatescriptPath(activeRow, path)}
+              onStatescriptDescriptionChange={(description) => {
+                if (!activeRow.statescript) return;
+                onFieldUpdate('associated_files', getDayAssociatedFiles(day).map((file, index) =>
+                  index === activeRow.statescript!.index ? { ...file, description } : file
+                ));
+              }}
               onAddStatescript={() => {
                 openFileEditor(activeRow.epoch, 'statescript');
                 addStatescript(activeRow);
@@ -911,6 +961,21 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
         </>
       )}
 
+      {pendingTemplate && <TaskTemplateDialog
+        kind={pendingTemplate}
+        types={view.taskTypes}
+        defaults={(animal as { taskTemplateDefaults?: { sleep?: string; run?: string } }).taskTemplateDefaults}
+        onClose={() => setPendingTemplate(null)}
+        onApply={(instances, defaults) => {
+          commit(instances, view.taskTypes, () => {
+            if (actions?.updateAnimal && ownerKey) {
+              (actions.updateAnimal as (id: string, patch: Record<string, unknown>) => void)(ownerKey, { taskTemplateDefaults: defaults });
+            }
+          });
+          setPendingTemplate(null);
+        }}
+      />}
+
       {quickAddEpoch !== null && (
         <TaskTypeModal
           isOpen
@@ -947,6 +1012,29 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
         }}
       />
 
+      {(hasOpto || protocols.length > 0) && <details className="supplemental-disclosure">
+        <summary>Stimulation protocols · {protocols.length}</summary>
+        {protocols.map((protocol, index) => <p key={index}>
+          {protocol.name || 'Unnamed protocol'} · epochs {(protocol.epochs ?? []).join(', ') || 'not selected'}{' '}
+          <Button variant="secondary" size="small" onClick={() => openProtocol(index)}>Edit protocol {index + 1}</Button>
+        </p>)}
+        <Button variant="secondary" onClick={() => openProtocol()}>Add stimulation protocol</Button>
+      </details>}
+      {protocolIndex !== null && protocols[protocolIndex] && <StimulationProtocolEditor
+        key={protocolIndex} index={protocolIndex} protocol={protocols[protocolIndex]} epochs={grid.rows}
+        cameras={cameras} events={getDayBehavioralEvents(day)} focusRequest={focusRequest}
+        onChange={(protocol) => onFieldUpdate('fs_gui_yamls', protocols.map((entry, index) => index === protocolIndex ? protocol : entry))}
+        onRemove={() => {
+          onFieldUpdate('fs_gui_yamls', protocols.filter((_, index) => index !== protocolIndex));
+          setProtocolIndex(null);
+        }}
+        onClose={() => setProtocolIndex(null)}
+        onEditCameras={() => { setProtocolIndex(null); window.location.hash = `#/animal/${encodeURIComponent(animal.id)}/cameras`; }}
+        onEditWiring={() => {
+          setProtocolIndex(null);
+          window.location.hash = `#/day/${encodeURIComponent(String(day.id))}?step=behavioral&field=behavioral_events`;
+        }}
+      />}
       {toastNode}
     </div>
   );
@@ -973,7 +1061,9 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
       // are that day's facts, so this day starts from the task-type defaults (same rule as creating
       // a day from the prior one; see stripTaskContext).
       const prior = priorDayInstances();
-      if (prior) commit(stripTaskContext(prior));
+      if (prior) commit(stripTaskContext(prior), view.taskTypes, () => {
+        onFieldUpdate('provenance', { ...day.provenance, taskContextReset: changedTaskContext(prior, view.taskTypes) });
+      });
       return;
     }
     if (kind === 'blank') {
@@ -982,33 +1072,7 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
       else setQuickAddEpoch(nextEpochNumber(view.taskInstances)); // define a type first
       return;
     }
-    // sleep / wtrack: find-or-create the needed task types, then lay down the epoch sequence.
-    let types = view.taskTypes;
-    const ensure = (name: string): string => {
-      const existing = types.find((t) => t?.task_name?.toLowerCase() === name.toLowerCase());
-      if (existing) return existing.id;
-      const id = nextTaskTypeId(types);
-      types = addTaskType(types, { task_name: name, task_description: name });
-      return id;
-    };
-    const instances: TaskInstance[] = [];
-    const push = (typeId: string, epoch: number) => {
-      const found = instances.find((i) => i.taskTypeId === typeId);
-      if (found) found.task_epochs.push(epoch);
-      else instances.push({ taskTypeId: typeId, task_epochs: [epoch] });
-    };
-    if (kind === 'sleep') {
-      const sleep = ensure('Sleep');
-      [1, 2, 3, 4].forEach((e) => push(sleep, e));
-    } else {
-      const sleep = ensure('Sleep');
-      const run = ensure('W-track');
-      push(sleep, 1);
-      push(run, 2);
-      push(sleep, 3);
-      push(run, 4);
-    }
-    commit(instances, types);
+    setPendingTemplate(kind);
   }
 }
 
@@ -1035,6 +1099,7 @@ interface EpochDetailsPanelProps {
   cameras: Camera[];
   taskTypes: TaskType[];
   grid: ReturnType<typeof buildEpochGrid>;
+  repairFocus?: FocusRequest | null;
   fileFocus: PendingFileFocus | null;
   manualStatescript: boolean;
   manualVideoKeys: Set<string>;
@@ -1042,11 +1107,12 @@ interface EpochDetailsPanelProps {
   onReassignTask: (taskTypeId: string) => void;
   onSetTaskContext: (context: TaskContextPatch) => void;
   onNewTaskType: () => void;
-  onOpto: (field: 'power_in_mW' | 'pulseLength', value: string) => void;
+  onEditProtocol: () => void;
   statescriptDerivedName: string;
   onStatescriptOverride: () => void;
   onStatescriptRevert: () => void;
   onStatescriptChange: (path: string) => void;
+  onStatescriptDescriptionChange: (description: string) => void;
   onAddStatescript: () => void;
   onAddManualStatescript: () => void;
   onAddVideo: () => void;
@@ -1121,6 +1187,7 @@ function EpochRowBlock(p: EpochRowProps) {
           <div className={styles.taskDisclosureRow}>
             <div className={styles.taskIdentity}>
               <span className={styles.taskName}>{row.taskName || <em>(no task)</em>}</span>
+              <span className={styles.taskEnvironment}>{row.taskEnvironment || 'Environment to enter'}</span>
               <span className={styles.taskMeta}>
                 <span className={styles.tag}>tag {row.tag}</span>
                 {row.duplicate && (
@@ -1194,21 +1261,13 @@ function EpochRowBlock(p: EpochRowProps) {
           >
             <FontAwesomeIcon icon={faArrowDown} aria-hidden="true" />
           </button>
-          <button
-            type="button"
-            className={`${styles.rowIconButton} ${styles.rowDangerButton}`}
-            aria-label={`Delete epoch ${row.epoch}`}
-            title="Delete"
-            onClick={p.onDelete}
-          >
-            <FontAwesomeIcon icon={faTrash} aria-hidden="true" />
-          </button>
           <OverflowMenu
             label={`More actions for epoch ${row.epoch}`}
             buttonClassName={styles.menuButton}
             items={[
               { key: 'insert', label: 'Insert epoch after', onSelect: p.onInsertAfter },
               { key: 'duplicate', label: 'Duplicate epoch', onSelect: p.onDuplicate },
+              { key: 'delete', label: `Delete epoch ${row.epoch}`, onSelect: p.onDelete },
             ]}
           />
         </div>
@@ -1278,6 +1337,18 @@ function EpochDetailsPanel(p: EpochDetailsPanelProps) {
   useDialogBehavior(panelRef, { onClose: p.onClose });
 
   useEffect(() => {
+    if (!p.repairFocus) return undefined;
+    // The drawer mounts after the frame's repair request. Focus the requested field after the
+    // dialog's initial focus and the frame's focus effect have both run.
+    const frame = requestAnimationFrame(() => {
+      const target = Array.from(panelRef.current?.querySelectorAll<HTMLElement>('[data-field-path]') ?? [])
+        .find((element) => element.dataset.fieldPath === p.repairFocus?.fieldPath);
+      target?.focus();
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [p.repairFocus, row.epoch]);
+
+  useEffect(() => {
     if (!p.fileFocus || p.fileFocus.epoch !== row.epoch) return undefined;
     const handle = window.setTimeout(() => {
       const target = document.querySelector<HTMLElement>(
@@ -1309,7 +1380,7 @@ function EpochDetailsPanel(p: EpochDetailsPanelProps) {
           </h2>
           <div className={styles.detailsPanelMeta}>
             <span className={styles.tag}>tag {row.tag}</span>
-            <EpochStatusPill status={row.status} />
+            <EpochStatusPill status={row.status} fileReminder={row.statescriptState === 'expected'} />
           </div>
         </div>
         <button
@@ -1349,15 +1420,28 @@ function EpochDetailsPanel(p: EpochDetailsPanelProps) {
                   tabIndex={row.statescript ? -1 : undefined}
                 >
                   {row.statescript ? (
-                    <GeneratedValue
-                      value={p.manualStatescript || row.statescriptNaming === 'manual' ? row.statescript.entry.path ?? '' : p.statescriptDerivedName}
-                      derived={row.statescriptNaming === 'generated' && !p.manualStatescript}
-                      overrideLabel="Override name"
-                      ariaLabel={`Epoch ${row.epoch} statescript path`}
-                      onOverride={p.onStatescriptOverride}
-                      onRevert={p.onStatescriptRevert}
-                      onChange={p.onStatescriptChange}
-                    />
+                    <>
+                      <GeneratedValue
+                        value={p.manualStatescript || row.statescriptNaming === 'manual' ? row.statescript.entry.path ?? '' : p.statescriptDerivedName}
+                        derived={row.statescriptNaming === 'generated' && !p.manualStatescript}
+                        overrideLabel="Override name"
+                        ariaLabel={`Epoch ${row.epoch} statescript path`}
+                        onOverride={p.onStatescriptOverride}
+                        onRevert={p.onStatescriptRevert}
+                        onChange={p.onStatescriptChange}
+                      />
+                      <label htmlFor={`epoch-${row.epoch}-statescript-description`}>Statescript description (required)</label>
+                      <DraftTextInput
+                        id={`epoch-${row.epoch}-statescript-description`}
+                        name={`associated_files[${row.statescript.index}].description`}
+                        data-field-path={`associated_files[${row.statescript.index}].description`}
+                        value={row.statescript.entry.description ?? ''}
+                        onCommit={p.onStatescriptDescriptionChange}
+                        aria-required="true"
+                        aria-invalid={!row.statescript.entry.description?.trim()}
+                      />
+                      <small>Include “statescript” so Spyglass can identify this log.</small>
+                    </>
                   ) : (
                     <>
                       <code className={styles.pathValue}>Expected: {expectedStatescriptPath}</code>
@@ -1486,8 +1570,6 @@ function EpochDetailsPanel(p: EpochDetailsPanelProps) {
               <dd><code className={styles.mono}>{row.tag}</code></dd>
             </div>
             <div>
-              <dt>Task source</dt>
-              <dd>{row.taskTypeId ? 'animal catalog' : 'day task'}</dd>
             </div>
             <div>
               <dt>Environment</dt>
@@ -1535,22 +1617,11 @@ function EpochDetailsPanel(p: EpochDetailsPanelProps) {
 
         {hasOpto && (
           <section className={styles.group} aria-labelledby={`epoch-${row.epoch}-opto-heading`}>
-            <div className={styles.taskEditorHeader}>
-              <h3 id={`epoch-${row.epoch}-opto-heading`} className={styles.groupHeading}>Optogenetics</h3>
-              <span className={styles.groupNote}>Day-specific FsGUI values.</span>
-            </div>
-            <div className={styles.fieldRow}>
-              <span className={styles.fieldLabel}>Power</span>
-              <span>
-                <DraftTextInput className={styles.optoInput} type="number" aria-label={`Epoch ${row.epoch} power`} value={String(row.opto?.entry.power_in_mW ?? '')} onCommit={(value) => p.onOpto('power_in_mW', value)} /> mW
-              </span>
-            </div>
-            <div className={styles.fieldRow}>
-              <span className={styles.fieldLabel}>Pulse</span>
-              <span>
-                <DraftTextInput className={styles.optoInput} type="number" aria-label={`Epoch ${row.epoch} pulse`} value={String(row.opto?.entry.pulseLength ?? '')} onCommit={(value) => p.onOpto('pulseLength', value)} /> ms
-              </span>
-            </div>
+            <h3 id={`epoch-${row.epoch}-opto-heading`} className={styles.groupHeading}>Stimulation</h3>
+            <p>{row.opto ? `${row.opto.entry.name || 'Unnamed protocol'} · ${row.opto.entry.power_in_mW ?? '—'} mW` : 'No stimulation recorded for this epoch.'}</p>
+            <Button variant="secondary" onClick={p.onEditProtocol}>
+              {row.opto ? 'Edit stimulation protocol' : 'Add stimulation protocol'}
+            </Button>
           </section>
         )}
 
@@ -1671,4 +1742,16 @@ function TaskContextForm({ row, cameras, taskType, onSave, onUseTaskDefault, onC
       </div>
     </div>
   );
+}
+
+/** Combine identical source contexts for a concise review without altering recorded epochs. */
+function groupCopiedContexts(instances: TaskInstance[]): TaskInstance[] {
+  const groups = new Map<string, TaskInstance>();
+  for (const instance of instances) {
+    const key = JSON.stringify([instance.taskTypeId, instance.task_environment, instance.camera_id]);
+    const group = groups.get(key);
+    if (group) group.task_epochs.push(...instance.task_epochs);
+    else groups.set(key, { ...instance, task_epochs: [...instance.task_epochs] });
+  }
+  return [...groups.values()].map((group) => ({ ...group, task_epochs: group.task_epochs.sort((a, b) => a - b) }));
 }

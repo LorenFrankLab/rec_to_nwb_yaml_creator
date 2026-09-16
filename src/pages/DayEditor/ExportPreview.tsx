@@ -1,3 +1,4 @@
+import { isIncompleteEntryIssue } from '../../domain/validationPresentation';
 import { useId, useMemo, useState } from 'react';
 import { encodeYaml } from '../../io/yaml';
 import { formatRecordingMetadataFilename } from '../../domain/recordingFilename';
@@ -16,13 +17,12 @@ import RepairActions from './RepairActions';
 import type { RepairDispatch } from './RepairActions';
 import { useDayEditorContext } from './DayEditorContext';
 import type { DayEditorBundle } from './DayEditorContext';
-import { exportAllDays } from './exportPreviewBatch';
-import type { ExportAllResult } from './exportPreviewBatch';
 import type { IssueViewModel, ExportGateViewModel } from '../../viewModels/types';
 import styles from './ExportPreview.module.css';
 import { blockingIssues, isAdvisoryIssue } from '../../validation/issueTypes';
 import { pluralize } from '../../utils/pluralize';
 import Button from '../../components/ui/Button';
+import { missingStatescriptEpochs } from '../../viewModels/epochGridViewModel';
 
 interface ExportPreviewProps extends DayEditorBundle {
   /** The classified issue list (`vm.issues`) — the blocked region's repair list reads its errors. */
@@ -56,15 +56,14 @@ interface ExportPreviewProps extends DayEditorBundle {
  * (the same `exportDayFile` core over every day, never a second export path).
  */
 export default function ExportPreview(props: ExportPreviewProps) {
-  const { animal, day, animalKey = undefined, actions = {} } = useDayEditorContext(props);
-  const { issues = [], exportGate, onNavigate = () => {}, onRepair, workspace } = props;
+  const { animal, day, animalDays, animalKey = undefined, actions = {} } = useDayEditorContext(props);
+  const { issues = [], exportGate, onNavigate = () => {}, onRepair } = props;
   const ownerKey = animalKey ?? (animal as { id?: string })?.id;
 
   const { show: showToast, node: toastNode } = useUndoToast();
   // A non-blocking notice for an export attempt that failed AFTER the gate (parity/encoder/clipboard) —
   // distinct from the gate's blocked state (which prevents the attempt entirely).
   const [actionError, setActionError] = useState<string | null>(null);
-  const [batchResult, setBatchResult] = useState<ExportAllResult | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
   // Ties the review's caption to its region without a hand-written DOM id (unique per instance).
   const reviewCaptionId = useId();
@@ -92,9 +91,11 @@ export default function ExportPreview(props: ExportPreviewProps) {
   const blocked = !exportGate?.open;
   const disabledReason = exportGate?.action?.disabledReason;
   const vmErrorIssues = blockingIssues(issues);
+  const incompleteEntries = vmErrorIssues.length > 0 && vmErrorIssues.every(isIncompleteEntryIssue);
   // The SAME issue list the gate is decided from — the readiness line never re-derives a second
   // count. "Ready to export" must not sit beside an unexplained warning-toned badge elsewhere.
   const warningCount = issues.filter(isAdvisoryIssue).length;
+  const fileReminderCount = missingStatescriptEpochs(animal, day, animalDays).length;
   const strict = isFeatureEnabled('shadowExportStrict');
   const dayCount = getAnimalDayIds(animal).length;
 
@@ -150,23 +151,20 @@ export default function ExportPreview(props: ExportPreviewProps) {
       .catch(() => setActionError('Could not copy to the clipboard — use Download instead.'));
   };
 
-  const handleExportAll = () => {
-    if (!workspace || ownerKey == null) return;
-    setBatchResult(exportAllDays(workspace, ownerKey, { actions: actions as unknown as ExportDayActions, strict }));
-  };
+
 
   return (
     <div className={styles.surface}>
       <header className={styles.header}>
-        <h2 className={styles.title}>Fix &amp; Export — {(day as { date?: string }).date}</h2>
+        <h2 className={styles.title}>Review &amp; export — {(day as { date?: string }).date}</h2>
         <p className={styles.lede}>
-          Fix blocking issues, then download the YAML next to your <code>.rec</code> files.
+          Review this recording, then save its metadata YAML beside the <code>.rec</code> files.
         </p>
       </header>
 
       {/* Readiness gate — issue-driven. Loud + field-linked when blocking; compact when clean. */}
       {blocked ? (
-        <div className={styles.blocked} role="alert">
+        <div className={incompleteEntries ? styles.incomplete : styles.blocked} role={incompleteEntries ? 'status' : 'alert'}>
           <p className={styles.blockedHeading}>{exportGate?.message ?? 'Export is blocked.'}</p>
           {vmErrorIssues.length > 0 ? (
             <RepairActions
@@ -206,6 +204,7 @@ export default function ExportPreview(props: ExportPreviewProps) {
           </span>{' '}
           Ready to export
           {warningCount > 0 && ` · ${warningCount} ${pluralize(warningCount, 'warning')} to review`}
+          {fileReminderCount > 0 && ` · ${fileReminderCount} optional ${pluralize(fileReminderCount, 'statescript')} to review`}
         </div>
       )}
 
@@ -218,7 +217,7 @@ export default function ExportPreview(props: ExportPreviewProps) {
           <p className={styles.reviewCaption} id={reviewCaptionId}>
             Check these values before downloading.
           </p>
-          <EffectiveDayReview animal={animal} day={day} warningCount={warningCount} />
+          <EffectiveDayReview animal={animal} day={day} animalDays={animalDays} warningCount={warningCount} onReviewStatescript={(epoch) => onNavigate('epochs', `epoch-${epoch}-statescript`)} />
         </section>
       )}
 
@@ -228,7 +227,7 @@ export default function ExportPreview(props: ExportPreviewProps) {
           disabled={blocked}
           title={blocked ? disabledReason : `Download ${fileName}`}
         >
-          Download
+          Download YAML
         </Button>
         <Button
           variant="secondary"
@@ -236,7 +235,7 @@ export default function ExportPreview(props: ExportPreviewProps) {
           disabled={blocked}
           title={blocked ? disabledReason : 'Both Download and Copy produce the file'}
         >
-          Copy
+          Copy YAML
         </Button>
       </div>
 
@@ -270,50 +269,9 @@ export default function ExportPreview(props: ExportPreviewProps) {
         </div>
       )}
 
-      {/* Batch: export every day of this animal (only the days that pass checks). */}
-      {dayCount > 1 && (
-        <div className={styles.batch}>
-          <p>
-            Recording a block?{' '}
-            <button type="button" className={styles.batchLink} onClick={handleExportAll}>
-              Export all {dayCount} days
-            </button>{' '}
-            (one file each, only the days that pass checks).
-          </p>
-        </div>
-      )}
-
-      {batchResult && (
-        <div className={styles.batchResult} role="status" aria-label="Batch export result">
-          <p className={styles.batchHeading}>
-            Exported {batchResult.exported.length}
-            {batchResult.skipped.length > 0 ? ` · Skipped ${batchResult.skipped.length}` : ''}
-          </p>
-          {batchResult.exported.length > 0 && (
-            <ul className={styles.batchList}>
-              {batchResult.exported.map((row) => (
-                <li key={row.dayId} className={styles.batchExported}>
-                  <span className={styles.fname}>{row.filename}</span>
-                </li>
-              ))}
-            </ul>
-          )}
-          {batchResult.skipped.length > 0 && (
-            <ul className={styles.batchList}>
-              {batchResult.skipped.map((row) => (
-                <li key={row.dayId} className={styles.batchSkipped}>
-                  {row.date} skipped — {row.message}{' '}
-                  {row.fixHref && (
-                    <a href={row.fixHref} className={styles.batchFix}>
-                      {row.fixLabel ?? 'Fix & export →'}
-                    </a>
-                  )}
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      )}
+      {dayCount > 1 && <p className={styles.batch}>
+        <a href={`#/animal/${encodeURIComponent(String(ownerKey))}/export`}>Review other recordings for {ownerKey}</a>
+      </p>}
 
       {toastNode}
     </div>

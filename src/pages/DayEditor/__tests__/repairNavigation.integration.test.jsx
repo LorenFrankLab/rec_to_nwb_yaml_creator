@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { StoreProvider } from '../../../state/StoreContext';
 import DayEditorFrame from '../DayEditorFrame';
@@ -46,8 +46,8 @@ describe('Day editor repair-action navigation (integration)', () => {
 
     await user.click(screen.getByRole('button', { name: /^Recording Setup\b/i }));
     // The readiness bar lists the blocking issue with a "Fix" action.
-    const bar = screen.getByRole('alert');
-    await user.click(within(bar).getByRole('button'));
+    await user.click(screen.getByRole('button', { name: 'Review & export' }));
+    await user.click(screen.getByRole('button', { name: /Fix in Daily log/i }));
 
     // Navigated to the daily log…
     expect(screen.getByRole('heading', { name: /daily log/i })).toBeInTheDocument();
@@ -75,8 +75,8 @@ describe('Day editor repair-action navigation (integration)', () => {
     await user.click(screen.getByRole('button', { name: /^Recording Setup\b/i }));
     // The empty-location error is one of potentially several animal-surface blockers in the
     // readiness bar; any of them hands off to the same Animal Editor route.
-    const bar = screen.getByRole('alert');
-    const [animalFix] = within(bar).getAllByRole('button');
+    await user.click(screen.getByRole('button', { name: 'Review & export' }));
+    const animalFix = screen.getByRole('button', { name: /Fix in Animal Setup/i });
     await user.click(animalFix);
 
     expect(window.location.hash).toMatch(new RegExp(`^#/animal/${animal.id}/electrode-groups\\?`));
@@ -99,8 +99,8 @@ describe('Day editor repair-action navigation (integration)', () => {
     );
 
     await user.click(screen.getByRole('button', { name: /^Recording Setup\b/i }));
-    const bar = screen.getByRole('alert');
-    const [animalFix] = within(bar).getAllByRole('button');
+    await user.click(screen.getByRole('button', { name: 'Review & export' }));
+    const animalFix = screen.getByRole('button', { name: /Fix in Animal Setup/i });
     await user.click(animalFix);
 
     const query = window.location.hash.split('?')[1] || '';

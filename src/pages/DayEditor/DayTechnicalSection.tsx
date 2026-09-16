@@ -1,4 +1,5 @@
 import { useRef } from 'react';
+import { DraftNumberInput } from '../../components/ui/DraftFields';
 import { useDraftField } from '../../hooks/useDraftField';
 import { resolveRigConstant } from '../../domain/rigConstants';
 import type { TechnicalParameters, TechnicalDefaults } from '../../state/workspaceTypes';
@@ -27,10 +28,10 @@ interface DayTechnicalSectionProps {
  *
  * Mixes two ownership kinds that both live on `day.technical` (Phase 8.7 Task 4):
  *  - `raw_data_to_volts` / `times_period_multiplier` are recording-system DEFAULTS copied into the
- *    day at creation. They are shown as effective, READ-ONLY values labelled against the current
+ *    day at creation. They are shown as effective values labelled against the current
  *    recording-system default (`Using recording-system default` vs `Different from current
- *    recording-system default`) with an `Edit in Recording System` link — they are not routine day
- *    edits, and a day keeps what it recorded (no silent retroactive change).
+ *    recording-system default`) with an `Edit in Recording System` link. A separate correction disclosure edits an existing
+ *    recording; changing the default never rewrites saved days.
  *  - `default_header_file_path` and `units` are genuine DAY-ONLY facts, edited here.
  *
  * `units` is written as a whole object, and cleared to `undefined` when both fields are
@@ -96,10 +97,8 @@ export default function DayTechnicalSection({
   const mult = resolveRigConstant(technical, recordingSystemDefaults, 'times_period_multiplier');
   const rigCue = (c: ReturnType<typeof resolveRigConstant>) => {
     if (c.status === 'unset') {
-      // Honest, no misleading remedy: these are read-only here and editing the animal default does
-      // NOT backfill an existing day (days keep their copied value), so don't steer there. The
-      // export gate (schema-required) blocks it; the user repairs/re-imports the corrupt day.
-      return 'Missing on this recording day — required for export. This day has no recording-system value (likely a corrupt/partial import).';
+      // Existing recordings need an explicit correction; changing a default does not backfill them.
+      return 'Missing on this recording day — required for export. This day has no recording-system value — enter a verified value in the correction section below.';
     }
     return c.status === 'default'
       ? 'Using recording-system default'
@@ -148,6 +147,24 @@ export default function DayTechnicalSection({
           </p>
         )}
       </div>
+
+      <details open={raw.status === 'unset' || mult.status === 'unset' || raw.display === 0.195 || undefined}>
+        <summary>Correct conversion values for this recording</summary>
+        <p>These corrections affect this recording only. Verify the voltage units against the
+          acquisition settings. The converter uses this voltage value only when the header lacks rawScalingToUv.</p>
+        {raw.display === 0.195 && <p role="note">The former app default was 0.195 V/count.
+          If the intended scale is 0.195 µV/count, enter 1.95e-7 V/count. Existing data has not been rescaled.</p>}
+        <label htmlFor="day-voltage-conversion">Voltage conversion for this recording (V/count)</label>
+        <DraftNumberInput id="day-voltage-conversion" name="technical.raw_data_to_volts"
+          data-field-path="technical.raw_data_to_volts" step="any" min="0"
+          value={technical.raw_data_to_volts}
+          onCommit={(value) => onFieldUpdate('technical.raw_data_to_volts', value)} />
+        <label htmlFor="day-period-multiplier">Legacy times period multiplier for this recording</label>
+        <DraftNumberInput id="day-period-multiplier" name="technical.times_period_multiplier"
+          data-field-path="technical.times_period_multiplier" step="any" min="0"
+          value={technical.times_period_multiplier}
+          onCommit={(value) => onFieldUpdate('technical.times_period_multiplier', value)} />
+      </details>
 
       <div className="form-grid">
         <div className="form-field">

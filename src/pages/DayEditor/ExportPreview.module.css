@@ -194,3 +194,12 @@
   color: var(--color-primary, #1565c0);
   white-space: nowrap;
 }
+
+.incomplete {
+  padding: var(--spacing-md);
+  border: 1px solid var(--color-grey-300);
+  border-radius: var(--radius-md);
+  background: var(--color-grey-100);
+}
+
+.incomplete .blockedHeading { color: var(--color-grey-900); }

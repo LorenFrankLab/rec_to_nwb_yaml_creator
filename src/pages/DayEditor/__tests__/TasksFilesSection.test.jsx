@@ -38,15 +38,7 @@ function renderSection(focusRequest = null) {
 
 describe('TasksFilesSection', () => {
   it('keeps supplemental files visible below the epoch workspace by default', async () => {
-    const user = userEvent.setup();
     renderSection();
-
-    window.location.hash = '#/day/r-2023-06-22';
-    await user.click(screen.getByRole('button', { name: /supplemental files 1/i }));
-    expect(window.location.hash).toBe('#/day/r-2023-06-22');
-
-    await user.click(screen.getByRole('button', { name: /^epochs$/i }));
-    expect(window.location.hash).toBe('#/day/r-2023-06-22');
 
     const section = screen.getByRole('heading', { name: /supplemental files/i }).closest('section');
     expect(section).toBeInTheDocument();

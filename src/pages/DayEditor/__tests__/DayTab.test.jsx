@@ -95,64 +95,31 @@ describe('DayTab', () => {
     );
 
     expect(screen.getByTestId('day-provenance')).toBeInTheDocument();
-    expect(screen.getByLabelText(/Weight measured today/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Weight measured on/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/Experimenters present/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/Data folder/i)).toBeInTheDocument();
+    expect(screen.queryByLabelText(/Data folder/i)).not.toBeInTheDocument();
     expect(screen.getByLabelText(/Session Description/i)).toBeRequired();
     expect(screen.getByLabelText(/Experiment Description/i)).toBeRequired();
-    expect(screen.getByRole('heading', { name: /file location/i })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: /search terms/i })).toBeInTheDocument();
     expect(screen.queryByText(/start here/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/export required/i)).not.toBeInTheDocument();
 
-    const weight = screen.getByLabelText(/Weight measured today/i);
+    const weight = screen.getByLabelText(/Weight measured on/i);
     const team = screen.getByLabelText(/Experimenters present/i);
     const epochs = screen.getByRole('heading', { name: /^epochs$/i });
-    const more = screen.getByText(/descriptions, data folder & search terms/i);
+    const more = screen.getByText(/Experiment details & search terms/i);
     const sessionDescription = screen.getByLabelText(/Session Description/i);
     const context = screen.getByText(/session identity and animal context/i);
     const sessionId = screen.getByDisplayValue('remy_20230622');
 
     expect(weight.compareDocumentPosition(team) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(team.compareDocumentPosition(epochs) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(epochs.compareDocumentPosition(team) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(epochs.compareDocumentPosition(more) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(more.compareDocumentPosition(sessionDescription) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(sessionDescription.compareDocumentPosition(more) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(sessionDescription.compareDocumentPosition(context) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(more.closest('details')).not.toHaveAttribute('open');
+    expect(more.closest('details')).toHaveAttribute('open'); // Required experiment description is missing.
     expect(context.closest('details')).not.toHaveAttribute('open');
     expect(sessionId).not.toBeVisible();
-  });
-
-  it('writes day.dataFolder via onFieldUpdate on blur', async () => {
-    const user = userEvent.setup();
-    const onFieldUpdate = vi.fn();
-    render(
-      <DayTab
-        animal={mockAnimal}
-        day={mockDay}
-        mergedDay={mockMergedDay}
-        onFieldUpdate={onFieldUpdate}
-      />
-    );
-
-    const folder = screen.getByLabelText(/data folder/i);
-    await user.type(folder, '/stelmo/remy/20230622/');
-    await user.tab();
-
-    expect(onFieldUpdate).toHaveBeenCalledWith('dataFolder', '/stelmo/remy/20230622/');
-  });
-
-  it('pre-fills the data folder from the stored day value', () => {
-    render(
-      <DayTab
-        animal={mockAnimal}
-        day={{ ...mockDay, dataFolder: '/stelmo/remy/' }}
-        mergedDay={mockMergedDay}
-        onFieldUpdate={vi.fn()}
-      />
-    );
-
-    expect(screen.getByLabelText(/data folder/i)).toHaveValue('/stelmo/remy/');
   });
 
   it('writes the recording-day weight to session.weight', async () => {
@@ -167,14 +134,14 @@ describe('DayTab', () => {
       />
     );
 
-    const weight = screen.getByLabelText(/weight measured today/i);
+    const weight = screen.getByLabelText(/weight measured on/i);
     await user.type(weight, '450');
     await user.tab();
 
     expect(onFieldUpdate).toHaveBeenCalledWith('session.weight', 450);
   });
 
-  it('offers the previous measurement as a DATED suggestion that must be accepted deliberately (never pre-filled)', async () => {
+  it('shows the dated previous measurement as reference and requires a new entry', async () => {
     const user = userEvent.setup();
     const onFieldUpdate = vi.fn();
     const animalWithWeight = { ...mockAnimal, subject: { ...mockAnimal.subject, weight: 450 } };
@@ -190,12 +157,15 @@ describe('DayTab', () => {
       />
     );
 
-    const weight = screen.getByLabelText(/weight measured today/i);
+    const weight = screen.getByLabelText(/weight measured on/i);
     expect(weight).toHaveValue(null); // never pre-filled
     expect(screen.getByText(/previous measurement: 410 g on 2023-06-10/i)).toBeInTheDocument();
     expect(screen.queryByText(/will be exported as a fallback/i)).not.toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: /use 410 grams/i }));
-    expect(onFieldUpdate).toHaveBeenCalledWith('session.weight', 410);
+    expect(screen.queryByRole('button', { name: /use 410/i })).not.toBeInTheDocument();
+    expect(onFieldUpdate).not.toHaveBeenCalled();
+    await user.type(weight, '412');
+    await user.tab();
+    expect(onFieldUpdate).toHaveBeenCalledWith('session.weight', 412);
   });
 
   it('falls back to the setup baseline as the suggestion when no earlier day has a weight', () => {

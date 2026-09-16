@@ -77,7 +77,7 @@ describe('Breadcrumb', () => {
   });
 
   it('handles single item', () => {
-    const items = [{ label: 'Home', href: '#/' }];
+    const items = [{ label: 'Home' }];
 
     render(<Breadcrumb items={items} />);
 

@@ -68,6 +68,7 @@ describe('export parity (new workspace path)', () => {
     const expected = {
       ...decodeYaml(realisticFixture),
       ...REALISTIC_ALWAYS_ON_KEYS,
+      raw_data_to_volts: 1.95e-7, // Corrected volts/count in newly created metadata.
     };
     // The legacy golden gives the two 'sleep' tasks epoch-specific descriptions
     // (Pre-/Post-task), a known-invalid Spyglass divergence. The corrected builder

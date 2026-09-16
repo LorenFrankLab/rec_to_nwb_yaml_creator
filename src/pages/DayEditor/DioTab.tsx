@@ -51,7 +51,7 @@ function parseChannel(description: unknown): { dir: 'Din' | 'Dout' | 'Other'; in
  *
  * Behavioral (DIO) events carry forward day to day and rarely change, so the subsection opens on a
  * read-only **carry-forward summary** (the named Din/Dout channels in two columns, "carried from
- * <date> · unchanged"). Only when the user rewired the rig do they click **Edit · rewired the rig**
+ * <date> · unchanged"). Only when the user rewired the rig do they click **Edit event names / wiring**
  * to reveal the full ECU channel editor ({@link BehavioralEventsDisplay}). An empty day opens
  * straight in the editor so the first naming / copy-from-animal bootstrap is one step away.
  *
@@ -81,10 +81,10 @@ export default function DioTab(props: DioTabProps) {
   return (
     <div className="behavioral-events-step">
       <div className={styles.header}>
-        <h2>Behavioral events</h2>
+        <h2>DIO Wiring</h2>
         {mode === 'summary' ? (
           <Button variant="secondary" onClick={() => setMode('edit')}>
-            Edit · rewired the rig
+            Edit event names / wiring
           </Button>
         ) : (
           named.length > 0 && (
@@ -156,7 +156,7 @@ function DioSummary({ named, carriedFrom, hasCollision, onEdit }: DioSummaryProp
 
       {count === 0 ? (
         <p className="field-help-text">
-          No behavioral events yet. Click <strong>Edit · rewired the rig</strong> to name the
+          No behavioral events yet. Click <strong>Edit event names / wiring</strong> to name the
           channels this day&apos;s rig uses.
         </p>
       ) : (

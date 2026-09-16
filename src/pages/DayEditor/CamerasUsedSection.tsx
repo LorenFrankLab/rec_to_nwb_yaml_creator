@@ -19,12 +19,12 @@ interface CamerasUsedSectionProps {
 
 /**
  * Per-day "cameras used" checklist (Phase 8C). A camera INFERRED-referenced by a task / video /
- * fs-gui row is used regardless (shown checked + disabled — it cannot be unchecked here). A
+ * fs-gui row is used regardless (shown as a read-only linked-camera list). A
  * non-inferred camera is a free checkbox whose checked state = its id is in the explicit
  * `day.cameras_used` set, and it stays ENABLED so the user can toggle it. Extracted verbatim from
  * `pages/DayEditor/DevicesStep.jsx` (Phase 9c-3) with no behavior change.
  *
- * The disabled/hint decision MUST use the INFERRED set (not the export union, which folds in
+ * The linked/additional distinction MUST use the INFERRED set (not the export union, which folds in
  * `cameras_used`) — otherwise checking a free camera would immediately disable it and the user could
  * never uncheck it. Toggling writes ONLY the explicit additions (inferred cameras are covered by the
  * union and need not be stored), so `cameras_used` stays absent/empty for all existing data and the
@@ -84,35 +84,25 @@ export default function CamerasUsedSection({ animal, day, mergedDay, onFieldUpda
   return (
     <section className="cameras-used-section" aria-label="Cameras used this day">
       <h3>Cameras used this day</h3>
-      <p className="field-help-text">
-        Check the cameras this recording day used. A camera already referenced by a task, video,
-        or FsGUI protocol is used regardless and shown checked.
-      </p>
-      <ul className="cameras-used-list">
-        {animalCameras.map((camera) => {
-          const key = String(camera?.id);
-          const referenced = inferredKeys.has(key);
-          const checked = referenced || explicitKeySet.has(key);
-          const label = `${camera?.camera_name ?? '(unnamed)'} (id ${camera?.id})`;
-          return (
-            <li key={key}>
-              <label>
-                <input
-                  type="checkbox"
-                  checked={checked}
-                  disabled={referenced}
-                  onChange={(e) => handleCameraUsedToggle(camera.id, e.target.checked)}
-                />
-                {label}
-                {referenced && (
-                  <span className="cameras-used-hint"> — used by a task/video</span>
-                )}
-              </label>
-            </li>
-          );
-        })}
-      </ul>
+      {inferredKeys.size > 0 && <>
+        <ul className="cameras-used-list" aria-label="Linked cameras">
+          {animalCameras.filter((camera) => inferredKeys.has(String(camera.id))).map((camera) =>
+            <li key={camera.id}>{camera.camera_name || `Camera ${camera.id}`} · linked to this day</li>
+          )}
+        </ul>
+        <p className="field-help-text">Change linked cameras in their task, video or protocol in the <a href={`#/day/${encodeURIComponent(day.id)}?step=epochs`}>Daily log</a>.</p>
+      </>}
+      {animalCameras.some((camera) => !inferredKeys.has(String(camera.id))) && <details open={explicitKeySet.size > 0 || undefined}>
+        <summary>Additional cameras {explicitKeySet.size > 0 ? `(${explicitKeySet.size} selected)` : '· Select'}</summary>
+        <ul className="cameras-used-list">
+          {animalCameras.filter((camera) => !inferredKeys.has(String(camera.id))).map((camera) => <li key={camera.id}>
+            <label><input type="checkbox" checked={explicitKeySet.has(String(camera.id))}
+              onChange={(event) => handleCameraUsedToggle(camera.id, event.target.checked)} />
+              {camera.camera_name || '(unnamed)'} (id {camera.id})
+            </label>
+          </li>)}
+        </ul>
+      </details>}
     </section>
   );
 }
-

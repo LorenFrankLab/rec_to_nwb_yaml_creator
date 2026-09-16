@@ -239,11 +239,8 @@ export default function BehavioralEventsDisplay({ dayEvents = [], onDayEventsCha
   return (
     <div className="behavioral-events-display">
       <header className="section-header">
-        <h3>Behavioral events — how your hardware maps to the SpikeGadgets ECU</h3>
         <p>
-          Name only the DIO lines this rig uses on this day. Unnamed ECU channels aren&apos;t written to
-          the file. A new day carries the previous day&apos;s names forward, so edit only if you rewired
-          the rig.
+          Name the lines used for this recording; leave unused channels blank. Names carry forward to later recordings.
         </p>
       </header>
 
@@ -292,8 +289,7 @@ export default function BehavioralEventsDisplay({ dayEvents = [], onDayEventsCha
 
       <section className="dio-named-lines" aria-labelledby="dio-named-lines-heading">
         <header className="section-header">
-          <h4 id="dio-named-lines-heading">Named DIO lines</h4>
-          <p>Edit the lines this rig actually uses. Leave every other ECU channel unnamed.</p>
+          <h3 id="dio-named-lines-heading">Named DIO lines</h3>
         </header>
 
         {namedStandardEvents.length === 0 ? (

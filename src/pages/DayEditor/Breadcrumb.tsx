@@ -34,18 +34,18 @@ export default function Breadcrumb({ items }: BreadcrumbProps) {
 
           return (
             <li key={index} className={styles.item}>
-              {item.href && !isLast ? (
+              {item.href ? (
                 <>
                   <a href={item.href} className={styles.link}>
                     {item.label}
                   </a>
-                  <span
+                  {!isLast && <span
                     className={styles.separator}
                     data-testid="breadcrumb-separator"
                     aria-hidden="true"
                   >
                     ›
-                  </span>
+                  </span>}
                 </>
               ) : (
                 <span className={styles.current} aria-current={isLast ? 'page' : undefined}>

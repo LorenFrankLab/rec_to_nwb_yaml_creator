@@ -17,42 +17,20 @@
   flex-wrap: wrap;
 }
 
-.headerActions {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-md);
-  flex: 0 0 auto;
-}
-
 .title {
   margin: 0;
   font-size: var(--font-size-xl, 1.5rem);
   color: var(--color-grey-900);
 }
 
-.chips {
+.saveRow {
   display: flex;
-  align-items: center;
   flex-wrap: wrap;
+  align-items: center;
   gap: var(--spacing-sm);
 }
 
-.chip {
+.downloadStatus {
   font-size: var(--font-size-sm);
-  background-color: var(--color-white, #fff);
-  border: 1px solid var(--color-grey-200);
-  border-radius: 999px;
-  padding: 3px 10px;
   color: var(--color-grey-700);
-}
-
-.chipCarry {
-  background-color: var(--color-grey-100);
-  border-color: var(--color-grey-300);
-  color: var(--color-primary);
-}
-
-.chipOpto {
-  border-color: var(--color-primary);
-  color: var(--color-primary);
 }
