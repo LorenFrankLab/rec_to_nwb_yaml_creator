@@ -309,6 +309,92 @@ describe('TaskTypesContainer — changing a task default that recording days alr
     expect(onFieldUpdate).not.toHaveBeenCalled();
   });
 
+  describe('cancelling the scope dialog does not advance the comparison baseline', () => {
+    // The baseline for "did the default change?" and for what an earlier day gets pinned with is
+    // ALWAYS the SAVED catalog entry. Reopening the form after a cancel hands back the user's
+    // unsaved draft — if that draft became the baseline, the next save would compare the draft with
+    // itself, find no change, and rewrite every earlier day's exported room with no scope choice.
+
+    it('asks again when the reopened edit is saved a second time', async () => {
+      const workspace = workspaceWithTwoDays();
+      const onFieldUpdate = vi.fn();
+      renderWithStore(
+        <TaskTypesContainer animal={workspace.animals.sc38} onFieldUpdate={onFieldUpdate} />,
+        workspace
+      );
+
+      await editEnvironment('HaightLeft');
+      await user.click(screen.getByRole('button', { name: /^Cancel$/i }));
+      expect(screen.getByLabelText('Environment')).toHaveValue('HaightLeft');
+
+      // Save the very same draft again, unchanged.
+      await user.click(screen.getByRole('button', { name: /Save task type/i }));
+
+      const dialog = screen.getByRole('alertdialog');
+      expect(dialog).toHaveTextContent(/2 recording days/i);
+      expect(dialog).toHaveTextContent('2023-06-06');
+      expect(onFieldUpdate).not.toHaveBeenCalled();
+    });
+
+    it('pins the SAVED environment and cameras after a cancel and a further edit', async () => {
+      const workspace = workspaceWithTwoDays();
+      workspace.animals.sc38 = {
+        ...workspace.animals.sc38,
+        cameras: [
+          { id: 0, camera_name: 'overhead' },
+          { id: 1, camera_name: 'sideview' },
+        ],
+      };
+      workspace.animals.sc38.taskTypes[0].camera_id = [0];
+      const onFieldUpdate = vi.fn();
+      renderWithStore(
+        <TaskTypesContainer animal={workspace.animals.sc38} onFieldUpdate={onFieldUpdate} />,
+        workspace
+      );
+
+      // First edit: a new room AND a different camera.
+      await user.click(screen.getByRole('button', { name: /Edit task type forkTrack/i }));
+      const environment = screen.getByLabelText('Environment');
+      await user.clear(environment);
+      await user.type(environment, 'HaightLeft');
+      await user.click(screen.getByRole('checkbox', { name: /overhead/i })); // off
+      await user.click(screen.getByRole('checkbox', { name: /sideview/i })); // on
+      await user.click(screen.getByRole('button', { name: /Save task type/i }));
+      await user.click(screen.getByRole('button', { name: /^Cancel$/i }));
+
+      // Back in the form with the draft intact; edit it further and save for real this time.
+      expect(screen.getByLabelText('Environment')).toHaveValue('HaightLeft');
+      const reopened = screen.getByLabelText('Environment');
+      await user.clear(reopened);
+      await user.type(reopened, 'ThirdRoom');
+      await user.click(screen.getByRole('button', { name: /Save task type/i }));
+      await user.click(screen.getByRole('button', { name: /Keep earlier days as recorded/i }));
+
+      // The earlier days record what they ACTUALLY ran — the saved default, not the draft.
+      const store = liveWorkspace.days;
+      expect(store['sc38-2023-06-06'].taskInstances).toEqual([
+        {
+          taskTypeId: 'tasktype-0',
+          task_environment: 'HaightRight',
+          camera_id: [0],
+          task_epochs: [2],
+        },
+      ]);
+      expect(store['sc38-2023-06-13'].taskInstances).toEqual([
+        {
+          taskTypeId: 'tasktype-0',
+          task_environment: 'HaightRight',
+          camera_id: [0],
+          task_epochs: [2],
+        },
+      ]);
+      // …and the catalog default is the user's latest draft.
+      expect(onFieldUpdate).toHaveBeenCalledWith('taskTypes', [
+        { ...TASK_TYPE, task_environment: 'ThirdRoom', camera_id: [1] },
+      ]);
+    });
+  });
+
   it('shows the scope dialog as the only modal surface (one focus trap at a time)', async () => {
     const workspace = workspaceWithTwoDays();
     renderWithStore(

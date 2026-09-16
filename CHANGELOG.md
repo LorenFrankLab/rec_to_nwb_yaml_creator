@@ -291,6 +291,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Cancelling the task-scope question no longer lets the next save rewrite earlier days.** Editing a
+  task type's default environment or cameras asks whether to keep the recording days that still
+  follow it as recorded; cancelling that question returned to the form with the typed edits, but
+  those unsaved edits then became the value the next save compared against — so saving again asked
+  nothing and silently changed what those earlier days export. The comparison and the values pinned
+  onto earlier days now always come from the saved task type, never from the reopened draft.
+
 - **The electrode-group coordinate fields were mislabeled: AP and ML were swapped relative to the
   NWB schema and Spyglass.** The Animal Setup electrode-group form labeled `targeted_x` "AP
   (Anterior-Posterior)" and `targeted_y` "ML (Medial-Lateral)", but `nwb_schema.json` defines

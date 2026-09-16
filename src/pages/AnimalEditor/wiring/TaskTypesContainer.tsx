@@ -42,7 +42,16 @@ interface TaskTypesContainerProps {
 interface TaskTypeModalState {
   open: boolean;
   mode: 'add' | 'edit';
+  /**
+   * The task type being edited, as PERSISTED in the catalog. This is the immutable baseline for
+   * change detection and for pinning — never the user's unsaved edits.
+   */
   taskType: TaskType | null;
+  /**
+   * The user's unsaved edits, when the form is reopened after cancelling the scope dialog. Only the
+   * modal's initial values come from here; it never becomes the comparison baseline.
+   */
+  draft: TaskType | null;
 }
 
 /** A default environment/cameras change awaiting the user's scope choice. */
@@ -118,7 +127,12 @@ function isRecordableContextValue(value: unknown): boolean {
 
 export default function TaskTypesContainer({ animal, onFieldUpdate, onPendingEditsChange }: TaskTypesContainerProps) {
   const { model, actions } = useStoreContext();
-  const [modal, setModal] = useState<TaskTypeModalState>({ open: false, mode: 'add', taskType: null });
+  const [modal, setModal] = useState<TaskTypeModalState>({
+    open: false,
+    mode: 'add',
+    taskType: null,
+    draft: null,
+  });
   const [nameError, setNameError] = useState<string | null>(null);
   const [pendingDelete, setPendingDelete] = useState<TaskType | null>(null);
   const [pendingContext, setPendingContext] = useState<PendingContextChange | null>(null);
@@ -145,19 +159,19 @@ export default function TaskTypesContainer({ animal, onFieldUpdate, onPendingEdi
 
   const openAdd = () => {
     setNameError(null);
-    setModal({ open: true, mode: 'add', taskType: null });
+    setModal({ open: true, mode: 'add', taskType: null, draft: null });
   };
 
   const openEdit = (id: string) => {
     const taskType = taskTypes.find((t) => t?.id === id);
     if (!taskType) return;
     setNameError(null);
-    setModal({ open: true, mode: 'edit', taskType });
+    setModal({ open: true, mode: 'edit', taskType, draft: null });
   };
 
   const closeModal = () => {
     setNameError(null);
-    setModal({ open: false, mode: 'add', taskType: null });
+    setModal({ open: false, mode: 'add', taskType: null, draft: null });
   };
 
   /**
@@ -177,15 +191,23 @@ export default function TaskTypesContainer({ animal, onFieldUpdate, onPendingEdi
       return;
     }
 
-    if (modal.mode === 'edit' && editingId != null && modal.taskType) {
-      const cleaned = withoutAddedBlankContext(modal.taskType, definition);
-      const scoped = contextChangeFor(modal.taskType, cleaned);
+    // The baseline is ALWAYS the task type as PERSISTED — the catalog entry, re-read at save time —
+    // never the modal's draft. Cancelling the scope dialog reopens the form with the unsaved edits,
+    // and if those became the baseline the next save would compare the draft against itself, find no
+    // change, and silently rewrite every earlier day's exported context with no scope choice.
+    const persisted = modal.mode === 'edit' && editingId != null
+      ? taskTypes.find((t) => t?.id === editingId) ?? modal.taskType
+      : null;
+
+    if (modal.mode === 'edit' && editingId != null && persisted) {
+      const cleaned = withoutAddedBlankContext(persisted, definition);
+      const scoped = contextChangeFor(persisted, cleaned);
       if (scoped) {
         // Days already follow the old default: ask before their exports change. The edit form
         // closes first so the scope dialog is the only modal surface (one focus trap at a time);
         // cancelling reopens it with everything the user typed.
         setPendingContext(scoped);
-        setModal({ open: false, mode: 'add', taskType: null });
+        setModal({ open: false, mode: 'add', taskType: null, draft: null });
         return;
       }
       onFieldUpdate('taskTypes', updateTaskType(taskTypes, editingId, cleaned));
@@ -320,7 +342,7 @@ export default function TaskTypesContainer({ animal, onFieldUpdate, onPendingEdi
         <TaskTypeModal
           isOpen={modal.open}
           mode={modal.mode}
-          taskType={modal.taskType}
+          taskType={modal.draft ?? modal.taskType}
           animal={animal}
           nameError={nameError}
           onSave={handleSave}
@@ -342,12 +364,15 @@ export default function TaskTypesContainer({ animal, onFieldUpdate, onPendingEdi
         onKeepEarlierDays={() => resolveContextChange(true)}
         onCorrectEarlierDays={() => resolveContextChange(false)}
         onCancel={() => {
-          // Back to the form the user was in, with their edits intact — never a silent discard.
+          // Back to the form the user was in, with their edits intact — never a silent discard. The
+          // edits ride back as the DRAFT; the persisted task type stays the baseline, so saving
+          // again asks the same question again.
           if (pendingContext) {
             setModal({
               open: true,
               mode: 'edit',
-              taskType: { ...pendingContext.taskType, ...pendingContext.definition },
+              taskType: pendingContext.taskType,
+              draft: { ...pendingContext.taskType, ...pendingContext.definition },
             });
           }
           setPendingContext(null);
