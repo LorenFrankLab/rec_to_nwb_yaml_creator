@@ -120,11 +120,11 @@ describe('ValidationSummary — bad-channel monotonicity gate', () => {
 
     render(<ValidationSummary />);
 
-    await user.click(screen.getByRole('button', { name: /export valid only/i }));
+    await user.click(screen.getByRole('button', { name: /Review \d+ selected recordings?/i }));
 
     // Only the valid day 1 reaches the preflight; the regressing day 2 is filtered out.
-    const confirm = await screen.findByRole('button', { name: /confirm export/i });
-    expect(confirm).toHaveTextContent(/\(1\)/);
+    const confirm = await screen.findByRole('button', { name: /Download \d+ YAML files/i });
+    expect(confirm).toHaveTextContent(/Download 1 YAML files/);
 
     await user.click(confirm);
 
@@ -153,9 +153,9 @@ describe('ValidationSummary — bad-channel monotonicity gate', () => {
     const day2Row = screen.getByTestId(`day-row-${ids.day2Id}`);
     expect(within(day2Row).getByText('Ready to export')).toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: /export valid only/i }));
-    const confirm = await screen.findByRole('button', { name: /confirm export/i });
-    expect(confirm).toHaveTextContent(/\(2\)/);
+    await user.click(screen.getByRole('button', { name: /Review \d+ selected recordings?/i }));
+    const confirm = await screen.findByRole('button', { name: /Download \d+ YAML files/i });
+    expect(confirm).toHaveTextContent(/Download 2 YAML files/);
     await user.click(confirm);
 
     expect(downloadYamlFile).toHaveBeenCalledTimes(2);

@@ -1,7 +1,7 @@
 /**
  * Unit tests for buildAnimalRows — the animal-scoped slice of buildRows (Phase 3-5).
  *
- * The per-animal Validation & Export tab must show ONLY one animal's days, with the SAME readiness
+ * The per-animal Review & export tab must show ONLY one animal's days, with the SAME readiness
  * chips the workspace-global Validation Summary computes — a FILTER over buildRows, never a parallel
  * validation path. These pin that: buildAnimalRows(ws, key) === buildRows(ws) restricted to `key`.
  */

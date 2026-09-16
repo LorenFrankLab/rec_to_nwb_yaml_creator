@@ -169,7 +169,7 @@ describe('ValidationSummary', () => {
 
     render(<ValidationSummary animalKey="remy" />);
 
-    // The per-animal Validation & Export tab must read the same unified label, not "config from <date>".
+    // The per-animal Review & export tab must read the same unified label, not "config from <date>".
     const validRow = screen.getByTestId(`day-row-${ids.validDayId}`);
     expect(within(validRow).getByText(/config v1 \(latest\)/i)).toBeInTheDocument();
     expect(within(validRow).queryByText(/config from/i)).not.toBeInTheDocument();
@@ -218,7 +218,7 @@ describe('ValidationSummary', () => {
     expect(
       within(errorRow).queryByTestId(`session-description-${ids.errorDayId}`)
     ).not.toBeInTheDocument();
-    expect(within(errorRow).getByText('remy_20230622')).toBeInTheDocument();
+    expect(within(errorRow).queryByText('remy_20230622')).not.toBeInTheDocument();
   });
 
   it('counts reflect chip breakdown', () => {
@@ -295,9 +295,9 @@ describe('ValidationSummary', () => {
 
     render(<ValidationSummary />);
 
-    await user.click(screen.getByRole('button', { name: /export valid only/i }));
+    await user.click(screen.getByRole('button', { name: /Review \d+ selected recordings?/i }));
     // Batch export now shows a preflight; confirm it to run the downloads.
-    await user.click(screen.getByRole('button', { name: /confirm export/i }));
+    await user.click(screen.getByRole('button', { name: /Download \d+ YAML files/i }));
 
     // Only the single valid day is shadow-checked and downloaded.
     expect(checkShadowExport).toHaveBeenCalledTimes(1);
@@ -320,8 +320,8 @@ describe('ValidationSummary', () => {
 
     render(<ValidationSummary />);
 
-    await user.click(screen.getByRole('button', { name: /export valid only/i }));
-    await user.click(screen.getByRole('button', { name: /confirm export/i }));
+    await user.click(screen.getByRole('button', { name: /Review \d+ selected recordings?/i }));
+    await user.click(screen.getByRole('button', { name: /Download \d+ YAML files/i }));
 
     // Skipped, never downloaded.
     expect(downloadYamlFile).not.toHaveBeenCalled();
@@ -348,8 +348,8 @@ describe('ValidationSummary', () => {
 
     render(<ValidationSummary />);
 
-    await user.click(screen.getByRole('button', { name: /export valid only/i }));
-    await user.click(screen.getByRole('button', { name: /confirm export/i }));
+    await user.click(screen.getByRole('button', { name: /Review \d+ selected recordings?/i }));
+    await user.click(screen.getByRole('button', { name: /Download \d+ YAML files/i }));
 
     expect(downloadYamlFile).toHaveBeenCalledTimes(2);
     // Stable order: sorted by date → 06-22 then 06-23.
@@ -372,8 +372,8 @@ describe('ValidationSummary', () => {
 
     render(<ValidationSummary />);
 
-    await user.click(screen.getByRole('button', { name: /export valid only/i }));
-    await user.click(screen.getByRole('button', { name: /confirm export/i }));
+    await user.click(screen.getByRole('button', { name: /Review \d+ selected recordings?/i }));
+    await user.click(screen.getByRole('button', { name: /Download \d+ YAML files/i }));
 
     // The override DOWNLOADS the mismatched day...
     expect(downloadYamlFile).toHaveBeenCalledTimes(1);
@@ -403,8 +403,8 @@ describe('ValidationSummary', () => {
 
     render(<ValidationSummary />);
 
-    await user.click(screen.getByRole('button', { name: /export valid only/i }));
-    await user.click(screen.getByRole('button', { name: /confirm export/i }));
+    await user.click(screen.getByRole('button', { name: /Review \d+ selected recordings?/i }));
+    await user.click(screen.getByRole('button', { name: /Download \d+ YAML files/i }));
 
     // Only the good day downloads; the mismatched day is skipped (not downloaded).
     expect(downloadYamlFile).toHaveBeenCalledTimes(1);
@@ -427,11 +427,11 @@ describe('ValidationSummary', () => {
 
     render(<ValidationSummary />);
     // Open the preflight while the day is a valid ok recording day...
-    await user.click(screen.getByRole('button', { name: /export valid only/i }));
+    await user.click(screen.getByRole('button', { name: /Review \d+ selected recordings?/i }));
     // ...then the record drifts to a different owner before the user confirms (import/corruption).
     // runExport re-derives recovery status from the LIVE workspace, so this must NOT export as remy.
     workspace.days[ids.validDayId].animalId = 'someone-else';
-    await user.click(screen.getByRole('button', { name: /confirm export/i }));
+    await user.click(screen.getByRole('button', { name: /Download \d+ YAML files/i }));
 
     expect(downloadYamlFile).not.toHaveBeenCalled();
     const alert = screen.getByRole('alert');
@@ -451,8 +451,8 @@ describe('ValidationSummary', () => {
     provideStore(workspace);
 
     render(<ValidationSummary />);
-    await user.click(screen.getByRole('button', { name: /export valid only/i }));
-    await user.click(screen.getByRole('button', { name: /confirm export/i }));
+    await user.click(screen.getByRole('button', { name: /Review \d+ selected recordings?/i }));
+    await user.click(screen.getByRole('button', { name: /Download \d+ YAML files/i }));
 
     expect(downloadYamlFile).not.toHaveBeenCalled();
     const alert = screen.getByRole('alert');
@@ -470,9 +470,9 @@ describe('ValidationSummary', () => {
     provideStore(workspace);
 
     render(<ValidationSummary />);
-    await user.click(screen.getByRole('button', { name: /export valid only/i }));
+    await user.click(screen.getByRole('button', { name: /Review \d+ selected recordings?/i }));
     delete workspace.days[ids.validDayId]; // gone between preflight and confirm
-    await user.click(screen.getByRole('button', { name: /confirm export/i }));
+    await user.click(screen.getByRole('button', { name: /Download \d+ YAML files/i }));
 
     expect(downloadYamlFile).not.toHaveBeenCalled();
     expect(screen.getByRole('alert')).toHaveTextContent(/no longer present since the preflight/i);
@@ -488,10 +488,10 @@ describe('ValidationSummary', () => {
     provideStore(workspace);
 
     render(<ValidationSummary />);
-    await user.click(screen.getByRole('button', { name: /export valid only/i }));
+    await user.click(screen.getByRole('button', { name: /Review \d+ selected recordings?/i }));
     // Corrupt the animal's configuration so the re-validation MERGE throws (≠ "no longer valid").
     workspace.animals.remy.configurationHistory = 'corrupt';
-    await user.click(screen.getByRole('button', { name: /confirm export/i }));
+    await user.click(screen.getByRole('button', { name: /Download \d+ YAML files/i }));
 
     expect(downloadYamlFile).not.toHaveBeenCalled();
     const alert = screen.getByRole('alert');
@@ -510,13 +510,13 @@ describe('ValidationSummary', () => {
 
     render(<ValidationSummary animalKey="remy" />);
 
-    const button = screen.getByRole('button', { name: /export valid only/i });
-    expect(button).toBeEnabled();
+    const button = screen.getByRole('button', { name: /Review \d+ selected recordings?/i });
+    expect(button).toBeDisabled();
     await user.click(button);
 
     expect(checkShadowExport).not.toHaveBeenCalled();
     expect(downloadYamlFile).not.toHaveBeenCalled();
-    expect(screen.getByRole('status')).toHaveTextContent(/no days are ready to export/i);
+    expect(screen.getByText(/Select recordings below/)).toBeInTheDocument();
   });
 
   it('Export Valid Only is DISABLED with an accessible reason when 0 days are valid and some have errors', () => {
@@ -529,7 +529,7 @@ describe('ValidationSummary', () => {
 
     render(<ValidationSummary />);
 
-    const button = screen.getByRole('button', { name: /export valid only/i });
+    const button = screen.getByRole('button', { name: /Review \d+ selected recordings?/i });
     expect(button).toBeDisabled();
     // The disabled reason is programmatically associated (not just a hover title).
     const reasonId = button.getAttribute('aria-describedby');
@@ -547,7 +547,7 @@ describe('ValidationSummary', () => {
     render(<ValidationSummary animalKey="remy" />);
 
     // No errors block here — the button stays enabled (a click yields the "complete fields" guidance).
-    expect(screen.getByRole('button', { name: /export valid only/i })).toBeEnabled();
+    expect(screen.getByRole('button', { name: /Review \d+ selected recordings?/i })).toBeDisabled();
   });
 
   it('Export Valid Only shows a per-day preflight (config version + contents) before downloading', async () => {
@@ -556,11 +556,14 @@ describe('ValidationSummary', () => {
     provideStore(workspace);
 
     render(<ValidationSummary />);
-    await user.click(screen.getByRole('button', { name: /export valid only/i }));
+    await user.click(screen.getByRole('button', { name: /Review \d+ selected recordings?/i }));
 
     // Preflight region appears; nothing has downloaded yet (confidence check, not one-click).
     const preflight = screen.getByRole('region', { name: /batch export preflight/i });
-    expect(within(preflight).getByText(/config v1/i)).toBeInTheDocument();
+    expect(within(preflight).getAllByText(/Measured weight/i)[0]).toBeInTheDocument();
+    expect(within(preflight).getAllByText(/Epochs & files/i)[0]).toBeInTheDocument();
+    await user.click(within(preflight).getByText(/Calibration & hardware details/i));
+    expect(within(preflight).getByText(/Version 1/i)).toBeInTheDocument();
     expect(within(preflight).getByText(/electrode group/i)).toBeInTheDocument();
     expect(downloadYamlFile).not.toHaveBeenCalled();
   });
@@ -588,8 +591,8 @@ describe('ValidationSummary', () => {
     const updateDay = provideStore(workspace);
 
     render(<ValidationSummary />);
-    await user.click(screen.getByRole('button', { name: /export valid only/i }));
-    await user.click(screen.getByRole('button', { name: /confirm export/i }));
+    await user.click(screen.getByRole('button', { name: /Review \d+ selected recordings?/i }));
+    await user.click(screen.getByRole('button', { name: /Download \d+ YAML files/i }));
 
     // Only the valid day downloads; it is then recorded as exported so it reads "Exported"
     // afterwards. `state` is display-only (never in the YAML), so byte-identity is unaffected.
@@ -649,8 +652,8 @@ describe('ValidationSummary', () => {
     provideStore(workspace);
 
     render(<ValidationSummary />);
-    await user.click(screen.getByRole('button', { name: /export valid only/i }));
-    await user.click(screen.getByRole('button', { name: /confirm export/i }));
+    await user.click(screen.getByRole('button', { name: /Review \d+ selected recordings?/i }));
+    await user.click(screen.getByRole('button', { name: /Download \d+ YAML files/i }));
 
     // Only the OK valid day downloads; the orphaned (recovered-unlinked) valid record is excluded.
     expect(downloadYamlFile).toHaveBeenCalledTimes(1);
@@ -731,7 +734,7 @@ describe('ValidationSummary', () => {
     provideStore(workspace);
 
     render(<ValidationSummary />);
-    await user.click(screen.getByRole('button', { name: /export valid only/i }));
+    await user.click(screen.getByRole('button', { name: /Review \d+ selected recordings?/i }));
     await user.click(screen.getByRole('button', { name: /cancel/i }));
 
     expect(screen.queryByRole('region', { name: /batch export preflight/i })).not.toBeInTheDocument();

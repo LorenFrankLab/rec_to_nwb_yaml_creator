@@ -1,3 +1,5 @@
+import { exportFreshnessStatus } from '../../domain/exportReceipt';
+import { isExportableDayStatus } from '../../domain/dayRecovery';
 /**
  * Validation Summary — cross-day overview of every recording day in the workspace.
  *
@@ -22,7 +24,7 @@
  * @module pages/ValidationSummary
  */
 
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { ElementType } from 'react';
 import { useStoreContext } from '../../state/StoreContext';
 import type { Animal, Day } from '../../state/workspaceTypes';
@@ -64,6 +66,31 @@ export function ValidationSummary({ animalKey }: { animalKey?: string } = {}) {
     [workspace, scoped, animalKey]
   );
 
+  const eligibleRows = rows.filter((row) => row.chip === 'valid' && isExportableDayStatus(row.status));
+  const eligibleIds = new Set(eligibleRows.map((row) => String(row.day.id)));
+  const currentIds = new Set(eligibleRows.filter((row) => exportFreshnessStatus(row.animal as unknown as Animal, row.day as unknown as Day) === 'current').map((row) => String(row.day.id)));
+  const pendingIds = new Set([...eligibleIds].filter((id) => !currentIds.has(id)));
+  const [selection, setSelection] = useState<Set<string> | null>(() => {
+    const requested = new URLSearchParams(window.location.hash.split('?')[1] ?? '').getAll('day');
+    return requested.length ? new Set(requested) : null;
+  });
+  useEffect(() => {
+    const resetFromRoute = () => {
+      const requested = new URLSearchParams(window.location.hash.split('?')[1] ?? '').getAll('day');
+      setSelection(requested.length ? new Set(requested) : null);
+    };
+    resetFromRoute();
+    window.addEventListener('hashchange', resetFromRoute);
+    return () => window.removeEventListener('hashchange', resetFromRoute);
+  }, [animalKey]);
+  const selectedIds = new Set([...(selection ?? pendingIds)].filter((id) => eligibleIds.has(id)));
+  const toggleDay = (id: string) => {
+    const next = new Set(selectedIds);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    setSelection(next);
+  };
+  const includeCurrent = currentIds.size > 0 && [...currentIds].every((id) => selectedIds.has(id));
+
   // The page view-model: the valid/error/incomplete counts, the per-day rows (status, label,
   // recovery, scan cells), the batch-action affordances + their disabled reasons, and the empty /
   // re-link notes — all decided in the builder, so this page renders them rather than re-deriving.
@@ -75,11 +102,18 @@ export function ValidationSummary({ animalKey }: { animalKey?: string } = {}) {
   // Raw { animal, day } records for the scoped EffectiveDayReview expander (it does its own merge);
   // every other rendered value comes from the view-model. Keyed by day id.
   const effectiveRecords = useMemo(() => {
-    const map: Record<string, { animal: Animal; day: Day }> = {};
+    const map: Record<string, { animal: Animal; day: Day; animalDays: Day[] }> = {};
+    const daysByAnimal = new Map<string, Day[]>();
+    for (const row of rows) {
+      const days = daysByAnimal.get(row.animalKey) ?? [];
+      days.push(row.day as unknown as Day);
+      daysByAnimal.set(row.animalKey, days);
+    }
     for (const row of rows) {
       const id = (row.day as { id?: string }).id;
       if (typeof id === 'string') {
-        map[id] = { animal: row.animal as unknown as Animal, day: row.day as unknown as Day };
+        map[id] = { animal: row.animal as unknown as Animal, day: row.day as unknown as Day,
+          animalDays: daysByAnimal.get(row.animalKey) ?? [] };
       }
     }
     return map;
@@ -101,7 +135,7 @@ export function ValidationSummary({ animalKey }: { animalKey?: string } = {}) {
     handleExportValidOnly,
     cancelExport,
     runExport,
-  } = useValidationSummaryActions({ rows, workspace, actions });
+  } = useValidationSummaryActions({ rows, selectedDayIds: selectedIds, workspace, actions });
 
   // The day-reference repairs route through the descriptor command layer (one named write surface):
   // the table dispatches each row's own `recoveryDetail.repair.command`, and this resolves it — the
@@ -110,26 +144,23 @@ export function ValidationSummary({ animalKey }: { animalKey?: string } = {}) {
 
   const hasDays = vm.days.length > 0;
 
-  // When nothing is exportable (no valid days) BUT there are days with errors, "Export Valid
-  // Only" would be inert — one click reports "Exported 0 files" with no fix path. The builder
-  // disables it with an accessible reason instead, so the affordance doesn't mislead. (With 0 valid
-  // and only INCOMPLETE days — no errors — the button stays enabled: clicking gives the "complete the
-  // required fields" guidance, which is the right next step there.)
+  // Explain why review is unavailable: either validation blocks the available days, or no
+  // eligible recording is selected. Current downloads remain explicitly selectable.
   const exportValidDisabledReason = vm.batchExport.exportValid.disabledReason;
-  const exportValidDisabled = exportValidDisabledReason != null;
+  const exportValidDisabled = exportValidDisabledReason != null || selectedIds.size === 0;
 
   // Scoped (embedded in AnimalView) renders a section + a scoped header — NOT a second
   // `<main id="main-content">` (AnimalView owns the page landmark) and NOT the page-level h1.
   const Wrapper: ElementType = scoped ? 'section' : 'main';
   const wrapperProps = scoped
-    ? { className: `validation-summary ${styles.scoped}`, 'aria-label': 'Validation and export for this animal' }
+    ? { className: `validation-summary ${styles.scoped}`, 'aria-label': 'Review and export for this animal' }
     : { id: 'main-content', tabIndex: -1, role: 'main', 'aria-labelledby': 'validation-heading' };
 
   return (
     <Wrapper {...wrapperProps}>
       {scoped ? (
         <header className={styles.scopedHeader}>
-          <h2>This animal — readiness &amp; export</h2>
+          <h2>Review &amp; export — {vm.scope.animalId}</h2>
           <p className={styles.scopedSubhead} data-testid="validation-scope">
             {vm.scope.subhead}
           </p>
@@ -137,11 +168,11 @@ export function ValidationSummary({ animalKey }: { animalKey?: string } = {}) {
               chrome-level Validation & Export screen (Task 4.4) — link up to it so the relationship
               is explicit, not hidden. */}
           <p className={styles.scopedUplink}>
-            <a href="#/validation">Validate &amp; export all animals →</a>
+            <a href="#/validation">Review &amp; export all animals →</a>
           </p>
         </header>
       ) : (
-        <h1 id="validation-heading">Validation Summary</h1>
+        <h1 id="validation-heading">Review &amp; export — all animals</h1>
       )}
 
       {!hasDays ? (
@@ -161,57 +192,43 @@ export function ValidationSummary({ animalKey }: { animalKey?: string } = {}) {
           <p data-testid="summary-counts" className={styles.counts}>
             <span className={`${styles.count} ${styles.countValid}`}>{vm.counts.valid} valid</span>
             {' / '}
-            <span className={`${styles.count} ${styles.countError}`}>{vm.counts.error} with errors</span>
+            <span className={`${styles.count} ${vm.counts.error > 0 ? styles.countError : ''}`}>{vm.counts.error} with errors</span>
             {' / '}
-            <span className={`${styles.count} ${styles.countIncomplete}`}>{vm.counts.incomplete} incomplete</span>
+            <span className={`${styles.count} ${vm.counts.incomplete > 0 ? styles.countIncomplete : ''}`}>{vm.counts.incomplete} incomplete</span>
           </p>
 
-          <div className={styles.actions}>
-            <Button
-              variant="secondary"
-              onClick={handleValidateAll}
-              title="Save the current validation status for each recording day so it persists across reloads and other views. Recovered and wrong-owner days are skipped (they aren't this animal's recording days)."
-            >
-              Validate All
+          {!pendingExport && <div className={styles.actions}>
+            <Button onClick={handleExportValidOnly} disabled={exportValidDisabled} aria-describedby={exportValidDisabled ? 'export-selection-help' : undefined}>
+              Review {selectedIds.size} selected {selectedIds.size === 1 ? 'recording' : 'recordings'}
             </Button>
-            <Button
-              onClick={handleExportValidOnly}
-              disabled={exportValidDisabled}
-              aria-describedby={exportValidDisabled ? 'export-valid-disabled-reason' : undefined}
-              title={
-                exportValidDisabled
-                  ? exportValidDisabledReason
-                  : "Download YAML for every valid day that is part of an animal's day list. Days with errors or incomplete fields are not exported; recovered days not in the list must be re-linked first."
-              }
-            >
-              Export Valid Only
-            </Button>
-            {exportValidDisabled && (
-              // Accessible disabled reason: a disabled control is not announced on hover by SRs, so
-              // pair it with a visible, programmatically-associated explanation (aria-describedby).
-              <p
-                id="export-valid-disabled-reason"
-                className={`${styles.hint} validation-summary-disabled-reason`}
-              >
-                {exportValidDisabledReason}
-              </p>
-            )}
-          </div>
+            <span>{pendingIds.size} to download</span>
+            {currentIds.size > 0 && <label>
+              <input type="checkbox" checked={includeCurrent} onChange={(event) => {
+                const next = new Set(selectedIds);
+                currentIds.forEach((id) => { if (event.target.checked) next.add(id); else next.delete(id); });
+                setSelection(next);
+              }} /> Include recordings already downloaded
+            </label>}
+            {exportValidDisabledReason && <p id="export-selection-help" className={styles.hint}>{exportValidDisabledReason}</p>}
+            {!exportValidDisabledReason && selectedIds.size === 0 && <p id="export-selection-help" className={styles.hint}>Select recordings below to review for download.</p>}
+          </div>}
 
           {/* Details on demand (Phase 8A-3): the full export rules are reference material, not
               needed to take the action, so they live behind a collapsed disclosure — the actions
               and counts above stay visually dominant. The task-critical disabled reason stays
               inline (shown only when Export is blocked). */}
-          <details className={`${styles.hint} ${styles.exportHelp}`}>
+          {!pendingExport && <details className={`${styles.hint} ${styles.exportHelp}`}>
             <summary>What gets exported?</summary>
             <p>
-              <strong>Export Valid Only</strong> downloads one YAML file per day that passes every
+              <strong>Review selected recordings</strong> downloads one YAML file per selected day that passes every
               check (status <em>Ready to export</em>, <em>Validated</em>, or <em>Exported</em>) and
               is part of an animal&apos;s day list. Days with errors or incomplete fields are not
               exported; a recovered day marked <em>not in day list</em> must be re-linked
               (&quot;Add to day list&quot;) before it can be exported.
             </p>
-          </details>
+            <p>Validate All refreshes saved validation status and clears postponed validation for all recording days in this view.</p>
+            <Button variant="secondary" onClick={handleValidateAll}>Validate All</Button>
+          </details>}
 
           {/* The re-link rule is reference material in the disclosure above EXCEPT when a recovered
               day is actually present (the builder sets relinkNote) — then it is task-critical
@@ -229,7 +246,7 @@ export function ValidationSummary({ animalKey }: { animalKey?: string } = {}) {
               pendingExport={pendingExport}
               warningsAcknowledged={warningsAcknowledged}
               onAcknowledgeChange={setWarningsAcknowledged}
-              onConfirm={runExport}
+              onConfirm={() => { runExport(); setSelection(null); }}
               onCancel={cancelExport}
             />
           )}
@@ -302,14 +319,16 @@ export function ValidationSummary({ animalKey }: { animalKey?: string } = {}) {
               Exported / …) — collapsed by default so it explains the chips on demand without
               crowding the table. The same component sits on Animal Days, so the vocabulary is
               defined once. */}
-          <DayLifecycleLegend />
+          {!pendingExport && <DayLifecycleLegend />}
 
-          <DayStatusTable
+          {!pendingExport && <DayStatusTable
+            selectedIds={selectedIds} selectableIds={eligibleIds} onToggleDay={toggleDay}
+            onToggleAll={() => setSelection(selectedIds.size === eligibleIds.size ? new Set() : new Set(eligibleIds))}
             rows={vm.days}
             scoped={scoped}
             effectiveRecords={effectiveRecords}
             onRepairCommand={(command) => run[command.id]?.(command)}
-          />
+          />}
         </>
       )}
     </Wrapper>

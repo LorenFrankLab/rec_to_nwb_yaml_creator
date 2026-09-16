@@ -33,6 +33,8 @@
 }
 
 /* Details-on-demand export rules — the summary is the only always-visible bit. */
+
+
 .exportHelp > p {
   margin: 0.5rem 0 0;
 }
@@ -127,7 +129,7 @@
   border-radius: 12px;
   font-size: 0.75rem;
   font-weight: 600;
-  text-transform: uppercase;
+  text-transform: none;
 }
 
 /* Live-valid but not yet saved as validated: "Ready to export". Outline-blue (light bg). */
@@ -314,9 +316,48 @@
   cursor: pointer;
 }
 
+.batchExportPreflightDetail details > summary {
+  cursor: pointer;
+  min-height: 44px;
+  padding-block: var(--spacing-sm);
+}
+
 .exportHelp[open] > summary,
 .effective[open] > summary {
   /* Drop the legacy black underline under an open summary. */
   border-bottom: 0;
   margin-bottom: var(--spacing-xs);
+}
+
+.recordingDate { white-space: nowrap; }
+
+.table :global(.status-chip--changed_since_export) {
+  color: var(--color-warning);
+  background: var(--color-warning-light);
+  border: 1px solid currentcolor;
+}
+
+.comparison {
+  display: grid;
+  grid-template-columns: 110px minmax(0, 1fr);
+  gap: var(--spacing-xs) var(--spacing-md);
+  margin-block: var(--spacing-sm);
+  font-size: var(--font-size-sm);
+  line-height: 1.5;
+}
+
+.comparison dt { font-weight: 600; }
+
+.comparison dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.downloadState { color: var(--color-grey-700); }
+
+
+
+@media (max-width: 600px) {
+  .comparison { grid-template-columns: minmax(0, 1fr); }
+  .comparison dd { margin-bottom: var(--spacing-sm); }
 }

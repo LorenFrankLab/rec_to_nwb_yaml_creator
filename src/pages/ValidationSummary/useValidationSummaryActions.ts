@@ -34,6 +34,9 @@ import {
 import type { SummaryRow } from '../../viewModels/validationSummaryRows';
 import { isAdvisoryIssue } from '../../validation/issueTypes';
 import { pluralize } from '../../utils/pluralize';
+import { buildRecordingComparison } from '../../domain/preflightSummary';
+import { missingStatescriptEpochs } from '../../viewModels/epochGridViewModel';
+import { exportFreshnessStatus } from '../../domain/exportReceipt';
 
 /** A per-day line in one of the assertive batch reports / the validate-errors list. */
 interface ReportItem {
@@ -55,6 +58,10 @@ export interface PreflightEntry {
   opto?: string;
   warnings?: RepairableIssue[];
   error?: string;
+  comparison?: ReturnType<typeof buildRecordingComparison>;
+  downloadStatus?: string;
+  records?: { animal: Animal; day: Day; animalDays: Day[] };
+  missingStatescripts?: number[];
 }
 
 /** One day with outstanding warnings the user must acknowledge before export. */
@@ -74,6 +81,7 @@ export interface PendingExport {
 interface ValidationSummaryActionsParams {
   /** The current table rows ({@link buildRows} / {@link buildAnimalRows}). */
   rows: SummaryRow[];
+  selectedDayIds?: ReadonlySet<string>;
   /** `model.workspace` ({ animals, days }) — read live at action time. */
   workspace: unknown;
   /** The store actions (`updateDay`, …). */
@@ -86,7 +94,7 @@ interface ValidationSummaryActionsParams {
  *
  * @returns The feedback state + the three batch handlers the component renders/wires.
  */
-export function useValidationSummaryActions({ rows, workspace, actions }: ValidationSummaryActionsParams) {
+export function useValidationSummaryActions({ rows, selectedDayIds, workspace, actions }: ValidationSummaryActionsParams) {
   // Action feedback: a polite status message plus three assertive per-day reports —
   // parity skips (strict), debug-override downloads (strict off), and hard failures.
   const [actionMessage, setActionMessage] = useState('');
@@ -193,7 +201,7 @@ export function useValidationSummaryActions({ rows, workspace, actions }: Valida
     // valid metadata but must be re-linked ("Add to day list") before it is exported, so it is
     // deliberately excluded here rather than silently shipped from a broken index.
     const validRows = rows.filter(
-      (row) => row.chip === 'valid' && isExportableDayStatus(row.status)
+      (row) => row.chip === 'valid' && isExportableDayStatus(row.status) && (!selectedDayIds || selectedDayIds.has(String(row.day.id)))
     );
 
     if (validRows.length === 0) {
@@ -226,7 +234,7 @@ export function useValidationSummaryActions({ rows, workspace, actions }: Valida
         const warnings = validateDay(day, merged, animal, animalDays).filter(isAdvisoryIssue);
         return {
           dayId: day.id as string,
-          label: `${subjectLabel(animal)} — ${(day.session as Record<string, unknown> | undefined)?.session_id || day.id}`,
+          label: `${subjectLabel(animal)} — ${day.date || day.id}`,
           version: status.configurationVersion,
           historical: status.isHistoricalConfiguration,
           groups: ((merged.electrode_groups as unknown[]) || []).length,
@@ -234,6 +242,10 @@ export function useValidationSummaryActions({ rows, workspace, actions }: Valida
           cameras: ((merged.cameras as unknown[]) || []).length,
           opto,
           warnings,
+          comparison: buildRecordingComparison(merged),
+          downloadStatus: { never: 'Not downloaded yet', current: 'Downloaded', changed: 'Changed since download', unverified: 'Download needs verification' }[exportFreshnessStatus(animal as unknown as Animal, day as unknown as Day)],
+          records: { animal: animal as unknown as Animal, day: day as unknown as Day, animalDays: animalDays as unknown as Day[] },
+          missingStatescripts: missingStatescriptEpochs(animal, day, animalDays),
         };
       } catch (err) {
         return { dayId: day.id as string, label: `${subjectLabel(animal)} — ${day.id}`, error: (err as Error).message };

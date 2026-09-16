@@ -10,6 +10,10 @@ const noop = () => {};
 interface DayStatusTableProps {
   /** The table-ordered day rows from `buildValidationSummaryViewModel`. */
   rows: DayStatusRowViewModel[];
+  selectedIds?: ReadonlySet<string>;
+  selectableIds?: ReadonlySet<string>;
+  onToggleDay?: (id: string) => void;
+  onToggleAll?: () => void;
   /** Per-animal mode: the scan cell becomes an effective-setup expander. */
   scoped: boolean;
   /**
@@ -17,7 +21,7 @@ interface DayStatusTableProps {
    * `EffectiveDayReview` (which does its own merge from the records). The view-model carries every
    * other rendered value; this is the narrow escape hatch for that one read-only detail panel.
    */
-  effectiveRecords?: Record<string, { animal: Animal; day: Day }>;
+  effectiveRecords?: Record<string, { animal: Animal; day: Day; animalDays?: Day[] }>;
   /**
    * Dispatch a row's recovery repair (remove dangling ref / unlink wrong-owner / re-link recovered).
    * The command is the VM's own `row.recoveryDetail.repair.command` — the page resolves it through
@@ -42,6 +46,7 @@ interface DayStatusTableProps {
 export default function DayStatusTable({
   rows,
   scoped,
+  selectedIds, selectableIds, onToggleDay, onToggleAll,
   effectiveRecords = {},
   onRepairCommand = noop,
 }: DayStatusTableProps) {
@@ -57,13 +62,15 @@ export default function DayStatusTable({
     <div className={styles.tableScroll} data-testid="validation-table-scroll">
       <table className={styles.table}>
         <caption className="visually-hidden">
-          Recording days across all animals with validation status
+          {scoped ? 'Recording days for this animal with validation status' : 'Recording days across all animals with validation status'}
         </caption>
         <thead>
           <tr>
-            <th scope="col">Animal</th>
+            {selectedIds && <th scope="col"><input type="checkbox" aria-label="Select all valid recordings"
+              checked={Boolean(selectableIds?.size) && selectedIds.size === selectableIds?.size}
+              disabled={!selectableIds?.size} onChange={onToggleAll} /></th>}
+            {!scoped && <th scope="col">Animal</th>}
             <th scope="col">Date</th>
-            <th scope="col">Session</th>
             <th scope="col">Setup</th>
             <th scope="col">Status</th>
             <th scope="col">Editor</th>
@@ -104,36 +111,14 @@ export default function DayStatusTable({
               // Key carries the map index so a corrupt duplicate-index workspace (the same day id
               // listed by two animals in unscoped mode) can't collide React keys.
               <tr key={`${row.dayId}-${index}`} data-testid={`day-row-${row.dayId}`}>
-                <td>
-                  {row.subjectLabel}
-                  {orphaned && (
-                    <span
-                      className={styles.orphanNote}
-                      title="This day record is not listed in its animal's recording-day index (the index is corrupt, missing, or doesn't reference it). It is shown here so it isn't lost; open it to review or re-link it."
-                    >
-                      {' '}⚠ not in day list
-                    </span>
-                  )}
-                  {wrongOwner && (
-                    <span
-                      className={styles.orphanNote}
-                      title={`This day is listed under ${row.subjectLabel} but its record belongs to ${owner}. It is NOT exported with this animal's metadata; remove it from this animal so it returns to its real owner.`}
-                    >
-                      {' '}⚠ belongs to {owner}
-                    </span>
-                  )}
-                </td>
-                <td>{row.date || '—'}</td>
-                <td>
-                  {row.sessionId || '—'}
-                  {row.sessionDescription && (
-                    <span
-                      className={styles.sessionDescription}
-                      data-testid={`session-description-${row.dayId}`}
-                    >
-                      {row.sessionDescription}
-                    </span>
-                  )}
+                {selectedIds && <td><input type="checkbox" aria-label={`Select ${row.subjectLabel} ${dateText}`}
+                  checked={selectedIds.has(row.dayId)} disabled={!selectableIds?.has(row.dayId)} onChange={() => onToggleDay?.(row.dayId)} /></td>}
+                {!scoped && <td>{row.subjectLabel}</td>}
+                <td className={styles.recordingDate}>
+                  {row.date || '—'}
+                  {orphaned && <span className={styles.orphanNote}> · not in day list</span>}
+                  {wrongOwner && <span className={styles.orphanNote}> · belongs to {owner}</span>}
+                  {row.sessionDescription && !row.sessionDescription.startsWith('Recording session for ') && <span className={styles.sessionDescription} data-testid={`session-description-${row.dayId}`}>{row.sessionDescription}</span>}
                 </td>
                 <td>
                   {/* Scan fields: pinned configuration version, camera count + calibration, and the
@@ -146,11 +131,13 @@ export default function DayStatusTable({
                     scoped ? (
                       <details className={styles.effective} data-testid={`effective-${row.dayId}`}>
                         <summary className={styles.scan}>{scanSummary}</summary>
+                        <p>Session: {row.sessionId || '—'}</p>
                         {records && (
                           <EffectiveDayReview
                             animal={records.animal}
                             day={records.day}
                             warningCount={row.warningCount ?? 0}
+                            animalDays={records.animalDays}
                           />
                         )}
                       </details>
