@@ -1,0 +1,43 @@
+Skip to main content
+Skip to navigation
+Navigated to Import Metadata YAML
+Workspace
+Validation & Export
+⌨
+Keyboard shortcuts
+Animals › Import
+Review batch import
+1 recording day → 1 animal
+Every selected file is included.
+remy
+
+1 recording day · 1 hardware configuration
+
+Configuration 1, from 2023-06-24 — 1 day
+Differences to review
+Camera "overhead_camera" has 2 calibrations across the files; each is kept as its own camera: overhead_camera = meters_per_pixel 0.001 (already on this animal); overhead_camera_20230624 = meters_per_pixel 0.003 (20230624_remy_metadata.yml).
+20230624_remy_metadata.yml numbers its cameras differently; its references were mapped to the combined catalog ("overhead_camera_20230624" 0 → 3).
+Camera “overhead_camera” has 2 calibrations across the files
+
+The calibration is the scale each day’s positions are converted with, so a recalibrated camera is a different camera.
+
+Calibration	First file	First date	Days
+meters_per_pixel 0.001	Already on this animal	—	0
+meters_per_pixel 0.003	20230624_remy_metadata.yml	2023-06-24	1
+Keep as separate cameras (recommended) — later calibrations become overhead_camera_20230624
+
+Use one calibration for every day:
+
+meters_per_pixel 0.001 for every day (already on this animal)
+
+This animal already has “overhead_camera”, and importing never re-calibrates a camera its earlier days already use. Re-calibrating that camera is a correction, made in the animal’s camera list.
+
+“remy” already exists. What should happen?
+Add these days to the existing animal
+Skip this animal
+Replace the existing animal and its days
+Back to repairs
+Confirm import
+Cancel
+Copyright © 2026 Loren Frank Lab
+The University of California at San Francisco

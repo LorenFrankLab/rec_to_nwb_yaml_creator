@@ -1,0 +1,2 @@
+const {defineConfig}=require('/Users/edeno/Documents/GitHub/rec_to_nwb_yaml_creator/node_modules/@playwright/test');
+module.exports=defineConfig({testDir:'/Users/edeno/Documents/GitHub/rec_to_nwb_yaml_creator/e2e',outputDir:'/tmp/revision6-playwright-output',testMatch:['workspace-daily-workflow.spec.js','workspace-workflows.spec.js','workspace-persistence-recovery.spec.js'],workers:2,retries:0,timeout:30000,reporter:'list',use:{baseURL:'http://127.0.0.1:3013',headless:true,trace:'retain-on-failure'}});

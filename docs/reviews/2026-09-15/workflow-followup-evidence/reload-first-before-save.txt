@@ -1,0 +1,238 @@
+Skip to main content
+Skip to navigation
+Workspace
+Validation & Export
+⌨
+Keyboard shortcuts
+Workspace
+›
+Animal: remy
+›
+Day: 2023-06-22
+✓
+Saved just now
+Export
+Day Editor: remy - 2023-06-22
+Configuration v1
+Needs attention
+Animal context
+Wild Type · M · Rattus norvegicus
+Config v1
+
+⚠
+4 issues block export
+
+3 in Tasks & Files · 1 in Recording Setup
+
+Tasks & Files
+3 things to fix
+Epoch 1 has a task but no video file linked, and it isn't marked "no video". Add the video for this epoch, or mark it as having no video.
+Fix in Epoch 1
+Epoch 3 has a task but no video file linked, and it isn't marked "no video". Add the video for this epoch, or mark it as having no video.
+Fix in Epoch 3
+Epoch 5 has a task but no video file linked, and it isn't marked "no video". Add the video for this epoch, or mark it as having no video.
+Fix in Epoch 5
+Recording Setup
+1 thing to fix
+The probe setup v1 was entered on 2026-09-15 and its effective period before that is not recorded, so it is not known to apply to this earlier recording. Confirm that v1 is the setup this day was recorded with, pick the right version, or set the version's effective date to cover 2023-06-22.
+Confirm this setup applies
+DAY
+Daily log
+✗
+Has errors
+RECORDING
+Recording Setup
+✗
+Has errors
+Failed Channels
+✓
+Complete
+DIO Wiring
+✓
+Complete
+FINISH
+Fix & Export
+4 to fix
+✗
+Has errors
+Daily log
+
+Imported from a YAML file
+·
+Probe setup v1 (effective Sep 15, 2026) — not confirmed for this date
+·
+Rig SpikeGadgets
+·
+entered Sep 16, 2026
+Change setup
+
+Weight
+Weight measured today (grams)
+Weight measured on this day — the value exported for this day.
+Team
+Experimenters present (one per line, "Last, First")
+This day’s actual team. Changing it here affects this day only.
+Epochs
+Supplemental files
+2
+Epochs
+
+Confirm what happened, then resolve expected statescript and video files.
+
+Show
+5 epochs
+3 videos needed
+2 statescripts expected
+2 custom filenames
+Data folder
+Set the data folder to generate statescript and video file names.
+Generate missing
+Statescripts (2)
+Videos (3)
+Templates ▾
+#	Task	Files	Camera(s)
+Actions
+
+1
+sleep
+tag s1
+Details
+▾
+
+Statescript: Not expected
+Video: Missing
+	overhead_camera
+⋮
+
+2
+w_alternation
+tag r1
+Hide
+▴
+
+Statescript: Expected
+Video: 2 videos
+	overhead_cameraside_camera
+⋮
+
+3
+sleep
+tag s2
+Details
+▾
+
+Statescript: Not expected
+Video: Missing
+	overhead_camera
+⋮
+
+4
+w_alternation
+tag r2
+Details
+▾
+
+Statescript: Expected
+Video: 2 videos
+	overhead_cameraside_camera
+⋮
+
+5
+sleep
+tag s3
+Details
+▾
+
+Statescript: Not expected
+Video: Missing
+	overhead_camera
+⋮
+Epoch 2: w_alternation
+tag r1
+Complete
+Close
+Files for this epoch
+needs review
+Statescript
+Expected
+Expected: 20230622_remy_02_r1.stateScriptLog
+Add expected statescript
+Enter manually
+Video
+2 videos
+manual
+Revert to generated
+· overhead_camera
+Remove
+manual
+Revert to generated
+· side_camera
+Remove
+Add another video
+Task
+Change only if this epoch was assigned wrong.
+Task type
+sleep
+w_alternation
++ new task type
+Derived tag
+r1
+Task source
+animal catalog
+Environment
+elevated W-track (180cm arms)
+Cameras
+overhead_cameraside_camera
+Environment for this day
+Cameras used this day
+overhead_camera
+side_camera
+
+Task default: elevated W-track (180cm arms) · overhead_camera, side_camera
+
+Save for this day
+Use task default
+Cancel
+Supplemental files
+
+Rare day-specific extras outside generated statescripts and videos, such as realtime output or stimulus scripts.
+
+2 files
+Supplemental file rows
+
+Optional files outside generated statescripts and videos.
+
+File name (required)
+Description
+Path
+Task epoch
+— select epoch —
+1
+2
+3
+4
+5
+Remove
+File name (required)
+Description
+Path
+Task epoch
+— select epoch —
+1
+2
+3
+4
+5
+Remove
+Psychopy stim script
+Realtime output
+Behavior timeline
+FSGUI log
+Custom file
+▶
+Descriptions, data folder & search terms
+▶
+Session identity and animal context
+READ-ONLY
+Copyright © 2026 Loren Frank Lab
+The University of California at San Francisco

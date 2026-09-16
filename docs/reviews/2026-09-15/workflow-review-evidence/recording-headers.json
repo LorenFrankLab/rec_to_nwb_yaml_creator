@@ -1,0 +1,58 @@
+[
+  {
+    "file": "/Users/edeno/Downloads/trodes_to_nwb_test_data/20230622_sample_01_a1.rec",
+    "headerBytes": 53349,
+    "ntrodes": 32,
+    "firstIds": [
+      "1",
+      "2",
+      "3",
+      "4",
+      "5",
+      "6",
+      "7",
+      "8"
+    ],
+    "lastIds": [
+      "29",
+      "30",
+      "31",
+      "32"
+    ],
+    "channelCounts": [
+      4
+    ]
+  },
+  {
+    "file": "/Users/edeno/Downloads/trodes_to_nwb_test_data/reconfig_probeDevice.trodesconf",
+    "headerBytes": 39671,
+    "ntrodes": 4,
+    "firstIds": [
+      "1",
+      "2",
+      "3",
+      "4"
+    ],
+    "lastIds": [
+      "1",
+      "2",
+      "3",
+      "4"
+    ],
+    "channelCounts": [
+      32
+    ]
+  },
+  {
+    "file": "/Users/edeno/Downloads/trodes_to_nwb_test_data/behavior_only.rec",
+    "headerBytes": 17853,
+    "ntrodes": 0,
+    "firstIds": [],
+    "lastIds": [],
+    "channelCounts": []
+  },
+  {
+    "file": "/Users/edeno/Downloads/trodes_to_nwb_test_data/bad_header.trodesconf",
+    "error": "unclosed token: line 1, column 0"
+  }
+]

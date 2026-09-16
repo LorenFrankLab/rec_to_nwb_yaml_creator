@@ -1,0 +1,58 @@
+Skip to main contentSkip to navigation
+Navigated to Animal
+Workspace
+▸
+re
+remy
+▾
+Validation & Export
+⌨
+Keyboard shortcuts
+remy
+animal ID
+Rattus norvegicus · M
+⋮
+Wild Type
+M
+Rattus norvegicus
+b. 2023-01-10
+8 probes — CA1, CA3, PFC
+Config v1
+Team: Guidera, Jennifer, Comrie, Alison
+DAY WORK
+Recording Days
+1
+›
+Validation & Export
+1 ready
+›
+ANIMAL SETUP
+Electrode Groups
+8
+›
+Recording System
+1
+›
+Cameras
+2
+›
+Task Types
+›
+Optogenetics
+○
+›
+
+Catalog — referenced per day.
+
+⚠
+Affects all 1 day
+Cameras
+
+Configure cameras for video tracking and behavioral recording.
+
++ Add Camera
+ID	NAME	MANUFACTURER	MODEL	LENS	METERS PER PIXEL	STATUS	ACTIONS
+0	overhead_camera	Allied Vision	Mako G-158	Fujinon HF16HA-1B	0.00085	✓	EditDelete
+1	side_camera	Allied Vision	Mako G-158	Fujinon HF16HA-1B	0.0009	✓	EditDelete
+Copyright © 2026 Loren Frank Lab
+The University of California at San Francisco

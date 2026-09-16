@@ -1,0 +1,25 @@
+{
+  "total": 325,
+  "parseOrAuditErrors": 0,
+  "readyWithoutResponses": 164,
+  "requiringSourceEdits": 37,
+  "requiringAnswers": 143,
+  "blockerCodes": {
+    "type": 17,
+    "enum": 199,
+    "channel_partition_invalid": 15,
+    "dangling_camera_ref": 7,
+    "orphaned_file": 2,
+    "orphaned_video": 2,
+    "duplicate_task_epoch": 1
+  },
+  "repairCodes": {
+    "type": 196,
+    "required": 294,
+    "enum": 98,
+    "invalid_species": 99,
+    "volume_shim_conflict": 84,
+    "pattern": 1,
+    "duplicate_associated_file_name": 1
+  }
+}

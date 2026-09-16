@@ -1,0 +1,189 @@
+{
+  "coldWorkspace": {
+    "skip": {
+      "position": "static",
+      "left": "auto"
+    },
+    "footer": {
+      "display": "inline",
+      "height": 18,
+      "minHeight": "0px"
+    },
+    "nav": {
+      "x": 226,
+      "y": 107.609375,
+      "width": 285.5625,
+      "height": 56.78125,
+      "top": 107.609375,
+      "right": 511.5625,
+      "bottom": 164.390625,
+      "left": 226
+    },
+    "stylesheets": [
+      "http://127.0.0.1:3019/rec_to_nwb_yaml_creator/assets/index-C4N7iC1D.css",
+      "http://127.0.0.1:3019/rec_to_nwb_yaml_creator/assets/EmptyState-B2ofO69b.css",
+      "http://127.0.0.1:3019/rec_to_nwb_yaml_creator/assets/AnimalWorkspace-ezohMusk.css",
+      "http://127.0.0.1:3019/rec_to_nwb_yaml_creator/assets/index-H9cexccU.css"
+    ],
+    "scripts": [
+      {
+        "name": "index-Br6R7ykD.js",
+        "bytes": 429158
+      },
+      {
+        "name": "AnimalWorkspace.module-BqOqT9o9.js",
+        "bytes": 8686
+      },
+      {
+        "name": "index-Bg0SaQIs.js",
+        "bytes": 12626
+      },
+      {
+        "name": "optoCompleteness-CTVTEdAL.js",
+        "bytes": 378
+      },
+      {
+        "name": "workflowStatus-knUCWk1k.js",
+        "bytes": 29528
+      },
+      {
+        "name": "EmptyState-pcC4ZRo6.js",
+        "bytes": 4081
+      },
+      {
+        "name": "index-5exFW9Wr.js",
+        "bytes": 336774
+      },
+      {
+        "name": "dayRowViewModel-C1Rd9Gw9.js",
+        "bytes": 1481
+      }
+    ]
+  },
+  "workspaceAfterLegacy": {
+    "skip": {
+      "position": "absolute",
+      "left": "-9999px"
+    },
+    "footer": {
+      "display": "inline-block",
+      "height": 24,
+      "minHeight": "24px"
+    },
+    "nav": {
+      "x": 78.796875,
+      "y": 16,
+      "width": 325.5625,
+      "height": 76.78125,
+      "top": 16,
+      "right": 404.359375,
+      "bottom": 92.78125,
+      "left": 78.796875
+    },
+    "stylesheets": [
+      "http://127.0.0.1:3019/rec_to_nwb_yaml_creator/assets/index-C4N7iC1D.css",
+      "http://127.0.0.1:3019/rec_to_nwb_yaml_creator/assets/EmptyState-B2ofO69b.css",
+      "http://127.0.0.1:3019/rec_to_nwb_yaml_creator/assets/AnimalWorkspace-ezohMusk.css",
+      "http://127.0.0.1:3019/rec_to_nwb_yaml_creator/assets/index-H9cexccU.css",
+      "http://127.0.0.1:3019/rec_to_nwb_yaml_creator/assets/AlertModal-DqeKtiyr.css",
+      "http://127.0.0.1:3019/rec_to_nwb_yaml_creator/assets/LegacyFormView-tigyKqIf.css"
+    ],
+    "scripts": [
+      {
+        "name": "index-Br6R7ykD.js",
+        "bytes": 429158
+      },
+      {
+        "name": "AnimalWorkspace.module-BqOqT9o9.js",
+        "bytes": 8686
+      },
+      {
+        "name": "index-Bg0SaQIs.js",
+        "bytes": 12626
+      },
+      {
+        "name": "optoCompleteness-CTVTEdAL.js",
+        "bytes": 378
+      },
+      {
+        "name": "workflowStatus-knUCWk1k.js",
+        "bytes": 29528
+      },
+      {
+        "name": "EmptyState-pcC4ZRo6.js",
+        "bytes": 4081
+      },
+      {
+        "name": "index-5exFW9Wr.js",
+        "bytes": 336774
+      },
+      {
+        "name": "dayRowViewModel-C1Rd9Gw9.js",
+        "bytes": 1481
+      },
+      {
+        "name": "LegacyFormView-orciUlmc.js",
+        "bytes": 86308
+      },
+      {
+        "name": "AlertModal-CHozqSaL.js",
+        "bytes": 2237
+      },
+      {
+        "name": "index.es-BP59MG9g.js",
+        "bytes": 7231
+      },
+      {
+        "name": "useStableId-CUsKU4vp.js",
+        "bytes": 338
+      }
+    ]
+  },
+  "blankFactsDraft": {
+    "subject_id": "ReviewDraft",
+    "description": "Wild-type Rattus norvegicus",
+    "species": "Rattus norvegicus",
+    "sex": "U",
+    "genotype": "Wild-type"
+  },
+  "invalidCopiedId": {
+    "disabled": true,
+    "text": "Skip to main contentSkip to navigation\nNavigated to Copy from Another Animal\nWorkspace\nValidation & Export\n⌨\nKeyboard shortcuts\nAnimals › New animal › Copy from another animal\nCopy setup from another animal\n\nReuse a same-rig animal's hardware setup, then tweak. The new animal gets its own identity — only the setup is copied.\n\nCopy from\nSource animal\nSelect an animal…\nremy\nWhat to copy\nChoose what to copy\nConfiguration (probes)\nCameras\nRecording system\nTask types\n\nNot copied: identity (species/sex/genotype/DOB — the new animal is its own subject), recording days, and DIO/behavioral events (those are set per recording day).\n\nNew animal\nSubject ID *\n\nUse only letters, numbers, and hyphens (no underscores — the converter splits filenames on them)\n\nCapitalization is kept exactly as typed — it has to match the animal token in your recording filenames. You'll confirm identity and the copied setup in the next step.\n\nCopy & continue setup →\nCancel\nCopyright © 2026 Loren Frank Lab\nThe University of California at San Francisco\n"
+  },
+  "copiedCase": "ReviewCase",
+  "tabOrder": [
+    "Daily log — Complete",
+    "Recording Setup — Complete",
+    "Failed Channels — Complete",
+    "DIO Wiring — Complete",
+    "Fix & Export — Complete"
+  ],
+  "keepHistory": {
+    "default": "New default",
+    "historical": [
+      {
+        "task_name": "sleep",
+        "task_description": "Rest in home cage",
+        "task_environment": "home cage",
+        "camera_id": [
+          0
+        ],
+        "task_epochs": [
+          1
+        ]
+      },
+      {
+        "task_name": "sleep",
+        "task_description": "Rest in home cage",
+        "task_environment": "home cage",
+        "camera_id": [
+          0
+        ],
+        "task_epochs": [
+          3,
+          5
+        ]
+      }
+    ]
+  }
+}

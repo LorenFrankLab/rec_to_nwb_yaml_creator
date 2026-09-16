@@ -1,0 +1,25 @@
+Skip to main content
+Skip to navigation
+Navigated to Copy from Another Animal
+Workspace
+Validation & Export
+⌨
+Keyboard shortcuts
+Animals › New animal › Copy from another animal
+Copy setup from another animal
+
+Reuse a same-rig animal's hardware setup, then tweak. The new animal gets its own identity — only the setup is copied.
+
+Copy from
+Source animal
+Select an animal…
+remy
+New animal
+Subject ID *
+
+You'll confirm identity and the copied setup in the next step.
+
+Copy & continue setup →
+Cancel
+Copyright © 2026 Loren Frank Lab
+The University of California at San Francisco

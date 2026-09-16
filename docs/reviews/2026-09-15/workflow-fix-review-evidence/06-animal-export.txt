@@ -1,0 +1,64 @@
+Skip to main contentSkip to navigation
+Navigated to Animal
+Workspace
+▸
+re
+remy
+▾
+Validation & Export
+⌨
+Keyboard shortcuts
+remy
+animal ID
+Rattus norvegicus · M
+⋮
+Wild Type
+M
+Rattus norvegicus
+b. 2023-01-10
+8 probes — CA1, CA3, PFC
+Config v1
+Team: Guidera, Jennifer, Comrie, Alison
+DAY WORK
+Recording Days
+1
+›
+Validation & Export
+1 ready
+›
+ANIMAL SETUP
+Electrode Groups
+8
+›
+Recording System
+1
+›
+Cameras
+2
+›
+Task Types
+›
+Optogenetics
+○
+›
+This animal — readiness & export
+
+Showing: remy — 1 day
+
+Validate & export all animals →
+
+1 valid / 0 with errors / 0 incomplete
+
+Validate All
+Export Valid Only
+What gets exported?
+What do these statuses mean?
+Recording days across all animals with validation status
+Animal	Date	Session	Setup	Status	Editor
+remy	2023-06-22	remy_20230622
+Day 45 of chronic recording, W-track alternation
+
+config v1 (latest) · 2 cameras (overhead_camera 0.00085 m/px, side_camera 0.0009 m/px) · No optogenetics
+	READY TO EXPORT	Open editor
+Copyright © 2026 Loren Frank Lab
+The University of California at San Francisco

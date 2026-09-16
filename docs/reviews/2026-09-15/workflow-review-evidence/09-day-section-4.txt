@@ -1,0 +1,49 @@
+Skip to main content
+Skip to navigation
+Navigated to Day Editor: remy-2023-06-22
+Workspace
+Validation & Export
+⌨
+Keyboard shortcuts
+Workspace
+›
+Animal: remy
+›
+Day: 2023-06-22
+Export
+Day Editor: remy - 2023-06-22
+Configuration v1
+Ready
+DAY
+Daily log
+✓
+Complete
+RECORDING
+Recording Setup
+✓
+Complete
+Failed Channels
+✓
+Complete
+DIO Wiring
+✓
+Complete
+FINISH
+Fix & Export
+✓
+Complete
+Fix & Export — 2023-06-22
+
+Fix blocking issues, then download the YAML next to your .rec files.
+
+Download
+Copy
+✓
+Ready to export
+
+Not downloaded yet.
+
+20230622_remy_metadata.yml
+View YAML · one file
+Copyright © 2026 Loren Frank Lab
+The University of California at San Francisco

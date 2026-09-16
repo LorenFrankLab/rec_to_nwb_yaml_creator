@@ -1,0 +1,105 @@
+Skip to main content
+Skip to navigation
+⌨
+Keyboard shortcuts
+
+Navigation
+
+Experimenter Name
+Lab
+Institution
+Experiment Description
+Session Description
+Session Id
+Keywords
+Subject
+Data Acq Device
+Cameras
+Tasks
+Associated Files
+Associated Video Files
+Units
+Times Period Multiplier
+Raw Data To Volts
+Default Header File Path
+Behavioral Events
+Device
+Opto Excitation Source
+Optical Fiber
+Virus Injection
+Fs Gui Yamls
+Optogenetic Stimulation Software
+Electrode Groups
+Rec-to-NWB YAML Creator   
+Import YAML
+   |Sample YAML
+Experimenter Name
+No experimenter +
+Lab
+ 
+Institution
+Experiment Description
+ 
+Session Description
+ 
+Session Id
+ 
+Keywords
+No keyword +
+Subject
+Description
+ 
+Species
+Genotype
+Sex
+M
+F
+U
+O
+Subject Id
+ 
+Date of Birth
+ 
+Weight (grams)
+ 
+Data Acq Device
+＋
+Cameras
+＋
+Tasks
+＋
+Associated Files
+＋
+Associated Video Files
+＋
+Units
+Analog
+ 
+Behavioral Events
+ 
+Times Period Multiplier
+ 
+Ephys-to-Volt Conversion Factor
+ 
+Default Header File Path
+ 
+Behavioral Events
+＋
+Device
+Name
+Trodes ✘  +
+Opto Excitation Source
+＋
+Optical Fiber
+＋
+Virus Injection
+＋
+FS Gui Yamls
+＋
+Optogenetic Stimulation Software
+ 
+Electrode Groups
+＋
+Generate YML FileReset
+Copyright © 2026 Loren Frank Lab
+The University of California at San Francisco

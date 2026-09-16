@@ -1,0 +1,23 @@
+Skip to main content
+Skip to navigation
+Navigated to Import Metadata YAML
+Workspace
+Validation & Export
+⌨
+Keyboard shortcuts
+Animals › Import
+Review batch import
+2 recording days → 1 animal
+Every selected file is included.
+remy
+
+2 recording days · 1 hardware configuration
+
+Configuration 1, from 2023-06-22 — 2 days
+Differences to review
+Camera "overhead_camera" differs across files in: meters_per_pixel
+Back to repairs
+Confirm import
+Cancel
+Copyright © 2026 Loren Frank Lab
+The University of California at San Francisco

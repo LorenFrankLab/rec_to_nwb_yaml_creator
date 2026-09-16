@@ -1,0 +1,60 @@
+Skip to main content
+Skip to navigation
+Navigated to Import Metadata YAML
+Workspace
+Validation & Export
+⌨
+Keyboard shortcuts
+Animals › Import
+Import metadata YAML
+20200302_chimi.yml
+Source edit needed
+Choose different files
+
+This file will create a new animal: “chimi”.
+
+Needs attention
+Apply safe suggestions (4)
+Experimenter name
+Alison Comrie → Alison Comrie
+must be array
+Accept
+Subject
+Sex
+Male → M
+must be equal to one of the allowed values
+Accept
+Subject
+Species
+Rat → Rattus norvegicus
+Species "Rat" is not DANDI-valid. Use a Latin binomial (e.g. "Rattus norvegicus") or an NCBI Taxonomy URI — DANDI rejects free text.
+Accept
+Subject
+Weight (g)
+527g → 527
+must be number
+Accept
+Required, but missing
+Subject
+Date of birth
+must have required property 'date_of_birth'
+Task 1 — sleep
+Task environment
+must have required property 'task_environment'
+Task 2 — spatial bandit task (regular)
+Task environment
+must have required property 'task_environment'
+Needs source-file editing
+
+These structures cannot be changed safely with a single value. This file stays out of the batch; other ready files can still be imported.
+
+Associated files must be array
+Technical field path
+Task 2 — spatial bandit task (regular): Task epochs must be array
+Technical field path
+Auto-normalized on import (1 format-only change)
+Import as new animal
+2 fields still need source-file editing.
+Cancel
+Copyright © 2026 Loren Frank Lab
+The University of California at San Francisco

@@ -1,0 +1,23 @@
+Skip to main content
+Skip to navigation
+Navigated to Animal Workspace
+Workspace
+Validation & Export
+⌨
+Keyboard shortcuts
+Animal Workspace
+＋
+No animals created yet.
+
+Start by setting up an animal — its identity and implant, entered once — then log a recording day. Already have metadata YAMLs? Import one to bring an animal in and standardize it.
+
+Create Animal
+Import YAML…
+Saved on this browser
+
+Your workspace is stored only in this browser on this computer. It uses 247 B of the 5.00 MiB the smallest supported browser allows. Download a backup to move work to another computer or to keep a copy.
+
+Download workspace backup
+Restore from backup…
+Copyright © 2026 Loren Frank Lab
+The University of California at San Francisco

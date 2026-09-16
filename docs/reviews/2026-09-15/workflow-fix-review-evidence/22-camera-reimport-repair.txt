@@ -1,0 +1,22 @@
+Skip to main contentSkip to navigation
+Workspace
+Validation & Export
+⌨
+Keyboard shortcuts
+Animals › Import
+Import metadata YAML
+20230623_remy_metadata.yml
+Needs repair
+Choose different files
+
+Animal “remy” already exists. Ready files for it will be reconciled together before its recording days are added.
+
+Needs attention
+Camera 0
+camera id 0 (overhead_camera)
+camera id 0 (overhead_camera) reuses camera_name "overhead_camera" from animal "remy" camera id 0 but differs in meters_per_pixel. Spyglass keys cameras by camera_name; if this was recalibrated or repositioned, give it a distinct camera_name in the YAML, or map the day to an existing camera id.
+Add recording day
+1 flagged field still need a response.
+Cancel
+Copyright © 2026 Loren Frank Lab
+The University of California at San Francisco

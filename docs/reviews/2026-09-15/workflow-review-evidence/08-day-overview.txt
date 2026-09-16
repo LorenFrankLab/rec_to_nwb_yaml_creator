@@ -1,0 +1,170 @@
+Skip to main content
+Skip to navigation
+Navigated to Day Editor: remy-2023-06-22
+Workspace
+Validation & Export
+⌨
+Keyboard shortcuts
+Workspace
+›
+Animal: remy
+›
+Day: 2023-06-22
+Export
+Day Editor: remy - 2023-06-22
+Configuration v1
+Ready
+Animal context
+Wild Type · M · Rattus norvegicus
+Config v1
+✓
+Ready to export
+DAY
+Daily log
+✓
+Complete
+RECORDING
+Recording Setup
+✓
+Complete
+Failed Channels
+✓
+Complete
+DIO Wiring
+✓
+Complete
+FINISH
+Fix & Export
+✓
+Complete
+Daily log
+
+Started blank
+·
+Probe setup v1 (effective Jun 22, 2023)
+·
+Rig SpikeGadgets
+Change setup
+
+Weight
+Weight measured today (grams)
+Weight measured on this day — the value exported for this day.
+Team
+Experimenters present (one per line, "Last, First")
+This day’s actual team. Changing it here affects this day only.
+Epochs
+Supplemental files
+2
+Epochs
+
+Confirm what happened, then resolve expected statescript and video files.
+
+Show
+5 epochs
+0 videos needed
+5 statescripts missing
+2 custom filenames
+Generate missing
+Statescripts (5)
+Templates ▾
+Data folder missing: generated paths need Daily Setup before export.
+#	Task	Files	Camera(s)
+Actions
+
+1
+sleep
+tag s1
+Details
+▾
+
+Statescript: Missing
+Video: No video
+	overhead_camera
+⋮
+
+2
+w_alternation
+tag r1
+Details
+▾
+
+Statescript: Missing
+Video: 2 videos
+	overhead_cameraside_camera
+⋮
+
+3
+sleep
+tag s2
+Details
+▾
+
+Statescript: Missing
+Video: No video
+	overhead_camera
+⋮
+
+4
+w_alternation
+tag r2
+Details
+▾
+
+Statescript: Missing
+Video: 2 videos
+	overhead_cameraside_camera
+⋮
+
+5
+sleep
+tag s3
+Details
+▾
+
+Statescript: Missing
+Video: No video
+	overhead_camera
+⋮
+Supplemental files
+
+Rare day-specific extras outside generated statescripts and videos, such as realtime output or stimulus scripts.
+
+2 files
+Supplemental file rows
+
+Optional files outside generated statescripts and videos.
+
+File name (required)
+Description
+Path
+Task epoch
+— select epoch —
+1
+2
+3
+4
+5
+Remove
+File name (required)
+Description
+Path
+Task epoch
+— select epoch —
+1
+2
+3
+4
+5
+Remove
+Psychopy stim script
+Realtime output
+Behavior timeline
+FSGUI log
+Custom file
+▶
+Descriptions, data folder & search terms
+▶
+Session identity and animal context
+READ-ONLY
+Copyright © 2026 Loren Frank Lab
+The University of California at San Francisco

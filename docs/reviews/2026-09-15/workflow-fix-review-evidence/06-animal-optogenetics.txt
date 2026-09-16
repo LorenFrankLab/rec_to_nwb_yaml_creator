@@ -1,0 +1,58 @@
+Skip to main contentSkip to navigation
+Navigated to Animal
+Workspace
+▸
+re
+remy
+▾
+Validation & Export
+⌨
+Keyboard shortcuts
+remy
+animal ID
+Rattus norvegicus · M
+⋮
+Wild Type
+M
+Rattus norvegicus
+b. 2023-01-10
+8 probes — CA1, CA3, PFC
+Config v1
+Team: Guidera, Jennifer, Comrie, Alison
+DAY WORK
+Recording Days
+1
+›
+Validation & Export
+1 ready
+›
+ANIMAL SETUP
+Electrode Groups
+8
+›
+Recording System
+1
+›
+Cameras
+2
+›
+Task Types
+›
+Optogenetics
+○
+›
+⚠
+Affects all 1 day
+
+Not used — no stimulation
+
+Optogenetics Setup
+
+This is the animal's implanted opto setup (excitation source, optical fiber, virus injection, stimulation software) — set it once here. What was actually stimulated is recorded per recording day in that day's Epochs step, scoped to the epochs it ran; a day or epoch with no stimulation needs nothing here.
+
+This animal has optogenetics
+
+Optogenetics is off. No optogenetics metadata will be exported. Turn it on only if this animal’s recordings include optogenetic stimulation.
+
+Copyright © 2026 Loren Frank Lab
+The University of California at San Francisco

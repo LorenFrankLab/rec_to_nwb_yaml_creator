@@ -1,0 +1,35 @@
+Skip to main contentSkip to navigation
+Workspace
+Validation & Export
+⌨
+Keyboard shortcuts
+Animals › Import
+Review batch import
+2 recording days → 1 animal
+Every selected file is included.
+remy
+
+2 recording days · 1 hardware configuration
+
+Configuration 1, from 2023-06-22 — 2 days
+Differences to review
+Camera "overhead_camera" has 2 calibrations across the files; each is kept as its own camera: overhead_camera = meters_per_pixel 0.001 (20230622_remy_metadata.yml); overhead_camera_20230623 = meters_per_pixel 0.002 (20230623_remy_metadata.yml).
+20230623_remy_metadata.yml numbers its cameras differently; its references were mapped to the combined catalog ("overhead_camera_20230623" 0 → 2).
+Camera “overhead_camera” has 2 calibrations across the files
+
+The calibration is the scale each day’s positions are converted with, so a recalibrated camera is a different camera.
+
+Calibration	First file	First date	Days
+meters_per_pixel 0.001	20230622_remy_metadata.yml	2023-06-22	1
+meters_per_pixel 0.002	20230623_remy_metadata.yml	2023-06-23	1
+Keep as separate cameras (recommended) — later calibrations become overhead_camera_20230623
+
+Use one calibration for every day:
+
+meters_per_pixel 0.001 for every day (20230622_remy_metadata.yml)
+meters_per_pixel 0.002 for every day (20230623_remy_metadata.yml)
+Back to repairs
+Confirm import
+Cancel
+Copyright © 2026 Loren Frank Lab
+The University of California at San Francisco

@@ -1,0 +1,77 @@
+Skip to main contentSkip to navigation
+Navigated to Day Editor: remy-2023-06-22
+Workspace
+Validation & Export
+⌨
+Keyboard shortcuts
+Workspace
+›
+Animal: remy
+›
+Day: 2023-06-22
+✓
+Saved just now
+Export
+Day Editor: remy - 2023-06-22
+Configuration v1
+Ready
+DAY
+Daily log
+✓
+Complete
+RECORDING
+Recording Setup
+✓
+Complete
+Failed Channels
+✓
+Complete
+DIO Wiring
+✓
+Complete
+FINISH
+Fix & Export
+✓
+Complete
+Fix & Export — 2023-06-22
+
+Fix blocking issues, then download the YAML next to your .rec files.
+
+✓
+Ready to export · 2 warnings to review
+
+Check these values before downloading.
+
+What this day used (read-only) — configuration from 2023-06-22 · Initial configuration
+
+Animal & day
+remy — 2023-06-22
+Weight & team
+485 g — Guidera, Jennifer; Comrie, Alison
+Configuration version
+Version 1 (current)
+Probes & failed channels
+8 electrode groups, 2 failed channels
+Cameras / calibration
+overhead_camera (0.00085 m/px), side_camera (0.0009 m/px)
+Data acquisition
+1 device (SpikeGadgets)
+Tasks & videos
+sleep (1) — home cage; w_alternation (2, 4) — Second room; sleep (3, 5) — home cage · 4 videos
+Optogenetics
+No optogenetics
+Subject & session
+remy — session remy_20230622
+Non-blocking warnings
+None
+Rig constants
+raw_data_to_volts 0.195; times_period_multiplier 1.5
+Download
+Copy
+
+Not downloaded yet.
+
+20230622_remy_metadata.yml
+View YAML · one file
+Copyright © 2026 Loren Frank Lab
+The University of California at San Francisco

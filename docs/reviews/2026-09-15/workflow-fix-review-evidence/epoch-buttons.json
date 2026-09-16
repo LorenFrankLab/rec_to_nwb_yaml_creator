@@ -1,0 +1,190 @@
+[
+  {
+    "text": "⌨Keyboard shortcuts",
+    "label": "Keyboard shortcuts"
+  },
+  {
+    "text": "Export",
+    "label": null
+  },
+  {
+    "text": "Daily log✓Complete",
+    "label": "Daily log — Complete"
+  },
+  {
+    "text": "Recording Setup✓Complete",
+    "label": "Recording Setup — Complete"
+  },
+  {
+    "text": "Failed Channels✓Complete",
+    "label": "Failed Channels — Complete"
+  },
+  {
+    "text": "DIO Wiring✓Complete",
+    "label": "DIO Wiring — Complete"
+  },
+  {
+    "text": "Fix & Export✓Complete",
+    "label": "Fix & Export — Complete"
+  },
+  {
+    "text": "Change setup",
+    "label": null
+  },
+  {
+    "text": "Epochs",
+    "label": null
+  },
+  {
+    "text": "Supplemental files 2",
+    "label": null
+  },
+  {
+    "text": "5 epochs",
+    "label": null
+  },
+  {
+    "text": "0 videos needed",
+    "label": null
+  },
+  {
+    "text": "0 statescripts expected",
+    "label": null
+  },
+  {
+    "text": "2 custom filenames",
+    "label": null
+  },
+  {
+    "text": "Templates ▾",
+    "label": null
+  },
+  {
+    "text": "Details▾",
+    "label": "Show epoch 1 details"
+  },
+  {
+    "text": "",
+    "label": "Move epoch 1 up"
+  },
+  {
+    "text": "",
+    "label": "Move epoch 1 down"
+  },
+  {
+    "text": "",
+    "label": "Delete epoch 1"
+  },
+  {
+    "text": "⋮",
+    "label": "More actions for epoch 1"
+  },
+  {
+    "text": "Details▾",
+    "label": "Show epoch 2 details"
+  },
+  {
+    "text": "",
+    "label": "Move epoch 2 up"
+  },
+  {
+    "text": "",
+    "label": "Move epoch 2 down"
+  },
+  {
+    "text": "",
+    "label": "Delete epoch 2"
+  },
+  {
+    "text": "⋮",
+    "label": "More actions for epoch 2"
+  },
+  {
+    "text": "Details▾",
+    "label": "Show epoch 3 details"
+  },
+  {
+    "text": "",
+    "label": "Move epoch 3 up"
+  },
+  {
+    "text": "",
+    "label": "Move epoch 3 down"
+  },
+  {
+    "text": "",
+    "label": "Delete epoch 3"
+  },
+  {
+    "text": "⋮",
+    "label": "More actions for epoch 3"
+  },
+  {
+    "text": "Details▾",
+    "label": "Show epoch 4 details"
+  },
+  {
+    "text": "",
+    "label": "Move epoch 4 up"
+  },
+  {
+    "text": "",
+    "label": "Move epoch 4 down"
+  },
+  {
+    "text": "",
+    "label": "Delete epoch 4"
+  },
+  {
+    "text": "⋮",
+    "label": "More actions for epoch 4"
+  },
+  {
+    "text": "Details▾",
+    "label": "Show epoch 5 details"
+  },
+  {
+    "text": "",
+    "label": "Move epoch 5 up"
+  },
+  {
+    "text": "",
+    "label": "Move epoch 5 down"
+  },
+  {
+    "text": "",
+    "label": "Delete epoch 5"
+  },
+  {
+    "text": "⋮",
+    "label": "More actions for epoch 5"
+  },
+  {
+    "text": "Remove",
+    "label": "Remove file probe_adjustment_log"
+  },
+  {
+    "text": "Remove",
+    "label": "Remove file behavioral_notes"
+  },
+  {
+    "text": "Psychopy stim script",
+    "label": "Add Psychopy stim script"
+  },
+  {
+    "text": "Realtime output",
+    "label": "Add Realtime output"
+  },
+  {
+    "text": "Behavior timeline",
+    "label": "Add Behavior timeline"
+  },
+  {
+    "text": "FSGUI log",
+    "label": "Add FSGUI log"
+  },
+  {
+    "text": "Custom file",
+    "label": "Add Custom file"
+  }
+]

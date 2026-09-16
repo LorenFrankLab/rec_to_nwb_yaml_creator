@@ -1,0 +1,27 @@
+[
+  {
+    "label": "Daily log — Complete",
+    "tabIndex": 0,
+    "text": "Daily log✓Complete"
+  },
+  {
+    "label": "Recording Setup — Complete",
+    "tabIndex": -1,
+    "text": "Recording Setup✓Complete"
+  },
+  {
+    "label": "Failed Channels — Complete",
+    "tabIndex": -1,
+    "text": "Failed Channels✓Complete"
+  },
+  {
+    "label": "DIO Wiring — Complete",
+    "tabIndex": -1,
+    "text": "DIO Wiring✓Complete"
+  },
+  {
+    "label": "Fix & Export — Complete",
+    "tabIndex": -1,
+    "text": "Fix & Export✓Complete"
+  }
+]

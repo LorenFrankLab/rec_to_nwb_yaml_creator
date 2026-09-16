@@ -1,0 +1,17 @@
+Skip to main contentSkip to navigation
+Workspace
+Validation & Export
+⌨
+Keyboard shortcuts
+Import complete
+
+Imported 2 recording days across 1 animal.
+
+remy
+Camera calibrations
+remy — “overhead_camera”
+overhead_camera — meters_per_pixel 0.001 — 2023-06-22
+overhead_camera_20230623 — meters_per_pixel 0.002 — 2023-06-23
+Import more files
+Copyright © 2026 Loren Frank Lab
+The University of California at San Francisco

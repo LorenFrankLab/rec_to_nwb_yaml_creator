@@ -1,0 +1,79 @@
+Reviewed HEAD: 036b959169c038ccf3e9582cfdf9a2b55b39edd6
+
+npm run typecheck — exit 0
+
+> Rec-to-NWB YAML Generator@2.3.0 typecheck
+> tsc --noEmit
+
+
+npx vitest run — exit 0; full-suite summary
+     ✓ creates complete session with all optional fields  9380ms
+     ✓ adds multiple experimenter names  2385ms
+     ✓ adds complete subject information  3648ms
+     ✓ configures data acquisition device  3087ms
+     ✓ adds cameras with auto-incrementing IDs  7276ms
+     ✓ adds tasks with camera references  6794ms
+     ✓ adds behavioral events  2910ms
+     ✓ adds electrode groups with device types  5322ms
+     ✓ triggers ntrode generation when device type selected  4227ms
+     ✓ validates and exports complete session as valid YAML  8548ms
+
+ Test Files  385 passed (385)
+      Tests  5469 passed (5469)
+   Start at  10:04:55
+   Duration  59.43s (transform 17.05s, setup 199.59s, collect 65.31s, tests 291.24s, environment 166.29s, prepare 2.61s)
+
+
+Changed-file ESLint --max-warnings 0 — exit 0
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+Browserslist: browsers data (caniuse-lite) is 11 months old. Please run:
+  npx update-browserslist-db@latest
+  Why you should do it regularly: https://github.com/browserslist/update-db#readme
+
+Three existing workspace browser specs — exit 0
+(node:86418) [DEP0205] DeprecationWarning: `module.register()` is deprecated. Use `module.registerHooks()` instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+
+Running 26 tests using 2 workers
+
+(node:86421) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:86420) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:86420) [DEP0205] DeprecationWarning: `module.register()` is deprecated. Use `module.registerHooks()` instead.
+(node:86421) [DEP0205] DeprecationWarning: `module.register()` is deprecated. Use `module.registerHooks()` instead.
+(node:86421) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:86420) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   2 e2e/workspace-persistence-recovery.spec.js:65:7 › Workspace persistence & recovery › a seeded configured workspace survives a full reload (913ms)
+  ✓   3 e2e/workspace-persistence-recovery.spec.js:104:7 › Workspace persistence & recovery › an empty workspace blob recovers (no crash) with a "missing sections" notice (492ms)
+  ✓   1 e2e/workspace-daily-workflow.spec.js:55:7 › backfill June 25 by typed date: starts from June 22, pins setup v1 (not the newer v2), opens directly (desktop 1280×720) (1.9s)
+  ✓   4 e2e/workspace-persistence-recovery.spec.js:136:7 › Workspace persistence & recovery › a corrupt (non-JSON) blob is discarded with a visible notice, no crash (517ms)
+  ✓   6 e2e/workspace-persistence-recovery.spec.js:166:7 › Workspace persistence & recovery › without IndexedDB, the discarded original is still downloadable after a reload (a durable localStorage copy) (833ms)
+  ✓   5 e2e/workspace-daily-workflow.spec.js:55:7 › backfill June 25 by typed date: starts from June 22, pins setup v1 (not the newer v2), opens directly (phone 390×844) (1.8s)
+  ✓   7 e2e/workspace-persistence-recovery.spec.js:187:7 › Workspace persistence & recovery › restoring a backup is refused while the unrestorable original could not be preserved (nothing overwrites the only copy) (973ms)
+  ✓   8 e2e/workspace-daily-workflow.spec.js:93:5 › Log today creates today’s day and opens it; a second press just opens it (928ms)
+  ✓   9 e2e/workspace-persistence-recovery.spec.js:212:7 › Workspace persistence & recovery › Cancel during a delayed restore aborts it: an edit saved afterwards is never overwritten by the stale restore (1.4s)
+  ✓  10 e2e/workspace-daily-workflow.spec.js:101:5 › typing into a focused field, Ctrl+S, and reloading preserves the text (F3) (1.1s)
+  ✓  11 e2e/workspace-persistence-recovery.spec.js:283:7 › Workspace persistence & recovery › a restore whose revision-marker write fails is refused as a whole: this tab, storage and a fresh tab all keep the old workspace (1.1s)
+  ✓  12 e2e/workspace-daily-workflow.spec.js:115:5 › a second tab opens read-only — its editing controls are DISABLED — and cannot overwrite the editing tab (F4) (1.7s)
+  ✓  13 e2e/workspace-persistence-recovery.spec.js:318:7 › Workspace persistence & recovery › a leftover revision stamp from a closed tab never blocks the sole writer after a discard (1.7s)
+  ✓  15 e2e/workspace-persistence-recovery.spec.js:342:7 › Workspace persistence & recovery › a malformed blob whose required section is wrong-typed is discarded, not laundered (585ms)
+  ✓  14 e2e/workspace-daily-workflow.spec.js:145:5 › hand-over is REFUSED while the editing tab cannot save: its unsaved observation is kept, the requester is told why (1.6s)
+  ✓  16 e2e/workspace-persistence-recovery.spec.js:372:7 › Workspace persistence & recovery › a failed autosave shows the save-failure state and keeps the unsaved-work guard armed (1.8s)
+  ✓  18 e2e/workspace-persistence-recovery.spec.js:422:7 › Workspace persistence & recovery › importing a YAML missing required fields surfaces them for repair, never silently (786ms)
+  ✓  17 e2e/workspace-daily-workflow.spec.js:176:5 › workspace backup → restore preserves incomplete days, setup history and provenance (F8) (2.4s)
+  ✓  19 e2e/workspace-persistence-recovery.spec.js:466:7 › Workspace persistence & recovery › a valid YAML imported through the FILE PICKER advances to the repair view (not zero files) (669ms)
+  ✓  20 e2e/workspace-daily-workflow.spec.js:215:5 › a download reads "Downloaded"; a later weight correction reads "Changed since download" (F6) (1.1s)
+  ✓  21 e2e/workspace-persistence-recovery.spec.js:520:7 › Workspace persistence & recovery › multiple ready YAMLs are reviewed and committed as one animal history (891ms)
+  ✓  23 e2e/workspace-workflows.spec.js:58:7 › Workspace export workflows › same-day: a prepared animal exports one day without re-entering shared setup (1.1s)
+  ✓  22 e2e/workspace-daily-workflow.spec.js:233:5 › duplicating June 22 (setup v1) to July 5 pins the setup effective July 5 (v2), not the source’s (2.1s)
+  ✓  24 e2e/workspace-workflows.spec.js:98:7 › Workspace export workflows › catch-up: per-day scan fields are visible and batch export ships every ready day (1.1s)
+  ✓  25 e2e/workspace-daily-workflow.spec.js:248:5 › the profile editor refuses a subject id another animal already uses (1.0s)
+  ✓  26 e2e/workspace-workflows.spec.js:173:7 › Workspace export workflows › catch-up: an unready day is excluded from batch export (1.2s)
+
+  26 passed (16.6s)
+
+Additional Chromium cleanup/reload/backup/comparison diagnostic — exit 0
+git diff --check 5fa83f98..HEAD — exit 0

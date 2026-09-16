@@ -1,0 +1,57 @@
+Skip to main contentSkip to navigation
+Navigated to Day Editor: remy-2023-06-22
+Workspace
+Validation & Export
+⌨
+Keyboard shortcuts
+Workspace
+›
+Animal: remy
+›
+Day: 2023-06-22
+Export
+Day Editor: remy - 2023-06-22
+Configuration v1
+Ready
+Animal context
+Wild Type · M · Rattus norvegicus
+Config v1
+✓
+Ready to export
+DAY
+Daily log
+✓
+Complete
+RECORDING
+Recording Setup
+✓
+Complete
+Failed Channels
+✓
+Complete
+DIO Wiring
+✓
+Complete
+FINISH
+Fix & Export
+✓
+Complete
+Recording Setup
+Recording system
+
+This session was recorded on SpikeGadgets. Add more systems in the animal's Recording System tab to choose a different one per day.
+
+Cameras used this day
+
+Check the cameras this recording day used. A camera already referenced by a task, video, or FsGUI protocol is used regardless and shown checked.
+
+overhead_camera (id 0)
+— used by a task/video
+side_camera (id 1)
+— used by a task/video
+Day-only technical overrides
+OPTIONAL
+Hardware configuration
+V1
+Copyright © 2026 Loren Frank Lab
+The University of California at San Francisco

@@ -1,0 +1,739 @@
+{
+  "observations": [
+    {
+      "name": "01-default-legacy",
+      "url": "http://127.0.0.1:3017/",
+      "dimensions": {
+        "viewport": 1440,
+        "width": 1440,
+        "height": 2787
+      },
+      "violations": [
+        {
+          "id": "label",
+          "impact": "critical",
+          "description": "Ensure every form element has a label",
+          "nodes": [
+            {
+              "target": [
+                "#importYAMLFile"
+              ],
+              "summary": "Fix any of the following:\n  Element does not have an implicit (wrapped) <label>\n  Element does not have an explicit <label>\n  aria-label attribute does not exist or is empty\n  aria-labelledby attribute does not exist, references elements that do not exist or references elements that are empty\n  Element has no title attribute\n  Element has no placeholder attribute\n  Element's default semantics were not overridden with role=\"none\" or role=\"presentation\""
+            },
+            {
+              "target": [
+                "input[step=\"1\"]"
+              ],
+              "summary": "Fix any of the following:\n  Element does not have an implicit (wrapped) <label>\n  Element does not have an explicit <label>\n  aria-label attribute does not exist or is empty\n  aria-labelledby attribute does not exist, references elements that do not exist or references elements that are empty\n  Element has no title attribute\n  Element has no placeholder attribute\n  Element's default semantics were not overridden with role=\"none\" or role=\"presentation\""
+            }
+          ]
+        },
+        {
+          "id": "target-size",
+          "impact": "serious",
+          "description": "Ensure touch targets have sufficient size and space",
+          "nodes": [
+            {
+              "target": [
+                "a[href$=\"#lab-area\"]"
+              ],
+              "summary": "Fix any of the following:\n  Target has insufficient size (23.5px by 16px, should be at least 24px by 24px)\n  Target has insufficient space to its closest neighbors. Safe clickable space has a diameter of 22px instead of at least 24px."
+            },
+            {
+              "target": [
+                "a[href$=\"#institution-area\"]"
+              ],
+              "summary": "Fix any of the following:\n  Target has insufficient size (60.3px by 16px, should be at least 24px by 24px)\n  Target has insufficient space to its closest neighbors. Safe clickable space has a diameter of 22px instead of at least 24px."
+            },
+            {
+              "target": [
+                "a[href=\"#experiment_description-area\"]"
+              ],
+              "summary": "Fix any of the following:\n  Target has insufficient size (145.6px by 16px, should be at least 24px by 24px)\n  Target has insufficient space to its closest neighbors. Safe clickable space has a diameter of 19.4px instead of at least 24px."
+            },
+            {
+              "target": [
+                "a[href$=\"#session_description-area\"]"
+              ],
+              "summary": "Fix any of the following:\n  Target has insufficient size (124.4px by 16px, should be at least 24px by 24px)\n  Target has insufficient space to its closest neighbors. Safe clickable space has a diameter of 19.4px instead of at least 24px."
+            },
+            {
+              "target": [
+                "a[href$=\"#session_id-area\"]"
+              ],
+              "summary": "Fix any of the following:\n  Target has insufficient size (65.8px by 16px, should be at least 24px by 24px)\n  Target has insufficient space to its closest neighbors. Safe clickable space has a diameter of 14.2px instead of at least 24px."
+            },
+            {
+              "target": [
+                "a[href$=\"#keywords-area\"]"
+              ],
+              "summary": "Fix any of the following:\n  Target has insufficient size (61.8px by 16px, should be at least 24px by 24px)\n  Target has insufficient space to its closest neighbors. Safe clickable space has a diameter of 14.2px instead of at least 24px."
+            },
+            {
+              "target": [
+                "a[href$=\"#subject-area\"]"
+              ],
+              "summary": "Fix any of the following:\n  Target has insufficient size (47px by 16px, should be at least 24px by 24px)\n  Target has insufficient space to its closest neighbors. Safe clickable space has a diameter of 16.8px instead of at least 24px."
+            },
+            {
+              "target": [
+                "a[href$=\"#data_acq_device-area\"]"
+              ],
+              "summary": "Fix any of the following:\n  Target has insufficient size (104.1px by 16px, should be at least 24px by 24px)\n  Target has insufficient space to its closest neighbors. Safe clickable space has a diameter of 22px instead of at least 24px."
+            },
+            {
+              "target": [
+                "a[href$=\"#cameras-area\"]"
+              ],
+              "summary": "Fix any of the following:\n  Target has insufficient size (57.1px by 16px, should be at least 24px by 24px)\n  Target has insufficient space to its closest neighbors. Safe clickable space has a diameter of 19.4px instead of at least 24px."
+            },
+            {
+              "target": [
+                "a[href$=\"#tasks-area\"]"
+              ],
+              "summary": "Fix any of the following:\n  Target has insufficient size (36px by 16px, should be at least 24px by 24px)\n  Target has insufficient space to its closest neighbors. Safe clickable space has a diameter of 19.4px instead of at least 24px."
+            },
+            {
+              "target": [
+                "a[href$=\"#associated_files-area\"]"
+              ],
+              "summary": "Fix any of the following:\n  Target has insufficient size (102.5px by 16px, should be at least 24px by 24px)\n  Target has insufficient space to its closest neighbors. Safe clickable space has a diameter of 22px instead of at least 24px."
+            },
+            {
+              "target": [
+                "a[href=\"#associated_video_files-area\"]"
+              ],
+              "summary": "Fix any of the following:\n  Target has insufficient size (142.2px by 16px, should be at least 24px by 24px)\n  Target has insufficient space to its closest neighbors. Safe clickable space has a diameter of 22px instead of at least 24px."
+            },
+            {
+              "target": [
+                "a[href$=\"#units-area\"]"
+              ],
+              "summary": "Fix any of the following:\n  Target has insufficient size (32.1px by 16px, should be at least 24px by 24px)\n  Target has insufficient space to its closest neighbors. Safe clickable space has a diameter of 22px instead of at least 24px."
+            },
+            {
+              "target": [
+                "a[href=\"#times_period_multiplier-area\"]"
+              ],
+              "summary": "Fix any of the following:\n  Target has insufficient size (142.7px by 16px, should be at least 24px by 24px)\n  Target has insufficient space to its closest neighbors. Safe clickable space has a diameter of 22px instead of at least 24px."
+            },
+            {
+              "target": [
+                "a[href$=\"#raw_data_to_volts-area\"]"
+              ],
+              "summary": "Fix any of the following:\n  Target has insufficient size (114.8px by 16px, should be at least 24px by 24px)\n  Target has insufficient space to its closest neighbors. Safe clickable space has a diameter of 22px instead of at least 24px."
+            },
+            {
+              "target": [
+                "a[href=\"#default_header_file_path-area\"]"
+              ],
+              "summary": "Fix any of the following:\n  Target has insufficient size (154.2px by 16px, should be at least 24px by 24px)\n  Target has insufficient space to its closest neighbors. Safe clickable space has a diameter of 22px instead of at least 24px."
+            },
+            {
+              "target": [
+                "a[href$=\"#behavioral_events-area\"]"
+              ],
+              "summary": "Fix any of the following:\n  Target has insufficient size (113.5px by 16px, should be at least 24px by 24px)\n  Target has insufficient space to its closest neighbors. Safe clickable space has a diameter of 22px instead of at least 24px."
+            },
+            {
+              "target": [
+                "a[href$=\"#device-area\"]"
+              ],
+              "summary": "Fix any of the following:\n  Target has insufficient size (43px by 16px, should be at least 24px by 24px)\n  Target has insufficient space to its closest neighbors. Safe clickable space has a diameter of 22px instead of at least 24px."
+            },
+            {
+              "target": [
+                "a[href=\"#opto_excitation_source-area\"]"
+              ],
+              "summary": "Fix any of the following:\n  Target has insufficient size (144px by 16px, should be at least 24px by 24px)\n  Target has insufficient space to its closest neighbors. Safe clickable space has a diameter of 22px instead of at least 24px."
+            },
+            {
+              "target": [
+                "a[href$=\"#optical_fiber-area\"]"
+              ],
+              "summary": "Fix any of the following:\n  Target has insufficient size (79.8px by 16px, should be at least 24px by 24px)\n  Target has insufficient space to its closest neighbors. Safe clickable space has a diameter of 15px instead of at least 24px."
+            },
+            {
+              "target": [
+                "a[href$=\"#virus_injection-area\"]"
+              ],
+              "summary": "Fix any of the following:\n  Target has insufficient size (88.2px by 16px, should be at least 24px by 24px)\n  Target has insufficient space to its closest neighbors. Safe clickable space has a diameter of 14.4px instead of at least 24px."
+            },
+            {
+              "target": [
+                "a[href$=\"#fs_gui_yamls-area\"]"
+              ],
+              "summary": "Fix any of the following:\n  Target has insufficient size (83.2px by 16px, should be at least 24px by 24px)\n  Target has insufficient space to its closest neighbors. Safe clickable space has a diameter of 14.4px instead of at least 24px."
+            },
+            {
+              "target": [
+                "li:nth-child(24) > .nav-link"
+              ],
+              "summary": "Fix any of the following:\n  Target has insufficient size (209px by 16px, should be at least 24px by 24px)\n  Target has insufficient space to its closest neighbors. Safe clickable space has a diameter of 22px instead of at least 24px."
+            },
+            {
+              "target": [
+                "a[href$=\"#electrode_groups-area\"]"
+              ],
+              "summary": "Fix any of the following:\n  Target has insufficient size (109.6px by 16px, should be at least 24px by 24px)\n  Target has insufficient space to its closest neighbors. Safe clickable space has a diameter of 22px instead of at least 24px."
+            },
+            {
+              "target": [
+                "a[href$=\"www.ucsf.edu\"]"
+              ],
+              "summary": "Fix any of the following:\n  Target has insufficient size (253.3px by 15px, should be at least 24px by 24px)\n  Target has insufficient space to its closest neighbors. Safe clickable space has a diameter of 15px instead of at least 24px."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "02-empty-workspace",
+      "url": "http://127.0.0.1:3017/#/workspace",
+      "dimensions": {
+        "viewport": 1440,
+        "width": 1440,
+        "height": 900
+      },
+      "violations": [
+        {
+          "id": "target-size",
+          "impact": "serious",
+          "description": "Ensure touch targets have sufficient size and space",
+          "nodes": [
+            {
+              "target": [
+                "a[href$=\"www.ucsf.edu\"]"
+              ],
+              "summary": "Fix any of the following:\n  Target has insufficient size (253.3px by 15px, should be at least 24px by 24px)\n  Target has insufficient space to its closest neighbors. Safe clickable space has a diameter of 15px instead of at least 24px."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "03-create-identity",
+      "url": "http://127.0.0.1:3017/#/home",
+      "dimensions": {
+        "viewport": 1440,
+        "width": 1440,
+        "height": 1023
+      },
+      "violations": [
+        {
+          "id": "target-size",
+          "impact": "serious",
+          "description": "Ensure touch targets have sufficient size and space",
+          "nodes": [
+            {
+              "target": [
+                "a[href$=\"www.ucsf.edu\"]"
+              ],
+              "summary": "Fix any of the following:\n  Target has insufficient size (253.3px by 15px, should be at least 24px by 24px)\n  Target has insufficient space to its closest neighbors. Safe clickable space has a diameter of 15px instead of at least 24px."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "04-import-empty",
+      "url": "http://127.0.0.1:3017/#/import",
+      "dimensions": {
+        "viewport": 1440,
+        "width": 1440,
+        "height": 900
+      },
+      "violations": [
+        {
+          "id": "target-size",
+          "impact": "serious",
+          "description": "Ensure touch targets have sufficient size and space",
+          "nodes": [
+            {
+              "target": [
+                "a[href$=\"www.ucsf.edu\"]"
+              ],
+              "summary": "Fix any of the following:\n  Target has insufficient size (253.3px by 15px, should be at least 24px by 24px)\n  Target has insufficient space to its closest neighbors. Safe clickable space has a diameter of 15px instead of at least 24px."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "05-workspace",
+      "url": "http://127.0.0.1:3017/#/workspace",
+      "dimensions": {
+        "viewport": 1440,
+        "width": 1440,
+        "height": 900
+      },
+      "violations": [
+        {
+          "id": "target-size",
+          "impact": "serious",
+          "description": "Ensure touch targets have sufficient size and space",
+          "nodes": [
+            {
+              "target": [
+                "a[href$=\"www.ucsf.edu\"]"
+              ],
+              "summary": "Fix any of the following:\n  Target has insufficient size (253.3px by 15px, should be at least 24px by 24px)\n  Target has insufficient space to its closest neighbors. Safe clickable space has a diameter of 15px instead of at least 24px."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "06-animal-days",
+      "url": "http://127.0.0.1:3017/#/animal/remy/days",
+      "dimensions": {
+        "viewport": 1440,
+        "width": 1440,
+        "height": 900
+      },
+      "violations": [
+        {
+          "id": "target-size",
+          "impact": "serious",
+          "description": "Ensure touch targets have sufficient size and space",
+          "nodes": [
+            {
+              "target": [
+                "a[href$=\"www.ucsf.edu\"]"
+              ],
+              "summary": "Fix any of the following:\n  Target has insufficient size (253.3px by 15px, should be at least 24px by 24px)\n  Target has insufficient space to its closest neighbors. Safe clickable space has a diameter of 15px instead of at least 24px."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "06-animal-electrode-groups",
+      "url": "http://127.0.0.1:3017/#/animal/remy/electrode-groups",
+      "dimensions": {
+        "viewport": 1440,
+        "width": 1440,
+        "height": 1544
+      },
+      "violations": [
+        {
+          "id": "target-size",
+          "impact": "serious",
+          "description": "Ensure touch targets have sufficient size and space",
+          "nodes": [
+            {
+              "target": [
+                "a[href$=\"www.ucsf.edu\"]"
+              ],
+              "summary": "Fix any of the following:\n  Target has insufficient size (253.3px by 15px, should be at least 24px by 24px)\n  Target has insufficient space to its closest neighbors. Safe clickable space has a diameter of 15px instead of at least 24px."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "06-animal-recording-system",
+      "url": "http://127.0.0.1:3017/#/animal/remy/recording-system",
+      "dimensions": {
+        "viewport": 1440,
+        "width": 1440,
+        "height": 900
+      },
+      "violations": [
+        {
+          "id": "target-size",
+          "impact": "serious",
+          "description": "Ensure touch targets have sufficient size and space",
+          "nodes": [
+            {
+              "target": [
+                "a[href$=\"www.ucsf.edu\"]"
+              ],
+              "summary": "Fix any of the following:\n  Target has insufficient size (253.3px by 15px, should be at least 24px by 24px)\n  Target has insufficient space to its closest neighbors. Safe clickable space has a diameter of 15px instead of at least 24px."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "06-animal-cameras",
+      "url": "http://127.0.0.1:3017/#/animal/remy/cameras",
+      "dimensions": {
+        "viewport": 1440,
+        "width": 1440,
+        "height": 900
+      },
+      "violations": [
+        {
+          "id": "target-size",
+          "impact": "serious",
+          "description": "Ensure touch targets have sufficient size and space",
+          "nodes": [
+            {
+              "target": [
+                "a[href$=\"www.ucsf.edu\"]"
+              ],
+              "summary": "Fix any of the following:\n  Target has insufficient size (253.3px by 15px, should be at least 24px by 24px)\n  Target has insufficient space to its closest neighbors. Safe clickable space has a diameter of 15px instead of at least 24px."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "06-animal-task-types",
+      "url": "http://127.0.0.1:3017/#/animal/remy/task-types",
+      "dimensions": {
+        "viewport": 1440,
+        "width": 1440,
+        "height": 900
+      },
+      "violations": [
+        {
+          "id": "target-size",
+          "impact": "serious",
+          "description": "Ensure touch targets have sufficient size and space",
+          "nodes": [
+            {
+              "target": [
+                "a[href$=\"www.ucsf.edu\"]"
+              ],
+              "summary": "Fix any of the following:\n  Target has insufficient size (253.3px by 15px, should be at least 24px by 24px)\n  Target has insufficient space to its closest neighbors. Safe clickable space has a diameter of 15px instead of at least 24px."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "06-animal-optogenetics",
+      "url": "http://127.0.0.1:3017/#/animal/remy/optogenetics",
+      "dimensions": {
+        "viewport": 1440,
+        "width": 1440,
+        "height": 900
+      },
+      "violations": [
+        {
+          "id": "target-size",
+          "impact": "serious",
+          "description": "Ensure touch targets have sufficient size and space",
+          "nodes": [
+            {
+              "target": [
+                "a[href$=\"www.ucsf.edu\"]"
+              ],
+              "summary": "Fix any of the following:\n  Target has insufficient size (253.3px by 15px, should be at least 24px by 24px)\n  Target has insufficient space to its closest neighbors. Safe clickable space has a diameter of 15px instead of at least 24px."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "06-animal-export",
+      "url": "http://127.0.0.1:3017/#/animal/remy/export",
+      "dimensions": {
+        "viewport": 1440,
+        "width": 1440,
+        "height": 900
+      },
+      "violations": [
+        {
+          "id": "target-size",
+          "impact": "serious",
+          "description": "Ensure touch targets have sufficient size and space",
+          "nodes": [
+            {
+              "target": [
+                "a[href$=\"www.ucsf.edu\"]"
+              ],
+              "summary": "Fix any of the following:\n  Target has insufficient size (253.3px by 15px, should be at least 24px by 24px)\n  Target has insufficient space to its closest neighbors. Safe clickable space has a diameter of 15px instead of at least 24px."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "07-copy-animal",
+      "url": "http://127.0.0.1:3017/#/copy-from-animal",
+      "dimensions": {
+        "viewport": 1440,
+        "width": 1440,
+        "height": 900
+      },
+      "violations": [
+        {
+          "id": "target-size",
+          "impact": "serious",
+          "description": "Ensure touch targets have sufficient size and space",
+          "nodes": [
+            {
+              "target": [
+                "a[href$=\"www.ucsf.edu\"]"
+              ],
+              "summary": "Fix any of the following:\n  Target has insufficient size (253.3px by 15px, should be at least 24px by 24px)\n  Target has insufficient space to its closest neighbors. Safe clickable space has a diameter of 15px instead of at least 24px."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "08-day-overview",
+      "url": "http://127.0.0.1:3017/#/day/remy-2023-06-22",
+      "dimensions": {
+        "viewport": 1440,
+        "width": 1440,
+        "height": 2226
+      },
+      "violations": [
+        {
+          "id": "target-size",
+          "impact": "serious",
+          "description": "Ensure touch targets have sufficient size and space",
+          "nodes": [
+            {
+              "target": [
+                "a[href$=\"www.ucsf.edu\"]"
+              ],
+              "summary": "Fix any of the following:\n  Target has insufficient size (253.3px by 15px, should be at least 24px by 24px)\n  Target has insufficient space to its closest neighbors. Safe clickable space has a diameter of 15px instead of at least 24px."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "09-day-section-1",
+      "url": "http://127.0.0.1:3017/#/day/remy-2023-06-22",
+      "dimensions": {
+        "viewport": 1440,
+        "width": 1440,
+        "height": 1084
+      },
+      "violations": [
+        {
+          "id": "target-size",
+          "impact": "serious",
+          "description": "Ensure touch targets have sufficient size and space",
+          "nodes": [
+            {
+              "target": [
+                "a[href$=\"www.ucsf.edu\"]"
+              ],
+              "summary": "Fix any of the following:\n  Target has insufficient size (253.3px by 15px, should be at least 24px by 24px)\n  Target has insufficient space to its closest neighbors. Safe clickable space has a diameter of 15px instead of at least 24px."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "09-day-section-2",
+      "url": "http://127.0.0.1:3017/#/day/remy-2023-06-22",
+      "dimensions": {
+        "viewport": 1440,
+        "width": 1440,
+        "height": 1062
+      },
+      "violations": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "description": "Ensure the contrast between foreground and background colors meets WCAG 2 AA minimum contrast ratio thresholds",
+          "nodes": [
+            {
+              "target": [
+                ".electrode-group-details:nth-child(2) > .electrode-group-summary > .status-warning.status-badge[aria-label=\"Status: 1 failed channel\"]"
+              ],
+              "summary": "Fix any of the following:\n  Element has insufficient color contrast of 2.46 (foreground color: #f57c00, background color: #fff3e0, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "target": [
+                ".electrode-group-details:nth-child(3) > .electrode-group-summary > .status-warning.status-badge[aria-label=\"Status: 1 failed channel\"]"
+              ],
+              "summary": "Fix any of the following:\n  Element has insufficient color contrast of 2.46 (foreground color: #f57c00, background color: #fff3e0, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1"
+            }
+          ]
+        },
+        {
+          "id": "target-size",
+          "impact": "serious",
+          "description": "Ensure touch targets have sufficient size and space",
+          "nodes": [
+            {
+              "target": [
+                "a[href$=\"www.ucsf.edu\"]"
+              ],
+              "summary": "Fix any of the following:\n  Target has insufficient size (253.3px by 15px, should be at least 24px by 24px)\n  Target has insufficient space to its closest neighbors. Safe clickable space has a diameter of 15px instead of at least 24px."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "09-day-section-3",
+      "url": "http://127.0.0.1:3017/#/day/remy-2023-06-22",
+      "dimensions": {
+        "viewport": 1440,
+        "width": 1440,
+        "height": 1062
+      },
+      "violations": [
+        {
+          "id": "target-size",
+          "impact": "serious",
+          "description": "Ensure touch targets have sufficient size and space",
+          "nodes": [
+            {
+              "target": [
+                "a[href$=\"www.ucsf.edu\"]"
+              ],
+              "summary": "Fix any of the following:\n  Target has insufficient size (253.3px by 15px, should be at least 24px by 24px)\n  Target has insufficient space to its closest neighbors. Safe clickable space has a diameter of 15px instead of at least 24px."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "09-day-section-4",
+      "url": "http://127.0.0.1:3017/#/day/remy-2023-06-22",
+      "dimensions": {
+        "viewport": 1440,
+        "width": 1440,
+        "height": 1062
+      },
+      "violations": [
+        {
+          "id": "target-size",
+          "impact": "serious",
+          "description": "Ensure touch targets have sufficient size and space",
+          "nodes": [
+            {
+              "target": [
+                "a[href$=\"www.ucsf.edu\"]"
+              ],
+              "summary": "Fix any of the following:\n  Target has insufficient size (253.3px by 15px, should be at least 24px by 24px)\n  Target has insufficient space to its closest neighbors. Safe clickable space has a diameter of 15px instead of at least 24px."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "10-workspace-validation",
+      "url": "http://127.0.0.1:3017/#/validation",
+      "dimensions": {
+        "viewport": 1440,
+        "width": 1440,
+        "height": 900
+      },
+      "violations": [
+        {
+          "id": "target-size",
+          "impact": "serious",
+          "description": "Ensure touch targets have sufficient size and space",
+          "nodes": [
+            {
+              "target": [
+                "a[href$=\"www.ucsf.edu\"]"
+              ],
+              "summary": "Fix any of the following:\n  Target has insufficient size (253.3px by 15px, should be at least 24px by 24px)\n  Target has insufficient space to its closest neighbors. Safe clickable space has a diameter of 15px instead of at least 24px."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "11-phone-days",
+      "url": "http://127.0.0.1:3017/#/animal/remy/days",
+      "dimensions": {
+        "viewport": 390,
+        "width": 390,
+        "height": 1221
+      },
+      "violations": [
+        {
+          "id": "target-size",
+          "impact": "serious",
+          "description": "Ensure touch targets have sufficient size and space",
+          "nodes": [
+            {
+              "target": [
+                "a[href$=\"www.ucsf.edu\"]"
+              ],
+              "summary": "Fix any of the following:\n  Target has insufficient size (253.3px by 15px, should be at least 24px by 24px)\n  Target has insufficient space to its closest neighbors. Safe clickable space has a diameter of 15px instead of at least 24px."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "12-phone-day",
+      "url": "http://127.0.0.1:3017/#/day/remy-2023-06-22",
+      "dimensions": {
+        "viewport": 390,
+        "width": 390,
+        "height": 4412
+      },
+      "violations": [
+        {
+          "id": "target-size",
+          "impact": "serious",
+          "description": "Ensure touch targets have sufficient size and space",
+          "nodes": [
+            {
+              "target": [
+                "a[href$=\"www.ucsf.edu\"]"
+              ],
+              "summary": "Fix any of the following:\n  Target has insufficient size (253.3px by 15px, should be at least 24px by 24px)\n  Target has insufficient space to its closest neighbors. Safe clickable space has a diameter of 15px instead of at least 24px."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "13-phone-cameras",
+      "url": "http://127.0.0.1:3017/#/animal/remy/cameras",
+      "dimensions": {
+        "viewport": 390,
+        "width": 390,
+        "height": 1551
+      },
+      "violations": [
+        {
+          "id": "target-size",
+          "impact": "serious",
+          "description": "Ensure touch targets have sufficient size and space",
+          "nodes": [
+            {
+              "target": [
+                "a[href$=\"www.ucsf.edu\"]"
+              ],
+              "summary": "Fix any of the following:\n  Target has insufficient size (253.3px by 15px, should be at least 24px by 24px)\n  Target has insufficient space to its closest neighbors. Safe clickable space has a diameter of 15px instead of at least 24px."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "14-phone-export",
+      "url": "http://127.0.0.1:3017/#/animal/remy/export",
+      "dimensions": {
+        "viewport": 390,
+        "width": 390,
+        "height": 1082
+      },
+      "violations": [
+        {
+          "id": "target-size",
+          "impact": "serious",
+          "description": "Ensure touch targets have sufficient size and space",
+          "nodes": [
+            {
+              "target": [
+                "a[href$=\"www.ucsf.edu\"]"
+              ],
+              "summary": "Fix any of the following:\n  Target has insufficient size (253.3px by 15px, should be at least 24px by 24px)\n  Target has insufficient space to its closest neighbors. Safe clickable space has a diameter of 15px instead of at least 24px."
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "errors": []
+}

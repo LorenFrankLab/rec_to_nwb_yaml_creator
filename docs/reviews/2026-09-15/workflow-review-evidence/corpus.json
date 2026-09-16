@@ -1,0 +1,1137 @@
+[
+  {
+    "name": "collected_metadata_yamls",
+    "totalYamlFiles": 1814,
+    "parseErrors": [
+      {
+        "file": "/Users/edeno/Downloads/collected_metadata_yamls/ebroyles/home/yaml/SC18/generated/mine/20230517_SC18_metadata.yml",
+        "error": "A block sequence may not be used as an implicit map key at line 113, column 1:"
+      },
+      {
+        "file": "/Users/edeno/Downloads/collected_metadata_yamls/sc4712/home/yaml/SC131/to check/20251124_SC131_metadata.yml",
+        "error": "A block sequence may not be used as an implicit map key at line 142, column 1:"
+      },
+      {
+        "file": "/Users/edeno/Downloads/collected_metadata_yamls/xulu/stelmo/recordings/Lily/raw/20251208_Lily_metadata.yml",
+        "error": "A block sequence may not be used as an implicit map key at line 60, column 1:"
+      },
+      {
+        "file": "/Users/edeno/Downloads/collected_metadata_yamls/xulu/stelmo/recordings/Lily/raw/20251209_Lily_metadata.yml",
+        "error": "A block sequence may not be used as an implicit map key at line 60, column 1:"
+      },
+      {
+        "file": "/Users/edeno/Downloads/collected_metadata_yamls/xulu/stelmo/recordings/Lily/raw/20251210_Lily_metadata.yml",
+        "error": "A block sequence may not be used as an implicit map key at line 60, column 1:"
+      },
+      {
+        "file": "/Users/edeno/Downloads/collected_metadata_yamls/xulu/stelmo/recordings/Lily/raw/20251211_Lily_metadata.yml",
+        "error": "A block sequence may not be used as an implicit map key at line 60, column 1:"
+      },
+      {
+        "file": "/Users/edeno/Downloads/collected_metadata_yamls/xulu/stelmo/recordings/Lily/raw/20251212/20251212_Lily_metadata.yml",
+        "error": "A block sequence may not be used as an implicit map key at line 60, column 1:"
+      },
+      {
+        "file": "/Users/edeno/Downloads/collected_metadata_yamls/xulu/stelmo/recordings/Lily/raw/20251213_Lily_metadata.yml",
+        "error": "A block sequence may not be used as an implicit map key at line 60, column 1:"
+      },
+      {
+        "file": "/Users/edeno/Downloads/collected_metadata_yamls/xulu/stelmo/recordings/Lily/raw/20251215_Lily_metadata.yml",
+        "error": "A block sequence may not be used as an implicit map key at line 60, column 1:"
+      },
+      {
+        "file": "/Users/edeno/Downloads/collected_metadata_yamls/xulu/stelmo/recordings/Lily/raw/20251216_Lily_metadata.yml",
+        "error": "A block sequence may not be used as an implicit map key at line 60, column 1:"
+      },
+      {
+        "file": "/Users/edeno/Downloads/collected_metadata_yamls/xulu/stelmo/recordings/Lily/raw/20251218_Lily_metadata.yml",
+        "error": "A block sequence may not be used as an implicit map key at line 60, column 1:"
+      },
+      {
+        "file": "/Users/edeno/Downloads/collected_metadata_yamls/xulu/stelmo/recordings/Lily/raw/20251219_Lily_metadata.yml",
+        "error": "A block sequence may not be used as an implicit map key at line 60, column 1:"
+      },
+      {
+        "file": "/Users/edeno/Downloads/collected_metadata_yamls/xulu/stelmo/recordings/Lily/raw/20251220_Lily_metadata.yml",
+        "error": "A block sequence may not be used as an implicit map key at line 60, column 1:"
+      },
+      {
+        "file": "/Users/edeno/Downloads/collected_metadata_yamls/xulu/stelmo/recordings/Lily/raw/20251223_Lily_metadata.yml",
+        "error": "A block sequence may not be used as an implicit map key at line 60, column 1:"
+      },
+      {
+        "file": "/Users/edeno/Downloads/collected_metadata_yamls/xulu/stelmo/recordings/Lily/raw/20251225_Lily_metadata.yml",
+        "error": "A block sequence may not be used as an implicit map key at line 60, column 1:"
+      }
+    ],
+    "nonSessionFiles": 35,
+    "uniqueContentSessionFiles": 1646,
+    "datedUniqueContentSessionFiles": 1634,
+    "subjectIds": 145,
+    "multidaySubjectIds": 127,
+    "variation": {
+      "weight": {
+        "animals": 47,
+        "examples": [
+          "Senor",
+          "chimi",
+          "peanut",
+          "wilbur",
+          "j16",
+          "Embry"
+        ]
+      },
+      "dob": {
+        "animals": 19,
+        "examples": [
+          "peanut",
+          "Winnie",
+          "Seth",
+          "SC100",
+          "SC101",
+          "SC104"
+        ]
+      },
+      "genotype": {
+        "animals": 15,
+        "examples": [
+          "SC100",
+          "SC101",
+          "SC104",
+          "SC79",
+          "SC85",
+          "SC92"
+        ]
+      },
+      "experimenters": {
+        "animals": 17,
+        "examples": [
+          "peanut",
+          "wilbur",
+          "Emmett",
+          "Seth",
+          "SC100",
+          "SC101"
+        ]
+      },
+      "experiment_description": {
+        "animals": 23,
+        "examples": [
+          "Banner",
+          "peanut",
+          "wilbur",
+          "Winnie",
+          "SC100",
+          "SC101"
+        ]
+      },
+      "task_names": {
+        "animals": 74,
+        "examples": [
+          "Senor",
+          "Banner",
+          "chimi",
+          "peanut",
+          "wilbur",
+          "j16"
+        ]
+      },
+      "task_environment": {
+        "animals": 77,
+        "examples": [
+          "Senor",
+          "Banner",
+          "chimi",
+          "peanut",
+          "wilbur",
+          "j16"
+        ]
+      },
+      "cameras": {
+        "animals": 56,
+        "examples": [
+          "peanut",
+          "wilbur",
+          "Bilbo",
+          "Frodo",
+          "Odins",
+          "Wallie"
+        ]
+      },
+      "calibration": {
+        "animals": 54,
+        "examples": [
+          "peanut",
+          "wilbur",
+          "Bilbo",
+          "Frodo",
+          "Odins",
+          "Embry"
+        ]
+      },
+      "bad_channels": {
+        "animals": 29,
+        "examples": [
+          "chimi",
+          "peanut",
+          "wilbur",
+          "Winnie",
+          "Bilbo",
+          "SC101"
+        ]
+      },
+      "electrode_locations": {
+        "animals": 31,
+        "examples": [
+          "chimi",
+          "peanut",
+          "wilbur",
+          "Bilbo",
+          "Emmett",
+          "SC100"
+        ]
+      },
+      "behavioral_events": {
+        "animals": 43,
+        "examples": [
+          "Senor",
+          "Banner",
+          "peanut",
+          "wilbur",
+          "Embry",
+          "Charlie"
+        ]
+      },
+      "associated_files": {
+        "animals": 108,
+        "examples": [
+          "Senor",
+          "Banner",
+          "chimi",
+          "peanut",
+          "wilbur",
+          "j16"
+        ]
+      }
+    },
+    "calibrationConflicts": [
+      {
+        "id": "wilbur",
+        "camera": "wilbur sleep camera",
+        "values": [
+          {
+            "date": "2021-03-26",
+            "file": "/Users/edeno/Downloads/collected_metadata_yamls/alison/nimbus/all_rat_metadata_yaml/wilbur metadata/20210326_wilbur.yml",
+            "mpp": 0.000474428
+          },
+          {
+            "date": "2021-03-28",
+            "file": "/Users/edeno/Downloads/collected_metadata_yamls/alison/nimbus/all_rat_metadata_yaml/wilbur metadata/20210328_wilbur.yml",
+            "mpp": 0.0005
+          }
+        ]
+      },
+      {
+        "id": "wilbur",
+        "camera": "wilbur run camera",
+        "values": [
+          {
+            "date": "2021-03-26",
+            "file": "/Users/edeno/Downloads/collected_metadata_yamls/alison/nimbus/all_rat_metadata_yaml/wilbur metadata/20210326_wilbur.yml",
+            "mpp": 0.0031784
+          },
+          {
+            "date": "2021-03-28",
+            "file": "/Users/edeno/Downloads/collected_metadata_yamls/alison/nimbus/all_rat_metadata_yaml/wilbur metadata/20210328_wilbur.yml",
+            "mpp": 0.00321
+          }
+        ]
+      },
+      {
+        "id": "Bilbo",
+        "camera": "Sleepbox_Overhead",
+        "values": [
+          {
+            "date": "2023-07-22",
+            "file": "/Users/edeno/Downloads/collected_metadata_yamls/amankili/cumulus/Bilbo/metadata/20230722_Bilbo.yml",
+            "mpp": 0.00222
+          },
+          {
+            "date": "2023-08-02",
+            "file": "/Users/edeno/Downloads/collected_metadata_yamls/amankili/cumulus/Bilbo/metadata/20230802_Bilbo_metadata.yml",
+            "mpp": 0.0022
+          }
+        ]
+      },
+      {
+        "id": "Frodo",
+        "camera": "Sleepbox_Overhead",
+        "values": [
+          {
+            "date": "2023-08-08",
+            "file": "/Users/edeno/Downloads/collected_metadata_yamls/amankili/cumulus/Frodo/metadata/20230808_Frodo_metadata.yml",
+            "mpp": 0.00222
+          },
+          {
+            "date": "2023-08-14",
+            "file": "/Users/edeno/Downloads/collected_metadata_yamls/amankili/cumulus/Frodo/metadata/20230814_Frodo_metadata.yml",
+            "mpp": 0.0022
+          }
+        ]
+      },
+      {
+        "id": "Emmett",
+        "camera": "sleep_camera",
+        "values": [
+          {
+            "date": "2025-11-06",
+            "file": "/Users/edeno/Downloads/collected_metadata_yamls/denisse/stelmo/Emmett/20251106/20251106_Emmett_metadata.yml",
+            "mpp": 0.00102
+          },
+          {
+            "date": "2025-12-03",
+            "file": "/Users/edeno/Downloads/collected_metadata_yamls/denisse/stelmo/Emmett/20251203/20251203_Emmett_metadata.yml",
+            "mpp": 0.001073
+          },
+          {
+            "date": "2026-02-02",
+            "file": "/Users/edeno/Downloads/collected_metadata_yamls/denisse/stelmo/Emmett/20260202/20260202_Emmett_metadata.yml",
+            "mpp": 0.001173
+          }
+        ]
+      },
+      {
+        "id": "Emmett",
+        "camera": "maze_camera",
+        "values": [
+          {
+            "date": "2025-11-06",
+            "file": "/Users/edeno/Downloads/collected_metadata_yamls/denisse/stelmo/Emmett/20251106/20251106_Emmett_metadata.yml",
+            "mpp": 0.001989
+          },
+          {
+            "date": "2025-12-01",
+            "file": "/Users/edeno/Downloads/collected_metadata_yamls/denisse/stelmo/Emmett/20251201/20251201_Emmett_metadata.yml",
+            "mpp": 0.0018274
+          },
+          {
+            "date": "2025-12-03",
+            "file": "/Users/edeno/Downloads/collected_metadata_yamls/denisse/stelmo/Emmett/20251203/20251203_Emmett_metadata.yml",
+            "mpp": 0.002235
+          },
+          {
+            "date": "2026-01-19",
+            "file": "/Users/edeno/Downloads/collected_metadata_yamls/denisse/stelmo/Emmett/20260119/20260119_Emmett_metadata.yml",
+            "mpp": 0.001935
+          },
+          {
+            "date": "2026-02-02",
+            "file": "/Users/edeno/Downloads/collected_metadata_yamls/denisse/stelmo/Emmett/20260202/20260202_Emmett_metadata.yml",
+            "mpp": 0.002289
+          }
+        ]
+      },
+      {
+        "id": "Jacob",
+        "camera": "sleep_camera",
+        "values": [
+          {
+            "date": "2025-06-16",
+            "file": "/Users/edeno/Downloads/collected_metadata_yamls/denisse/stelmo/Jacob/raw/20250616/20250616_Jacob_metadata.yml",
+            "mpp": 0.00102
+          },
+          {
+            "date": "2025-06-18",
+            "file": "/Users/edeno/Downloads/collected_metadata_yamls/denisse/stelmo/Jacob/raw/20250618/20250618_Jacob_metadata.yml",
+            "mpp": 0.001073
+          }
+        ]
+      },
+      {
+        "id": "Jacob",
+        "camera": "maze_camera",
+        "values": [
+          {
+            "date": "2025-06-16",
+            "file": "/Users/edeno/Downloads/collected_metadata_yamls/denisse/stelmo/Jacob/raw/20250616/20250616_Jacob_metadata.yml",
+            "mpp": 0.001989
+          },
+          {
+            "date": "2025-06-18",
+            "file": "/Users/edeno/Downloads/collected_metadata_yamls/denisse/stelmo/Jacob/raw/20250618/20250618_Jacob_metadata.yml",
+            "mpp": 0.002235
+          },
+          {
+            "date": "2025-06-21",
+            "file": "/Users/edeno/Downloads/collected_metadata_yamls/denisse/stelmo/Jacob/raw/20250621/20250621_Jacob_metadata.yml",
+            "mpp": 0.00201
+          }
+        ]
+      },
+      {
+        "id": "Seth",
+        "camera": "sleep_camera",
+        "values": [
+          {
+            "date": "2025-12-08",
+            "file": "/Users/edeno/Downloads/collected_metadata_yamls/denisse/stelmo/Seth/20251208/20251208_Seth_metadata.yml",
+            "mpp": 0.00102
+          },
+          {
+            "date": "2025-12-10",
+            "file": "/Users/edeno/Downloads/collected_metadata_yamls/denisse/stelmo/Seth/20251210/20251210_Seth_metadata.yml",
+            "mpp": 0.001073
+          }
+        ]
+      },
+      {
+        "id": "Seth",
+        "camera": "maze_camera",
+        "values": [
+          {
+            "date": "2025-12-08",
+            "file": "/Users/edeno/Downloads/collected_metadata_yamls/denisse/stelmo/Seth/20251208/20251208_Seth_metadata.yml",
+            "mpp": 0.0018274
+          },
+          {
+            "date": "2025-12-10",
+            "file": "/Users/edeno/Downloads/collected_metadata_yamls/denisse/stelmo/Seth/20251210/20251210_Seth_metadata.yml",
+            "mpp": 0.002235
+          },
+          {
+            "date": "2026-01-22",
+            "file": "/Users/edeno/Downloads/collected_metadata_yamls/denisse/stelmo/Seth/20260122_part2/20260122_Seth_metadata.yml",
+            "mpp": 0.001935
+          }
+        ]
+      },
+      {
+        "id": "SC1001",
+        "camera": "HomeBox_camera",
+        "values": [
+          {
+            "date": "2023-09-04",
+            "file": "/Users/edeno/Downloads/collected_metadata_yamls/ebroyles/home/yaml/SC1001/generated/sc4712_updated/20230904_SC1001_metadata.yml",
+            "mpp": 0.08062435
+          },
+          {
+            "date": "2023-09-05",
+            "file": "/Users/edeno/Downloads/collected_metadata_yamls/sc4712/home/Downloads/SC100120230905_metadata.yml",
+            "mpp": 12.4032
+          }
+        ]
+      },
+      {
+        "id": "SC1001",
+        "camera": "HomeBoxSide_camera",
+        "values": [
+          {
+            "date": "2023-09-04",
+            "file": "/Users/edeno/Downloads/collected_metadata_yamls/ebroyles/home/yaml/SC1001/generated/sc4712_updated/20230904_SC1001_metadata.yml",
+            "mpp": 0.07571111
+          },
+          {
+            "date": "2023-09-05",
+            "file": "/Users/edeno/Downloads/collected_metadata_yamls/sc4712/home/Downloads/SC100120230905_metadata.yml",
+            "mpp": 13.20817
+          }
+        ]
+      },
+      {
+        "id": "SC1001",
+        "camera": "SleepBox_camera",
+        "values": [
+          {
+            "date": "2023-09-04",
+            "file": "/Users/edeno/Downloads/collected_metadata_yamls/ebroyles/home/yaml/SC1001/generated/sc4712_updated/20230904_SC1001_metadata.yml",
+            "mpp": 0.148623
+          },
+          {
+            "date": "2023-09-05",
+            "file": "/Users/edeno/Downloads/collected_metadata_yamls/sc4712/home/Downloads/SC100120230905_metadata.yml",
+            "mpp": 6.728433
+          }
+        ]
+      },
+      {
+        "id": "SC1001",
+        "camera": "SleepBoxSide_camera",
+        "values": [
+          {
+            "date": "2023-09-04",
+            "file": "/Users/edeno/Downloads/collected_metadata_yamls/ebroyles/home/yaml/SC1001/generated/sc4712_updated/20230904_SC1001_metadata.yml",
+            "mpp": 0.06210370076
+          },
+          {
+            "date": "2023-09-05",
+            "file": "/Users/edeno/Downloads/collected_metadata_yamls/sc4712/home/Downloads/SC100120230905_metadata.yml",
+            "mpp": 16.1021
+          }
+        ]
+      },
+      {
+        "id": "SC38",
+        "camera": "HomeBox_camera",
+        "values": [
+          {
+            "date": "2023-06-06",
+            "file": "/Users/edeno/Downloads/collected_metadata_yamls/ebroyles/home/yaml/SC38/generated/sc4712_updated/20230606_SC38_metadata.yml",
+            "mpp": 0.08253276551
+          },
+          {
+            "date": "2023-06-06",
+            "file": "/Users/edeno/Downloads/collected_metadata_yamls/sambray/home/Downloads/SC3820230606_metadata.yml",
+            "mpp": 0
+          }
+        ]
+      },
+      {
+        "id": "SC38",
+        "camera": "HomeBoxSide_camera",
+        "values": [
+          {
+            "date": "2023-06-06",
+            "file": "/Users/edeno/Downloads/collected_metadata_yamls/ebroyles/home/yaml/SC38/generated/sc4712_updated/20230606_SC38_metadata.yml",
+            "mpp": 0.07571071541
+          },
+          {
+            "date": "2023-06-06",
+            "file": "/Users/edeno/Downloads/collected_metadata_yamls/sambray/home/Downloads/SC3820230606_metadata.yml",
+            "mpp": 0
+          }
+        ]
+      },
+      {
+        "id": "SC38",
+        "camera": "SleepBox_camera",
+        "values": [
+          {
+            "date": "2023-06-06",
+            "file": "/Users/edeno/Downloads/collected_metadata_yamls/ebroyles/home/yaml/SC38/generated/sc4712_updated/20230606_SC38_metadata.yml",
+            "mpp": 0.2002872119
+          },
+          {
+            "date": "2023-06-06",
+            "file": "/Users/edeno/Downloads/collected_metadata_yamls/sambray/home/Downloads/SC3820230606_metadata.yml",
+            "mpp": 0
+          }
+        ]
+      },
+      {
+        "id": "SC38",
+        "camera": "HaightRight_HaightLeft_camera",
+        "values": [
+          {
+            "date": "2023-06-06",
+            "file": "/Users/edeno/Downloads/collected_metadata_yamls/ebroyles/home/yaml/SC38/generated/sc4712_updated/20230606_SC38_metadata.yml",
+            "mpp": 0.00274
+          },
+          {
+            "date": "2023-06-06",
+            "file": "/Users/edeno/Downloads/collected_metadata_yamls/sambray/home/Downloads/SC3820230606_metadata.yml",
+            "mpp": 0
+          }
+        ]
+      },
+      {
+        "id": "J16",
+        "camera": "SleepBox_camera",
+        "values": [
+          {
+            "date": "2021-05-29",
+            "file": "/Users/edeno/Downloads/collected_metadata_yamls/jguidera/home/yaml/J16/generated/J1620210529_metadata.yml",
+            "mpp": 0.001399
+          },
+          {
+            "date": "2021-07-22",
+            "file": "/Users/edeno/Downloads/collected_metadata_yamls/sambray/home/Downloads/20210722_J16_metadata.yml",
+            "mpp": 0.000842
+          }
+        ]
+      },
+      {
+        "id": "L12",
+        "camera": "Track camera",
+        "values": [
+          {
+            "date": "2024-04-16",
+            "file": "/Users/edeno/Downloads/collected_metadata_yamls/kyu/nimbus/L12/20240416/20240416_L12_metadata.yml",
+            "mpp": 0.00189
+          },
+          {
+            "date": "2024-04-17",
+            "file": "/Users/edeno/Downloads/collected_metadata_yamls/kyu/nimbus/L12/20240417/20240417_L12_metadata.yml",
+            "mpp": 0.00203
+          }
+        ]
+      },
+      {
+        "id": "L14",
+        "camera": "Track camera",
+        "values": [
+          {
+            "date": "2024-06-04",
+            "file": "/Users/edeno/Downloads/collected_metadata_yamls/kyu/nimbus/L14/20240604/20240604_L14_metadata.yml",
+            "mpp": 0.00186
+          },
+          {
+            "date": "2024-06-05",
+            "file": "/Users/edeno/Downloads/collected_metadata_yamls/kyu/nimbus/L14/20240605/20240605_L14_metadata.yml",
+            "mpp": 0.00189
+          }
+        ]
+      },
+      {
+        "id": "L14",
+        "camera": "Sleep box camera",
+        "values": [
+          {
+            "date": "2024-06-04",
+            "file": "/Users/edeno/Downloads/collected_metadata_yamls/kyu/nimbus/L14/20240604/20240604_L14_metadata.yml",
+            "mpp": 0.000993
+          },
+          {
+            "date": "2024-06-05",
+            "file": "/Users/edeno/Downloads/collected_metadata_yamls/kyu/nimbus/L14/20240605/20240605_L14_metadata.yml",
+            "mpp": 0.000781
+          }
+        ]
+      },
+      {
+        "id": "L15",
+        "camera": "Track camera",
+        "values": [
+          {
+            "date": "2024-11-17",
+            "file": "/Users/edeno/Downloads/collected_metadata_yamls/kyu/stelmo/L15/20241117/20241117_L15_metadata.yml",
+            "mpp": 0.00186
+          },
+          {
+            "date": "2024-11-18",
+            "file": "/Users/edeno/Downloads/collected_metadata_yamls/kyu/stelmo/L15/20241118/20241118_L15_metadata.yml",
+            "mpp": 0.00189
+          }
+        ]
+      },
+      {
+        "id": "L19",
+        "camera": "Track camera",
+        "values": [
+          {
+            "date": "2025-09-25",
+            "file": "/Users/edeno/Downloads/collected_metadata_yamls/kyu/stelmo/L19/20250925/20250925_L19_metadata.yml",
+            "mpp": 0.00272
+          },
+          {
+            "date": "2025-09-27",
+            "file": "/Users/edeno/Downloads/collected_metadata_yamls/kyu/stelmo/L19/20250927/20250927_L19_metadata.yml",
+            "mpp": 0.00182
+          }
+        ]
+      },
+      {
+        "id": "L19",
+        "camera": "Sleep box camera",
+        "values": [
+          {
+            "date": "2025-09-25",
+            "file": "/Users/edeno/Downloads/collected_metadata_yamls/kyu/stelmo/L19/20250925/20250925_L19_metadata.yml",
+            "mpp": 0.000103
+          },
+          {
+            "date": "2025-09-27",
+            "file": "/Users/edeno/Downloads/collected_metadata_yamls/kyu/stelmo/L19/20250927/20250927_L19_metadata.yml",
+            "mpp": 0.00108
+          }
+        ]
+      },
+      {
+        "id": "L9",
+        "camera": "run cam",
+        "values": [
+          {
+            "date": "2023-09-09",
+            "file": "/Users/edeno/Downloads/collected_metadata_yamls/sambray/home/Desktop/metadata/20230909_L9_metadata.yml",
+            "mpp": 0.00208
+          },
+          {
+            "date": "2023-06-05",
+            "file": "/Users/edeno/Downloads/collected_metadata_yamls/zoldello/home/Documents/data/L9/yaml_file/old/20230605_l9_metadata.yml",
+            "mpp": 0.05
+          }
+        ]
+      },
+      {
+        "id": "SC127",
+        "camera": "HomeBox_camera",
+        "values": [
+          {
+            "date": "2025-09-12",
+            "file": "/Users/edeno/Downloads/collected_metadata_yamls/sc4712/curated/SC127/generated/20250912_SC127_metadata.yml",
+            "mpp": 0.00087499
+          },
+          {
+            "date": "2025-09-18",
+            "file": "/Users/edeno/Downloads/collected_metadata_yamls/sc4712/curated/SC127/generated/20250918_SC127_metadata.yml",
+            "mpp": 0.0006866355544
+          }
+        ]
+      },
+      {
+        "id": "SC137",
+        "camera": "HomeBox_camera",
+        "values": [
+          {
+            "date": "2026-02-04",
+            "file": "/Users/edeno/Downloads/collected_metadata_yamls/sc4712/curated/SC137/generated/20260204_SC137_metadata.yml",
+            "mpp": 0.0007033074204
+          },
+          {
+            "date": "2026-02-18",
+            "file": "/Users/edeno/Downloads/collected_metadata_yamls/sc4712/curated/SC137/generated/20260218_SC137_metadata.yml",
+            "mpp": 0.000722080313382856
+          }
+        ]
+      },
+      {
+        "id": "SC137",
+        "camera": "HomeBoxSide_camera",
+        "values": [
+          {
+            "date": "2026-02-04",
+            "file": "/Users/edeno/Downloads/collected_metadata_yamls/sc4712/curated/SC137/generated/20260204_SC137_metadata.yml",
+            "mpp": 0.001013859116
+          },
+          {
+            "date": "2026-02-18",
+            "file": "/Users/edeno/Downloads/collected_metadata_yamls/sc4712/curated/SC137/generated/20260218_SC137_metadata.yml",
+            "mpp": 0.00101385911616494
+          }
+        ]
+      },
+      {
+        "id": "Lily",
+        "camera": "Lily_maze_camera",
+        "values": [
+          {
+            "date": "2025-12-14",
+            "file": "/Users/edeno/Downloads/collected_metadata_yamls/xulu/stelmo/recordings/Lily/raw/20251214_Lily_metadata.yml",
+            "mpp": 0.0016
+          },
+          {
+            "date": "2026-01-02",
+            "file": "/Users/edeno/Downloads/collected_metadata_yamls/xulu/stelmo/recordings/Lily/raw/20260102/20260102_Lily_metadata.yml",
+            "mpp": 0.0017
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "all_rat_metadata_yaml",
+    "totalYamlFiles": 325,
+    "parseErrors": [],
+    "nonSessionFiles": 1,
+    "uniqueContentSessionFiles": 320,
+    "datedUniqueContentSessionFiles": 318,
+    "subjectIds": 42,
+    "multidaySubjectIds": 37,
+    "variation": {
+      "weight": {
+        "animals": 31,
+        "examples": [
+          "chimi",
+          "Embry",
+          "Emmett",
+          "Laurent",
+          "Seth",
+          "peanut"
+        ]
+      },
+      "dob": {
+        "animals": 1,
+        "examples": [
+          "Seth"
+        ]
+      },
+      "genotype": {
+        "animals": 1,
+        "examples": [
+          "mec10"
+        ]
+      },
+      "experimenters": {
+        "animals": 2,
+        "examples": [
+          "Emmett",
+          "Seth"
+        ]
+      },
+      "experiment_description": {
+        "animals": 0,
+        "examples": []
+      },
+      "task_names": {
+        "animals": 27,
+        "examples": [
+          "chimi",
+          "Charlie",
+          "Embry",
+          "Emmett",
+          "Jacob",
+          "Laurent"
+        ]
+      },
+      "task_environment": {
+        "animals": 27,
+        "examples": [
+          "chimi",
+          "Charlie",
+          "Embry",
+          "Emmett",
+          "Jacob",
+          "Laurent"
+        ]
+      },
+      "cameras": {
+        "animals": 13,
+        "examples": [
+          "Charlie",
+          "Embry",
+          "Emmett",
+          "Jacob",
+          "Laurent",
+          "Seth"
+        ]
+      },
+      "calibration": {
+        "animals": 13,
+        "examples": [
+          "Charlie",
+          "Embry",
+          "Emmett",
+          "Jacob",
+          "Laurent",
+          "Seth"
+        ]
+      },
+      "bad_channels": {
+        "animals": 7,
+        "examples": [
+          "chimi",
+          "SC1000",
+          "SC1001",
+          "SC1002",
+          "SC18",
+          "SC38"
+        ]
+      },
+      "electrode_locations": {
+        "animals": 8,
+        "examples": [
+          "chimi",
+          "Emmett",
+          "SC1003",
+          "SC18",
+          "SC57",
+          "SC64"
+        ]
+      },
+      "behavioral_events": {
+        "animals": 9,
+        "examples": [
+          "Charlie",
+          "Embry",
+          "Emmett",
+          "Jacob",
+          "Laurent",
+          "Seth"
+        ]
+      },
+      "associated_files": {
+        "animals": 35,
+        "examples": [
+          "chimi",
+          "Charlie",
+          "Embry",
+          "Emmett",
+          "Jacob",
+          "Jasper"
+        ]
+      }
+    },
+    "calibrationConflicts": [
+      {
+        "id": "Emmett",
+        "camera": "sleep_camera",
+        "values": [
+          {
+            "date": "2025-11-06",
+            "file": "/Users/edeno/Downloads/all_rat_metadata_yaml/denisse_yaml_files/Emmett/20251106/20251106_Emmett_metadata.yml",
+            "mpp": 0.00102
+          },
+          {
+            "date": "2025-12-03",
+            "file": "/Users/edeno/Downloads/all_rat_metadata_yaml/denisse_yaml_files/Emmett/20251203/20251203_Emmett_metadata.yml",
+            "mpp": 0.001073
+          },
+          {
+            "date": "2026-02-02",
+            "file": "/Users/edeno/Downloads/all_rat_metadata_yaml/denisse_yaml_files/Emmett/20260202/20260202_Emmett_metadata.yml",
+            "mpp": 0.001173
+          }
+        ]
+      },
+      {
+        "id": "Emmett",
+        "camera": "maze_camera",
+        "values": [
+          {
+            "date": "2025-11-06",
+            "file": "/Users/edeno/Downloads/all_rat_metadata_yaml/denisse_yaml_files/Emmett/20251106/20251106_Emmett_metadata.yml",
+            "mpp": 0.001989
+          },
+          {
+            "date": "2025-12-01",
+            "file": "/Users/edeno/Downloads/all_rat_metadata_yaml/denisse_yaml_files/Emmett/20251201/20251201_Emmett_metadata.yml",
+            "mpp": 0.0018274
+          },
+          {
+            "date": "2025-12-03",
+            "file": "/Users/edeno/Downloads/all_rat_metadata_yaml/denisse_yaml_files/Emmett/20251203/20251203_Emmett_metadata.yml",
+            "mpp": 0.002235
+          },
+          {
+            "date": "2026-01-19",
+            "file": "/Users/edeno/Downloads/all_rat_metadata_yaml/denisse_yaml_files/Emmett/20260119/20260119_Emmett_metadata.yml",
+            "mpp": 0.001935
+          },
+          {
+            "date": "2026-02-02",
+            "file": "/Users/edeno/Downloads/all_rat_metadata_yaml/denisse_yaml_files/Emmett/20260202/20260202_Emmett_metadata.yml",
+            "mpp": 0.002289
+          }
+        ]
+      },
+      {
+        "id": "Jacob",
+        "camera": "sleep_camera",
+        "values": [
+          {
+            "date": "2025-06-16",
+            "file": "/Users/edeno/Downloads/all_rat_metadata_yaml/denisse_yaml_files/Jacob/raw/20250616/20250616_Jacob_metadata.yml",
+            "mpp": 0.00102
+          },
+          {
+            "date": "2025-06-18",
+            "file": "/Users/edeno/Downloads/all_rat_metadata_yaml/denisse_yaml_files/Jacob/raw/20250618/20250618_Jacob_metadata.yml",
+            "mpp": 0.001073
+          }
+        ]
+      },
+      {
+        "id": "Jacob",
+        "camera": "maze_camera",
+        "values": [
+          {
+            "date": "2025-06-16",
+            "file": "/Users/edeno/Downloads/all_rat_metadata_yaml/denisse_yaml_files/Jacob/raw/20250616/20250616_Jacob_metadata.yml",
+            "mpp": 0.001989
+          },
+          {
+            "date": "2025-06-18",
+            "file": "/Users/edeno/Downloads/all_rat_metadata_yaml/denisse_yaml_files/Jacob/raw/20250618/20250618_Jacob_metadata.yml",
+            "mpp": 0.002235
+          },
+          {
+            "date": "2025-06-21",
+            "file": "/Users/edeno/Downloads/all_rat_metadata_yaml/denisse_yaml_files/Jacob/raw/20250621/20250621_Jacob_metadata.yml",
+            "mpp": 0.00201
+          }
+        ]
+      },
+      {
+        "id": "Seth",
+        "camera": "sleep_camera",
+        "values": [
+          {
+            "date": "2025-12-08",
+            "file": "/Users/edeno/Downloads/all_rat_metadata_yaml/denisse_yaml_files/Seth/20251208/20251208_Seth_metadata.yml",
+            "mpp": 0.00102
+          },
+          {
+            "date": "2025-12-10",
+            "file": "/Users/edeno/Downloads/all_rat_metadata_yaml/denisse_yaml_files/Seth/20251210/20251210_Seth_metadata.yml",
+            "mpp": 0.001073
+          }
+        ]
+      },
+      {
+        "id": "Seth",
+        "camera": "maze_camera",
+        "values": [
+          {
+            "date": "2025-12-08",
+            "file": "/Users/edeno/Downloads/all_rat_metadata_yaml/denisse_yaml_files/Seth/20251208/20251208_Seth_metadata.yml",
+            "mpp": 0.0018274
+          },
+          {
+            "date": "2025-12-10",
+            "file": "/Users/edeno/Downloads/all_rat_metadata_yaml/denisse_yaml_files/Seth/20251210/20251210_Seth_metadata.yml",
+            "mpp": 0.002235
+          },
+          {
+            "date": "2026-01-22",
+            "file": "/Users/edeno/Downloads/all_rat_metadata_yaml/denisse_yaml_files/Seth/20260122_part2/20260122_Seth_metadata.yml",
+            "mpp": 0.001935
+          }
+        ]
+      },
+      {
+        "id": "SC127",
+        "camera": "HomeBox_camera",
+        "values": [
+          {
+            "date": "2025-09-12",
+            "file": "/Users/edeno/Downloads/all_rat_metadata_yaml/sc4712_yaml_files/SC127/generated/20250912_SC127_metadata.yml",
+            "mpp": 0.00087499
+          },
+          {
+            "date": "2025-09-18",
+            "file": "/Users/edeno/Downloads/all_rat_metadata_yaml/sc4712_yaml_files/SC127/generated/20250918_SC127_metadata.yml",
+            "mpp": 0.0006866355544
+          }
+        ]
+      },
+      {
+        "id": "SC137",
+        "camera": "HomeBox_camera",
+        "values": [
+          {
+            "date": "2026-02-04",
+            "file": "/Users/edeno/Downloads/all_rat_metadata_yaml/sc4712_yaml_files/SC137/generated/20260204_SC137_metadata.yml",
+            "mpp": 0.0007033074204
+          },
+          {
+            "date": "2026-02-18",
+            "file": "/Users/edeno/Downloads/all_rat_metadata_yaml/sc4712_yaml_files/SC137/generated/20260218_SC137_metadata.yml",
+            "mpp": 0.000722080313382856
+          }
+        ]
+      },
+      {
+        "id": "SC137",
+        "camera": "HomeBoxSide_camera",
+        "values": [
+          {
+            "date": "2026-02-04",
+            "file": "/Users/edeno/Downloads/all_rat_metadata_yaml/sc4712_yaml_files/SC137/generated/20260204_SC137_metadata.yml",
+            "mpp": 0.001013859116
+          },
+          {
+            "date": "2026-02-18",
+            "file": "/Users/edeno/Downloads/all_rat_metadata_yaml/sc4712_yaml_files/SC137/generated/20260218_SC137_metadata.yml",
+            "mpp": 0.00101385911616494
+          }
+        ]
+      },
+      {
+        "id": "wilbur",
+        "camera": "wilbur sleep camera",
+        "values": [
+          {
+            "date": "2021-03-26",
+            "file": "/Users/edeno/Downloads/all_rat_metadata_yaml/wilbur metadata/20210326_wilbur.yml",
+            "mpp": 0.000474428
+          },
+          {
+            "date": "2021-03-28",
+            "file": "/Users/edeno/Downloads/all_rat_metadata_yaml/wilbur metadata/20210328_wilbur.yml",
+            "mpp": 0.0005
+          }
+        ]
+      },
+      {
+        "id": "wilbur",
+        "camera": "wilbur run camera",
+        "values": [
+          {
+            "date": "2021-03-26",
+            "file": "/Users/edeno/Downloads/all_rat_metadata_yaml/wilbur metadata/20210326_wilbur.yml",
+            "mpp": 0.0031784
+          },
+          {
+            "date": "2021-03-28",
+            "file": "/Users/edeno/Downloads/all_rat_metadata_yaml/wilbur metadata/20210328_wilbur.yml",
+            "mpp": 0.00321
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "trodes_to_nwb_test_data",
+    "totalYamlFiles": 8,
+    "parseErrors": [],
+    "nonSessionFiles": 5,
+    "uniqueContentSessionFiles": 3,
+    "datedUniqueContentSessionFiles": 2,
+    "subjectIds": 1,
+    "multidaySubjectIds": 0,
+    "variation": {
+      "weight": {
+        "animals": 0,
+        "examples": []
+      },
+      "dob": {
+        "animals": 0,
+        "examples": []
+      },
+      "genotype": {
+        "animals": 0,
+        "examples": []
+      },
+      "experimenters": {
+        "animals": 0,
+        "examples": []
+      },
+      "experiment_description": {
+        "animals": 0,
+        "examples": []
+      },
+      "task_names": {
+        "animals": 0,
+        "examples": []
+      },
+      "task_environment": {
+        "animals": 0,
+        "examples": []
+      },
+      "cameras": {
+        "animals": 0,
+        "examples": []
+      },
+      "calibration": {
+        "animals": 0,
+        "examples": []
+      },
+      "bad_channels": {
+        "animals": 0,
+        "examples": []
+      },
+      "electrode_locations": {
+        "animals": 0,
+        "examples": []
+      },
+      "behavioral_events": {
+        "animals": 0,
+        "examples": []
+      },
+      "associated_files": {
+        "animals": 0,
+        "examples": []
+      }
+    },
+    "calibrationConflicts": []
+  }
+]

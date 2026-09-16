@@ -1,0 +1,131 @@
+Skip to main content
+Skip to navigation
+Navigated to Day Editor: remy-2023-06-25
+Workspace
+Validation & Export
+⌨
+Keyboard shortcuts
+Workspace
+›
+Animal: remy
+›
+Day: 2023-06-25
+✓
+Saved just now
+Export
+Day Editor: remy - 2023-06-25
+Configuration v3
+↩ carried from 2023-06-24
+Needs attention
+Animal context
+Wild Type · M · Rattus norvegicus
+Config v3
+
+⚠
+11 issues block export
+
+11 in Tasks & Files
+
+Tasks & Files
+11 things to fix
+Associated file 1 ("probe_adjustment_log") references task epoch 1, which no task defines. Point it at an existing epoch or remove it.
+Fix file epoch
+Associated file 2 ("behavioral_notes") references task epoch 2, which no task defines. Point it at an existing epoch or remove it.
+Fix file epoch
+Video 1 ("overhead_video_epoch2") references task epoch 2, which no task defines. Spyglass silently drops videos without a matching task epoch — point it at an existing epoch.
+Fix video epoch
++8 more in Tasks & Files
+DAY
+Daily log
+✗
+Has errors
+RECORDING
+Recording Setup
+✓
+Complete
+Failed Channels
+✓
+Complete
+DIO Wiring
+✓
+Complete
+FINISH
+Fix & Export
+11 to fix
+✗
+Has errors
+Daily log
+
+Imported from a YAML file
+·
+Probe setup v3 (effective Jun 25, 2023)
+·
+Rig SpikeGadgets
+·
+entered Sep 16, 2026
+Change source…
+Change setup
+
+Weight
+Weight measured today (grams)
+Weight measured on this day — the value exported for this day.
+Team
+Experimenters present (one per line, "Last, First")
+This day’s actual team. Changing it here affects this day only.
+Epochs
+Supplemental files
+2
+Epochs
+
+Confirm what happened, then resolve expected statescript and video files.
+
+Templates ▾
+▦
+No epochs yet
+
+Each epoch is a numbered recording block belonging to a task. Use Templates for a full day, or add a single epoch and fill in its task and files. Need a new task? Add one on the animal's Task Types tab.
+
+＋ Add an epoch
+Supplemental files
+
+Rare day-specific extras outside generated statescripts and videos, such as realtime output or stimulus scripts.
+
+2 files
+Supplemental file rows
+
+Optional files outside generated statescripts and videos.
+
+File name (required)
+Description
+Path
+Task epoch
+— select epoch —
+Missing epoch 1
+
+No task epochs defined — add tasks with epochs first, then link this file to one.
+
+Remove
+File "probe_adjustment_log" references epoch 1, which is no longer defined in any task on this day. Re-point it to a current epoch before exporting.
+File name (required)
+Description
+Path
+Task epoch
+— select epoch —
+Missing epoch 2
+
+No task epochs defined — add tasks with epochs first, then link this file to one.
+
+Remove
+File "behavioral_notes" references epoch 2, which is no longer defined in any task on this day. Re-point it to a current epoch before exporting.
+Psychopy stim script
+Realtime output
+Behavior timeline
+FSGUI log
+Custom file
+▶
+Descriptions, data folder & search terms
+▶
+Session identity and animal context
+READ-ONLY
+Copyright © 2026 Loren Frank Lab
+The University of California at San Francisco

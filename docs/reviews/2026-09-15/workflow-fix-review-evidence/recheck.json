@@ -1,0 +1,316 @@
+{
+  "cancelScope": {
+    "before": {
+      "tasks": [
+        {
+          "task_name": "sleep",
+          "task_description": "Rest in home cage",
+          "task_environment": "home cage",
+          "camera_id": [
+            0
+          ],
+          "task_epochs": [
+            1
+          ]
+        },
+        {
+          "task_name": "w_alternation",
+          "task_description": "W-track continuous alternation for reward",
+          "task_environment": "elevated W-track (180cm arms)",
+          "camera_id": [
+            0,
+            1
+          ],
+          "task_epochs": [
+            2,
+            4
+          ]
+        },
+        {
+          "task_name": "sleep",
+          "task_description": "Rest in home cage",
+          "task_environment": "home cage",
+          "camera_id": [
+            0
+          ],
+          "task_epochs": [
+            3,
+            5
+          ]
+        }
+      ],
+      "instances": [
+        {
+          "taskTypeId": "tasktype-0",
+          "task_epochs": [
+            1
+          ]
+        },
+        {
+          "taskTypeId": "tasktype-1",
+          "task_epochs": [
+            2,
+            4
+          ]
+        },
+        {
+          "taskTypeId": "tasktype-0",
+          "task_epochs": [
+            3,
+            5
+          ]
+        }
+      ]
+    },
+    "after": {
+      "tasks": [
+        {
+          "task_name": "sleep",
+          "task_description": "Rest in home cage",
+          "task_environment": "Room B",
+          "camera_id": [
+            0
+          ],
+          "task_epochs": [
+            1
+          ]
+        },
+        {
+          "task_name": "w_alternation",
+          "task_description": "W-track continuous alternation for reward",
+          "task_environment": "elevated W-track (180cm arms)",
+          "camera_id": [
+            0,
+            1
+          ],
+          "task_epochs": [
+            2,
+            4
+          ]
+        },
+        {
+          "task_name": "sleep",
+          "task_description": "Rest in home cage",
+          "task_environment": "Room B",
+          "camera_id": [
+            0
+          ],
+          "task_epochs": [
+            3,
+            5
+          ]
+        }
+      ],
+      "instances": [
+        {
+          "taskTypeId": "tasktype-0",
+          "task_epochs": [
+            1
+          ]
+        },
+        {
+          "taskTypeId": "tasktype-1",
+          "task_epochs": [
+            2,
+            4
+          ]
+        },
+        {
+          "taskTypeId": "tasktype-0",
+          "task_epochs": [
+            3,
+            5
+          ]
+        }
+      ]
+    },
+    "dialogAfterSecondSave": false
+  },
+  "cameraOrder": {
+    "before": {
+      "tasks": [
+        {
+          "task_name": "sleep",
+          "task_description": "Rest in home cage",
+          "task_environment": "home cage",
+          "camera_id": [
+            0
+          ],
+          "task_epochs": [
+            1
+          ]
+        },
+        {
+          "task_name": "w_alternation",
+          "task_description": "W-track continuous alternation for reward",
+          "task_environment": "elevated W-track (180cm arms)",
+          "camera_id": [
+            1,
+            0
+          ],
+          "task_epochs": [
+            2,
+            4
+          ]
+        },
+        {
+          "task_name": "sleep",
+          "task_description": "Rest in home cage",
+          "task_environment": "home cage",
+          "camera_id": [
+            0
+          ],
+          "task_epochs": [
+            3,
+            5
+          ]
+        }
+      ],
+      "instances": [
+        {
+          "taskTypeId": "tasktype-0",
+          "task_epochs": [
+            1
+          ]
+        },
+        {
+          "taskTypeId": "tasktype-1",
+          "task_epochs": [
+            2,
+            4
+          ]
+        },
+        {
+          "taskTypeId": "tasktype-0",
+          "task_epochs": [
+            3,
+            5
+          ]
+        }
+      ]
+    },
+    "after": {
+      "tasks": [
+        {
+          "task_name": "sleep",
+          "task_description": "Rest in home cage",
+          "task_environment": "home cage",
+          "camera_id": [
+            0
+          ],
+          "task_epochs": [
+            1
+          ]
+        },
+        {
+          "task_name": "w_alternation",
+          "task_description": "W-track continuous alternation for reward",
+          "task_environment": "Second room",
+          "camera_id": [
+            0,
+            1
+          ],
+          "task_epochs": [
+            2,
+            4
+          ]
+        },
+        {
+          "task_name": "sleep",
+          "task_description": "Rest in home cage",
+          "task_environment": "home cage",
+          "camera_id": [
+            0
+          ],
+          "task_epochs": [
+            3,
+            5
+          ]
+        }
+      ],
+      "instances": [
+        {
+          "taskTypeId": "tasktype-0",
+          "task_epochs": [
+            1
+          ]
+        },
+        {
+          "taskTypeId": "tasktype-1",
+          "task_epochs": [
+            2,
+            4
+          ],
+          "task_environment": "Second room",
+          "camera_id": [
+            0,
+            1
+          ]
+        },
+        {
+          "taskTypeId": "tasktype-0",
+          "task_epochs": [
+            3,
+            5
+          ]
+        }
+      ]
+    }
+  },
+  "exportAxe": [
+    {
+      "id": "target-size",
+      "impact": "serious",
+      "tags": [
+        "cat.sensory-and-visual-cues",
+        "wcag22aa",
+        "wcag258"
+      ],
+      "description": "Ensure touch targets have sufficient size and space",
+      "help": "All touch targets must be 24px large, or leave sufficient space",
+      "helpUrl": "https://dequeuniversity.com/rules/axe/4.11/target-size?application=playwright",
+      "nodes": [
+        {
+          "any": [
+            {
+              "id": "target-size",
+              "data": {
+                "minSize": 24,
+                "width": 316.6,
+                "height": 17
+              },
+              "relatedNodes": [],
+              "impact": "serious",
+              "message": "Target has insufficient size (316.6px by 17px, should be at least 24px by 24px)"
+            },
+            {
+              "id": "target-offset",
+              "data": {
+                "closestOffset": 19,
+                "minOffset": 24
+              },
+              "relatedNodes": [
+                {
+                  "html": "<a href=\"https://franklab.ucsf.edu/\">Loren Frank Lab</a>",
+                  "target": [
+                    "a[href$=\"franklab.ucsf.edu/\"]"
+                  ]
+                }
+              ],
+              "impact": "serious",
+              "message": "Target has insufficient space to its closest neighbors. Safe clickable space has a diameter of 19px instead of at least 24px."
+            }
+          ],
+          "all": [],
+          "none": [],
+          "impact": "serious",
+          "html": "<a href=\"http://www.ucsf.edu\">The University of California at San Francisco</a>",
+          "target": [
+            "a[href$=\"www.ucsf.edu\"]"
+          ],
+          "failureSummary": "Fix any of the following:\n  Target has insufficient size (316.6px by 17px, should be at least 24px by 24px)\n  Target has insufficient space to its closest neighbors. Safe clickable space has a diameter of 19px instead of at least 24px."
+        }
+      ]
+    }
+  ]
+}

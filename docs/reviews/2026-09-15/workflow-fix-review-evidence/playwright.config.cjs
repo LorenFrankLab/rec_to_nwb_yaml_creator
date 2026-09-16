@@ -1,0 +1,3 @@
+const {defineConfig}=require('@playwright/test');
+const path=require('node:path');
+module.exports=defineConfig({testDir:path.resolve(__dirname,'../../../../e2e'),outputDir:'/tmp/workflow-fix-review-playwright',testMatch:['workspace-daily-workflow.spec.js','workspace-workflows.spec.js','workspace-persistence-recovery.spec.js','workspace-responsive-a11y.spec.js','workspace-export.spec.js','workspace-mistake-prevention.spec.js','workspace-optogenetics.spec.js','workspace-ownership.spec.js'],workers:2,retries:0,timeout:30000,reporter:'list',use:{baseURL:'http://127.0.0.1:3018',headless:true,trace:'retain-on-failure'}});

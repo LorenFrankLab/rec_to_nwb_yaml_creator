@@ -1,0 +1,60 @@
+Skip to main contentSkip to navigation
+Navigated to Day Editor: remy-2023-06-22
+Workspace
+Validation & Export
+⌨
+Keyboard shortcuts
+Workspace
+›
+Animal: remy
+›
+Day: 2023-06-22
+Export
+Day Editor: remy - 2023-06-22
+Configuration v1
+Ready
+Animal context
+Wild Type · M · Rattus norvegicus
+Config v1
+✓
+Ready to export
+DAY
+Daily log
+✓
+Complete
+RECORDING
+Recording Setup
+✓
+Complete
+Failed Channels
+✓
+Complete
+DIO Wiring
+✓
+Complete
+FINISH
+Fix & Export
+✓
+Complete
+Behavioral events
+Edit · rewired the rig
+
+3 events
+
+Inputs (Din)
+
+None.
+
+Outputs (Dout)
+
+None.
+
+Other
+Reward delivery at left arm
+reward_left
+Reward delivery at right arm
+reward_right
+Trial start at center arm
+trial_start
+Copyright © 2026 Loren Frank Lab
+The University of California at San Francisco

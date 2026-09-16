@@ -1,0 +1,1615 @@
+[
+  {
+    "reloadBeforeEdit": false,
+    "before": {
+      "animalTaskTypes": null,
+      "day": {
+        "id": "remy-2023-06-22",
+        "animalId": "remy",
+        "date": "2023-06-22",
+        "experimentDate": "06222023",
+        "session": {
+          "session_id": "remy_20230622",
+          "session_description": "Day 45 of chronic recording, W-track alternation",
+          "experiment_description": "Chronic tetrode recording during spatial navigation",
+          "weight": 485
+        },
+        "experimenters": {
+          "experimenter_name": [
+            "Guidera, Jennifer",
+            "Comrie, Alison"
+          ],
+          "lab": "Frank",
+          "institution": "University of California, San Francisco"
+        },
+        "optogenetics": null,
+        "keywords": [],
+        "tasks": [
+          {
+            "task_name": "sleep",
+            "task_description": "Rest in home cage",
+            "task_environment": "home cage",
+            "camera_id": [
+              0
+            ],
+            "task_epochs": [
+              1
+            ]
+          },
+          {
+            "task_name": "w_alternation",
+            "task_description": "W-track continuous alternation for reward",
+            "task_environment": "elevated W-track (180cm arms)",
+            "camera_id": [
+              0,
+              1
+            ],
+            "task_epochs": [
+              2,
+              4
+            ]
+          },
+          {
+            "task_name": "sleep",
+            "task_description": "Rest in home cage",
+            "task_environment": "home cage",
+            "camera_id": [
+              0
+            ],
+            "task_epochs": [
+              3,
+              5
+            ]
+          }
+        ],
+        "behavioral_events": [
+          {
+            "description": "Reward delivery at left arm",
+            "name": "reward_left"
+          },
+          {
+            "description": "Reward delivery at right arm",
+            "name": "reward_right"
+          },
+          {
+            "description": "Trial start at center arm",
+            "name": "trial_start"
+          }
+        ],
+        "associated_files": [
+          {
+            "name": "probe_adjustment_log",
+            "description": "Daily probe depth adjustments and observations",
+            "path": "/data/remy/probe_logs/20230622_adjustments.txt",
+            "task_epochs": 1
+          },
+          {
+            "name": "behavioral_notes",
+            "description": "Experimenter behavioral observations",
+            "path": "/data/remy/behavior/20230622_notes.txt",
+            "task_epochs": 2
+          }
+        ],
+        "associated_video_files": [
+          {
+            "name": "overhead_video_epoch2",
+            "camera_id": 0,
+            "task_epochs": 2
+          },
+          {
+            "name": "overhead_video_epoch4",
+            "camera_id": 0,
+            "task_epochs": 4
+          },
+          {
+            "name": "side_view_video_epoch2",
+            "camera_id": 1,
+            "task_epochs": 2
+          },
+          {
+            "name": "side_view_video_epoch4",
+            "camera_id": 1,
+            "task_epochs": 4
+          }
+        ],
+        "technical": {
+          "times_period_multiplier": 1.5,
+          "raw_data_to_volts": 0.195,
+          "default_header_file_path": ""
+        },
+        "state": {
+          "draft": true,
+          "validated": false,
+          "exported": false,
+          "validationDeferred": false
+        },
+        "provenance": {
+          "enteredAt": "2026-09-16T04:05:06.863Z",
+          "copiedFromDayId": null,
+          "copiedFromDate": null,
+          "configuration": {
+            "source": "import",
+            "confirmed": true
+          },
+          "fields": {
+            "experimenters": "import",
+            "optogenetics": "import",
+            "session.experiment_description": "import",
+            "session.weight": "import"
+          }
+        },
+        "created": "2026-09-16T04:05:06.863Z",
+        "lastModified": "2026-09-16T04:05:06.864Z",
+        "configurationVersion": 1,
+        "fs_gui_yamls": [],
+        "data_acq_device_name": "SpikeGadgets",
+        "cameras_used": [
+          0,
+          1
+        ]
+      },
+      "mergedTasks": [
+        {
+          "task_name": "sleep",
+          "task_description": "Rest in home cage",
+          "task_environment": "home cage",
+          "camera_id": [
+            0
+          ],
+          "task_epochs": [
+            1
+          ]
+        },
+        {
+          "task_name": "w_alternation",
+          "task_description": "W-track continuous alternation for reward",
+          "task_environment": "elevated W-track (180cm arms)",
+          "camera_id": [
+            0,
+            1
+          ],
+          "task_epochs": [
+            2,
+            4
+          ]
+        },
+        {
+          "task_name": "sleep",
+          "task_description": "Rest in home cage",
+          "task_environment": "home cage",
+          "camera_id": [
+            0
+          ],
+          "task_epochs": [
+            3,
+            5
+          ]
+        }
+      ],
+      "issues": [
+        {
+          "path": "associated_video_files",
+          "field": "video",
+          "focusPath": "epoch-1-video",
+          "step": "epochs",
+          "actionLabel": "Fix in Epoch 1",
+          "code": "epoch_video_undeclared",
+          "repairSurface": "day",
+          "severity": "error",
+          "message": "Epoch 1 has a task but no video file linked, and it isn't marked \"no video\". Add the video for this epoch, or mark it as having no video.",
+          "ownerSurface": "day"
+        },
+        {
+          "path": "associated_video_files",
+          "field": "video",
+          "focusPath": "epoch-3-video",
+          "step": "epochs",
+          "actionLabel": "Fix in Epoch 3",
+          "code": "epoch_video_undeclared",
+          "repairSurface": "day",
+          "severity": "error",
+          "message": "Epoch 3 has a task but no video file linked, and it isn't marked \"no video\". Add the video for this epoch, or mark it as having no video.",
+          "ownerSurface": "day"
+        },
+        {
+          "path": "associated_video_files",
+          "field": "video",
+          "focusPath": "epoch-5-video",
+          "step": "epochs",
+          "actionLabel": "Fix in Epoch 5",
+          "code": "epoch_video_undeclared",
+          "repairSurface": "day",
+          "severity": "error",
+          "message": "Epoch 5 has a task but no video file linked, and it isn't marked \"no video\". Add the video for this epoch, or mark it as having no video.",
+          "ownerSurface": "day"
+        },
+        {
+          "code": "configuration_effective_date_unconfirmed",
+          "severity": "error",
+          "step": "devices",
+          "repairSurface": "day",
+          "field": "configurationVersion",
+          "focusPath": "configurationVersion",
+          "actionLabel": "Confirm this setup applies",
+          "message": "The probe setup v1 was entered on 2026-09-15 and its effective period before that is not recorded, so it is not known to apply to this earlier recording. Confirm that v1 is the setup this day was recorded with, pick the right version, or set the version's effective date to cover 2023-06-22.",
+          "repairCommand": {
+            "type": "confirmConfigurationChoice"
+          },
+          "ownerSurface": "day"
+        }
+      ]
+    },
+    "after": {
+      "animalTaskTypes": null,
+      "day": {
+        "id": "remy-2023-06-22",
+        "animalId": "remy",
+        "date": "2023-06-22",
+        "experimentDate": "06222023",
+        "session": {
+          "session_id": "remy_20230622",
+          "session_description": "Day 45 of chronic recording, W-track alternation",
+          "experiment_description": "Chronic tetrode recording during spatial navigation",
+          "weight": 485
+        },
+        "experimenters": {
+          "experimenter_name": [
+            "Guidera, Jennifer",
+            "Comrie, Alison"
+          ],
+          "lab": "Frank",
+          "institution": "University of California, San Francisco"
+        },
+        "optogenetics": null,
+        "keywords": [],
+        "tasks": [],
+        "behavioral_events": [
+          {
+            "description": "Reward delivery at left arm",
+            "name": "reward_left"
+          },
+          {
+            "description": "Reward delivery at right arm",
+            "name": "reward_right"
+          },
+          {
+            "description": "Trial start at center arm",
+            "name": "trial_start"
+          }
+        ],
+        "associated_files": [
+          {
+            "name": "probe_adjustment_log",
+            "description": "Daily probe depth adjustments and observations",
+            "path": "/data/remy/probe_logs/20230622_adjustments.txt",
+            "task_epochs": 1
+          },
+          {
+            "name": "behavioral_notes",
+            "description": "Experimenter behavioral observations",
+            "path": "/data/remy/behavior/20230622_notes.txt",
+            "task_epochs": 2
+          }
+        ],
+        "associated_video_files": [
+          {
+            "name": "overhead_video_epoch2",
+            "camera_id": 0,
+            "task_epochs": 2
+          },
+          {
+            "name": "overhead_video_epoch4",
+            "camera_id": 0,
+            "task_epochs": 4
+          },
+          {
+            "name": "side_view_video_epoch2",
+            "camera_id": 1,
+            "task_epochs": 2
+          },
+          {
+            "name": "side_view_video_epoch4",
+            "camera_id": 1,
+            "task_epochs": 4
+          }
+        ],
+        "technical": {
+          "times_period_multiplier": 1.5,
+          "raw_data_to_volts": 0.195,
+          "default_header_file_path": ""
+        },
+        "state": {
+          "draft": true,
+          "validated": false,
+          "exported": false,
+          "validationDeferred": false
+        },
+        "provenance": {
+          "enteredAt": "2026-09-16T04:05:06.863Z",
+          "copiedFromDayId": null,
+          "copiedFromDate": null,
+          "configuration": {
+            "source": "import",
+            "confirmed": true
+          },
+          "fields": {
+            "experimenters": "import",
+            "optogenetics": "import",
+            "session.experiment_description": "import",
+            "session.weight": "import"
+          }
+        },
+        "created": "2026-09-16T04:05:06.863Z",
+        "lastModified": "2026-09-16T04:05:08.027Z",
+        "configurationVersion": 1,
+        "fs_gui_yamls": [],
+        "data_acq_device_name": "SpikeGadgets",
+        "cameras_used": [
+          0,
+          1
+        ],
+        "taskInstances": [
+          {
+            "taskTypeId": "tasktype-0",
+            "task_epochs": [
+              1
+            ]
+          },
+          {
+            "taskTypeId": "tasktype-1",
+            "task_epochs": [
+              2,
+              4
+            ],
+            "task_environment": "New room for this day"
+          },
+          {
+            "taskTypeId": "tasktype-0",
+            "task_epochs": [
+              3,
+              5
+            ]
+          }
+        ]
+      },
+      "mergedTasks": [],
+      "issues": [
+        {
+          "path": "associated_files[0].task_epochs",
+          "field": "task_epochs",
+          "step": "epochs",
+          "actionLabel": "Fix file epoch",
+          "code": "orphaned_file",
+          "repairSurface": "day",
+          "severity": "error",
+          "message": "Associated file 1 (\"probe_adjustment_log\") references task epoch 1, which no task defines. Point it at an existing epoch or remove it.",
+          "ownerSurface": "day",
+          "focusPath": "associated_files[0].task_epochs"
+        },
+        {
+          "path": "associated_files[1].task_epochs",
+          "field": "task_epochs",
+          "step": "epochs",
+          "actionLabel": "Fix file epoch",
+          "code": "orphaned_file",
+          "repairSurface": "day",
+          "severity": "error",
+          "message": "Associated file 2 (\"behavioral_notes\") references task epoch 2, which no task defines. Point it at an existing epoch or remove it.",
+          "ownerSurface": "day",
+          "focusPath": "associated_files[1].task_epochs"
+        },
+        {
+          "path": "associated_video_files[0].task_epochs",
+          "field": "task_epochs",
+          "step": "epochs",
+          "actionLabel": "Fix video epoch",
+          "code": "orphaned_video",
+          "repairSurface": "day",
+          "severity": "error",
+          "message": "Video 1 (\"overhead_video_epoch2\") references task epoch 2, which no task defines. Spyglass silently drops videos without a matching task epoch — point it at an existing epoch.",
+          "ownerSurface": "day",
+          "focusPath": "associated_video_files[0].task_epochs"
+        },
+        {
+          "path": "associated_video_files[1].task_epochs",
+          "field": "task_epochs",
+          "step": "epochs",
+          "actionLabel": "Fix video epoch",
+          "code": "orphaned_video",
+          "repairSurface": "day",
+          "severity": "error",
+          "message": "Video 2 (\"overhead_video_epoch4\") references task epoch 4, which no task defines. Spyglass silently drops videos without a matching task epoch — point it at an existing epoch.",
+          "ownerSurface": "day",
+          "focusPath": "associated_video_files[1].task_epochs"
+        },
+        {
+          "path": "associated_video_files[2].task_epochs",
+          "field": "task_epochs",
+          "step": "epochs",
+          "actionLabel": "Fix video epoch",
+          "code": "orphaned_video",
+          "repairSurface": "day",
+          "severity": "error",
+          "message": "Video 3 (\"side_view_video_epoch2\") references task epoch 2, which no task defines. Spyglass silently drops videos without a matching task epoch — point it at an existing epoch.",
+          "ownerSurface": "day",
+          "focusPath": "associated_video_files[2].task_epochs"
+        },
+        {
+          "path": "associated_video_files[3].task_epochs",
+          "field": "task_epochs",
+          "step": "epochs",
+          "actionLabel": "Fix video epoch",
+          "code": "orphaned_video",
+          "repairSurface": "day",
+          "severity": "error",
+          "message": "Video 4 (\"side_view_video_epoch4\") references task epoch 4, which no task defines. Spyglass silently drops videos without a matching task epoch — point it at an existing epoch.",
+          "ownerSurface": "day",
+          "focusPath": "associated_video_files[3].task_epochs"
+        },
+        {
+          "path": "taskInstances",
+          "field": "taskTypeId",
+          "step": "epochs",
+          "actionLabel": "Fix task selection",
+          "code": "dangling_task_type_ref",
+          "repairSurface": "day",
+          "severity": "error",
+          "message": "This day references task type \"tasktype-0\", which the animal's catalog no longer defines. Re-pick the task or restore the task type.",
+          "ownerSurface": "day",
+          "focusPath": "taskInstances"
+        },
+        {
+          "path": "taskInstances",
+          "field": "taskTypeId",
+          "step": "epochs",
+          "actionLabel": "Fix task selection",
+          "code": "dangling_task_type_ref",
+          "repairSurface": "day",
+          "severity": "error",
+          "message": "This day references task type \"tasktype-1\", which the animal's catalog no longer defines. Re-pick the task or restore the task type.",
+          "ownerSurface": "day",
+          "focusPath": "taskInstances"
+        },
+        {
+          "path": "associated_video_files",
+          "field": "video",
+          "focusPath": "epoch-1-video",
+          "step": "epochs",
+          "actionLabel": "Fix in Epoch 1",
+          "code": "epoch_video_undeclared",
+          "repairSurface": "day",
+          "severity": "error",
+          "message": "Epoch 1 has a task but no video file linked, and it isn't marked \"no video\". Add the video for this epoch, or mark it as having no video.",
+          "ownerSurface": "day"
+        },
+        {
+          "path": "associated_video_files",
+          "field": "video",
+          "focusPath": "epoch-3-video",
+          "step": "epochs",
+          "actionLabel": "Fix in Epoch 3",
+          "code": "epoch_video_undeclared",
+          "repairSurface": "day",
+          "severity": "error",
+          "message": "Epoch 3 has a task but no video file linked, and it isn't marked \"no video\". Add the video for this epoch, or mark it as having no video.",
+          "ownerSurface": "day"
+        },
+        {
+          "path": "associated_video_files",
+          "field": "video",
+          "focusPath": "epoch-5-video",
+          "step": "epochs",
+          "actionLabel": "Fix in Epoch 5",
+          "code": "epoch_video_undeclared",
+          "repairSurface": "day",
+          "severity": "error",
+          "message": "Epoch 5 has a task but no video file linked, and it isn't marked \"no video\". Add the video for this epoch, or mark it as having no video.",
+          "ownerSurface": "day"
+        },
+        {
+          "code": "configuration_effective_date_unconfirmed",
+          "severity": "error",
+          "step": "devices",
+          "repairSurface": "day",
+          "field": "configurationVersion",
+          "focusPath": "configurationVersion",
+          "actionLabel": "Confirm this setup applies",
+          "message": "The probe setup v1 was entered on 2026-09-15 and its effective period before that is not recorded, so it is not known to apply to this earlier recording. Confirm that v1 is the setup this day was recorded with, pick the right version, or set the version's effective date to cover 2023-06-22.",
+          "repairCommand": {
+            "type": "confirmConfigurationChoice"
+          },
+          "ownerSurface": "day"
+        }
+      ]
+    },
+    "afterReload": {
+      "animalTaskTypes": null,
+      "day": {
+        "id": "remy-2023-06-22",
+        "animalId": "remy",
+        "date": "2023-06-22",
+        "experimentDate": "06222023",
+        "session": {
+          "session_id": "remy_20230622",
+          "session_description": "Day 45 of chronic recording, W-track alternation",
+          "experiment_description": "Chronic tetrode recording during spatial navigation",
+          "weight": 485
+        },
+        "experimenters": {
+          "experimenter_name": [
+            "Guidera, Jennifer",
+            "Comrie, Alison"
+          ],
+          "lab": "Frank",
+          "institution": "University of California, San Francisco"
+        },
+        "optogenetics": null,
+        "keywords": [],
+        "tasks": [],
+        "behavioral_events": [
+          {
+            "description": "Reward delivery at left arm",
+            "name": "reward_left"
+          },
+          {
+            "description": "Reward delivery at right arm",
+            "name": "reward_right"
+          },
+          {
+            "description": "Trial start at center arm",
+            "name": "trial_start"
+          }
+        ],
+        "associated_files": [
+          {
+            "name": "probe_adjustment_log",
+            "description": "Daily probe depth adjustments and observations",
+            "path": "/data/remy/probe_logs/20230622_adjustments.txt",
+            "task_epochs": 1
+          },
+          {
+            "name": "behavioral_notes",
+            "description": "Experimenter behavioral observations",
+            "path": "/data/remy/behavior/20230622_notes.txt",
+            "task_epochs": 2
+          }
+        ],
+        "associated_video_files": [
+          {
+            "name": "overhead_video_epoch2",
+            "camera_id": 0,
+            "task_epochs": 2
+          },
+          {
+            "name": "overhead_video_epoch4",
+            "camera_id": 0,
+            "task_epochs": 4
+          },
+          {
+            "name": "side_view_video_epoch2",
+            "camera_id": 1,
+            "task_epochs": 2
+          },
+          {
+            "name": "side_view_video_epoch4",
+            "camera_id": 1,
+            "task_epochs": 4
+          }
+        ],
+        "technical": {
+          "times_period_multiplier": 1.5,
+          "raw_data_to_volts": 0.195,
+          "default_header_file_path": ""
+        },
+        "state": {
+          "draft": true,
+          "validated": false,
+          "exported": false
+        },
+        "provenance": {
+          "enteredAt": "2026-09-16T04:05:06.863Z",
+          "copiedFromDayId": null,
+          "copiedFromDate": null,
+          "configuration": {
+            "source": "import",
+            "confirmed": true
+          },
+          "fields": {
+            "experimenters": "import",
+            "optogenetics": "import",
+            "session.experiment_description": "import",
+            "session.weight": "import"
+          }
+        },
+        "created": "2026-09-16T04:05:06.863Z",
+        "lastModified": "2026-09-16T04:05:08.027Z",
+        "configurationVersion": 1,
+        "fs_gui_yamls": [],
+        "data_acq_device_name": "SpikeGadgets",
+        "cameras_used": [
+          0,
+          1
+        ],
+        "taskInstances": [
+          {
+            "taskTypeId": "tasktype-0",
+            "task_epochs": [
+              1
+            ]
+          },
+          {
+            "taskTypeId": "tasktype-1",
+            "task_epochs": [
+              2,
+              4
+            ],
+            "task_environment": "New room for this day"
+          },
+          {
+            "taskTypeId": "tasktype-0",
+            "task_epochs": [
+              3,
+              5
+            ]
+          }
+        ]
+      },
+      "mergedTasks": [],
+      "issues": [
+        {
+          "path": "associated_files[0].task_epochs",
+          "field": "task_epochs",
+          "step": "epochs",
+          "actionLabel": "Fix file epoch",
+          "code": "orphaned_file",
+          "repairSurface": "day",
+          "severity": "error",
+          "message": "Associated file 1 (\"probe_adjustment_log\") references task epoch 1, which no task defines. Point it at an existing epoch or remove it.",
+          "ownerSurface": "day",
+          "focusPath": "associated_files[0].task_epochs"
+        },
+        {
+          "path": "associated_files[1].task_epochs",
+          "field": "task_epochs",
+          "step": "epochs",
+          "actionLabel": "Fix file epoch",
+          "code": "orphaned_file",
+          "repairSurface": "day",
+          "severity": "error",
+          "message": "Associated file 2 (\"behavioral_notes\") references task epoch 2, which no task defines. Point it at an existing epoch or remove it.",
+          "ownerSurface": "day",
+          "focusPath": "associated_files[1].task_epochs"
+        },
+        {
+          "path": "associated_video_files[0].task_epochs",
+          "field": "task_epochs",
+          "step": "epochs",
+          "actionLabel": "Fix video epoch",
+          "code": "orphaned_video",
+          "repairSurface": "day",
+          "severity": "error",
+          "message": "Video 1 (\"overhead_video_epoch2\") references task epoch 2, which no task defines. Spyglass silently drops videos without a matching task epoch — point it at an existing epoch.",
+          "ownerSurface": "day",
+          "focusPath": "associated_video_files[0].task_epochs"
+        },
+        {
+          "path": "associated_video_files[1].task_epochs",
+          "field": "task_epochs",
+          "step": "epochs",
+          "actionLabel": "Fix video epoch",
+          "code": "orphaned_video",
+          "repairSurface": "day",
+          "severity": "error",
+          "message": "Video 2 (\"overhead_video_epoch4\") references task epoch 4, which no task defines. Spyglass silently drops videos without a matching task epoch — point it at an existing epoch.",
+          "ownerSurface": "day",
+          "focusPath": "associated_video_files[1].task_epochs"
+        },
+        {
+          "path": "associated_video_files[2].task_epochs",
+          "field": "task_epochs",
+          "step": "epochs",
+          "actionLabel": "Fix video epoch",
+          "code": "orphaned_video",
+          "repairSurface": "day",
+          "severity": "error",
+          "message": "Video 3 (\"side_view_video_epoch2\") references task epoch 2, which no task defines. Spyglass silently drops videos without a matching task epoch — point it at an existing epoch.",
+          "ownerSurface": "day",
+          "focusPath": "associated_video_files[2].task_epochs"
+        },
+        {
+          "path": "associated_video_files[3].task_epochs",
+          "field": "task_epochs",
+          "step": "epochs",
+          "actionLabel": "Fix video epoch",
+          "code": "orphaned_video",
+          "repairSurface": "day",
+          "severity": "error",
+          "message": "Video 4 (\"side_view_video_epoch4\") references task epoch 4, which no task defines. Spyglass silently drops videos without a matching task epoch — point it at an existing epoch.",
+          "ownerSurface": "day",
+          "focusPath": "associated_video_files[3].task_epochs"
+        },
+        {
+          "path": "taskInstances",
+          "field": "taskTypeId",
+          "step": "epochs",
+          "actionLabel": "Fix task selection",
+          "code": "dangling_task_type_ref",
+          "repairSurface": "day",
+          "severity": "error",
+          "message": "This day references task type \"tasktype-0\", which the animal's catalog no longer defines. Re-pick the task or restore the task type.",
+          "ownerSurface": "day",
+          "focusPath": "taskInstances"
+        },
+        {
+          "path": "taskInstances",
+          "field": "taskTypeId",
+          "step": "epochs",
+          "actionLabel": "Fix task selection",
+          "code": "dangling_task_type_ref",
+          "repairSurface": "day",
+          "severity": "error",
+          "message": "This day references task type \"tasktype-1\", which the animal's catalog no longer defines. Re-pick the task or restore the task type.",
+          "ownerSurface": "day",
+          "focusPath": "taskInstances"
+        },
+        {
+          "path": "associated_video_files",
+          "field": "video",
+          "focusPath": "epoch-1-video",
+          "step": "epochs",
+          "actionLabel": "Fix in Epoch 1",
+          "code": "epoch_video_undeclared",
+          "repairSurface": "day",
+          "severity": "error",
+          "message": "Epoch 1 has a task but no video file linked, and it isn't marked \"no video\". Add the video for this epoch, or mark it as having no video.",
+          "ownerSurface": "day"
+        },
+        {
+          "path": "associated_video_files",
+          "field": "video",
+          "focusPath": "epoch-3-video",
+          "step": "epochs",
+          "actionLabel": "Fix in Epoch 3",
+          "code": "epoch_video_undeclared",
+          "repairSurface": "day",
+          "severity": "error",
+          "message": "Epoch 3 has a task but no video file linked, and it isn't marked \"no video\". Add the video for this epoch, or mark it as having no video.",
+          "ownerSurface": "day"
+        },
+        {
+          "path": "associated_video_files",
+          "field": "video",
+          "focusPath": "epoch-5-video",
+          "step": "epochs",
+          "actionLabel": "Fix in Epoch 5",
+          "code": "epoch_video_undeclared",
+          "repairSurface": "day",
+          "severity": "error",
+          "message": "Epoch 5 has a task but no video file linked, and it isn't marked \"no video\". Add the video for this epoch, or mark it as having no video.",
+          "ownerSurface": "day"
+        },
+        {
+          "code": "configuration_effective_date_unconfirmed",
+          "severity": "error",
+          "step": "devices",
+          "repairSurface": "day",
+          "field": "configurationVersion",
+          "focusPath": "configurationVersion",
+          "actionLabel": "Confirm this setup applies",
+          "message": "The probe setup v1 was entered on 2026-09-15 and its effective period before that is not recorded, so it is not known to apply to this earlier recording. Confirm that v1 is the setup this day was recorded with, pick the right version, or set the version's effective date to cover 2023-06-22.",
+          "repairCommand": {
+            "type": "confirmConfigurationChoice"
+          },
+          "ownerSurface": "day"
+        }
+      ]
+    },
+    "downloadDisabled": true
+  },
+  {
+    "reloadBeforeEdit": true,
+    "before": {
+      "animalTaskTypes": null,
+      "day": {
+        "id": "remy-2023-06-22",
+        "animalId": "remy",
+        "date": "2023-06-22",
+        "experimentDate": "06222023",
+        "session": {
+          "session_id": "remy_20230622",
+          "session_description": "Day 45 of chronic recording, W-track alternation",
+          "experiment_description": "Chronic tetrode recording during spatial navigation",
+          "weight": 485
+        },
+        "experimenters": {
+          "experimenter_name": [
+            "Guidera, Jennifer",
+            "Comrie, Alison"
+          ],
+          "lab": "Frank",
+          "institution": "University of California, San Francisco"
+        },
+        "optogenetics": null,
+        "keywords": [],
+        "tasks": [
+          {
+            "task_name": "sleep",
+            "task_description": "Rest in home cage",
+            "task_environment": "home cage",
+            "camera_id": [
+              0
+            ],
+            "task_epochs": [
+              1
+            ]
+          },
+          {
+            "task_name": "w_alternation",
+            "task_description": "W-track continuous alternation for reward",
+            "task_environment": "elevated W-track (180cm arms)",
+            "camera_id": [
+              0,
+              1
+            ],
+            "task_epochs": [
+              2,
+              4
+            ]
+          },
+          {
+            "task_name": "sleep",
+            "task_description": "Rest in home cage",
+            "task_environment": "home cage",
+            "camera_id": [
+              0
+            ],
+            "task_epochs": [
+              3,
+              5
+            ]
+          }
+        ],
+        "behavioral_events": [
+          {
+            "description": "Reward delivery at left arm",
+            "name": "reward_left"
+          },
+          {
+            "description": "Reward delivery at right arm",
+            "name": "reward_right"
+          },
+          {
+            "description": "Trial start at center arm",
+            "name": "trial_start"
+          }
+        ],
+        "associated_files": [
+          {
+            "name": "probe_adjustment_log",
+            "description": "Daily probe depth adjustments and observations",
+            "path": "/data/remy/probe_logs/20230622_adjustments.txt",
+            "task_epochs": 1
+          },
+          {
+            "name": "behavioral_notes",
+            "description": "Experimenter behavioral observations",
+            "path": "/data/remy/behavior/20230622_notes.txt",
+            "task_epochs": 2
+          }
+        ],
+        "associated_video_files": [
+          {
+            "name": "overhead_video_epoch2",
+            "camera_id": 0,
+            "task_epochs": 2
+          },
+          {
+            "name": "overhead_video_epoch4",
+            "camera_id": 0,
+            "task_epochs": 4
+          },
+          {
+            "name": "side_view_video_epoch2",
+            "camera_id": 1,
+            "task_epochs": 2
+          },
+          {
+            "name": "side_view_video_epoch4",
+            "camera_id": 1,
+            "task_epochs": 4
+          }
+        ],
+        "technical": {
+          "times_period_multiplier": 1.5,
+          "raw_data_to_volts": 0.195,
+          "default_header_file_path": ""
+        },
+        "state": {
+          "draft": true,
+          "validated": false,
+          "exported": false
+        },
+        "provenance": {
+          "enteredAt": "2026-09-16T04:05:08.696Z",
+          "copiedFromDayId": null,
+          "copiedFromDate": null,
+          "configuration": {
+            "source": "import",
+            "confirmed": true
+          },
+          "fields": {
+            "experimenters": "import",
+            "optogenetics": "import",
+            "session.experiment_description": "import",
+            "session.weight": "import"
+          }
+        },
+        "created": "2026-09-16T04:05:08.696Z",
+        "lastModified": "2026-09-16T04:05:08.697Z",
+        "configurationVersion": 1,
+        "fs_gui_yamls": [],
+        "data_acq_device_name": "SpikeGadgets",
+        "cameras_used": [
+          0,
+          1
+        ]
+      },
+      "mergedTasks": [
+        {
+          "task_name": "sleep",
+          "task_description": "Rest in home cage",
+          "task_environment": "home cage",
+          "camera_id": [
+            0
+          ],
+          "task_epochs": [
+            1
+          ]
+        },
+        {
+          "task_name": "w_alternation",
+          "task_description": "W-track continuous alternation for reward",
+          "task_environment": "elevated W-track (180cm arms)",
+          "camera_id": [
+            0,
+            1
+          ],
+          "task_epochs": [
+            2,
+            4
+          ]
+        },
+        {
+          "task_name": "sleep",
+          "task_description": "Rest in home cage",
+          "task_environment": "home cage",
+          "camera_id": [
+            0
+          ],
+          "task_epochs": [
+            3,
+            5
+          ]
+        }
+      ],
+      "issues": [
+        {
+          "path": "associated_video_files",
+          "field": "video",
+          "focusPath": "epoch-1-video",
+          "step": "epochs",
+          "actionLabel": "Fix in Epoch 1",
+          "code": "epoch_video_undeclared",
+          "repairSurface": "day",
+          "severity": "error",
+          "message": "Epoch 1 has a task but no video file linked, and it isn't marked \"no video\". Add the video for this epoch, or mark it as having no video.",
+          "ownerSurface": "day"
+        },
+        {
+          "path": "associated_video_files",
+          "field": "video",
+          "focusPath": "epoch-3-video",
+          "step": "epochs",
+          "actionLabel": "Fix in Epoch 3",
+          "code": "epoch_video_undeclared",
+          "repairSurface": "day",
+          "severity": "error",
+          "message": "Epoch 3 has a task but no video file linked, and it isn't marked \"no video\". Add the video for this epoch, or mark it as having no video.",
+          "ownerSurface": "day"
+        },
+        {
+          "path": "associated_video_files",
+          "field": "video",
+          "focusPath": "epoch-5-video",
+          "step": "epochs",
+          "actionLabel": "Fix in Epoch 5",
+          "code": "epoch_video_undeclared",
+          "repairSurface": "day",
+          "severity": "error",
+          "message": "Epoch 5 has a task but no video file linked, and it isn't marked \"no video\". Add the video for this epoch, or mark it as having no video.",
+          "ownerSurface": "day"
+        },
+        {
+          "code": "configuration_effective_date_unconfirmed",
+          "severity": "error",
+          "step": "devices",
+          "repairSurface": "day",
+          "field": "configurationVersion",
+          "focusPath": "configurationVersion",
+          "actionLabel": "Confirm this setup applies",
+          "message": "The probe setup v1 was entered on 2026-09-15 and its effective period before that is not recorded, so it is not known to apply to this earlier recording. Confirm that v1 is the setup this day was recorded with, pick the right version, or set the version's effective date to cover 2023-06-22.",
+          "repairCommand": {
+            "type": "confirmConfigurationChoice"
+          },
+          "ownerSurface": "day"
+        }
+      ]
+    },
+    "after": {
+      "animalTaskTypes": null,
+      "day": {
+        "id": "remy-2023-06-22",
+        "animalId": "remy",
+        "date": "2023-06-22",
+        "experimentDate": "06222023",
+        "session": {
+          "session_id": "remy_20230622",
+          "session_description": "Day 45 of chronic recording, W-track alternation",
+          "experiment_description": "Chronic tetrode recording during spatial navigation",
+          "weight": 485
+        },
+        "experimenters": {
+          "experimenter_name": [
+            "Guidera, Jennifer",
+            "Comrie, Alison"
+          ],
+          "lab": "Frank",
+          "institution": "University of California, San Francisco"
+        },
+        "optogenetics": null,
+        "keywords": [],
+        "tasks": [],
+        "behavioral_events": [
+          {
+            "description": "Reward delivery at left arm",
+            "name": "reward_left"
+          },
+          {
+            "description": "Reward delivery at right arm",
+            "name": "reward_right"
+          },
+          {
+            "description": "Trial start at center arm",
+            "name": "trial_start"
+          }
+        ],
+        "associated_files": [
+          {
+            "name": "probe_adjustment_log",
+            "description": "Daily probe depth adjustments and observations",
+            "path": "/data/remy/probe_logs/20230622_adjustments.txt",
+            "task_epochs": 1
+          },
+          {
+            "name": "behavioral_notes",
+            "description": "Experimenter behavioral observations",
+            "path": "/data/remy/behavior/20230622_notes.txt",
+            "task_epochs": 2
+          }
+        ],
+        "associated_video_files": [
+          {
+            "name": "overhead_video_epoch2",
+            "camera_id": 0,
+            "task_epochs": 2
+          },
+          {
+            "name": "overhead_video_epoch4",
+            "camera_id": 0,
+            "task_epochs": 4
+          },
+          {
+            "name": "side_view_video_epoch2",
+            "camera_id": 1,
+            "task_epochs": 2
+          },
+          {
+            "name": "side_view_video_epoch4",
+            "camera_id": 1,
+            "task_epochs": 4
+          }
+        ],
+        "technical": {
+          "times_period_multiplier": 1.5,
+          "raw_data_to_volts": 0.195,
+          "default_header_file_path": ""
+        },
+        "state": {
+          "draft": true,
+          "validated": false,
+          "exported": false,
+          "validationDeferred": false
+        },
+        "provenance": {
+          "enteredAt": "2026-09-16T04:05:08.696Z",
+          "copiedFromDayId": null,
+          "copiedFromDate": null,
+          "configuration": {
+            "source": "import",
+            "confirmed": true
+          },
+          "fields": {
+            "experimenters": "import",
+            "optogenetics": "import",
+            "session.experiment_description": "import",
+            "session.weight": "import"
+          }
+        },
+        "created": "2026-09-16T04:05:08.696Z",
+        "lastModified": "2026-09-16T04:05:10.027Z",
+        "configurationVersion": 1,
+        "fs_gui_yamls": [],
+        "data_acq_device_name": "SpikeGadgets",
+        "cameras_used": [
+          0,
+          1
+        ],
+        "taskInstances": [
+          {
+            "taskTypeId": "tasktype-0",
+            "task_epochs": [
+              1
+            ]
+          },
+          {
+            "taskTypeId": "tasktype-1",
+            "task_epochs": [
+              2,
+              4
+            ],
+            "task_environment": "New room for this day"
+          },
+          {
+            "taskTypeId": "tasktype-0",
+            "task_epochs": [
+              3,
+              5
+            ]
+          }
+        ]
+      },
+      "mergedTasks": [],
+      "issues": [
+        {
+          "path": "associated_files[0].task_epochs",
+          "field": "task_epochs",
+          "step": "epochs",
+          "actionLabel": "Fix file epoch",
+          "code": "orphaned_file",
+          "repairSurface": "day",
+          "severity": "error",
+          "message": "Associated file 1 (\"probe_adjustment_log\") references task epoch 1, which no task defines. Point it at an existing epoch or remove it.",
+          "ownerSurface": "day",
+          "focusPath": "associated_files[0].task_epochs"
+        },
+        {
+          "path": "associated_files[1].task_epochs",
+          "field": "task_epochs",
+          "step": "epochs",
+          "actionLabel": "Fix file epoch",
+          "code": "orphaned_file",
+          "repairSurface": "day",
+          "severity": "error",
+          "message": "Associated file 2 (\"behavioral_notes\") references task epoch 2, which no task defines. Point it at an existing epoch or remove it.",
+          "ownerSurface": "day",
+          "focusPath": "associated_files[1].task_epochs"
+        },
+        {
+          "path": "associated_video_files[0].task_epochs",
+          "field": "task_epochs",
+          "step": "epochs",
+          "actionLabel": "Fix video epoch",
+          "code": "orphaned_video",
+          "repairSurface": "day",
+          "severity": "error",
+          "message": "Video 1 (\"overhead_video_epoch2\") references task epoch 2, which no task defines. Spyglass silently drops videos without a matching task epoch — point it at an existing epoch.",
+          "ownerSurface": "day",
+          "focusPath": "associated_video_files[0].task_epochs"
+        },
+        {
+          "path": "associated_video_files[1].task_epochs",
+          "field": "task_epochs",
+          "step": "epochs",
+          "actionLabel": "Fix video epoch",
+          "code": "orphaned_video",
+          "repairSurface": "day",
+          "severity": "error",
+          "message": "Video 2 (\"overhead_video_epoch4\") references task epoch 4, which no task defines. Spyglass silently drops videos without a matching task epoch — point it at an existing epoch.",
+          "ownerSurface": "day",
+          "focusPath": "associated_video_files[1].task_epochs"
+        },
+        {
+          "path": "associated_video_files[2].task_epochs",
+          "field": "task_epochs",
+          "step": "epochs",
+          "actionLabel": "Fix video epoch",
+          "code": "orphaned_video",
+          "repairSurface": "day",
+          "severity": "error",
+          "message": "Video 3 (\"side_view_video_epoch2\") references task epoch 2, which no task defines. Spyglass silently drops videos without a matching task epoch — point it at an existing epoch.",
+          "ownerSurface": "day",
+          "focusPath": "associated_video_files[2].task_epochs"
+        },
+        {
+          "path": "associated_video_files[3].task_epochs",
+          "field": "task_epochs",
+          "step": "epochs",
+          "actionLabel": "Fix video epoch",
+          "code": "orphaned_video",
+          "repairSurface": "day",
+          "severity": "error",
+          "message": "Video 4 (\"side_view_video_epoch4\") references task epoch 4, which no task defines. Spyglass silently drops videos without a matching task epoch — point it at an existing epoch.",
+          "ownerSurface": "day",
+          "focusPath": "associated_video_files[3].task_epochs"
+        },
+        {
+          "path": "taskInstances",
+          "field": "taskTypeId",
+          "step": "epochs",
+          "actionLabel": "Fix task selection",
+          "code": "dangling_task_type_ref",
+          "repairSurface": "day",
+          "severity": "error",
+          "message": "This day references task type \"tasktype-0\", which the animal's catalog no longer defines. Re-pick the task or restore the task type.",
+          "ownerSurface": "day",
+          "focusPath": "taskInstances"
+        },
+        {
+          "path": "taskInstances",
+          "field": "taskTypeId",
+          "step": "epochs",
+          "actionLabel": "Fix task selection",
+          "code": "dangling_task_type_ref",
+          "repairSurface": "day",
+          "severity": "error",
+          "message": "This day references task type \"tasktype-1\", which the animal's catalog no longer defines. Re-pick the task or restore the task type.",
+          "ownerSurface": "day",
+          "focusPath": "taskInstances"
+        },
+        {
+          "path": "associated_video_files",
+          "field": "video",
+          "focusPath": "epoch-1-video",
+          "step": "epochs",
+          "actionLabel": "Fix in Epoch 1",
+          "code": "epoch_video_undeclared",
+          "repairSurface": "day",
+          "severity": "error",
+          "message": "Epoch 1 has a task but no video file linked, and it isn't marked \"no video\". Add the video for this epoch, or mark it as having no video.",
+          "ownerSurface": "day"
+        },
+        {
+          "path": "associated_video_files",
+          "field": "video",
+          "focusPath": "epoch-3-video",
+          "step": "epochs",
+          "actionLabel": "Fix in Epoch 3",
+          "code": "epoch_video_undeclared",
+          "repairSurface": "day",
+          "severity": "error",
+          "message": "Epoch 3 has a task but no video file linked, and it isn't marked \"no video\". Add the video for this epoch, or mark it as having no video.",
+          "ownerSurface": "day"
+        },
+        {
+          "path": "associated_video_files",
+          "field": "video",
+          "focusPath": "epoch-5-video",
+          "step": "epochs",
+          "actionLabel": "Fix in Epoch 5",
+          "code": "epoch_video_undeclared",
+          "repairSurface": "day",
+          "severity": "error",
+          "message": "Epoch 5 has a task but no video file linked, and it isn't marked \"no video\". Add the video for this epoch, or mark it as having no video.",
+          "ownerSurface": "day"
+        },
+        {
+          "code": "configuration_effective_date_unconfirmed",
+          "severity": "error",
+          "step": "devices",
+          "repairSurface": "day",
+          "field": "configurationVersion",
+          "focusPath": "configurationVersion",
+          "actionLabel": "Confirm this setup applies",
+          "message": "The probe setup v1 was entered on 2026-09-15 and its effective period before that is not recorded, so it is not known to apply to this earlier recording. Confirm that v1 is the setup this day was recorded with, pick the right version, or set the version's effective date to cover 2023-06-22.",
+          "repairCommand": {
+            "type": "confirmConfigurationChoice"
+          },
+          "ownerSurface": "day"
+        }
+      ]
+    },
+    "afterReload": {
+      "animalTaskTypes": null,
+      "day": {
+        "id": "remy-2023-06-22",
+        "animalId": "remy",
+        "date": "2023-06-22",
+        "experimentDate": "06222023",
+        "session": {
+          "session_id": "remy_20230622",
+          "session_description": "Day 45 of chronic recording, W-track alternation",
+          "experiment_description": "Chronic tetrode recording during spatial navigation",
+          "weight": 485
+        },
+        "experimenters": {
+          "experimenter_name": [
+            "Guidera, Jennifer",
+            "Comrie, Alison"
+          ],
+          "lab": "Frank",
+          "institution": "University of California, San Francisco"
+        },
+        "optogenetics": null,
+        "keywords": [],
+        "tasks": [],
+        "behavioral_events": [
+          {
+            "description": "Reward delivery at left arm",
+            "name": "reward_left"
+          },
+          {
+            "description": "Reward delivery at right arm",
+            "name": "reward_right"
+          },
+          {
+            "description": "Trial start at center arm",
+            "name": "trial_start"
+          }
+        ],
+        "associated_files": [
+          {
+            "name": "probe_adjustment_log",
+            "description": "Daily probe depth adjustments and observations",
+            "path": "/data/remy/probe_logs/20230622_adjustments.txt",
+            "task_epochs": 1
+          },
+          {
+            "name": "behavioral_notes",
+            "description": "Experimenter behavioral observations",
+            "path": "/data/remy/behavior/20230622_notes.txt",
+            "task_epochs": 2
+          }
+        ],
+        "associated_video_files": [
+          {
+            "name": "overhead_video_epoch2",
+            "camera_id": 0,
+            "task_epochs": 2
+          },
+          {
+            "name": "overhead_video_epoch4",
+            "camera_id": 0,
+            "task_epochs": 4
+          },
+          {
+            "name": "side_view_video_epoch2",
+            "camera_id": 1,
+            "task_epochs": 2
+          },
+          {
+            "name": "side_view_video_epoch4",
+            "camera_id": 1,
+            "task_epochs": 4
+          }
+        ],
+        "technical": {
+          "times_period_multiplier": 1.5,
+          "raw_data_to_volts": 0.195,
+          "default_header_file_path": ""
+        },
+        "state": {
+          "draft": true,
+          "validated": false,
+          "exported": false
+        },
+        "provenance": {
+          "enteredAt": "2026-09-16T04:05:08.696Z",
+          "copiedFromDayId": null,
+          "copiedFromDate": null,
+          "configuration": {
+            "source": "import",
+            "confirmed": true
+          },
+          "fields": {
+            "experimenters": "import",
+            "optogenetics": "import",
+            "session.experiment_description": "import",
+            "session.weight": "import"
+          }
+        },
+        "created": "2026-09-16T04:05:08.696Z",
+        "lastModified": "2026-09-16T04:05:10.027Z",
+        "configurationVersion": 1,
+        "fs_gui_yamls": [],
+        "data_acq_device_name": "SpikeGadgets",
+        "cameras_used": [
+          0,
+          1
+        ],
+        "taskInstances": [
+          {
+            "taskTypeId": "tasktype-0",
+            "task_epochs": [
+              1
+            ]
+          },
+          {
+            "taskTypeId": "tasktype-1",
+            "task_epochs": [
+              2,
+              4
+            ],
+            "task_environment": "New room for this day"
+          },
+          {
+            "taskTypeId": "tasktype-0",
+            "task_epochs": [
+              3,
+              5
+            ]
+          }
+        ]
+      },
+      "mergedTasks": [],
+      "issues": [
+        {
+          "path": "associated_files[0].task_epochs",
+          "field": "task_epochs",
+          "step": "epochs",
+          "actionLabel": "Fix file epoch",
+          "code": "orphaned_file",
+          "repairSurface": "day",
+          "severity": "error",
+          "message": "Associated file 1 (\"probe_adjustment_log\") references task epoch 1, which no task defines. Point it at an existing epoch or remove it.",
+          "ownerSurface": "day",
+          "focusPath": "associated_files[0].task_epochs"
+        },
+        {
+          "path": "associated_files[1].task_epochs",
+          "field": "task_epochs",
+          "step": "epochs",
+          "actionLabel": "Fix file epoch",
+          "code": "orphaned_file",
+          "repairSurface": "day",
+          "severity": "error",
+          "message": "Associated file 2 (\"behavioral_notes\") references task epoch 2, which no task defines. Point it at an existing epoch or remove it.",
+          "ownerSurface": "day",
+          "focusPath": "associated_files[1].task_epochs"
+        },
+        {
+          "path": "associated_video_files[0].task_epochs",
+          "field": "task_epochs",
+          "step": "epochs",
+          "actionLabel": "Fix video epoch",
+          "code": "orphaned_video",
+          "repairSurface": "day",
+          "severity": "error",
+          "message": "Video 1 (\"overhead_video_epoch2\") references task epoch 2, which no task defines. Spyglass silently drops videos without a matching task epoch — point it at an existing epoch.",
+          "ownerSurface": "day",
+          "focusPath": "associated_video_files[0].task_epochs"
+        },
+        {
+          "path": "associated_video_files[1].task_epochs",
+          "field": "task_epochs",
+          "step": "epochs",
+          "actionLabel": "Fix video epoch",
+          "code": "orphaned_video",
+          "repairSurface": "day",
+          "severity": "error",
+          "message": "Video 2 (\"overhead_video_epoch4\") references task epoch 4, which no task defines. Spyglass silently drops videos without a matching task epoch — point it at an existing epoch.",
+          "ownerSurface": "day",
+          "focusPath": "associated_video_files[1].task_epochs"
+        },
+        {
+          "path": "associated_video_files[2].task_epochs",
+          "field": "task_epochs",
+          "step": "epochs",
+          "actionLabel": "Fix video epoch",
+          "code": "orphaned_video",
+          "repairSurface": "day",
+          "severity": "error",
+          "message": "Video 3 (\"side_view_video_epoch2\") references task epoch 2, which no task defines. Spyglass silently drops videos without a matching task epoch — point it at an existing epoch.",
+          "ownerSurface": "day",
+          "focusPath": "associated_video_files[2].task_epochs"
+        },
+        {
+          "path": "associated_video_files[3].task_epochs",
+          "field": "task_epochs",
+          "step": "epochs",
+          "actionLabel": "Fix video epoch",
+          "code": "orphaned_video",
+          "repairSurface": "day",
+          "severity": "error",
+          "message": "Video 4 (\"side_view_video_epoch4\") references task epoch 4, which no task defines. Spyglass silently drops videos without a matching task epoch — point it at an existing epoch.",
+          "ownerSurface": "day",
+          "focusPath": "associated_video_files[3].task_epochs"
+        },
+        {
+          "path": "taskInstances",
+          "field": "taskTypeId",
+          "step": "epochs",
+          "actionLabel": "Fix task selection",
+          "code": "dangling_task_type_ref",
+          "repairSurface": "day",
+          "severity": "error",
+          "message": "This day references task type \"tasktype-0\", which the animal's catalog no longer defines. Re-pick the task or restore the task type.",
+          "ownerSurface": "day",
+          "focusPath": "taskInstances"
+        },
+        {
+          "path": "taskInstances",
+          "field": "taskTypeId",
+          "step": "epochs",
+          "actionLabel": "Fix task selection",
+          "code": "dangling_task_type_ref",
+          "repairSurface": "day",
+          "severity": "error",
+          "message": "This day references task type \"tasktype-1\", which the animal's catalog no longer defines. Re-pick the task or restore the task type.",
+          "ownerSurface": "day",
+          "focusPath": "taskInstances"
+        },
+        {
+          "path": "associated_video_files",
+          "field": "video",
+          "focusPath": "epoch-1-video",
+          "step": "epochs",
+          "actionLabel": "Fix in Epoch 1",
+          "code": "epoch_video_undeclared",
+          "repairSurface": "day",
+          "severity": "error",
+          "message": "Epoch 1 has a task but no video file linked, and it isn't marked \"no video\". Add the video for this epoch, or mark it as having no video.",
+          "ownerSurface": "day"
+        },
+        {
+          "path": "associated_video_files",
+          "field": "video",
+          "focusPath": "epoch-3-video",
+          "step": "epochs",
+          "actionLabel": "Fix in Epoch 3",
+          "code": "epoch_video_undeclared",
+          "repairSurface": "day",
+          "severity": "error",
+          "message": "Epoch 3 has a task but no video file linked, and it isn't marked \"no video\". Add the video for this epoch, or mark it as having no video.",
+          "ownerSurface": "day"
+        },
+        {
+          "path": "associated_video_files",
+          "field": "video",
+          "focusPath": "epoch-5-video",
+          "step": "epochs",
+          "actionLabel": "Fix in Epoch 5",
+          "code": "epoch_video_undeclared",
+          "repairSurface": "day",
+          "severity": "error",
+          "message": "Epoch 5 has a task but no video file linked, and it isn't marked \"no video\". Add the video for this epoch, or mark it as having no video.",
+          "ownerSurface": "day"
+        },
+        {
+          "code": "configuration_effective_date_unconfirmed",
+          "severity": "error",
+          "step": "devices",
+          "repairSurface": "day",
+          "field": "configurationVersion",
+          "focusPath": "configurationVersion",
+          "actionLabel": "Confirm this setup applies",
+          "message": "The probe setup v1 was entered on 2026-09-15 and its effective period before that is not recorded, so it is not known to apply to this earlier recording. Confirm that v1 is the setup this day was recorded with, pick the right version, or set the version's effective date to cover 2023-06-22.",
+          "repairCommand": {
+            "type": "confirmConfigurationChoice"
+          },
+          "ownerSurface": "day"
+        }
+      ]
+    },
+    "downloadDisabled": true
+  }
+]

@@ -1,0 +1,916 @@
+{
+  "blankWeightDraft": {
+    "url": "http://127.0.0.1:3017/#/home",
+    "text": "Skip to main content\nSkip to navigation\nWorkspace\nValidation & Export\n⌨\nKeyboard shortcuts\nAnimals › New animal\nNew animal — guided setup\n\nEnter once what stays the same for this animal across every recording day. Recording days reuse all of this; you'll only revisit it on a re-implant.\n\nStarting fresh below, or Import a YAML… · Copy from another animal…\n\n1\nIdentity\n2\nElectrodes\n3\nCameras\n4\nOptogenetics\noptional\n5\nTasks\n6\nRecording system\n7\nTeam\nIdentity\n\nWho this animal is. Fixed for the animal's life — set carefully; it can't drift day to day.\n\nSubject ID\nMust be unique. Case folds to one key (RS10 = rs10). No slashes (DANDI).\nSpecies\nRat (Rattus norvegicus)\nMouse (Mus musculus)\nMarmoset (Callithrix jacchus)\nRhesus macaque (Macaca mulatta)\nOther (specify)…\nLatin binomial — DANDI rejects free text like “Rat”.\nSex\nMale (M)\nFemale (F)\nUnknown (U)\nSingle letter (NWB/DANDI), not “Male”.\nGenotype\nGenetic background — not the strain. Use “Wild-type” for unmodified.\nWeight (grams)\nWeight is required\nDate of Birth\nDescription\nFree-text note. Leave blank to auto-generate one from genotype and species.\n← Back\nSave draft\nNext →\nCopyright © 2026 Loren Frank Lab\nThe University of California at San Francisco\n",
+    "stored": null
+  },
+  "importPreview": "Skip to main content\nSkip to navigation\nNavigated to Import Metadata YAML\nWorkspace\nValidation & Export\n⌨\nKeyboard shortcuts\nAnimals › Import\nReview batch import\n2 recording days → 1 animal\nEvery selected file is included.\nremy\n\n2 recording days · 1 hardware configuration\n\nConfiguration 1, from 2023-06-22 — 2 days\nDifferences to review\nCamera \"overhead_camera\" differs across files in: meters_per_pixel\nBack to repairs\nConfirm import\nCancel\nCopyright © 2026 Loren Frank Lab\nThe University of California at San Francisco\n",
+  "importedCameras": {
+    "schemaVersion": 4,
+    "workspace": {
+      "version": "1.0.0",
+      "lastModified": "2026-09-15T17:23:39.005Z",
+      "animals": {
+        "remy": {
+          "id": "remy",
+          "subject": {
+            "subject_id": "remy",
+            "weight": 485,
+            "description": "Long Evans Rat from Charles River",
+            "genotype": "Wild Type",
+            "sex": "M",
+            "species": "Rattus norvegicus",
+            "date_of_birth": "2023-01-10T00:00:00",
+            "age": "P164"
+          },
+          "devices": {
+            "data_acq_device": [
+              {
+                "name": "SpikeGadgets",
+                "system": "SpikeGadgets",
+                "amplifier": "Intan",
+                "adc_circuit": "Intan"
+              }
+            ],
+            "device": {
+              "name": [
+                "Trodes"
+              ]
+            },
+            "electrode_groups": [
+              {
+                "id": 0,
+                "location": "CA1",
+                "device_type": "tetrode_12.5",
+                "description": "Dorsal CA1 right hemisphere tetrode 1",
+                "targeted_location": "CA1",
+                "targeted_x": 3,
+                "targeted_y": 2.5,
+                "targeted_z": 2,
+                "units": "mm"
+              },
+              {
+                "id": 1,
+                "location": "CA1",
+                "device_type": "tetrode_12.5",
+                "description": "Dorsal CA1 right hemisphere tetrode 2",
+                "targeted_location": "CA1",
+                "targeted_x": 3.1,
+                "targeted_y": 2.5,
+                "targeted_z": 2,
+                "units": "mm"
+              },
+              {
+                "id": 2,
+                "location": "CA1",
+                "device_type": "tetrode_12.5",
+                "description": "Dorsal CA1 right hemisphere tetrode 3",
+                "targeted_location": "CA1",
+                "targeted_x": 3.2,
+                "targeted_y": 2.5,
+                "targeted_z": 2,
+                "units": "mm"
+              },
+              {
+                "id": 3,
+                "location": "CA1",
+                "device_type": "tetrode_12.5",
+                "description": "Dorsal CA1 right hemisphere tetrode 4",
+                "targeted_location": "CA1",
+                "targeted_x": 3.3,
+                "targeted_y": 2.5,
+                "targeted_z": 2,
+                "units": "mm"
+              },
+              {
+                "id": 4,
+                "location": "CA3",
+                "device_type": "tetrode_12.5",
+                "description": "CA3 right hemisphere tetrode 1",
+                "targeted_location": "CA3",
+                "targeted_x": 3.5,
+                "targeted_y": 3,
+                "targeted_z": 2.2,
+                "units": "mm"
+              },
+              {
+                "id": 5,
+                "location": "CA3",
+                "device_type": "tetrode_12.5",
+                "description": "CA3 right hemisphere tetrode 2",
+                "targeted_location": "CA3",
+                "targeted_x": 3.6,
+                "targeted_y": 3,
+                "targeted_z": 2.2,
+                "units": "mm"
+              },
+              {
+                "id": 6,
+                "location": "PFC",
+                "device_type": "tetrode_12.5",
+                "description": "Medial prefrontal cortex tetrode 1",
+                "targeted_location": "mPFC",
+                "targeted_x": 0.5,
+                "targeted_y": 3.2,
+                "targeted_z": 4,
+                "units": "mm"
+              },
+              {
+                "id": 7,
+                "location": "PFC",
+                "device_type": "tetrode_12.5",
+                "description": "Medial prefrontal cortex tetrode 2",
+                "targeted_location": "mPFC",
+                "targeted_x": 0.6,
+                "targeted_y": 3.2,
+                "targeted_z": 4,
+                "units": "mm"
+              }
+            ],
+            "ntrode_electrode_group_channel_map": [
+              {
+                "ntrode_id": 1,
+                "electrode_group_id": 0,
+                "bad_channels": [],
+                "map": {
+                  "0": 0,
+                  "1": 1,
+                  "2": 2,
+                  "3": 3
+                }
+              },
+              {
+                "ntrode_id": 2,
+                "electrode_group_id": 1,
+                "bad_channels": [],
+                "map": {
+                  "0": 0,
+                  "1": 1,
+                  "2": 2,
+                  "3": 3
+                }
+              },
+              {
+                "ntrode_id": 3,
+                "electrode_group_id": 2,
+                "bad_channels": [],
+                "map": {
+                  "0": 0,
+                  "1": 1,
+                  "2": 2,
+                  "3": 3
+                }
+              },
+              {
+                "ntrode_id": 4,
+                "electrode_group_id": 3,
+                "bad_channels": [],
+                "map": {
+                  "0": 0,
+                  "1": 1,
+                  "2": 2,
+                  "3": 3
+                }
+              },
+              {
+                "ntrode_id": 5,
+                "electrode_group_id": 4,
+                "bad_channels": [],
+                "map": {
+                  "0": 0,
+                  "1": 1,
+                  "2": 2,
+                  "3": 3
+                }
+              },
+              {
+                "ntrode_id": 6,
+                "electrode_group_id": 5,
+                "bad_channels": [],
+                "map": {
+                  "0": 0,
+                  "1": 1,
+                  "2": 2,
+                  "3": 3
+                }
+              },
+              {
+                "ntrode_id": 7,
+                "electrode_group_id": 6,
+                "bad_channels": [],
+                "map": {
+                  "0": 0,
+                  "1": 1,
+                  "2": 2,
+                  "3": 3
+                }
+              },
+              {
+                "ntrode_id": 8,
+                "electrode_group_id": 7,
+                "bad_channels": [],
+                "map": {
+                  "0": 0,
+                  "1": 1,
+                  "2": 2,
+                  "3": 3
+                }
+              }
+            ]
+          },
+          "cameras": [
+            {
+              "id": 0,
+              "meters_per_pixel": 0.001,
+              "manufacturer": "Allied Vision",
+              "model": "Mako G-158",
+              "lens": "Fujinon HF16HA-1B",
+              "camera_name": "overhead_camera"
+            },
+            {
+              "id": 1,
+              "meters_per_pixel": 0.0009,
+              "manufacturer": "Allied Vision",
+              "model": "Mako G-158",
+              "lens": "Fujinon HF16HA-1B",
+              "camera_name": "side_camera"
+            }
+          ],
+          "experimenters": {
+            "experimenter_name": [
+              "Guidera, Jennifer",
+              "Comrie, Alison"
+            ],
+            "lab": "Frank",
+            "institution": "University of California, San Francisco"
+          },
+          "experiment_description": "",
+          "technicalDefaults": {
+            "raw_data_to_volts": 0.195,
+            "times_period_multiplier": 1.5
+          },
+          "optogenetics": null,
+          "days": [
+            "remy-2023-06-22",
+            "remy-2023-06-23"
+          ],
+          "created": "2026-09-15T17:23:38.997Z",
+          "lastModified": "2026-09-15T17:23:38.997Z",
+          "configurationHistory": [
+            {
+              "version": 1,
+              "date": "2026-09-15",
+              "effectiveDateKnown": false,
+              "description": "Initial configuration",
+              "devices": {
+                "electrode_groups": [
+                  {
+                    "id": 0,
+                    "location": "CA1",
+                    "device_type": "tetrode_12.5",
+                    "description": "Dorsal CA1 right hemisphere tetrode 1",
+                    "targeted_location": "CA1",
+                    "targeted_x": 3,
+                    "targeted_y": 2.5,
+                    "targeted_z": 2,
+                    "units": "mm"
+                  },
+                  {
+                    "id": 1,
+                    "location": "CA1",
+                    "device_type": "tetrode_12.5",
+                    "description": "Dorsal CA1 right hemisphere tetrode 2",
+                    "targeted_location": "CA1",
+                    "targeted_x": 3.1,
+                    "targeted_y": 2.5,
+                    "targeted_z": 2,
+                    "units": "mm"
+                  },
+                  {
+                    "id": 2,
+                    "location": "CA1",
+                    "device_type": "tetrode_12.5",
+                    "description": "Dorsal CA1 right hemisphere tetrode 3",
+                    "targeted_location": "CA1",
+                    "targeted_x": 3.2,
+                    "targeted_y": 2.5,
+                    "targeted_z": 2,
+                    "units": "mm"
+                  },
+                  {
+                    "id": 3,
+                    "location": "CA1",
+                    "device_type": "tetrode_12.5",
+                    "description": "Dorsal CA1 right hemisphere tetrode 4",
+                    "targeted_location": "CA1",
+                    "targeted_x": 3.3,
+                    "targeted_y": 2.5,
+                    "targeted_z": 2,
+                    "units": "mm"
+                  },
+                  {
+                    "id": 4,
+                    "location": "CA3",
+                    "device_type": "tetrode_12.5",
+                    "description": "CA3 right hemisphere tetrode 1",
+                    "targeted_location": "CA3",
+                    "targeted_x": 3.5,
+                    "targeted_y": 3,
+                    "targeted_z": 2.2,
+                    "units": "mm"
+                  },
+                  {
+                    "id": 5,
+                    "location": "CA3",
+                    "device_type": "tetrode_12.5",
+                    "description": "CA3 right hemisphere tetrode 2",
+                    "targeted_location": "CA3",
+                    "targeted_x": 3.6,
+                    "targeted_y": 3,
+                    "targeted_z": 2.2,
+                    "units": "mm"
+                  },
+                  {
+                    "id": 6,
+                    "location": "PFC",
+                    "device_type": "tetrode_12.5",
+                    "description": "Medial prefrontal cortex tetrode 1",
+                    "targeted_location": "mPFC",
+                    "targeted_x": 0.5,
+                    "targeted_y": 3.2,
+                    "targeted_z": 4,
+                    "units": "mm"
+                  },
+                  {
+                    "id": 7,
+                    "location": "PFC",
+                    "device_type": "tetrode_12.5",
+                    "description": "Medial prefrontal cortex tetrode 2",
+                    "targeted_location": "mPFC",
+                    "targeted_x": 0.6,
+                    "targeted_y": 3.2,
+                    "targeted_z": 4,
+                    "units": "mm"
+                  }
+                ],
+                "ntrode_electrode_group_channel_map": [
+                  {
+                    "ntrode_id": 1,
+                    "electrode_group_id": 0,
+                    "bad_channels": [],
+                    "map": {
+                      "0": 0,
+                      "1": 1,
+                      "2": 2,
+                      "3": 3
+                    }
+                  },
+                  {
+                    "ntrode_id": 2,
+                    "electrode_group_id": 1,
+                    "bad_channels": [],
+                    "map": {
+                      "0": 0,
+                      "1": 1,
+                      "2": 2,
+                      "3": 3
+                    }
+                  },
+                  {
+                    "ntrode_id": 3,
+                    "electrode_group_id": 2,
+                    "bad_channels": [],
+                    "map": {
+                      "0": 0,
+                      "1": 1,
+                      "2": 2,
+                      "3": 3
+                    }
+                  },
+                  {
+                    "ntrode_id": 4,
+                    "electrode_group_id": 3,
+                    "bad_channels": [],
+                    "map": {
+                      "0": 0,
+                      "1": 1,
+                      "2": 2,
+                      "3": 3
+                    }
+                  },
+                  {
+                    "ntrode_id": 5,
+                    "electrode_group_id": 4,
+                    "bad_channels": [],
+                    "map": {
+                      "0": 0,
+                      "1": 1,
+                      "2": 2,
+                      "3": 3
+                    }
+                  },
+                  {
+                    "ntrode_id": 6,
+                    "electrode_group_id": 5,
+                    "bad_channels": [],
+                    "map": {
+                      "0": 0,
+                      "1": 1,
+                      "2": 2,
+                      "3": 3
+                    }
+                  },
+                  {
+                    "ntrode_id": 7,
+                    "electrode_group_id": 6,
+                    "bad_channels": [],
+                    "map": {
+                      "0": 0,
+                      "1": 1,
+                      "2": 2,
+                      "3": 3
+                    }
+                  },
+                  {
+                    "ntrode_id": 8,
+                    "electrode_group_id": 7,
+                    "bad_channels": [],
+                    "map": {
+                      "0": 0,
+                      "1": 1,
+                      "2": 2,
+                      "3": 3
+                    }
+                  }
+                ]
+              },
+              "appliedToDays": []
+            }
+          ]
+        }
+      },
+      "days": {
+        "remy-2023-06-22": {
+          "id": "remy-2023-06-22",
+          "animalId": "remy",
+          "date": "2023-06-22",
+          "experimentDate": "06222023",
+          "session": {
+            "session_id": "remy_20230622",
+            "session_description": "Day 45 of chronic recording, W-track alternation",
+            "experiment_description": "Chronic tetrode recording during spatial navigation",
+            "weight": 485
+          },
+          "experimenters": {
+            "experimenter_name": [
+              "Guidera, Jennifer",
+              "Comrie, Alison"
+            ],
+            "lab": "Frank",
+            "institution": "University of California, San Francisco"
+          },
+          "optogenetics": null,
+          "keywords": [],
+          "tasks": [
+            {
+              "task_name": "sleep",
+              "task_description": "Rest in home cage",
+              "task_environment": "home cage",
+              "camera_id": [
+                0
+              ],
+              "task_epochs": [
+                1
+              ]
+            },
+            {
+              "task_name": "w_alternation",
+              "task_description": "W-track continuous alternation for reward",
+              "task_environment": "elevated W-track (180cm arms)",
+              "camera_id": [
+                0,
+                1
+              ],
+              "task_epochs": [
+                2,
+                4
+              ]
+            },
+            {
+              "task_name": "sleep",
+              "task_description": "Rest in home cage",
+              "task_environment": "home cage",
+              "camera_id": [
+                0
+              ],
+              "task_epochs": [
+                3,
+                5
+              ]
+            }
+          ],
+          "behavioral_events": [
+            {
+              "description": "Reward delivery at left arm",
+              "name": "reward_left"
+            },
+            {
+              "description": "Reward delivery at right arm",
+              "name": "reward_right"
+            },
+            {
+              "description": "Trial start at center arm",
+              "name": "trial_start"
+            }
+          ],
+          "associated_files": [
+            {
+              "name": "probe_adjustment_log",
+              "description": "Daily probe depth adjustments and observations",
+              "path": "/data/remy/probe_logs/20230622_adjustments.txt",
+              "task_epochs": 1
+            },
+            {
+              "name": "behavioral_notes",
+              "description": "Experimenter behavioral observations",
+              "path": "/data/remy/behavior/20230622_notes.txt",
+              "task_epochs": 2
+            }
+          ],
+          "associated_video_files": [
+            {
+              "name": "overhead_video_epoch2",
+              "camera_id": 0,
+              "task_epochs": 2
+            },
+            {
+              "name": "overhead_video_epoch4",
+              "camera_id": 0,
+              "task_epochs": 4
+            },
+            {
+              "name": "side_view_video_epoch2",
+              "camera_id": 1,
+              "task_epochs": 2
+            },
+            {
+              "name": "side_view_video_epoch4",
+              "camera_id": 1,
+              "task_epochs": 4
+            }
+          ],
+          "technical": {
+            "times_period_multiplier": 1.5,
+            "raw_data_to_volts": 0.195,
+            "default_header_file_path": ""
+          },
+          "state": {
+            "draft": true,
+            "validated": false,
+            "exported": false,
+            "validationDeferred": false
+          },
+          "provenance": {
+            "enteredAt": "2026-09-15T17:23:39.002Z",
+            "copiedFromDayId": null,
+            "copiedFromDate": null,
+            "configuration": {
+              "source": "import",
+              "confirmed": true
+            },
+            "fields": {
+              "experimenters": "import",
+              "optogenetics": "import",
+              "session.experiment_description": "import",
+              "session.weight": "import"
+            }
+          },
+          "created": "2026-09-15T17:23:39.002Z",
+          "lastModified": "2026-09-15T17:23:39.004Z",
+          "configurationVersion": 1,
+          "fs_gui_yamls": [],
+          "data_acq_device_name": "SpikeGadgets",
+          "cameras_used": [
+            0,
+            1
+          ]
+        },
+        "remy-2023-06-23": {
+          "id": "remy-2023-06-23",
+          "animalId": "remy",
+          "date": "2023-06-23",
+          "experimentDate": "06232023",
+          "session": {
+            "session_id": "remy_20230623",
+            "session_description": "Day 45 of chronic recording, W-track alternation",
+            "experiment_description": "Chronic tetrode recording during spatial navigation",
+            "weight": 485
+          },
+          "experimenters": {
+            "experimenter_name": [
+              "Guidera, Jennifer",
+              "Comrie, Alison"
+            ],
+            "lab": "Frank",
+            "institution": "University of California, San Francisco"
+          },
+          "optogenetics": null,
+          "keywords": [],
+          "tasks": [
+            {
+              "task_name": "sleep",
+              "task_description": "Rest in home cage",
+              "task_environment": "home cage",
+              "camera_id": [
+                0
+              ],
+              "task_epochs": [
+                1
+              ]
+            },
+            {
+              "task_name": "w_alternation",
+              "task_description": "W-track continuous alternation for reward",
+              "task_environment": "elevated W-track (180cm arms)",
+              "camera_id": [
+                0,
+                1
+              ],
+              "task_epochs": [
+                2,
+                4
+              ]
+            },
+            {
+              "task_name": "sleep",
+              "task_description": "Rest in home cage",
+              "task_environment": "home cage",
+              "camera_id": [
+                0
+              ],
+              "task_epochs": [
+                3,
+                5
+              ]
+            }
+          ],
+          "behavioral_events": [
+            {
+              "description": "Reward delivery at left arm",
+              "name": "reward_left"
+            },
+            {
+              "description": "Reward delivery at right arm",
+              "name": "reward_right"
+            },
+            {
+              "description": "Trial start at center arm",
+              "name": "trial_start"
+            }
+          ],
+          "associated_files": [
+            {
+              "name": "probe_adjustment_log",
+              "description": "Daily probe depth adjustments and observations",
+              "path": "/data/remy/probe_logs/20230622_adjustments.txt",
+              "task_epochs": 1
+            },
+            {
+              "name": "behavioral_notes",
+              "description": "Experimenter behavioral observations",
+              "path": "/data/remy/behavior/20230622_notes.txt",
+              "task_epochs": 2
+            }
+          ],
+          "associated_video_files": [
+            {
+              "name": "overhead_video_epoch2",
+              "camera_id": 0,
+              "task_epochs": 2
+            },
+            {
+              "name": "overhead_video_epoch4",
+              "camera_id": 0,
+              "task_epochs": 4
+            },
+            {
+              "name": "side_view_video_epoch2",
+              "camera_id": 1,
+              "task_epochs": 2
+            },
+            {
+              "name": "side_view_video_epoch4",
+              "camera_id": 1,
+              "task_epochs": 4
+            }
+          ],
+          "technical": {
+            "times_period_multiplier": 1.5,
+            "raw_data_to_volts": 0.195,
+            "default_header_file_path": ""
+          },
+          "state": {
+            "draft": true,
+            "validated": false,
+            "exported": false,
+            "validationDeferred": false
+          },
+          "provenance": {
+            "enteredAt": "2026-09-15T17:23:39.003Z",
+            "copiedFromDayId": null,
+            "copiedFromDate": null,
+            "configuration": {
+              "source": "import",
+              "confirmed": true
+            },
+            "fields": {
+              "experimenters": "import",
+              "optogenetics": "import",
+              "session.experiment_description": "import",
+              "session.weight": "import"
+            }
+          },
+          "created": "2026-09-15T17:23:39.003Z",
+          "lastModified": "2026-09-15T17:23:39.005Z",
+          "configurationVersion": 1,
+          "fs_gui_yamls": [],
+          "data_acq_device_name": "SpikeGadgets",
+          "cameras_used": [
+            0,
+            1
+          ]
+        }
+      },
+      "settings": {
+        "defaultLab": "",
+        "defaultInstitution": "",
+        "defaultExperimenters": [],
+        "autoSaveInterval": 30000,
+        "shadowExportEnabled": true
+      }
+    }
+  },
+  "sourceRepairFile": "/Users/edeno/Downloads/all_rat_metadata_yaml/Re _metadata_round_2-/20200302_chimi.yml",
+  "navAfterArrow": {
+    "focus": "Daily log — Complete",
+    "active": "Daily log✓Complete"
+  },
+  "navAfterTab": {
+    "tag": "BUTTON",
+    "text": "Change setup",
+    "label": null
+  },
+  "navAfterShortcut": [
+    {
+      "text": "Daily log✓Complete",
+      "current": "page"
+    },
+    {
+      "text": "Recording Setup✓Complete",
+      "current": null
+    },
+    {
+      "text": "Failed Channels✓Complete",
+      "current": null
+    },
+    {
+      "text": "DIO Wiring✓Complete",
+      "current": null
+    },
+    {
+      "text": "Fix & Export✓Complete",
+      "current": null
+    }
+  ],
+  "taskEditText": "Edit Task Type\nTask name\nThe task's identity in Spyglass — same name means the same task. Two task types can't share a name with different details.\nDescription\nEnvironment\nCameras used\n0 · overhead_camera\n1 · side_camera\nWhich cameras recorded this task. Each day still confirms the cameras it actually used.\nCancel\nSave",
+  "historicalTaskAfterEdit": [
+    {
+      "task_name": "sleep",
+      "task_description": "Rest in home cage",
+      "task_environment": "Room B for later recordings",
+      "camera_id": [
+        0
+      ],
+      "task_epochs": [
+        1
+      ]
+    },
+    {
+      "task_name": "w_alternation",
+      "task_description": "W-track continuous alternation for reward",
+      "task_environment": "elevated W-track (180cm arms)",
+      "camera_id": [
+        0,
+        1
+      ],
+      "task_epochs": [
+        2,
+        4
+      ]
+    },
+    {
+      "task_name": "sleep",
+      "task_description": "Rest in home cage",
+      "task_environment": "Room B for later recordings",
+      "camera_id": [
+        0
+      ],
+      "task_epochs": [
+        3,
+        5
+      ]
+    }
+  ],
+  "settledCameraAxe": [
+    {
+      "id": "target-size",
+      "impact": "serious",
+      "tags": [
+        "cat.sensory-and-visual-cues",
+        "wcag22aa",
+        "wcag258"
+      ],
+      "description": "Ensure touch targets have sufficient size and space",
+      "help": "All touch targets must be 24px large, or leave sufficient space",
+      "helpUrl": "https://dequeuniversity.com/rules/axe/4.11/target-size?application=playwright",
+      "nodes": [
+        {
+          "any": [
+            {
+              "id": "target-size",
+              "data": {
+                "minSize": 24,
+                "width": 253.3,
+                "height": 15
+              },
+              "relatedNodes": [],
+              "impact": "serious",
+              "message": "Target has insufficient size (253.3px by 15px, should be at least 24px by 24px)"
+            },
+            {
+              "id": "target-offset",
+              "data": {
+                "closestOffset": 15,
+                "minOffset": 24
+              },
+              "relatedNodes": [
+                {
+                  "html": "<a href=\"https://franklab.ucsf.edu/\">Loren Frank Lab</a>",
+                  "target": [
+                    "a[href$=\"franklab.ucsf.edu/\"]"
+                  ]
+                }
+              ],
+              "impact": "serious",
+              "message": "Target has insufficient space to its closest neighbors. Safe clickable space has a diameter of 15px instead of at least 24px."
+            }
+          ],
+          "all": [],
+          "none": [],
+          "impact": "serious",
+          "html": "<a href=\"http://www.ucsf.edu\">The University of California at San Francisco</a>",
+          "target": [
+            "a[href$=\"www.ucsf.edu\"]"
+          ],
+          "failureSummary": "Fix any of the following:\n  Target has insufficient size (253.3px by 15px, should be at least 24px by 24px)\n  Target has insufficient space to its closest neighbors. Safe clickable space has a diameter of 15px instead of at least 24px."
+        }
+      ]
+    }
+  ],
+  "cameraModalText": "Edit Camera\nCamera ID\nAutomatically assigned\nCamera Name\nSame name means the same camera. A camera with a different zoom, calibration, lens, model, or id is a different camera — give it a different name.\nManufacturer\nModel\nLens\nMeters per Pixel\nSpatial calibration — meters per pixel (how many meters one pixel spans in the tracking video). Typical overhead tracking: 0.0005–0.002 m/px. Changing this is a new camera identity.\nCancel\nSave",
+  "electrodeActions": [
+    "reremy▾",
+    "⌨Keyboard shortcuts",
+    "⋮",
+    "New configuration…",
+    "+ Add Electrode Group",
+    "Copy from Animal",
+    "Edit",
+    "Delete",
+    "Edit",
+    "Delete",
+    "Edit",
+    "Delete",
+    "Edit",
+    "Delete",
+    "Edit",
+    "Delete",
+    "Edit",
+    "Delete",
+    "Edit",
+    "Delete",
+    "Edit",
+    "Delete"
+  ],
+  "optoEnabledText": "Skip to main content\nSkip to navigation\nNavigated to Animal\nWorkspace\n▸\nre\nremy\n▾\nValidation & Export\n⌨\nKeyboard shortcuts\nremy\nanimal ID\nRattus norvegicus · M\n⟳\nSaving…\n⋮\nWild Type\nM\nRattus norvegicus\nb. 2023-01-10\n8 probes — CA1, CA3, PFC\nConfig v1\nTeam: Guidera, Jennifer, Comrie, Alison\nOptogenetics\nDAY WORK\nRecording Days\n1\n›\nValidation & Export\n0 ready\n›\nANIMAL SETUP\nElectrode Groups\n8\n›\nRecording System\n1\n›\nCameras\n2\n›\nTask Types\n›\nOptogenetics\n●\nincomplete\n›\n⚠\nAffects all 1 day\n\nOpto configured · 2 of 4\n\nOptogenetics Setup\n\nThis is the animal's implanted opto setup (excitation source, optical fiber, virus injection, stimulation software) — set it once here. What was actually stimulated is recorded per recording day in that day's Epochs step, scoped to the epochs it ran; a day or epoch with no stimulation needs nothing here.\n\nThis animal has optogenetics\n\nThis app blocks export until every optogenetics section below is complete; still missing: a complete excitation source, a complete optical fiber, a complete virus injection. Separately, if a partial file like this were fed straight to the conversion tool, it would silently drop the entire optogenetics block with no error — which is exactly what this export gate prevents.\n\nExcitation source\nSetup name\nHardware model name\nDescription\nWavelength (nm)\nSource power (W)\nIntensity (W/m²)\nOptical fibers\nAdd optical fiber\nVirus injections\nAdd virus injection\nStimulation software\nOptogenetic stimulation software\nCopyright © 2026 Loren Frank Lab\nThe University of California at San Francisco\n",
+  "copyIdentity": {
+    "url": "http://127.0.0.1:3017/#/home?animal=reviewcase",
+    "value": "reviewcase",
+    "readOnly": true
+  },
+  "copyUnderscore": {
+    "url": "http://127.0.0.1:3017/#/home?animal=review_rat",
+    "text": "Skip to main content\nSkip to navigation\nNavigated to Home - Animal Selection\nWorkspace\nValidation & Export\n⌨\nKeyboard shortcuts\nAnimals › New animal\nNew animal — guided setup\n\nEnter once what stays the same for this animal across every recording day. Recording days reuse all of this; you'll only revisit it on a re-implant.\n\nStarting fresh below, or Import a YAML… · Copy from another animal…\n\n1\nIdentity\n2\nElectrodes\n3\nCameras\n4\nOptogenetics\noptional\n5\nTasks\n6\nRecording system\nPre-filled — review\n7\nTeam\nIdentity\n\nWho this animal is. Fixed for the animal's life — set carefully; it can't drift day to day.\n\nSubject ID\nMust be unique. Case folds to one key (RS10 = rs10). No slashes (DANDI). Locked once the animal is created.\nUse only letters, numbers, and hyphens (no underscores — the converter splits filenames on them)\nSpecies\nRat (Rattus norvegicus)\nMouse (Mus musculus)\nMarmoset (Callithrix jacchus)\nRhesus macaque (Macaca mulatta)\nOther (specify)…\nLatin binomial — DANDI rejects free text like “Rat”.\nSex\nMale (M)\nFemale (F)\nUnknown (U)\nSingle letter (NWB/DANDI), not “Male”.\nGenotype\nGenetic background — not the strain. Use “Wild-type” for unmodified.\nWeight (grams)\nDate of Birth\nDescription\nFree-text note. Leave blank to auto-generate one from genotype and species.\n← Back\nSave draft\nNext →\nCopyright © 2026 Loren Frank Lab\nThe University of California at San Francisco\n",
+    "readOnly": true
+  }
+}

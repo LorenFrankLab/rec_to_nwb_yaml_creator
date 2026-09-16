@@ -1,0 +1,56 @@
+Skip to main content
+Skip to navigation
+Navigated to Day Editor: remy-2023-06-22
+Workspace
+Validation & Export
+⌨
+Keyboard shortcuts
+Workspace
+›
+Animal: remy
+›
+Day: 2023-06-22
+Export
+Day Editor: remy - 2023-06-22
+Configuration v1
+Ready
+Animal context
+Wild Type · M · Rattus norvegicus
+Config v1
+✓
+Ready to export
+DAY
+Daily log
+✓
+Complete
+RECORDING
+Recording Setup
+✓
+Complete
+Failed Channels
+✓
+Complete
+DIO Wiring
+✓
+Complete
+FINISH
+Fix & Export
+✓
+Complete
+Failed Channels
+
+Mark failed channels for this recording day. These marks apply to this day only, not to all recordings on this configuration.
+
+2 failed channels
+2 groups have failed channels.
+▶
+Electrode Group 2: CA1
+1 failed channel
+▶
+Electrode Group 5: CA3
+1 failed channel
+▶
+Other groups
+6 clean groups
+Copyright © 2026 Loren Frank Lab
+The University of California at San Francisco

@@ -1,0 +1,31 @@
+{
+  "multicamera": 252,
+  "changingEnvironment": [
+    {
+      "task": "Emmett / Linear Track",
+      "variants": [
+        {
+          "environment": "msaze",
+          "file": "/Users/edeno/Downloads/all_rat_metadata_yaml/denisse_yaml_files/Emmett/20251106/20251106_Emmett_metadata.yml"
+        },
+        {
+          "environment": "maze",
+          "file": "/Users/edeno/Downloads/all_rat_metadata_yaml/denisse_yaml_files/Emmett/20251107/20251107_Emmett_metadata.yml"
+        }
+      ]
+    },
+    {
+      "task": "SC38 / forkTrack_handleAlternation_HaightRight_twoSecondDelay",
+      "variants": [
+        {
+          "environment": "HaightRight",
+          "file": "/Users/edeno/Downloads/all_rat_metadata_yaml/sc4712_yaml_files/SC38/generated/20230606_SC38_metadata.yml"
+        },
+        {
+          "environment": "HaightLeft",
+          "file": "/Users/edeno/Downloads/all_rat_metadata_yaml/sc4712_yaml_files/SC38/generated/20230613_SC38_metadata.yml"
+        }
+      ]
+    }
+  ]
+}
