@@ -5,6 +5,8 @@ import { getDayWorkflowStatus } from '../domain/workflowStatus';
 import { buildPreflightSummary } from '../domain/preflightSummary';
 import { resolveRigConstant } from '../domain/rigConstants';
 import styles from './EffectiveDayReview.module.css';
+import { missingStatescriptEpochs } from '../viewModels/epochGridViewModel';
+import StatescriptReminder from './StatescriptReminder';
 
 /**
  * EffectiveDayReview — read-only "what THIS day actually used" review (Phase 3-5, Task 3.3a:
@@ -27,11 +29,19 @@ export default function EffectiveDayReview({
   animal,
   day,
   warningCount,
+  animalDays = [],
+  onReviewStatescript,
+  showFileReminders = true,
+  omitLabels = [],
 }: {
   animal: Animal;
   day: Day;
   /** Non-blocking warnings the caller's gate counts for this day. */
   warningCount: number;
+  animalDays?: Day[];
+  showFileReminders?: boolean;
+  omitLabels?: string[];
+  onReviewStatescript?: (epoch: number) => void;
 }) {
   let merged: Record<string, unknown>;
   try {
@@ -63,27 +73,35 @@ export default function EffectiveDayReview({
     <div className={styles.effectiveDayReview} role="group" aria-label="Effective setup for this day">
       <p className={styles.effectiveDayReviewCaption}>
         What this day used (read-only)
-        {snapshot?.date ? ` — configuration from ${snapshot.date}` : ''}
+        {snapshot?.date && snapshot.effectiveDateKnown !== false ? ` — configuration from ${snapshot.date}` : ''}
         {workflow.isHistoricalConfiguration ? ' · historical, may differ from the current setup tabs' : ''}
         {snapshot?.description ? ` · ${snapshot.description}` : ''}
       </p>
+      {showFileReminders && <StatescriptReminder epochs={missingStatescriptEpochs(animal, day, animalDays)} dayId={day.id} onReview={onReviewStatescript} />}
       <dl className={styles.effectiveDayReviewList}>
-        {summary.map((entry) => (
+        {summary.filter((entry) => entry.label !== 'Subject & session' && !omitLabels.includes(entry.label)).map((entry) => (
           <div key={entry.label} className={styles.effectiveDayReviewRow}>
             <dt>{entry.label}</dt>
             <dd>{entry.value}</dd>
           </div>
         ))}
+
+      </dl>
+      <details className={styles.technical} open={raw.status === 'differs' || mult.status === 'differs' || undefined}>
+        <summary>Technical conversion values{raw.status === 'differs' || mult.status === 'differs' ? ' · differs from defaults' : ''}</summary>
+        <dl className={styles.effectiveDayReviewList}>
+        <div className={styles.effectiveDayReviewRow}><dt>Session ID</dt><dd>{String(merged.session_id ?? '—')}</dd></div>
         <div className={styles.effectiveDayReviewRow}>
-          <dt>Rig constants</dt>
+          <dt>Voltage & timing</dt>
           <dd>
-            raw_data_to_volts {raw.display}
-            {raw.status === 'differs' ? ' (differs from current default)' : ''}; times_period_multiplier{' '}
+            Voltage conversion: {raw.display} V/count
+            {raw.status === 'differs' ? ' (differs from current default)' : ''}; legacy period multiplier: {' '}
             {mult.display}
             {mult.status === 'differs' ? ' (differs from current default)' : ''}
           </dd>
         </div>
-      </dl>
+        </dl>
+      </details>
     </div>
   );
 }

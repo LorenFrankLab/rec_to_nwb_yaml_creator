@@ -1,3 +1,5 @@
+import { SPECIES_OPTIONS } from '../domain/subjectOptions';
+import { FieldRequirements, RequiredMark } from './ui/FieldRequirements';
 import { useId, useMemo, useState, useEffect } from 'react';
 import { getAnimalSubject } from '../state/workspaceSelectors';
 import { isValidSpecies } from '../validation/dandiSubject';
@@ -41,20 +43,9 @@ interface AnimalProfileDialogProps {
 }
 
 /**
- * AnimalProfileDialog — the animal-wide subject-facts editor, opened from the AnimalView header ⋮
- * ("Edit profile…").
- *
- * It owns the CONSTANT subject facts (species, sex, date of birth, genotype, description).
- * `subject_id` is the read-only identity (recreate the animal to change it). Weight is intentionally
- * absent — it is a per-day recording fact, not a constant animal fact. Editing here is animal-wide
- * (`animal.subject.*` merges into every day at export), so it NAMES the blast radius — this animal +
- * all N recording days, including already-exported ones — both as a persistent note AND in a confirm
- * before the change commits. Species carries the DANDI Latin-binomial / NCBI guidance (the app's
- * `invalid_species` rule is the only gate); DOB carries the ISO-8601 expectation.
- *
- * Relocated from the always-visible collapsible AnimalProfileSection (which cluttered the header band
- * on every tab) into this on-demand dialog; the form behaviour is preserved.
- *
+ * Edit shared subject facts using the same species choices and required-field cues as creation.
+ * A correction applies to all of the animal’s recordings and requires a scope confirmation.
+ * Weight is measured on the recording day; it is deliberately absent from this form.
  */
 export default function AnimalProfileDialog({
   isOpen,
@@ -84,6 +75,7 @@ export default function AnimalProfileDialog({
     [subject.subject_id, subject.species, subject.sex, subject.date_of_birth, subject.genotype, subject.description]
   );
 
+  const [customSpecies, setCustomSpecies] = useState(false);
   const [form, setForm] = useState(initial);
   const [speciesError, setSpeciesError] = useState('');
   const trimmedSubjectId = form.subject_id.trim();
@@ -104,6 +96,7 @@ export default function AnimalProfileDialog({
   useEffect(() => {
     if (isOpen) {
       setForm(initial);
+      setCustomSpecies(false);
       setSpeciesError('');
       setConfirmOpen(false);
     }
@@ -193,11 +186,13 @@ export default function AnimalProfileDialog({
           recording day.
         </p>
 
+        <FieldRequirements when="export" />
         <div className="form-grid">
           <div className="form-field">
-            <label htmlFor="profile-subject-id">Subject ID (exact spelling in the recording filenames)</label>
+            <label htmlFor="profile-subject-id">Subject ID <RequiredMark /></label>
             <input
               id="profile-subject-id"
+              aria-required="true"
               type="text"
               data-field-path="subject.subject_id"
               value={form.subject_id}
@@ -206,11 +201,7 @@ export default function AnimalProfileDialog({
               onChange={(e) => setField('subject_id', e.target.value)}
             />
             <span id="profile-subject-id-hint" className="field-help-text">
-              The converter matches <code>{`{date}_{subject}_metadata.yml`}</code> to{' '}
-              <code>{`{date}_{subject}_{epoch}_{tag}.rec`}</code> by this exact token (case-sensitive).
-              If this animal was entered in a different capitalization than its recordings use, correct it
-              here — the workspace key ({String((animal as { id?: unknown } | undefined)?.id ?? subject.subject_id)}) stays the same. Letters, digits and
-              hyphens only.
+              Match the exact animal spelling and capitalization in your recording filenames. Letters, digits and hyphens only.
             </span>
             {subjectIdError && (
               <span id="profile-subject-id-error" className="validation-error" role="alert">
@@ -220,31 +211,23 @@ export default function AnimalProfileDialog({
           </div>
 
           <div className="form-field">
-            <label htmlFor="profile-species">Species</label>
-            <input
-              id="profile-species"
-              type="text"
-              data-field-path="subject.species"
-              value={form.species}
-              aria-invalid={!!speciesError}
-              aria-describedby={speciesError ? 'profile-species-error' : 'profile-species-hint'}
-              onChange={(e) => {
-                setField('species', e.target.value);
-                if (speciesError) setSpeciesError('');
-              }}
-              onBlur={(e) => {
-                const value = e.target.value.trim();
-                setSpeciesError(
-                  value !== '' && !isValidSpecies(value)
-                    ? 'Use a Latin binomial (e.g. Rattus norvegicus) or an NCBI Taxonomy URI.'
-                    : ''
-                );
-              }}
-            />
-            <span id="profile-species-hint" className="field-help-text">
-              Scientific name — a Latin binomial (e.g. Rattus norvegicus) or an NCBI Taxonomy URI.
-              Free text like &quot;Rat&quot; is rejected by NWB/DANDI archives.
-            </span>
+            <label htmlFor="profile-species">Species <RequiredMark /></label>
+            <select id="profile-species" aria-required="true" data-field-path="subject.species"
+              value={!customSpecies && SPECIES_OPTIONS.some((choice) => choice.value === form.species) ? form.species : 'other'}
+              onChange={(event) => {
+                setCustomSpecies(event.target.value === 'other');
+                setField('species', event.target.value === 'other' ? '' : event.target.value);
+                setSpeciesError('');
+              }}>
+              {SPECIES_OPTIONS.map((choice) => <option key={choice.value} value={choice.value}>{choice.label}</option>)}
+            </select>
+            {(customSpecies || !SPECIES_OPTIONS.some((choice) => choice.value === form.species)) && <>
+              <label htmlFor="profile-species-custom">Scientific name or taxonomy URI <RequiredMark /></label>
+              <input id="profile-species-custom" type="text" value={form.species} aria-required="true"
+                aria-invalid={!!speciesError} aria-describedby={speciesError ? 'profile-species-error' : undefined}
+                onChange={(event) => setField('species', event.target.value)}
+                onBlur={() => setSpeciesError(form.species.trim() && !isValidSpecies(form.species.trim()) ? 'Use a scientific name, such as Rattus norvegicus, or an NCBI Taxonomy URI.' : '')} />
+            </>}
             {speciesError && (
               <span id="profile-species-error" className="validation-error" role="alert">
                 {speciesError}
@@ -253,9 +236,10 @@ export default function AnimalProfileDialog({
           </div>
 
           <div className="form-field">
-            <label htmlFor="profile-sex">Sex</label>
+            <label htmlFor="profile-sex">Sex <RequiredMark /></label>
             <select
               id="profile-sex"
+              aria-required="true"
               data-field-path="subject.sex"
               value={form.sex}
               onChange={(e) => setField('sex', e.target.value)}
@@ -268,9 +252,10 @@ export default function AnimalProfileDialog({
           </div>
 
           <div className="form-field">
-            <label htmlFor="profile-dob">Date of Birth</label>
+            <label htmlFor="profile-dob">Date of Birth <RequiredMark /></label>
             <input
               id="profile-dob"
+              aria-required="true"
               type="date"
               data-field-path="subject.date_of_birth"
               value={form.date_of_birth}
@@ -280,14 +265,15 @@ export default function AnimalProfileDialog({
               onChange={(e) => setField('date_of_birth', e.target.value)}
             />
             <span className="field-help-text">
-              Stored as an ISO-8601 datetime (e.g. 2023-01-15T00:00:00) for NWB.
+              Required before export. You can leave it blank while completing a draft.
             </span>
           </div>
 
           <div className="form-field">
-            <label htmlFor="profile-genotype">Genotype</label>
+            <label htmlFor="profile-genotype">Genotype <RequiredMark /></label>
             <input
               id="profile-genotype"
+              aria-required="true"
               type="text"
               data-field-path="subject.genotype"
               value={form.genotype}
@@ -296,7 +282,7 @@ export default function AnimalProfileDialog({
           </div>
 
           <div className="form-field">
-            <label htmlFor="profile-description">Description</label>
+            <label htmlFor="profile-description">Description (optional)</label>
             <input
               id="profile-description"
               type="text"

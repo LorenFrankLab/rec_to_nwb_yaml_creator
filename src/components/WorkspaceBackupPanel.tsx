@@ -32,11 +32,7 @@ interface RestoreCandidate {
   recoveredNote: string | null;
 }
 
-function formatBytes(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KiB`;
-  return `${(bytes / 1024 / 1024).toFixed(2)} MiB`;
-}
+
 
 function formatWhen(iso: string | null): string {
   if (!iso) return 'never';
@@ -172,8 +168,7 @@ export default function WorkspaceBackupPanel() {
       <p className={styles.lede}>
         Your workspace is stored only in this browser on this computer
         {persistence.lastSaved ? ` (last saved ${formatWhen(persistence.lastSaved)})` : ''}.
-        {' '}It uses {formatBytes(usage.bytes)} of the {formatBytes(5 * 1024 * 1024)} the smallest supported
-        browser allows. Download a backup to move work to another computer or to keep a copy.
+        {' '}Download a backup to keep a copy or continue on another computer.
       </p>
       {usage.fraction > 0.6 && (
         <p className={styles.warning} role="status">
@@ -189,9 +184,10 @@ export default function WorkspaceBackupPanel() {
       )}
 
       <div className={styles.actions}>
-        <Button variant="primary" size="small" onClick={downloadBackup}>
+        <Button variant="secondary" size="small" onClick={downloadBackup} disabled={Object.keys(workspace.animals ?? {}).length === 0 && Object.keys(workspace.days ?? {}).length === 0}>
           Download workspace backup
         </Button>
+        <details open={Object.keys(workspace.animals ?? {}).length === 0 || undefined}><summary>Restore a workspace</summary>
         <Button variant="secondary" size="small" onClick={() => fileInputRef.current?.click()} disabled={readOnly}>
           Restore from backup…
         </Button>
@@ -208,6 +204,7 @@ export default function WorkspaceBackupPanel() {
             Restore last known good ({formatWhen(kept.checkpoint.savedAt)})
           </Button>
         )}
+        </details>
       </div>
 
       {(kept.quarantine || kept.premigration) && (

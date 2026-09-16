@@ -1,0 +1,148 @@
+body:has(.modern-app) {
+  margin: 0;
+  color: var(--color-grey-900);
+  font-family: system-ui, -apple-system, sans-serif;
+}
+
+.modern-app {
+  max-width: 1320px;
+  padding: 0 var(--spacing-lg);
+  margin: 0 auto;
+}
+
+.modern-app *,
+.modern-app *::before,
+.modern-app *::after {
+  box-sizing: border-box;
+}
+
+.modern-app details {
+  border-color: var(--color-grey-200);
+}
+
+
+.modern-app .footer {
+  padding-block: var(--spacing-md);
+  color: var(--color-grey-600);
+}
+
+.modern-app .day-editor-content { padding: 16px 0 16px 24px; }
+
+.modern-app .daily-setup-section {
+  padding: 0;
+  border: 0;
+}
+.modern-app .daily-setup-header { margin-bottom: var(--spacing-lg); }
+.modern-app .daily-setup-lede { margin-bottom: var(--spacing-sm); }
+.modern-app .daily-log-context { margin-top: var(--spacing-sm); }
+.modern-app .daily-log-primary-grid { min-width: 0; }
+
+.modern-app .daily-setup-group {
+  min-width: 0;
+  padding: 0;
+  border: 0;
+}
+.modern-app .daily-setup-group-primary { padding: 0; }
+
+.modern-app .daily-setup-group-primary > summary {
+  margin: 0;
+  padding: 12px;
+  font-size: var(--font-size-sm);
+}
+.modern-app .daily-setup-group-primary[open] { padding: 0 12px 12px; }
+
+.modern-app .supplemental-disclosure > summary {
+  min-height: 44px;
+  padding: var(--spacing-sm) var(--spacing-md);
+  font-size: var(--font-size-sm);
+}
+
+.modern-app details[open] > summary {
+  border-bottom-color: var(--color-grey-200);
+}
+
+.modern-app .daily-setup-group-primary[open] > summary { margin-inline: -12px; }
+
+.modern-app .daily-log-epochs > .tasks-files-step > .day-editor-section {
+  border: 0;
+  padding: 0;
+}
+
+.modern-app .day-editor-body .section-nav-group-label {
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+}
+
+.modern-app .day-editor-body .section-nav-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  min-height: 44px;
+}
+
+.modern-app .day-editor-body .section-nav-status {
+  grid-column: 2;
+  grid-row: 1;
+}
+.modern-app .day-editor-body .section-nav-status-text { display: none; }
+
+.modern-app .day-editor-body .section-nav-count {
+  grid-column: 1;
+  grid-row: 2;
+  text-align: left;
+}
+.modern-app .day-editor-body .section-nav-item.step-incomplete .section-nav-status-icon { color: var(--color-grey-600); }
+
+.modern-app .field-help-text {
+  font-style: normal;
+  line-height: 1.5;
+}
+.modern-app .opto-step { max-width: 760px; }
+
+.modern-app .opto-step .help-text {
+  color: var(--color-grey-700);
+  line-height: 1.5;
+}
+
+.modern-app .opto-enable {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  min-height: 44px;
+  margin-bottom: var(--spacing-md);
+}
+
+.modern-app .opto-incomplete {
+  padding: var(--spacing-md);
+  background: var(--color-grey-100);
+  border-radius: var(--radius-sm);
+}
+.modern-app .form-container { gap: var(--spacing-md); }
+
+@media (max-width: 720px) {
+  .modern-app { padding-inline: var(--spacing-md); }
+  .modern-app .day-editor-content { padding: var(--spacing-md) 0; }
+  .modern-app .day-editor-section { padding: var(--spacing-md); }
+  .modern-app .daily-setup-section { padding: 0; }
+  .modern-app .daily-setup-stack { gap: var(--spacing-md); }
+  .modern-app .daily-log-primary-grid { grid-template-columns: minmax(0, 1fr); }
+  .modern-app .form-actions { flex-wrap: wrap; }
+  .modern-app .form-actions > button { flex: 1 1 auto; }
+}
+
+.modern-app .repair-action-video-group {
+  display: grid;
+  gap: var(--spacing-sm);
+}
+.modern-app .repair-action-video-group p { margin: 0; }
+.modern-app .repair-action-video-group > button { justify-self: start; }
+
+.modern-app .repair-epoch-links {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm);
+}
+
+
+.modern-app .supplemental-disclosure { margin-top: var(--spacing-lg); }

@@ -27,17 +27,18 @@ describe('ReadinessBar (issue-driven export readiness)', () => {
       { severity: 'error', message: 'Probe 2 location missing', actionLabel: 'Fix in Setup' },
     ];
     render(<ReadinessBar issues={issues} onFix={onFix} />);
-    expect(screen.getByText(/2 issues block export/i)).toBeInTheDocument();
+    expect(screen.getByText(/2 issues to correct/i)).toBeInTheDocument();
     expect(screen.getByText('Epoch 1 has no video')).toBeInTheDocument();
     expect(screen.getByText('Probe 2 location missing')).toBeInTheDocument();
 
+    await user.click(screen.getByText('Show required corrections'));
     await user.click(screen.getByRole('button', { name: 'Fix in Epoch 1' }));
     expect(onFix).toHaveBeenCalledWith(issues[0]);
   });
 
   it('uses singular copy for a single blocking issue', () => {
     render(<ReadinessBar issues={[{ severity: 'error', message: 'x' }]} onFix={() => {}} />);
-    expect(screen.getByText(/1 issue blocks export/i)).toBeInTheDocument();
+    expect(screen.getByText(/1 issue to correct/i)).toBeInTheDocument();
   });
 
   it('defaults the fix action label to "Fix" when an issue carries none', async () => {
@@ -45,7 +46,8 @@ describe('ReadinessBar (issue-driven export readiness)', () => {
     const onFix = vi.fn();
     const issue = { severity: 'error', message: 'Something blocks export' };
     render(<ReadinessBar issues={[issue]} onFix={onFix} />);
-    await user.click(screen.getByRole('button', { name: 'Fix' }));
+    await user.click(screen.getByText('Show required corrections'));
+    await user.click(screen.getByRole('button', { name: 'Review entry' }));
     expect(onFix).toHaveBeenCalledWith(issue);
   });
 
@@ -86,30 +88,25 @@ describe('ReadinessBar (issue-driven export readiness)', () => {
     expect(screen.getByText('This one can be fixed')).toBeInTheDocument();
     expect(screen.getByText('Read-only dead end — no in-app fix')).toBeInTheDocument();
     // …but only the actionable one gets a button (no dead control on the dead-end issue).
-    expect(screen.getAllByRole('button')).toHaveLength(1);
+    expect(screen.getAllByRole('button', { hidden: true })).toHaveLength(1);
   });
 
-  it('groups blocking errors by owning section and keeps the visible groups bounded', () => {
-    const buckets = [
-      { code: 'partial_configuration', path: 'optogenetics.opto_excitation_source' },
-      { code: 'required', path: 'associated_video_files' },
-      { code: 'bad_channel_out_of_range', path: 'deviceOverrides.bad_channels' },
-      { code: 'required', path: 'behavioral_events' },
-      { code: 'required', path: 'experiment_description' },
-    ];
-    const issues = Array.from({ length: 20 }, (_, index) => ({
-      severity: 'error',
-      ...buckets[index % buckets.length],
-      message: `Issue ${index}`,
-    }));
-    render(<ReadinessBar issues={issues} onFix={() => {}} />);
-
-    expect(screen.getByText(/20 issues block export/i)).toBeInTheDocument();
-    expect(screen.getAllByTestId('readiness-error-group')).toHaveLength(3);
-    expect(screen.getByText(/\+2 more sections with fixes/i)).toBeInTheDocument();
+  it('keeps a new draft calm, groups missing videos and offers review without exposing a wall of errors', async () => {
+    const user = userEvent.setup();
+    const onReview = vi.fn();
+    render(<ReadinessBar issues={[
+      { severity: 'error', code: 'required', message: 'Weight is required' },
+      ...[1, 2, 3, 4].map((epoch) => ({ severity: 'error', code: 'epoch_video_undeclared', message: `Epoch ${epoch} needs a video` })),
+    ]} onFix={vi.fn()} onReview={onReview} exportGate={{ open: false, message: 'Complete the entries' }} />);
+    expect(screen.getByRole('status')).toHaveTextContent('To finish');
+    expect(screen.getByText(/Weight · 4 epochs need video files/)).toBeVisible();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(screen.queryByText('Epoch 1 needs a video')).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Review & export' }));
+    expect(onReview).toHaveBeenCalledOnce();
   });
 
-  it('collapses warnings behind an acknowledgement disclosure and omits info items', async () => {
+  it('collapses warnings behind a disclosure and omits info items', async () => {
     const user = userEvent.setup();
     render(
       <ReadinessBar
@@ -125,9 +122,6 @@ describe('ReadinessBar (issue-driven export readiness)', () => {
     expect(screen.queryByText(/Inline-only nudge/i)).not.toBeInTheDocument();
 
     await user.click(screen.getByText(/1 warning to review/i));
-    expect(screen.getByText(/1 section has non-blocking warnings/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/reviewed these warnings/i)).toBeInTheDocument();
-    await user.click(screen.getByLabelText(/reviewed these warnings/i));
-    expect(screen.getByText(/1 warning to review — reviewed/i)).toBeInTheDocument();
+    expect(screen.getByText('Location case differs')).toBeVisible();
   });
 });

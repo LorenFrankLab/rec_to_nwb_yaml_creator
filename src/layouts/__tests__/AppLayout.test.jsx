@@ -453,7 +453,7 @@ describe('AppLayout', () => {
       expect(screen.queryByRole('navigation', { name: /primary/i })).not.toBeInTheDocument();
     });
 
-    it('renders Workspace and Validation & Export links on non-legacy routes (no standalone Home)', () => {
+    it('renders Workspace and Review all animals links on non-legacy routes (no standalone Home)', () => {
       window.location.hash = '#/workspace';
       render(<AppLayout />);
 
@@ -461,8 +461,8 @@ describe('AppLayout', () => {
       expect(nav).toBeInTheDocument();
       expect(nav).toHaveAttribute('id', 'navigation');
       expect(screen.getByRole('link', { name: /^workspace$/i })).toHaveAttribute('href', '#/workspace');
-      // Batch Validation & Export is now discoverable in the chrome nav (Task 4.3/4.4).
-      expect(screen.getByRole('link', { name: /validation & export/i })).toHaveAttribute('href', '#/validation');
+      // Batch Review all animals is now discoverable in the chrome nav (Task 4.3/4.4).
+      expect(screen.getByRole('link', { name: /review all animals/i })).toHaveAttribute('href', '#/validation');
       // The redundant standalone Home entry is gone — create-animal now lives in the workspace.
       expect(screen.queryByRole('link', { name: /^home$/i })).not.toBeInTheDocument();
     });
@@ -489,7 +489,7 @@ describe('AppLayout', () => {
     it('marks the current route link with aria-current=page', () => {
       window.location.hash = '#/validation';
       render(<AppLayout />);
-      expect(screen.getByRole('link', { name: /validation & export/i })).toHaveAttribute('aria-current', 'page');
+      expect(screen.getByRole('link', { name: /review all animals/i })).toHaveAttribute('aria-current', 'page');
       expect(screen.getByRole('link', { name: /^workspace$/i })).not.toHaveAttribute('aria-current');
     });
 

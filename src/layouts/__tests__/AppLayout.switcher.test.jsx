@@ -66,7 +66,7 @@ describe('AppLayout — animal switcher placement', () => {
   it('does NOT render the switcher on the workspace route', () => {
     renderAt('#/workspace');
     expect(screen.queryByRole('button', { name: /switch animal/i })).not.toBeInTheDocument();
-    // The plain Workspace / Validation & Export nav is still there.
+    // The plain Workspace / Review & export nav is still there.
     expect(screen.getByRole('link', { name: /^workspace$/i })).toBeInTheDocument();
   });
 });

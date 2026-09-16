@@ -68,6 +68,7 @@ const EPOCH_CLASS: Record<EpochStatus, string> = {
 interface EpochStatusPillProps {
   /** The epoch-row completeness state. */
   status: EpochStatus;
+  fileReminder?: boolean;
 }
 
 /**
@@ -76,12 +77,13 @@ interface EpochStatusPillProps {
  * epoch row and must never collide with the day-lifecycle words. `Needs video` is the row face of
  * the video-declaration readiness rule.
  */
-export const EpochStatusPill = ({ status }: EpochStatusPillProps) => {
-  const classes = [styles.pill, EPOCH_CLASS[status] ?? styles.incomplete].filter(Boolean).join(' ');
+export const EpochStatusPill = ({ status, fileReminder = false }: EpochStatusPillProps) => {
+  const reminder = status === 'complete' && fileReminder;
+  const classes = [styles.pill, reminder ? styles.needsVideo : EPOCH_CLASS[status] ?? styles.incomplete].filter(Boolean).join(' ');
   return (
     <span className={classes}>
       <span className={styles.dot} aria-hidden="true" />
-      {EPOCH_LABEL[status]}
+      {reminder ? 'Review optional log' : EPOCH_LABEL[status]}
     </span>
   );
 };

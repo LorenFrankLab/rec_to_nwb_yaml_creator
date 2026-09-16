@@ -28,6 +28,8 @@ import logo from '../logo.png';
 // here, eagerly, so a direct load of any route paints a styled shell — it used to ride in on
 // `App.scss` via the legacy form, which is now a lazily-loaded route.
 import './AppShell.scss';
+import './ModernWorkspace.css';
+import '../components/ui/FormFields.css';
 import styles from './AppLayout.module.css';
 
 // Route components are CODE-SPLIT: each page is its own chunk, fetched the first time its route is
@@ -335,7 +337,7 @@ export function AppLayout() {
   );
 
   return (
-    <>
+    <div className={currentRoute.view === 'legacy' ? undefined : 'modern-app'}>
       {/* Skip links for keyboard accessibility (WCAG 2.1 Level A - 2.4.1) */}
       <a
         href="#main-content"
@@ -411,14 +413,14 @@ export function AppLayout() {
                 />
               </>
             )}
-            {/* Batch / cross-animal Validation & Export is the chrome-level home for the preflight
+            {/* Batch / cross-animal Review & export is the chrome-level home for the preflight
                 (Task 4.3/4.4); the per-animal export tab links UP to it. The redundant standalone
                 "Home" entry is dropped — create-animal now lives in the workspace picker. */}
             <a
               href="#/validation"
               aria-current={currentRoute.view === 'validation' ? 'page' : undefined}
             >
-              Validation &amp; Export
+              Review all animals
             </a>
             {isFeatureEnabled('showLegacyToggle') && (
               <a href="#/" className={styles.legacyToggle}>
@@ -510,7 +512,7 @@ export function AppLayout() {
         <a href="http://www.ucsf.edu">The University of California at San Francisco</a>
         <br />
       </footer>
-    </>
+    </div>
   );
 }
 

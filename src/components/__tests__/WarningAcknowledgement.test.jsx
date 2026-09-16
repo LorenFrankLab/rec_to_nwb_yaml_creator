@@ -1,7 +1,7 @@
 /**
  * Unit tests for WarningAcknowledgement (Phase 3-6) — the reusable pre-export warning review.
  *
- * Pins the component's contract directly (the per-animal Validation & Export tab and the future
+ * Pins the component's contract directly (the per-animal Review & export tab and the future
  * Phase 4 batch screen both consume it): it lists each day → its warning messages, renders nothing
  * when there are no warnings, and reports the checkbox state through onChange.
  */

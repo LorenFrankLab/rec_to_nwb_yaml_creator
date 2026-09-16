@@ -1,6 +1,6 @@
 /**
  * @file Tests for getInitialCalendarMonth — the timeline-aware initial month for the
- * Add Recording Days calendar (Phase 8A-1).
+ * Add multiple dates… calendar (Phase 8A-1).
  *
  * The calendar must follow the animal's recording timeline: when the animal already has
  * recording days, it opens near the latest one (or the next likely recording day if that

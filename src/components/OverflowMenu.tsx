@@ -1,4 +1,5 @@
-import { forwardRef, useCallback, useEffect, useId, useImperativeHandle, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
+import { forwardRef, useCallback, useEffect, useLayoutEffect, useId, useImperativeHandle, useRef, useState } from 'react';
 import type { KeyboardEvent as ReactKeyboardEvent, ReactNode } from 'react';
 import buttonStyles from './ui/Button.module.css';
 import { usePopupDismissal } from '../hooks/usePopupDismissal';
@@ -54,6 +55,7 @@ const OverflowMenu = forwardRef<OverflowMenuHandle, OverflowMenuProps>(function 
 ) {
   const menuId = useId();
   const [open, setOpen] = useState(false);
+  const [position, setPosition] = useState({ top: 0, left: 0 });
   // Index of the item that owns focus while the menu is open (a roving focus target).
   const [activeIndex, setActiveIndex] = useState(0);
   const triggerRef = useRef<HTMLButtonElement | null>(null);
@@ -91,6 +93,24 @@ const OverflowMenu = forwardRef<OverflowMenuHandle, OverflowMenuProps>(function 
   useEffect(() => {
     if (open) itemRefs.current[activeIndex]?.focus();
   }, [open, activeIndex]);
+
+  // Place the popup outside scrolling tables so a last-row menu cannot be clipped.
+  useLayoutEffect(() => {
+    if (!open) return;
+    const place = () => {
+      const anchor = triggerRef.current?.getBoundingClientRect();
+      const popup = menuRef.current?.getBoundingClientRect();
+      if (!anchor || !popup) return;
+      setPosition({
+        left: Math.max(8, Math.min(anchor.right - popup.width, window.innerWidth - popup.width - 8)),
+        top: Math.max(8, anchor.bottom + popup.height + 4 <= window.innerHeight ? anchor.bottom + 4 : anchor.top - popup.height - 4),
+      });
+    };
+    place();
+    window.addEventListener('resize', place);
+    window.addEventListener('scroll', place, true);
+    return () => { window.removeEventListener('resize', place); window.removeEventListener('scroll', place, true); };
+  }, [open]);
 
   const dismiss = useCallback(() => setOpen(false), []);
   usePopupDismissal({ open, triggerRef, popupRef: menuRef, onDismiss: dismiss });
@@ -209,13 +229,14 @@ const OverflowMenu = forwardRef<OverflowMenuHandle, OverflowMenuProps>(function 
         {trigger ?? <span aria-hidden="true">⋮</span>}
       </button>
 
-      {open && (
+      {open && createPortal(
         <ul
           ref={menuRef}
           id={menuId}
           role="menu"
           aria-label={label}
           className={styles.list}
+          style={position}
           onKeyDown={handleMenuKeyDown}
         >
           {items.map((item, index) => (
@@ -239,7 +260,8 @@ const OverflowMenu = forwardRef<OverflowMenuHandle, OverflowMenuProps>(function 
               </button>
             </li>
           ))}
-        </ul>
+        </ul>,
+        triggerRef.current?.closest('[data-popup-root], [role="dialog"], [role="alertdialog"]') ?? document.body
       )}
     </div>
   );

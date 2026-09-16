@@ -126,6 +126,7 @@ export default function AnimalSwitcher({
       {open && (
         <div
           ref={popupRef}
+          data-popup-root
           id={popupId}
           role="group"
           aria-label="Switch animal"

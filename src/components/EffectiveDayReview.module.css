@@ -1,43 +1,79 @@
-/* Styles for EffectiveDayReview — moved VERBATIM out of ValidationSummary.module.css when the
-   component moved to src/components so more than one page can render it (the architecture guard
-   forbids a page importing a sibling page). No rule changed: the Validation summary looks the same. */
-
 .effectiveDayReview {
-  margin: 0.5rem 0 0.25rem;
-  padding: 0.5rem 0.7rem;
-  border-left: 3px solid #cfe0e0;
-  background: #f7fafa;
-  border-radius: 0 6px 6px 0;
+  margin: var(--spacing-md) 0;
+  padding: var(--spacing-md);
+  border: 1px solid var(--color-grey-200);
+  border-radius: var(--radius-md);
 }
 
 .effectiveDayReviewCaption {
-  margin: 0 0 0.4rem;
-  font-size: 0.8rem;
+  margin: 0 0 var(--spacing-md);
+  font-size: var(--font-size-base);
   font-weight: 600;
-  color: var(--color-ink-warm);
+  line-height: 1.5;
 }
 
 .effectiveDayReviewList {
   margin: 0;
   display: grid;
-  grid-template-columns: max-content 1fr;
-  gap: 0.1rem 0.6rem;
-  font-size: 0.8rem;
+  grid-template-columns: minmax(120px, 1fr) minmax(0, 3fr);
+  gap: var(--spacing-sm) var(--spacing-md);
+  font-size: var(--font-size-sm);
+  line-height: 1.6;
 }
 
-.effectiveDayReviewRow {
-  display: contents;
-}
-
-.effectiveDayReviewList dt {
-  color: var(--color-ink-muted);
-}
+.effectiveDayReviewRow { display: contents; }
+.effectiveDayReviewList dt { color: var(--color-grey-700); }
 
 .effectiveDayReviewList dd {
   margin: 0;
-  color: var(--color-grey-900);
-
-  /* Long values must wrap within the grid cell, not widen the page at narrow viewports. */
   min-width: 0;
   overflow-wrap: anywhere;
+  color: var(--color-grey-900);
+}
+.technical { margin-top: var(--spacing-md); }
+
+.technical > summary {
+  min-height: 44px;
+  padding: var(--spacing-sm);
+  font-size: var(--font-size-sm);
+}
+.technical[open] > dl { padding: var(--spacing-sm); }
+
+@media (max-width: 600px) {
+  .effectiveDayReviewList {
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--spacing-xs);
+}
+  .effectiveDayReviewList dt { font-weight: 600; }
+  .effectiveDayReviewList dd { margin-bottom: var(--spacing-sm); }
+}
+
+.fileReminder {
+  padding: var(--spacing-md);
+  margin-bottom: var(--spacing-md);
+  border-left: 3px solid var(--color-warning);
+  background: var(--color-warning-light);
+  font-size: var(--font-size-sm);
+}
+
+.fileReminder p { margin-block: var(--spacing-xs) var(--spacing-sm); }
+
+.reminderLinks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-sm);
+}
+
+.reminderLinks > :is(button, a) {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  padding: var(--spacing-xs) var(--spacing-sm);
+  color: var(--color-primary);
+  background: var(--color-white);
+  border: 1px solid var(--color-grey-300);
+  border-radius: var(--radius-sm);
+  text-decoration: none;
+  font: inherit;
+  cursor: pointer;
 }

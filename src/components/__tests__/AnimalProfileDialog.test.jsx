@@ -53,7 +53,7 @@ describe('AnimalProfileDialog', () => {
 
   it('exposes the exported subject_id as an editable recording token, with the converter\u2019s filename rule', async () => {
     renderOpen();
-    const input = screen.getByLabelText(/subject id \(exact spelling/i);
+    const input = screen.getByLabelText(/subject id/i);
     expect(input).toHaveValue('remy');
     // An underscore can never be grouped with the recordings — blocked inline.
     await user.clear(input);
@@ -69,18 +69,18 @@ describe('AnimalProfileDialog', () => {
 
   it('blocks a subject id another animal already uses (case-insensitively), naming that animal', async () => {
     renderOpen({ animalId: 'remy', animals: { remy: animal, other: { subject: { subject_id: 'OtherRat' } } } });
-    const input = screen.getByLabelText(/subject id \(exact spelling/i);
+    const input = screen.getByLabelText(/subject id/i);
     await user.clear(input);
     await user.type(input, 'otherrat');
     expect(screen.getByRole('alert')).toHaveTextContent(/already used by animal "OtherRat"/i);
     expect(screen.getByRole('button', { name: /save profile changes/i })).toBeDisabled();
   });
 
-  it('shows species guidance (Latin binomial / NCBI URI) and DOB ISO expectation at the edit point', () => {
+  it('offers familiar species choices and a required-before-export DOB cue', () => {
     renderOpen();
-    expect(screen.getByText(/Latin binomial.*NCBI Taxonomy/is)).toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: /species/i })).toHaveValue('Rattus norvegicus');
     expect(screen.getByLabelText(/Date of Birth/i)).toBeInTheDocument();
-    expect(screen.getByText(/ISO-8601 datetime/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/required before export/i)[0]).toBeInTheDocument();
   });
 
   it('opens on a draft animal with no date of birth and lets the user fill it in', async () => {
@@ -104,7 +104,8 @@ describe('AnimalProfileDialog', () => {
 
   it('blocks save and shows an error when species is not a binomial / URI', async () => {
     renderOpen({ dayCount: 2 });
-    const species = screen.getByLabelText(/Species/i);
+    await user.selectOptions(screen.getByRole('combobox', { name: /Species/i }), 'other');
+    const species = screen.getByLabelText(/Scientific name or taxonomy URI/i);
     await user.clear(species);
     await user.type(species, 'Rat');
     await user.click(screen.getByRole('button', { name: /save profile/i }));
@@ -166,7 +167,7 @@ describe('AnimalProfileDialog', () => {
 
   it('exposes subject repair-focus anchors and focuses the requested field', async () => {
     renderOpen({ focusPath: 'subject.species' });
-    const species = screen.getByLabelText(/Species/i);
+    const species = screen.getByRole('combobox', { name: /Species/i });
     expect(species).toHaveAttribute('data-field-path', 'subject.species');
     expect(screen.getByLabelText(/Date of Birth/i)).toHaveAttribute('data-field-path', 'subject.date_of_birth');
     await waitFor(() => expect(species).toHaveFocus());
