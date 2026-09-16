@@ -291,6 +291,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **The app shell (header, skip links, footer) is styled the same on a direct workspace load as after
+  visiting the legacy form.** The shell's stylesheet was loaded by the legacy metadata form, which is
+  now fetched only when its route is opened — so opening a workspace URL directly showed an oversized
+  logo, both skip links sitting inline at the top of the page, and footer links below the 24 px
+  minimum target size, until the legacy form happened to be visited. Those rules now load with the
+  shell itself.
+
 - **Importing a later calibration of a known camera goes straight to the split/unify choice instead
   of a mapping repair.** Adding the next recording day of an animal whose camera had been split by an
   earlier import stopped at "Needs repair", asking for the camera to be mapped onto an existing id or

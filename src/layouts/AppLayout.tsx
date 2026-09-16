@@ -24,6 +24,10 @@ import ReadOnlyTabBanner from '../components/ReadOnlyTabBanner';
 import { getAnimalDayIds } from '../state/workspaceSelectors';
 import { RouteLoading } from './RouteLoading';
 import logo from '../logo.png';
+// The shell's OWN global stylesheet (banner, skip links, footer, base globals). Imported
+// here, eagerly, so a direct load of any route paints a styled shell — it used to ride in on
+// `App.scss` via the legacy form, which is now a lazily-loaded route.
+import './AppShell.scss';
 import styles from './AppLayout.module.css';
 
 // Route components are CODE-SPLIT: each page is its own chunk, fetched the first time its route is

@@ -1,41 +1,14 @@
 /*
+ * App.scss — the frozen LEGACY metadata form's stylesheet, loaded with its (lazy) route.
+ *
+ * The rules the application SHELL renders — `body`, the `.home-region` banner, the skip links, the
+ * footer, the base `a` / `li` / `details` globals and the shared validation-hint classes — moved to
+ * `layouts/AppShell.scss`, which `AppLayout` imports EAGERLY. They are not duplicated here: a route
+ * must never decide how the shell looks (see e2e/workspace-shell-styles.spec.js).
+ *
  * @NOTE: Prepend a `~` to scss file paths that are in your node_modules
  *        See https://github.com/webpack-contrib/sass-loader#imports
  */
- body {
-  color: black;
-  background: linear-gradient(
-    200.96deg,
-    #fff -29.09%,
-    #fff 1.77%,
-    #fff 129.35%
-  );
-  font-family: sans-serif;
-  overflow-y: scroll;
-  margin-left: 2%;
-  margin-right: 2%;
-}
-
-.home-region {
-  margin: 5px 0 5px 10px;
-  padding: 0;
-  position: relative;
-
-  // F3: the banner (logo + keyboard-shortcuts trigger) must sit above .primary-nav
-  // (var(--z-base)), which is a later DOM sibling and would otherwise paint over and
-  // intercept clicks. position is already set (relative here, fixed at >=750px below),
-  // so this z-index takes effect in both layouts.
-  z-index: var(--z-banner);
-
-  a {
-    padding: 0;
-    margin: 0;
-  }
-
-  img {
-    width: 2rem;
-  }
-}
 
 .header-text {
   text-align: center;
@@ -132,22 +105,6 @@
 
 .base-width {
   width: 90%;
-}
-
-li {
-  list-style: none;
-}
-
-a {
-  text-decoration: none;
-  height: fit-content;
-  width: fit-content;
-  margin: 10px;
-}
-
-a:hover {
-  opacity: 1;
-  text-decoration: none;
 }
 
 .hide {
@@ -476,22 +433,6 @@ a.nav-link:hover {
   padding: 2px;
 }
 
-.footer {
-  font-size: 0.8rem;
-  margin-top: 20px;
-  margin-bottom: 10px;
-
-  /* The links keep their small type, but the target grows to the 24px minimum
-     (WCAG 2.2 target size) instead of the ~15px line box the 0.8rem font gives. */
-  a {
-    display: inline-block;
-    min-height: 24px;
-    line-height: 24px;
-    margin: 0;
-    padding: 0 var(--spacing-xs);
-  }
-}
-
 /* List of items */
 .list-of-items {
   border: 1px solid #ccc;
@@ -527,51 +468,6 @@ a.nav-link:hover {
 
 /***** List of items *****/
 
-// --- Details/Summary settings
-details {
-  border: 1px solid black;
-  border-radius: 4px;
-  padding: 0.5em 0.5em 0;
-
-  &:hover,
-  &:focus {
-    background: #fff;
-  }
-
-  &[open] {
-    padding: 0.5em;
-
-    summary {
-      border-bottom: 1px solid black;
-      margin-bottom: 0.5em;
-    }
-  }
-
-  &[closed] {
-    border-bottom: 0;
-    margin-bottom: 0;
-  }
-
-  & summary {
-    font-weight: bold;
-    margin: -0.5em -0.5em 0;
-    padding: 0.5em;
-    cursor: pointer;
-  }
-
-  & .array-item {
-    summary {
-      margin-bottom: 0 !important;
-      border-bottom: 0 solid black !important;
-    }
-
-    &[open] summary {
-      margin-bottom: 5px !important;
-      border-bottom: 1px solid black !important;
-    }
-  }
-}
-
 // -----------------------------
 
 @media (min-width: 750px) {
@@ -579,93 +475,5 @@ details {
     position: fixed;
     height: 90%;
     overflow: auto;
-  }
-
-  .home-region {
-    position: fixed;
-  }
-
-  // F3: on the workspace routes — the only ones that render `.primary-nav` — the banner
-  // must stay in normal flow. `position: fixed` (above) pulls it out of flow, so the nav
-  // slides up underneath it and the logo + shortcuts trigger overlap the nav's first link.
-  // In flow, the banner sits as its own row ABOVE the nav (no overlap). The frozen legacy
-  // route has no `.primary-nav`, so `:has()` leaves its fixed banner untouched. (z-index on
-  // `.home-region` remains as defense-in-depth per the z-index scale.)
-  body:has(.primary-nav) .home-region {
-    position: relative;
-  }
-}
-
-// -----------------------------
-// Validation Hints & Errors
-// -----------------------------
-
-// Styling for instant validation with smart escalation (useQuickChecks + HintDisplay)
-// - Gray hints while typing (debounced onChange)
-// - Red errors after blur if invalid
-.validation-hint {
-  font-size: 0.875rem;
-  color: #525252;  // Gray for hints - WCAG AAA compliant (8.31:1 contrast on white)
-  margin-top: 0.25rem;
-  font-weight: 500;
-  line-height: 1.4;
-
-  // Ensure hints appear below input without displacing layout
-  display: block;
-  min-height: 1.2rem;  // Reserve space to prevent layout shift
-
-  // Smooth fade-in for better UX
-  animation: fadeIn 0.2s ease-in;
-}
-
-// Error state: Escalated validation after blur
-.validation-error {
-  color: #DC2626;  // Red for errors - WCAG AAA compliant (5.03:1 contrast on white)
-  font-weight: 600;
-
-  // Visual indicator for errors (accessibility + scannability)
-  &::before {
-    content: "⚠ ";
-    font-weight: 700;
-  }
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(-2px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-// Respect user preference for reduced motion (accessibility)
-@media (prefers-reduced-motion: reduce) {
-  .validation-hint {
-    animation: none;
-  }
-}
-
-// Skip links for keyboard accessibility (WCAG 2.1 Level A - 2.4.1)
-// Skip links are hidden until focused, allowing keyboard users to bypass repetitive navigation
-.skip-link {
-  position: absolute;
-  left: -9999px;
-  top: 0;
-  z-index: var(--z-skip-link); // must beat the modal overlay (var(--z-modal)); was 999, below it
-  padding: 0.75rem 1.5rem;
-  background-color: #1976d2;
-  color: white;
-  text-decoration: none;
-  font-weight: 500;
-  border-radius: 0 0 4px;
-  
-  &:focus {
-    left: 0;
-    outline: 2px solid #1976d2;
-    outline-offset: 2px;
   }
 }
