@@ -19,6 +19,7 @@
  */
 
 import { test, expect } from '@playwright/test';
+import { resetWorkspace, seedAndOpen, buildConfiguredWorkspaceBlob, ANIMAL_ID } from './helpers/workspace';
 
 /** The WCAG 2.2 (2.5.8) minimum target size the footer links are sized to. */
 const MIN_TARGET_PX = 24;
@@ -103,6 +104,29 @@ test.describe('The app shell is styled on a direct workspace load (R4)', () => {
     await expect(skip).toBeFocused();
     const focusedLeft = await skip.evaluate((el) => getComputedStyle(el).left);
     expect(Number.parseFloat(focusedLeft)).toBe(0);
+  });
+
+  test('a workspace form group keeps its row spacing without visiting legacy', async ({ page }) => {
+    // `.form-container` is shared: the legacy form's field groups AND the workspace's Optogenetics
+    // step (plus the recording-system fields). Left in the legacy stylesheet it lost its column gap
+    // on a cold load — the same bug class as the shell rules.
+    await resetWorkspace(page);
+    const blob = buildConfiguredWorkspaceBlob();
+    blob.workspace.animals[ANIMAL_ID].optogenetics = {
+      opto_excitation_source: [{ name: 'Omicron LuxX+ Blue' }],
+      optical_fiber: [],
+      virus_injection: [],
+      optogenetic_stimulation_software: 'fs-gui',
+    };
+    await seedAndOpen(page, blob, `/#/animal/${ANIMAL_ID}/optogenetics`);
+
+    const group = page.getByRole('group', { name: 'Excitation source' });
+    await expect(group).toBeVisible();
+    const rowGap = await group
+      .locator('.form-container')
+      .first()
+      .evaluate((el) => getComputedStyle(el).rowGap);
+    expect(rowGap).toBe('10px');
   });
 
   test('the legacy form still gets its own form styles', async ({ page }) => {
