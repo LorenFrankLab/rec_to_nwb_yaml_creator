@@ -1,3 +1,4 @@
+import { buildOptoWorkspace } from '../../__tests__/fixtures/legacyParityFixture';
 /**
  * Unit tests for the pure create-animal wizard view-model.
  *
@@ -57,15 +58,7 @@ function makeAnimal(overrides = {}) {
 
 describe('WIZARD_STEPS — step order + markers', () => {
   it('orders the seven steps Identity → Electrodes → Cameras → Optogenetics → Tasks → Recording system → Team', () => {
-    expect(WIZARD_STEP_KEYS).toEqual([
-      'identity',
-      'electrodes',
-      'cameras',
-      'optogenetics',
-      'tasks',
-      'recording-system',
-      'team',
-    ]);
+    expect(WIZARD_STEP_KEYS).toEqual(['identity', 'team', 'recording-system', 'electrodes', 'cameras', 'tasks', 'optogenetics']);
   });
 
   it('numbers the steps 1..7 in display order', () => {
@@ -74,12 +67,12 @@ describe('WIZARD_STEPS — step order + markers', () => {
 
   it('marks ONLY optogenetics optional (the mockup tags it "optional"; the rest are standard setup)', () => {
     const optional = WIZARD_STEPS.filter((s) => s.optional).map((s) => s.key);
-    expect(optional).toEqual(['optogenetics']);
+    expect(optional).toEqual(['electrodes', 'cameras', 'optogenetics']);
   });
 
   it('marks identity, electrodes, recording-system and team required-for-export', () => {
     const required = WIZARD_STEPS.filter((s) => s.requiredForExport).map((s) => s.key);
-    expect(required).toEqual(['identity', 'electrodes', 'recording-system', 'team']);
+    expect(required).toEqual(['identity', 'team', 'recording-system']);
   });
 });
 
@@ -240,7 +233,7 @@ describe('computeStepStatuses — per-step completeness', () => {
     ).toBe('skipped');
     expect(
       computeStepStatuses(makeAnimal(), { identityValid: true, behaviorOnly: false }).electrodes
-    ).toBe('incomplete');
+    ).toBe('optional');
   });
 
   it('team is complete only when an experimenter name + experiment description + lab + institution are present', () => {
@@ -303,13 +296,17 @@ describe('optogenetics step — all-or-nothing via optoFieldsPresence', () => {
     ).toBe('optional');
   });
 
-  it('is complete when all four opto sections are present', () => {
+  it('is complete when every required opto field is filled', () => {
     expect(
-      computeStepStatuses(makeAnimal({ optogenetics: enabledOpto(4) }), {
+      computeStepStatuses(makeAnimal({ optogenetics: (buildOptoWorkspace().animal as { optogenetics: unknown }).optogenetics }), {
         identityValid: true,
         behaviorOnly: false,
       }).optogenetics
     ).toBe('complete');
+  });
+
+  it('does not count empty rows as a complete opto setup', () => {
+    expect(computeStepStatuses(makeAnimal({ optogenetics: enabledOpto(4) }), { identityValid: true, behaviorOnly: false }).optogenetics).toBe('incomplete');
   });
 
   it('is incomplete (blocking) when only some of the four are present (partial drops all opto)', () => {
@@ -331,7 +328,7 @@ describe('buildCreateAnimalWizardViewModel — the assembled view-model', () => 
       animal: makeAnimal(),
       behaviorOnly: false,
     });
-    expect(vm.steps.map((s) => s.key)).toEqual(WIZARD_STEP_KEYS);
+    expect(vm.steps.map((s) => s.key)).toEqual(WIZARD_STEP_KEYS.filter((key) => key !== 'optogenetics'));
     expect(vm.steps.find((s) => s.key === 'electrodes')?.isActive).toBe(true);
     expect(vm.steps.find((s) => s.key === 'identity')?.status).toBe('complete');
   });
@@ -347,8 +344,8 @@ describe('buildCreateAnimalWizardViewModel — the assembled view-model', () => 
       buildCreateAnimalWizardViewModel({ ...base, currentStepKey: 'identity' }).nextLabel
     ).toMatch(/next/i);
     expect(
-      buildCreateAnimalWizardViewModel({ ...base, currentStepKey: 'team' }).nextLabel
-    ).toMatch(/create animal/i);
+      buildCreateAnimalWizardViewModel({ ...base, currentStepKey: 'tasks' }).nextLabel
+    ).toMatch(/finish setup/i);
   });
 
   it('keeps the identity step complete once the animal exists (a self-collision must not regress it)', () => {

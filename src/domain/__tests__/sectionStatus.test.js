@@ -1,3 +1,4 @@
+import { completeOptogenetics } from '../../__tests__/fixtures/completeOptogenetics';
 import { describe, it, expect } from 'vitest';
 import {
   getAnimalSectionStatus,
@@ -27,21 +28,16 @@ const configuredAnimal = {
   },
   cameras: [{ id: 0, camera_name: 'overhead' }],
   behavioral_events: [{ name: 'Din1' }],
-  optogenetics: {
-    opto_excitation_source: [{ name: 'laser' }],
-    optical_fiber: [{ name: 'fiber' }],
-    virus_injection: [{ name: 'virus' }],
-    optogenetic_stimulation_software: 'fsgui',
-  },
+  optogenetics: completeOptogenetics(),
   days: ['remy-2023-06-22'],
 };
 
 const SETUP_SECTIONS = ['electrode-groups', 'recording-system', 'cameras', 'optogenetics'];
 
 describe('getAnimalSectionStatus', () => {
-  it('marks every setup section TODO for a bare (never-configured) animal', () => {
+  it('requires a rig but does not invent optional hardware requirements', () => {
     for (const section of SETUP_SECTIONS) {
-      expect(getAnimalSectionStatus(bareAnimal, section)).toBe(SECTION_STATUS.TODO);
+      expect(getAnimalSectionStatus(bareAnimal, section)).toBe(section === 'recording-system' ? SECTION_STATUS.TODO : SECTION_STATUS.NONE);
     }
   });
 
@@ -70,12 +66,7 @@ describe('getAnimalSectionStatus', () => {
     );
 
     // COMPLETE opto (all four fields present) → configured → NONE.
-    const completeOpto = {
-      opto_excitation_source: [{ name: 'laser' }],
-      optical_fiber: [{ name: 'fiber' }],
-      virus_injection: [{ name: 'virus' }],
-      optogenetic_stimulation_software: 'fsgui',
-    };
+    const completeOpto = completeOptogenetics();
     expect(getAnimalOptoCompleteness({ optogenetics: completeOpto })).toBe(OPTO_COMPLETENESS.COMPLETE);
     expect(getAnimalSectionStatus({ ...bareAnimal, optogenetics: completeOpto }, 'optogenetics')).toBe(
       SECTION_STATUS.NONE
@@ -85,7 +76,7 @@ describe('getAnimalSectionStatus', () => {
   it('is robust to corrupt collections (treats them as not configured, never throws)', () => {
     const corrupt = { ...bareAnimal, cameras: 'nope', behavioral_events: 42, optogenetics: [] };
     expect(() => getAnimalSectionStatus(corrupt, 'cameras')).not.toThrow();
-    expect(getAnimalSectionStatus(corrupt, 'cameras')).toBe(SECTION_STATUS.TODO);
+    expect(getAnimalSectionStatus(corrupt, 'cameras')).toBe(SECTION_STATUS.NONE);
     expect(getAnimalSectionStatus(corrupt, 'optogenetics')).toBe(SECTION_STATUS.TODO);
   });
 
@@ -96,12 +87,7 @@ describe('getAnimalSectionStatus', () => {
 
 describe('getAnimalOptoCompleteness', () => {
   /** All FOUR fields present — the export rule's complete-opto definition. */
-  const completeOpto = {
-    opto_excitation_source: [{ name: 'laser' }],
-    optical_fiber: [{ name: 'fiber' }],
-    virus_injection: [{ name: 'virus' }],
-    optogenetic_stimulation_software: 'fsgui',
-  };
+  const completeOpto = completeOptogenetics();
 
   it('returns COMPLETE when all four opto fields are present', () => {
     expect(getAnimalOptoCompleteness({ optogenetics: completeOpto })).toBe(

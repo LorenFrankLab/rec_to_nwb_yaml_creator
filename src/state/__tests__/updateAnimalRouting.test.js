@@ -138,7 +138,7 @@ describe('createDay seeds day.technical from animal.technicalDefaults', () => {
     });
 
     const day = Object.values(result.current.model.workspace.days)[0];
-    expect(day.technical.raw_data_to_volts).toBe(0.195);
+    expect(day.technical.raw_data_to_volts).toBe(1.95e-7);
     expect(day.technical.times_period_multiplier).toBe(1.5);
   });
 });

@@ -1,3 +1,4 @@
+import { hasOnlyIncompleteEntries } from '../domain/validationPresentation';
 /**
  * @fileoverview Pure row-building + display helpers for the Validation Summary.
  *
@@ -74,7 +75,7 @@ function deriveDisplayChip(
 ): ChipType {
   const chip = deriveChip(stepStatus);
   if (chip !== 'error') return chip;
-  if (isDayValidationDeferred(day)) return 'incomplete';
+  if (isDayValidationDeferred(day) || (hasOnlyIncompleteEntries(issues) && stepStatus.devices !== 'error')) return 'incomplete';
   return allBlockingIssuesDeferred(issues, day) ? 'incomplete' : chip;
 }
 

@@ -129,6 +129,8 @@ export interface WorkflowAction {
  * are surfaced as issues.
  */
 export interface IssueViewModel {
+  /** Stable issue code used to group related entry tasks without changing validation. */
+  code?: string;
   /** Blocking (`error`) vs non-blocking (`warning`). */
   severity: 'error' | 'warning';
   /** Display message — already humanized (no raw snake_case schema keys). */

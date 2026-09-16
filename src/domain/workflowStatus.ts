@@ -24,6 +24,7 @@ import { DAY_LIFECYCLE, DAY_LIFECYCLE_LABEL, lifecycleForValidDay } from './dayL
 import { exportFreshnessStatus } from './exportReceipt';
 import {
   allBlockingIssuesDeferred,
+  hasOnlyIncompleteEntries,
   isDayValidationDeferred,
   presentValidationIssues,
 } from './validationPresentation';
@@ -449,8 +450,9 @@ export function getDayRowStatus(
   // The one validation pass this row needs: the blocking reason, the step statuses and the
   // deferred-issue check below all read it (this runs per day, per animal, on the workspace home).
   const issues = mergedDay ? validateDayOrNull(animal, day, mergedDay, animalDays) : null;
+  const onlyMissingEntries = !!mergedDay && !!issues && hasOnlyIncompleteEntries(issues);
   const reason = firstBlockingReason(day, mergedDay, issues);
-  if (reason) {
+  if (reason && !onlyMissingEntries) {
     return { variant: DAY_LIFECYCLE.NEEDS_FIXING, label: `${DAY_LIFECYCLE_LABEL.needs_fixing} — ${reason}` };
   }
   // The LIVE export gate is authoritative and is checked BEFORE the persisted flags: a saved
@@ -470,6 +472,11 @@ export function getDayRowStatus(
       variant: DAY_LIFECYCLE.NEEDS_FIXING,
       label: `${DAY_LIFECYCLE_LABEL.needs_fixing} — recording day status could not be computed`,
     };
+  }
+
+  // Missing form entries are a draft; hardware step errors still need explicit attention.
+  if (onlyMissingEntries && stepStatus.devices !== STEP_STATUS.ERROR) {
+    return { variant: DAY_LIFECYCLE.DRAFT, label: 'Draft — incomplete' };
   }
 
   if (isExportEnabled(stepStatus)) {

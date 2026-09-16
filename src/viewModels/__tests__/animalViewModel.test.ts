@@ -1,3 +1,4 @@
+import { completeOptogenetics } from '../../__tests__/fixtures/completeOptogenetics';
 /**
  * Parity tests for buildAnimalViewModel.
  *
@@ -5,7 +6,7 @@
  * Each assertion recomputes the page's truth from the same domain functions the component calls
  * (`getAnimalBlockingSections` + `getAnimalSectionStatus` for the per-tab status ring with blocking
  * outranking todo, `getPresentDayCount` for the Recording Days count, `buildAnimalRows`
- * filtered to the valid chip for the "N ready" Validation & Export count, `getAnimalSubject` for the
+ * filtered to the valid chip for the "N ready" Review & export count, `getAnimalSubject` for the
  * header facts), then asserts the view-model reproduces it — so a divergence fails.
  */
 import { describe, it, expect } from 'vitest';
@@ -56,7 +57,7 @@ describe('buildAnimalViewModel — groups / order', () => {
       vm.groups.flatMap((g) => g.sections).map((s) => [s.key, s])
     );
     expect(byKey.days.label).toBe('Recording Days');
-    expect(byKey.export.label).toBe('Validation & Export');
+    expect(byKey.export.label).toBe('Review & export');
     expect(byKey['electrode-groups'].label).toBe('Electrode Groups');
     expect(byKey['recording-system'].label).toBe('Recording System');
     expect(byKey.cameras.label).toBe('Cameras');
@@ -244,11 +245,11 @@ describe('buildAnimalViewModel — status rings', () => {
     const byKey = Object.fromEntries(sections.map((s) => [s.key, s]));
     expect(byKey.days.status).toBe('ready');
     expect(byKey.export.status).toBe('ready');
-    expect(byKey['electrode-groups'].status).toBe('todo');
+    expect(byKey['electrode-groups'].status).toBe('ready');
     expect(byKey['recording-system'].status).toBe('ready');
     expect(byKey.cameras.status).toBe('ready');
     expect(byKey['task-types'].status).toBe('ready'); // task-types has no setup todo predicate
-    expect(byKey.optogenetics.status).toBe('todo');
+    expect(byKey.optogenetics.status).toBe('ready');
   });
 
   it('a blocking-section animal reads error and announces "blocks export" — blocking outranks todo', () => {
@@ -267,7 +268,7 @@ describe('buildAnimalViewModel — status rings', () => {
 
     // electrode-groups would be `todo` (configurationHistory-only), but the blocking error outranks it.
     expect(getAnimalSectionStatus(blockingAnimal as never, 'electrode-groups')).toBe(
-      SECTION_STATUS.TODO
+      SECTION_STATUS.NONE
     );
     expect(getAnimalBlockingSections(blockingAnimal as never, ws.days as never).has('electrode-groups')).toBe(
       true
@@ -293,7 +294,7 @@ describe('buildAnimalViewModel — status rings', () => {
     );
 
     // The setup tabs that carry a configured-predicate read todo; task-types has none → ready.
-    for (const key of ['electrode-groups', 'recording-system', 'cameras', 'optogenetics']) {
+    for (const key of ['recording-system']) {
       expect(byKey[key].status).toBe('todo');
       expect(byKey[key].summary).toBe(`${byKey[key].label} — not set up`);
       // A todo section hides its count (the hollow-○ ring owns the slot).
@@ -312,7 +313,7 @@ describe('buildAnimalViewModel — counts', () => {
     );
 
     const expectedDays = String(getPresentDayCount(animal.id, animal, ws.days));
-    const expectedReady = `${buildAnimalRows(ws, animal.id).filter((r) => r.chip === 'valid').length} ready`;
+    const expectedReady = `${buildAnimalRows(ws, animal.id).filter((r) => r.chip === 'valid').length} to download`;
 
     expect(byKey.days.countLabel).toBe(expectedDays);
     expect(byKey.days.issueCount).toBe(Number(expectedDays));
@@ -320,7 +321,7 @@ describe('buildAnimalViewModel — counts', () => {
 
     // Concrete values for the realistic single-valid-day fixture.
     expect(byKey.days.countLabel).toBe('1');
-    expect(byKey.export.countLabel).toBe('1 ready');
+    expect(byKey.export.countLabel).toBe('1 to download');
   });
 
   it('reproduces the setup-section item counts', () => {
@@ -343,20 +344,15 @@ describe('buildAnimalViewModel — counts', () => {
     const optoNone = vmNone.groups
       .flatMap((g) => g.sections)
       .find((s) => s.key === 'optogenetics')!;
-    expect(optoNone.status).toBe('todo');
-    expect(optoNone.showCount).toBe(false);
-    expect(optoNone.countLabel).toBe('incomplete');
+    expect(optoNone.status).toBe('ready');
+    expect(optoNone.showCount).toBe(true);
+    expect(optoNone.countLabel).toBe('not used');
 
     // COMPLETE: all four export-gated opto fields present (the four-field presence gate) → "used"
     // token, count shown (not a todo). The status still follows the domain truth (a blocking opto
     // error, if any, outranks — verified independently below) rather than a hard-coded value.
     const completeAnimal = clone(animal) as Idable & { optogenetics: Record<string, unknown> };
-    completeAnimal.optogenetics = {
-      opto_excitation_source: [{ name: 'laser' }],
-      optical_fiber: [{ name: 'fiber' }],
-      virus_injection: [{ name: 'virus' }],
-      optogenetic_stimulation_software: 'FsGUI',
-    };
+    completeAnimal.optogenetics = completeOptogenetics();
     const wsComplete = wrap(completeAnimal, day);
     const vmComplete = buildAnimalViewModel(wsComplete, completeAnimal.id, 'days');
     const optoComplete = vmComplete.groups

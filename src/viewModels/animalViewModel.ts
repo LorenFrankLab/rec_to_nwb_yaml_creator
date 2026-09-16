@@ -1,3 +1,4 @@
+import { exportFreshnessStatus } from '../domain/exportReceipt';
 /**
  * @fileoverview AnimalView view-model builder.
  *
@@ -10,7 +11,7 @@
  * "blocks export" ring) + `getAnimalSectionStatus` (the hollow ○ "not set up" ring) for each
  * section's status — blocking outranks todo, exactly as the page does; `getPresentDayCount` for the
  * Recording Days count; the per-animal export rows (`buildAnimalRows`) filtered to the valid chip for
- * the "N ready" Validation & Export count; `getAnimalSetupCounts` for the setup-section item counts;
+ * the "N ready" Review & export count; `getAnimalSetupCounts` for the setup-section item counts;
  * `getAnimalOptoCompleteness` for the optogenetics 'used' / 'incomplete' token; and `getAnimalSubject`
  * for the header facts. The status mapping follows the shared severity invariant (a blocking section
  * → 'error'; else a never-/under-configured setup section → 'todo'; else 'ready').
@@ -172,7 +173,7 @@ const SECTION_GROUPS: ReadonlyArray<{
     label: 'Day work',
     items: [
       { key: 'days', label: 'Recording Days' },
-      { key: 'export', label: 'Validation & Export' },
+      { key: 'export', label: 'Review & export' },
     ],
   },
   {
@@ -347,10 +348,10 @@ function buildCountLabels(
   workspace: { animals?: unknown; days?: Record<string, Day> }
 ): Record<string, string> {
   const dayCount = getPresentDayCount(animalId, animal, workspace.days);
-  const readyCount = buildAnimalRows(workspace, animalId).filter((r) => r.chip === 'valid').length;
+  const readyCount = buildAnimalRows(workspace, animalId).filter((r) => r.chip === 'valid' && r.status === 'ok' && exportFreshnessStatus(r.animal as unknown as Animal, r.day as unknown as Day) !== 'current').length;
   return {
     days: String(dayCount),
-    export: `${readyCount} ready`,
+    export: `${readyCount} to download`,
     ...Object.fromEntries(
       Object.entries(getAnimalSetupCounts(animal)).map(([k, n]): [string, string] => [k, String(n)])
     ),
@@ -358,7 +359,7 @@ function buildCountLabels(
     // token agrees with the red ● a partial config fires). The NONE case never shows a token — its
     // hollow-○ todo ring owns the count slot — so a valid unused-opto row reads empty, not a bare 0.
     optogenetics:
-      getAnimalOptoCompleteness(animal) === OPTO_COMPLETENESS.COMPLETE ? 'used' : 'incomplete',
+      getAnimalOptoCompleteness(animal) === OPTO_COMPLETENESS.COMPLETE ? 'used' : getAnimalOptoCompleteness(animal) === OPTO_COMPLETENESS.NONE ? 'not used' : 'incomplete',
   };
 }
 

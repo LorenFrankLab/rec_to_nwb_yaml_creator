@@ -383,7 +383,7 @@ describe('createDayRecord', () => {
 
   it('falls back to standard technical values when no defaults are set', () => {
     const day = createDayRecord({ configurationHistory: [] }, 'remy', 'd', '2023-06-22', {}, NOW);
-    expect(day.technical.raw_data_to_volts).toBe(0.195);
+    expect(day.technical.raw_data_to_volts).toBe(1.95e-7);
     expect(day.technical.times_period_multiplier).toBe(1.5);
     expect(day.configurationVersion).toBe(0);
   });
@@ -515,7 +515,7 @@ describe('createDayRecord', () => {
       const noTech = { ...carryFrom, technical: undefined };
       const day = createDayRecord(animal, 'remy', 'd', '2023-06-23', session, NOW, noTech);
       expect(day.technical.times_period_multiplier).toBe(1.5);
-      expect(day.technical.raw_data_to_volts).toBe(0.195);
+      expect(day.technical.raw_data_to_volts).toBe(1.95e-7);
     });
 
     // The data folder is stable across a block of days (unlike date-derived filenames), so a new

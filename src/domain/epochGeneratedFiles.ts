@@ -4,6 +4,7 @@ import {
   deriveVideoName,
 } from './fileNaming';
 import type { StatescriptState } from './statescriptExpectation';
+import { STATESCRIPT_DESCRIPTION } from './associatedFiles';
 import type { AssociatedFile, AssociatedVideoFile, Camera } from '../state/workspaceTypes';
 
 interface GeneratedFileRef {
@@ -131,7 +132,7 @@ export function addMissingGeneratedStatescripts(
       });
       return {
         name,
-        description: '',
+        description: STATESCRIPT_DESCRIPTION,
         path: deriveStatescriptPath(grid.dataFolder, name),
         task_epochs: row.epoch,
       };

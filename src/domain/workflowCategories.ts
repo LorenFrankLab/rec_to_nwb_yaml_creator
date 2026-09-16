@@ -80,6 +80,7 @@ export const WORKFLOW_CATEGORY_LABELS: Readonly<Record<string, string>> = Object
  *  - corrupt/recovered/stale shapes that need cleanup before trust → existing-data repair.
  */
 export const CATEGORY_BY_CODE: Readonly<Record<string, WorkflowCategory>> = Object.freeze({
+  birth_date_required: WORKFLOW_CATEGORY.ANIMAL_SETUP,
   // Shared animal hardware setup (device geometry, channel maps, probe catalog, cameras,
   // data-acq devices) and animal-level optogenetics.
   channel_value_out_of_range: WORKFLOW_CATEGORY.ANIMAL_SETUP,
@@ -170,6 +171,8 @@ export const CATEGORY_BY_CODE: Readonly<Record<string, WorkflowCategory>> = Obje
   // The pinned version's effective date does not cover the recording date — confirm / re-pin.
   configuration_effective_date_unconfirmed: WORKFLOW_CATEGORY.EXISTING_DATA,
   // A migration-filled weight the scientist should confirm as a measurement.
+  voltage_units_review: WORKFLOW_CATEGORY.DAY_METADATA,
+  copied_task_context_review: WORKFLOW_CATEGORY.DAY_METADATA,
   weight_from_baseline: WORKFLOW_CATEGORY.DAY_METADATA,
 });
 

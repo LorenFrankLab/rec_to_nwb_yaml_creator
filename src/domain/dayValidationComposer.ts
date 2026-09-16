@@ -31,6 +31,7 @@ import type { RepairableIssue } from './repairRouting';
 import { epochVideoUndeclared } from './epochVideoValidation';
 import { recordingFilenameIssues } from './recordingFilename';
 import { configurationChoiceIssues, provenanceReviewIssues } from './datedFactsValidation';
+import { suspiciousVoltageIssues } from './rigConstants';
 import type { ValidationModel } from '../validation/issueTypes';
 
 /**
@@ -67,7 +68,15 @@ export function validateDay(
   // Compute the base (schema + rules) issues once, then pass them to dayOverrideIssues
   // so it can tell an erroring array geometry override (a dead-end that needs a day-routed
   // escape) from a clean one (which must NOT be flagged).
-  const base = validate(mergedDay);
+  const base = validate(mergedDay).map((issue) => {
+    // An empty birth date is unfinished entry, not an incorrectly formatted date.
+    // Keep it blocking and routed to the same field; malformed nonblank dates remain errors.
+    const birthDate = mergedDay.subject?.date_of_birth;
+    return issue.path === 'subject.date_of_birth' && issue.code === 'pattern'
+      && typeof birthDate === 'string' && birthDate.trim() === ''
+      ? { ...issue, code: 'birth_date_required', message: 'Date of birth is required before export' }
+      : issue;
+  });
   // Boundary 2: ownership by PROVENANCE, not path. A geometry error's owner depends on
   // WHERE the merged geometry came from — the animal snapshot (animal-owned, edit there)
   // or a day-level override (day-owned, the snapshot is the wrong editor). Re-tag base
@@ -106,7 +115,21 @@ export function validateDay(
     // pin to a version effective AFTER the day) blocks export; migration review flags are advisory.
     ...configurationChoiceIssues(day, animal),
     ...provenanceReviewIssues(day),
-  ].map(normalizeIssue);
+    ...suspiciousVoltageIssues(mergedDay),
+    ...(Array.isArray(day.provenance?.taskContextReset) && day.provenance.taskContextReset.length > 0 ? [{
+      code: 'copied_task_context_review', severity: 'error' as const, repairSurface: 'day' as const,
+      step: 'epochs', path: 'taskInstances', focusPath: 'task-context-review',
+      actionLabel: 'Review copied task context',
+      message: 'The source recording used different task environments or cameras. Choose the context for this recording before export.',
+    }] : []),
+  ].map((issue) => {
+    const fileIndex = /^associated_files\[(\d+)\]\.description$/.exec(issue.path ?? '');
+    if (!fileIndex || !Array.isArray(mergedDay.associated_files)) return issue;
+    const file = mergedDay.associated_files[Number(fileIndex[1])];
+    const message = typeof file?.description === 'string' && !file.description.trim()
+      ? 'Add a description for this file.' : issue.message;
+    return { ...issue, message: `File ${file?.name || Number(fileIndex[1]) + 1} (epoch ${file?.task_epochs ?? 'unassigned'}): ${message}` };
+  }).map(normalizeIssue);
 }
 
 /**

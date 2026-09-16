@@ -14,10 +14,16 @@
  * body's `unknown`-accepting selectors (`getConfigHistory`, `getAnimalDevices`, `getDayTasks`, …),
  * exactly as before. `nextConfigurationVersion` stays shape-agnostic (`unknown`).
  */
+import { continuesHardware, hardwareIdentity } from '../domain/hardwareContinuity';
+import { changedTaskContext } from '../domain/copiedTaskContext';
+import { RIG_FALLBACK } from '../domain/rigConstants';
 
 import { formatExperimentDate } from './workspaceUtils';
 import {
   getAnimalDevices,
+  getAnimalNtrodeMaps,
+  getProbeNtrodeMaps,
+  getAnimalTaskTypes,
   getAnimalExperimenters,
   getConfigHistory,
   getDayTasks,
@@ -68,6 +74,7 @@ import type {
  * accepts an explicit `null` (the editor's "disable" sentinel).
  */
 export interface AnimalUpdates {
+  recordingModalities?: Animal['recordingModalities'];
   subject?: Partial<SubjectMetadata>;
   experimenters?: Partial<ExperimenterInfo>;
   devices?: Partial<DeviceConfiguration>;
@@ -76,12 +83,17 @@ export interface AnimalUpdates {
   technicalDefaults?: Partial<TechnicalDefaults>;
   behavioral_events?: BehavioralEvent[];
   taskTypes?: TaskType[];
+  taskTemplateDefaults?: { sleep?: string; run?: string };
   optogenetics?: OptogeneticsConfig | null;
+  optogeneticsDraft?: OptogeneticsConfig | null;
+  recordingSystemReviewed?: string;
   experiment_description?: string;
 }
 
 /** `{ date, description, devices }` for a new configuration snapshot; `devices` is normalized. */
 export interface ConfigSnapshotInput {
+  /** Explicit physical continuity choice; omitted preserves the existing action contract. */
+  failurePolicy?: 'same-hardware' | 'replacement';
   date: string;
   description: string;
   /** Raw device payload (a devices object); `normalizeProbeConfigDevices` tolerates the contents. */
@@ -182,6 +194,7 @@ true satisfies [UnroutedDayKey] extends [never] ? true : never;
 
 /** Animal keys whose update REPLACES the field wholesale. See {@link DAY_REPLACE_KEYS}. */
 export const ANIMAL_REPLACE_KEYS = {
+  recordingModalities: 'defined',
   experiment_description: 'defined',
   cameras: 'nonNull',
   // Animal-level behavioral events are an editable reference; the exported source is the day's.
@@ -189,8 +202,11 @@ export const ANIMAL_REPLACE_KEYS = {
   // The define-once task-type catalog day `taskInstances` reference. `defined` so a delete-last-type
   // (`taskTypes: []`) persists, never a silent no-op.
   taskTypes: 'defined',
+  taskTemplateDefaults: 'defined',
   // `defined` so an explicit `null` CLEARS opto (the editor's disable sentinel).
   optogenetics: 'defined',
+  optogeneticsDraft: 'defined',
+  recordingSystemReviewed: 'defined',
 } as const satisfies Partial<Record<keyof AnimalUpdates, UpdateGate>>;
 
 /**
@@ -411,9 +427,24 @@ export function createSnapshotAndApplyForward(
   version?: number,
   ownerKey?: string
 ): { animal: Animal; days: Record<string, Day>; version: number } {
+  const previous = getConfigHistory(animal).slice(-1)[0];
+  if (config.failurePolicy === 'same-hardware' && (!previous || hardwareIdentity(previous.devices) !== hardwareIdentity(config.devices))) {
+    throw new Error('Keeping failed channels requires the same probe types, ntrode IDs and channel mapping. Choose replacement hardware if these changed.');
+  }
   const created = version ?? nextConfigurationVersion(getConfigHistory(animal));
   const withSnapshot = addConfigurationSnapshotToAnimal(animal, config, now, created);
   const applied = applyConfigurationForwardToAnimal(withSnapshot, days, created, dayIds, now, ownerKey);
+  const snapshot = getConfigHistory(applied.animal).find((entry) => entry.version === created)!;
+  if (config.failurePolicy) applied.animal.devices = normalizeDevices({ ...getAnimalDevices(applied.animal), ...snapshot.devices });
+  if (config.failurePolicy === 'same-hardware') snapshot.continuesHardwareFromVersion = previous.version;
+  if (config.failurePolicy === 'replacement') {
+    getProbeNtrodeMaps(snapshot.devices).forEach((map) => { map.bad_channels = []; });
+    getAnimalNtrodeMaps(applied.animal).forEach((map) => { map.bad_channels = []; });
+    Object.entries(applied.days).forEach(([id, moved]) => {
+      if (moved === days[id] || moved.configurationVersion !== created) return;
+      applied.days[id] = { ...moved, deviceOverrides: { ...moved.deviceOverrides, bad_channels: {} } };
+    });
+  }
   return { animal: applied.animal, days: applied.days, version: created };
 }
 
@@ -558,7 +589,8 @@ export interface CreateDayRecordOptions {
  * aliases the source:
  *  - copied: tasks (by shape: catalog `taskInstances` or legacy inline `tasks`), behavioral_events,
  *    keywords, technical, session.experiment_description, the chosen recording system
- *    (`data_acq_device_name`), the team (`experimenters`), the optogenetics snapshot;
+ *    (`data_acq_device_name`), the optogenetics snapshot;
+ *  - animal default: experimenters, so a one-day exception does not carry forward;
  *  - NOT copied: `session.weight` (a measurement — shown as a dated suggestion instead),
  *    `session_id` / `session_description` (date-derived, from the caller), associated_files,
  *    associated_video_files, fs_gui_yamls, cameras_used, and every review/export state flag;
@@ -630,7 +662,7 @@ export function createDayRecord(
     // Seeded from the animal's technical DEFAULTS (overridable per day); falls back to
     // the standard values when no defaults are set.
     times_period_multiplier: animal.technicalDefaults?.times_period_multiplier ?? 1.5,
-    raw_data_to_volts: animal.technicalDefaults?.raw_data_to_volts ?? 0.195,
+    raw_data_to_volts: animal.technicalDefaults?.raw_data_to_volts ?? RIG_FALLBACK.raw_data_to_volts,
     default_header_file_path: '',
     units: undefined,
   };
@@ -642,7 +674,7 @@ export function createDayRecord(
 
   // Bad-channel carry-forward, guarded by config version (see the function doc).
   const carriedBadChannels: Record<string, number[]> =
-    carryFrom && carryFrom.configurationVersion === pinnedVersion
+    carryFrom && continuesHardware(history, pinnedVersion, carryFrom.configurationVersion)
       ? getDayBadChannelOverrides(carryFrom)
       : {};
   const deviceOverrides =
@@ -667,12 +699,11 @@ export function createDayRecord(
       : { tasks: carryFrom ? structuredClone(getDayTasks(carryFrom)) : [] };
   if (carryFrom) fields.tasks = 'copied';
 
-  // --- Team / opto / experiment description: the source day's copy, else the animal default. ---
-  const sourceTeam = carryFrom && isPlainRecordValue(carryFrom.experimenters) ? carryFrom.experimenters : null;
-  const experimenters: ExperimenterInfo = structuredClone(
-    sourceTeam ? getAnimalExperimenters({ experimenters: sourceTeam }) : getAnimalExperimenters(animal)
-  );
-  fields.experimenters = sourceTeam ? 'copied' : 'animal-default';
+  // --- Stable team default and recording-specific opto / experiment context. ---
+  // Experimenters are a stable animal default. A one-day exception must not become the
+  // default for subsequent recordings merely because their epoch structure was copied.
+  const experimenters: ExperimenterInfo = structuredClone(getAnimalExperimenters(animal));
+  fields.experimenters = 'animal-default';
   const optogenetics: OptogeneticsConfig | null =
     carryFrom && 'optogenetics' in carryFrom
       ? structuredClone(carryFrom.optogenetics ?? null)
@@ -702,6 +733,8 @@ export function createDayRecord(
   if (folder.kind === 'copied') fields.dataFolder = 'copied';
 
   const provenance: DayProvenance = {
+    origin: carryFrom ? 'copy' : 'blank',
+    taskContextReset: carriedInstances ? changedTaskContext(carriedInstances, getAnimalTaskTypes(animal)) : undefined,
     enteredAt: now,
     copiedFromDayId: carryFrom ? String(carryFrom.id) : null,
     copiedFromDate: carryFrom ? String(carryFrom.date ?? '') || null : null,
@@ -785,6 +818,7 @@ export function reseedDayFromSource(animal: Animal, day: Day, source: Day, now: 
   const keepsDescription = Boolean(getDaySession(day).experiment_description);
   // A kept description keeps its own provenance; only re-copied fields take the source's.
   const seededFields: Record<string, DayFactSource> = { ...(seededProvenance.fields ?? {}) };
+  if (day.experimenters) delete seededFields.experimenters;
   if (keepsDescription) delete seededFields['session.experiment_description'];
   const next: Day = {
     ...structuredClone(day),
@@ -793,7 +827,7 @@ export function reseedDayFromSource(animal: Animal, day: Day, source: Day, now: 
     behavioral_events: seeded.behavioral_events,
     keywords: seeded.keywords,
     technical: seeded.technical,
-    experimenters: seeded.experimenters,
+    experimenters: structuredClone(day.experimenters ?? seeded.experimenters),
     optogenetics: seeded.optogenetics,
     // The day's own recorded description is kept (the dialog promises "keeps this day's
     // descriptions"); only an EMPTY one is filled from the source.
@@ -807,6 +841,8 @@ export function reseedDayFromSource(animal: Animal, day: Day, source: Day, now: 
     provenance: {
       ...(day.provenance ?? seededProvenance),
       enteredAt: day.provenance?.enteredAt ?? seededProvenance.enteredAt,
+      origin: 'copy',
+      taskContextReset: seededProvenance.taskContextReset,
       copiedFromDayId: source.id,
       copiedFromDate: String(source.date ?? '') || null,
       configuration: day.provenance?.configuration ?? seededProvenance.configuration,
@@ -875,6 +911,7 @@ export function applyDayUpdates(day: Day, updates: DayUpdates, now: string): Day
     const current = isPlainRecordValue(updated.provenance) ? updated.provenance : ({} as DayProvenance);
     updated.provenance = {
       ...current,
+      origin: current.origin ?? (current.configuration?.source === 'import' || Object.values(current.fields ?? {}).includes('import') ? 'import' : current.copiedFromDayId ? 'copy' : 'blank'),
       ...updates.provenance,
       configuration: { ...current.configuration, ...updates.provenance.configuration } as DayProvenance['configuration'],
       fields: { ...current.fields, ...updates.provenance.fields },

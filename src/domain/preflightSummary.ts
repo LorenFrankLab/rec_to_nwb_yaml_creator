@@ -16,8 +16,6 @@ import { pluralize } from '../utils/pluralize';
 // How many cameras to spell out inline before collapsing the rest into "+K more".
 const MAX_CAMERAS_INLINE = 4;
 
-// How many tasks to spell out inline (name, epochs, room) before falling back to plain counts.
-const MAX_TASKS_INLINE = 6;
 
 /** Workflow context for {@link buildPreflightSummary}. */
 interface PreflightContext {
@@ -99,18 +97,21 @@ function describeWeightAndTeam(subject: unknown, experimenterNames: unknown): st
  */
 function describeTasks(tasks: unknown, videoCount: number): string {
   const list = Array.isArray(tasks) ? tasks : [];
-  if (list.length === 0 || list.length > MAX_TASKS_INLINE) {
+  if (list.length === 0) {
     return `${list.length} tasks, ${videoCount} videos`;
   }
 
   const described = list
-    .map((task: { task_name?: string; task_environment?: string; task_epochs?: unknown } | null | undefined) => {
-      const name = task?.task_name || 'unnamed task';
-      const epochs = Array.isArray(task?.task_epochs) ? task.task_epochs : [];
-      const epochPart = epochs.length > 0 ? ` (${epochs.join(', ')})` : '';
-      const environment = task?.task_environment || 'environment not recorded';
-      return `${name}${epochPart} — ${environment}`;
+    .flatMap((task: { task_name?: string; task_environment?: string; task_epochs?: unknown } | null | undefined) => {
+      const epochs = Array.isArray(task?.task_epochs) && task.task_epochs.length ? task.task_epochs : [null];
+      return epochs.map((epoch: number | null) => ({
+        epoch,
+        name: task?.task_name || 'unnamed task',
+        environment: task?.task_environment || 'environment not recorded',
+      }));
     })
+    .sort((a, b) => (a.epoch ?? Infinity) - (b.epoch ?? Infinity))
+    .map(({ epoch, name, environment }) => `${name}${epoch == null ? '' : ` (${epoch})`} — ${environment}`)
     .join('; ');
 
   return `${described} · ${videoCount} ${pluralize(videoCount, 'video')}`;
@@ -196,13 +197,23 @@ export function buildPreflightSummary(
     { label: 'Optogenetics', value: opto.label },
     { label: 'Subject & session', value: `${subjectId} — session ${sessionId}` },
     {
-      label: 'Non-blocking warnings',
+      label: 'Validation warnings',
       value:
         warningCount > 0
           ? `${warningCount} ${pluralize(warningCount, 'warning')} to review (does not block export)`
           : 'None',
     },
   ];
+}
+
+/** Compact batch comparisons share the same scientific descriptions as single-day review. */
+export function buildRecordingComparison(merged: ValidationModel) {
+  return {
+    weight: merged.subject?.weight == null || merged.subject.weight === '' ? 'Not recorded' : `${merged.subject.weight} g`,
+    experimenters: Array.isArray(merged.experimenter_name) ? merged.experimenter_name.join('; ') : 'Not recorded',
+    weightAndTeam: describeWeightAndTeam(merged.subject, merged.experimenter_name),
+    tasksAndVideos: describeTasks(merged.tasks, (merged.associated_video_files || []).length),
+  };
 }
 
 export default buildPreflightSummary;

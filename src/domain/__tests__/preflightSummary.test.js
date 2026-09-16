@@ -30,7 +30,7 @@ describe('buildPreflightSummary — row order', () => {
       'Tasks & videos',
       'Optogenetics',
       'Subject & session',
-      'Non-blocking warnings',
+      'Validation warnings',
     ]);
   });
 });
@@ -68,7 +68,7 @@ describe('buildPreflightSummary — tasks & videos row', () => {
       associated_video_files: [{ name: 'a.h264' }, { name: 'b.h264' }],
     };
     const value = rowValue(buildPreflightSummary(merged, {}), 'Tasks & videos');
-    expect(value).toBe('sleep (1, 3) — home cage; w_alternation (2) — elevated W-track · 2 videos');
+    expect(value).toBe('sleep (1) — home cage; w_alternation (2) — elevated W-track; sleep (3) — home cage · 2 videos');
   });
 
   it('says a task environment is not recorded instead of leaving the room blank', () => {
@@ -77,14 +77,15 @@ describe('buildPreflightSummary — tasks & videos row', () => {
     expect(value).toBe('sleep (1) — environment not recorded · 0 videos');
   });
 
-  it('falls back to counts when there are too many tasks to read inline', () => {
+  it('keeps every recorded task visible even with a longer sequence', () => {
     const tasks = Array.from({ length: 7 }, (_, i) => ({
       task_name: `task${i}`,
       task_environment: 'room',
       task_epochs: [i],
     }));
     const value = rowValue(buildPreflightSummary({ tasks }, {}), 'Tasks & videos');
-    expect(value).toBe('7 tasks, 0 videos');
+    expect(value).toContain('task0 (0) — room');
+    expect(value).toContain('task6 (6) — room');
   });
 
   it('falls back to counts when the day has no tasks at all', () => {

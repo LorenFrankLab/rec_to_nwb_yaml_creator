@@ -119,7 +119,7 @@ describe('buildAnimalFromForm', () => {
     });
     expect(metadata.cameras).toEqual([]);
     expect(metadata.technicalDefaults).toEqual({
-      raw_data_to_volts: 0.195,
+      raw_data_to_volts: 1.95e-7,
       times_period_multiplier: 1.5,
     });
   });

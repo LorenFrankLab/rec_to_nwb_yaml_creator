@@ -81,7 +81,7 @@ associated_video_files:
     camera_id: 1
     task_epochs: 4
 times_period_multiplier: 1.5
-raw_data_to_volts: 0.195
+raw_data_to_volts: 1.95e-7
 behavioral_events:
   - description: Reward delivery at left arm
     name: reward_left

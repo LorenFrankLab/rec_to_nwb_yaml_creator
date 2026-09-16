@@ -21,6 +21,8 @@ import { mergeDayMetadata } from '../state/workspaceUtils';
 import type { Animal, Day } from '../state/workspaceTypes';
 import {
   getAnimalSubject,
+  getAnimalElectrodeGroups,
+  getAnimalCameras,
   getConfigHistory,
   getDaySession,
   getMostRecentDayId,
@@ -62,6 +64,7 @@ import type {
   WorkflowCommandId,
 } from './types';
 import { pluralize } from '../utils/pluralize';
+import { missingAnimalSetupFacts, recordingSystemReviewed } from '../domain/animalSetupProgress';
 
 /** The per-animal status rollup shown on the Animals home (its own summary over the day set). */
 export interface StatusRollupViewModel {
@@ -116,7 +119,7 @@ export interface ExistingDataReviewViewModel {
    * doesn't have to re-run raw validation to render the repairs.
    */
   rawCorruptionNotices: RecoveryNoticeViewModel[];
-  /** Link to this animal's Validation & Export tab. */
+  /** Link to this animal's Review & export tab. */
   reviewLink: WorkflowAction;
 }
 
@@ -180,6 +183,9 @@ function shouldShowSetupCard(
   return sections.some((section) => {
     if (section.status === 'error') return true;
     if (section.status !== 'todo') return false;
+    const modalities = (animal as Animal)?.recordingModalities;
+    if (section.key === 'electrode-groups') return modalities?.ephys === true;
+    if (section.key === 'cameras') return modalities?.video === true;
     if (section.key !== 'optogenetics') return true;
     return optoCompleteness === OPTO_COMPLETENESS.PARTIAL;
   });
@@ -379,10 +385,10 @@ function buildAnimalRowStatusRollup(
   }
   if (draftCount > 0) return { variant: DAY_LIFECYCLE.DRAFT, label: `${draftCount} draft` };
   if (pendingExportCount > 0) {
-    return { variant: DAY_LIFECYCLE.READY, label: `${pendingExportCount} ready` };
+    return { variant: DAY_LIFECYCLE.READY, label: `${pendingExportCount} to download` };
   }
   void exportedCount; // every present day is exported
-  return { variant: DAY_LIFECYCLE.EXPORTED, label: 'All exported' };
+  return { variant: DAY_LIFECYCLE.EXPORTED, label: 'Downloads current' };
 }
 
 /** Build the first-run setup-card sections for an animal. */
@@ -397,16 +403,26 @@ function buildSetupSections(
     animal as Parameters<typeof getAnimalBlockingSections>[0],
     days as Parameters<typeof getAnimalBlockingSections>[1]
   );
-  return SETUP_CARD_SECTIONS.map(({ key, label }) => {
+  const missing = missingAnimalSetupFacts(animal);
+  const facts: SectionViewModel[] = (['identity', 'team'] as const).map((key) => ({
+    key, label: key === 'identity' ? 'Animal identity' : 'Experiment & team',
+    status: missing[key].length ? 'todo' : 'ready',
+    summary: missing[key].length ? `To enter: ${missing[key].join(', ')}` : 'Complete',
+    issueCount: missing[key].length,
+    action: { label: missing[key].length ? 'Continue' : 'Review', href: `#/home?animal=${encodeURIComponent(animalId)}&step=${key}`, intent: 'setup' },
+  }));
+  return [...facts, ...SETUP_CARD_SECTIONS.map(({ key, label }) => {
     const blocking = blockingSections.has(key);
+    const unreviewed = key === 'recording-system' && !recordingSystemReviewed(animal);
     const todo =
       !blocking &&
-      getAnimalSectionStatus(animal as Parameters<typeof getAnimalSectionStatus>[0], key) ===
-        SECTION_STATUS.TODO;
+      (getAnimalSectionStatus(animal as Parameters<typeof getAnimalSectionStatus>[0], key) ===
+        SECTION_STATUS.TODO || unreviewed);
     const status: SectionViewModel['status'] = blocking ? 'error' : todo ? 'todo' : 'ready';
     const verb = blocking ? 'Fix' : todo ? 'Set up' : 'Review';
     const intent: WorkflowAction['intent'] = blocking ? 'fix' : todo ? 'setup' : 'review';
-    const summary = blocking ? 'Needs fixing' : todo ? 'To do' : 'Done';
+    const unused = (key === 'electrode-groups' && getAnimalElectrodeGroups(animal).length === 0) || (key === 'cameras' && getAnimalCameras(animal).length === 0) || (key === 'optogenetics' && getAnimalOptoCompleteness(animal as Animal) === OPTO_COMPLETENESS.NONE);
+    const summary = blocking ? 'Needs fixing' : unreviewed ? 'Review default' : todo ? 'To enter' : unused ? 'Not used' : 'Complete';
     return {
       key,
       label,
@@ -415,7 +431,7 @@ function buildSetupSections(
       issueCount: 0,
       action: { label: verb, href: `#/animal/${animalId}/${key}`, intent },
     };
-  });
+  })];
 }
 
 /** Build the existing-data review state. Returns undefined when there is nothing to review. */
@@ -473,7 +489,7 @@ function buildReview(
     hasCorruption,
     rawCorruptionNotices,
     reviewLink: {
-      label: "Open this animal's Validation & Export",
+      label: "Open this animal's Review & export",
       href: `#/animal/${animalId}/export`,
     },
   };

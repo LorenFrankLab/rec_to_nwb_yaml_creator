@@ -1,3 +1,4 @@
+import { recordingSystemSignature } from '../../../domain/animalSetupProgress';
 /**
  * @fileoverview Consolidated scenario fixtures for the cross-surface view-model boundary tests
  * (Phase 5). Each builder returns one canonical workspace (`{ animals, days }`) plus the ids the
@@ -81,7 +82,7 @@ export const incompleteAnimal = (): Scenario => {
 /** A complete animal with zero recording days. */
 export const completeAnimalNoDays = (): Scenario => {
   const { animal } = loadRealistic();
-  const a = { ...clone(animal), days: [] } as Idable;
+  const a = { ...clone(animal), days: [], experiment_description: 'Spatial navigation experiment', recordingSystemReviewed: recordingSystemSignature(animal) } as Idable;
   return { workspace: { animals: { [a.id]: a }, days: {} }, animalId: a.id };
 };
 
@@ -212,6 +213,6 @@ export const orphanNoOwner = (): Required<Scenario> => ({
 /** A real day record whose owner is present but does NOT list it (recovered, unlinked). */
 export const recoveredUnlinked = (): Required<Scenario> => {
   const { animal, day } = loadRealistic();
-  const a = { ...clone(animal), days: [] } as Idable;
+  const a = { ...clone(animal), days: [], experiment_description: 'Spatial navigation experiment', recordingSystemReviewed: recordingSystemSignature(animal) } as Idable;
   return { workspace: { animals: { [a.id]: a }, days: { [day.id]: day } }, animalId: a.id, dayId: day.id };
 };

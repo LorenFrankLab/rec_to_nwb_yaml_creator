@@ -294,6 +294,7 @@ export function useWorkspacePersistence({
   // the draft registry so the indicator / unload guard cannot claim durability over a pending draft.
   useSyncExternalStore(subscribeDrafts, getDraftVersion, getDraftVersion);
   const hasPendingDrafts = readPendingDrafts();
+  const hasUnappliedDrafts = hasUnflushableDrafts();
 
   // Force an immediate write (Ctrl/Cmd+S, the Save button, pagehide), bypassing the autosave
   // debounce. FLUSHES pending field drafts first: their commits go through the ref-lockstep
@@ -486,6 +487,7 @@ export function useWorkspacePersistence({
       saveError,
       hasPendingWrite,
       hasPendingDrafts,
+      hasUnappliedDrafts,
       loadNotice,
       loadOutcome,
       writer: writerState,
@@ -505,6 +507,7 @@ export function useWorkspacePersistence({
       saveError,
       hasPendingWrite,
       hasPendingDrafts,
+      hasUnappliedDrafts,
       loadNotice,
       loadOutcome,
       writerState,

@@ -27,7 +27,7 @@ import { buildRealisticWorkspace } from '../fixtures/workspaceBuilders';
  * 2. **incomplete** — `session_id` omitted, so the Overview step is `'incomplete'`
  *    (a missing-but-not-invalid field: it is absent from the schema's top-level
  *    `required` set, so it produces no error-severity issue).
- * 3. **error** — a whitespace-only `session_description`, which trips the schema's
+ * 3. **error** — a non-string `session_description`, which trips the schema's
  *    non-empty pattern and produces a genuine `error`-severity issue.
  *
  * The valid + incomplete days belong to animal `remy`; the error day belongs to a
@@ -69,7 +69,7 @@ export function makeSummaryWorkspace() {
   };
   remy.days = [validDay.id, incompleteDay.id];
 
-  // Animal "totoro": one error day (whitespace-only session_description).
+  // Animal "totoro": one error day (non-string session_description).
   const { animal: totoro } = buildRealisticWorkspace();
   totoro.id = 'totoro';
   totoro.subject = { ...totoro.subject, subject_id: 'totoro' };
@@ -78,7 +78,7 @@ export function makeSummaryWorkspace() {
     ...structuredClone(validDay),
     id: 'totoro-2023-06-22',
     animalId: 'totoro',
-    session: { ...validDay.session, session_description: '   ' },
+    session: { ...validDay.session, session_description: 42 },
   };
   totoro.days = [errorDay.id];
 

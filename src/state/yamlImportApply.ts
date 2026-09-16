@@ -510,6 +510,7 @@ function dayOwnedUpdates(day: ImportPlanDay): Record<string, any> {
     experimenters: day.experimenters,
     optogenetics: day.optogenetics,
     provenance: {
+      origin: 'import',
       copiedFromDayId: null,
       copiedFromDate: null,
       configuration: { source: 'import', confirmed: true },

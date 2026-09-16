@@ -117,10 +117,10 @@ export function stepIdForIssue(issue: RepairableIssue): RoutableStep {
 export const STEP_LABELS: Record<string, string> = {
   overview: 'Daily log',
   devices: 'Recording Setup',
-  epochs: 'Tasks & Files',
+  epochs: 'Daily log',
   behavioral: 'DIO Wiring',
-  validation: 'Fix & Export',
-  export: 'Fix & Export',
+  validation: 'Review & export',
+  export: 'Review & export',
 };
 
 /**
@@ -129,7 +129,7 @@ export const STEP_LABELS: Record<string, string> = {
  * the "Fix in …" button labels, instead of re-deriving the routing from path substrings.
  */
 export const DAY_SECTIONS = {
-  tasks: 'Tasks & Files',
+  tasks: 'Daily log',
   dio: 'DIO Wiring',
   channels: 'Failed Channels',
   recording: 'Recording Setup',
@@ -204,6 +204,7 @@ export const REPAIR_SURFACES: Set<string> = new Set(['day', 'animal', 'none']);
  * schema issues, which carry no app metadata).
  */
 export const SURFACE_BY_CODE: Record<string, RepairSurface> = {
+  birth_date_required: 'animal',
   // Editable ONLY in the Animal Editor (device geometry, channel maps, probe catalog,
   // electrode-group identity/location, cameras, data-acq devices, subject identity).
   channel_value_out_of_range: 'animal',
@@ -282,6 +283,8 @@ export const SURFACE_BY_CODE: Record<string, RepairSurface> = {
   // date (confirm / re-pin in the Recording Setup section); a migration-filled weight to confirm.
   configuration_effective_date_unconfirmed: 'day',
   weight_from_baseline: 'day',
+  voltage_units_review: 'day',
+  copied_task_context_review: 'day',
   malformed_animal_collection: 'animal',
   missing_configuration_history: 'animal',
   missing_camera: 'day',

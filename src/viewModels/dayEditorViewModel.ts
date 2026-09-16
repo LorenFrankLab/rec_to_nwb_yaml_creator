@@ -1,3 +1,4 @@
+import { isIncompleteEntryIssue } from '../domain/validationPresentation';
 /**
  * @fileoverview DayEditor view-model builder.
  *
@@ -172,7 +173,7 @@ const DEFAULT_STEP = 'daily';
 /** The accessible status label per step status — rendered verbatim by DayEditorSectionNav (it reads `step.statusLabel`). */
 const STEP_STATUS_LABEL: Record<StepStatus, string> = {
   valid: 'Complete',
-  incomplete: 'Incomplete',
+  incomplete: 'To enter',
   error: 'Has errors',
   pending: 'Not started',
 };
@@ -180,11 +181,11 @@ const STEP_STATUS_LABEL: Record<StepStatus, string> = {
 /** The six section rows rendered by the grouped vertical rail. */
 const TAB_ORDER: ReadonlyArray<{ key: DayTabKey; label: string; steps: string[] }> = [
   { key: 'daily', label: 'Daily log', steps: ['overview'] },
-  { key: 'tasks', label: 'Tasks & Files', steps: ['epochs'] },
+  { key: 'tasks', label: 'Daily log', steps: ['epochs'] },
   { key: 'recording', label: 'Recording Setup', steps: ['devices'] },
   { key: 'channels', label: 'Failed Channels', steps: ['devices'] },
   { key: 'dio', label: 'DIO Wiring', steps: ['behavioral'] },
-  { key: 'export', label: 'Fix & Export', steps: ['validation', 'export'] },
+  { key: 'export', label: 'Review & export', steps: ['validation', 'export'] },
 ];
 
 /** The valid section keys (the frame's nav allow-list), derived from the section order. */
@@ -233,9 +234,7 @@ function issuePath(issue: RepairableIssue): string {
   return String(issue.focusPath || issue.path || issue.instancePath || issue.field || '');
 }
 
-function hasErrorIssue(issues: RepairableIssue[], matcher: (issue: RepairableIssue) => boolean): boolean {
-  return issues.some((issue) => isBlockingIssue(issue) && matcher(issue));
-}
+
 
 function sectionIssuePath(issue: RepairableIssue): string {
   return issuePath(issue).replace(/^\//, '').replace(/\//g, '.');
@@ -337,7 +336,8 @@ function splitSectionStatus(
   issues: RepairableIssue[],
   matcher: (issue: RepairableIssue) => boolean
 ): StepStatus {
-  if (hasErrorIssue(issues, matcher)) return 'error';
+  const blocking = issues.filter((issue) => isBlockingIssue(issue) && matcher(issue));
+  if (blocking.length > 0) return blocking.every(isIncompleteEntryIssue) ? 'incomplete' : 'error';
   return fallback === 'error' ? 'valid' : fallback;
 }
 
@@ -360,7 +360,7 @@ function buildSectionItems(
     },
     {
       key: 'tasks',
-      label: 'Tasks & Files',
+      label: 'Daily log',
       status: splitSectionStatus(stepStatus.epochs ?? 'incomplete', issues, isTasksFilesIssue),
     },
     {
@@ -380,8 +380,11 @@ function buildSectionItems(
     },
     {
       key: 'export',
-      label: 'Fix & Export',
-      status: rollupStepStatus([
+      label: 'Review & export',
+      status: issues.some(isBlockingIssue) && issues.filter(isBlockingIssue).every(isIncompleteEntryIssue) ? 'incomplete' : rollupStepStatus([
+        stepStatus.overview ?? 'incomplete',
+        stepStatus.devices ?? 'incomplete',
+        stepStatus.epochs ?? 'incomplete',
         stepStatus.validation ?? 'incomplete',
         stepStatus.export ?? 'incomplete',
       ]),
@@ -659,8 +662,8 @@ function buildOverviewFields(
         ? 'Weight measured on this day — the value exported for this day.'
         : suggestionText
           ? `No weight entered for this day — required for export. Previous: ${suggestionText}. ` +
-            'Enter today\u2019s measurement (the previous value is a suggestion, not a measurement).'
-          : 'No weight entered for this day — required for export. Enter today\u2019s measurement.',
+            'Enter the measurement for this recording date (the previous value is a suggestion, not a measurement).'
+          : 'No weight entered for this day — required for export. Enter the measurement for this recording date.',
   });
 
   // Read-only inherited subject identity facts (always animal-owned / inherited on this surface).
@@ -721,6 +724,7 @@ export function toIssueViewModel(
 
   const vm: IssueViewModel = {
     severity: issue.severity === 'warning' ? 'warning' : 'error',
+    ...(issue.code ? { code: issue.code } : {}),
     message: humanizeValidationMessage(issue.message, path),
     ownership: ownership.pattern,
     // The ownership pattern's primary action + reach + category are the data IssueOwnershipHint and
@@ -915,9 +919,9 @@ function buildExportGate(opts: {
       + 'on the validation summary, then return.';
   } else if (errorIssues.length > 0) {
     reason = 'validation-errors';
-    message = `Resolve ${errorIssues.length} validation ${
-      pluralize(errorIssues.length, 'error')
-    } before exporting.`;
+    message = stepStatus.devices !== 'error' && errorIssues.every(isIncompleteEntryIssue)
+      ? 'Complete these entries before downloading.'
+      : `Resolve ${errorIssues.length} validation ${pluralize(errorIssues.length, 'error')} before exporting.`;
   } else {
     reason = 'incomplete-steps';
     message = 'Complete the required setup shown below before exporting.';

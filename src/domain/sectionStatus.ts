@@ -21,6 +21,7 @@ import {
 import { mergeDayMetadata } from '../state/workspaceUtils';
 import { validateDay, repairTargetForIssue, animalSetupTabForFieldPath } from './validation';
 import { optoFieldsPresence } from './optoCompleteness';
+import { optoSetupCompleteness } from './optoEditorFields';
 import type { Animal, Day } from '../state/workspaceTypes';
 import { isBlockingIssue } from '../validation/issueTypes';
 
@@ -31,9 +32,8 @@ export const SECTION_STATUS: Readonly<Record<string, string>> = {
 };
 
 /**
- * Optogenetics completeness classification for the section-nav count slot. Mirrors the export rule
- * {@link module:validation/rulesValidation} `partial_configuration` (rulesValidation.js): opto is
- * gated on FOUR fields each being present and non-empty.
+ * Optogenetics entry completeness for the section-nav count slot. All four sections must
+ * have their required scientific fields filled; export validation separately checks their values.
  */
 export const OPTO_COMPLETENESS: Readonly<Record<string, string>> = {
   COMPLETE: 'complete',
@@ -42,14 +42,9 @@ export const OPTO_COMPLETENESS: Readonly<Record<string, string>> = {
 };
 
 /**
- * Classify an animal's optogenetics setup as COMPLETE, PARTIAL, or NONE, using the SAME four-field
- * definition as the export rule's `partial_configuration` (rulesValidation.js ~lines 93-104):
- * `opto_excitation_source` / `optical_fiber` / `virus_injection` each a non-empty array, and
- * `optogenetic_stimulation_software` a non-empty (trimmed) string.
- *
- * COMPLETE → all four present. PARTIAL → some-but-not-all. NONE → none (the never-configured case
- * the hollow-○ todo path owns). Shape-safe: a malformed `optogenetics` yields NONE rather than
- * throwing.
+ * Classify an animal's optogenetics setup using field-level entry completeness.
+ * COMPLETE means all required fields in every record are entered; PARTIAL means setup was started;
+ * NONE means it was never configured. Malformed top-level shapes read as NONE without throwing.
  *
  * @param animal - The animal record.
  * @returns One of {@link OPTO_COMPLETENESS}.
@@ -57,11 +52,10 @@ export const OPTO_COMPLETENESS: Readonly<Record<string, string>> = {
 export function getAnimalOptoCompleteness(animal: Animal): string {
   const opto = animal?.optogenetics;
   if (!opto || typeof opto !== 'object' || Array.isArray(opto)) return OPTO_COMPLETENESS.NONE;
-  // SAME shared predicate as the export gate (rulesValidation `partial_configuration`), reading the
-  // NESTED animal.optogenetics.* — so the nav count and the gate can never disagree.
+  // Presence distinguishes untouched setup; populated arrays alone cannot mean complete.
   const present = optoFieldsPresence(opto).count;
   if (present === 0) return OPTO_COMPLETENESS.NONE;
-  if (present === 4) return OPTO_COMPLETENESS.COMPLETE;
+  if (optoSetupCompleteness(opto).count === 4) return OPTO_COMPLETENESS.COMPLETE;
   return OPTO_COMPLETENESS.PARTIAL;
 }
 
@@ -76,11 +70,11 @@ export function getAnimalOptoCompleteness(animal: Animal): string {
  * "Done" that contradicts them.
  */
 const SETUP_SECTION_IS_CONFIGURED: Record<string, (animal: Animal) => boolean> = {
-  'electrode-groups': (animal) => getAnimalElectrodeGroups(animal).length > 0,
+  'electrode-groups': (animal) => getAnimalElectrodeGroups(animal).length > 0 || animal?.recordingModalities?.ephys !== true,
   'recording-system': (animal) => getDataAcqDevices(animal).length > 0,
-  cameras: (animal) => getAnimalCameras(animal).length > 0,
+  cameras: (animal) => getAnimalCameras(animal).length > 0 || animal?.recordingModalities?.video !== true,
   optogenetics: (animal) =>
-    getAnimalOptoCompleteness(animal) === OPTO_COMPLETENESS.COMPLETE,
+    !animal?.optogenetics || getAnimalOptoCompleteness(animal) === OPTO_COMPLETENESS.COMPLETE,
 };
 
 /**

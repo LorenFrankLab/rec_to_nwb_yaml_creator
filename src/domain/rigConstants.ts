@@ -11,6 +11,7 @@
  */
 
 import type { TechnicalParameters, TechnicalDefaults } from '../state/workspaceTypes';
+import type { RepairableIssue } from './repairRouting';
 
 /** The rig-constant fields this module resolves. */
 export type RigField = 'raw_data_to_volts' | 'times_period_multiplier';
@@ -18,9 +19,19 @@ export type RigField = 'raw_data_to_volts' | 'times_period_multiplier';
 /** Fallback rig-constant values (match `createDayRecord`'s seeding fallbacks, not the schema
  *  `default` of 0.0 — these are the app's seeded values). */
 export const RIG_FALLBACK: Record<RigField, number> = {
-  raw_data_to_volts: 0.195,
+  raw_data_to_volts: 1.95e-7,
   times_period_multiplier: 1.5,
 };
+
+/** Flag the former app default without silently rescaling imported scientific data. */
+export function suspiciousVoltageIssues(model: { raw_data_to_volts?: unknown }): RepairableIssue[] {
+  return model.raw_data_to_volts === 0.195 ? [{
+    code: 'voltage_units_review', severity: 'warning', repairSurface: 'day', step: 'devices',
+    path: 'raw_data_to_volts', focusPath: 'technical.raw_data_to_volts',
+    actionLabel: 'Review voltage units',
+    message: 'Voltage conversion is 0.195 V/count, the former app default. If the intended scale is 0.195 µV/count, use 1.95e-7 V/count. Verify the recording header: metadata is the fallback when rawScalingToUv is absent.',
+  }] : [];
+}
 
 /**
  * Resolve a rig constant's EFFECTIVE day value (what export reads) and how it relates to the

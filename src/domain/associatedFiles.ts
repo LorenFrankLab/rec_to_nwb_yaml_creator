@@ -1,5 +1,8 @@
 import type { AssociatedFile } from '../state/workspaceTypes';
 
+/** File type recognized by Spyglass; does not assert any experimental observations. */
+export const STATESCRIPT_DESCRIPTION = 'statescript log';
+
 /** A stored associated-file row plus its original index in `day.associated_files`. */
 export interface IndexedAssociatedFile {
   /** Stored row, by reference. */

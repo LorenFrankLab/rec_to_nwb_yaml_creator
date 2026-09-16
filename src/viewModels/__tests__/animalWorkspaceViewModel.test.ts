@@ -1,3 +1,4 @@
+import { recordingSystemSignature, recordingSystemReviewed } from '../../domain/animalSetupProgress';
 /**
  * Parity tests for buildAnimalWorkspaceViewModel.
  *
@@ -98,14 +99,14 @@ describe('buildAnimalWorkspaceViewModel — animal row metadata (Animals home)',
   it('rolls a single valid-but-unexported day up to "1 ready"', () => {
     const { animal, day } = loadRealistic();
     const card = buildAnimalWorkspaceViewModel(wrap(animal, day)).animals[0];
-    expect(card.statusRollup).toEqual({ variant: 'ready', label: '1 ready' });
+    expect(card.statusRollup).toEqual({ variant: 'ready', label: '1 to download' });
   });
 
   it('rolls a fully-exported day set up to "All exported"', () => {
     const { animal, day } = loadRealistic();
     const exported = { ...day, state: { ...(day.state as Record<string, unknown>), draft: false, validated: true, exported: true } };
     const card = buildAnimalWorkspaceViewModel(wrap(animal, exported)).animals[0];
-    expect(card.statusRollup).toEqual({ variant: 'exported', label: 'All exported' });
+    expect(card.statusRollup).toEqual({ variant: 'exported', label: 'Downloads current' });
   });
 
   it('rolls a needs-attention day (wrong owner) up to "1 needs review"', () => {
@@ -131,7 +132,7 @@ describe('buildAnimalWorkspaceViewModel — animal row metadata (Animals home)',
       days: { [day.id]: day, [day2.id]: day2 },
     };
     const card = buildAnimalWorkspaceViewModel(ws).animals[0];
-    expect(card.statusRollup).toEqual({ variant: 'ready', label: '1 ready' });
+    expect(card.statusRollup).toEqual({ variant: 'ready', label: '1 to download' });
   });
 
   it('reads "No recording days" for an animal with no days', () => {
@@ -258,6 +259,8 @@ describe('buildAnimalWorkspaceViewModel — setup sections', () => {
     const vm = buildAnimalWorkspaceViewModel(wrap(animal, day), animal.id);
     const sections = vm.selectedAnimal!.setupSections;
     expect(sections.map((s) => s.key)).toEqual([
+      'identity',
+      'team',
       'electrode-groups',
       'recording-system',
       'cameras',
@@ -265,10 +268,10 @@ describe('buildAnimalWorkspaceViewModel — setup sections', () => {
     ]);
 
     const blocking = getAnimalBlockingSections(animal as never, wrap(animal, day).days as never);
-    for (const s of sections) {
+    for (const s of sections.filter((section) => !['identity', 'team'].includes(section.key))) {
       const isBlocking = blocking.has(s.key);
       const isTodo =
-        !isBlocking && getAnimalSectionStatus(animal as never, s.key) === SECTION_STATUS.TODO;
+        !isBlocking && (getAnimalSectionStatus(animal as never, s.key) === SECTION_STATUS.TODO || (s.key === 'recording-system' && !recordingSystemReviewed(animal)));
       const expectedStatus = isBlocking ? 'error' : isTodo ? 'todo' : 'ready';
       const expectedVerb = isBlocking ? 'Fix' : isTodo ? 'Set up' : 'Review';
       const expectedIntent = isBlocking ? 'fix' : isTodo ? 'setup' : 'review';
@@ -281,13 +284,13 @@ describe('buildAnimalWorkspaceViewModel — setup sections', () => {
     // Concrete reads for this fixture: animal-record-configured sections done/Review; the
     // configurationHistory-only electrode groups and the never-configured opto → todo/Set up.
     const byKey = Object.fromEntries(sections.map((s) => [s.key, s]));
-    expect(byKey['electrode-groups'].status).toBe('todo');
-    expect(byKey['electrode-groups'].action?.label).toBe('Set up');
-    expect(byKey['recording-system'].status).toBe('ready');
-    expect(byKey['recording-system'].action?.label).toBe('Review');
+    expect(byKey['electrode-groups'].status).toBe('ready');
+    expect(byKey['electrode-groups'].action?.label).toBe('Review');
+    expect(byKey['recording-system'].status).toBe('todo');
+    expect(byKey['recording-system'].summary).toBe('Review default');
     expect(byKey['cameras'].status).toBe('ready');
-    expect(byKey['optogenetics'].status).toBe('todo');
-    expect(byKey['optogenetics'].action?.label).toBe('Set up');
+    expect(byKey['optogenetics'].status).toBe('ready');
+    expect(byKey['optogenetics'].action?.label).toBe('Review');
   });
 
   it('a never-configured animal reads every setup section as todo/Set up', () => {
@@ -297,9 +300,9 @@ describe('buildAnimalWorkspaceViewModel — setup sections', () => {
     };
     const vm = buildAnimalWorkspaceViewModel(ws, 'fresh');
     for (const s of vm.selectedAnimal!.setupSections) {
-      expect(s.status).toBe('todo');
-      expect(s.action?.label).toBe('Set up');
-      expect(s.action?.intent).toBe('setup');
+      expect(s.status).toBe(['identity', 'team', 'recording-system'].includes(s.key) ? 'todo' : 'ready');
+      expect(s.action?.label).toBe(['identity', 'team'].includes(s.key) ? 'Continue' : s.key === 'recording-system' ? 'Set up' : 'Review');
+      expect(s.action?.intent).toBe(['identity', 'team', 'recording-system'].includes(s.key) ? 'setup' : 'review');
     }
     // A fresh animal with missing required setup → the setup card shows.
     expect(vm.selectedAnimal!.showSetupCard).toBe(true);
@@ -309,6 +312,8 @@ describe('buildAnimalWorkspaceViewModel — setup sections', () => {
     const { animal, day } = loadRealistic();
     const completeAnimal = {
       ...animal,
+      recordingSystemReviewed: recordingSystemSignature(animal),
+      experiment_description: 'Spatial navigation experiment',
       devices: {
         ...(animal.devices as Record<string, unknown>),
         electrode_groups: structuredClone(
@@ -328,6 +333,8 @@ describe('buildAnimalWorkspaceViewModel — setup sections', () => {
     const { animal } = loadRealistic();
     const completeAnimal = {
       ...animal,
+      recordingSystemReviewed: recordingSystemSignature(animal),
+      experiment_description: 'Spatial navigation experiment',
       days: [],
       devices: {
         ...(animal.devices as Record<string, unknown>),

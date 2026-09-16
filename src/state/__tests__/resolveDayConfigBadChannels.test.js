@@ -78,6 +78,7 @@ function makeMultiConfig() {
 describe('byte-identity gate: migration + day-only merge reproduces the old base-reading bytes', () => {
   it('realistic workspace (snapshot carries base bad_channels) is byte-identical to the frozen old-merge baseline', () => {
     const { animal, day } = buildRealisticWorkspace();
+    day.technical.raw_data_to_volts = 0.195; // Frozen historical input, preserved verbatim.
 
     // Sanity: the realistic snapshot genuinely carries base marks (else vacuous).
     const snap = animal.configurationHistory[0];

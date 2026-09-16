@@ -281,7 +281,7 @@ function getStepStatus(errors: RepairableIssue[], data: SessionLike | null | und
     return STEP_STATUS.INCOMPLETE;
   }
 
-  if (errors && errors.length > 0) {
+  if (errors?.some(isBlockingIssue)) {
     // Has validation errors (but data is present)
     return STEP_STATUS.ERROR;
   }

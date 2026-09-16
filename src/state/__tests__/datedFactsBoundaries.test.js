@@ -88,8 +88,8 @@ describe('#5 backfill selects the setup effective on the recording date', () => 
     expect(day.provenance.configuration).toEqual({ source: 'effective-date', confirmed: true });
     expect(day.provenance.copiedFromDayId).toBe('remy-2023-06-22');
     expect(day.provenance.copiedFromDate).toBe('2023-06-22');
-    // Copied from June 22 (team of one), not from July 2 (team of two).
-    expect(day.experimenters.experimenter_name).toEqual(['Doe, Jane']);
+    // Day-only team exceptions do not become the default for a new day.
+    expect(day.experimenters.experimenter_name).toEqual(result.current.model.workspace.animals.remy.experimenters.experimenter_name);
     // The resolved geometry is v1's.
     const merged = mergeDayMetadata(result.current.model.workspace.animals.remy, day);
     expect(merged.electrode_groups.length).toBeGreaterThan(0);
@@ -117,7 +117,7 @@ describe('#5 backfill selects the setup effective on the recording date', () => 
 });
 
 describe('#8 copying a day follows the field rules', () => {
-  it('weight never; rig, team, opto, tasks, DIO copied; folder derived; files + receipt cleared; bad channels only within the same configuration', () => {
+  it('weight never; usual team; rig, opto, tasks, DIO copied; folder derived; files + receipt cleared; bad channels only within the same configuration', () => {
     const { result } = renderHook(() => useStore(seed()));
     act(() => {
       result.current.actions.createDay('remy', '2023-06-25', { session_id: 'remy_20230625', session_description: 'next' }, { carryForwardFromDayId: 'auto' });
@@ -126,7 +126,7 @@ describe('#8 copying a day follows the field rules', () => {
     const day = result.current.model.workspace.days['remy-2023-06-25'];
     expect(day.session.weight).toBeUndefined();              // a measurement is never copied
     expect(day.data_acq_device_name).toBe('Second rig');     // the rig choice is preserved (F7)
-    expect(day.experimenters).toEqual(src.experimenters);    // team copied
+    expect(day.experimenters).toEqual(result.current.model.workspace.animals.remy.experimenters); // usual team
     expect(day.optogenetics).toBeNull();                     // opto snapshot copied (none)
     expect(day.taskInstances).toEqual(src.taskInstances);    // epoch plan copied
     expect(day.behavioral_events).toEqual(src.behavioral_events);
@@ -137,7 +137,7 @@ describe('#8 copying a day follows the field rules', () => {
     // Same configuration (v1) → the source's marks (incl. the base marks hydration moved onto it) are carried.
     expect(day.deviceOverrides?.bad_channels).toEqual(src.deviceOverrides.bad_channels);
     expect(Object.keys(day.deviceOverrides.bad_channels)).toContain('1');
-    expect(day.provenance.fields).toMatchObject({ dataFolder: 'derived', data_acq_device_name: 'copied', experimenters: 'copied' });
+    expect(day.provenance.fields).toMatchObject({ dataFolder: 'derived', data_acq_device_name: 'copied', experimenters: 'animal-default' });
   });
 
   it('bad channels are NOT carried across a configuration change', () => {
@@ -166,14 +166,14 @@ describe('#5b duplicating a day selects the setup by the TARGET date, like creat
     expect(validateDay(day, mergeDayMetadata(animal, day), animal).some((i) => i.code === 'configuration_effective_date_unconfirmed')).toBe(false);
   });
 
-  it('backward: duplicating July 2 (v2) to June 25 pins v1 (effective June 1), still copying July 2’s team', () => {
+  it('backward: duplicating July 2 (v2) to June 25 pins v1 (effective June 1), using the usual team', () => {
     const { result } = renderHook(() => useStore(seed()));
     act(() => {
       result.current.actions.duplicateDay('remy-2023-07-02', '2023-06-25');
     });
     const day = result.current.model.workspace.days['remy-2023-06-25'];
     expect(day.configurationVersion).toBe(1);
-    expect(day.experimenters.experimenter_name).toEqual(['Doe, Jane', 'Roe, Richard']);
+    expect(day.experimenters.experimenter_name).toEqual(result.current.model.workspace.animals.remy.experimenters.experimenter_name);
     expect(day.provenance.copiedFromDayId).toBe('remy-2023-07-02');
   });
 
@@ -189,7 +189,7 @@ describe('#5b duplicating a day selects the setup by the TARGET date, like creat
 });
 
 describe('#8b "Change source" re-copies the carry fields but keeps the day’s own recorded facts', () => {
-  it('keeps a recorded experiment description (the dialog promises to), while copying team and tasks', () => {
+  it('keeps a recorded experiment description (the dialog promises to), while preserving the recorded team and copying tasks', () => {
     const { result } = renderHook(() => useStore(seed()));
     act(() => {
       result.current.actions.updateDay('remy-2023-06-22', { session: { experiment_description: 'TARGET recorded protocol' } });
@@ -201,7 +201,7 @@ describe('#8b "Change source" re-copies the carry fields but keeps the day’s o
     const day = result.current.model.workspace.days['remy-2023-06-22'];
     expect(day.session.experiment_description).toBe('TARGET recorded protocol');
     expect(day.session.weight).toBe(480);
-    expect(day.experimenters.experimenter_name).toEqual(['Doe, Jane', 'Roe, Richard']);
+    expect(day.experimenters.experimenter_name).toEqual(['Doe, Jane']);
     expect(day.provenance.copiedFromDayId).toBe('remy-2023-07-02');
   });
 

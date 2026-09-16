@@ -55,13 +55,13 @@ describe('epoch generated file helpers', () => {
     expect(addMissingGeneratedStatescripts(grid, [])).toEqual([
       {
         name: '20230622_remy_01_s1.stateScriptLog',
-        description: '',
+        description: 'statescript log',
         path: '/data/remy/20230622/20230622_remy_01_s1.stateScriptLog',
         task_epochs: 1,
       },
       {
         name: '20230622_remy_03_s2.stateScriptLog',
-        description: '',
+        description: 'statescript log',
         path: '/data/remy/20230622/20230622_remy_03_s2.stateScriptLog',
         task_epochs: 3,
       },
@@ -83,7 +83,7 @@ describe('epoch generated file helpers', () => {
     expect(addMissingGeneratedStatescripts(withUnexpected, [])).toEqual([
       {
         name: '20230622_remy_01_s1.stateScriptLog',
-        description: '',
+        description: 'statescript log',
         path: '/data/remy/20230622/20230622_remy_01_s1.stateScriptLog',
         task_epochs: 1,
       },
@@ -98,7 +98,7 @@ describe('epoch generated file helpers', () => {
         statescriptState: row.statescript ? ('linked' as const) : ('not_expected' as const),
       })),
     };
-    const current = [{ name: 'manual.stateScriptLog', description: '', path: '/p', task_epochs: 9 }];
+    const current = [{ name: 'manual.stateScriptLog', description: 'statescript log', path: '/p', task_epochs: 9 }];
 
     expect(countMissingGeneratedStatescripts(noneExpected)).toBe(0);
     expect(addMissingGeneratedStatescripts(noneExpected, current)).toBe(current);

@@ -63,6 +63,8 @@ export interface PersistenceStatus {
    * flushes these first.
    */
   hasPendingDrafts: boolean;
+  /** A dialog requires an explicit Save/Cancel decision. */
+  hasUnappliedDrafts?: boolean;
   /** Notice shown when a saved workspace was recovered or discarded, or null. */
   loadNotice: string | null;
   /** The load-time persistence outcome, kept runtime-only so the UI can distinguish repair vs discard. */
@@ -99,6 +101,10 @@ export type PersistenceLoadOutcome = 'recovered' | 'discarded' | null;
  * or changes infrequently across recording sessions.
  */
 export interface Animal {
+  /** Setup applicability, retained in the workspace and omitted from YAML. */
+  recordingModalities?: { ephys?: boolean; video?: boolean };
+  /** Reusable epoch-template choices, omitted from exported YAML. */
+  taskTemplateDefaults?: { sleep?: string; run?: string };
   /** Unique animal identifier. */
   id: AnimalId;
   /** Subject information. */
@@ -127,6 +133,10 @@ export interface Animal {
    * {@link module:state/workspaceTransitions}.
    */
   optogenetics?: OptogeneticsConfig | null;
+  /** Saved setup while optogenetics is disabled. Workspace-only; never merged into a recording. */
+  optogeneticsDraft?: OptogeneticsConfig | null;
+  /** Workspace-only signature of the acquisition catalog explicitly reviewed by the scientist. */
+  recordingSystemReviewed?: string;
   /**
    * VESTIGIAL animal-level behavioral-events (DIO) library. Behavioral events are now
    * day-owned (`Day.behavioral_events`, the only ones exported); this field is retained in
@@ -331,6 +341,8 @@ export interface VirusInjection {
  * derives the trustworthy view from each day's version regardless.
  */
 export interface ConfigurationSnapshot {
+  /** Explicitly the same physical probes/wiring as this earlier version (e.g. a depth change). */
+  continuesHardwareFromVersion?: number;
   /**
    * Date this config became effective (YYYY-MM-DD) — the SETUP EFFECTIVE DATE, distinct from any
    * recording date and from the metadata-entry timestamp. `createAnimal` stamps version 1 with the
@@ -503,6 +515,10 @@ export type DayFactSource = 'copied' | 'animal-default' | 'derived' | 'import' |
  * which earlier day the copied fields were seeded from. Never read by the export merge.
  */
 export interface DayProvenance {
+  /** The record's origin, independent of later configuration confirmations. */
+  origin?: 'blank' | 'copy' | 'import' | 'migration';
+  /** Source task context requiring a decision after creating a day with default context. */
+  taskContextReset?: TaskInstance[];
   /** ISO timestamp when the record was entered into the app (NOT the recording date). */
   enteredAt: string;
   /** The day the copied fields were seeded from, or null (blank day / import / migration). */
@@ -729,6 +745,10 @@ export interface FsGuiYaml {
   power_in_mW?: number | string;
   /** Pulse length (ms). */
   pulseLength?: number | string;
+  nPulses?: number;
+  sequencePeriod?: number;
+  nOutputTrains?: number;
+  trainInterval?: number;
   /** DIO output channel the protocol triggers. */
   dio_output_name?: string;
   /** Camera id (speed / spatial-filter protocols). */

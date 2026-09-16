@@ -51,6 +51,12 @@ import type {
 /** Naming state of a row's statescript file (the collapsed Statescript cell axis). */
 export type StatescriptNaming = 'generated' | 'manual' | 'none';
 export type { StatescriptState } from '../domain/statescriptExpectation';
+
+/** Optional file reminders use the same join and historical expectation as the daily grid. */
+export function missingStatescriptEpochs(animal: unknown, day: unknown, animalDays: unknown[] = []): number[] {
+  return buildEpochGrid(animal, day, animalDays).rows
+    .filter((row) => row.statescriptState === 'expected').map((row) => row.epoch);
+}
 /** Presence state of a row's video (the collapsed Video cell axis + the video 3-state). */
 export type VideoPresence = 'present' | 'missing' | 'absent';
 /** Epoch-row completeness scope (the EpochStatusPill vocabulary). */
@@ -309,7 +315,7 @@ export function buildEpochGrid(animal: unknown, day: unknown, animalDays: unknow
         ? deferredSet.has(epoch)
           ? 'incomplete'
           : 'needs_video'
-        : taskName.trim() === ''
+        : taskName.trim() === '' || (statescript != null && !statescript.entry.description?.trim())
           ? 'incomplete'
           : 'complete';
 

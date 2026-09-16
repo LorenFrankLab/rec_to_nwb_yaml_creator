@@ -1,10 +1,11 @@
+import { RIG_FALLBACK } from '../domain/rigConstants';
 import {
   generateDayId,
   assertIsoDate,
   getCurrentTimestamp,
   getCurrentDate,
 } from './workspaceUtils';
-import { getAnimalDayIds, getConfigHistory } from './workspaceSelectors';
+import { getAnimalDayIds, getConfigHistory, getAnimalNtrodeMaps } from './workspaceSelectors';
 import { normalizeDevices } from '../utils/deviceNormalization';
 import { nearestEarlierDayId } from '../domain/dayCarryPolicy';
 import { subjectIdCollision } from '../domain/animalCreation';
@@ -22,6 +23,7 @@ import {
 import type { AnimalUpdates, ConfigSnapshotInput, DayUpdates } from './workspaceTransitions';
 import type {
   Workspace,
+  NtrodeMap,
   SubjectMetadata,
   ExperimenterInfo,
   Camera,
@@ -152,7 +154,7 @@ export function createWorkspaceActions({
           experimenters,
           experiment_description: metadata.experiment_description || '',
           technicalDefaults: metadata.technicalDefaults || {
-            raw_data_to_volts: 0.195,
+            raw_data_to_volts: RIG_FALLBACK.raw_data_to_volts,
             times_period_multiplier: 1.5,
           },
           optogenetics: metadata.optogenetics,
@@ -187,6 +189,40 @@ export function createWorkspaceActions({
           },
           lastModified: now,
         };
+      });
+    },
+
+    /** Correct mapping IDs and preserve failed-channel references in the same transaction. */
+    correctChannelMaps: (animalId: string, maps: NtrodeMap[]) => {
+      commitWorkspace((prev) => {
+        const animal = prev.animals[animalId];
+        if (!animal) throw new Error(`Animal "${animalId}" not found`);
+        const original = getAnimalNtrodeMaps(animal);
+        if (original.length !== maps.length || new Set(maps.map((map) => map.ntrode_id)).size !== maps.length) {
+          throw new Error('A mapping correction must preserve rows and use unique ntrode IDs.');
+        }
+        const renames = new Map(original.map((map, index) => [String(map.ntrode_id), String(maps[index].ntrode_id)]));
+        const version = getConfigHistory(animal).slice(-1)[0]?.version;
+        const now = getCurrentTimestamp();
+        const updated = applyAnimalUpdates(animal, { devices: { ntrode_electrode_group_channel_map: maps } }, now);
+        const days = { ...prev.days };
+        Object.entries(days).forEach(([id, day]) => {
+          const overrides = day.deviceOverrides;
+          if (day.animalId !== animalId || day.configurationVersion !== version || !overrides?.bad_channels
+            || overrides.ntrode_electrode_group_channel_map !== undefined) return;
+          const duplicateSource = original.find((map, index) => original.findIndex((other) => other.ntrode_id === map.ntrode_id) !== index);
+          if (duplicateSource && Object.prototype.hasOwnProperty.call(overrides.bad_channels, String(duplicateSource.ntrode_id))) {
+            throw new Error('Duplicate original ntrode IDs make failed-channel ownership ambiguous. Correct the affected recording’s failed-channel references before renaming these ntrodes.');
+          }
+          // Rename by original row identity, atomically (including swapped IDs). Probe-local failed
+          // electrode indices stay attached to the same probe. Independent day geometry is untouched.
+          const badChannels = Object.fromEntries(Object.entries(overrides.bad_channels).map(([key, value]) => [renames.get(key) ?? key, value]));
+          if (Object.keys(badChannels).length !== Object.keys(overrides.bad_channels).length) {
+            throw new Error('Resolve stale failed-channel references before renaming ntrodes.');
+          }
+          days[id] = { ...day, deviceOverrides: { ...overrides, bad_channels: badChannels }, lastModified: now };
+        });
+        return { ...prev, animals: { ...prev.animals, [animalId]: updated }, days, lastModified: now };
       });
     },
 
@@ -595,14 +631,14 @@ export function createWorkspaceActions({
      *
      * @param animalId - Animal identifier.
      * @param version - The configuration version.
-     * @param date - The effective date, ISO `YYYY-MM-DD`.
+     * @param date - The effective date, ISO `YYYY-MM-DD`, or null when the date is unknown.
      * @throws If the animal or version does not exist, or the date is not ISO.
      */
-    setConfigurationEffectiveDate: (animalId: string, version: number, date: string) => {
+    setConfigurationEffectiveDate: (animalId: string, version: number, date: string | null) => {
       commitWorkspace((prev) => {
         const animal = prev.animals[animalId];
         if (!animal) throw new Error(`Animal "${animalId}" not found`);
-        assertIsoDate(date);
+        if (date !== null) assertIsoDate(date);
         const history = getConfigHistory(animal);
         if (!history.some((s) => s.version === version)) {
           throw new Error(`Configuration version "${version}" not found for animal "${animalId}"`);
@@ -611,7 +647,7 @@ export function createWorkspaceActions({
         const updated = {
           ...animal,
           configurationHistory: history.map((s) =>
-            s.version === version ? { ...s, date, effectiveDateKnown: true } : s
+            s.version === version ? { ...s, ...(date === null ? { effectiveDateKnown: false } : { date, effectiveDateKnown: true }) } : s
           ),
           lastModified: now,
         };

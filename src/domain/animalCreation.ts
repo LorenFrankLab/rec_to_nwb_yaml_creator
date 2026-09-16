@@ -10,6 +10,7 @@
  *
  * @module domain/animalCreation
  */
+import { RIG_FALLBACK } from './rigConstants';
 import { getAnimalExperimenters } from '../state/workspaceSelectors';
 import { recordingFilenameIssue } from './recordingFilename';
 import { idHasSlash } from '../validation/dandiSubject';
@@ -260,7 +261,7 @@ export function buildAnimalFromForm(formData: AnimalCreationFormData) {
     },
     cameras: [],
     technicalDefaults: {
-      raw_data_to_volts: 0.195,
+      raw_data_to_volts: RIG_FALLBACK.raw_data_to_volts,
       times_period_multiplier: 1.5,
     },
   };

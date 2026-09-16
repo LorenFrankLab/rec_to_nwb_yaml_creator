@@ -2,6 +2,20 @@ import type { RepairableIssue } from './repairRouting';
 import { isRecord } from '../utils/records';
 import { isBlockingIssue, blockingIssues } from '../validation/issueTypes';
 
+/** Presentation only: missing entries are a to-do, while invalid values remain errors.
+ * This never removes an issue from validation or opens the download gate. */
+export function isIncompleteEntryIssue(issue: { code?: string; message?: string }): boolean {
+  return issue.code === 'required' || issue.code === 'birth_date_required' || issue.code === 'epoch_video_undeclared'
+    || issue.code === 'copied_task_context_review' || issue.code === 'minItems' || issue.code === 'minLength'
+    || (issue.code === 'pattern' && !!issue.message?.includes('empty or contain only whitespace'));
+}
+
+/** True when a recording only needs more entry, with no invalid or contradictory values. */
+export function hasOnlyIncompleteEntries(issues: RepairableIssue[]): boolean {
+  const blocking = issues.filter(isBlockingIssue);
+  return blocking.length > 0 && blocking.every(isIncompleteEntryIssue);
+}
+
 /** Off-export day-state flags that control when validation results are surfaced. */
 interface PresentationState {
   validationDeferred?: unknown;

@@ -101,7 +101,7 @@ describe('scenario: one incomplete animal (no subject)', () => {
 
   it('AnimalView setup rings read todo (nothing configured yet)', () => {
     for (const key of ['electrode-groups', 'recording-system', 'cameras', 'optogenetics']) {
-      expect(ring(workspace, animalId, key)?.status, key).toBe('todo');
+      expect(ring(workspace, animalId, key)?.status, key).toBe(key === 'recording-system' ? 'todo' : 'ready');
     }
   });
 });
@@ -150,7 +150,7 @@ describe('AnimalView setup ring reflects the current editable configuration (ani
     expect(ring(complete.workspace, complete.animalId, 'electrode-groups')?.status).not.toBe('todo');
 
     const bare = fx.incompleteAnimal();
-    expect(ring(bare.workspace, bare.animalId, 'electrode-groups')?.status).toBe('todo');
+    expect(ring(bare.workspace, bare.animalId, 'electrode-groups')?.status).toBe('ready');
   });
 });
 
@@ -159,17 +159,17 @@ describe('AnimalView setup ring reflects the current editable configuration (ani
 describe('scenario: day missing an export-required field', () => {
   const { workspace, animalId, dayId } = fx.dayMissingRequiredField();
 
-  it('ValidationSummary, AnimalWorkspace, and DayEditor all flag the same day as error', () => {
+  it('ValidationSummary, AnimalWorkspace, and DayEditor all flag the same day as incomplete', () => {
     const vs = buildValidationSummaryViewModel(workspace, animalId);
     const row = vs.days.find((r) => r.dayId === dayId);
     const dayRow = awRow(workspace, animalId, dayId);
     const de = buildDayEditorViewModel(workspace, dayId);
 
     // ValidationSummary: one error in the count and on the row.
-    expect(vs.counts.error).toBe(1);
-    expect(row?.status).toBe('error');
+    expect(vs.counts.incomplete).toBe(1);
+    expect(row?.status).toBe('todo');
     // AnimalWorkspace day row agrees.
-    expect(dayRow?.status).toBe('error');
+    expect(dayRow?.status).toBe('todo');
     // DayEditor: export blocked on a validation error, the owning step is error, and a repairable
     // issue is surfaced.
     expect(de.overall).toBe('error');
@@ -182,7 +182,7 @@ describe('scenario: day missing an export-required field', () => {
 
     // Cross-surface agreement: the SAME day reads error on all three.
     expect(row?.status).toBe(dayRow?.status);
-    expect(de.overall).toBe(row?.status);
+    expect(de.export.open).toBe(false); // Missing entry stays a blocking validation issue.
   });
 });
 
@@ -220,8 +220,8 @@ describe('scenario: animal-setup issue affecting day export', () => {
     expect(de.export.open).toBe(false);
     expect(de.export.action.disabledReason).toBeDefined();
     // The day row reads error on both day-list surfaces.
-    expect(vsRow(workspace, animalId, dayId)?.status).toBe('error');
-    expect(awRow(workspace, animalId, dayId)?.status).toBe('error');
+    expect(vsRow(workspace, animalId, dayId)?.status).toBe('todo');
+    expect(awRow(workspace, animalId, dayId)?.status).toBe('todo');
   });
 });
 
@@ -351,16 +351,17 @@ describe('severity-mapping invariant (full table)', () => {
     expect(buildDayEditorViewModel(workspace, dayId).export.reason).toBe('incomplete-steps');
   });
 
-  it('a live blocking issue → error', () => {
+  it('missing required entry → todo, with export blocked', () => {
     const { workspace, animalId, dayId } = fx.dayMissingRequiredField();
-    expect(vsRow(workspace, animalId, dayId)?.status).toBe('error');
+    expect(vsRow(workspace, animalId, dayId)?.status).toBe('todo');
+    expect(buildDayEditorViewModel(workspace, dayId).export.open).toBe(false);
   });
 
   it('SECTION_STATUS.TODO → todo (a genuinely never-configured setup section)', () => {
     // A truly under-configured animal (empty devices AND empty config) — NOT the realistic animal,
     // whose devices are populated, so its 'todo' would have been a fixture artifact, not a real state.
     const { workspace, animalId } = fx.incompleteAnimal();
-    expect(ring(workspace, animalId, 'electrode-groups')?.status).toBe('todo');
+    expect(ring(workspace, animalId, 'recording-system')?.status).toBe('todo');
   });
 
   it('SECTION_STATUS.DONE with no blocking issue → ready', () => {

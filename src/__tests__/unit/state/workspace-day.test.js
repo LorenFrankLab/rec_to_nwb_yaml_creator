@@ -141,7 +141,7 @@ describe('Day State Management', () => {
       const day = result.current.model.workspace.days['remy-2023-06-22'];
 
       expect(day.technical.times_period_multiplier).toBe(1.5);
-      expect(day.technical.raw_data_to_volts).toBe(0.195);
+      expect(day.technical.raw_data_to_volts).toBe(1.95e-7);
       expect(day.technical.default_header_file_path).toBe('');
     });
 

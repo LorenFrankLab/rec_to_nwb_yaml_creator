@@ -167,7 +167,7 @@ export function buildRealisticWorkspace() {
     ],
     technical: {
       times_period_multiplier: 1.5,
-      raw_data_to_volts: 0.195,
+      raw_data_to_volts: 1.95e-7,
       default_header_file_path: '',
       units: undefined,
     },

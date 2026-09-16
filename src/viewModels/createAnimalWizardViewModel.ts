@@ -14,12 +14,13 @@
  *   (the shared glue), so the wizard builds an animal IDENTICAL to any other entry point.
  * - **Per-step completeness** ({@link computeStepStatuses}) — derived from the live animal record
  *   (read through the tolerant selectors); the optogenetics step's all-or-nothing meter reuses
- *   `optoFieldsPresence` (a partial opto setup silently drops ALL opto downstream).
+ *   `optoSetupCompleteness` (a partial opto setup silently drops ALL opto downstream).
  *
  * Pure and React-free; returns plain data only.
  */
 import { isValidSpecies } from '../validation/dandiSubject';
-import { optoFieldsPresence } from '../domain/optoCompleteness';
+import { recordingSystemReviewed } from '../domain/animalSetupProgress';
+import { optoSetupCompleteness } from '../domain/optoEditorFields';
 import type { OptoFieldsPresence } from '../domain/optoCompleteness';
 import { buildAnimalFromForm, validateSubjectId } from '../domain/animalCreation';
 import type { AnimalCreationFormData } from '../domain/animalCreation';
@@ -50,7 +51,7 @@ export interface WizardStepDescriptor {
   label: string;
   /** 1-based step number shown in the pill. */
   number: number;
-  /** Whether the step carries the "optional" tag (the design tags only optogenetics). */
+  /** Whether this setup depends on the experiment’s recording modalities. */
   optional: boolean;
   /**
    * Whether this step's completion is required for a clean export. Identity (the subject),
@@ -65,12 +66,12 @@ export interface WizardStepDescriptor {
 /** The ordered step descriptors. */
 export const WIZARD_STEPS: WizardStepDescriptor[] = [
   { key: 'identity', label: 'Identity', number: 1, optional: false, requiredForExport: true },
-  { key: 'electrodes', label: 'Electrodes', number: 2, optional: false, requiredForExport: true },
-  { key: 'cameras', label: 'Cameras', number: 3, optional: false, requiredForExport: false },
-  { key: 'optogenetics', label: 'Optogenetics', number: 4, optional: true, requiredForExport: false },
-  { key: 'tasks', label: 'Tasks', number: 5, optional: false, requiredForExport: false },
-  { key: 'recording-system', label: 'Recording system', number: 6, optional: false, requiredForExport: true },
-  { key: 'team', label: 'Team', number: 7, optional: false, requiredForExport: true },
+  { key: 'team', label: 'Experiment & team', number: 2, optional: false, requiredForExport: true },
+  { key: 'recording-system', label: 'Recording system', number: 3, optional: false, requiredForExport: true },
+  { key: 'electrodes', label: 'Electrodes', number: 4, optional: true, requiredForExport: false },
+  { key: 'cameras', label: 'Cameras', number: 5, optional: true, requiredForExport: false },
+  { key: 'tasks', label: 'Tasks', number: 6, optional: false, requiredForExport: false },
+  { key: 'optogenetics', label: 'Optogenetics', number: 7, optional: true, requiredForExport: false },
 ];
 
 /** The step keys in display order (a convenience for nav/index math). */
@@ -282,7 +283,7 @@ export interface StepCompletenessInput {
 
 /**
  * Compute each step's completeness from the live animal record (read tolerantly) + the identity
- * draft validity. The optogenetics step reuses `optoFieldsPresence` for its all-or-nothing meter.
+ * draft validity. The optogenetics step reuses `optoSetupCompleteness` for its all-or-nothing meter.
  *
  * @param animal - The created animal record (null before the create — only identity is known then).
  * @param input - Identity validity + the behavior-only declaration.
@@ -298,14 +299,14 @@ export function computeStepStatuses(
   const dataAcq = getDataAcqDevices(animal);
   const experimenters = getAnimalExperimenters(animal);
   const experimenterNames = getExperimenterNames(animal);
-  const opto = optoFieldsPresence(
-    (animal as { optogenetics?: unknown })?.optogenetics as Parameters<typeof optoFieldsPresence>[0]
+  const opto = optoSetupCompleteness(
+    (animal as { optogenetics?: unknown })?.optogenetics as Parameters<typeof optoSetupCompleteness>[0]
   );
 
   // Opto is all-or-nothing: none → a valid neutral state; all four → complete; a partial setup
   // silently drops ALL opto downstream, so it BLOCKS (incomplete).
   const optoStatus: StepStatus =
-    opto.count === 0 ? 'optional' : opto.count === 4 ? 'complete' : 'incomplete';
+    !(animal as { optogenetics?: unknown })?.optogenetics ? 'optional' : opto.count === 4 ? 'complete' : 'incomplete';
 
   const teamComplete =
     experimenterNames.some((n) => String(n).trim()) &&
@@ -318,11 +319,11 @@ export function computeStepStatuses(
   return {
     identity: input.identityValid && !input.identityMissingForExport ? 'complete' : 'incomplete',
     electrodes:
-      electrodeGroups.length > 0 ? 'complete' : input.behaviorOnly ? 'skipped' : 'incomplete',
-    cameras: cameras.length > 0 ? 'complete' : 'incomplete',
+      electrodeGroups.length > 0 ? 'complete' : input.behaviorOnly ? 'skipped' : 'optional',
+    cameras: cameras.length > 0 ? 'complete' : (animal as { recordingModalities?: { video?: boolean } })?.recordingModalities?.video === false ? 'skipped' : 'optional',
     optogenetics: optoStatus,
     tasks: taskTypes.length > 0 ? 'complete' : 'incomplete',
-    'recording-system': dataAcq.length > 0 ? 'prefilled' : 'incomplete',
+    'recording-system': dataAcq.length > 0 ? recordingSystemReviewed(animal) ? 'complete' : 'prefilled' : 'incomplete',
     team: teamComplete ? 'complete' : 'incomplete',
   };
 }
@@ -385,15 +386,21 @@ export function buildCreateAnimalWizardViewModel(
     identityMissingForExport: !input.identity.date_of_birth?.trim(),
     behaviorOnly: input.behaviorOnly,
   });
-  const steps: WizardStepViewModel[] = WIZARD_STEPS.map((step) => ({
+  const modalities = (input.animal as { recordingModalities?: { ephys?: boolean; video?: boolean }; optogenetics?: unknown }) ?? {};
+  const visible = WIZARD_STEPS.filter((step) => step.key === input.currentStepKey ||
+    (step.key === 'electrodes' ? modalities.recordingModalities?.ephys !== false || getAnimalElectrodeGroups(input.animal).length > 0 :
+      step.key === 'cameras' ? modalities.recordingModalities?.video !== false || getAnimalCameras(input.animal).length > 0 :
+        step.key === 'optogenetics' ? Boolean(modalities.optogenetics) : true));
+  const steps: WizardStepViewModel[] = visible.map((step, index) => ({
     ...step,
+    number: index + 1,
     status: statuses[step.key],
     isActive: step.key === input.currentStepKey,
   }));
-  const isLastStep = input.currentStepKey === WIZARD_STEP_KEYS[WIZARD_STEP_KEYS.length - 1];
-  const opto = optoFieldsPresence(
+  const isLastStep = input.currentStepKey === steps[steps.length - 1].key;
+  const opto = optoSetupCompleteness(
     (input.animal as { optogenetics?: unknown })?.optogenetics as Parameters<
-      typeof optoFieldsPresence
+      typeof optoSetupCompleteness
     >[0]
   );
   return {
@@ -401,6 +408,6 @@ export function buildCreateAnimalWizardViewModel(
     identity,
     opto,
     isLastStep,
-    nextLabel: isLastStep ? '✓ Create animal' : 'Next →',
+    nextLabel: isLastStep ? 'Finish setup' : 'Next →',
   };
 }

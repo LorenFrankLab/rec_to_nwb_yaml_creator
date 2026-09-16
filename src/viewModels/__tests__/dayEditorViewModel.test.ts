@@ -398,7 +398,7 @@ describe('buildDayEditorViewModel — issues / repair / export', () => {
     const vm = buildDayEditorViewModel(wrap(animal, day), day.id);
     expect(vm.export.open).toBe(false);
     expect(vm.export.reason).toBe('validation-errors');
-    expect(vm.export.action.disabledReason).toContain('validation');
+    expect(vm.export.action.disabledReason).toContain('Complete these entries');
     expect(vm.export.blockingIssues.length).toBeGreaterThan(0);
   });
 
@@ -826,7 +826,7 @@ describe('buildDayEditorViewModel — grouped section rail model', () => {
       'Recording Setup',
       'Failed Channels',
       'DIO Wiring',
-      'Fix & Export',
+      'Review & export',
     ]);
     expect(vm.sectionGroups.map((group) => group.label)).toEqual(['DAY', 'RECORDING', 'FINISH']);
   });

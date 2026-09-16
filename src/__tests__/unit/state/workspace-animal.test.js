@@ -109,7 +109,7 @@ describe('Animal State Management', () => {
       expect(animal.subject.species).toBe('Rattus norvegicus');
       expect(animal.subject.sex).toBe('M');
       expect(animal.days).toEqual([]);
-      expect(animal.technicalDefaults).toEqual({ raw_data_to_volts: 0.195, times_period_multiplier: 1.5 });
+      expect(animal.technicalDefaults).toEqual({ raw_data_to_volts: 1.95e-7, times_period_multiplier: 1.5 });
       expect(animal.configurationHistory).toHaveLength(1);
       expect(animal.configurationHistory[0].version).toBe(1);
       // The initial snapshot is stamped with the ENTRY date, which is not evidence of when the
