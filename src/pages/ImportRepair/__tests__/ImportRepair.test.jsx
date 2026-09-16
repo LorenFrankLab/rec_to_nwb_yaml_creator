@@ -14,6 +14,7 @@ import fs from 'fs';
 import path from 'path';
 import { StoreProvider, useStoreContext } from '../../../state/StoreContext';
 import { decodeYaml, encodeYaml } from '../../../io/yaml';
+import { mergeDayMetadata } from '../../../state/workspaceUtils';
 import ImportRepair from '../index';
 
 const originalHash = window.location.hash;
@@ -1130,6 +1131,52 @@ describe('ImportRepair — a LATER calibration of a camera the animal already ha
     // Nothing new was invented, and the day still points at the camera it was imported under.
     expect(captured.animals.remy.cameras).toEqual(camerasBefore);
     expect(overheadRefOf('remy-2023-06-23')).toBe(cameraIdOf('overhead_camera_20230623'));
+  });
+
+  it('routes a NEW day onto the camera the animal already holds that calibration under', async () => {
+    // The reroute's real job: a later day recorded under the bare `overhead_camera` name at the
+    // calibration the animal already stores as `overhead_camera_20230623` IS that camera. It must
+    // commit — no repair, no second split, no duplicate CameraDevice — with the new day's task and
+    // video references landing on that existing camera's id.
+    const user = userEvent.setup();
+    renderScreen();
+    await importSplitHistory(user);
+    const camerasBefore = structuredClone(captured.animals.remy.cameras);
+
+    await user.upload(
+      screen.getByLabelText(/choose a metadata yaml file/i),
+      makeFile('06252023_remy_metadata.yml', dayYaml('20230625', 0.002))
+    );
+
+    const add = await screen.findByRole('button', { name: /add recording day/i });
+    expect(add).toBeEnabled();
+    expect(screen.queryByLabelText(/Map camera 0 to existing camera id/i)).not.toBeInTheDocument();
+
+    await user.click(add);
+    expect(
+      screen.queryByRole('group', { name: /overhead_camera.*calibrations/i })
+    ).not.toBeInTheDocument();
+    // The single-day success state (the region is labelled "Import complete").
+    await screen.findByRole('heading', { name: /recording day added/i });
+    expect(screen.getByRole('region', { name: /import complete/i })).toBeInTheDocument();
+
+    // The catalog is untouched — the calibration was recognised, not re-split.
+    expect(captured.animals.remy.cameras).toEqual(camerasBefore);
+
+    // …and the new day's references were remapped onto that camera, in the stored record AND in
+    // what the day would export.
+    const splitId = cameraIdOf('overhead_camera_20230623');
+    const day = captured.days['remy-2023-06-25'];
+    expect(overheadRefOf('remy-2023-06-25')).toBe(splitId);
+    const merged = mergeDayMetadata(captured.animals.remy, day);
+    const overheadTask = merged.tasks.find((task) => (task.camera_id || []).includes(splitId));
+    expect(overheadTask).toBeDefined();
+    expect(
+      merged.cameras.find((camera) => camera.id === splitId)
+    ).toMatchObject({ camera_name: 'overhead_camera_20230623', meters_per_pixel: 0.002 });
+    expect(
+      merged.cameras.some((camera) => camera.camera_name === 'overhead_camera')
+    ).toBe(false);
   });
 
   it('still asks about a camera the animal cannot explain at all', async () => {
