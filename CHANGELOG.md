@@ -291,6 +291,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Editing a recording day's room no longer reorders its cameras.** Saving "Edit for this day" in
+  the epoch drill-in rebuilt the task's camera list in animal-catalog order, so a day recorded as
+  `[1, 0]` silently became `[0, 1]`. The converter reads the FIRST task camera's calibration for the
+  epoch's position scale, so that re-sorting could change the exported metres-per-pixel of a day
+  whose room was all the scientist edited. The recorded order is now preserved for the cameras that
+  stay selected, with newly selected ones appended after them.
+
 - **Cancelling the task-scope question no longer lets the next save rewrite earlier days.** Editing a
   task type's default environment or cameras asks whether to keep the recording days that still
   follow it as recorded; cancelling that question returned to the form with the typed edits, but

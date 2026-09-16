@@ -12,6 +12,7 @@ import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { axe } from 'jest-axe';
 import EpochsTab from '../EpochsTab';
+import { mergeDayMetadata } from '../../../state/workspaceUtils';
 import styles from '../EpochsTab.module.css';
 
 /**
@@ -449,6 +450,138 @@ describe('EpochsTab — write-back patches', () => {
       expect(lastPatch(bundle.onFieldUpdate, 'taskInstances')).toEqual([
         { taskTypeId: 'tasktype-0', task_epochs: [1] },
       ]);
+    });
+
+    describe('the recorded camera ORDER survives a per-day edit (R2)', () => {
+      // The converter reads the FIRST task camera's calibration for an epoch's position scale
+      // (trodes_to_nwb convert_position.py), so re-sorting a task's cameras into catalog order
+      // silently changes meters_per_pixel. A room-only save must leave the references alone.
+
+      /**
+       * A Sleep occurrence over a three-camera catalog whose cameras are calibrated differently.
+       * @param {Array<number>} taskDefaultCameras - The task type's default `camera_id`.
+       * @param {object} [dayOverrides] - Fields recorded on the day's task instance.
+       * @returns {object} The EpochsTab bundle.
+       */
+      const orderedCameraBundle = (taskDefaultCameras, dayOverrides = {}) =>
+        makeBundle(
+          {
+            taskInstances: [{ taskTypeId: 'tasktype-0', task_epochs: [1], ...dayOverrides }],
+            associated_video_files: [],
+            configurationVersion: 1,
+          },
+          {
+            // A minimal probe configuration, so the day can actually be merged for export.
+            configurationHistory: [
+              {
+                version: 1,
+                date: '2023-06-01',
+                description: 'Initial configuration',
+                devices: { electrode_groups: [], ntrode_electrode_group_channel_map: [] },
+                appliedToDays: [],
+              },
+            ],
+            cameras: [
+              { id: 0, camera_name: 'cam0', meters_per_pixel: 0.00085 },
+              { id: 1, camera_name: 'cam1', meters_per_pixel: 0.0009 },
+              { id: 2, camera_name: 'cam2', meters_per_pixel: 0.00095 },
+            ],
+            taskTypes: [
+              {
+                id: 'tasktype-0',
+                task_name: 'Sleep',
+                task_description: 'sleep',
+                task_environment: 'HaightRight',
+                camera_id: taskDefaultCameras,
+              },
+            ],
+          }
+        );
+
+      /**
+       * Open epoch 1's per-day context editor and retype only its environment.
+       * @param {object} user - The userEvent session.
+       * @param {string} next - The new room.
+       */
+      const editRoomOnly = async (user, next) => {
+        await user.click(screen.getByRole('button', { name: /Show epoch 1 details/i }));
+        await user.click(screen.getByRole('button', { name: /Edit for this day/i }));
+        const environment = screen.getByLabelText(/Environment for this day/i);
+        await user.clear(environment);
+        await user.type(environment, next);
+        await user.click(screen.getByRole('button', { name: /Save for this day/i }));
+      };
+
+      it('a room-only save on [1, 0] records no camera override and keeps the first calibration', async () => {
+        const user = userEvent.setup();
+        const bundle = orderedCameraBundle([1, 0]);
+        render(<EpochsTab {...bundle} />);
+
+        await editRoomOnly(user, 'Second room');
+
+        const patch = lastPatch(bundle.onFieldUpdate, 'taskInstances');
+        // The selection did not change, so nothing is pinned — the day still follows the default.
+        expect(patch).toEqual([
+          { taskTypeId: 'tasktype-0', task_epochs: [1], task_environment: 'Second room' },
+        ]);
+        const merged = mergeDayMetadata(bundle.animal, { ...bundle.day, taskInstances: patch });
+        expect(merged.tasks[0].camera_id).toEqual([1, 0]);
+        const firstCamera = merged.cameras.find((c) => c.id === merged.tasks[0].camera_id[0]);
+        expect(firstCamera.meters_per_pixel).toBe(0.0009);
+      });
+
+      it('a room-only save keeps a day-recorded [1, 0] exactly as recorded', async () => {
+        const user = userEvent.setup();
+        const bundle = orderedCameraBundle([0, 1], { camera_id: [1, 0] });
+        render(<EpochsTab {...bundle} />);
+
+        await editRoomOnly(user, 'Second room');
+
+        const patch = lastPatch(bundle.onFieldUpdate, 'taskInstances');
+        expect(patch[0].camera_id).toEqual([1, 0]);
+        const merged = mergeDayMetadata(bundle.animal, { ...bundle.day, taskInstances: patch });
+        expect(merged.tasks[0].camera_id).toEqual([1, 0]);
+        const firstCamera = merged.cameras.find((c) => c.id === merged.tasks[0].camera_id[0]);
+        expect(firstCamera.meters_per_pixel).toBe(0.0009);
+      });
+
+      it('keeps a split-import order like [2, 1] against a [0, 1, 2] catalog', async () => {
+        // The calibration split names the later camera last in the catalog, so a day that used it
+        // legitimately references a higher id first.
+        const user = userEvent.setup();
+        const bundle = orderedCameraBundle([0], { camera_id: [2, 1] });
+        render(<EpochsTab {...bundle} />);
+
+        await editRoomOnly(user, 'Second room');
+
+        expect(lastPatch(bundle.onFieldUpdate, 'taskInstances')[0].camera_id).toEqual([2, 1]);
+      });
+
+      it('deselecting a camera removes only that one, keeping the rest in order', async () => {
+        const user = userEvent.setup();
+        const bundle = orderedCameraBundle([1, 0]);
+        render(<EpochsTab {...bundle} />);
+
+        await user.click(screen.getByRole('button', { name: /Show epoch 1 details/i }));
+        await user.click(screen.getByRole('button', { name: /Edit for this day/i }));
+        await user.click(screen.getByRole('checkbox', { name: /cam1/i })); // off
+        await user.click(screen.getByRole('button', { name: /Save for this day/i }));
+
+        expect(lastPatch(bundle.onFieldUpdate, 'taskInstances')[0].camera_id).toEqual([0]);
+      });
+
+      it('a newly selected camera is appended after the recorded ones', async () => {
+        const user = userEvent.setup();
+        const bundle = orderedCameraBundle([1, 0]);
+        render(<EpochsTab {...bundle} />);
+
+        await user.click(screen.getByRole('button', { name: /Show epoch 1 details/i }));
+        await user.click(screen.getByRole('button', { name: /Edit for this day/i }));
+        await user.click(screen.getByRole('checkbox', { name: /cam2/i })); // on
+        await user.click(screen.getByRole('button', { name: /Save for this day/i }));
+
+        expect(lastPatch(bundle.onFieldUpdate, 'taskInstances')[0].camera_id).toEqual([1, 0, 2]);
+      });
     });
 
     it('"Use task default" clears the day overrides', async () => {

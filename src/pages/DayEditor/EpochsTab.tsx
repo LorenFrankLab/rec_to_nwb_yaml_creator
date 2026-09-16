@@ -1592,9 +1592,20 @@ function TaskContextForm({ row, cameras, taskType, onSave, onUseTaskDefault, onC
   };
 
   const handleSave = () => {
-    // Keep catalog order for the ids, and keep each camera's ORIGINAL id type (they are integers
-    // downstream) — never the string keys the checkboxes track.
-    const nextCameras = cameras.filter((camera) => selected.includes(String(camera?.id))).map((c) => c.id);
+    // Preserve the RECORDED order of the cameras that stay selected, then append newly selected ones
+    // in catalog order. The converter reads the FIRST task camera's calibration for the epoch's
+    // position scale, so re-sorting this list into catalog order would silently change
+    // meters_per_pixel — a room-only edit must leave the references byte-identical. Ids keep their
+    // ORIGINAL type (integers downstream), never the string keys the checkboxes track.
+    const keptCameras = row.cameras.filter((id) => selected.includes(String(id)));
+    const addedCameras = cameras
+      .filter(
+        (camera) =>
+          selected.includes(String(camera?.id)) &&
+          !row.cameras.some((id) => String(id) === String(camera?.id))
+      )
+      .map((c) => c.id);
+    const nextCameras = [...keptCameras, ...addedCameras];
     const trimmed = environment.trim();
     onSave({
       // A BLANK environment is never a valid exported value, so an emptied field means "use the
