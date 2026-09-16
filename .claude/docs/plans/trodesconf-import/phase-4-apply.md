@@ -28,9 +28,18 @@ byte-identity gate.
   later edits.
 - [src/pages/AnimalEditor/wiring/ElectrodeGroupsContainer.tsx:94](../../../../src/pages/AnimalEditor/wiring/ElectrodeGroupsContainer.tsx)
   — the editor reads `animal.devices` (the mirror); hence the mirror must match the new snapshot.
+- [src/pages/DayEditor/ReconfigWizard.tsx:147-153](../../../../src/pages/DayEditor/ReconfigWizard.tsx) +
+  [src/pages/AnimalView/NewConfigurationModal.tsx:119-125](../../../../src/pages/AnimalView/NewConfigurationModal.tsx)
+  — the **clone** callers; they pass `{date,description,devices}` today. **Both must set
+  `inheritSiblingsFromLatest: true`** (NewConfigurationModal only on the `copyFromCurrent` branch, not the
+  blank one) so a clone preserves the import-backed marker.
+- [src/state/yamlImportApply.ts:405,473](../../../../src/state/yamlImportApply.ts) — the YAML importer
+  also calls this transition with only `{date,description,devices}`; it must **not** set the flag, so a
+  YAML config never inherits Trodes siblings (even with overlapping ntrode ids). This is why inheritance
+  is an explicit opt-in, not overlap-inferred.
 - [src/state/workspaceTypes.ts:299-322](../../../../src/state/workspaceTypes.ts) —
-  `ConfigurationSnapshot` (add optional `dioInventory: ParsedDioChannel[]` + `trodesImport` as
-  **siblings** of `devices` so `diffProbeConfigs` is untouched).
+  `ConfigurationSnapshot` (add optional `dioInventory: ParsedDioChannel[]` as a **sibling** of `devices`;
+  the `trodesImport` sibling is already added in Phase 3).
 - [src/state/persistence.ts:16-20,188](../../../../src/state/persistence.ts) +
   [src/state/workspaceMigrations.ts:70-103](../../../../src/state/workspaceMigrations.ts) — the
   persistence-invariant decision (overview Rollout).
@@ -41,20 +50,32 @@ byte-identity gate.
 
 ## Tasks
 
-- **Off-export snapshot siblings + transition.** Add to `ConfigurationSnapshot` (both **siblings** of
-  `devices`, so `diffProbeConfigs` and the export — which reads only `devices` — are untouched):
-  `dioInventory?: ParsedDioChannel[]` (the shared §1 type — **not** an undefined `DioChannel`) and
-  `trodesImport?: { ntrodeChannelCounts: Record<string, number>; sourceName?: string }` (the off-export
-  counts the [§3](shared-contracts.md#3-invariant) completion needs while `device_type` is blank). Add
-  both to `ConfigSnapshotInput`. Read via defensive selectors (`getConfigDioInventory`,
-  `getConfigImportCounts`; absent → `[]`/`{}`).
+- **Off-export `dioInventory` sibling.** Add `dioInventory?: ParsedDioChannel[]` (the shared §1 type —
+  **not** an undefined `DioChannel`) to `ConfigurationSnapshot` as a **sibling** of `devices` (off-export
+  — `diffProbeConfigs` + the export, which reads only the merged `devices`, are untouched), plus a
+  defensive `getConfigDioInventory(snapshot)` selector (absent → `[]`). The **`trodesImport` sibling +
+  `getConfigImportCounts` are already defined in [Phase 3](phase-3-completion.md)** — this phase only
+  *populates* it. Add **both** siblings to `ConfigSnapshotInput` (so the transition can thread them) plus
+  the opt-in `inheritSiblingsFromLatest?: boolean` (default falsey) used by the carry-forward rule below.
 - **Extend the snapshot transition `addConfigurationSnapshotToAnimal`
   ([workspaceTransitions.ts:248-258](../../../../src/state/workspaceTransitions.ts)) — type alone is
   insufficient (must-fix #1/#2).** Today it builds `newVersion` from only `{date, description, devices}`
   and **does not touch `updated.devices`** (the editable mirror the editor reads at
   [ElectrodeGroupsContainer.tsx:94](../../../../src/pages/AnimalEditor/wiring/ElectrodeGroupsContainer.tsx)).
-  Change it to (a) copy `config.dioInventory`/`config.trodesImport` onto `newVersion`, **and** (b) sync
-  the new snapshot's **probe fields** into the mirror, **preserving the rest of `animal.devices`**.
+  Change it to (a) set `newVersion`'s siblings by this precedence: **(1)** if `config` provides
+  `dioInventory`/`trodesImport`, use them (the Trodes import apply); **(2)** else if
+  `config.inheritSiblingsFromLatest === true`, **carry them forward from the current latest snapshot**
+  (pruning `trodesImport.ntrodeChannelCounts` to ntrode_ids present in `newVersion.devices` as a safety
+  belt); **(3)** else **no siblings**. The inherit flag is an **explicit opt-in on `ConfigSnapshotInput`**
+  — NOT inferred from ntrode-id overlap — because this transition is **also called by the YAML importer**
+  ([yamlImportApply.ts:405,473](../../../../src/state/yamlImportApply.ts)) with only
+  `{date,description,devices}`; an overlap-based carry would let a YAML-imported config inherit a stale
+  `trodesImport` and be falsely treated as import-backed. Set the flag **only** in the clone-callers:
+  `ReconfigWizard` (always a clone) and `NewConfigurationModal` **when `copyFromCurrent`** (not the blank
+  path). YAML import and blank-new pass nothing → no inheritance. This must-fix preserves the
+  import-backed marker through a *clone* fork while never leaking it to a non-clone config.
+  **(b)** sync the new snapshot's **probe fields** into the mirror, **preserving the rest of
+  `animal.devices`**.
   `animal.devices` is a `DeviceConfiguration` that also owns `data_acq_device` + `device`
   ([workspaceTypes.ts:157-166](../../../../src/state/workspaceTypes.ts)) — the snapshot `devices` is a
   probe-only `ProbeConfiguration` ([:299-322](../../../../src/state/workspaceTypes.ts)), and export reads
@@ -91,10 +112,10 @@ byte-identity gate.
     ([workspaceTransitions.ts:155-168](../../../../src/state/workspaceTransitions.ts)) — must-fix #2.
   - **The written `ntrode_id`s are the plan's preserved ids** ([§3](shared-contracts.md#3-invariant)) —
     never re-derived here.
-- **Persistence decision (from the code).** Determine if the load/shape-ensure path tolerates a snapshot
-  without `dioInventory`/`trodesImport`. Absent-tolerant ⇒ no schema bump + a regression test loading a
-  current blob unchanged. Normalize-touching ⇒ bump `WORKSPACE_SCHEMA_VERSION` + forward migrator
-  backfilling the absent fields + a `vN` blob fixture. State which in the PR.
+- **Persistence decision.** Phase 3 already made the bump-vs-no-bump call when it added `trodesImport`;
+  `dioInventory` is the same additive-optional shape and **rides that same decision** (no separate bump).
+  Add `dioInventory` to the same regression test (a current blob without it loads → `getConfigDioInventory
+  → []`), or to the `vN` migrator/fixture if Phase 3 bumped.
 - **CHANGELOG.** Note the config-level DIO inventory + that exported YAML is unchanged.
 
 ## Deliberately not in this phase
@@ -112,6 +133,8 @@ byte-identity gate.
 | `applyTrodesconfImport` — re-import | new version via the reconfig action; preserved groups keep `device_type`/`location` + grouping; days re-pin. |
 | re-import updates the **mirror** (must-fix #1) | after re-import, `animal.devices`'s **probe fields** (`electrode_groups`/`ntrode…`) equal the imported snapshot's, while `data_acq_device` + `device` are **preserved** (not dropped); a subsequent `updateAnimal` edit mirrors into the NEW snapshot, not over it. |
 | `addConfigurationSnapshotToAnimal` reconfig regression | the existing reconfig path (config.devices = clone of current) is unchanged — mirror stays equal, no observable behavior change. |
+| **clone fork carries `trodesImport`** (must-fix) | a `config` with `inheritSiblingsFromLatest:true` (the clone-callers) carries `trodesImport`/`dioInventory` from the latest snapshot (counts pruned to present ntrode_ids); a later `device_type` edit on the forked config **still preserves ids**. `NewConfigurationModal` blank (flag unset) sheds them. |
+| **YAML import does NOT inherit** (must-fix) | a `createConfigurationSnapshotAndApplyForward` call **without** the flag and without explicit siblings — e.g. the YAML importer ([yamlImportApply.ts:405,473](../../../../src/state/yamlImportApply.ts)) adding a config to an existing **import-backed** animal whose ntrode ids **overlap** — produces a snapshot with **no** `trodesImport` (not falsely import-backed). |
 | `ntrode_id` integrity | the persisted snapshot's `ntrode_id`s equal the plan's (== parsed config's); none renumbered on the way to disk. |
 | bad channels reset | bad channels on the old version don't carry onto the new (inherent to the bump). |
 | persistence | a blob without `dioInventory`/`trodesImport` loads with the defensive selectors → `[]`/`{}`; if bumped, the `vN` fixture hydrates to current. |

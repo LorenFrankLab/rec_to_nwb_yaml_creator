@@ -31,7 +31,7 @@ For agent invocation, **load only the slice you need**:
 - Phases (each ships as a separable PR, in dependency order):
   - [phase-1-parser.md](phase-1-parser.md) — pure XML → `ParsedTrodesConfig` (+ stricter DIO direction, informational `numChannels`).
   - [phase-2-plan.md](phase-2-plan.md) — candidate config + diff/plan with **id-preserving** ntrode shells + the grouping model.
-  - [phase-3-completion.md](phase-3-completion.md) — **the invariant:** `fillImportedNtrodeMaps` (preserve ids) + branch `ElectrodeGroupsContainer` away from the renumbering path.
-  - [phase-4-apply.md](phase-4-apply.md) — apply via the existing reconfig action; add the optional `dioInventory` field (+ extend `ConfigSnapshotInput` + the transition).
+  - [phase-3-completion.md](phase-3-completion.md) — **the invariant:** `fillImportedNtrodeMaps` (preserve ids) + the off-export `trodesImport` snapshot field + branch `ElectrodeGroupsContainer` away from the renumbering path for **import-backed** groups (forever, not just pre-completion).
+  - [phase-4-apply.md](phase-4-apply.md) — apply via the existing reconfig action; add the off-export `dioInventory` field; snapshot+mirror write path (+ extend `ConfigSnapshotInput` + the transition).
   - [phase-5-ui.md](phase-5-ui.md) — real file-input + `file.text()`, a **new** diff/preview component, the grouping + device_type step, entry points.
   - [phase-6-dio.md](phase-6-dio.md) — reconcile board ids → editor index + limit the day DIO picker to present channels.

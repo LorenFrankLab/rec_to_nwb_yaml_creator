@@ -101,12 +101,24 @@ fillImportedNtrodeMaps(
 Shank↔ntrode pairing follows the **caller-supplied order**, not a hard-coded ascending `ntrode_id` — the
 Phase 5 grouping UI lets the user order ntrodes within a merged multi-shank group (default: ascending).
 
-**Wiring:** `ElectrodeGroupsContainer`'s device-type-change branch must route an **imported,
-not-yet-completed** group through `fillImportedNtrodeMaps` (preserve ids) instead of
-`generateChannelMapsForGroup`/`nextNtrodeId` (renumber). A group is "imported-incomplete" when its
-ntrode rows exist with empty `map` and a `trodesImport.ntrodeChannelCounts` entry but its `device_type`
-is blank (Phase 2 records the counts; Phase 4 persists them off-export). **Do not weaken:** non-imported
+**Wiring:** `ElectrodeGroupsContainer`'s device-type-change branch must route an **import-backed** group
+through `fillImportedNtrodeMaps` (preserve ids) instead of `generateChannelMapsForGroup`/`nextNtrodeId`
+(renumber). A group is **import-backed** iff its current ntrode rows have entries in the snapshot's
+off-export `trodesImport.ntrodeChannelCounts` — a **permanent** property, **not** "empty map / blank
+device_type". This is the crux: a group that has **already been completed** (map filled, device_type
+set) is *still* import-backed, so a **later** `device_type` change must **again** go through the
+id-preserving fill (re-fill the existing rows from the new device_type's geometry, or refuse if the
+shank structure no longer matches) — never the renumbering path. Routing only "not-yet-completed" groups
+would let a second device-type edit renumber and break the invariant. **Do not weaken:** non-import-backed
 groups keep the existing generate path unchanged.
+
+For the marker to stay permanent it must also **survive a config fork**: the existing reconfig flows
+(`ReconfigWizard`/`NewConfigurationModal`) clone the current config without the siblings, so the
+snapshot transition carries `trodesImport` forward **only when the clone caller opts in**
+(`inheritSiblingsFromLatest`, set by `ReconfigWizard` + `NewConfigurationModal`-copy; pruned to the new
+config's ntrode_ids) — **not** inferred from ntrode-id overlap, so the **YAML importer** (which calls the
+same transition) never inherits stale markers. See [phase-4](phase-4-apply.md). Without the carry, forking
+an imported config would silently drop the marker and a later device-type edit would renumber.
 
 ## 4. `TrodesconfImportPlan` {#4-import-plan}
 
@@ -139,8 +151,9 @@ export interface TrodesconfImportPlan {
 }
 ```
 - `ntrodeShells` carry **`ntrode_id` verbatim** ([§3](#3-invariant)) with `map: {}`. Expected channel
-  counts live **only** in `ntrodeChannelCounts` (and, post-apply, the off-export
-  `ConfigurationSnapshot.trodesImport` — [phase-4](phase-4-apply.md)); **never** a field on the
+  counts live **only** in `ntrodeChannelCounts` (and, on the off-export `ConfigurationSnapshot.trodesImport`
+  sibling — **defined in [phase-3](phase-3-completion.md)**, populated by the apply in
+  [phase-4](phase-4-apply.md)); **never** a field on the
   `NtrodeMap` row, since exported-key reordering is lossless and would leak it
   ([workspaceUtils.ts:66](../../../../src/state/workspaceUtils.ts)).
 - **Grouping rule:** **first import** → default 1 ntrode → 1 group. **Re-import** → for each current

@@ -5,7 +5,9 @@
 ## Current codebase integration points
 
 The importer adds pure modules + UI, **modifies the channel-map regeneration path** so imported
-`ntrode_id`s survive `device_type` completion, and adds one optional persisted field.
+`ntrode_id`s survive `device_type` completion, and adds **two** optional off-export persisted snapshot
+fields: `trodesImport` (the channel counts the completion needs — defined in Phase 3) and `dioInventory`
+(defined in Phase 4).
 
 - [src/state/workspaceTypes.ts:181-208,299-322](../../../../src/state/workspaceTypes.ts) —
   `ElectrodeGroup`, `NtrodeMap` (`ntrode_id, electrode_group_id, map, bad_channels`), `ProbeConfiguration`,
@@ -13,7 +15,7 @@ The importer adds pure modules + UI, **modifies the channel-map regeneration pat
 - [src/pages/AnimalEditor/wiring/ElectrodeGroupsContainer.tsx:158-186](../../../../src/pages/AnimalEditor/wiring/ElectrodeGroupsContainer.tsx)
   — **the renumbering path (must-fix #1).** On a `device_type` change it removes the group's maps and
   regenerates with `generateChannelMapsForGroup(group, nextNtrodeId(retainedMaps))` — new ids. Phase 3
-  branches imported-incomplete groups to the id-preserving fill instead.
+  branches **import-backed** groups (permanent property) to the id-preserving fill instead.
 - [src/utils/channelMapUtils.ts:62-92](../../../../src/utils/channelMapUtils.ts) —
   `generateChannelMapsForGroup(group, startingNtrodeId)`: one ntrode **per shank** from
   `getProbeShanks`, ids `startingNtrodeId..`, map values = each shank's `electrodeIds`. The non-imported
@@ -48,7 +50,8 @@ The importer adds pure modules + UI, **modifies the channel-map regeneration pat
   names channels. Phase 6 limits this to the reconciled imported inventory.
 - [src/state/workspaceMigrations.ts:70-103](../../../../src/state/workspaceMigrations.ts) +
   [src/state/persistence.ts:16-20,188](../../../../src/state/persistence.ts) — `WORKSPACE_SCHEMA_VERSION`
-  + migrator registry (Phase 4's `dioInventory` persistence decision).
+  + migrator registry (**Phase 3** owns the persistence decision — it adds `trodesImport` first;
+  Phase 4's `dioInventory` rides it).
 
 ## Scope and dependency policy
 
@@ -90,27 +93,29 @@ No new dependencies. XML via browser-native `DOMParser`; file read via `await fi
 
 | Risk | Mitigation |
 | --- | --- |
-| `device_type` selection renumbers imported `ntrode_id`s (the bug that motivated the replan). | Phase 3 adds `fillImportedNtrodeMaps` (id-preserving) and branches `ElectrodeGroupsContainer` to it for imported-incomplete groups; the existing generate/`nextNtrodeId` path is untouched for non-imported groups. Tested: complete an imported group → ids unchanged. ([shared-contracts §3](shared-contracts.md#3-invariant)) |
+| `device_type` selection renumbers imported `ntrode_id`s (the bug that motivated the replan). | Phase 3 adds `fillImportedNtrodeMaps` (id-preserving) and branches `ElectrodeGroupsContainer` to it for **import-backed** groups (a permanent property — membership in `trodesImport.ntrodeChannelCounts`), on **every** device-type change incl. re-edits after completion; the generate/`nextNtrodeId` path is untouched for non-import-backed groups. Tested: first completion AND a later device-type change both leave ids unchanged. ([shared-contracts §3](shared-contracts.md#3-invariant)) |
 | Multi-shank: `.trodesconf` doesn't say which ntrodes form one probe. | The user groups them in the Phase 5 UI; the fill validates `getProbeShanks(device_type).length === group's ntrode count` and per-shank channel counts, refusing (conflict) on mismatch rather than guessing. |
 | DIO id schemes differ (`Din*` vs `MCU_Din*` vs `Controller_Din*`) and direction isn't always on `input`. | Stricter parse rule + `reconcileDioId` mapping ([shared-contracts §1](shared-contracts.md#1-parsedtrodesconfig), [§5](shared-contracts.md#5-dio-reconciliation)); unreconcilable ids are surfaced, not dropped. |
 | `diffProbeConfigs` exists but nothing renders it. | Phase 5 budgets a new preview component over the pure fn (no assumed reuse). |
 | `FileUpload.jsx` can't read contents. | Use a `<input type=file>` + `await file.text()` (the `importYaml.ts` pattern). |
-| `dioInventory` breaks old saves / isn't threaded. | Additive-optional + defensive read (Phase 4 persistence decision); the snapshot transition is explicitly extended, not just the type. |
+| A new snapshot sibling breaks old saves / isn't threaded / lost on a fork. | Both siblings are additive-optional + defensively read (Phase 3 owns the persistence decision; `dioInventory` rides it); the snapshot transition is explicitly extended (not just the type) and **carries siblings forward on clone/copy forks** (pruned to present ntrode_ids) so reconfig doesn't shed the import-backed marker. |
 
 ## Rollout Strategy
 
 No feature flag. Six phases, each merged to `modern` per the per-phase workflow (branch off `modern` →
 TDD → full gate → `code-reviewer` → `git merge --ff-only`, not pushed unless asked). **Persistence
-invariant:** `dioInventory` is optional + defensively read; Phase 4 decides bump-vs-no-bump from the
-load/shape-ensure path (absent-tolerant ⇒ no bump + a regression test; normalize-touching ⇒ bump +
-migrator + `vN` fixture per the project rule).
+invariant:** both new snapshot siblings are optional + defensively read. **Phase 3 owns the
+bump-vs-no-bump decision** (it adds `trodesImport` first) from the load/shape-ensure path
+(absent-tolerant ⇒ no bump + a regression test; normalize-touching ⇒ bump + migrator + `vN` fixture per
+the project rule); **Phase 4's `dioInventory` rides that same decision** (same additive-optional shape).
 
 ## Open Questions
 
-1. **Imported-incomplete tagging.** How a group signals "imported, awaiting device_type" so
-   `ElectrodeGroupsContainer` branches to the fill — Phase 2 defines the marker (e.g. ntrode rows
-   present + blank `device_type`, or an explicit transient flag); Phase 3 consumes it. Confirmed from the
-   container code, not assumed.
+1. **Import-backed tagging (RESOLVED).** A group is import-backed iff its ntrode rows have entries in
+   the snapshot's off-export `trodesImport.ntrodeChannelCounts` — a **permanent** property, not a
+   transient "incomplete" state. `ElectrodeGroupsContainer` branches such groups to the id-preserving
+   fill on **every** device-type change (Phase 3). This is what closes the "second device-type edit
+   renumbers" hole; do not regress it to a blank-`device_type`/empty-`map` check.
 2. **`numChannels` mismatch is informational** — Trodes hardware capacity can exceed active spike
    ntrodes (smaller-correction #3); surfaced as `severity: 'info'`, never blocks import.
 3. **Future: RewardGui/FSGui as a behavioral-event-name source.** `rewardconfig` maps wells → input/
