@@ -2,7 +2,7 @@
  * E2E: Browser-export of a configured recording day (the real download path).
  *
  * These specs drive the SHIPPED export surfaces — the per-day Day Editor Export step
- * (`#/day/:id` → Export → the YAML preview + "Download") and the per-animal Validation & Export
+ * (`#/day/:id` → Export → the YAML preview + "Download") and the per-animal Review & export
  * tab (`#/animal/:id/export` → "Export Valid Only" → batch preflight → "Confirm export (N)")
  * — capture the YAML the browser actually downloads, and assert the high-risk, previously
  * data-corrupting sections are correct in the downloaded TEXT.
@@ -38,15 +38,15 @@ test.describe('Browser export of a configured recording day', () => {
   }) => {
     await seedAndOpen(page, buildConfiguredWorkspaceBlob(), `/#/day/${DAY_ID}`);
     await expect(
-      page.getByRole('heading', { level: 1, name: `Day Editor: ${ANIMAL_ID} - 2023-06-22` }),
+      page.getByRole('heading', { level: 1, name: `${ANIMAL_ID} · 2023-06-22` }),
     ).toBeVisible();
 
     // Navigate to the export-preview surface (a freely-reachable header action; the DOWNLOAD self-gates).
-    await page.getByRole('button', { name: 'Export', exact: true }).click();
-    await expect(page.getByRole('heading', { level: 2, name: 'Export — 2023-06-22' })).toBeVisible();
+    await page.getByRole('button', { name: 'Review & export', exact: true }).click();
+    await expect(page.getByRole('heading', { level: 2, name: 'Review & export — 2023-06-22' })).toBeVisible();
 
     // The resolved deterministic filename labels the (enabled) Download action.
-    await expect(page.getByRole('button', { name: 'Download' })).toBeEnabled();
+    await expect(page.getByRole('button', { name: 'Download YAML' })).toBeEnabled();
 
     // ---- The read-only preview IS the real export bytes (encodeYaml(mergeDayMetadata)). ----
     await page.locator('summary').filter({ hasText: /View YAML/ }).click();
@@ -57,19 +57,19 @@ test.describe('Browser export of a configured recording day', () => {
 
     // ---- Capture the real browser download and assert the corrected sections. ----
     const { filename, text } = await captureDownload(page, async () => {
-      await page.getByRole('button', { name: 'Download' }).click();
+      await page.getByRole('button', { name: 'Download YAML' }).click();
     });
 
     expect(filename).toBe(EXPECTED_FILENAME);
     assertCorrectedYaml(text);
   });
 
-  test('per-animal Validation & Export tab batch-exports the valid day with a preflight', async ({
+  test('per-animal Review & export tab batch-exports the valid day with a preflight', async ({
     page,
   }) => {
     await seedAndOpen(page, buildConfiguredWorkspaceBlob(), `/#/animal/${ANIMAL_ID}/export`);
     await expect(
-      page.getByRole('heading', { level: 2, name: 'This animal — readiness & export' }),
+      page.getByRole('heading', { level: 2, name: 'Review & export — remy' }),
     ).toBeVisible();
 
     // The day is Valid and counted ready.
@@ -110,11 +110,11 @@ test.describe('Browser export of a configured recording day', () => {
       camera_name: 'UNUSED_camera',
     });
     await seedAndOpen(page, blob, `/#/day/${DAY_ID}`);
-    await page.getByRole('button', { name: 'Export', exact: true }).click();
-    await expect(page.getByRole('heading', { level: 2, name: 'Export — 2023-06-22' })).toBeVisible();
+    await page.getByRole('button', { name: 'Review & export', exact: true }).click();
+    await expect(page.getByRole('heading', { level: 2, name: 'Review & export — 2023-06-22' })).toBeVisible();
 
     const { text } = await captureDownload(page, async () => {
-      await page.getByRole('button', { name: 'Download' }).click();
+      await page.getByRole('button', { name: 'Download YAML' }).click();
     });
 
     // Referenced cameras present; the unreferenced one is NOT emitted (day-used binding).

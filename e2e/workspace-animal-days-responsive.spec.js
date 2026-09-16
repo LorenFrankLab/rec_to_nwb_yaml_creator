@@ -4,7 +4,7 @@
  * jsdom can't compute layout, so this measures the real rendered Animal Days surface at a narrow
  * phone width (390px) and at desktop (1440px) and asserts:
  *  - the page never scrolls horizontally (no control pushed off-screen / one-word columns);
- *  - the primary "Add Recording Days" action and the carry-forward toggle are visible and not
+ *  - the primary "Add multiple dates…" action and the carry-forward toggle are visible and not
  *    clipped, with the toggle below/near the primary action at narrow width;
  *  - on a day row, the destructive "Delete day…" action does not overlap the row's primary
  *    navigation link (destructive separated from primary).
@@ -45,7 +45,7 @@ for (const viewport of [NARROW, DESKTOP]) {
       expect(overflow).toBeLessThanOrEqual(1);
 
       // Primary action + carry-forward toggle are both visible and within the viewport.
-      const addButton = page.getByRole('button', { name: 'Add Recording Days' });
+      const addButton = page.getByRole('button', { name: 'Add multiple dates…' });
       await expect(addButton).toBeVisible();
       const toggle = page.getByRole('checkbox', { name: /start each new day from the nearest earlier day/i });
       await expect(toggle).toBeVisible();

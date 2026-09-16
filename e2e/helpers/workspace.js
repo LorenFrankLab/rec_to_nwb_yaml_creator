@@ -169,7 +169,7 @@ export function makeEmptyAnimal(id, overrides = {}) {
     },
     cameras: [],
     experimenters: { experimenter_name: ['Doe, Jane'], lab: 'Frank', institution: 'UCSF' },
-    technicalDefaults: { raw_data_to_volts: 0.195, times_period_multiplier: 1.5 },
+    technicalDefaults: { raw_data_to_volts: 1.95e-7, times_period_multiplier: 1.5 },
     optogenetics: undefined,
     // NOTE: no top-level `behavioral_events` here — production `createAnimal`
     // (src/state/useWorkspace.js) does NOT put `behavioral_events` on the base record, so the
@@ -242,8 +242,7 @@ export function buildConfiguredWorkspaceBlob(overrides = {}) {
  *
  * From-scratch creation is the guided wizard at `#/home` (epoch-editor Phase 6). This helper opens it
  * from the picker, fills the Identity step's required identity (Subject ID — Species/Sex/Genotype
- * default to valid values) plus the baseline weight and date of birth (both OPTIONAL to create a
- * draft, but the date of birth is required to export), then uses "Save draft" to commit the animal
+ * default to valid values) plus date of birth (optional in a draft and required before export), then uses "Save draft" to commit the animal
  * and land on its days tab. The remaining setup steps (electrodes, cameras, team, …) are left for the
  * caller to drive when a fuller animal is needed; this helper produces the minimal valid draft.
  *
@@ -253,10 +252,9 @@ export function buildConfiguredWorkspaceBlob(overrides = {}) {
  * @param {object} opts - Field values.
  * @param {string} opts.subjectId - Unique subject id (letters/numbers/-/_; no spaces).
  * @param {string} [opts.dateOfBirth] - ISO date (YYYY-MM-DD). Default '2023-01-01'.
- * @param {string|number} [opts.weight] - Weight in grams. Default 450.
  * @returns {Promise<{ animalId: string }>} The lowercased animal id now in the route.
  */
-export async function createAnimalViaUI(page, { subjectId, dateOfBirth = '2023-01-01', weight = 450 }) {
+export async function createAnimalViaUI(page, { subjectId, dateOfBirth = '2023-01-01' }) {
   if (!subjectId) throw new Error('createAnimalViaUI requires a subjectId');
 
   // Open the wizard from the picker. Both the empty-state ("Create Animal") and the populated-picker
@@ -276,7 +274,6 @@ export async function createAnimalViaUI(page, { subjectId, dateOfBirth = '2023-0
   // Fill the Identity step. Species/Sex/Genotype default to valid values; the baseline weight and
   // the date of birth are optional here, but an exportable animal needs the date of birth.
   await page.getByRole('textbox', { name: 'Subject ID' }).fill(subjectId);
-  await page.getByLabel('Baseline weight (grams, optional)').fill(String(weight));
   await page.getByLabel('Date of birth').fill(dateOfBirth);
 
   // Save draft commits the animal (createAnimal) and lands on its days tab.

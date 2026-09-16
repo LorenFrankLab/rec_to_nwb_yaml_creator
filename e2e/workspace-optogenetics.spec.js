@@ -135,17 +135,17 @@ test.describe('Optogenetics export gating and the two-layer opto model', () => {
     // volume_in_ul) ABSENT, and no opto validation block — and the status surface reads honestly.
     await seedAndOpen(page, buildConfiguredWorkspaceBlob(), `/#/day/${DAY_ID}`);
     await expect(
-      page.getByRole('heading', { level: 1, name: `Day Editor: ${ANIMAL_ID} - 2023-06-22` }),
+      page.getByRole('heading', { level: 1, name: `${ANIMAL_ID} · 2023-06-22` }),
     ).toBeVisible();
 
-    await page.getByRole('button', { name: 'Export', exact: true }).click();
-    await expect(page.getByRole('heading', { level: 2, name: 'Export — 2023-06-22' })).toBeVisible();
+    await page.getByRole('button', { name: 'Review & export', exact: true }).click();
+    await expect(page.getByRole('heading', { level: 2, name: 'Review & export — 2023-06-22' })).toBeVisible();
 
     // The export is NOT blocked by opto (a non-opto day is valid) — Download is enabled.
-    await expect(page.getByRole('button', { name: 'Download' })).toBeEnabled();
+    await expect(page.getByRole('button', { name: 'Download YAML' })).toBeEnabled();
 
     const { filename, text } = await captureDownload(page, async () => {
-      await page.getByRole('button', { name: 'Download' }).click();
+      await page.getByRole('button', { name: 'Download YAML' }).click();
     });
     expect(filename).toBe(EXPECTED_FILENAME);
 
@@ -192,16 +192,15 @@ test.describe('Optogenetics export gating and the two-layer opto model', () => {
     // converter silently drops ALL opto otherwise) — so the requirement is surfaced, not hidden.
     const incomplete = page
       .getByRole('status')
-      .filter({ hasText: 'blocks export until every optogenetics section' });
+      .filter({ hasText: 'Complete before export' });
     await expect(incomplete).toBeVisible();
-    await expect(incomplete).toContainText('silently drop');
     await expect(incomplete).toContainText('a complete optical fiber');
     await expect(incomplete).toContainText('a complete virus injection');
 
     // --- Export is BLOCKED for the day: the partial_configuration rule fires on the merged day. ---
     await seedAndOpen(page, blob, `/#/day/${DAY_ID}`);
-    await page.getByRole('button', { name: 'Export', exact: true }).click();
-    await expect(page.getByRole('heading', { level: 2, name: 'Export — 2023-06-22' })).toBeVisible();
+    await page.getByRole('button', { name: 'Review & export', exact: true }).click();
+    await expect(page.getByRole('heading', { level: 2, name: 'Review & export — 2023-06-22' })).toBeVisible();
 
     // The export-preview's blocking alert names the opto all-or-nothing failure. Scoped by its text so
     // it is not confused with the header readiness bar's alert.
@@ -215,7 +214,7 @@ test.describe('Optogenetics export gating and the two-layer opto model', () => {
     await expect(blocked.getByText(/optical_fiber ✗/)).toBeVisible();
     await expect(blocked.getByText(/virus_injection ✗/)).toBeVisible();
     // The incomplete opto state CANNOT export — Download is gated.
-    await expect(page.getByRole('button', { name: 'Download' })).toBeDisabled();
+    await expect(page.getByRole('button', { name: 'Download YAML' })).toBeDisabled();
   });
 
   test('per-epoch optogenetics: power/pulse are controlled numeric inputs applied to a SELECTED epoch subset', async ({
@@ -239,14 +238,16 @@ test.describe('Optogenetics export gating and the two-layer opto model', () => {
     // Per-epoch power is a CONTROLLED numeric input in each selected epoch drawer — not a free-text
     // protocol field. Set power on epoch 2 only, then inspect epoch 4 to prove it stays empty.
     await page.getByRole('button', { name: /Show epoch 2 details/i }).click();
-    const power2 = page.getByRole('spinbutton', { name: /Epoch 2 power/i });
+    await page.getByRole('button', { name: 'Add stimulation protocol', exact: true }).click();
+    const power2 = page.getByRole('spinbutton', { name: /Power \(mW\)/i });
     await expect(power2).toBeVisible();
     await power2.fill('40');
     await power2.blur();
     await expect(power2).toHaveValue('40');
     await page.keyboard.press('Escape');
     await page.getByRole('button', { name: /Show epoch 4 details/i }).click();
-    const power4 = page.getByRole('spinbutton', { name: /Epoch 4 power/i });
+    await page.getByRole('button', { name: 'Add stimulation protocol', exact: true }).click();
+    const power4 = page.getByRole('spinbutton', { name: /Power \(mW\)/i });
     await expect(power4).toBeVisible();
     // Opto is epoch-scoped, not applied to the whole day: epoch 4's power stays empty.
     await expect(power4).toHaveValue('');
@@ -259,16 +260,16 @@ test.describe('Optogenetics export gating and the two-layer opto model', () => {
     // per-day download path and assert the shimmed dual spellings + non-empty required opto fields.
     await seedAndOpen(page, buildCompleteOptoBlob(), `/#/day/${DAY_ID}`);
     await expect(
-      page.getByRole('heading', { level: 1, name: `Day Editor: ${ANIMAL_ID} - 2023-06-22` }),
+      page.getByRole('heading', { level: 1, name: `${ANIMAL_ID} · 2023-06-22` }),
     ).toBeVisible();
 
-    await page.getByRole('button', { name: 'Export', exact: true }).click();
-    await expect(page.getByRole('heading', { level: 2, name: 'Export — 2023-06-22' })).toBeVisible();
+    await page.getByRole('button', { name: 'Review & export', exact: true }).click();
+    await expect(page.getByRole('heading', { level: 2, name: 'Review & export — 2023-06-22' })).toBeVisible();
     // A complete opto session is NOT blocked — Download is enabled.
-    await expect(page.getByRole('button', { name: 'Download' })).toBeEnabled();
+    await expect(page.getByRole('button', { name: 'Download YAML' })).toBeEnabled();
 
     const { filename, text } = await captureDownload(page, async () => {
-      await page.getByRole('button', { name: 'Download' }).click();
+      await page.getByRole('button', { name: 'Download YAML' }).click();
     });
     expect(filename).toBe(EXPECTED_FILENAME);
 

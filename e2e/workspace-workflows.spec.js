@@ -61,7 +61,7 @@ test.describe('Workspace export workflows', () => {
     // Go straight from the day to its export — never through an electrode/camera setup form.
     await seedAndOpen(page, buildConfiguredWorkspaceBlob(), `/#/day/${DAY_ID}`);
     await expect(
-      page.getByRole('heading', { level: 1, name: `Day Editor: ${ANIMAL_ID} - 2023-06-22` }),
+      page.getByRole('heading', { level: 1, name: `${ANIMAL_ID} · 2023-06-22` }),
     ).toBeVisible();
 
     // The Day Editor has no electrode-group / channel-map / camera setup STEP — those are
@@ -73,17 +73,17 @@ test.describe('Workspace export workflows', () => {
     await expect(dayNav.getByRole('button', { name: /^Recording Setup\b/ })).toBeVisible();
     await expect(dayNav.getByRole('button', { name: /^Failed Channels\b/ })).toBeVisible();
     await expect(dayNav.getByRole('button', { name: /^DIO Wiring\b/ })).toBeVisible();
-    await expect(dayNav.getByRole('button', { name: /^Fix & Export\b/ })).toBeVisible();
+    await expect(dayNav.getByRole('button', { name: /^Review & export\b/ })).toBeVisible();
     // No camera / electrode-group setup form is part of the day flow.
     await expect(dayNav.getByRole('button', { name: /Electrode Groups/i })).toHaveCount(0);
     await expect(dayNav.getByRole('button', { name: /Cameras/i })).toHaveCount(0);
 
     // Day → Export → download, in one move (Export is the header action).
-    await page.getByRole('button', { name: 'Export', exact: true }).click();
-    await expect(page.getByRole('heading', { level: 2, name: 'Export — 2023-06-22' })).toBeVisible();
+    await page.getByRole('button', { name: 'Review & export', exact: true }).click();
+    await expect(page.getByRole('heading', { level: 2, name: 'Review & export — 2023-06-22' })).toBeVisible();
 
     const { filename, text } = await captureDownload(page, async () => {
-      await page.getByRole('button', { name: 'Download' }).click();
+      await page.getByRole('button', { name: 'Download YAML' }).click();
     });
 
     expect(filename).toBe(EXPECTED_FILENAME);
@@ -106,10 +106,10 @@ test.describe('Workspace export workflows', () => {
       experimentDate: '06232023',
       sessionId: 'remy_20230623',
     });
-    // The per-animal Validation & Export tab is the catch-up surface.
+    // The per-animal Review & export tab is the catch-up surface.
     await seedAndOpen(page, blob, `/#/animal/${ANIMAL_ID}/export`);
     await expect(
-      page.getByRole('heading', { level: 2, name: 'This animal — readiness & export' }),
+      page.getByRole('heading', { level: 2, name: 'Review & export — remy' }),
     ).toBeVisible();
 
     // Both days are ready.
@@ -152,15 +152,15 @@ test.describe('Workspace export workflows', () => {
     await expect(row2.getByRole('cell', { name: 'Ready to export', exact: true })).toBeVisible();
 
     // Batch export: only ready days export. Both are valid, so the preflight names 2 days.
-    await page.getByRole('button', { name: 'Export Valid Only' }).click();
+    await page.getByRole('button', { name: /Review \d+ selected recordings?/ }).click();
     const batch = page.getByRole('region', { name: 'Batch export preflight' });
-    await expect(batch.getByRole('heading', { name: 'Confirm batch export' })).toBeVisible();
-    await expect(batch.getByText('2 days will be encoded and downloaded.')).toBeVisible();
+    await expect(batch.getByRole('heading', { name: 'Review recordings for download' })).toBeVisible();
+    await expect(batch.getByText('2 days will be downloaded as YAML files. Review the setup for each recording:')).toBeVisible();
 
     // Confirm exports both files; capture both downloads.
     const downloads = [];
     page.on('download', (d) => downloads.push(d));
-    await batch.getByRole('button', { name: 'Confirm export (2)' }).click();
+    await batch.getByRole('button', { name: 'Download 2 YAML files' }).click();
     await expect(page.getByRole('status').filter({ hasText: 'Exported 2 files.' })).toBeVisible();
     await expect.poll(() => downloads.map((d) => d.suggestedFilename()).sort()).toEqual([
       '20230622_remy_metadata.yml',
@@ -185,7 +185,7 @@ test.describe('Workspace export workflows', () => {
     });
     await seedAndOpen(page, blob, `/#/animal/${ANIMAL_ID}/export`);
     await expect(
-      page.getByRole('heading', { level: 2, name: 'This animal — readiness & export' }),
+      page.getByRole('heading', { level: 2, name: 'Review & export — remy' }),
     ).toBeVisible();
 
     // One valid, one not ready (has errors).
@@ -193,12 +193,12 @@ test.describe('Workspace export workflows', () => {
     await expect(page.getByText('1 with errors')).toBeVisible();
 
     // Batch export only stages the ONE ready day.
-    await page.getByRole('button', { name: 'Export Valid Only' }).click();
+    await page.getByRole('button', { name: /Review \d+ selected recordings?/ }).click();
     const batch = page.getByRole('region', { name: 'Batch export preflight' });
-    await expect(batch.getByText('1 day will be encoded and downloaded.')).toBeVisible();
+    await expect(batch.getByText('1 day will be downloaded as YAML files. Review the setup for each recording:')).toBeVisible();
 
     const { filename } = await captureDownload(page, async () => {
-      await batch.getByRole('button', { name: 'Confirm export (1)' }).click();
+      await batch.getByRole('button', { name: 'Download 1 YAML files' }).click();
     });
     expect(filename).toBe(EXPECTED_FILENAME); // the valid day only
     await expect(

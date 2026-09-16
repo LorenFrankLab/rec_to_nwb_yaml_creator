@@ -59,7 +59,7 @@ test.describe('redesign — core flow', () => {
     // Open the recording day from the day list (the date is a real link).
     await page.getByRole('link', { name: /2023-06-22/ }).first().click();
     await expect(page).toHaveURL(new RegExp(`#/day/${DAY_ID}`));
-    await expect(page.getByRole('heading', { level: 1, name: /Day Editor/ })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1, name: /remy · / })).toBeVisible();
 
     // The epoch editor lives on the daily log (the first screen): drill into an epoch via its edit
     // button (keyboard-operable disclosure button).
@@ -74,7 +74,7 @@ test.describe('redesign — core flow', () => {
     // Export preview: the YAML preview renders for the configured day.
     await page.keyboard.press('Escape');
     await expect(page.getByRole('dialog', { name: /Epoch \d+:/i })).toHaveCount(0);
-    await page.getByRole('button', { name: /^Export$/i }).click();
+    await page.getByRole('button', { name: /^Review & export$/i }).click();
     await page.locator('summary').filter({ hasText: /View YAML/ }).click();
     await expect(page.getByLabel('YAML preview')).toContainText(/subject_id/);
   });
@@ -138,7 +138,7 @@ test.describe('redesign — Day Editor IA layout', () => {
       'Recording Setup',
       'Failed Channels',
       'DIO Wiring',
-      'Fix & Export',
+      'Review & export',
     ];
     for (const label of sectionLabels) {
       await expect(nav.getByRole('button', { name: new RegExp(`^${label}\\b`) })).toBeVisible();

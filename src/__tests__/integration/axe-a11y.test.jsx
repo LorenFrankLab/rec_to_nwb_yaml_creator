@@ -7,7 +7,7 @@
  * the unit-level contrast check; these tests cover structure/ARIA/labelling.
  */
 import { describe, it, expect, afterEach } from 'vitest';
-import { render, screen, act, cleanup } from '@testing-library/react';
+import { render, screen, within, act, cleanup } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { axe } from 'jest-axe';
 import { App } from '../../App';
@@ -98,7 +98,7 @@ describe('axe-a11y (configured workspace, all routes)', () => {
 
   it('ValidationSummary has no violations', async () => {
     const { container } = await renderRoute('#/validation');
-    await screen.findByRole('heading', { name: /validation summary/i });
+    await screen.findByRole('heading', { name: /Review & export — all animals/i });
     await expectNoViolations(container);
   });
 
@@ -134,17 +134,16 @@ describe('axe-a11y (configured workspace, all routes)', () => {
       'Recording Setup',
       'Failed Channels',
       'DIO Wiring',
-      'Fix & Export',
+      'Review & export',
     ];
 
     it.each(sections)('section %s has no violations', async (sectionLabel) => {
       const user = userEvent.setup();
       const { container } = await renderRoute(`#/day/${DAY_ID}`);
-      await screen.findByRole('heading', { name: /day editor/i });
+      await screen.findByRole('heading', { name: /remy · 2023-06-22/i });
 
       // Section accessible names include their readiness status, e.g. "Overview — Complete".
-      const buttonName = new RegExp(`^${sectionLabel}\\b`, 'i');
-      await user.click(screen.getByRole('button', { name: buttonName }));
+      await user.click(within(screen.getByRole('navigation', { name: 'Day editor sections' })).getByRole('button', { name: new RegExp(`^${sectionLabel}\\b`, 'i') }));
 
       await expectNoViolations(container);
     });

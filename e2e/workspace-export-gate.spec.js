@@ -2,12 +2,12 @@
  * E2E: Fail-closed export gate + repair navigation.
  *
  * Proves an invalid recording day cannot reach or use the YAML download from ANY route —
- * the Day Editor Fix & Export section's own Download button, keyboard navigation (Alt+→)
+ * the Day Editor Review & export section's own Download button, keyboard navigation (Alt+→)
  * into that section, or the per-animal "Export Valid Only" batch path — and that the visible
  * blocking UI offers a repair action that deep-links to the editable owner of the fix.
  *
  * The Day Editor sections are FREELY navigable (no step-locking); the gate lives INSIDE the
- * Fix & Export section (ExportPreview consults isExportEnabled(computeStepStatus(...))). So "stepper
+ * Review & export section (ExportPreview consults isExportEnabled(computeStepStatus(...))). So "stepper
  * click / keyboard next cannot bypass" means: reaching Export by any route still shows the
  * BLOCKED state with a repair action and the Download is disabled / never fires — not that
  * navigation itself is blocked.
@@ -57,7 +57,7 @@ function buildInvalidCameraBlob() {
 }
 
 /**
- * Seed the invalid-camera workspace and land on the day's Fix & Export section.
+ * Seed the invalid-camera workspace and land on the day's Review & export section.
  * A full reload after the hash-nav forces a fresh document so the store hydrates from the seed.
  *
  * @param {import('@playwright/test').Page} page - The Playwright page.
@@ -66,12 +66,12 @@ function buildInvalidCameraBlob() {
 async function openInvalidDayExportStep(page) {
   await seedAndOpen(page, buildInvalidCameraBlob(), `/#/day/${DAY_ID}`);
   await expect(
-    page.getByRole('heading', { level: 1, name: `Day Editor: ${ANIMAL_ID} - 2023-06-22` }),
+    page.getByRole('heading', { level: 1, name: `${ANIMAL_ID} · 2023-06-22` }),
   ).toBeVisible();
 
   // Reach the Export section (a freely-reachable tab; its DOWNLOAD action self-gates).
-  await page.getByRole('button', { name: 'Export', exact: true }).click();
-  await expect(page.getByRole('heading', { level: 2, name: 'Export — 2023-06-22' })).toBeVisible();
+  await page.getByRole('button', { name: 'Review & export', exact: true }).click();
+  await expect(page.getByRole('heading', { level: 2, name: 'Review & export — 2023-06-22' })).toBeVisible();
 }
 
 test.describe('Fail-closed export gate + repair navigation', () => {
@@ -87,11 +87,11 @@ test.describe('Fail-closed export gate + repair navigation', () => {
     // The section rail advertises that this day still has errors even while the export surface is
     // open, so the state remains visible without duplicating another alert above the preview.
     await expect(
-      page.getByRole('button', { name: /^Fix & Export — Has errors/i }),
+      page.getByRole('button', { name: /^Review & export — Has errors/i }),
     ).toBeVisible();
 
     // The Download control is GATED — assert the disabled state, not merely a missing button.
-    const download = page.getByRole('button', { name: 'Download' });
+    const download = page.getByRole('button', { name: 'Download YAML' });
     await expect(download).toBeVisible();
     await expect(download).toBeDisabled();
 
@@ -111,7 +111,7 @@ test.describe('Fail-closed export gate + repair navigation', () => {
   }) => {
     await openInvalidDayExportStep(page);
 
-    const download = page.getByRole('button', { name: 'Download' });
+    const download = page.getByRole('button', { name: 'Download YAML' });
     await expect(download).toBeDisabled();
 
     // Backstop: even a forced click (bypassing the disabled affordance) must not produce a
@@ -121,25 +121,25 @@ test.describe('Fail-closed export gate + repair navigation', () => {
     await expect(noDownload).rejects.toThrow();
   });
 
-  test('the Alt+ keyboard cycle reaches Fix & Export, and the gate still blocks', async ({
+  test('the Alt+ keyboard cycle reaches Review & export, and the gate still blocks', async ({
     page,
   }) => {
     await seedAndOpen(page, buildInvalidCameraBlob(), `/#/day/${DAY_ID}`);
     await expect(
-      page.getByRole('heading', { level: 1, name: `Day Editor: ${ANIMAL_ID} - 2023-06-22` }),
+      page.getByRole('heading', { level: 1, name: `${ANIMAL_ID} · 2023-06-22` }),
     ).toBeVisible();
 
-    // Alt+←/→ walks the five grouped sections. Reaching Fix & Export by keyboard still lands
+    // Alt+←/→ walks the five grouped sections. Reaching Review & export by keyboard still lands
     // on the same gated surface as the header action.
     await expect(page.getByRole('heading', { level: 2, name: 'Daily log' })).toBeVisible();
-    const exportHeading = page.getByRole('heading', { level: 2, name: 'Export — 2023-06-22' });
+    const exportHeading = page.getByRole('heading', { level: 2, name: 'Review & export — 2023-06-22' });
     for (let i = 0; i < 4; i += 1) {
       await page.keyboard.press('Alt+ArrowRight');
     }
     await expect(exportHeading).toBeVisible();
 
-    // Reaching Fix & Export by keyboard still shows the BLOCKED state: Download disabled + repair.
-    const download = page.getByRole('button', { name: 'Download' });
+    // Reaching Review & export by keyboard still shows the BLOCKED state: Download disabled + repair.
+    const download = page.getByRole('button', { name: 'Download YAML' });
     await expect(download).toBeDisabled();
     await expect(
       page.getByRole('alert').getByRole('button', { name: 'Fix in Animal Setup → Cameras' }),
@@ -156,7 +156,7 @@ test.describe('Fail-closed export gate + repair navigation', () => {
   }) => {
     await seedAndOpen(page, buildInvalidCameraBlob(), `/#/animal/${ANIMAL_ID}/export`);
     await expect(
-      page.getByRole('heading', { level: 2, name: 'This animal — readiness & export' }),
+      page.getByRole('heading', { level: 2, name: 'Review & export — remy' }),
     ).toBeVisible();
 
     // The day is counted as an error, NOT ready.
@@ -165,7 +165,7 @@ test.describe('Fail-closed export gate + repair navigation', () => {
 
     // With 0 valid days AND an error day, "Export Valid Only" is inert/misleading — so it is
     // DISABLED with an accessible reason rather than reporting "Exported 0 files" on click.
-    const exportButton = page.getByRole('button', { name: 'Export Valid Only' });
+    const exportButton = page.getByRole('button', { name: /Review \d+ selected recordings?/ });
     await expect(exportButton).toBeDisabled();
     await expect(page.getByText(/No valid days to export — fix errors first/)).toBeVisible();
 

@@ -50,7 +50,7 @@ test.describe('Day Editor — direct day-to-day navigation', () => {
 
     // The editor remounts on the new day id: it shows DAY B's value, not DAY A's stale text.
     await expect(
-      page.getByRole('heading', { level: 1, name: /Day Editor: remy - 2023-06-23/ })
+      page.getByRole('heading', { level: 1, name: /remy · 2023-06-23/ })
     ).toBeVisible();
     // a11y: keyboard/SR users must not be stranded on the prior day. The remount alone moves no
     // focus (DayEditorStepper skips focus on its first render), so AppLayout must focus the new main

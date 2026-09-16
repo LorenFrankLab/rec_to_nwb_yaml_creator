@@ -56,7 +56,7 @@ const CROSS_PAGE_ALLOWLIST = new Set([
   'pages/AnimalEditor/TaskTypeModal',
   'pages/AnimalEditor/wiring/OptogeneticsContainer',
   'pages/AnimalEditor/wiring/useAnimalFieldUpdate',
-  // Phase 3-5: the per-animal Validation & Export tab renders <ValidationSummary animalKey=…> — the
+  // Phase 3-5: the per-animal Review & export tab renders <ValidationSummary animalKey=…> — the
   // SAME component as the standalone page, scoped by a filter (buildAnimalRows), not a fork. The
   // export-truth deciders it consumes (mergeDayMetadata, computeStepStatus, shadowExport) live in
   // domain/state; the page composes them like any page.

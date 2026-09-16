@@ -268,7 +268,7 @@ test.describe('Workspace persistence & recovery', () => {
       window.__holdTx = false;
     });
     await page.goto(`/#/day/${DAY_ID}`);
-    await page.getByLabel('Weight measured today (grams)').fill('777');
+    await page.getByLabel(/Weight measured on/).fill('777');
     await page.keyboard.press('Control+s');
     await expect(page.getByRole('status', { name: /^Saved/ })).toBeVisible();
 
@@ -277,7 +277,7 @@ test.describe('Workspace persistence & recovery', () => {
     await page.waitForTimeout(300);
     const stored = await page.evaluate((key) => JSON.parse(window.localStorage.getItem(key)).workspace.days, STORAGE_KEY);
     expect(stored[DAY_ID].session.weight).toBe(777);
-    await expect(page.getByLabel('Weight measured today (grams)')).toHaveValue('777');
+    await expect(page.getByLabel(/Weight measured on/)).toHaveValue('777');
   });
 
   test('a restore whose revision-marker write fails is refused as a whole: this tab, storage and a fresh tab all keep the old workspace', async ({ context, page }) => {
@@ -311,7 +311,7 @@ test.describe('Workspace persistence & recovery', () => {
     // A fresh (read-only) tab reads the same workspace this tab shows.
     const second = await context.newPage();
     await second.goto(`/#/day/${DAY_ID}`);
-    await expect(second.getByLabel('Weight measured today (grams)')).toHaveValue('485');
+    await expect(second.getByLabel(/Weight measured on/)).toHaveValue('485');
     await second.close();
   });
 
@@ -385,7 +385,7 @@ test.describe('Workspace persistence & recovery', () => {
 
     // The day editor renders (read path is intact).
     await expect(
-      page.getByRole('heading', { level: 1, name: `Day Editor: ${ANIMAL_ID} - 2023-06-22` }),
+      page.getByRole('heading', { level: 1, name: `${ANIMAL_ID} · 2023-06-22` }),
     ).toBeVisible();
 
     // Edit a day-owned field so a workspace change triggers the debounced autosave, whose
@@ -564,7 +564,7 @@ test.describe('Workspace persistence & recovery', () => {
       },
     ]);
 
-    await expect(page.getByRole('region', { name: 'Import batch status' })).toContainText('2 ready');
+    await expect(page.getByRole('region', { name: 'Import batch status' })).toContainText('2 to download');
     await page.getByRole('button', { name: 'Review 2 ready files' }).click();
     await expect(page.getByRole('region', { name: 'Batch import summary' })).toContainText(
       '2 recording days → 1 animal',

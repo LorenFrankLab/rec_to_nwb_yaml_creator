@@ -218,7 +218,7 @@ describe('ARIA Landmarks', () => {
       expect(screen.getByRole('link', { name: /^workspace$/i })).toBeInTheDocument();
     });
 
-    it('Workspace: one main + one #main-content, a navigation landmark with batch Validation & Export', async () => {
+    it('Workspace: one main + one #main-content, a navigation landmark with batch Review all animals', async () => {
       overrideFlags({ animalWorkspace: true });
       const { container } = renderRoute('#/workspace');
 
@@ -230,8 +230,8 @@ describe('ARIA Landmarks', () => {
       expect(container.querySelectorAll('#main-content')).toHaveLength(1);
       expect(container.querySelector('[role="navigation"]')).toBeTruthy();
       // Phase 4 dropped the standalone Home nav entry; the primary nav now exposes the cross-animal
-      // batch Validation & Export screen alongside the Workspace hub.
-      expect(screen.getByRole('link', { name: /validation & export/i })).toBeInTheDocument();
+      // batch Review all animals screen alongside the Workspace hub.
+      expect(screen.getByRole('link', { name: /review all animals/i })).toBeInTheDocument();
     });
 
     it('DayEditor: one main + one #main-content + one banner/contentinfo; breadcrumb back-nav', async () => {
@@ -239,7 +239,7 @@ describe('ARIA Landmarks', () => {
       const { container } = renderRoute('#/day/remy_20230622');
 
       // useDayIdFromUrl resolves the day id in an effect, so wait for the real frame.
-      await screen.findByRole('heading', { level: 1, name: /day editor/i });
+      await screen.findByRole('heading', { level: 1, name: /remy · 2023-06-22/i });
       // The frame header's breadcrumb provides the back navigation (Workspace › Animal › Day) —
       // the explicit "Back to Workspace" link was retired in favor of the breadcrumb.
       const breadcrumb = screen.getByRole('navigation', { name: /breadcrumb/i });

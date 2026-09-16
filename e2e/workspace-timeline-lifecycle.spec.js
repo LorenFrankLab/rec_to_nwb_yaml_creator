@@ -2,7 +2,7 @@
  * E2E: Phase 8A-1 — timeline-aware day creation + the shared day-lifecycle vocabulary.
  *
  * Two pre-test UX-hardening guarantees jsdom can't fully prove:
- *  1. The "Add Recording Days" calendar opens on the animal's RECORDING TIMELINE (the seeded
+ *  1. The "Add multiple dates…" calendar opens on the animal's RECORDING TIMELINE (the seeded
  *     2023 day's month) instead of wall-clock today — and "Today" still works as an explicit jump.
  *  2. A recording day's status uses ONE vocabulary across surfaces, and the persisted-validated
  *     state ("Validated") is distinct from live readiness ("Ready to export") on both the
@@ -21,7 +21,7 @@ import {
   DAY_ID,
 } from './helpers/workspace';
 
-test.describe('Timeline-aware Add Recording Days calendar', () => {
+test.describe('Timeline-aware Add multiple dates… calendar', () => {
   test.beforeEach(async ({ page }) => {
     await resetWorkspace(page);
   });
@@ -34,7 +34,7 @@ test.describe('Timeline-aware Add Recording Days calendar', () => {
     await expect(page.getByRole('heading', { level: 1, name: ANIMAL_ID })).toBeVisible();
 
     // Open the calendar — its accessible name now equals its visible text (label parity, 8A-2).
-    await page.getByRole('button', { name: 'Add Recording Days' }).click();
+    await page.getByRole('button', { name: 'Add multiple dates…' }).click();
     await expect(page.getByRole('dialog', { name: 'Recording Days Calendar' })).toBeVisible();
 
     // It follows the recording timeline: the latest day (2023-06-22) → next likely day is the same
@@ -57,7 +57,7 @@ test.describe('Timeline-aware Add Recording Days calendar', () => {
     // browser that the day cells still flow 7-per-row (a regression here collapses the grid into
     // vertical strips). Uses bounding boxes — the first seven cells share a row top; the eighth wraps.
     await seedAndOpen(page, buildConfiguredWorkspaceBlob(), `/#/animal/${ANIMAL_ID}/days`);
-    await page.getByRole('button', { name: 'Add Recording Days' }).click();
+    await page.getByRole('button', { name: 'Add multiple dates…' }).click();
     const dialog = page.getByRole('dialog', { name: 'Recording Days Calendar' });
     await expect(dialog).toBeVisible();
 

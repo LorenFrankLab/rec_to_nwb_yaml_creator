@@ -70,7 +70,7 @@ describe('global shortcuts + help (integration)', () => {
 
   it('Alt+N opens the epoch template menu on the daily log (the epoch editor lives there)', async () => {
     await renderRoute(`#/day/${DAY_ID}`);
-    await screen.findByRole('heading', { name: /day editor/i });
+    await screen.findByRole('heading', { name: /remy · 2023-06-22/i });
     await screen.findByRole('heading', { name: /^Epochs$/i });
 
     // Alt+N opens the grid's add affordance — the "+ from template" menu.

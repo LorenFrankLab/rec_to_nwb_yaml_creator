@@ -82,7 +82,7 @@ test.describe('workspace harness', () => {
   test('captureDownload returns the exported YAML text of a seeded valid day', async ({ page }) => {
     await seedWorkspace(page, buildConfiguredWorkspaceBlob());
 
-    // The realistic day is Valid → exportable from the animal's Validation & Export tab.
+    // The realistic day is Valid → exportable from the animal's Review & export tab.
     await page.goto('/#/animal/remy/export');
     const exportButton = page.getByRole('button', { name: 'Export Valid Only' });
     await expect(exportButton).toBeVisible();

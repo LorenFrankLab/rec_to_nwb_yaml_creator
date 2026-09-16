@@ -74,10 +74,9 @@ test.describe('Mistake-prevention UX on high-risk edit surfaces', () => {
     await expect(
       divergence.getByText(/already used by .* with different settings/),
     ).toBeVisible();
-    // The comparison table contrasts the existing vs this camera's identity fields. (The header
-    // cells render as `cell` role here, not `columnheader`.)
-    await expect(divergence.getByRole('cell', { name: 'Existing', exact: true })).toBeVisible();
-    await expect(divergence.getByRole('cell', { name: 'This camera', exact: true })).toBeVisible();
+    // The comparison exposes its hardware columns as accessible headers.
+    await expect(divergence.getByRole('columnheader', { name: 'Existing', exact: true })).toBeVisible();
+    await expect(divergence.getByRole('columnheader', { name: 'This camera', exact: true })).toBeVisible();
 
     // A control to take the safe new-name path is offered (the new-identity escape hatch).
     await expect(divergence.getByRole('button', { name: 'Use a new camera name' })).toBeVisible();
@@ -135,8 +134,8 @@ test.describe('Mistake-prevention UX on high-risk edit surfaces', () => {
     await expect(
       divergence.getByText(/already used by .* with different hardware/),
     ).toBeVisible();
-    await expect(divergence.getByRole('cell', { name: 'Existing', exact: true })).toBeVisible();
-    await expect(divergence.getByRole('cell', { name: 'This device', exact: true })).toBeVisible();
+    await expect(divergence.getByRole('columnheader', { name: 'Existing', exact: true })).toBeVisible();
+    await expect(divergence.getByRole('columnheader', { name: 'This device', exact: true })).toBeVisible();
 
     // The modal stays open (the divergent save was blocked, not silently committed).
     await expect(dialog).toBeVisible();
@@ -169,7 +168,8 @@ test.describe('Mistake-prevention UX on high-risk edit surfaces', () => {
     // Targeted Location field, then blur it.
     const targeted = dialog.getByRole('combobox', { name: 'Targeted Location' });
     await targeted.fill('ca1');
-    // Blur to trigger the canonicalization (moving focus to another field).
+    // Histology is optional; reveal it before moving focus to its location field.
+    await dialog.locator('summary').filter({ hasText: 'Histology & description' }).click();
     await dialog.getByRole('combobox', { name: 'Location (optional)' }).click();
 
     // The current guard CANONICALIZES on blur: the field visibly snaps "ca1" → "CA1" while the
@@ -185,7 +185,7 @@ test.describe('Mistake-prevention UX on high-risk edit surfaces', () => {
     // so the normal path cannot persist a stale id.
     await seedAndOpen(page, buildConfiguredWorkspaceBlob(), `/#/day/${DAY_ID}`);
     await expect(
-      page.getByRole('heading', { level: 1, name: `Day Editor: ${ANIMAL_ID} - 2023-06-22` }),
+      page.getByRole('heading', { level: 1, name: `${ANIMAL_ID} · 2023-06-22` }),
     ).toBeVisible();
 
     await expect(page.getByRole('heading', { level: 2, name: 'Epochs' })).toBeVisible();
@@ -252,10 +252,10 @@ test.describe('Mistake-prevention UX on high-risk edit surfaces', () => {
     await seedAndOpen(page, blob, `/#/day/${DAY_ID}`);
     // Behavioral events live in the focused DIO Wiring section.
     await page.getByRole('button', { name: /^DIO Wiring\b/ }).click();
-    await expect(page.getByRole('heading', { level: 2, name: 'Behavioral Events' })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 2, name: 'DIO Wiring' })).toBeVisible();
 
     // The tab opens on the read-only carry-forward summary; reveal the editable ECU wiring table.
-    await page.getByRole('button', { name: /edit · rewired the rig/i }).click();
+    await page.getByRole('button', { name: /edit event names \/ wiring/i }).click();
 
     // Day events overlay onto their channels in the direction-grouped hardware grid: the name is
     // the VALUE of the channel's field (Din1 under Inputs, Dout7 under Outputs). `exact` so
@@ -280,7 +280,7 @@ test.describe('Mistake-prevention UX on high-risk edit surfaces', () => {
     // against the current recording-system default, and routes edits to Recording System.
     await seedAndOpen(page, buildConfiguredWorkspaceBlob(), `/#/day/${DAY_ID}`);
     await expect(
-      page.getByRole('heading', { level: 1, name: `Day Editor: ${ANIMAL_ID} - 2023-06-22` }),
+      page.getByRole('heading', { level: 1, name: `${ANIMAL_ID} · 2023-06-22` }),
     ).toBeVisible();
 
     // Recording Setup hosts the Technical parameters block.
@@ -312,4 +312,24 @@ test.describe('Mistake-prevention UX on high-risk edit surfaces', () => {
       `#/animal/${ANIMAL_ID}/recording-system?field=data_acq_device`,
     );
   });
+});
+
+test('a statescript description repair focuses the required field and restores export', async ({ page }) => {
+  await resetWorkspace(page);
+  const blob = buildConfiguredWorkspaceBlob();
+  blob.workspace.days[DAY_ID].associated_files = [{
+    name: '20230622_remy_02_r1.stateScriptLog', description: '',
+    path: '/data/remy/20230622/20230622_remy_02_r1.stateScriptLog', task_epochs: 2,
+  }];
+  await seedAndOpen(page, blob, `/#/day/${DAY_ID}`);
+  await page.getByRole('button', { name: /^Review & export$/ }).click();
+  await expect(page.getByRole('button', { name: 'Download YAML', exact: true })).toBeDisabled();
+  await page.getByRole('button', { name: 'Fix in Daily log', exact: true }).click();
+  const description = page.getByLabel('Statescript description (required)', { exact: true });
+  await expect(description).toBeFocused();
+  await description.fill('statescript log');
+  await description.press('Tab');
+  await page.getByRole('button', { name: 'Close epoch 2 details' }).click();
+  await page.getByRole('button', { name: /^Review & export$/ }).click();
+  await expect(page.getByRole('button', { name: 'Download YAML', exact: true })).toBeEnabled();
 });

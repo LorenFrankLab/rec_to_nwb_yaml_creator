@@ -100,9 +100,9 @@ test.describe('Responsive + a11y smoke — navigation reachable at both viewport
         'Primary nav "Workspace" link',
       );
       await expectWithinViewportHorizontally(
-        primaryNav.getByRole('link', { name: 'Validation & Export' }),
+        primaryNav.getByRole('link', { name: 'Review & export' }),
         viewport,
-        'Primary nav "Validation & Export" link',
+        'Primary nav "Review & export" link',
       );
 
       // --- Top object-selector trigger (switch current animal): reachable + in-viewport. ---
@@ -120,11 +120,11 @@ test.describe('Responsive + a11y smoke — navigation reachable at both viewport
       if (viewport.width <= 720) {
         const select = sectionNav.getByRole('combobox', { name: 'Section' });
         await expectWithinViewportHorizontally(select, viewport, 'Compact section selector');
-        for (const name of ['Recording Days', 'Validation & Export', 'Electrode Groups', 'Cameras']) {
+        for (const name of ['Recording Days', 'Review & export', 'Electrode Groups', 'Cameras']) {
           await expect(select.locator('option', { hasText: name })).toHaveCount(1);
         }
       } else {
-        for (const name of ['Recording Days', 'Validation & Export', 'Electrode Groups', 'Cameras']) {
+        for (const name of ['Recording Days', 'Review & export', 'Electrode Groups', 'Cameras']) {
           await expectWithinViewportHorizontally(
             sectionNav.getByRole('link', { name: new RegExp(`^${name}`) }),
             viewport,
@@ -252,7 +252,7 @@ test.describe('Responsive + a11y smoke — validation summary reachable at both 
       await seedAndOpen(page, buildInvalidCameraBlob(), `/#/animal/${ANIMAL_ID}/export`);
 
       await expect(
-        page.getByRole('heading', { level: 2, name: 'This animal — readiness & export' }),
+        page.getByRole('heading', { level: 2, name: 'Review & export — remy' }),
       ).toBeVisible();
 
       // --- The readiness counts (chips) report the error day and are in-viewport. ---
@@ -288,7 +288,7 @@ test.describe('Responsive + a11y smoke — validation summary reachable at both 
       await page.keyboard.press('Enter');
       await expect(page).toHaveURL(new RegExp(`#/day/${DAY_ID}`));
       await expect(
-        page.getByRole('heading', { level: 1, name: `Day Editor: ${ANIMAL_ID} - 2023-06-22` }),
+        page.getByRole('heading', { level: 1, name: `${ANIMAL_ID} · 2023-06-22` }),
       ).toBeVisible();
     });
   }
@@ -304,12 +304,12 @@ test.describe('Responsive + a11y smoke — Export reachable at both viewports', 
       await seedAndOpen(page, buildConfiguredWorkspaceBlob(), `/#/day/${DAY_ID}`);
 
       await expect(
-        page.getByRole('heading', { level: 1, name: `Day Editor: ${ANIMAL_ID} - 2023-06-22` }),
+        page.getByRole('heading', { level: 1, name: `${ANIMAL_ID} · 2023-06-22` }),
       ).toBeVisible();
 
       // Reach the export-preview surface (a freely-navigable Day Editor header action).
-      await page.getByRole('button', { name: 'Export', exact: true }).click();
-      await expect(page.getByRole('heading', { level: 2, name: 'Export — 2023-06-22' })).toBeVisible();
+      await page.getByRole('button', { name: 'Review & export', exact: true }).click();
+      await expect(page.getByRole('heading', { level: 2, name: 'Review & export — 2023-06-22' })).toBeVisible();
 
       // --- The YAML preview (the read-only confidence check before download) is visible + in-viewport. ---
       await page.locator('summary').filter({ hasText: /View YAML/ }).click();
@@ -319,7 +319,7 @@ test.describe('Responsive + a11y smoke — Export reachable at both viewports', 
       // --- The Download control: a valid day enables it, it is in-viewport, and it is KEYBOARD
       //     reachable (focusable + Enter-activatable). Activating it produces a download (reachability
       //     proof — byte assertions live in the export spec). ---
-      const download = page.getByRole('button', { name: 'Download' });
+      const download = page.getByRole('button', { name: 'Download YAML' });
       await expect(download).toBeEnabled();
       await expectWithinViewportHorizontally(download, viewport, 'Download button');
       await download.focus();

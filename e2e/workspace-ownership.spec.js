@@ -99,7 +99,7 @@ test.describe('Ownership & discoverability — AnimalView header + section-nav +
     await expect(nav.getByText('Animal setup', { exact: true })).toBeVisible();
     // Day-work rows.
     await expect(nav.getByRole('link', { name: /^Recording Days/ })).toBeVisible();
-    await expect(nav.getByRole('link', { name: /^Validation & Export/ })).toBeVisible();
+    await expect(nav.getByRole('link', { name: /^Review & export/ })).toBeVisible();
     // Setup rows.
     for (const name of ['Electrode Groups', 'Recording System', 'Cameras', 'Optogenetics']) {
       await expect(nav.getByRole('link', { name: new RegExp(`^${name}`) })).toBeVisible();
@@ -181,7 +181,7 @@ test.describe('Ownership & discoverability — AnimalView header + section-nav +
     // corrupt/wrong-owner records — not merely because a day fails validation (a clean
     // established animal must not show a standing review task). So seed a recovered-unlinked (orphan)
     // day record — owned by this animal but absent from its day index — which is exactly the state the
-    // review banner exists to surface, and which renders the in-animal Validation & Export re-link.
+    // review banner exists to surface, and which renders the in-animal Review & export re-link.
     const orphanId = `${ANIMAL_ID}-orphan`;
     blob.workspace.days[orphanId] = {
       ...blob.workspace.days[DAY_ID],
@@ -200,7 +200,7 @@ test.describe('Ownership & discoverability — AnimalView header + section-nav +
     // first; both must target this animal's export tab.
     const reviewLink = page
       .getByRole('region', { name: 'Existing data review' })
-      .getByRole('link', { name: /Validation & Export/ })
+      .getByRole('link', { name: /Review & export/ })
       .first();
     await expect(reviewLink).toBeVisible();
     await expect(reviewLink).toHaveAttribute('href', `#/animal/${ANIMAL_ID}/export`);

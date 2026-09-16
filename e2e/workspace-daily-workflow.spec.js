@@ -65,15 +65,15 @@ for (const viewport of [
     await page.getByRole('button', { name: 'Create & open' }).click();
 
     await expect(page).toHaveURL(/#\/day\/remy-2023-06-25$/);
-    await expect(page.getByRole('heading', { level: 1, name: /Day Editor: remy - 2023-06-25/ })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1, name: /remy · 2023-06-25/ })).toBeVisible();
     const provenance = page.getByTestId('day-provenance');
     await expect(provenance).toContainText('Started from Jun 22, 2023');
     await expect(provenance).toContainText('Probe setup v1');
     // The weight is NOT copied; the previous measurement is a dated suggestion.
-    await expect(page.getByLabel('Weight measured today (grams)')).toHaveValue('');
+    await expect(page.getByLabel(/Weight measured on/)).toHaveValue('');
     await expect(page.getByText(/Previous measurement: 480 g on 2023-06-22/)).toBeVisible();
-    // The team was copied from June 22 (one person), not from July 2 (two).
-    await expect(page.getByLabel(/Experimenters present/)).toHaveValue('Doe, Jane');
+    // The usual experimenters are reused; a source-day exception is not propagated.
+    await expect(page.getByLabel(/Experimenters present/)).toHaveValue(buildBackfillBlob().workspace.animals[ANIMAL_ID].experimenters.experimenter_name.join('\n'));
 
     // Persisted with the right pin, provenance and re-dated folder.
     await expect
@@ -100,6 +100,8 @@ test('Log today creates today’s day and opens it; a second press just opens it
 
 test('typing into a focused field, Ctrl+S, and reloading preserves the text (F3)', async ({ page }) => {
   await seedAndOpen(page, buildConfiguredWorkspaceBlob(), `/#/day/${DAY_ID}`);
+  await page.getByText(/^Recording details/).click();
+  await page.getByText(/^Experimenters:/).click();
   const team = page.getByLabel(/Experimenters present/);
   await team.click();
   await team.fill('Doe, Jane\nTyped, Without Blur');
@@ -114,22 +116,22 @@ test('typing into a focused field, Ctrl+S, and reloading preserves the text (F3)
 
 test('a second tab opens read-only — its editing controls are DISABLED — and cannot overwrite the editing tab (F4)', async ({ context, page }) => {
   await seedAndOpen(page, buildConfiguredWorkspaceBlob(), `/#/day/${DAY_ID}`);
-  await expect(page.getByRole('heading', { level: 1, name: /Day Editor/ })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: /remy · / })).toBeVisible();
 
   const second = await context.newPage();
   await second.goto(`/#/day/${DAY_ID}`);
   await expect(second.getByText(/Another tab is editing this workspace/)).toBeVisible();
 
   // Tab A edits the weight; tab B (read-only) follows the saved change live.
-  await page.getByLabel('Weight measured today (grams)').fill('491');
+  await page.getByLabel(/Weight measured on/).fill('491');
   await page.keyboard.press('Control+s');
-  await expect(second.getByLabel('Weight measured today (grams)')).toHaveValue('491');
+  await expect(second.getByLabel(/Weight measured on/)).toHaveValue('491');
 
   // Tab B cannot type at all: the field is disabled (nothing a reader enters can be lost), while
   // navigation links and the backup download stay usable.
-  await expect(second.getByLabel('Weight measured today (grams)')).toBeDisabled();
+  await expect(second.getByLabel(/Weight measured on/)).toBeDisabled();
   await expect(second.getByRole('button', { name: 'Download workspace backup' })).toBeEnabled();
-  await expect(second.getByRole('link', { name: 'Validation & Export' })).toBeVisible();
+  await expect(second.getByRole('link', { name: 'Review all animals' })).toBeVisible();
   const stored = await page.evaluate((key) => JSON.parse(window.localStorage.getItem(key)).workspace.days, STORAGE_KEY);
   expect(stored[DAY_ID].session.weight).toBe(491);
 
@@ -137,14 +139,14 @@ test('a second tab opens read-only — its editing controls are DISABLED — and
   await second.getByRole('button', { name: /Edit in this tab instead/ }).click();
   await expect(second.getByText(/Another tab is editing/)).toHaveCount(0);
   await expect(page.getByText(/Editing moved to another tab/)).toBeVisible();
-  await expect(page.getByLabel('Weight measured today (grams)')).toBeDisabled();
-  await expect(second.getByLabel('Weight measured today (grams)')).toBeEnabled();
+  await expect(page.getByLabel(/Weight measured on/)).toBeDisabled();
+  await expect(second.getByLabel(/Weight measured on/)).toBeEnabled();
   await second.close();
 });
 
 test('hand-over is REFUSED while the editing tab cannot save: its unsaved observation is kept, the requester is told why', async ({ context, page }) => {
   await seedAndOpen(page, buildConfiguredWorkspaceBlob(), `/#/day/${DAY_ID}`);
-  await expect(page.getByRole('heading', { level: 1, name: /Day Editor/ })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: /remy · / })).toBeVisible();
   const second = await context.newPage();
   await second.goto(`/#/day/${DAY_ID}`);
   await expect(second.getByText(/Another tab is editing this workspace/)).toBeVisible();
@@ -157,7 +159,7 @@ test('hand-over is REFUSED while the editing tab cannot save: its unsaved observ
       original(k, v);
     };
   }, STORAGE_KEY);
-  await page.getByLabel('Weight measured today (grams)').fill('477');
+  await page.getByLabel(/Weight measured on/).fill('477');
   await page.keyboard.press('Control+s');
   await expect(page.getByRole('alert')).toContainText(/Could not save/);
 
@@ -166,8 +168,8 @@ test('hand-over is REFUSED while the editing tab cannot save: its unsaved observ
   await expect(second.getByRole('alert').filter({ hasText: /Could not take over/ }).first()).toContainText(/could not save its unsaved work/i);
   await expect(second.getByText(/Another tab is editing this workspace/)).toBeVisible();
   await expect(page.getByText(/Editing moved to another tab/)).toHaveCount(0);
-  await expect(page.getByLabel('Weight measured today (grams)')).toHaveValue('477');
-  await expect(page.getByLabel('Weight measured today (grams)')).toBeEnabled();
+  await expect(page.getByLabel(/Weight measured on/)).toHaveValue('477');
+  await expect(page.getByLabel(/Weight measured on/)).toBeEnabled();
   const stored = await second.evaluate((key) => JSON.parse(window.localStorage.getItem(key)).workspace.days, STORAGE_KEY);
   expect(stored[DAY_ID].session.weight).not.toBe(477); // never written — and never replaced by B either
   await second.close();
@@ -214,16 +216,16 @@ test('workspace backup → restore preserves incomplete days, setup history and 
 
 test('a download reads "Downloaded"; a later weight correction reads "Changed since download" (F6)', async ({ page }) => {
   await seedAndOpen(page, buildConfiguredWorkspaceBlob(), `/#/day/${DAY_ID}`);
-  await page.getByRole('button', { name: 'Export', exact: true }).click();
+  await page.getByRole('button', { name: 'Review & export', exact: true }).click();
   await expect(page.getByTestId('download-status')).toHaveAttribute('data-status', 'never');
-  const { filename } = await captureDownload(page, (p) => p.getByRole('button', { name: 'Download' }).click());
+  const { filename } = await captureDownload(page, (p) => p.getByRole('button', { name: 'Download YAML' }).click());
   expect(filename).toBe('20230622_remy_metadata.yml');
   await expect(page.getByTestId('download-status')).toHaveAttribute('data-status', 'current');
 
   await page.getByRole('button', { name: /^Daily log/ }).click();
-  await page.getByLabel('Weight measured today (grams)').fill('486');
+  await page.getByLabel(/Weight measured on/).fill('486');
   await page.keyboard.press('Control+s');
-  await page.getByRole('button', { name: 'Export', exact: true }).click();
+  await page.getByRole('button', { name: 'Review & export', exact: true }).click();
   await expect(page.getByTestId('download-status')).toHaveAttribute('data-status', 'changed');
   await expect(page.getByTestId('download-status')).toContainText('Changed since download');
   await page.getByText(/Show what changed/).click();
@@ -251,7 +253,7 @@ test('the profile editor refuses a subject id another animal already uses', asyn
   await seedAndOpen(page, blob, `/#/animal/${ANIMAL_ID}/days`);
   await page.getByRole('button', { name: `Actions for ${ANIMAL_ID}` }).click();
   await page.getByRole('menuitem', { name: 'Edit profile…' }).click();
-  const input = page.getByLabel('Subject ID (exact spelling in the recording filenames)');
+  const input = page.getByLabel(/Subject ID/);
   await input.fill('otherrat');
   await expect(page.getByRole('alert')).toContainText(/already used by animal "OtherRat"/);
   await expect(page.getByRole('button', { name: 'Save profile changes' })).toBeDisabled();

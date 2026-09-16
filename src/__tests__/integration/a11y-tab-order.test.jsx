@@ -27,7 +27,7 @@ describe('tab order through the DayEditor frame', () => {
       window.dispatchEvent(new HashChangeEvent('hashchange'));
       await Promise.resolve();
     });
-    await screen.findByRole('heading', { name: /day editor/i });
+    await screen.findByRole('heading', { name: /remy · 2023-06-22/i });
 
     const tabBar = screen.getByRole('navigation', { name: /day editor sections/i });
     const labels = [...tabBar.querySelectorAll('button')].map((el) =>
@@ -38,7 +38,7 @@ describe('tab order through the DayEditor frame', () => {
       'Recording Setup',
       'Failed Channels',
       'DIO Wiring',
-      'Fix & Export',
+      'Review & export',
     ]);
   });
 
@@ -53,7 +53,7 @@ describe('tab order through the DayEditor frame', () => {
       window.dispatchEvent(new HashChangeEvent('hashchange'));
       await Promise.resolve();
     });
-    await screen.findByRole('heading', { name: /day editor/i });
+    await screen.findByRole('heading', { name: /remy · 2023-06-22/i });
 
     const positive = [...container.querySelectorAll('[tabindex]')].filter(
       (el) => Number(el.getAttribute('tabindex')) > 0

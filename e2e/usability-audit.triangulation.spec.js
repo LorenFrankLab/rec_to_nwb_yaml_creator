@@ -59,10 +59,10 @@ async function readPersisted(page) {
  * @returns {Promise<{ text: string, doc: object }>} The downloaded text and the parsed object.
  */
 async function captureExportedYaml(page) {
-  await page.getByRole('button', { name: 'Export', exact: true }).click();
-  await expect(page.getByRole('heading', { level: 2, name: 'Export — 2023-06-22' })).toBeVisible();
+  await page.getByRole('button', { name: 'Review & export', exact: true }).click();
+  await expect(page.getByRole('heading', { level: 2, name: 'Review & export — 2023-06-22' })).toBeVisible();
   const { text } = await captureDownload(page, async (p) => {
-    await p.getByRole('button', { name: 'Download' }).click();
+    await p.getByRole('button', { name: 'Download YAML' }).click();
   });
   return { text, doc: YAML.parse(text) };
 }
@@ -103,7 +103,7 @@ test.describe('Three-way agreement: UI ⇄ localStorage ⇄ exported YAML', () =
     // PLANE 3 (export) — drive the real download from the day and parse the YAML.
     await seedAndOpen(page, buildConfiguredWorkspaceBlob(), `/#/day/${DAY_ID}`);
     await expect(
-      page.getByRole('heading', { level: 1, name: `Day Editor: ${ANIMAL_ID} - 2023-06-22` }),
+      page.getByRole('heading', { level: 1, name: `${ANIMAL_ID} · 2023-06-22` }),
     ).toBeVisible();
     const { doc } = await captureExportedYaml(page);
 
@@ -210,7 +210,7 @@ test.describe('Three-way agreement: UI ⇄ localStorage ⇄ exported YAML', () =
     // PLANE 3 (export).
     await seedAndOpen(page, buildConfiguredWorkspaceBlob(), `/#/day/${DAY_ID}`);
     await expect(
-      page.getByRole('heading', { level: 1, name: `Day Editor: ${ANIMAL_ID} - 2023-06-22` }),
+      page.getByRole('heading', { level: 1, name: `${ANIMAL_ID} · 2023-06-22` }),
     ).toBeVisible();
     const { doc } = await captureExportedYaml(page);
 

@@ -1,5 +1,5 @@
 /**
- * E2E: the cross-animal Validation & Export screen (`#/validation`) does not overflow the page
+ * E2E: the cross-animal Review & export screen (`#/validation`) does not overflow the page
  * horizontally on a narrow phone viewport.
  *
  * jsdom proves the row/label LOGIC but not layout-in-a-real-viewport. At ~390px the dense 6-column
@@ -54,7 +54,7 @@ function addLongNamedDay(blob) {
   return day.id;
 }
 
-test.describe('Validation & Export — narrow viewport layout', () => {
+test.describe('Review & export — narrow viewport layout', () => {
   test.beforeEach(async ({ page }) => {
     await resetWorkspace(page);
   });

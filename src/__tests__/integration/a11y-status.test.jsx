@@ -41,13 +41,13 @@ describe('status conveyed without relying on color', () => {
   it('the day readiness is conveyed by the readiness bar with text, not color alone', async () => {
     const user = userEvent.setup();
     await renderRoute(`#/day/${DAY_ID}`);
-    await screen.findByRole('heading', { name: /day editor/i });
+    await screen.findByRole('heading', { name: /remy · 2023-06-22/i });
 
     // The readiness bar (explicit text, not color-coded section-nav glyphs) is shown on the daily
     // log and the work sections.
     await user.click(screen.getByRole('button', { name: /^Recording Setup\b/ }));
 
-    const readiness = screen.getByText(/ready to export|block(s)? export/i);
+    const readiness = screen.getByText(/ready to export|to finish|issues? to correct/i);
     expect(readiness).toBeInTheDocument();
     const region = readiness.closest('[role="status"], [role="alert"]');
     expect(region).not.toBeNull();
@@ -58,7 +58,7 @@ describe('status conveyed without relying on color', () => {
 
   it('the Failed Channels health badges expose a non-color status label', async () => {
     const { container } = await renderRoute(`#/day/${DAY_ID}`);
-    await screen.findByRole('heading', { name: /day editor/i });
+    await screen.findByRole('heading', { name: /remy · 2023-06-22/i });
 
     // Navigate to the Failed Channels section.
     const { fireEvent } = await import('@testing-library/react');
