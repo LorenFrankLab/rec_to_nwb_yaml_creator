@@ -291,6 +291,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Editing an imported day's task environment or cameras preserves its task definitions.** The
+  first epoch edit now saves newly imported task types before replacing inline tasks with catalog
+  references. Task definitions, camera order, and earlier days remain intact after saving and reloading,
+  including when an import introduces an unfamiliar task for an existing animal.
+
 - **The app shell (header, skip links, footer) is styled the same on a direct workspace load as after
   visiting the legacy form.** The shell's stylesheet was loaded by the legacy metadata form, which is
   now fetched only when its route is opened — so opening a workspace URL directly showed an oversized

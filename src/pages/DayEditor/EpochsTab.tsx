@@ -48,6 +48,7 @@ import {
 } from '../../domain/epochGeneratedFiles';
 import {
   getAnimalCameras,
+  getAnimalTaskTypes,
   getDayAssociatedVideos,
   getDayAssociatedFiles,
   getDayDeferredEpochs,
@@ -249,7 +250,9 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
       options: { trackAddedEpochs?: boolean } = {}
     ) => {
       if (unresolvedTaskCatalogDivergence && !allowTaskCatalogDivergence) return;
-      if (nextTaskTypes !== view.taskTypes && actions?.updateAnimal && ownerKey) {
+      // An imported day's working view may already contain newly derived types. Compare with the
+      // stored catalog so those definitions are saved before their inline source is retired.
+      if (nextTaskTypes !== getAnimalTaskTypes(animal) && actions?.updateAnimal && ownerKey) {
         (actions.updateAnimal as (id: string, patch: Record<string, unknown>) => void)(ownerKey, {
           taskTypes: nextTaskTypes,
         });
@@ -281,7 +284,7 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
     },
     [
       unresolvedTaskCatalogDivergence,
-      view.taskTypes,
+      animal,
       view.taskInstances,
       view.derived,
       actions,
