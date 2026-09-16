@@ -1,0 +1,50 @@
+Skip to main content
+Skip to navigation
+Navigated to Animal
+Workspace
+▸
+Fi
+FixRat2
+▾
+Review all animals
+⌨
+Keyboard shortcuts
+FixRat2
+Rattus norvegicus · M
+Edit profile
+⋮
+Animal facts & setup summary
+DAY WORK
+Recording Days
+4
+›
+Review & export
+1 to download
+›
+ANIMAL SETUP
+Electrode Groups
+1
+›
+Recording System
+1
+›
+Cameras
+1
+›
+Task Types
+›
+Optogenetics
+not used
+›
+Cameras
+
+Configure cameras for video tracking and behavioral recording.
+
++ Add Camera
+ID	Name	Hardware	Calibration (m/px)	Status	Actions
+0	overhead	FLIR · Blackfly
+Lens: 6 mm
+	0.001	✓	Edit
+⋮
+Copyright © 2026 Loren Frank Lab
+The University of California at San Francisco

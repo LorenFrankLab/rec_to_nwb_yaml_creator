@@ -1,0 +1,28 @@
+Skip to main content
+Skip to navigation
+Navigated to Home - Animal Selection
+Workspace
+Review & export
+⌨
+Keyboard shortcuts
+Animals › Setup: ResumeRat
+Animal setup — ResumeRat
+Import or copy existing setup
+Step 7 of 7 — Team ▾
+Team
+
+* Required before export. You can save an unfinished draft.
+
+Enter the experiment description and usual team. Each recording can use a different team.
+
+Experiment description *
+Required for export. New recording days inherit this unless a day overrides it.
+Experimenter names *
++ Add experimenter
+Lab *
+Institution *
+← Back
+Save draft & exit
+Finish setup
+Copyright © 2026 Loren Frank Lab
+The University of California at San Francisco

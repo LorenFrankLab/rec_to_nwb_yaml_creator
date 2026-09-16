@@ -1,0 +1,70 @@
+Skip to main content
+Skip to navigation
+Navigated to Animal
+Workspace
+▸
+Ux
+UxRat01
+▾
+Validation & Export
+⌨
+Keyboard shortcuts
+UxRat01
+animal ID
+Rattus norvegicus · M
+✓
+Saved just now
+⋮
+Wild-type
+M
+Rattus norvegicus
+b. 2023-01-10
+1 probe — CA1
+Config v1
+Team: Scientist, Sam
+DAY WORK
+Recording Days
+1
+›
+Validation & Export
+0 ready
+›
+ANIMAL SETUP
+Electrode Groups
+1
+›
+Recording System
+1
+›
+Cameras
+1
+›
+Task Types
+›
+Optogenetics
+○
+›
+Recording Days for UxRat01
+Add Recording Days
+Start each new day from the nearest earlier day (latest: 2023-06-22) — review & adjust per day
+Log a recording day
+Log today (Sep 15, 2026)
+Choose recording date
+Create & open
+
+Jun 23, 2023 will start from Jun 22, 2023 (the nearest earlier day) · probe setup v1 (effective Sep 15, 2026) — that setup became effective later, so you will be asked to confirm it applies.
+
+1 unfinished: Jun 22, 2023
+
+What do these statuses mean?
+	DATE	STATUS
+ACTIONS
+
+	2023-06-22
+Recording session for UxRat01 on 2023-06-22
+
+Needs attention — Description cannot be empty or contain only whitespace
+⋮
+›
+Copyright © 2026 Loren Frank Lab
+The University of California at San Francisco

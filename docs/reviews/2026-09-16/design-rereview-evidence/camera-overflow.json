@@ -1,0 +1,51 @@
+[
+  {
+    "tag": "NAV",
+    "cls": "_nav_159u3_11",
+    "w": 336.28125,
+    "right": 352.28125,
+    "text": "SectionRecording DaysValidation & ExportElectrode GroupsRecording Syst"
+  },
+  {
+    "tag": "DIV",
+    "cls": "_compact_159u3_119",
+    "w": 313.90625,
+    "right": 341.09375,
+    "text": "SectionRecording DaysValidation & ExportElectrode GroupsRecording Syst"
+  },
+  {
+    "tag": "SELECT",
+    "cls": "_compactSelect_159u3_130",
+    "w": 256,
+    "right": 341.09375,
+    "text": "Recording DaysValidation & ExportElectrode GroupsRecording SystemCamer"
+  },
+  {
+    "tag": "SECTION",
+    "cls": "_panel_1dr7y_61",
+    "w": 336.28125,
+    "right": 352.28125,
+    "text": "Catalog — referenced per day.⚠Affects all 4 daysCamerasConfigure camer"
+  },
+  {
+    "tag": "P",
+    "cls": "_panelScope_1dr7y_75",
+    "w": 288.28125,
+    "right": 328.28125,
+    "text": "Catalog — referenced per day."
+  },
+  {
+    "tag": "DIV",
+    "cls": "",
+    "w": 288.28125,
+    "right": 328.28125,
+    "text": "⚠Affects all 4 daysCamerasConfigure cameras for video tracking and beh"
+  },
+  {
+    "tag": "DIV",
+    "cls": "cameras-section",
+    "w": 288.28125,
+    "right": 328.28125,
+    "text": "CamerasConfigure cameras for video tracking and behavioral recording.+"
+  }
+]

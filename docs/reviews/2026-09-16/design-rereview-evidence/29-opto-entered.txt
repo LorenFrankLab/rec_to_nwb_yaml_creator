@@ -1,0 +1,91 @@
+Skip to main content
+Skip to navigation
+Navigated to Animal
+Workspace
+▸
+De
+DesignRat
+▾
+Validation & Export
+⌨
+Keyboard shortcuts
+DesignRat
+animal ID
+Rattus norvegicus · U
+⟳
+Saving…
+⋮
+Wild-type
+U
+Rattus norvegicus
+b. 2023-01-01
+Config v1
+Team: Scientist, Alex
+Optogenetics
+DAY WORK
+Recording Days
+0
+›
+Validation & Export
+0 ready
+›
+ANIMAL SETUP
+Electrode Groups
+○
+›
+Recording System
+1
+›
+Cameras
+○
+›
+Task Types
+›
+Optogenetics
+○
+›
+⚠
+Affects all 0 days
+
+Opto configured · 3 of 4
+
+Optogenetics Setup
+
+Enter the implanted source, fibers, virus injections and stimulation software. Starred fields are required before export.
+
+This animal has optogenetics
+
+Complete before export: a complete excitation source, a complete optical fiber, a complete virus injection.
+
+Excitation source
+Setup name *
+Hardware model name *
+Description *
+Wavelength (nm) *
+Source power (W) *
+Intensity (W/m²) *
+Optical fibers
+Fiber implant name *
+Fiber hardware model *
+Implant description *
+Hemisphere *
+— select —
+left
+right
+Location *
+AP (mm) *
+ML (mm) *
+DV (mm) *
+Roll (deg) *
+Pitch (deg) *
+Yaw (deg) *
+Coordinate reference *
+Stereotaxic reference for the AP/ML/DV coordinates.
+Remove fiber
+Add optical fiber
+Virus injections
+Add virus injection
+Stimulation software
+Optogenetic stimulation software
+Copyright © 2026 Loren Frank Lab
+The University of California at San Francisco

@@ -1,0 +1,23 @@
+Verification: 2026-09-16
+
+Vitest: 5689 passed, 0 failed; 392 files
+Chromium regression: 43 passed (7 specs, retries disabled).
+Protocol-layout follow-up: all 4 element-priority journeys passed again.
+
+Browser specs:
+workspace-daily-workflow.spec.js
+workspace-design-entry.spec.js
+workspace-design-rereview.spec.js
+workspace-element-priority.spec.js
+workspace-export-gate.spec.js
+workspace-mistake-prevention.spec.js
+workspace-optogenetics.spec.js
+
+TypeScript: passed
+ESLint: passed; dependency/browser-data notices remain
+Production build: passed
+Targeted CSS: passed
+git diff --check: passed
+
+Synthetic workspaces, isolated browser storage; production preview on localhost:3021 and regression server on localhost:3022.
+No Trodes conversion, DANDI validation, or Spyglass insertion was run.

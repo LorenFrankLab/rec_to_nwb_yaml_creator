@@ -1,0 +1,27 @@
+Skip to main content
+Skip to navigation
+Navigated to Copy from Another Animal
+Workspace
+Review & export
+⌨
+Keyboard shortcuts
+Animals › New animal › Copy from another animal
+Copy setup from another animal
+
+Reuse a same-rig animal's hardware setup, then tweak. The new animal gets its own identity — only the setup is copied.
+
+Copy from
+Source animal
+Select an animal…
+FixRat
+FixRat2
+DesignRat
+New animal
+Subject ID *
+
+Capitalization is kept exactly as typed — it has to match the animal token in your recording filenames. You'll confirm identity and the copied setup in the next step.
+
+Copy & continue setup →
+Cancel
+Copyright © 2026 Loren Frank Lab
+The University of California at San Francisco

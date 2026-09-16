@@ -1,0 +1,23 @@
+Skip to main content
+Skip to navigation
+Navigated to Validation Summary
+Workspace
+Review & export
+⌨
+Keyboard shortcuts
+Review & export — all animals
+
+4 valid / 0 with errors / 0 incomplete
+
+Validate All
+Review 4 ready recordings
+What gets exported?
+What do these statuses mean?
+Recording days across all animals with validation status
+Animal	Date	Session	Setup	Status	Editor
+FixRat2	2023-06-22	FixRat2_20230622	config v1 (latest) · 1 camera (overhead 0.001 m/px) · No optogenetics	Changed since download	Open editor
+FixRat2	2023-06-23	FixRat2_20230623	config v1 (latest) · 1 camera (overhead 0.001 m/px) · No optogenetics	Downloaded	Open editor
+FixRat2	2023-06-24	FixRat2_20230624	config v1 (latest) · 1 camera (overhead 0.001 m/px) · No optogenetics	Downloaded	Open editor
+FixRat2	2023-06-25	FixRat2_20230625	config v1 (latest) · 1 camera (overhead 0.001 m/px) · No optogenetics	Downloaded	Open editor
+Copyright © 2026 Loren Frank Lab
+The University of California at San Francisco

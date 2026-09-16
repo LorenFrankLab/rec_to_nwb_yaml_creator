@@ -1,0 +1,80 @@
+Skip to main content
+Skip to navigation
+Navigated to Day Editor: ReviewRat-2026-09-16
+Workspace
+Validation & Export
+⌨
+Keyboard shortcuts
+Workspace
+›
+Animal: ReviewRat
+ReviewRat · 2026-09-16
+✓
+Saved 19s ago
+DAY
+Daily log
+✗
+RECORDING
+Recording Setup
+○
+Failed Channels
+✓
+DIO Wiring
+✓
+FINISH
+Review & export
+4 remaining
+✗
+Review & export — 2026-09-16
+
+Review this recording, then save its metadata YAML beside the .rec files.
+
+Resolve 4 validation errors before exporting.
+
+Animal setup
+Date of birth is missing. Add it in the animal profile.
+Fix shared animal setup
+Affects more than this day
+Fix in Animal Setup → Profile
+Day metadata
+Experiment description cannot be empty or contain only whitespace
+Fix in Daily log
+Add at least one experimenter name
+Fix in Daily log
+Weight is required
+Fix in Daily log
+
+Check these values before downloading.
+
+What this day used (read-only) · Initial configuration
+
+Animal & day
+ReviewRat — 2026-09-16
+Weight & team
+not recorded — team not recorded
+Configuration version
+Version 1 (current)
+Probes & failed channels
+0 electrode groups, 0 failed channels
+Cameras / calibration
+0 cameras
+Data acquisition
+1 device (SpikeGadgets)
+Tasks & videos
+0 tasks, 0 videos
+Optogenetics
+No optogenetics
+Subject & session
+ReviewRat — session ReviewRat_20260916
+Non-blocking warnings
+None
+Technical conversion values
+Download YAML
+Copy YAML
+
+Not downloaded yet.
+
+20260916_ReviewRat_metadata.yml
+View YAML · one file
+Copyright © 2026 Loren Frank Lab
+The University of California at San Francisco

@@ -1,0 +1,83 @@
+Skip to main content
+Skip to navigation
+Navigated to Day Editor: UxRat01-2023-06-22
+Workspace
+Validation & Export
+⌨
+Keyboard shortcuts
+Workspace
+›
+Animal: UxRat01
+›
+Day: 2023-06-22
+✓
+Saved 23s ago
+Export
+Day Editor: UxRat01 - 2023-06-22
+Configuration v1
+Needs attention
+DAY
+Daily log
+⚠
+Incomplete
+RECORDING
+Recording Setup
+✗
+Has errors
+Failed Channels
+✓
+Complete
+DIO Wiring
+✓
+Complete
+FINISH
+Fix & Export
+1 to fix
+✗
+Has errors
+Fix & Export — 2023-06-22
+
+Fix blocking issues, then download the YAML next to your .rec files.
+
+Resolve 1 validation error before exporting.
+
+Existing data repair
+The probe setup v1 was entered on 2026-09-15 and its effective period before that is not recorded, so it is not known to apply to this earlier recording. Confirm that v1 is the setup this day was recorded with, pick the right version, or set the version's effective date to cover 2023-06-22.
+Pin or fix the configuration version
+Confirm this setup applies
+
+Check these values before downloading.
+
+What this day used (read-only) — configuration from 2026-09-15 · Initial configuration
+
+Animal & day
+UxRat01 — 2023-06-22
+Weight & team
+485 g — Scientist, Sam
+Configuration version
+Version 1 (current)
+Probes & failed channels
+1 electrode group, 0 failed channels
+Cameras / calibration
+0 cameras
+Data acquisition
+1 device (SpikeGadgets)
+Tasks & videos
+0 tasks, 0 videos
+Optogenetics
+No optogenetics
+Subject & session
+UxRat01 — session UxRat01_20230622
+Non-blocking warnings
+None
+Rig constants
+raw_data_to_volts 0.195; times_period_multiplier 1.5
+Download
+Copy
+
+Not downloaded yet.
+
+20230622_UxRat01_metadata.yml
+View YAML · one file
+Copyright © 2026 Loren Frank Lab
+The University of California at San Francisco

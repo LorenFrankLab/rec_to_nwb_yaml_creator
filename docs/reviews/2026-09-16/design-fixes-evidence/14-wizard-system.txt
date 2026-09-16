@@ -1,0 +1,42 @@
+Skip to main content
+Skip to navigation
+Workspace
+Validation & Export
+⌨
+Keyboard shortcuts
+Animals › New animal
+New animal — guided setup
+
+Set animal facts and reusable recording defaults. Each recording day records its own measurements, tasks and files. You can correct setup or record dated changes later.
+
+Starting fresh below, or Import a YAML… · Copy from another animal…
+
+1
+Identity
+2
+Electrodes
+3
+Cameras
+4
+Optogenetics
+optional
+5
+Tasks
+6
+Recording system
+Pre-filled — review
+7
+Team
+Recording system
+
+The acquisition hardware. Usually the same across the lab — change only if this animal used a different rig.
+
++ Add Recording System
+Name	System	Amplifier	ADC Circuit	Role	Actions
+SpikeGadgets	SpikeGadgets	Intan	Intan	Default	EditDelete
+Advanced Settings
+← Back
+Save draft
+Next →
+Copyright © 2026 Loren Frank Lab
+The University of California at San Francisco

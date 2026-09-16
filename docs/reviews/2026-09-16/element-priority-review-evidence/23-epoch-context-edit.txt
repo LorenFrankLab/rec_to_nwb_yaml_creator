@@ -1,0 +1,146 @@
+Skip to main content
+Skip to navigation
+Navigated to Day Editor: FixRat2-2023-06-25
+Workspace
+Review & export
+⌨
+Keyboard shortcuts
+Workspace
+›
+Animal: FixRat2
+FixRat2 · 2023-06-25
+Downloaded
+Ready to export
+Review & export
+DAY
+Daily log
+✓
+RECORDING
+Recording Setup
+✓
+Failed Channels
+✓
+DIO Wiring
+✓
+FINISH
+Review & export
+✓
+Daily log
+
+Enter this recording’s measurement, then review its epochs and files. Changes save automatically.
+
+Weight measured on 2023-06-25 (grams)
+Previous measurement: 455 g on 2023-06-24. Enter the measurement for 2023-06-25.
+Team: Scientist, Alex · Change
+Recording source & setup
+Epochs
+
+List epochs in recording order. Add the files recorded for each epoch.
+
+Show
+4 epochs
+0 videos needed
+2 statescripts missing
+0 custom filenames
+Generate missing
+Statescripts (2)
+Add epoch
+Templates ▾
+#	Task	Files	Camera(s)	
+Actions
+
+1	
+Sleep
+tag s1
+Details
+▾
+	
+Statescript: Not expected
+Video: 1 video
+	overhead	
+⋮
+
+2	
+w_alternation
+tag r1
+differs from task default
+Hide
+▴
+	
+Statescript: Expected
+Video: 1 video
+	overhead	
+⋮
+
+3	
+Sleep
+tag s2
+Details
+▾
+	
+Statescript: Not expected
+Video: 1 video
+	overhead	
+⋮
+
+4	
+w_alternation
+tag r2
+differs from task default
+Details
+▾
+	
+Statescript: Expected
+Video: 1 video
+	overhead	
+⋮
+Epoch 2: w_alternation
+tag r1
+Review optional log
+Close
+Files for this epoch
+needs review
+Statescript
+Expected
+Expected: /data/FixRat2/20230625/20230625_FixRat2_02_r1.stateScriptLog
+Add expected statescript
+Enter manually
+Video
+1 video
+20230625_FixRat2_02_r1.1.h264
+generated
+Rename
+· overhead
+Remove
+Add another video
+Task
+Change only if this epoch was assigned wrong.
+Task type
+Sleep
+w_alternation
++ new task type
+Derived tag
+r1
+Task source
+animal catalog
+Environment
+Room Bthis day
+Cameras
+overhead
+Environment for this day
+Cameras used this day
+overhead
+
+Task default: Room A · overhead
+
+Save for this day
+Use task default
+Cancel
+Supplemental files (optional) · 0 files
+▶
+Descriptions, data folder & search terms
+▶
+Session identity and animal context
+READ-ONLY
+Copyright © 2026 Loren Frank Lab
+The University of California at San Francisco

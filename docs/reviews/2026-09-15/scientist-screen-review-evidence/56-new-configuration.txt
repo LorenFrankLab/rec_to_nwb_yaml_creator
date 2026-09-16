@@ -1,0 +1,236 @@
+Skip to main content
+Skip to navigation
+Navigated to Animal
+Workspace
+▸
+54
+54321
+▾
+Validation & Export
+⌨
+Keyboard shortcuts
+54321
+animal ID
+Rattus pyctoris · M
+✓
+Saved 11s ago
+⋮
+Obese Prone CD Rat
+M
+Rattus pyctoris
+b. 2000-01-01
+32 probes — corpus callosum and associated subcortical white matter (cc-ec-cing-dwm)
+Config v1
+Team: lastname, firstname, lastname2, firstname2
+Optogenetics
+DAY WORK
+Recording Days
+1
+›
+Validation & Export
+1 ready
+›
+ANIMAL SETUP
+Electrode Groups
+32
+›
+Recording System
+1
+›
+Cameras
+2
+›
+Task Types
+›
+Optogenetics
+used
+›
+
+Shared across all recording days — a hardware change starts a new version (with an audit trail).
+
+Configuration · v1 (current) · entered 2026-09-15 (effective date not recorded) · 1 day
+New configuration…
+When did this setup (v1) become effective? Recording days before the entry date otherwise need per-day confirmation.
+Set effective date
+Probe 0 · corpus callosum and associated subcortical white matter (cc-ec-cing-dwm)
+tetrode_12.5 · (1.1, 2.2, 3.3) mm
+Probe 1 · corpus callosum and associated subcortical white matter (cc-ec-cing-dwm)
+tetrode_12.5 · (1.1, 2.2, 3.3) mm
+Probe 2 · corpus callosum and associated subcortical white matter (cc-ec-cing-dwm)
+tetrode_12.5 · (1.1, 2.2, 3.3) mm
+Probe 3 · corpus callosum and associated subcortical white matter (cc-ec-cing-dwm)
+tetrode_12.5 · (1.1, 2.2, 3.3) mm
+Probe 4 · corpus callosum and associated subcortical white matter (cc-ec-cing-dwm)
+tetrode_12.5 · (1.1, 2.2, 3.3) mm
+Probe 5 · corpus callosum and associated subcortical white matter (cc-ec-cing-dwm)
+tetrode_12.5 · (1.1, 2.2, 3.3) mm
+Probe 6 · corpus callosum and associated subcortical white matter (cc-ec-cing-dwm)
+tetrode_12.5 · (1.1, 2.2, 3.3) mm
+Probe 7 · corpus callosum and associated subcortical white matter (cc-ec-cing-dwm)
+tetrode_12.5 · (1.1, 2.2, 3.3) mm
+Probe 8 · corpus callosum and associated subcortical white matter (cc-ec-cing-dwm)
+tetrode_12.5 · (1.1, 2.2, 3.3) mm
+Probe 9 · corpus callosum and associated subcortical white matter (cc-ec-cing-dwm)
+tetrode_12.5 · (1.1, 2.2, 3.3) mm
+Probe 10 · corpus callosum and associated subcortical white matter (cc-ec-cing-dwm)
+tetrode_12.5 · (1.1, 2.2, 3.3) mm
+Probe 11 · corpus callosum and associated subcortical white matter (cc-ec-cing-dwm)
+tetrode_12.5 · (1.1, 2.2, 3.3) mm
+Probe 12 · corpus callosum and associated subcortical white matter (cc-ec-cing-dwm)
+tetrode_12.5 · (1.1, 2.2, 3.3) mm
+Probe 13 · corpus callosum and associated subcortical white matter (cc-ec-cing-dwm)
+tetrode_12.5 · (1.1, 2.2, 3.3) mm
+Probe 14 · corpus callosum and associated subcortical white matter (cc-ec-cing-dwm)
+tetrode_12.5 · (1.1, 2.2, 3.3) mm
+Probe 15 · corpus callosum and associated subcortical white matter (cc-ec-cing-dwm)
+tetrode_12.5 · (1.1, 2.2, 3.3) mm
+Probe 16 · corpus callosum and associated subcortical white matter (cc-ec-cing-dwm)
+tetrode_12.5 · (1.1, 2.2, 3.3) mm
+Probe 17 · corpus callosum and associated subcortical white matter (cc-ec-cing-dwm)
+tetrode_12.5 · (1.1, 2.2, 3.3) mm
+Probe 18 · corpus callosum and associated subcortical white matter (cc-ec-cing-dwm)
+tetrode_12.5 · (1.1, 2.2, 3.3) mm
+Probe 19 · corpus callosum and associated subcortical white matter (cc-ec-cing-dwm)
+tetrode_12.5 · (1.1, 2.2, 3.3) mm
+Probe 20 · corpus callosum and associated subcortical white matter (cc-ec-cing-dwm)
+tetrode_12.5 · (1.1, 2.2, 3.3) mm
+Probe 21 · corpus callosum and associated subcortical white matter (cc-ec-cing-dwm)
+tetrode_12.5 · (1.1, 2.2, 3.3) mm
+Probe 22 · corpus callosum and associated subcortical white matter (cc-ec-cing-dwm)
+tetrode_12.5 · (1.1, 2.2, 3.3) mm
+Probe 23 · corpus callosum and associated subcortical white matter (cc-ec-cing-dwm)
+tetrode_12.5 · (1.1, 2.2, 3.3) mm
+Probe 24 · corpus callosum and associated subcortical white matter (cc-ec-cing-dwm)
+tetrode_12.5 · (1.1, 2.2, 3.3) mm
+Probe 25 · corpus callosum and associated subcortical white matter (cc-ec-cing-dwm)
+tetrode_12.5 · (1.1, 2.2, 3.3) mm
+Probe 26 · corpus callosum and associated subcortical white matter (cc-ec-cing-dwm)
+tetrode_12.5 · (1.1, 2.2, 3.3) mm
+Probe 27 · corpus callosum and associated subcortical white matter (cc-ec-cing-dwm)
+tetrode_12.5 · (1.1, 2.2, 3.3) mm
+Probe 28 · corpus callosum and associated subcortical white matter (cc-ec-cing-dwm)
+tetrode_12.5 · (1.1, 2.2, 3.3) mm
+Probe 29 · corpus callosum and associated subcortical white matter (cc-ec-cing-dwm)
+tetrode_12.5 · (1.1, 2.2, 3.3) mm
+Probe 30 · corpus callosum and associated subcortical white matter (cc-ec-cing-dwm)
+tetrode_12.5 · (1.1, 2.2, 3.3) mm
+Probe 31 · corpus callosum and associated subcortical white matter (cc-ec-cing-dwm)
+tetrode_12.5 · (1.1, 2.2, 3.3) mm
+Electrode Groups
+
+Configure the electrode groups for this animal.
+
+Channel maps are generated automatically from each electrode group's device type.
+
++ Add Electrode Group
+Copy from Animal
+ID	DEVICE TYPE	LOCATION	CHANNELS	SHANKS	STATUS	ACTIONS
+0	Tetrode (12.5 µm)	corpus callosum and associated subcortical white matter (cc-ec-cing-dwm)	4	1
+✓
+	EditDelete
+1	Tetrode (12.5 µm)	corpus callosum and associated subcortical white matter (cc-ec-cing-dwm)	4	1
+✓
+	EditDelete
+2	Tetrode (12.5 µm)	corpus callosum and associated subcortical white matter (cc-ec-cing-dwm)	4	1
+✓
+	EditDelete
+3	Tetrode (12.5 µm)	corpus callosum and associated subcortical white matter (cc-ec-cing-dwm)	4	1
+✓
+	EditDelete
+4	Tetrode (12.5 µm)	corpus callosum and associated subcortical white matter (cc-ec-cing-dwm)	4	1
+✓
+	EditDelete
+5	Tetrode (12.5 µm)	corpus callosum and associated subcortical white matter (cc-ec-cing-dwm)	4	1
+✓
+	EditDelete
+6	Tetrode (12.5 µm)	corpus callosum and associated subcortical white matter (cc-ec-cing-dwm)	4	1
+✓
+	EditDelete
+7	Tetrode (12.5 µm)	corpus callosum and associated subcortical white matter (cc-ec-cing-dwm)	4	1
+✓
+	EditDelete
+8	Tetrode (12.5 µm)	corpus callosum and associated subcortical white matter (cc-ec-cing-dwm)	4	1
+✓
+	EditDelete
+9	Tetrode (12.5 µm)	corpus callosum and associated subcortical white matter (cc-ec-cing-dwm)	4	1
+✓
+	EditDelete
+10	Tetrode (12.5 µm)	corpus callosum and associated subcortical white matter (cc-ec-cing-dwm)	4	1
+✓
+	EditDelete
+11	Tetrode (12.5 µm)	corpus callosum and associated subcortical white matter (cc-ec-cing-dwm)	4	1
+✓
+	EditDelete
+12	Tetrode (12.5 µm)	corpus callosum and associated subcortical white matter (cc-ec-cing-dwm)	4	1
+✓
+	EditDelete
+13	Tetrode (12.5 µm)	corpus callosum and associated subcortical white matter (cc-ec-cing-dwm)	4	1
+✓
+	EditDelete
+14	Tetrode (12.5 µm)	corpus callosum and associated subcortical white matter (cc-ec-cing-dwm)	4	1
+✓
+	EditDelete
+15	Tetrode (12.5 µm)	corpus callosum and associated subcortical white matter (cc-ec-cing-dwm)	4	1
+✓
+	EditDelete
+16	Tetrode (12.5 µm)	corpus callosum and associated subcortical white matter (cc-ec-cing-dwm)	4	1
+✓
+	EditDelete
+17	Tetrode (12.5 µm)	corpus callosum and associated subcortical white matter (cc-ec-cing-dwm)	4	1
+✓
+	EditDelete
+18	Tetrode (12.5 µm)	corpus callosum and associated subcortical white matter (cc-ec-cing-dwm)	4	1
+✓
+	EditDelete
+19	Tetrode (12.5 µm)	corpus callosum and associated subcortical white matter (cc-ec-cing-dwm)	4	1
+✓
+	EditDelete
+20	Tetrode (12.5 µm)	corpus callosum and associated subcortical white matter (cc-ec-cing-dwm)	4	1
+✓
+	EditDelete
+21	Tetrode (12.5 µm)	corpus callosum and associated subcortical white matter (cc-ec-cing-dwm)	4	1
+✓
+	EditDelete
+22	Tetrode (12.5 µm)	corpus callosum and associated subcortical white matter (cc-ec-cing-dwm)	4	1
+✓
+	EditDelete
+23	Tetrode (12.5 µm)	corpus callosum and associated subcortical white matter (cc-ec-cing-dwm)	4	1
+✓
+	EditDelete
+24	Tetrode (12.5 µm)	corpus callosum and associated subcortical white matter (cc-ec-cing-dwm)	4	1
+✓
+	EditDelete
+25	Tetrode (12.5 µm)	corpus callosum and associated subcortical white matter (cc-ec-cing-dwm)	4	1
+✓
+	EditDelete
+26	Tetrode (12.5 µm)	corpus callosum and associated subcortical white matter (cc-ec-cing-dwm)	4	1
+✓
+	EditDelete
+27	Tetrode (12.5 µm)	corpus callosum and associated subcortical white matter (cc-ec-cing-dwm)	4	1
+✓
+	EditDelete
+28	Tetrode (12.5 µm)	corpus callosum and associated subcortical white matter (cc-ec-cing-dwm)	4	1
+✓
+	EditDelete
+29	Tetrode (12.5 µm)	corpus callosum and associated subcortical white matter (cc-ec-cing-dwm)	4	1
+✓
+	EditDelete
+30	Tetrode (12.5 µm)	corpus callosum and associated subcortical white matter (cc-ec-cing-dwm)	4	1
+✓
+	EditDelete
+31	Tetrode (12.5 µm)	corpus callosum and associated subcortical white matter (cc-ec-cing-dwm)	4	1
+✓
+	EditDelete
+New configuration (re-implant)?
+
+Use this when the implant physically changes — new probes, repositioning, or a re-surgery. It creates configuration v2; existing days keep the version they were recorded under.
+
+Effective start date
+Copy current probes into the new configuration (then adjust geometry)
+Change description
+Recording days from the effective date forward use v2.
+Bad-channel marks reset for v2 — v1 failures don't carry across configurations.
+Cancel
+Start configuration v2
+Copyright © 2026 Loren Frank Lab
+The University of California at San Francisco

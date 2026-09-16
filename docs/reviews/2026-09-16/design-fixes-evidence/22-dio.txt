@@ -1,0 +1,53 @@
+Skip to main content
+Skip to navigation
+Workspace
+Validation & Export
+⌨
+Keyboard shortcuts
+Workspace
+›
+Animal: FixRat2
+FixRat2 · 2023-06-24
+Ready to export
+Review & export
+DAY
+Daily log
+✓
+Complete
+RECORDING
+Recording Setup
+✓
+Complete
+Failed Channels
+✓
+Complete
+DIO Wiring
+✓
+Complete
+FINISH
+Review & export
+✓
+Complete
+Digital I/O & behavioral events
+Behavioral events — how your hardware maps to the SpikeGadgets ECU
+
+Name only the DIO lines this rig uses on this day. Unnamed ECU channels aren't written to the file. A new day carries the previous day's names forward, so edit if the wiring changed or a previous entry needs correction.
+
+Din = inputs (sensors the animal triggers). Dout = outputs (things you drive). Names must be unique.
+
+Named DIO lines
+
+Edit the lines this rig actually uses. Leave every other ECU channel unnamed.
+
+No named DIO lines yet.
+
+Type
+Din
+Dout
+Index
+Event name
+▾
+Add line
+Advanced: show all ECU lines
+Copyright © 2026 Loren Frank Lab
+The University of California at San Francisco

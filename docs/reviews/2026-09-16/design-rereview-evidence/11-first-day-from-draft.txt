@@ -1,0 +1,60 @@
+Skip to main content
+Skip to navigation
+Navigated to Day Editor: ReviewRat-2026-09-16
+Workspace
+Validation & Export
+⌨
+Keyboard shortcuts
+Workspace
+›
+Animal: ReviewRat
+ReviewRat · 2026-09-16
+⟳
+Saving…
+2 issues to correct
+Review & export
+Show required corrections
+DAY
+Daily log
+✗
+RECORDING
+Recording Setup
+○
+Failed Channels
+✓
+DIO Wiring
+✓
+FINISH
+Review & export
+4 remaining
+✗
+Daily log
+
+Enter this recording’s measurement, then review its epochs and files. Changes save automatically.
+
+Weight measured on 2026-09-16 (grams)
+No weight entered for this day — required for export. Enter the measurement for this recording date.
+Team: Enter experimenters · Change
+Experimenters present (one per line, "Last, First")
+This day’s actual team. Changing it here affects this day only.
+Recording source & setup
+Epochs
+
+List epochs in recording order. Add the files recorded for each epoch.
+
+Add epoch
+Templates ▾
+▦
+No epochs yet
+
+Each epoch is a numbered recording block belonging to a task. Use Templates for a full day, or add a single epoch and fill in its task and files. Need a new task? Add one on the animal's Task Types tab.
+
+＋ Add an epoch
+Supplemental files (optional) · 0 files
+▶
+Descriptions, data folder & search terms
+▶
+Session identity and animal context
+READ-ONLY
+Copyright © 2026 Loren Frank Lab
+The University of California at San Francisco

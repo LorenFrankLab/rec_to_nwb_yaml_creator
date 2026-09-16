@@ -1,0 +1,51 @@
+Skip to main content
+Skip to navigation
+Navigated to Animal
+Workspace
+▸
+Fi
+FixRat2
+▾
+Review all animals
+⌨
+Keyboard shortcuts
+FixRat2
+Rattus norvegicus · M
+Edit profile
+⋮
+Animal facts & setup summary
+DAY WORK
+Recording Days
+4
+›
+Review & export
+1 to download
+›
+ANIMAL SETUP
+Electrode Groups
+1
+›
+Recording System
+1
+›
+Cameras
+1
+›
+Task Types
+›
+Optogenetics
+not used
+›
+Task Types
+
+Define task defaults here; record their occurrences in each day’s Daily log.
+
++ Add Task Type
+NAME	DESCRIPTION	ENVIRONMENT	CAMERAS	STATUS	ACTIONS
+Sleep	Rest in home cage	Room A	0 · overhead	✓	Edit
+⋮
+
+w_alternation	Continuous alternation for reward	Room A	0 · overhead	✓	Edit
+⋮
+Copyright © 2026 Loren Frank Lab
+The University of California at San Francisco

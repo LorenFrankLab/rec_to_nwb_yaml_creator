@@ -1,0 +1,69 @@
+Skip to main content
+Skip to navigation
+Navigated to Day Editor: FixRat2-2023-06-25
+Workspace
+Review & export
+⌨
+Keyboard shortcuts
+Workspace
+›
+Animal: FixRat2
+FixRat2 · 2023-06-25
+Downloaded
+Ready to export
+Review & export
+DAY
+Daily log
+✓
+RECORDING
+Recording Setup
+✓
+Failed Channels
+✓
+DIO Wiring
+✓
+FINISH
+Review & export
+✓
+Recording Setup
+Recording system
+
+This session was recorded on SpikeGadgets. Add more systems in the animal's Recording System tab to choose a different one per day.
+
+Cameras used this day
+
+Select any additional cameras used. Checked, locked cameras come from this day’s epochs, videos or stimulation protocols.
+
+overhead (id 0)
+— linked to this day
+
+To remove a locked camera, update its task, video or protocol in Daily entry.
+
+Day-only technical overrides
+OPTIONAL
+Technical parameters
+Raw data to volts
+1.95e-7
+Using recording-system default
+Times period multiplier
+1.5
+Using recording-system default
+
+These are recording-system constants — Edit in Recording System.
+
+Correct conversion values for this recording
+Default header file path This day only
+Optional. Path to the .trodesconf configuration file for this day. If blank, the default header from the .rec file is used.
+Analog units
+Behavioral-event units
+Analog and behavioral-event units are required together when either is set.
+Hardware configuration
+V1
+This day uses animal electrode configuration v1.
+Edit shared animal electrode setup
+Configuration version 1: Initial configuration (2023-06-01)LATEST
+Mark failed channels for this recording day. Probe geometry is shared animal setup — edit it in Animal Setup.
+Applied to 4 days
+Hardware changed starting this day…
+Copyright © 2026 Loren Frank Lab
+The University of California at San Francisco

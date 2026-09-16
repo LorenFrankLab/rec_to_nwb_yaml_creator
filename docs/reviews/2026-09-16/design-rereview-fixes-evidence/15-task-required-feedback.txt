@@ -1,0 +1,73 @@
+Skip to main content
+Skip to navigation
+Workspace
+▸
+Fi
+FixRat2
+▾
+Review & export
+⌨
+Keyboard shortcuts
+FixRat2
+animal ID
+Rattus norvegicus · M
+Editing — Save or Cancel
+⋮
+Wild-type
+M
+Rattus norvegicus
+b. 2023-01-01
+1 probe — CA1
+Config v1
+Team: Scientist, Alex
+DAY WORK
+Recording Days
+4
+›
+Review & export
+4 ready
+›
+ANIMAL SETUP
+Electrode Groups
+1
+›
+Recording System
+1
+›
+Cameras
+1
+›
+Task Types
+›
+Optogenetics
+○
+›
+
+Define once — each recording day picks and orders its epochs.
+
+Task Types
+
+Define each task once; recording days select and order them. Defined on the animal — the epochs that ran each day are set per day in the Day Editor.
+
++ Add Task Type
+NAME	DESCRIPTION	ENVIRONMENT	CAMERAS	STATUS	ACTIONS
+Sleep	Rest in home cage	Room A	0 · overhead	✓	EditDelete
+w_alternation	Continuous alternation for reward	Room A	0 · overhead	✓	EditDelete
+Add Task Type
+
+* Required to save.
+
+Task name *
+The task's identity in Spyglass — same name means the same task. Two task types can't share a name with different details.
+Description *
+Environment *
+Cameras used (optional)
+0 · overhead
+Which cameras recorded this task. Each day still confirms the cameras it actually used.
+
+To save: complete description, environment.
+
+Cancel
+Save
+Copyright © 2026 Loren Frank Lab
+The University of California at San Francisco

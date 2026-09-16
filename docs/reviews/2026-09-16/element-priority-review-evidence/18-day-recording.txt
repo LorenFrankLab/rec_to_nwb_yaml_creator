@@ -1,0 +1,47 @@
+Skip to main content
+Skip to navigation
+Navigated to Day Editor: FixRat2-2023-06-25
+Workspace
+Review & export
+⌨
+Keyboard shortcuts
+Workspace
+›
+Animal: FixRat2
+FixRat2 · 2023-06-25
+Downloaded
+Ready to export
+Review & export
+DAY
+Daily log
+✓
+RECORDING
+Recording Setup
+✓
+Failed Channels
+✓
+DIO Wiring
+✓
+FINISH
+Review & export
+✓
+Recording Setup
+Recording system
+
+This session was recorded on SpikeGadgets. Add more systems in the animal's Recording System tab to choose a different one per day.
+
+Cameras used this day
+
+Select any additional cameras used. Checked, locked cameras come from this day’s epochs, videos or stimulation protocols.
+
+overhead (id 0)
+— linked to this day
+
+To remove a locked camera, update its task, video or protocol in Daily entry.
+
+Day-only technical overrides
+OPTIONAL
+Hardware configuration
+V1
+Copyright © 2026 Loren Frank Lab
+The University of California at San Francisco

@@ -1,0 +1,106 @@
+Skip to main content
+Skip to navigation
+Navigated to Animal
+Workspace
+▸
+54
+54321
+▾
+Validation & Export
+⌨
+Keyboard shortcuts
+54321
+animal ID
+Rattus pyctoris · M
+✓
+Saved 38s ago
+⋮
+Obese Prone CD Rat
+M
+Rattus pyctoris
+b. 2000-01-01
+32 probes — corpus callosum and associated subcortical white matter (cc-ec-cing-dwm)
+Config v1
+Team: lastname, firstname, lastname2, firstname2
+Optogenetics
+DAY WORK
+Recording Days
+1
+›
+Validation & Export
+1 ready
+›
+ANIMAL SETUP
+Electrode Groups
+32
+›
+Recording System
+1
+›
+Cameras
+2
+›
+Task Types
+›
+Optogenetics
+used
+›
+⚠
+Affects all 1 day
+
+Opto configured · 4 of 4
+
+Optogenetics Setup
+
+This is the animal's implanted opto setup (excitation source, optical fiber, virus injection, stimulation software) — set it once here. What was actually stimulated is recorded per recording day in that day's Epochs step, scoped to the epochs it ran; a day or epoch with no stimulation needs nothing here.
+
+This animal has optogenetics
+Excitation source
+Setup name
+Hardware model name
+Description
+Wavelength (nm)
+Source power (W)
+Intensity (W/m²)
+Optical fibers
+Fiber implant name
+Fiber hardware model
+Implant description
+Hemisphere
+— select —
+left
+right
+Location
+AP (mm)
+ML (mm)
+DV (mm)
+Roll (deg)
+Pitch (deg)
+Yaw (deg)
+Coordinate referenceStereotaxic reference for the AP/ML/DV coordinates.
+Remove fiber
+Add optical fiber
+Virus injections
+Injection name
+Description
+Virus name
+Volume (µL)
+Titer (vg/mL)
+Hemisphere
+— select —
+left
+right
+Location
+AP (mm)
+ML (mm)
+DV (mm)
+Roll (deg)
+Pitch (deg)
+Yaw (deg)
+Coordinate referenceStereotaxic reference for the AP/ML/DV coordinates.
+Remove injection
+Add virus injection
+Stimulation software
+Optogenetic stimulation software
+Copyright © 2026 Loren Frank Lab
+The University of California at San Francisco

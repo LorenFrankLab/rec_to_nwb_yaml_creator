@@ -1,0 +1,363 @@
+{
+  "version": "1.0.0",
+  "lastModified": "2026-09-16T05:41:50.242Z",
+  "animals": {
+    "UxRat01": {
+      "id": "UxRat01",
+      "subject": {
+        "subject_id": "UxRat01",
+        "description": "Long Evans rat; spatial navigation study",
+        "species": "Rattus norvegicus",
+        "sex": "M",
+        "genotype": "Wild-type",
+        "date_of_birth": "2023-01-10T00:00:00.000Z"
+      },
+      "devices": {
+        "data_acq_device": [
+          {
+            "name": "SpikeGadgets",
+            "system": "SpikeGadgets",
+            "amplifier": "Intan",
+            "adc_circuit": "Intan"
+          }
+        ],
+        "device": {
+          "name": [
+            "Trodes"
+          ]
+        },
+        "electrode_groups": [
+          {
+            "id": 0,
+            "location": "CA1",
+            "device_type": "tetrode_12.5",
+            "description": "tetrode_12.5 targeting CA1",
+            "targeted_location": "CA1",
+            "targeted_x": -3,
+            "targeted_y": -3.6,
+            "targeted_z": 2,
+            "units": "mm"
+          }
+        ],
+        "ntrode_electrode_group_channel_map": [
+          {
+            "ntrode_id": 0,
+            "electrode_group_id": 0,
+            "bad_channels": [],
+            "map": {
+              "0": 0,
+              "1": 1,
+              "2": 2,
+              "3": 3
+            }
+          }
+        ]
+      },
+      "cameras": [
+        {
+          "id": 0,
+          "camera_name": "overhead_camera",
+          "manufacturer": "Allied Vision",
+          "model": "Manta G-158C",
+          "lens": "Theia SL183M",
+          "meters_per_pixel": 0.00085
+        }
+      ],
+      "experimenters": {
+        "experimenter_name": [
+          "Scientist, Sam"
+        ],
+        "lab": "Frank",
+        "institution": "UCSF"
+      },
+      "experiment_description": "Chronic recording during W-track alternation",
+      "technicalDefaults": {
+        "raw_data_to_volts": 0.195,
+        "times_period_multiplier": 1.5
+      },
+      "optogenetics": null,
+      "days": [
+        "UxRat01-2023-06-22",
+        "UxRat01-2023-06-23"
+      ],
+      "created": "2026-09-16T05:27:41.422Z",
+      "lastModified": "2026-09-16T05:32:07.897Z",
+      "configurationHistory": [
+        {
+          "version": 1,
+          "date": "2026-09-15",
+          "effectiveDateKnown": false,
+          "description": "Initial configuration",
+          "devices": {
+            "electrode_groups": [
+              {
+                "id": 0,
+                "location": "CA1",
+                "device_type": "tetrode_12.5",
+                "description": "tetrode_12.5 targeting CA1",
+                "targeted_location": "CA1",
+                "targeted_x": -3,
+                "targeted_y": -3.6,
+                "targeted_z": 2,
+                "units": "mm"
+              }
+            ],
+            "ntrode_electrode_group_channel_map": [
+              {
+                "ntrode_id": 0,
+                "electrode_group_id": 0,
+                "bad_channels": [],
+                "map": {
+                  "0": 0,
+                  "1": 1,
+                  "2": 2,
+                  "3": 3
+                }
+              }
+            ]
+          },
+          "appliedToDays": []
+        }
+      ],
+      "taskTypes": [
+        {
+          "id": "tasktype-0",
+          "task_name": "sleep",
+          "task_description": "Rest in home cage",
+          "task_environment": "Home cage",
+          "camera_id": [
+            0
+          ]
+        },
+        {
+          "id": "tasktype-1",
+          "task_name": "w_alternation",
+          "task_description": "W-track continuous alternation for reward",
+          "task_environment": "Room A",
+          "camera_id": [
+            0
+          ]
+        },
+        {
+          "id": "tasktype-2",
+          "task_name": "W-track",
+          "task_description": "W-track"
+        }
+      ]
+    }
+  },
+  "days": {
+    "UxRat01-2023-06-22": {
+      "id": "UxRat01-2023-06-22",
+      "animalId": "UxRat01",
+      "date": "2023-06-22",
+      "experimentDate": "06222023",
+      "session": {
+        "session_id": "UxRat01_20230622",
+        "session_description": "Recording session for UxRat01 on 2023-06-22",
+        "experiment_description": "Chronic recording during W-track alternation",
+        "weight": 485
+      },
+      "experimenters": {
+        "experimenter_name": [
+          "Scientist, Sam"
+        ],
+        "lab": "Frank",
+        "institution": "UCSF"
+      },
+      "optogenetics": null,
+      "keywords": [],
+      "tasks": [],
+      "behavioral_events": [],
+      "associated_files": [
+        {
+          "name": "20230622_UxRat01_02_r1.stateScriptLog",
+          "description": "",
+          "path": "/data/UxRat01/20230622/20230622_UxRat01_02_r1.stateScriptLog",
+          "task_epochs": 2
+        },
+        {
+          "name": "20230622_UxRat01_04_r2.stateScriptLog",
+          "description": "",
+          "path": "/data/UxRat01/20230622/20230622_UxRat01_04_r2.stateScriptLog",
+          "task_epochs": 4
+        }
+      ],
+      "associated_video_files": [
+        {
+          "name": "20230622_UxRat01_01_s1.1.h264",
+          "camera_id": 0,
+          "task_epochs": 1
+        },
+        {
+          "name": "20230622_UxRat01_02_r1.1.h264",
+          "camera_id": 0,
+          "task_epochs": 2
+        },
+        {
+          "name": "20230622_UxRat01_03_s2.1.h264",
+          "camera_id": 0,
+          "task_epochs": 3
+        },
+        {
+          "name": "20230622_UxRat01_04_r2.1.h264",
+          "camera_id": 0,
+          "task_epochs": 4
+        }
+      ],
+      "technical": {
+        "times_period_multiplier": 1.5,
+        "raw_data_to_volts": 0.195,
+        "default_header_file_path": ""
+      },
+      "state": {
+        "draft": true,
+        "validated": false,
+        "exported": false,
+        "validationDeferred": false,
+        "deferredEpochs": [
+          1,
+          3
+        ]
+      },
+      "provenance": {
+        "enteredAt": "2026-09-16T05:30:34.867Z",
+        "copiedFromDayId": null,
+        "copiedFromDate": null,
+        "configuration": {
+          "source": "explicit",
+          "confirmed": true
+        },
+        "fields": {
+          "experimenters": "animal-default",
+          "optogenetics": "animal-default",
+          "session.experiment_description": "animal-default"
+        }
+      },
+      "created": "2026-09-16T05:30:34.867Z",
+      "lastModified": "2026-09-16T05:35:14.207Z",
+      "configurationVersion": 1,
+      "taskInstances": [
+        {
+          "taskTypeId": "tasktype-0",
+          "task_epochs": [
+            1,
+            3
+          ]
+        },
+        {
+          "taskTypeId": "tasktype-1",
+          "task_epochs": [
+            2,
+            4
+          ],
+          "task_environment": "Room B"
+        }
+      ],
+      "dataFolder": "/data/UxRat01/20230622",
+      "deviceOverrides": {
+        "bad_channels": {
+          "0": [
+            2
+          ]
+        }
+      }
+    },
+    "UxRat01-2023-06-23": {
+      "id": "UxRat01-2023-06-23",
+      "animalId": "UxRat01",
+      "date": "2023-06-23",
+      "experimentDate": "06232023",
+      "session": {
+        "session_id": "UxRat01_20230623",
+        "session_description": "Recording session for UxRat01 on 2023-06-23",
+        "experiment_description": "Chronic recording during W-track alternation"
+      },
+      "experimenters": {
+        "experimenter_name": [
+          "Scientist, Sam"
+        ],
+        "lab": "Frank",
+        "institution": "UCSF"
+      },
+      "optogenetics": null,
+      "keywords": [],
+      "tasks": [],
+      "taskInstances": [
+        {
+          "taskTypeId": "tasktype-0",
+          "task_epochs": [
+            1,
+            3
+          ]
+        },
+        {
+          "taskTypeId": "tasktype-1",
+          "task_epochs": [
+            2,
+            4
+          ]
+        }
+      ],
+      "behavioral_events": [
+        {
+          "description": "Din1",
+          "name": "left_poke"
+        }
+      ],
+      "associated_files": [],
+      "associated_video_files": [],
+      "technical": {
+        "times_period_multiplier": 1.5,
+        "raw_data_to_volts": 0.195,
+        "default_header_file_path": ""
+      },
+      "deviceOverrides": {
+        "bad_channels": {
+          "0": []
+        }
+      },
+      "dataFolder": "/data/UxRat01/20230623",
+      "state": {
+        "draft": true,
+        "validated": false,
+        "exported": false,
+        "validationDeferred": false,
+        "badChannelRemovalAcks": {
+          "0": [
+            2
+          ]
+        }
+      },
+      "provenance": {
+        "enteredAt": "2026-09-16T05:35:14.573Z",
+        "copiedFromDayId": "UxRat01-2023-06-22",
+        "copiedFromDate": "2023-06-22",
+        "configuration": {
+          "source": "explicit",
+          "confirmed": true
+        },
+        "fields": {
+          "deviceOverrides.bad_channels": "copied",
+          "tasks": "copied",
+          "experimenters": "copied",
+          "optogenetics": "copied",
+          "session.experiment_description": "copied",
+          "dataFolder": "derived"
+        }
+      },
+      "created": "2026-09-16T05:35:14.573Z",
+      "lastModified": "2026-09-16T05:41:50.242Z",
+      "configurationVersion": 1
+    }
+  },
+  "settings": {
+    "defaultLab": "Frank",
+    "defaultInstitution": "UCSF",
+    "defaultExperimenters": [
+      "Scientist, Sam"
+    ],
+    "autoSaveInterval": 30000,
+    "shadowExportEnabled": true
+  }
+}

@@ -1,0 +1,96 @@
+Skip to main content
+Skip to navigation
+Workspace
+▸
+Fi
+FixRat2
+▾
+Review all animals
+⌨
+Keyboard shortcuts
+FixRat2
+Rattus norvegicus · M
+Edit profile
+⋮
+Animal facts & setup summary
+DAY WORK
+Recording Days
+4
+›
+Review & export
+1 to download
+›
+ANIMAL SETUP
+Electrode Groups
+1
+›
+Recording System
+1
+›
+Cameras
+1
+›
+Task Types
+›
+Optogenetics
+not used
+›
+Recording Days
+Log a recording day
+Log today (Sep 16, 2026)
+Choose recording date
+Create & open
+
+Jun 26, 2023 will start from Jun 25, 2023 (the nearest earlier day) · probe setup v1 (effective Jun 1, 2023).
+
+Add multiple dates…
+Copy prior epochs · Change
+Setup to finish: Recording System
+	DATE	STATUS	
+ACTIONS
+
+	2023-06-25	
+Downloaded	
+⋮
+›
+	2023-06-24	
+Downloaded	
+⋮
+›
+	2023-06-23	
+Downloaded	
+⋮
+›
+	2023-06-22	
+Changed since download	
+⋮
+›
+What do these statuses mean?
+Edit animal profile
+
+⚠
+Affects all 4 daysShared subject facts. Editing them updates this animal and all 4 recording days, including any already exported. Nothing here belongs to a single recording day.
+
+* Required before export. You can save an unfinished draft.
+
+Subject ID *
+Match the exact animal spelling and capitalization in your recording filenames. Letters, digits and hyphens only.
+Species *
+Rat (Rattus norvegicus)
+Mouse (Mus musculus)
+Marmoset (Callithrix jacchus)
+Rhesus macaque (Macaca mulatta)
+Other (specify)…
+Sex *
+Unspecified
+Male (M)
+Female (F)
+Unknown (U)
+Date of Birth *
+Required before export. You can leave it blank while completing a draft.
+Genotype *
+Description (optional)
+Cancel
+Save profile changes
+Copyright © 2026 Loren Frank Lab
+The University of California at San Francisco

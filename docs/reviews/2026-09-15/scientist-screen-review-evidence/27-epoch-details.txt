@@ -1,0 +1,194 @@
+Skip to main content
+Skip to navigation
+Navigated to Day Editor: UxRat01-2023-06-22
+Workspace
+Validation & Export
+⌨
+Keyboard shortcuts
+Workspace
+›
+Animal: UxRat01
+›
+Day: 2023-06-22
+⟳
+Saving…
+Export
+Day Editor: UxRat01 - 2023-06-22
+Configuration v1
+Needs attention
+Animal context
+Wild-type · M · Rattus norvegicus
+Config v1
+
+⚠
+3 issues block export
+
+1 in Animal setup · 2 in Tasks & Files
+
+Animal setup
+1 thing to fix
+A camera selection is required
+Fix
+Tasks & Files
+2 things to fix
+Task environment (room/apparatus) is required
+Fix
+Epoch 2 has a task but no video file linked, and it isn't marked "no video". Add the video for this epoch, or mark it as having no video.
+Fix in Epoch 2
+DAY
+Daily log
+✗
+Has errors
+RECORDING
+Recording Setup
+✓
+Complete
+Failed Channels
+✓
+Complete
+DIO Wiring
+✓
+Complete
+FINISH
+Fix & Export
+6 to fix
+✗
+Has errors
+Daily log
+
+Started blank
+·
+Probe setup v1 (effective Sep 15, 2026)
+·
+Rig SpikeGadgets
+·
+entered Sep 16, 2026
+Change setup
+
+Weight
+Weight measured today (grams)
+Weight measured on this day — the value exported for this day.
+Team
+Experimenters present (one per line, "Last, First")
+This day’s actual team. Changing it here affects this day only.
+Epochs
+Supplemental files
+0
+Epochs
+
+Confirm what happened, then resolve expected statescript and video files.
+
+Show
+4 epochs
+1 video needed
+2 statescripts expected
+0 custom filenames
+Data folder
+Set the data folder to generate statescript and video file names.
+Generate missing
+Statescripts (2)
+Videos (4)
+Templates ▾
+#	Task	Files	Camera(s)
+Actions
+
+1
+sleep
+tag s1
+Details
+▾
+
+Statescript: Not expected
+Video: Missing
+	overhead_camera
+⋮
+
+2
+W-track
+tag r1
+Hide
+▴
+
+Statescript: Expected
+Video: Missing
+	—
+⋮
+
+3
+sleep
+tag s2
+Details
+▾
+
+Statescript: Not expected
+Video: Missing
+	overhead_camera
+⋮
+
+4
+W-track
+tag r2
+Details
+▾
+
+Statescript: Expected
+Video: Missing
+	—
+⋮
+Epoch 2: W-track
+tag r1
+Needs video
+Close
+Files for this epoch
+needs review
+Statescript
+Expected
+Expected: 20230622_UxRat01_02_r1.stateScriptLog
+Add expected statescript
+Enter manually
+Video
+Missing
+Expected: 20230622_UxRat01_02_r1.1.h264
+Add expected video
+Enter manually
+Mark no video
+Task
+Change only if this epoch was assigned wrong.
+Task type
+sleep
+w_alternation
+W-track
++ new task type
+Derived tag
+r1
+Task source
+animal catalog
+Environment
+—
+Cameras
+none
+Edit for this day
+Where this task ran and which cameras recorded it, for this recording day only.
+Supplemental files
+
+Rare day-specific extras outside generated statescripts and videos, such as realtime output or stimulus scripts.
+
+0 files
+Supplemental file rows
+
+Optional files outside generated statescripts and videos.
+
+No supplemental files yet.
+
+Psychopy stim script
+Realtime output
+Behavior timeline
+FSGUI log
+Custom file
+▶
+Descriptions, data folder & search terms
+▶
+Session identity and animal context
+READ-ONLY
+Copyright © 2026 Loren Frank Lab
+The University of California at San Francisco

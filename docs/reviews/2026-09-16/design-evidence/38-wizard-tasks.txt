@@ -1,0 +1,47 @@
+Skip to main content
+Skip to navigation
+Navigated to Home - Animal Selection
+Workspace
+Validation & Export
+⌨
+Keyboard shortcuts
+Animals › New animal
+New animal — guided setup
+
+Set animal facts and reusable recording defaults. Each recording day records its own measurements, tasks and files. You can correct setup or record dated changes later.
+
+Starting fresh below, or Import a YAML… · Copy from another animal…
+
+1
+Identity
+2
+Electrodes
+3
+Cameras
+4
+Optogenetics
+optional
+5
+Tasks
+6
+Recording system
+Pre-filled — review
+7
+Team
+Tasks
+
+Define task types once. Each recording day's epochs pick from these.
+
+Task Types
+
+Define each task once; recording days select and order them. Defined on the animal — the epochs that ran each day are set per day in the Day Editor.
+
++ Add Task Type
+NAME	DESCRIPTION	ENVIRONMENT	CAMERAS	STATUS	ACTIONS
+Sleep	Rest in home cage	Room A	0 · overhead	✓	EditDelete
+w_alternation	Continuous alternation for reward	Room A	0 · overhead	✓	EditDelete
+← Back
+Save draft
+Next →
+Copyright © 2026 Loren Frank Lab
+The University of California at San Francisco

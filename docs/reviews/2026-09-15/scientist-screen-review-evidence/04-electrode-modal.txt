@@ -1,0 +1,92 @@
+Skip to main content
+Skip to navigation
+Navigated to Home - Animal Selection
+Workspace
+Validation & Export
+⌨
+Keyboard shortcuts
+Animals › New animal
+New animal — guided setup
+
+Enter once what stays the same for this animal across every recording day. Recording days reuse all of this; you'll only revisit it on a re-implant.
+
+Starting fresh below, or Import a YAML… · Copy from another animal…
+
+1
+Identity
+2
+Electrodes
+3
+Cameras
+4
+Optogenetics
+optional
+5
+Tasks
+6
+Recording system
+Pre-filled — review
+7
+Team
+Electrodes / probes
+
+One group per probe (or tetrode). Channel maps and geometry come from the device type automatically.
+
+🔌
+No Electrode Groups Configured
+
+Electrode groups define your recording hardware: brain regions, device types, and stereotaxic coordinates.
+
+After adding electrode groups, you'll configure channel maps to match your Trodes hardware setup.
+
+Add First Electrode Group
+Copy from Existing Animal
+Add Electrode Group
+Device Type *
+Select device type...
+Tetrode (12.5 µm)
+32-ch, 1-shank, 6 mm (A1x32 H32)
+128-ch, 4-shank, 8 mm (20/40 µm)
+128-ch, 4-shank, 8 mm (15/26 µm)
+128-ch, 4-shank, 6 mm (20/40 µm)
+128-ch, 4-shank, 6 mm (15/26 µm)
+128-ch, 4-shank, 4 mm (20/40 µm)
+128-ch, 4-shank, 4 mm (15/26 µm)
+32-ch, 2-shank, 8 mm (20/40 µm)
+64-ch, 4-shank, 6 mm (20/40 µm)
+64-ch, 3-shank, 6 mm (20/40 µm)
+128-ch, 1-shank (NET-EBL)
+Number of Electrode Groups
+Create multiple identical electrode groups at once (e.g., 4 tetrodes in CA1)
+Targeted Location
+▾
+* Required. Planned implant target region (e.g., CA1) — the region you know at recording time.
+Location (optional)
+▾
+Actual recorded region, confirmed by histology. Leave blank to use the targeted location for now; update it once histology is done.
+Description (optional)
+Free-text label for this group in the NWB file. Leave blank to auto-generate one from the device type and target.
+ML (Medial-Lateral) (mm) *
+AP (Anterior-Posterior) (mm) *
+DV (Dorsal-Ventral) (mm) *
+
+Stereotaxic coordinates in the unit selected below (millimeters by default).
+
+Units
+mm
+μm
+
+Failed channels are marked per recording day in the Day Editor (Devices step), not here, since channels fail over time.
+
+Fill in all required fields (device type, targeted location, and the ML/AP/DV coordinates) to save.
+
+Cancel
+Save
+
+No electrophysiology? This is a behavior-only animal — skip electrodes.
+
+← Back
+Save draft
+Next →
+Copyright © 2026 Loren Frank Lab
+The University of California at San Francisco

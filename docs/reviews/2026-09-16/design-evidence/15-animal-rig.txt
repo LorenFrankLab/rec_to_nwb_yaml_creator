@@ -1,0 +1,57 @@
+Skip to main content
+Skip to navigation
+Navigated to Animal
+Workspace
+▸
+Fi
+FixRat2
+▾
+Validation & Export
+⌨
+Keyboard shortcuts
+FixRat2
+animal ID
+Rattus norvegicus · M
+⋮
+Wild-type
+M
+Rattus norvegicus
+b. 2023-01-01
+1 probe — CA1
+Config v1
+Team: Scientist, Alex
+DAY WORK
+Recording Days
+2
+›
+Validation & Export
+2 ready
+›
+ANIMAL SETUP
+Electrode Groups
+1
+›
+Recording System
+1
+›
+Cameras
+1
+›
+Task Types
+›
+Optogenetics
+○
+›
+
+Animal-wide catalog — each recording day uses one.
+
+Recording System
+
+The recording systems this animal was recorded on. Each recording day uses one (chosen in the day's setup); the first here is the default a day inherits when it hasn't chosen its own. A single .rec session is recorded by one acquisition system — an animal recorded on different rigs over time is captured by different days, each using one of these.
+
++ Add Recording System
+NAME	SYSTEM	AMPLIFIER	ADC CIRCUIT	ROLE	ACTIONS
+SpikeGadgets	SpikeGadgets	Intan	Intan	DEFAULT	EditDelete
+Advanced Settings
+Copyright © 2026 Loren Frank Lab
+The University of California at San Francisco

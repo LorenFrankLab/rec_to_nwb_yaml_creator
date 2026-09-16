@@ -1,0 +1,53 @@
+Skip to main content
+Skip to navigation
+Navigated to Day Editor: FixRat2-2023-06-25
+Workspace
+Review & export
+⌨
+Keyboard shortcuts
+Workspace
+›
+Animal: FixRat2
+FixRat2 · 2023-06-25
+Downloaded
+Ready to export
+Review & export
+DAY
+Daily log
+✓
+RECORDING
+Recording Setup
+✓
+Failed Channels
+✓
+DIO Wiring
+✓
+FINISH
+Review & export
+✓
+Failed Channels
+
+Mark failed channels for this recording day. These marks apply to this day only, not to all recordings on this configuration.
+
+No failed channels marked
+Expand an electrode group to mark any failed channels.
+▶
+Electrode Group 0: CA1
+No failures recorded
+
+This tetrode_12.5 has 1 shank. Mark individual channels that have failed on each shank.
+
+Only mark channels with hardware failures. Analysis quality issues should be handled during spike sorting.
+
+Shank #1 (Ntrode ID: 7)
+Failed Channels
+Channel 0
+Channel 1
+Channel 2
+Channel 3
+▶
+View Channel Map
+▶
+View Device Configuration
+Copyright © 2026 Loren Frank Lab
+The University of California at San Francisco

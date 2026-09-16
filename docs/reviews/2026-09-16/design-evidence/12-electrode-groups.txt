@@ -1,0 +1,69 @@
+Skip to main content
+Skip to navigation
+Navigated to Animal
+Workspace
+▸
+Fi
+FixRat2
+▾
+Validation & Export
+⌨
+Keyboard shortcuts
+FixRat2
+animal ID
+Rattus norvegicus · M
+⋮
+Wild-type
+M
+Rattus norvegicus
+b. 2023-01-01
+1 probe — CA1
+Config v1
+Team: Scientist, Alex
+DAY WORK
+Recording Days
+2
+›
+Validation & Export
+2 ready
+›
+ANIMAL SETUP
+Electrode Groups
+1
+›
+Recording System
+1
+›
+Cameras
+1
+›
+Task Types
+›
+Optogenetics
+○
+›
+
+Shared across all recording days — a hardware change starts a new version (with an audit trail).
+
+Configuration · v1 (current) · effective 2023-06-01 · 2 days
+New configuration…
+Probe 0 · CA1
+tetrode_12.5 · (1, 1, 1) mm
+Electrode Groups
+
+Configure the electrode groups for this animal.
+
+Channel maps are generated automatically from each electrode group's device type.
+
++ Add Electrode Group
+Copy from Animal
+ID	DEVICE TYPE	LOCATION	CHANNELS	SHANKS	STATUS	ACTIONS
+0	Tetrode (12.5 µm)	CA1	4	1	
+✓
+	EditDelete
+
+Generated channel maps need verification against the recording’s Trodes IDs and your probe wiring records.
+
+Edit / verify Trodes channel mapping
+Copyright © 2026 Loren Frank Lab
+The University of California at San Francisco

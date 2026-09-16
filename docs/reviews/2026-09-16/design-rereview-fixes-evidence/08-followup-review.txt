@@ -1,0 +1,76 @@
+Skip to main content
+Skip to navigation
+Navigated to Day Editor: FixRat2-2023-06-25
+Workspace
+Review & export
+⌨
+Keyboard shortcuts
+Workspace
+›
+Animal: FixRat2
+FixRat2 · 2023-06-25
+✓
+Saved 11s ago
+DAY
+Daily log
+✓
+RECORDING
+Recording Setup
+✓
+Failed Channels
+✓
+DIO Wiring
+✓
+FINISH
+Review & export
+✓
+Review & export — 2023-06-25
+
+Review this recording, then save its metadata YAML beside the .rec files.
+
+✓
+Ready to export · 2 optional statescripts to review
+
+Check these values before downloading.
+
+What this day used (read-only) — configuration from 2023-06-01 · Initial configuration
+
+2 expected statescripts not listed
+
+Optional for export. Add the logs if they were recorded, or continue without them.
+
+Review epoch 2
+Review epoch 4
+Animal & day
+FixRat2 — 2023-06-25
+Weight & team
+458 g — Scientist, Alex
+Configuration version
+Version 1 (current)
+Probes & failed channels
+1 electrode group, 0 failed channels
+Cameras / calibration
+overhead (0.001 m/px)
+Data acquisition
+1 device (SpikeGadgets)
+Tasks & videos
+Sleep (1) — Room A; w_alternation (2) — Room B; Sleep (3) — Room A; w_alternation (4) — Room B · 4 videos
+Optogenetics
+No optogenetics
+Subject & session
+FixRat2 — session FixRat2_20230625
+Validation warnings
+None
+Technical conversion values
+Download YAML
+Copy YAML
+
+Not downloaded yet.
+
+20230625_FixRat2_metadata.yml
+View YAML · one file
+
+Recording a block? Download all 4 days for FixRat2 (one file each, only the days that pass checks).
+
+Copyright © 2026 Loren Frank Lab
+The University of California at San Francisco

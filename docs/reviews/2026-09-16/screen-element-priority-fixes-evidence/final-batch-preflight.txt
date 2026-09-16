@@ -1,0 +1,63 @@
+Skip to main content
+Skip to navigation
+Navigated to Animal
+Workspace
+▸
+Fi
+FixRat2
+▾
+Review all animals
+⌨
+Keyboard shortcuts
+FixRat2
+Rattus norvegicus · M
+Edit profile
+⋮
+Animal facts & setup summary
+DAY WORK
+Recording Days
+4
+›
+Review & export
+1 to download
+›
+ANIMAL SETUP
+Electrode Groups
+1
+›
+Recording System
+1
+›
+Cameras
+1
+›
+Task Types
+›
+Optogenetics
+not used
+›
+Review & export — FixRat2
+
+Showing: FixRat2 — 4 days
+
+Review & export all animals →
+
+4 valid / 0 with errors / 0 incomplete
+
+Review recordings for download
+
+1 day will be downloaded as YAML files. Review the setup for each recording:
+
+FixRat2 · Experimenters: Scientist, Alex
+
+FixRat2 — 2023-06-22
+Changed since download
+Measured weight
+450 g
+Epochs & files
+Sleep (1) — Room A; w_alternation (2) — Room B; Sleep (3) — Room A; w_alternation (4) — Room B · 4 videos
+Calibration & hardware details
+Download 1 YAML files
+Cancel
+Copyright © 2026 Loren Frank Lab
+The University of California at San Francisco

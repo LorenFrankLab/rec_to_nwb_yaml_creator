@@ -1,0 +1,62 @@
+Skip to main content
+Skip to navigation
+Navigated to Home - Animal Selection
+Workspace
+Validation & Export
+⌨
+Keyboard shortcuts
+Animals › New animal
+New animal — guided setup
+
+Enter once what stays the same for this animal across every recording day. Recording days reuse all of this; you'll only revisit it on a re-implant.
+
+Starting fresh below, or Import a YAML… · Copy from another animal…
+
+1
+Identity
+2
+Electrodes
+3
+Cameras
+4
+Optogenetics
+optional
+5
+Tasks
+6
+Recording system
+Pre-filled — review
+7
+Team
+Optogenetics optional
+
+Only if this animal is stimulated. It's all-or-nothing: include every section or none — a partial setup silently drops all opto downstream.
+
+Opto configured · 2 of 4
+
+Optogenetics Setup
+
+This is the animal's implanted opto setup (excitation source, optical fiber, virus injection, stimulation software) — set it once here. What was actually stimulated is recorded per recording day in that day's Epochs step, scoped to the epochs it ran; a day or epoch with no stimulation needs nothing here.
+
+This animal has optogenetics
+
+This app blocks export until every optogenetics section below is complete; still missing: a complete excitation source, a complete optical fiber, a complete virus injection. Separately, if a partial file like this were fed straight to the conversion tool, it would silently drop the entire optogenetics block with no error — which is exactly what this export gate prevents.
+
+Excitation source
+Setup name
+Hardware model name
+Description
+Wavelength (nm)
+Source power (W)
+Intensity (W/m²)
+Optical fibers
+Add optical fiber
+Virus injections
+Add virus injection
+Stimulation software
+Optogenetic stimulation software
+← Back
+Save draft
+Next →
+Copyright © 2026 Loren Frank Lab
+The University of California at San Francisco

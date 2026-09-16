@@ -1,0 +1,64 @@
+Skip to main content
+Skip to navigation
+Navigated to Day Editor: UxRat01-2023-06-22
+Workspace
+Validation & Export
+⌨
+Keyboard shortcuts
+Workspace
+›
+Animal: UxRat01
+›
+Day: 2023-06-22
+✓
+Saved 24s ago
+Export
+Day Editor: UxRat01 - 2023-06-22
+Configuration v1
+Needs attention
+Animal context
+Wild-type · M · Rattus norvegicus
+Config v1
+
+⚠
+2 issues block export
+
+2 in Tasks & Files
+
+Tasks & Files
+2 things to fix
+Description cannot be empty or contain only whitespace
+Fix
+Description cannot be empty or contain only whitespace
+Fix
+2 warnings to review
+DAY
+Daily log
+✗
+Has errors
+RECORDING
+Recording Setup
+✓
+Complete
+Failed Channels
+✓
+Complete
+DIO Wiring
+✓
+Complete
+FINISH
+Fix & Export
+2 to fix
+✗
+Has errors
+Failed Channels
+
+Mark failed channels for this recording day. These marks apply to this day only, not to all recordings on this configuration.
+
+No failed channels marked
+All electrode groups are currently clean.
+▶
+Other groups
+1 clean group
+Copyright © 2026 Loren Frank Lab
+The University of California at San Francisco

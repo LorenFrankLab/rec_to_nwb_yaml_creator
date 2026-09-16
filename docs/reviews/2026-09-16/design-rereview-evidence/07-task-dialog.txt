@@ -1,0 +1,50 @@
+Skip to main content
+Skip to navigation
+Navigated to Home - Animal Selection
+Workspace
+Validation & Export
+⌨
+Keyboard shortcuts
+Animals › New animal
+New animal — guided setup
+
+Set animal facts and reusable recording defaults. Each recording day records its own measurements, tasks and files. You can correct setup or record dated changes later.
+
+Starting fresh below, or Import a YAML… · Copy from another animal…
+
+1
+Identity
+2
+Electrodes
+3
+Cameras
+4
+Optogenetics
+optional
+5
+Tasks
+6
+Recording system
+Pre-filled — review
+7
+Team
+Tasks
+
+Define task types once. Each recording day's epochs pick from these.
+
+Add First Task Type
+Add Task Type
+Task name
+The task's identity in Spyglass — same name means the same task. Two task types can't share a name with different details.
+Description
+Environment
+Cameras used
+No cameras defined on this animal yet (optional).
+Which cameras recorded this task. Each day still confirms the cameras it actually used.
+Cancel
+Save
+← Back
+Save draft
+Next →
+Copyright © 2026 Loren Frank Lab
+The University of California at San Francisco

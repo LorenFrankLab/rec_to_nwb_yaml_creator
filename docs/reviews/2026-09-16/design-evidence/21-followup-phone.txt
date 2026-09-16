@@ -1,0 +1,134 @@
+Skip to main content
+Skip to navigation
+Navigated to Day Editor: FixRat2-2023-06-24
+Workspace
+Validation & Export
+⌨
+Keyboard shortcuts
+Workspace
+Animal: FixRat2
+Day: 2023-06-24
+✓
+Saved just now
+Export
+Day Editor: FixRat2 - 2023-06-24
+Configuration v1
+↩ carried from 2023-06-23
+Needs attention
+Animal context
+Wild-type · M · Rattus norvegicus
+Config v1
+
+⚠
+6 issues block export
+
+1 in Daily log · 5 in Tasks & Files
+
+Review issues blocking export
+Review all required information
+Section
+Daily log — Has errors
+Recording Setup — Complete
+Failed Channels — Complete
+DIO Wiring — Complete
+Fix & Export — Has errors (6 to fix)
+Daily log
+
+Started from Jun 23, 2023
+·
+Probe setup v1 (effective Jun 1, 2023)
+·
+Rig SpikeGadgets
+·
+entered Sep 16, 2026
+Change source…
+Change setup
+
+Weight
+Weight measured on 2023-06-24 (grams)
+Use 452 g
+Previous measurement: 452 g on 2023-06-23. Enter the measurement for 2023-06-24 — the previous value is a suggestion, not a measurement.
+Team: Scientist, Alex · Change
+Epochs
+Supplemental files
+0
+Review context copied from the previous recording
+
+The source used different environments or cameras. This draft currently uses task-type defaults.
+
+w_alternation, epochs 2: previously Room B; cameras overhead. Defaults: Room A; cameras overhead.
+w_alternation, epochs 4: previously Room B; cameras overhead. Defaults: Room A; cameras overhead.
+Use previous context
+Keep defaults for this recording
+Epochs
+
+Confirm what happened, then resolve expected statescript and video files.
+
+Show
+4 epochs
+4 videos needed
+2 statescripts expected
+0 custom filenames
+Generate missing
+Statescripts (2)
+Videos (4)
+Templates ▾
+1
+Sleep
+tag s1
+Details
+▾
+Statescript: Not expected
+Video: Missing
+overhead
+⋮
+2
+w_alternation
+tag r1
+Details
+▾
+Statescript: Expected
+Video: Missing
+overhead
+⋮
+3
+Sleep
+tag s2
+Details
+▾
+Statescript: Not expected
+Video: Missing
+overhead
+⋮
+4
+w_alternation
+tag r2
+Details
+▾
+Statescript: Expected
+Video: Missing
+overhead
+⋮
+Supplemental files
+
+Rare day-specific extras outside generated statescripts and videos, such as realtime output or stimulus scripts.
+
+0 files
+Supplemental file rows
+
+Optional files outside generated statescripts and videos.
+
+No supplemental files yet.
+
+Psychopy stim script
+Realtime output
+Behavior timeline
+FSGUI log
+Custom file
+▶
+Descriptions, data folder & search terms
+▶
+Session identity and animal context
+READ-ONLY
+Copyright © 2026 Loren Frank Lab
+The University of California at San Francisco

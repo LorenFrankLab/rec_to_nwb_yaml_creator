@@ -1,0 +1,47 @@
+{
+  "before": {
+    "opto_excitation_source": [
+      {
+        "name": "Blue source",
+        "model_name": "",
+        "description": "",
+        "wavelength_in_nm": 470,
+        "power_in_W": "",
+        "intensity_in_W_per_m2": ""
+      }
+    ],
+    "optical_fiber": [
+      {
+        "name": "Left CA1",
+        "hardware_name": "",
+        "implanted_fiber_description": "",
+        "hemisphere": "",
+        "location": "",
+        "ap_in_mm": "",
+        "ml_in_mm": "",
+        "dv_in_mm": "",
+        "roll_in_deg": "",
+        "pitch_in_deg": "",
+        "yaw_in_deg": "",
+        "reference": ""
+      }
+    ],
+    "virus_injection": [],
+    "optogenetic_stimulation_software": "fsgui"
+  },
+  "after": {
+    "opto_excitation_source": [
+      {
+        "name": "",
+        "model_name": "",
+        "description": "",
+        "wavelength_in_nm": "",
+        "power_in_W": "",
+        "intensity_in_W_per_m2": ""
+      }
+    ],
+    "optical_fiber": [],
+    "virus_injection": [],
+    "optogenetic_stimulation_software": "fsgui"
+  }
+}

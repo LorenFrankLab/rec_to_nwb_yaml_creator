@@ -1,0 +1,138 @@
+Skip to main content
+Skip to navigation
+Navigated to Animal
+Workspace
+▸
+Fi
+FixRat2
+▾
+Review & export
+⌨
+Keyboard shortcuts
+FixRat2
+animal ID
+Rattus norvegicus · M
+✓
+Saved just now
+⋮
+Wild-type
+M
+Rattus norvegicus
+b. 2023-01-01
+1 probe — CA1
+Config v1
+Team: Scientist, Alex
+DAY WORK
+Recording Days
+4
+›
+Review & export
+4 ready
+›
+ANIMAL SETUP
+Electrode Groups
+1
+›
+Recording System
+1
+›
+Cameras
+1
+›
+Task Types
+›
+Optogenetics
+○
+›
+Review & export — FixRat2
+
+Showing: FixRat2 — 4 days
+
+Review & export all animals →
+
+4 valid / 0 with errors / 0 incomplete
+
+Validate All
+Review 4 ready recordings
+What gets exported?
+Review recordings for download
+
+4 days will be downloaded as YAML files. Review the setup for each recording:
+
+FixRat2 — 2023-06-22
+Changed since download
+Weight & team
+450 g — Scientist, Alex
+Epochs & files
+Sleep (1) — Room A; w_alternation (2) — Room B; Sleep (3) — Room A; w_alternation (4) — Room B · 4 videos
+Calibration & hardware details
+FixRat2 — 2023-06-23
+Downloaded
+Weight & team
+452 g — Scientist, Alex
+Epochs & files
+Sleep (1) — Room A; w_alternation (2) — Room B; Sleep (3) — Room A; w_alternation (4) — Room B · 4 videos
+Calibration & hardware details
+FixRat2 — 2023-06-24
+Downloaded
+Weight & team
+455 g — Scientist, Alex
+Epochs & files
+Sleep (1) — Room A; w_alternation (2) — Room B; Sleep (3) — Room A; w_alternation (4) — Room B · 4 videos
+Calibration & hardware details
+FixRat2 — 2023-06-25
+Downloaded
+Weight & team
+458 g — Scientist, Alex
+Epochs & files
+Sleep (1) — Room A; w_alternation (2) — Room B; Sleep (3) — Room A; w_alternation (4) — Room B · 4 videos
+2 expected statescripts not listed
+
+Optional for export. Add the logs if they were recorded, or continue without them.
+
+Review epoch 2
+Review epoch 4
+Calibration & hardware details
+
+What this day used (read-only) — configuration from 2023-06-01 · Initial configuration
+
+Animal & day
+FixRat2 — 2023-06-25
+Weight & team
+458 g — Scientist, Alex
+Configuration version
+Version 1 (current)
+Probes & failed channels
+1 electrode group, 0 failed channels
+Cameras / calibration
+overhead (0.001 m/px)
+Data acquisition
+1 device (SpikeGadgets)
+Tasks & videos
+Sleep (1) — Room A; w_alternation (2) — Room B; Sleep (3) — Room A; w_alternation (4) — Room B · 4 videos
+Optogenetics
+No optogenetics
+Subject & session
+FixRat2 — session FixRat2_20230625
+Validation warnings
+None
+Technical conversion values
+Download 4 YAML files
+Cancel
+What do these statuses mean?
+Recording days across all animals with validation status
+Animal	Date	Session	Setup	Status	Editor
+FixRat2	2023-06-22	FixRat2_20230622	
+config v1 (latest) · 1 camera (overhead 0.001 m/px) · No optogenetics
+	Changed since download	Open editor
+FixRat2	2023-06-23	FixRat2_20230623	
+config v1 (latest) · 1 camera (overhead 0.001 m/px) · No optogenetics
+	Downloaded	Open editor
+FixRat2	2023-06-24	FixRat2_20230624	
+config v1 (latest) · 1 camera (overhead 0.001 m/px) · No optogenetics
+	Downloaded	Open editor
+FixRat2	2023-06-25	FixRat2_20230625	
+config v1 (latest) · 1 camera (overhead 0.001 m/px) · No optogenetics
+	Downloaded	Open editor
+Copyright © 2026 Loren Frank Lab
+The University of California at San Francisco

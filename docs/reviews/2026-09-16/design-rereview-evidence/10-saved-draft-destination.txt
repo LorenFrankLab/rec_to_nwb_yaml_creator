@@ -1,0 +1,79 @@
+Skip to main content
+Skip to navigation
+Navigated to Animal
+Workspace
+▸
+Re
+ReviewRat
+▾
+Validation & Export
+⌨
+Keyboard shortcuts
+ReviewRat
+animal ID
+Rattus norvegicus · U
+✓
+Saved just now
+⋮
+Wild-type
+U
+Rattus norvegicus
+Config v1
+DAY WORK
+Recording Days
+0
+›
+Validation & Export
+0 ready
+›
+ANIMAL SETUP
+Electrode Groups
+○
+›
+Recording System
+1
+›
+Cameras
+○
+›
+Task Types
+›
+Optogenetics
+○
+›
+Recording Days for ReviewRat
+Set up this animal
+
+Configure the shared hardware this animal's recording days will reference. Add only what your recordings use — a behavior-only day needs no electrodes, and each section is referenced per day.
+
+Electrode Groups
+if ephys
+TO DO
+Set up →
+Recording System
+data acquisition
+DONE
+Review →
+Cameras
+if video
+TO DO
+Set up →
+Optogenetics
+if opto
+TO DO
+Set up →
+Log a recording day
+Log today (Sep 16, 2026)
+Choose recording date
+Create & open
+
+Today logs the current date; type any past date to backfill — it starts from the nearest earlier day and the setup in effect then.
+
+📅
+No recording days yet
+
+Add the first recording day to log what the animal did and where the files are — the next day will pre-fill from it, so you only edit what changed.
+
+＋ Add recording day
+Copyright © 2026 Loren Frank Lab
+The University of California at San Francisco

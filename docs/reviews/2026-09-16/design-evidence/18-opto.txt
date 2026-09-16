@@ -1,0 +1,59 @@
+Skip to main content
+Skip to navigation
+Navigated to Animal
+Workspace
+▸
+Fi
+FixRat2
+▾
+Validation & Export
+⌨
+Keyboard shortcuts
+FixRat2
+animal ID
+Rattus norvegicus · M
+⋮
+Wild-type
+M
+Rattus norvegicus
+b. 2023-01-01
+1 probe — CA1
+Config v1
+Team: Scientist, Alex
+DAY WORK
+Recording Days
+2
+›
+Validation & Export
+2 ready
+›
+ANIMAL SETUP
+Electrode Groups
+1
+›
+Recording System
+1
+›
+Cameras
+1
+›
+Task Types
+›
+Optogenetics
+○
+›
+⚠
+Affects all 2 days
+
+Not used — no stimulation
+
+Optogenetics Setup
+
+This is the animal's implanted opto setup (excitation source, optical fiber, virus injection, stimulation software) — set it once here. What was actually stimulated is recorded per recording day in that day's Epochs step, scoped to the epochs it ran; a day or epoch with no stimulation needs nothing here.
+
+This animal has optogenetics
+
+Optogenetics is off. No optogenetics metadata will be exported. Turn it on only if this animal’s recordings include optogenetic stimulation.
+
+Copyright © 2026 Loren Frank Lab
+The University of California at San Francisco

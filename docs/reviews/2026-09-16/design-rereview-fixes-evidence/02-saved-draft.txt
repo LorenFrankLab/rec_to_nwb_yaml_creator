@@ -1,0 +1,61 @@
+Skip to main content
+Skip to navigation
+Workspace
+▸
+Re
+ResumeRat
+▾
+Review & export
+⌨
+Keyboard shortcuts
+ResumeRat
+animal ID
+Rattus norvegicus · U
+⋮
+Wild-type
+U
+Rattus norvegicus
+Config v1
+Section
+Recording Days
+Review & export
+Electrode Groups — not set up
+Recording System
+Cameras — not set up
+Task Types
+Optogenetics — not set up
+Recording Days for ResumeRat
+Set up this animal
+
+Finish animal facts and reusable defaults when you have them. You can log recording days while setup is incomplete.
+
+Resume setup
+
+Animal identity
+required before export
+To enter: date of birth
+Continue →
+Experiment & team
+defaults for new days
+To enter: experiment description, experimenters
+Continue →
+Recording System
+data acquisition
+Review default
+Set up →
+Hardware setup · as needed
+Log a recording day
+Log today (Sep 16, 2026)
+Choose recording date
+Create & open
+
+Today logs the current date; type any past date to backfill — it starts from the nearest earlier day and the setup in effect then.
+
+📅
+No recording days yet
+
+Add the first recording day to log what the animal did and where the files are — the next day will pre-fill from it, so you only edit what changed.
+
+＋ Add recording day
+Copyright © 2026 Loren Frank Lab
+The University of California at San Francisco

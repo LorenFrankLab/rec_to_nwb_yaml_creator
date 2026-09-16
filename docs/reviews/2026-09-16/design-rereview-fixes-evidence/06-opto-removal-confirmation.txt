@@ -1,0 +1,122 @@
+Skip to main content
+Skip to navigation
+Workspace
+▸
+Fi
+FixRat2
+▾
+Review & export
+⌨
+Keyboard shortcuts
+FixRat2
+animal ID
+Rattus norvegicus · M
+⟳
+Saving…
+⋮
+Wild-type
+M
+Rattus norvegicus
+b. 2023-01-01
+1 probe — CA1
+Config v1
+Team: Scientist, Alex
+Optogenetics
+DAY WORK
+Recording Days
+4
+›
+Review & export
+4 ready
+›
+ANIMAL SETUP
+Electrode Groups
+1
+›
+Recording System
+1
+›
+Cameras
+1
+›
+Task Types
+›
+Optogenetics
+○
+›
+
+Animal default. Existing recordings keep their saved optogenetics setup.
+
+1 of 4 optogenetics sections complete
+
+Optogenetics Setup
+
+Enter the implanted source, fibers, virus injections and stimulation software. Starred fields are required before export.
+
+This animal has optogenetics
+
+Complete before export: a complete excitation source, a complete optical fiber, a complete virus injection.
+
+Excitation source
+Blue source To finish
+Setup name *
+Hardware model name *
+Description *
+Wavelength (nm) *
+Source power (W) *
+Intensity (W/m²) *
+Optical fibers
+Left CA1 To finish
+Fiber implant name *
+Fiber hardware model *
+Implant description *
+Hemisphere *
+— select —
+left
+right
+Location *
+AP (mm) *
+ML (mm) *
+DV (mm) *
+Roll (deg) *
+Pitch (deg) *
+Yaw (deg) *
+Coordinate reference *
+Stereotaxic reference for the AP/ML/DV coordinates.
+Remove fiber
+Add optical fiber
+Virus injections
+Injection 1 To finish
+Injection name *
+Description *
+Virus name *
+Volume (µL) *
+Titer (vg/mL) *
+Hemisphere *
+— select —
+left
+right
+Location *
+AP (mm) *
+ML (mm) *
+DV (mm) *
+Roll (deg) *
+Pitch (deg) *
+Yaw (deg) *
+Coordinate reference *
+Stereotaxic reference for the AP/ML/DV coordinates.
+Remove injection
+Add virus injection
+Stimulation software
+Optogenetic stimulation software *
+Remove this optical fiber?
+
+This removes the entered record from the animal’s setup. Existing recording days keep their own setup.
+
+Keep record
+Remove record
+
+4 recording days recorded a different optogenetics setup than this default. Each day keeps what it recorded unless you apply this setup to it. Apply this setup to 4 recording days…
+
+Copyright © 2026 Loren Frank Lab
+The University of California at San Francisco

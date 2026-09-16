@@ -1,0 +1,29 @@
+Final verification — design re-review fixes
+
+PASS: npx vitest run — 392 files, 5,691 tests.
+PASS: TypeScript (npm run typecheck).
+PASS: JavaScript/TypeScript lint (npm run lint:check).
+PASS: Production build (npm run build).
+PASS: Stylelint on the eight modified CSS files for this re-review.
+PASS: git diff --check.
+
+Browser regression: 31 tests passed against the local production preview in Chromium.
+Specs:
+- workspace-design-rereview.spec.js
+- workspace-design-entry.spec.js
+- workspace-optogenetics.spec.js
+- workspace-daily-workflow.spec.js
+- workspace-export-gate.spec.js
+
+Manual browser evidence: 18 synthetic states; 0 axe violations, 0 page errors,
+0 captured states with page-level horizontal overflow. See verification.json.
+
+Browser assertions cover setup resume, recording-system review, optogenetics
+preservation across reload, deliberate record removal, reminder repair links,
+optional statescripts in actual YAML downloads, batch comparison, all seven
+animal sections at 320/390/1440 px, follow-up entry, post-download corrections,
+backup restoration and blocking invalid exports.
+
+Production preview and isolated browser were stopped after verification.
+No real NWB conversion, DANDI validation, Spyglass insertion or observed
+scientist usability study was performed in this fix pass.

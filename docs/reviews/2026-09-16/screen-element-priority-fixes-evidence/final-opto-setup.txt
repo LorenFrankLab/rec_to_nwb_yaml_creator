@@ -1,0 +1,65 @@
+Skip to main content
+Skip to navigation
+Navigated to Animal
+Workspace
+▸
+De
+DesignRat
+▾
+Review all animals
+⌨
+Keyboard shortcuts
+DesignRat
+Rattus norvegicus · U
+Edit profile
+⋮
+Animal facts & setup summary
+DAY WORK
+Recording Days
+0
+›
+Review & export
+0 to download
+›
+ANIMAL SETUP
+Electrode Groups
+0
+›
+Recording System
+1
+›
+Cameras
+0
+›
+Task Types
+›
+Optogenetics
+○
+›
+
+1 of 4 optogenetics sections complete
+
+Optogenetics Setup
+
+Animal default. Existing recordings keep their saved setup. Enter the implanted source, fibers, virus injections and stimulation software; starred fields are required before export.
+
+This animal has optogenetics
+
+Complete before export: a complete excitation source, a complete optical fiber, a complete virus injection.
+
+Excitation source
+Source details To finish
+Setup name *
+Hardware model name *
+Description *
+Wavelength (nm) *
+Source power (W) *
+Intensity (W/m²) *
+Optical fibers
+Add optical fiber
+Virus injections
+Add virus injection
+Stimulation software
+Optogenetic stimulation software *
+Copyright © 2026 Loren Frank Lab
+The University of California at San Francisco

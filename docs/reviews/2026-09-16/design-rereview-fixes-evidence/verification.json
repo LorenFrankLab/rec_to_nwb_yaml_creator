@@ -1,0 +1,220 @@
+{
+  "captures": 18,
+  "axeViolations": 0,
+  "pageErrors": 0,
+  "overflowCaptures": [],
+  "firstSetupFieldTopPx": 459,
+  "syntheticDownload": {
+    "weightGrams": 458,
+    "experimenters": [
+      "Scientist, Alex"
+    ],
+    "optionalStatescripts": 0,
+    "videos": 4,
+    "runEpochs": [
+      2,
+      4
+    ],
+    "runEnvironment": "Room B"
+  },
+  "states": [
+    {
+      "name": "01-phone-first-setup",
+      "url": "http://127.0.0.1:3021/rec_to_nwb_yaml_creator/#/home",
+      "geometry": {
+        "width": 320,
+        "contentWidth": 320,
+        "height": 1432
+      },
+      "violations": [],
+      "errors": []
+    },
+    {
+      "name": "02-saved-draft",
+      "url": "http://127.0.0.1:3021/rec_to_nwb_yaml_creator/#/animal/ResumeRat/days",
+      "geometry": {
+        "width": 320,
+        "contentWidth": 320,
+        "height": 2074
+      },
+      "violations": [],
+      "errors": []
+    },
+    {
+      "name": "03-resume-team",
+      "url": "http://127.0.0.1:3021/rec_to_nwb_yaml_creator/#/home?animal=ResumeRat&step=team",
+      "geometry": {
+        "width": 320,
+        "contentWidth": 320,
+        "height": 1215
+      },
+      "violations": [],
+      "errors": []
+    },
+    {
+      "name": "04-opto-honest-progress",
+      "url": "http://127.0.0.1:3021/rec_to_nwb_yaml_creator/#/animal/FixRat2/optogenetics",
+      "geometry": {
+        "width": 1440,
+        "contentWidth": 1440,
+        "height": 4266
+      },
+      "violations": [],
+      "errors": []
+    },
+    {
+      "name": "05-opto-preserved-off",
+      "url": "http://127.0.0.1:3021/rec_to_nwb_yaml_creator/#/animal/FixRat2/optogenetics",
+      "geometry": {
+        "width": 1440,
+        "contentWidth": 1440,
+        "height": 960
+      },
+      "violations": [],
+      "errors": []
+    },
+    {
+      "name": "06-opto-removal-confirmation",
+      "url": "http://127.0.0.1:3021/rec_to_nwb_yaml_creator/#/animal/FixRat2/optogenetics",
+      "geometry": {
+        "width": 1440,
+        "contentWidth": 1440,
+        "height": 4266
+      },
+      "violations": [],
+      "errors": []
+    },
+    {
+      "name": "07-followup-daily",
+      "url": "http://127.0.0.1:3021/rec_to_nwb_yaml_creator/#/day/FixRat2-2023-06-25",
+      "geometry": {
+        "width": 1440,
+        "contentWidth": 1440,
+        "height": 1429
+      },
+      "violations": [],
+      "errors": []
+    },
+    {
+      "name": "08-followup-review",
+      "url": "http://127.0.0.1:3021/rec_to_nwb_yaml_creator/#/day/FixRat2-2023-06-25",
+      "geometry": {
+        "width": 1440,
+        "contentWidth": 1440,
+        "height": 1282
+      },
+      "violations": [],
+      "errors": []
+    },
+    {
+      "name": "09-reminder-repair",
+      "url": "http://127.0.0.1:3021/rec_to_nwb_yaml_creator/#/day/FixRat2-2023-06-25",
+      "geometry": {
+        "width": 1440,
+        "contentWidth": 1440,
+        "height": 1406
+      },
+      "violations": [],
+      "errors": []
+    },
+    {
+      "name": "10-animal-review",
+      "url": "http://127.0.0.1:3021/rec_to_nwb_yaml_creator/#/animal/FixRat2/export",
+      "geometry": {
+        "width": 1440,
+        "contentWidth": 1440,
+        "height": 960
+      },
+      "violations": [],
+      "errors": []
+    },
+    {
+      "name": "11-batch-review",
+      "url": "http://127.0.0.1:3021/rec_to_nwb_yaml_creator/#/animal/FixRat2/export",
+      "geometry": {
+        "width": 1440,
+        "contentWidth": 1440,
+        "height": 1857
+      },
+      "violations": [],
+      "errors": []
+    },
+    {
+      "name": "12-batch-details",
+      "url": "http://127.0.0.1:3021/rec_to_nwb_yaml_creator/#/animal/FixRat2/export",
+      "geometry": {
+        "width": 1440,
+        "contentWidth": 1440,
+        "height": 2357
+      },
+      "violations": [],
+      "errors": []
+    },
+    {
+      "name": "13-phone-configuration",
+      "url": "http://127.0.0.1:3021/rec_to_nwb_yaml_creator/#/animal/FixRat2/electrode-groups",
+      "geometry": {
+        "width": 320,
+        "contentWidth": 320,
+        "height": 1639
+      },
+      "violations": [],
+      "errors": []
+    },
+    {
+      "name": "14-phone-cameras",
+      "url": "http://127.0.0.1:3021/rec_to_nwb_yaml_creator/#/animal/FixRat2/cameras",
+      "geometry": {
+        "width": 320,
+        "contentWidth": 320,
+        "height": 1135
+      },
+      "violations": [],
+      "errors": []
+    },
+    {
+      "name": "15-task-required-feedback",
+      "url": "http://127.0.0.1:3021/rec_to_nwb_yaml_creator/#/animal/FixRat2/task-types",
+      "geometry": {
+        "width": 1440,
+        "contentWidth": 1440,
+        "height": 960
+      },
+      "violations": [],
+      "errors": []
+    },
+    {
+      "name": "16-camera-required-feedback",
+      "url": "http://127.0.0.1:3021/rec_to_nwb_yaml_creator/#/animal/FixRat2/cameras",
+      "geometry": {
+        "width": 1440,
+        "contentWidth": 1440,
+        "height": 960
+      },
+      "violations": [],
+      "errors": []
+    },
+    {
+      "name": "17-first-recording-to-finish",
+      "url": "http://127.0.0.1:3021/rec_to_nwb_yaml_creator/#/day/ResumeRat-2026-09-16",
+      "geometry": {
+        "width": 1440,
+        "contentWidth": 1440,
+        "height": 1313
+      },
+      "violations": [],
+      "errors": []
+    },
+    {
+      "name": "18-recording-camera-correction",
+      "url": "http://127.0.0.1:3021/rec_to_nwb_yaml_creator/#/day/FixRat2-2023-06-25?step=recording",
+      "geometry": {
+        "width": 1440,
+        "contentWidth": 1440,
+        "height": 960
+      },
+      "violations": [],
+      "errors": []
+    }
+  ]
+}

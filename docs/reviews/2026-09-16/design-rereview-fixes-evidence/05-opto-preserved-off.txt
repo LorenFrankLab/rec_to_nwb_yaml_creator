@@ -1,0 +1,60 @@
+Skip to main content
+Skip to navigation
+Workspace
+▸
+Fi
+FixRat2
+▾
+Review & export
+⌨
+Keyboard shortcuts
+FixRat2
+animal ID
+Rattus norvegicus · M
+⟳
+Saving…
+⋮
+Wild-type
+M
+Rattus norvegicus
+b. 2023-01-01
+1 probe — CA1
+Config v1
+Team: Scientist, Alex
+DAY WORK
+Recording Days
+4
+›
+Review & export
+4 ready
+›
+ANIMAL SETUP
+Electrode Groups
+1
+›
+Recording System
+1
+›
+Cameras
+1
+›
+Task Types
+›
+Optogenetics
+○
+›
+
+Animal default. Existing recordings keep their saved optogenetics setup.
+
+Not used — no stimulation
+
+Optogenetics Setup
+
+Enter the implanted source, fibers, virus injections and stimulation software. Starred fields are required before export.
+
+This animal has optogenetics
+
+Optogenetics is off in this animal’s default setup. Your setup is saved. Turn it on again to restore your entries. Existing recordings keep their own setup.
+
+Copyright © 2026 Loren Frank Lab
+The University of California at San Francisco

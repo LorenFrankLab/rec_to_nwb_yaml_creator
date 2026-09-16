@@ -1,0 +1,21 @@
+Skip to main content
+Skip to navigation
+Navigated to Import Metadata YAML
+Workspace
+Review & export
+⌨
+Keyboard shortcuts
+Animals › Import
+Import metadata YAML
+20230625_FixRat2_metadata.yml
+Ready
+Choose different files
+
+Animal “FixRat2” already exists. Ready files for it will be reconciled together before its recording days are added.
+
+No repairs needed. This file is ready.
+
+Add recording day
+Cancel
+Copyright © 2026 Loren Frank Lab
+The University of California at San Francisco

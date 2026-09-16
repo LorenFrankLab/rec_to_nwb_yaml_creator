@@ -1,0 +1,115 @@
+Skip to main content
+Skip to navigation
+Workspace
+Validation & Export
+⌨
+Keyboard shortcuts
+Workspace
+Animal: FixRat2
+Day: 2023-06-23
+Export
+Day Editor: FixRat2 - 2023-06-23
+Configuration v1
+↩ carried from 2023-06-22
+Downloaded
+Animal context
+Wild-type · M · Rattus norvegicus
+Config v1
+✓
+Ready to export
+Section
+Daily log — Complete
+Recording Setup — Complete
+Failed Channels — Complete
+DIO Wiring — Complete
+Fix & Export — Complete
+Daily log
+
+Started from Jun 22, 2023
+·
+Probe setup v1 (effective Jun 1, 2023)
+·
+Rig SpikeGadgets
+·
+entered Sep 15, 2026
+Change source…
+Change setup
+
+Weight
+Weight measured on 2023-06-23 (grams)
+Weight measured on this day — the value exported for this day.
+Team: Scientist, Alex · Change
+Epochs
+Supplemental files
+0
+Epochs
+
+Confirm what happened, then resolve expected statescript and video files.
+
+Show
+4 epochs
+0 videos needed
+0 statescripts expected
+0 custom filenames
+Templates ▾
+1
+Sleep
+tag s1
+Details
+▾
+Statescript: Not expected
+Video: 1 video
+overhead
+⋮
+2
+w_alternation
+tag r1
+differs from task default
+Details
+▾
+Statescript: Generated
+Video: 1 video
+overhead
+⋮
+3
+Sleep
+tag s2
+Details
+▾
+Statescript: Not expected
+Video: 1 video
+overhead
+⋮
+4
+w_alternation
+tag r2
+differs from task default
+Details
+▾
+Statescript: Generated
+Video: 1 video
+overhead
+⋮
+Supplemental files
+
+Rare day-specific extras outside generated statescripts and videos, such as realtime output or stimulus scripts.
+
+0 files
+Supplemental file rows
+
+Optional files outside generated statescripts and videos.
+
+No supplemental files yet.
+
+Psychopy stim script
+Realtime output
+Behavior timeline
+FSGUI log
+Custom file
+▶
+Descriptions, data folder & search terms
+▶
+Session identity and animal context
+READ-ONLY
+Copyright © 2026 Loren Frank Lab
+The University of California at San Francisco

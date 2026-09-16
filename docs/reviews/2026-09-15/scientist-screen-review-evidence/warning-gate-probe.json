@@ -1,0 +1,36 @@
+{
+  "issues": [
+    {
+      "path": "associated_files[0].path",
+      "field": "path",
+      "step": "epochs",
+      "actionLabel": "Review associated file path",
+      "code": "associated_file_path_shape",
+      "repairSurface": "day",
+      "severity": "warning",
+      "message": "Associated file \"associated1.txt\" path \"path/\" is not shaped like an absolute file path. Use the full file path, not a bare filename, relative path, or directory path, so the converter can read the raw log content.",
+      "ownerSurface": "day",
+      "focusPath": "associated_files[0].path"
+    },
+    {
+      "path": "subject.subject_id",
+      "field": "subject_id",
+      "step": "overview",
+      "actionLabel": "Set the real subject id",
+      "code": "placeholder_subject_id",
+      "repairSurface": "animal",
+      "severity": "warning",
+      "message": "Subject ID \"54321\" looks like a template placeholder. Set the real subject id so the animal identity matches the recording files.",
+      "ownerSurface": "animal",
+      "focusPath": "subject.subject_id"
+    }
+  ],
+  "status": {
+    "overview": "error",
+    "devices": "valid",
+    "epochs": "valid",
+    "behavioral": "valid",
+    "validation": "valid",
+    "export": "valid"
+  }
+}

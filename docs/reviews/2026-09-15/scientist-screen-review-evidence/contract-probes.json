@@ -1,0 +1,56 @@
+{
+  "ntrode": {
+    "generated_ids": [
+      0
+    ],
+    "header_id": 7,
+    "result": "KeyError: \"ntrode 7 is present in the rec/reconfig header but has no matching entry in the metadata YAML 'ntrode_electrode_group_channel_map'. Add an entry with ntrode_id 7 to the YAML, or use a (re)config header whose ntrodes match the YAML.\""
+  },
+  "voltage": [
+    {
+      "metadata_raw_data_to_volts": 0.195,
+      "iterator_conversion_microvolts_per_count": 195000.0,
+      "electrical_series_conversion_volts_per_microvolt": 1e-06
+    },
+    {
+      "metadata_raw_data_to_volts": 1.95e-07,
+      "iterator_conversion_microvolts_per_count": 0.195,
+      "electrical_series_conversion_volts_per_microvolt": 1e-06
+    }
+  ],
+  "voltage_ratio": 1000000.0,
+  "sample_header_ids": [
+    "1",
+    "2",
+    "3",
+    "4",
+    "5",
+    "6",
+    "7",
+    "8",
+    "9",
+    "10",
+    "11",
+    "12",
+    "13",
+    "14",
+    "15",
+    "16",
+    "17",
+    "18",
+    "19",
+    "20",
+    "21",
+    "22",
+    "23",
+    "24",
+    "25",
+    "26",
+    "27",
+    "28",
+    "29",
+    "30",
+    "31",
+    "32"
+  ]
+}

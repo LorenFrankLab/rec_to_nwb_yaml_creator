@@ -1,0 +1,53 @@
+Skip to main content
+Skip to navigation
+Navigated to Animal
+Workspace
+▸
+Fi
+FixRat2
+▾
+Review all animals
+⌨
+Keyboard shortcuts
+FixRat2
+Rattus norvegicus · M
+Edit profile
+⋮
+Animal facts & setup summary
+DAY WORK
+Recording Days
+4
+›
+Review & export
+1 to download
+›
+ANIMAL SETUP
+Electrode Groups
+1
+›
+Recording System
+1
+›
+Cameras
+1
+›
+Task Types
+›
+Optogenetics
+not used
+›
+Recording System
+
+Add the systems used for this animal. New recordings start with the default system; change it in a recording’s setup when needed.
+
++ Add Recording System
+Name	System	Amplifier	ADC Circuit	Role	Actions
+SpikeGadgets	SpikeGadgets	Intan	Intan	Default	Edit
+⋮
+
+Check that this default matches the recording hardware.
+
+Confirm recording system
+Advanced Settings
+Copyright © 2026 Loren Frank Lab
+The University of California at San Francisco

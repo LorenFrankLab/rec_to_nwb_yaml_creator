@@ -1,0 +1,80 @@
+Skip to main content
+Skip to navigation
+Navigated to Animal
+Workspace
+▸
+Fi
+FixRat2
+▾
+Review & export
+⌨
+Keyboard shortcuts
+FixRat2
+animal ID
+Rattus norvegicus · M
+⋮
+Wild-type
+M
+Rattus norvegicus
+b. 2023-01-01
+1 probe — CA1
+Config v1
+Team: Scientist, Alex
+DAY WORK
+Recording Days
+4
+›
+Review & export
+4 ready
+›
+ANIMAL SETUP
+Electrode Groups
+1
+›
+Recording System
+1
+›
+Cameras
+1
+›
+Task Types
+›
+Optogenetics
+○
+›
+
+Animal-wide catalog — each recording day uses one.
+
+Recording System
+
+Add the systems used for this animal. New recordings start with the default system; change it in a recording’s setup when needed.
+
+Check that this default matches the recording hardware.
+
+Confirm recording system
++ Add Recording System
+Name	System	Amplifier	ADC Circuit	Role	Actions
+SpikeGadgets	SpikeGadgets	Intan	Intan	Default	EditDelete
+Advanced Settings
+Edit animal profile
+
+⚠
+Affects all 4 daysShared subject facts. Editing them updates this animal and all 4 recording days, including any already exported. Nothing here belongs to a single recording day.
+
+Subject ID (exact spelling in the recording filenames)
+The converter matches {date}_{subject}_metadata.yml to {date}_{subject}_{epoch}_{tag}.rec by this exact token (case-sensitive). If this animal was entered in a different capitalization than its recordings use, correct it here — the workspace key (FixRat2) stays the same. Letters, digits and hyphens only.
+Species
+Scientific name — a Latin binomial (e.g. Rattus norvegicus) or an NCBI Taxonomy URI. Free text like "Rat" is rejected by NWB/DANDI archives.
+Sex
+Unspecified
+Male (M)
+Female (F)
+Unknown (U)
+Date of Birth
+Stored as an ISO-8601 datetime (e.g. 2023-01-15T00:00:00) for NWB.
+Genotype
+Description
+Cancel
+Save profile changes
+Copyright © 2026 Loren Frank Lab
+The University of California at San Francisco

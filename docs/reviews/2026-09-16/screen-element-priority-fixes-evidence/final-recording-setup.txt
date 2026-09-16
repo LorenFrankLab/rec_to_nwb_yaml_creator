@@ -1,0 +1,43 @@
+Skip to main content
+Skip to navigation
+Navigated to Day Editor: FixRat2-2023-06-22
+Workspace
+Review all animals
+⌨
+Keyboard shortcuts
+Workspace
+›
+Animal: FixRat2
+FixRat2 · 2023-06-22
+Changed since download
+Ready to export
+Review & export
+DAY
+Daily log
+✓
+RECORDING
+Recording Setup
+✓
+Failed Channels
+✓
+DIO Wiring
+✓
+FINISH
+Review & export
+✓
+Recording Setup
+Recording system
+
+This session was recorded on SpikeGadgets. Add more systems in the animal's Recording System tab to choose a different one per day.
+
+Cameras used this day
+overhead · linked to this day
+
+Change linked cameras in their task, video or protocol in the Daily log.
+
+Day-only technical overrides
+OPTIONAL
+Hardware configuration
+V1
+Copyright © 2026 Loren Frank Lab
+The University of California at San Francisco

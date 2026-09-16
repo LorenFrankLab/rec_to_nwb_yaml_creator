@@ -1,0 +1,81 @@
+Skip to main content
+Skip to navigation
+Navigated to Day Editor: 54321-2023-06-22
+Workspace
+Validation & Export
+⌨
+Keyboard shortcuts
+Workspace
+›
+Animal: 54321
+›
+Day: 2023-06-22
+⟳
+Saving…
+Export
+Day Editor: 54321 - 2023-06-22
+Configuration v1
+◑ Optogenetics
+Downloaded
+DAY
+Daily log
+✓
+Complete
+RECORDING
+Recording Setup
+✓
+Complete
+Failed Channels
+✓
+Complete
+DIO Wiring
+✓
+Complete
+FINISH
+Fix & Export
+✓
+Complete
+Fix & Export — 2023-06-22
+
+Fix blocking issues, then download the YAML next to your .rec files.
+
+✓
+Ready to export · 1 warning to review
+
+Check these values before downloading.
+
+What this day used (read-only) — configuration from 2026-09-15 · Initial configuration
+
+Animal & day
+54321 — 2023-06-22
+Weight & team
+100 g — lastname, firstname; lastname2, firstname2
+Configuration version
+Version 1 (current)
+Probes & failed channels
+32 electrode groups, 0 failed channels
+Cameras / calibration
+test camera 1 (0.001 m/px), test camera 2 (0.001 m/px)
+Data acquisition
+1 device (SpikeGadgets)
+Tasks & videos
+Sleep (1, 3, 5) — sleep box; wtrack (2, 4) — wtrack arena · 2 videos
+Optogenetics
+Stimulation on epochs 1, 2
+Subject & session
+sample — session 12345
+Non-blocking warnings
+1 warning to review (does not block export)
+Rig constants
+raw_data_to_volts 1.95e-7 (differs from current default); times_period_multiplier 1 (differs from current default)
+Download
+Copy
+
+Downloaded as 20230622_sample_metadata.yml on 9/15/2026, 10:46:15 PM; nothing has changed since. (A download is not proof that the conversion succeeded — see the pilot runbook for the converter check.)
+
+20230622_sample_metadata.yml
+View YAML · one file
+✓ Downloaded 20230622_sample_metadata.yml
+×
+Copyright © 2026 Loren Frank Lab
+The University of California at San Francisco

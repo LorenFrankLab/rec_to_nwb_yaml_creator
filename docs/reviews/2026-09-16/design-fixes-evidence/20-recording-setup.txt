@@ -1,0 +1,47 @@
+Skip to main content
+Skip to navigation
+Workspace
+Validation & Export
+⌨
+Keyboard shortcuts
+Workspace
+›
+Animal: FixRat2
+FixRat2 · 2023-06-24
+Ready to export
+Review & export
+DAY
+Daily log
+✓
+Complete
+RECORDING
+Recording Setup
+✓
+Complete
+Failed Channels
+✓
+Complete
+DIO Wiring
+✓
+Complete
+FINISH
+Review & export
+✓
+Complete
+Recording Setup
+Recording system
+
+This session was recorded on SpikeGadgets. Add more systems in the animal's Recording System tab to choose a different one per day.
+
+Cameras used this day
+
+Check the cameras this recording day used. A camera already referenced by a task, video, or FsGUI protocol is used regardless and shown checked.
+
+overhead (id 0)
+— used by a task/video
+Day-only technical overrides
+OPTIONAL
+Hardware configuration
+V1
+Copyright © 2026 Loren Frank Lab
+The University of California at San Francisco

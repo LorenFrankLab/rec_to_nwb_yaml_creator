@@ -1,0 +1,54 @@
+Skip to main content
+Skip to navigation
+Navigated to Animal
+Workspace
+▸
+54
+54321
+▾
+Validation & Export
+⌨
+Keyboard shortcuts
+54321
+animal ID
+Rattus pyctoris · M
+✓
+Saved 39s ago
+⋮
+Obese Prone CD Rat
+M
+Rattus pyctoris
+b. 2000-01-01
+32 probes — corpus callosum and associated subcortical white matter (cc-ec-cing-dwm)
+Config v1
+Team: lastname, firstname, lastname2, firstname2
+Optogenetics
+Section
+Recording Days
+Validation & Export
+Electrode Groups
+Recording System
+Cameras
+Task Types
+Optogenetics
+This animal — readiness & export
+
+Showing: 54321 — 1 day
+
+Validate & export all animals →
+
+1 valid / 0 with errors / 0 incomplete
+
+Validate All
+Export Valid Only
+What gets exported?
+What do these statuses mean?
+Recording days across all animals with validation status
+Animal	Date	Session	Setup	Status	Editor
+sample	2023-06-22	12345
+test yaml insertion
+
+config v1 (latest) · 2 cameras (test camera 1 0.001 m/px, test camera 2 0.001 m/px) · Stimulation on epochs 1, 2
+	CHANGED SINCE DOWNLOAD	Open editor
+Copyright © 2026 Loren Frank Lab
+The University of California at San Francisco

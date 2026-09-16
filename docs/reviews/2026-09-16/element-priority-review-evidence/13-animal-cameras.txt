@@ -1,0 +1,60 @@
+Skip to main content
+Skip to navigation
+Navigated to Animal
+Workspace
+▸
+Fi
+FixRat2
+▾
+Review & export
+⌨
+Keyboard shortcuts
+FixRat2
+animal ID
+Rattus norvegicus · M
+⋮
+Wild-type
+M
+Rattus norvegicus
+b. 2023-01-01
+1 probe — CA1
+Config v1
+Team: Scientist, Alex
+DAY WORK
+Recording Days
+4
+›
+Review & export
+4 ready
+›
+ANIMAL SETUP
+Electrode Groups
+1
+›
+Recording System
+1
+›
+Cameras
+1
+›
+Task Types
+›
+Optogenetics
+○
+›
+
+Catalog — referenced per day.
+
+⚠
+Affects all 4 days
+Cameras
+
+Configure cameras for video tracking and behavioral recording.
+
++ Add Camera
+ID	Name	Hardware	Calibration (m/px)	Status	Actions
+0	overhead	FLIR · Blackfly
+Lens: 6 mm
+	0.001	✓	EditDelete
+Copyright © 2026 Loren Frank Lab
+The University of California at San Francisco

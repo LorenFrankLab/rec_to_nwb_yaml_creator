@@ -1,0 +1,1359 @@
+{
+  "viewport": {
+    "width": 320,
+    "height": 800
+  },
+  "scroll": {
+    "x": 0,
+    "y": 0
+  },
+  "documentWidth": 402,
+  "weight": {
+    "x": 74.390625,
+    "y": 1156.15625,
+    "width": 178,
+    "height": 36,
+    "right": 252.390625
+  },
+  "overflow": [
+    {
+      "tag": "DIV",
+      "id": "",
+      "cls": "daily-log-primary-grid",
+      "text": "Weight\nWeight measured on 2023-06-24 (grams)\nUse 452 g\nPrevious measurement: 452 g on 2023-06-23. En",
+      "rect": {
+        "x": 55.390625,
+        "y": 1091.15625,
+        "width": 321.921875,
+        "height": 237,
+        "right": 377.3125
+      }
+    },
+    {
+      "tag": "DIV",
+      "id": "",
+      "cls": "daily-setup-group daily-setup-group-primary",
+      "text": "Weight\nWeight measured on 2023-06-24 (grams)\nUse 452 g\nPrevious measurement: 452 g on 2023-06-23. En",
+      "rect": {
+        "x": 55.390625,
+        "y": 1091.15625,
+        "width": 321.921875,
+        "height": 177,
+        "right": 377.3125
+      }
+    },
+    {
+      "tag": "DIV",
+      "id": "",
+      "cls": "daily-setup-group-header",
+      "text": "Weight",
+      "rect": {
+        "x": 74.390625,
+        "y": 1108.15625,
+        "width": 302.921875,
+        "height": 16,
+        "right": 377.3125
+      }
+    },
+    {
+      "tag": "H3",
+      "id": "",
+      "cls": "",
+      "text": "Weight",
+      "rect": {
+        "x": 74.390625,
+        "y": 1108.15625,
+        "width": 302.921875,
+        "height": 16,
+        "right": 377.3125
+      }
+    },
+    {
+      "tag": "DIV",
+      "id": "",
+      "cls": "form-field",
+      "text": "Weight measured on 2023-06-24 (grams)\nUse 452 g\nPrevious measurement: 452 g on 2023-06-23. Enter the",
+      "rect": {
+        "x": 74.390625,
+        "y": 1132.15625,
+        "width": 302.921875,
+        "height": 136,
+        "right": 377.3125
+      }
+    },
+    {
+      "tag": "LABEL",
+      "id": "",
+      "cls": "required",
+      "text": "Weight measured on 2023-06-24 (grams)",
+      "rect": {
+        "x": 74.390625,
+        "y": 1132.15625,
+        "width": 302.921875,
+        "height": 16,
+        "right": 377.3125
+      }
+    },
+    {
+      "tag": "DIV",
+      "id": "",
+      "cls": "daily-log-weight-row",
+      "text": "Use 452 g",
+      "rect": {
+        "x": 74.390625,
+        "y": 1152.15625,
+        "width": 302.921875,
+        "height": 44,
+        "right": 377.3125
+      }
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "cls": "_button_uakeb_3 _secondary_uakeb_51 _small_uakeb_101",
+      "text": "Use 452 g",
+      "rect": {
+        "x": 260.390625,
+        "y": 1152.15625,
+        "width": 91.4375,
+        "height": 44,
+        "right": 351.828125
+      }
+    },
+    {
+      "tag": "SPAN",
+      "id": "session-weight-help",
+      "cls": "field-help-text",
+      "text": "Previous measurement: 452 g on 2023-06-23. Enter the measurement for 2023-06-24 — the previous value",
+      "rect": {
+        "x": 74.390625,
+        "y": 1204.15625,
+        "width": 302.921875,
+        "height": 64,
+        "right": 377.3125
+      }
+    },
+    {
+      "tag": "DETAILS",
+      "id": "",
+      "cls": "daily-setup-group daily-setup-group-primary",
+      "text": "Team: Scientist, Alex · Change",
+      "rect": {
+        "x": 55.390625,
+        "y": 1284.15625,
+        "width": 321.921875,
+        "height": 44,
+        "right": 377.3125
+      }
+    },
+    {
+      "tag": "SUMMARY",
+      "id": "",
+      "cls": "",
+      "text": "Team: Scientist, Alex · Change",
+      "rect": {
+        "x": 66.390625,
+        "y": 1293.15625,
+        "width": 317.921875,
+        "height": 34,
+        "right": 384.3125
+      }
+    },
+    {
+      "tag": "DIV",
+      "id": "",
+      "cls": "daily-log-epochs",
+      "text": "Epochs\nSupplemental files\n0\nReview context copied from the previous recording\n\nThe source used diffe",
+      "rect": {
+        "x": 55.390625,
+        "y": 1360.15625,
+        "width": 321.921875,
+        "height": 2274.1875,
+        "right": 377.3125
+      }
+    },
+    {
+      "tag": "DIV",
+      "id": "",
+      "cls": "tasks-files-step",
+      "text": "Epochs\nSupplemental files\n0\nReview context copied from the previous recording\n\nThe source used diffe",
+      "rect": {
+        "x": 55.390625,
+        "y": 1360.15625,
+        "width": 321.921875,
+        "height": 2250.1875,
+        "right": 377.3125
+      }
+    },
+    {
+      "tag": "NAV",
+      "id": "",
+      "cls": "tasks-files-subnav",
+      "text": "Epochs\nSupplemental files\n0",
+      "rect": {
+        "x": 55.390625,
+        "y": 1360.15625,
+        "width": 321.921875,
+        "height": 32,
+        "right": 377.3125
+      }
+    },
+    {
+      "tag": "DIV",
+      "id": "epochs-workspace",
+      "cls": "day-editor-section _root_1hx08_3",
+      "text": "Review context copied from the previous recording\n\nThe source used different environments or cameras",
+      "rect": {
+        "x": 55.390625,
+        "y": 1408.15625,
+        "width": 321.921875,
+        "height": 1744.1875,
+        "right": 377.3125
+      }
+    },
+    {
+      "tag": "SECTION",
+      "id": "",
+      "cls": "day-editor-section",
+      "text": "Review context copied from the previous recording\n\nThe source used different environments or cameras",
+      "rect": {
+        "x": 80.390625,
+        "y": 1433.15625,
+        "width": 271.921875,
+        "height": 512.1875,
+        "right": 352.3125
+      }
+    },
+    {
+      "tag": "H3",
+      "id": "task-context-review-title",
+      "cls": "",
+      "text": "Review context copied from the previous recording",
+      "rect": {
+        "x": 105.390625,
+        "y": 1458.15625,
+        "width": 221.921875,
+        "height": 36,
+        "right": 327.3125
+      }
+    },
+    {
+      "tag": "P",
+      "id": "",
+      "cls": "",
+      "text": "The source used different environments or cameras. This draft currently uses task-type defaults.",
+      "rect": {
+        "x": 105.390625,
+        "y": 1510.15625,
+        "width": 221.921875,
+        "height": 72,
+        "right": 327.3125
+      }
+    },
+    {
+      "tag": "UL",
+      "id": "",
+      "cls": "",
+      "text": "w_alternation, epochs 2: previously Room B; cameras overhead. Defaults: Room A; cameras overhead.\nw_",
+      "rect": {
+        "x": 105.390625,
+        "y": 1598.15625,
+        "width": 221.921875,
+        "height": 180,
+        "right": 327.3125
+      }
+    },
+    {
+      "tag": "LI",
+      "id": "",
+      "cls": "",
+      "text": "w_alternation, epochs 2: previously Room B; cameras overhead. Defaults: Room A; cameras overhead.",
+      "rect": {
+        "x": 145.390625,
+        "y": 1598.15625,
+        "width": 181.921875,
+        "height": 90,
+        "right": 327.3125
+      }
+    },
+    {
+      "tag": "LI",
+      "id": "",
+      "cls": "",
+      "text": "w_alternation, epochs 4: previously Room B; cameras overhead. Defaults: Room A; cameras overhead.",
+      "rect": {
+        "x": 145.390625,
+        "y": 1688.15625,
+        "width": 181.921875,
+        "height": 90,
+        "right": 327.3125
+      }
+    },
+    {
+      "tag": "DIV",
+      "id": "",
+      "cls": "form-actions",
+      "text": "Use previous context\nKeep defaults for this recording",
+      "rect": {
+        "x": 105.390625,
+        "y": 1802.15625,
+        "width": 221.921875,
+        "height": 118.1875,
+        "right": 327.3125
+      }
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "cls": "_button_uakeb_3 _neutral_uakeb_88",
+      "text": "Keep defaults for this recording",
+      "rect": {
+        "x": 220.234375,
+        "y": 1827.15625,
+        "width": 107.078125,
+        "height": 93.1875,
+        "right": 327.3125
+      }
+    },
+    {
+      "tag": "DIV",
+      "id": "",
+      "cls": "_workspaceHeader_1hx08_7",
+      "text": "Epochs\n\nConfirm what happened, then resolve expected statescript and video files.\n\nShow\n4 epochs\n4 v",
+      "rect": {
+        "x": 80.390625,
+        "y": 1969.34375,
+        "width": 271.921875,
+        "height": 306,
+        "right": 352.3125
+      }
+    },
+    {
+      "tag": "DIV",
+      "id": "",
+      "cls": "",
+      "text": "Epochs\n\nConfirm what happened, then resolve expected statescript and video files.\n\nShow\n4 epochs\n4 v",
+      "rect": {
+        "x": 80.390625,
+        "y": 1969.34375,
+        "width": 271.921875,
+        "height": 246,
+        "right": 352.3125
+      }
+    },
+    {
+      "tag": "H2",
+      "id": "",
+      "cls": "",
+      "text": "Epochs",
+      "rect": {
+        "x": 80.390625,
+        "y": 1969.34375,
+        "width": 271.921875,
+        "height": 22,
+        "right": 352.3125
+      }
+    },
+    {
+      "tag": "P",
+      "id": "",
+      "cls": "_workspaceIntro_1hx08_19",
+      "text": "Confirm what happened, then resolve expected statescript and video files.",
+      "rect": {
+        "x": 80.390625,
+        "y": 2007.34375,
+        "width": 271.921875,
+        "height": 32,
+        "right": 352.3125
+      }
+    },
+    {
+      "tag": "DIV",
+      "id": "",
+      "cls": "_epochToolbar_1hx08_25",
+      "text": "Show\n4 epochs\n4 videos needed\n2 statescripts expected\n0 custom filenames\nGenerate missing\nStatescrip",
+      "rect": {
+        "x": 80.390625,
+        "y": 2047.34375,
+        "width": 271.921875,
+        "height": 168,
+        "right": 352.3125
+      }
+    },
+    {
+      "tag": "DIV",
+      "id": "",
+      "cls": "_toolbarGroup_1hx08_32",
+      "text": "Show\n4 epochs\n4 videos needed\n2 statescripts expected\n0 custom filenames",
+      "rect": {
+        "x": 80.390625,
+        "y": 2047.34375,
+        "width": 271.921875,
+        "height": 98,
+        "right": 352.3125
+      }
+    },
+    {
+      "tag": "SPAN",
+      "id": "",
+      "cls": "_toolbarLabel_1hx08_37",
+      "text": "Show",
+      "rect": {
+        "x": 80.390625,
+        "y": 2047.34375,
+        "width": 271.921875,
+        "height": 14,
+        "right": 352.3125
+      }
+    },
+    {
+      "tag": "DIV",
+      "id": "",
+      "cls": "_summaryStrip_1hx08_48",
+      "text": "4 epochs\n4 videos needed\n2 statescripts expected\n0 custom filenames",
+      "rect": {
+        "x": 80.390625,
+        "y": 2065.34375,
+        "width": 271.921875,
+        "height": 80,
+        "right": 352.3125
+      }
+    },
+    {
+      "tag": "DIV",
+      "id": "",
+      "cls": "_templateMenu_1hx08_102",
+      "text": "Templates ▾",
+      "rect": {
+        "x": 80.390625,
+        "y": 2231.34375,
+        "width": 271.921875,
+        "height": 44,
+        "right": 352.3125
+      }
+    },
+    {
+      "tag": "DIV",
+      "id": "",
+      "cls": "_tablePane_1hx08_440",
+      "text": "1\nSleep\ntag s1\nDetails\n▾\nStatescript: Not expected\nVideo: Missing\noverhead\n⋮\n2\nw_alternation\ntag r1\n",
+      "rect": {
+        "x": 80.390625,
+        "y": 2291.34375,
+        "width": 271.921875,
+        "height": 826,
+        "right": 352.3125
+      }
+    },
+    {
+      "tag": "TABLE",
+      "id": "",
+      "cls": "_table_1hx08_165",
+      "text": "1\nSleep\ntag s1\nDetails\n▾\nStatescript: Not expected\nVideo: Missing\noverhead\n⋮\n2\nw_alternation\ntag r1\n",
+      "rect": {
+        "x": 80.390625,
+        "y": 2291.34375,
+        "width": 271.921875,
+        "height": 826,
+        "right": 352.3125
+      }
+    },
+    {
+      "tag": "TBODY",
+      "id": "",
+      "cls": "",
+      "text": "1\nSleep\ntag s1\nDetails\n▾\nStatescript: Not expected\nVideo: Missing\noverhead\n⋮\n2\nw_alternation\ntag r1\n",
+      "rect": {
+        "x": 80.390625,
+        "y": 2291.34375,
+        "width": 271.921875,
+        "height": 826,
+        "right": 352.3125
+      }
+    },
+    {
+      "tag": "TR",
+      "id": "",
+      "cls": "",
+      "text": "1\nSleep\ntag s1\nDetails\n▾\nStatescript: Not expected\nVideo: Missing\noverhead\n⋮",
+      "rect": {
+        "x": 80.390625,
+        "y": 2291.34375,
+        "width": 271.921875,
+        "height": 215,
+        "right": 352.3125
+      }
+    },
+    {
+      "tag": "TD",
+      "id": "",
+      "cls": "_taskCell_1hx08_236",
+      "text": "Sleep\ntag s1\nDetails\n▾",
+      "rect": {
+        "x": 135.390625,
+        "y": 2304.34375,
+        "width": 203.921875,
+        "height": 44,
+        "right": 339.3125
+      }
+    },
+    {
+      "tag": "DIV",
+      "id": "",
+      "cls": "_taskCellStack_1hx08_241",
+      "text": "Sleep\ntag s1\nDetails\n▾",
+      "rect": {
+        "x": 135.390625,
+        "y": 2304.34375,
+        "width": 203.921875,
+        "height": 44,
+        "right": 339.3125
+      }
+    },
+    {
+      "tag": "DIV",
+      "id": "",
+      "cls": "_taskDisclosureRow_1hx08_247",
+      "text": "Sleep\ntag s1\nDetails\n▾",
+      "rect": {
+        "x": 135.390625,
+        "y": 2304.34375,
+        "width": 203.921875,
+        "height": 44,
+        "right": 339.3125
+      }
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "cls": "_taskDisclosureButton_1hx08_206",
+      "text": "Details\n▾",
+      "rect": {
+        "x": 261.953125,
+        "y": 2304.34375,
+        "width": 77.359375,
+        "height": 44,
+        "right": 339.3125
+      }
+    },
+    {
+      "tag": "SPAN",
+      "id": "",
+      "cls": "_editChevron_1hx08_197",
+      "text": "▾",
+      "rect": {
+        "x": 317.3125,
+        "y": 2320.34375,
+        "width": 12,
+        "height": 12,
+        "right": 329.3125
+      }
+    },
+    {
+      "tag": "TD",
+      "id": "",
+      "cls": "_fileSummaryCell_1hx08_300",
+      "text": "Statescript: Not expected\nVideo: Missing",
+      "rect": {
+        "x": 93.390625,
+        "y": 2356.34375,
+        "width": 245.921875,
+        "height": 60,
+        "right": 339.3125
+      }
+    },
+    {
+      "tag": "SPAN",
+      "id": "",
+      "cls": "_fileSummaryStack_1hx08_304",
+      "text": "Statescript: Not expected\nVideo: Missing",
+      "rect": {
+        "x": 93.390625,
+        "y": 2356.34375,
+        "width": 245.921875,
+        "height": 60,
+        "right": 339.3125
+      }
+    },
+    {
+      "tag": "TD",
+      "id": "",
+      "cls": "_cameraCell_1hx08_888",
+      "text": "overhead",
+      "rect": {
+        "x": 93.390625,
+        "y": 2424.34375,
+        "width": 245.921875,
+        "height": 17,
+        "right": 339.3125
+      }
+    },
+    {
+      "tag": "TD",
+      "id": "",
+      "cls": "_menuCell_1hx08_186",
+      "text": "⋮",
+      "rect": {
+        "x": 93.390625,
+        "y": 2449.34375,
+        "width": 245.921875,
+        "height": 44,
+        "right": 339.3125
+      }
+    },
+    {
+      "tag": "DIV",
+      "id": "",
+      "cls": "_rowActionGroup_1hx08_358",
+      "text": "⋮",
+      "rect": {
+        "x": 93.390625,
+        "y": 2449.34375,
+        "width": 245.921875,
+        "height": 44,
+        "right": 339.3125
+      }
+    },
+    {
+      "tag": "DIV",
+      "id": "",
+      "cls": "_menu_y3sgs_6",
+      "text": "⋮",
+      "rect": {
+        "x": 295.3125,
+        "y": 2449.34375,
+        "width": 44,
+        "height": 44,
+        "right": 339.3125
+      }
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "cls": "_trigger_y3sgs_11 _menuButton_1hx08_400",
+      "text": "⋮",
+      "rect": {
+        "x": 295.3125,
+        "y": 2449.34375,
+        "width": 44,
+        "height": 44,
+        "right": 339.3125
+      }
+    },
+    {
+      "tag": "TR",
+      "id": "",
+      "cls": "",
+      "text": "2\nw_alternation\ntag r1\nDetails\n▾\nStatescript: Expected\nVideo: Missing\noverhead\n⋮",
+      "rect": {
+        "x": 80.390625,
+        "y": 2516.34375,
+        "width": 271.921875,
+        "height": 183,
+        "right": 352.3125
+      }
+    },
+    {
+      "tag": "TD",
+      "id": "",
+      "cls": "_taskCell_1hx08_236",
+      "text": "w_alternation\ntag r1\nDetails\n▾",
+      "rect": {
+        "x": 135.390625,
+        "y": 2529.34375,
+        "width": 203.921875,
+        "height": 44,
+        "right": 339.3125
+      }
+    },
+    {
+      "tag": "DIV",
+      "id": "",
+      "cls": "_taskCellStack_1hx08_241",
+      "text": "w_alternation\ntag r1\nDetails\n▾",
+      "rect": {
+        "x": 135.390625,
+        "y": 2529.34375,
+        "width": 203.921875,
+        "height": 44,
+        "right": 339.3125
+      }
+    },
+    {
+      "tag": "DIV",
+      "id": "",
+      "cls": "_taskDisclosureRow_1hx08_247",
+      "text": "w_alternation\ntag r1\nDetails\n▾",
+      "rect": {
+        "x": 135.390625,
+        "y": 2529.34375,
+        "width": 203.921875,
+        "height": 44,
+        "right": 339.3125
+      }
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "cls": "_taskDisclosureButton_1hx08_206",
+      "text": "Details\n▾",
+      "rect": {
+        "x": 261.953125,
+        "y": 2529.34375,
+        "width": 77.359375,
+        "height": 44,
+        "right": 339.3125
+      }
+    },
+    {
+      "tag": "SPAN",
+      "id": "",
+      "cls": "_editChevron_1hx08_197",
+      "text": "▾",
+      "rect": {
+        "x": 317.3125,
+        "y": 2545.34375,
+        "width": 12,
+        "height": 12,
+        "right": 329.3125
+      }
+    },
+    {
+      "tag": "TD",
+      "id": "",
+      "cls": "_fileSummaryCell_1hx08_300",
+      "text": "Statescript: Expected\nVideo: Missing",
+      "rect": {
+        "x": 93.390625,
+        "y": 2581.34375,
+        "width": 245.921875,
+        "height": 28,
+        "right": 339.3125
+      }
+    },
+    {
+      "tag": "SPAN",
+      "id": "",
+      "cls": "_fileSummaryStack_1hx08_304",
+      "text": "Statescript: Expected\nVideo: Missing",
+      "rect": {
+        "x": 93.390625,
+        "y": 2581.34375,
+        "width": 245.921875,
+        "height": 28,
+        "right": 339.3125
+      }
+    },
+    {
+      "tag": "SPAN",
+      "id": "",
+      "cls": "_fileSummaryChip_1hx08_310 _fileSummaryMissing_1hx08_336",
+      "text": "Video: Missing",
+      "rect": {
+        "x": 236.109375,
+        "y": 2581.34375,
+        "width": 100.46875,
+        "height": 28,
+        "right": 336.578125
+      }
+    },
+    {
+      "tag": "TD",
+      "id": "",
+      "cls": "_cameraCell_1hx08_888",
+      "text": "overhead",
+      "rect": {
+        "x": 93.390625,
+        "y": 2617.34375,
+        "width": 245.921875,
+        "height": 17,
+        "right": 339.3125
+      }
+    },
+    {
+      "tag": "TD",
+      "id": "",
+      "cls": "_menuCell_1hx08_186",
+      "text": "⋮",
+      "rect": {
+        "x": 93.390625,
+        "y": 2642.34375,
+        "width": 245.921875,
+        "height": 44,
+        "right": 339.3125
+      }
+    },
+    {
+      "tag": "DIV",
+      "id": "",
+      "cls": "_rowActionGroup_1hx08_358",
+      "text": "⋮",
+      "rect": {
+        "x": 93.390625,
+        "y": 2642.34375,
+        "width": 245.921875,
+        "height": 44,
+        "right": 339.3125
+      }
+    },
+    {
+      "tag": "DIV",
+      "id": "",
+      "cls": "_menu_y3sgs_6",
+      "text": "⋮",
+      "rect": {
+        "x": 295.3125,
+        "y": 2642.34375,
+        "width": 44,
+        "height": 44,
+        "right": 339.3125
+      }
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "cls": "_trigger_y3sgs_11 _menuButton_1hx08_400",
+      "text": "⋮",
+      "rect": {
+        "x": 295.3125,
+        "y": 2642.34375,
+        "width": 44,
+        "height": 44,
+        "right": 339.3125
+      }
+    },
+    {
+      "tag": "TR",
+      "id": "",
+      "cls": "",
+      "text": "3\nSleep\ntag s2\nDetails\n▾\nStatescript: Not expected\nVideo: Missing\noverhead\n⋮",
+      "rect": {
+        "x": 80.390625,
+        "y": 2709.34375,
+        "width": 271.921875,
+        "height": 215,
+        "right": 352.3125
+      }
+    },
+    {
+      "tag": "TD",
+      "id": "",
+      "cls": "_taskCell_1hx08_236",
+      "text": "Sleep\ntag s2\nDetails\n▾",
+      "rect": {
+        "x": 135.390625,
+        "y": 2722.34375,
+        "width": 203.921875,
+        "height": 44,
+        "right": 339.3125
+      }
+    },
+    {
+      "tag": "DIV",
+      "id": "",
+      "cls": "_taskCellStack_1hx08_241",
+      "text": "Sleep\ntag s2\nDetails\n▾",
+      "rect": {
+        "x": 135.390625,
+        "y": 2722.34375,
+        "width": 203.921875,
+        "height": 44,
+        "right": 339.3125
+      }
+    },
+    {
+      "tag": "DIV",
+      "id": "",
+      "cls": "_taskDisclosureRow_1hx08_247",
+      "text": "Sleep\ntag s2\nDetails\n▾",
+      "rect": {
+        "x": 135.390625,
+        "y": 2722.34375,
+        "width": 203.921875,
+        "height": 44,
+        "right": 339.3125
+      }
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "cls": "_taskDisclosureButton_1hx08_206",
+      "text": "Details\n▾",
+      "rect": {
+        "x": 261.953125,
+        "y": 2722.34375,
+        "width": 77.359375,
+        "height": 44,
+        "right": 339.3125
+      }
+    },
+    {
+      "tag": "SPAN",
+      "id": "",
+      "cls": "_editChevron_1hx08_197",
+      "text": "▾",
+      "rect": {
+        "x": 317.3125,
+        "y": 2738.34375,
+        "width": 12,
+        "height": 12,
+        "right": 329.3125
+      }
+    },
+    {
+      "tag": "TD",
+      "id": "",
+      "cls": "_fileSummaryCell_1hx08_300",
+      "text": "Statescript: Not expected\nVideo: Missing",
+      "rect": {
+        "x": 93.390625,
+        "y": 2774.34375,
+        "width": 245.921875,
+        "height": 60,
+        "right": 339.3125
+      }
+    },
+    {
+      "tag": "SPAN",
+      "id": "",
+      "cls": "_fileSummaryStack_1hx08_304",
+      "text": "Statescript: Not expected\nVideo: Missing",
+      "rect": {
+        "x": 93.390625,
+        "y": 2774.34375,
+        "width": 245.921875,
+        "height": 60,
+        "right": 339.3125
+      }
+    },
+    {
+      "tag": "TD",
+      "id": "",
+      "cls": "_cameraCell_1hx08_888",
+      "text": "overhead",
+      "rect": {
+        "x": 93.390625,
+        "y": 2842.34375,
+        "width": 245.921875,
+        "height": 17,
+        "right": 339.3125
+      }
+    },
+    {
+      "tag": "TD",
+      "id": "",
+      "cls": "_menuCell_1hx08_186",
+      "text": "⋮",
+      "rect": {
+        "x": 93.390625,
+        "y": 2867.34375,
+        "width": 245.921875,
+        "height": 44,
+        "right": 339.3125
+      }
+    },
+    {
+      "tag": "DIV",
+      "id": "",
+      "cls": "_rowActionGroup_1hx08_358",
+      "text": "⋮",
+      "rect": {
+        "x": 93.390625,
+        "y": 2867.34375,
+        "width": 245.921875,
+        "height": 44,
+        "right": 339.3125
+      }
+    },
+    {
+      "tag": "DIV",
+      "id": "",
+      "cls": "_menu_y3sgs_6",
+      "text": "⋮",
+      "rect": {
+        "x": 295.3125,
+        "y": 2867.34375,
+        "width": 44,
+        "height": 44,
+        "right": 339.3125
+      }
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "cls": "_trigger_y3sgs_11 _menuButton_1hx08_400",
+      "text": "⋮",
+      "rect": {
+        "x": 295.3125,
+        "y": 2867.34375,
+        "width": 44,
+        "height": 44,
+        "right": 339.3125
+      }
+    },
+    {
+      "tag": "TR",
+      "id": "",
+      "cls": "",
+      "text": "4\nw_alternation\ntag r2\nDetails\n▾\nStatescript: Expected\nVideo: Missing\noverhead\n⋮",
+      "rect": {
+        "x": 80.390625,
+        "y": 2934.34375,
+        "width": 271.921875,
+        "height": 183,
+        "right": 352.3125
+      }
+    },
+    {
+      "tag": "TD",
+      "id": "",
+      "cls": "_taskCell_1hx08_236",
+      "text": "w_alternation\ntag r2\nDetails\n▾",
+      "rect": {
+        "x": 135.390625,
+        "y": 2947.34375,
+        "width": 203.921875,
+        "height": 44,
+        "right": 339.3125
+      }
+    },
+    {
+      "tag": "DIV",
+      "id": "",
+      "cls": "_taskCellStack_1hx08_241",
+      "text": "w_alternation\ntag r2\nDetails\n▾",
+      "rect": {
+        "x": 135.390625,
+        "y": 2947.34375,
+        "width": 203.921875,
+        "height": 44,
+        "right": 339.3125
+      }
+    },
+    {
+      "tag": "DIV",
+      "id": "",
+      "cls": "_taskDisclosureRow_1hx08_247",
+      "text": "w_alternation\ntag r2\nDetails\n▾",
+      "rect": {
+        "x": 135.390625,
+        "y": 2947.34375,
+        "width": 203.921875,
+        "height": 44,
+        "right": 339.3125
+      }
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "cls": "_taskDisclosureButton_1hx08_206",
+      "text": "Details\n▾",
+      "rect": {
+        "x": 261.953125,
+        "y": 2947.34375,
+        "width": 77.359375,
+        "height": 44,
+        "right": 339.3125
+      }
+    },
+    {
+      "tag": "SPAN",
+      "id": "",
+      "cls": "_editChevron_1hx08_197",
+      "text": "▾",
+      "rect": {
+        "x": 317.3125,
+        "y": 2963.34375,
+        "width": 12,
+        "height": 12,
+        "right": 329.3125
+      }
+    },
+    {
+      "tag": "TD",
+      "id": "",
+      "cls": "_fileSummaryCell_1hx08_300",
+      "text": "Statescript: Expected\nVideo: Missing",
+      "rect": {
+        "x": 93.390625,
+        "y": 2999.34375,
+        "width": 245.921875,
+        "height": 28,
+        "right": 339.3125
+      }
+    },
+    {
+      "tag": "SPAN",
+      "id": "",
+      "cls": "_fileSummaryStack_1hx08_304",
+      "text": "Statescript: Expected\nVideo: Missing",
+      "rect": {
+        "x": 93.390625,
+        "y": 2999.34375,
+        "width": 245.921875,
+        "height": 28,
+        "right": 339.3125
+      }
+    },
+    {
+      "tag": "SPAN",
+      "id": "",
+      "cls": "_fileSummaryChip_1hx08_310 _fileSummaryMissing_1hx08_336",
+      "text": "Video: Missing",
+      "rect": {
+        "x": 236.109375,
+        "y": 2999.34375,
+        "width": 100.46875,
+        "height": 28,
+        "right": 336.578125
+      }
+    },
+    {
+      "tag": "TD",
+      "id": "",
+      "cls": "_cameraCell_1hx08_888",
+      "text": "overhead",
+      "rect": {
+        "x": 93.390625,
+        "y": 3035.34375,
+        "width": 245.921875,
+        "height": 17,
+        "right": 339.3125
+      }
+    },
+    {
+      "tag": "TD",
+      "id": "",
+      "cls": "_menuCell_1hx08_186",
+      "text": "⋮",
+      "rect": {
+        "x": 93.390625,
+        "y": 3060.34375,
+        "width": 245.921875,
+        "height": 44,
+        "right": 339.3125
+      }
+    },
+    {
+      "tag": "DIV",
+      "id": "",
+      "cls": "_rowActionGroup_1hx08_358",
+      "text": "⋮",
+      "rect": {
+        "x": 93.390625,
+        "y": 3060.34375,
+        "width": 245.921875,
+        "height": 44,
+        "right": 339.3125
+      }
+    },
+    {
+      "tag": "DIV",
+      "id": "",
+      "cls": "_menu_y3sgs_6",
+      "text": "⋮",
+      "rect": {
+        "x": 295.3125,
+        "y": 3060.34375,
+        "width": 44,
+        "height": 44,
+        "right": 339.3125
+      }
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "cls": "_trigger_y3sgs_11 _menuButton_1hx08_400",
+      "text": "⋮",
+      "rect": {
+        "x": 295.3125,
+        "y": 3060.34375,
+        "width": 44,
+        "height": 44,
+        "right": 339.3125
+      }
+    },
+    {
+      "tag": "SECTION",
+      "id": "other-associated-files",
+      "cls": "day-editor-section supplemental-files-section",
+      "text": "Supplemental files\n\nRare day-specific extras outside generated statescripts and videos, such as real",
+      "rect": {
+        "x": 55.390625,
+        "y": 3176.34375,
+        "width": 321.921875,
+        "height": 434,
+        "right": 377.3125
+      }
+    },
+    {
+      "tag": "DIV",
+      "id": "",
+      "cls": "supplemental-files-header",
+      "text": "Supplemental files\n\nRare day-specific extras outside generated statescripts and videos, such as real",
+      "rect": {
+        "x": 80.390625,
+        "y": 3201.34375,
+        "width": 271.921875,
+        "height": 116,
+        "right": 352.3125
+      }
+    },
+    {
+      "tag": "DIV",
+      "id": "",
+      "cls": "",
+      "text": "Supplemental files\n\nRare day-specific extras outside generated statescripts and videos, such as real",
+      "rect": {
+        "x": 80.390625,
+        "y": 3201.34375,
+        "width": 271.921875,
+        "height": 74,
+        "right": 352.3125
+      }
+    },
+    {
+      "tag": "H2",
+      "id": "supplemental-files-heading",
+      "cls": "",
+      "text": "Supplemental files",
+      "rect": {
+        "x": 80.390625,
+        "y": 3201.34375,
+        "width": 271.921875,
+        "height": 22,
+        "right": 352.3125
+      }
+    },
+    {
+      "tag": "P",
+      "id": "",
+      "cls": "",
+      "text": "Rare day-specific extras outside generated statescripts and videos, such as realtime output or stimu",
+      "rect": {
+        "x": 80.390625,
+        "y": 3227.34375,
+        "width": 271.921875,
+        "height": 48,
+        "right": 352.3125
+      }
+    },
+    {
+      "tag": "SECTION",
+      "id": "",
+      "cls": "associated-files-editor",
+      "text": "Supplemental file rows\n\nOptional files outside generated statescripts and videos.\n\nNo supplemental f",
+      "rect": {
+        "x": 80.390625,
+        "y": 3333.34375,
+        "width": 271.921875,
+        "height": 252,
+        "right": 352.3125
+      }
+    },
+    {
+      "tag": "DIV",
+      "id": "",
+      "cls": "associated-files-header",
+      "text": "Supplemental file rows\n\nOptional files outside generated statescripts and videos.",
+      "rect": {
+        "x": 80.390625,
+        "y": 3333.34375,
+        "width": 271.921875,
+        "height": 54,
+        "right": 352.3125
+      }
+    },
+    {
+      "tag": "H3",
+      "id": ":r2p:-heading",
+      "cls": "",
+      "text": "Supplemental file rows",
+      "rect": {
+        "x": 80.390625,
+        "y": 3333.34375,
+        "width": 271.921875,
+        "height": 18,
+        "right": 352.3125
+      }
+    },
+    {
+      "tag": "P",
+      "id": "",
+      "cls": "associated-files-hint",
+      "text": "Optional files outside generated statescripts and videos.",
+      "rect": {
+        "x": 80.390625,
+        "y": 3355.34375,
+        "width": 271.921875,
+        "height": 32,
+        "right": 352.3125
+      }
+    },
+    {
+      "tag": "P",
+      "id": "",
+      "cls": "associated-files-empty",
+      "text": "No supplemental files yet.",
+      "rect": {
+        "x": 80.390625,
+        "y": 3403.34375,
+        "width": 271.921875,
+        "height": 18,
+        "right": 352.3125
+      }
+    },
+    {
+      "tag": "DIV",
+      "id": "",
+      "cls": "associated-file-presets",
+      "text": "Psychopy stim script\nRealtime output\nBehavior timeline\nFSGUI log\nCustom file",
+      "rect": {
+        "x": 80.390625,
+        "y": 3437.34375,
+        "width": 271.921875,
+        "height": 148,
+        "right": 352.3125
+      }
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "cls": "_button_uakeb_3 _secondary_uakeb_51 _small_uakeb_101",
+      "text": "Behavior timeline",
+      "rect": {
+        "x": 214.046875,
+        "y": 3489.34375,
+        "width": 134.984375,
+        "height": 44,
+        "right": 349.03125
+      }
+    },
+    {
+      "tag": "DETAILS",
+      "id": "",
+      "cls": "daily-setup-group daily-log-more",
+      "text": "▶\nDescriptions, data folder & search terms",
+      "rect": {
+        "x": 55.390625,
+        "y": 3658.34375,
+        "width": 321.921875,
+        "height": 62,
+        "right": 377.3125
+      }
+    },
+    {
+      "tag": "SUMMARY",
+      "id": "",
+      "cls": "inherited-metadata-toggle",
+      "text": "▶\nDescriptions, data folder & search terms",
+      "rect": {
+        "x": 50.390625,
+        "y": 3659.34375,
+        "width": 351.921875,
+        "height": 52,
+        "right": 402.3125
+      }
+    }
+  ]
+}

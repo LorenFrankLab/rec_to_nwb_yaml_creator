@@ -1,0 +1,108 @@
+Skip to main content
+Skip to navigation
+Navigated to Day Editor: UxRat01-2023-06-22
+Workspace
+Validation & Export
+⌨
+Keyboard shortcuts
+Workspace
+›
+Animal: UxRat01
+›
+Day: 2023-06-22
+✓
+Saved just now
+Export
+Day Editor: UxRat01 - 2023-06-22
+Configuration v1
+Needs attention
+Animal context
+Wild-type · M · Rattus norvegicus
+Config v1
+
+⚠
+2 issues block export
+
+1 in Daily log · 1 in Recording Setup
+
+Daily log
+1 thing to fix
+Weight is required
+Fix
+Recording Setup
+1 thing to fix
+The probe setup v1 was entered on 2026-09-15 and its effective period before that is not recorded, so it is not known to apply to this earlier recording. Confirm that v1 is the setup this day was recorded with, pick the right version, or set the version's effective date to cover 2023-06-22.
+Confirm this setup applies
+DAY
+Daily log
+✗
+Has errors
+RECORDING
+Recording Setup
+✗
+Has errors
+Failed Channels
+✓
+Complete
+DIO Wiring
+✓
+Complete
+FINISH
+Fix & Export
+2 to fix
+✗
+Has errors
+Daily log
+
+Started blank
+·
+Probe setup v1 (effective Sep 15, 2026) — not confirmed for this date
+·
+Rig SpikeGadgets
+·
+entered Sep 16, 2026
+Change setup
+
+Weight
+Weight measured today (grams)
+No weight entered for this day — required for export. Enter today’s measurement.
+Team
+Experimenters present (one per line, "Last, First")
+This day’s actual team. Changing it here affects this day only.
+Epochs
+Supplemental files
+0
+Epochs
+
+Confirm what happened, then resolve expected statescript and video files.
+
+Templates ▾
+▦
+No epochs yet
+
+Each epoch is a numbered recording block belonging to a task. Use Templates for a full day, or add a single epoch and fill in its task and files. Need a new task? Add one on the animal's Task Types tab.
+
+＋ Add an epoch
+Supplemental files
+
+Rare day-specific extras outside generated statescripts and videos, such as realtime output or stimulus scripts.
+
+0 files
+Supplemental file rows
+
+Optional files outside generated statescripts and videos.
+
+No supplemental files yet.
+
+Psychopy stim script
+Realtime output
+Behavior timeline
+FSGUI log
+Custom file
+▶
+Descriptions, data folder & search terms
+▶
+Session identity and animal context
+READ-ONLY
+Copyright © 2026 Loren Frank Lab
+The University of California at San Francisco

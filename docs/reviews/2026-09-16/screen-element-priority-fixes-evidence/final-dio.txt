@@ -1,0 +1,47 @@
+Skip to main content
+Skip to navigation
+Navigated to Day Editor: FixRat2-2023-06-22
+Workspace
+Review all animals
+⌨
+Keyboard shortcuts
+Workspace
+›
+Animal: FixRat2
+FixRat2 · 2023-06-22
+Changed since download
+Ready to export
+Review & export
+DAY
+Daily log
+✓
+RECORDING
+Recording Setup
+✓
+Failed Channels
+✓
+DIO Wiring
+✓
+FINISH
+Review & export
+✓
+DIO Wiring
+
+Name the lines used for this recording; leave unused channels blank. Names carry forward to later recordings.
+
+Din = inputs (sensors the animal triggers). Dout = outputs (things you drive). Names must be unique.
+
+Named DIO lines
+
+No named DIO lines yet.
+
+Type
+Din
+Dout
+Index
+Event name
+▾
+Add line
+Advanced: show all ECU lines
+Copyright © 2026 Loren Frank Lab
+The University of California at San Francisco

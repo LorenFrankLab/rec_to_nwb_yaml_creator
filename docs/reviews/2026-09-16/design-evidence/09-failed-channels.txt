@@ -1,0 +1,54 @@
+Skip to main content
+Skip to navigation
+Navigated to Day Editor: FixRat2-2023-06-23
+Workspace
+Validation & Export
+⌨
+Keyboard shortcuts
+Workspace
+›
+Animal: FixRat2
+›
+Day: 2023-06-23
+Export
+Day Editor: FixRat2 - 2023-06-23
+Configuration v1
+↩ carried from 2023-06-22
+Downloaded
+Animal context
+Wild-type · M · Rattus norvegicus
+Config v1
+✓
+Ready to export
+DAY
+Daily log
+✓
+Complete
+RECORDING
+Recording Setup
+✓
+Complete
+Failed Channels
+✓
+Complete
+DIO Wiring
+✓
+Complete
+FINISH
+Fix & Export
+✓
+Complete
+Failed Channels
+
+Mark failed channels for this recording day. These marks apply to this day only, not to all recordings on this configuration.
+
+No failed channels marked
+No failed channels recorded. Expand an electrode group to mark failures.
+▶
+Electrode groups without recorded failures
+1 group
+▶
+Electrode Group 0: CA1
+No failures recorded
+Copyright © 2026 Loren Frank Lab
+The University of California at San Francisco

@@ -1,0 +1,47 @@
+Skip to main content
+Skip to navigation
+Navigated to Home - Animal Selection
+Workspace
+Validation & Export
+⌨
+Keyboard shortcuts
+Animals › New animal
+New animal — guided setup
+
+Set animal facts and reusable recording defaults. Each recording day records its own measurements, tasks and files. You can correct setup or record dated changes later.
+
+Starting fresh below, or Import a YAML… · Copy from another animal…
+
+1
+Identity
+2
+Electrodes
+3
+Cameras
+4
+Optogenetics
+optional
+5
+Tasks
+6
+Recording system
+Pre-filled — review
+7
+Team
+Optogenetics optional
+
+Only if this animal is stimulated. It's all-or-nothing: include every section or none — a partial setup silently drops all opto downstream.
+
+Optogenetics Setup
+
+This is the animal's implanted opto setup (excitation source, optical fiber, virus injection, stimulation software) — set it once here. What was actually stimulated is recorded per recording day in that day's Epochs step, scoped to the epochs it ran; a day or epoch with no stimulation needs nothing here.
+
+This animal has optogenetics
+
+Optogenetics is off. No optogenetics metadata will be exported. Turn it on only if this animal’s recordings include optogenetic stimulation.
+
+← Back
+Save draft
+Next →
+Copyright © 2026 Loren Frank Lab
+The University of California at San Francisco

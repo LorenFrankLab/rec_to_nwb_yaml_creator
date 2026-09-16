@@ -1,0 +1,34 @@
+{
+  "valid": true,
+  "errors": [],
+  "subject_id": "sample",
+  "weight": 100,
+  "raw_data_to_volts": 1.95e-07,
+  "tasks": [
+    {
+      "task_name": "Sleep",
+      "task_description": "sleeping",
+      "task_environment": "sleep box",
+      "camera_id": [
+        0
+      ],
+      "task_epochs": [
+        1,
+        3,
+        5
+      ]
+    },
+    {
+      "task_name": "wtrack",
+      "task_description": "reward finding",
+      "task_environment": "wtrack arena",
+      "camera_id": [
+        1
+      ],
+      "task_epochs": [
+        2,
+        4
+      ]
+    }
+  ]
+}

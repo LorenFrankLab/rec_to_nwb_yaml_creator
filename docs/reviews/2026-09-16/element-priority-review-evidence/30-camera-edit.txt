@@ -1,0 +1,76 @@
+Skip to main content
+Skip to navigation
+Navigated to Animal
+Workspace
+▸
+Fi
+FixRat2
+▾
+Review & export
+⌨
+Keyboard shortcuts
+FixRat2
+animal ID
+Rattus norvegicus · M
+Editing — Save or Cancel
+⋮
+Wild-type
+M
+Rattus norvegicus
+b. 2023-01-01
+1 probe — CA1
+Config v1
+Team: Scientist, Alex
+DAY WORK
+Recording Days
+4
+›
+Review & export
+4 ready
+›
+ANIMAL SETUP
+Electrode Groups
+1
+›
+Recording System
+1
+›
+Cameras
+1
+›
+Task Types
+›
+Optogenetics
+○
+›
+
+Catalog — referenced per day.
+
+⚠
+Affects all 4 days
+Cameras
+
+Configure cameras for video tracking and behavioral recording.
+
++ Add Camera
+ID	Name	Hardware	Calibration (m/px)	Status	Actions
+0	overhead	FLIR · Blackfly
+Lens: 6 mm
+	0.001	✓	EditDelete
+Edit Camera
+
+* Required to save.
+
+Camera ID
+Automatically assigned
+Camera Name *
+Same name means the same camera. A camera with a different zoom, calibration, lens, model, or id is a different camera — give it a different name.
+Manufacturer *
+Model *
+Lens *
+Meters per Pixel *
+Spatial calibration — meters per pixel (how many meters one pixel spans in the tracking video). Typical overhead tracking: 0.0005–0.002 m/px. Changing this is a new camera identity.
+Cancel
+Save
+Copyright © 2026 Loren Frank Lab
+The University of California at San Francisco

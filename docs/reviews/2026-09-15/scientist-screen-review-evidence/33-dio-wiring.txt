@@ -1,0 +1,76 @@
+Skip to main content
+Skip to navigation
+Navigated to Day Editor: UxRat01-2023-06-22
+Workspace
+Validation & Export
+⌨
+Keyboard shortcuts
+Workspace
+›
+Animal: UxRat01
+›
+Day: 2023-06-22
+✓
+Saved 24s ago
+Export
+Day Editor: UxRat01 - 2023-06-22
+Configuration v1
+Needs attention
+Animal context
+Wild-type · M · Rattus norvegicus
+Config v1
+
+⚠
+2 issues block export
+
+2 in Tasks & Files
+
+Tasks & Files
+2 things to fix
+Description cannot be empty or contain only whitespace
+Fix
+Description cannot be empty or contain only whitespace
+Fix
+2 warnings to review
+DAY
+Daily log
+✗
+Has errors
+RECORDING
+Recording Setup
+✓
+Complete
+Failed Channels
+✓
+Complete
+DIO Wiring
+✓
+Complete
+FINISH
+Fix & Export
+2 to fix
+✗
+Has errors
+Behavioral events
+Behavioral events — how your hardware maps to the SpikeGadgets ECU
+
+Name only the DIO lines this rig uses on this day. Unnamed ECU channels aren't written to the file. A new day carries the previous day's names forward, so edit only if you rewired the rig.
+
+Din = inputs (sensors the animal triggers). Dout = outputs (things you drive). Names must be unique.
+
+Named DIO lines
+
+Edit the lines this rig actually uses. Leave every other ECU channel unnamed.
+
+No named DIO lines yet.
+
+Type
+Din
+Dout
+Index
+Event name
+▾
+Add line
+Advanced: show all ECU lines
+Copyright © 2026 Loren Frank Lab
+The University of California at San Francisco

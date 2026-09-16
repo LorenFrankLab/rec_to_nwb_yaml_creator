@@ -1,0 +1,115 @@
+Skip to main content
+Skip to navigation
+Navigated to Day Editor: FixRat2-2023-06-25
+Workspace
+Validation & Export
+⌨
+Keyboard shortcuts
+Workspace
+›
+Animal: FixRat2
+FixRat2 · 2023-06-25
+⟳
+Saving…
+To finish
+Weight · task context · 4 epochs need video files
+Review & export
+DAY
+Daily log
+○
+RECORDING
+Recording Setup
+✓
+Failed Channels
+✓
+DIO Wiring
+✓
+FINISH
+Review & export
+6 remaining
+○
+Daily log
+
+Enter this recording’s measurement, then review its epochs and files. Changes save automatically.
+
+Weight measured on 2023-06-25 (grams)
+Previous measurement: 455 g on 2023-06-24. Enter the measurement for 2023-06-25.
+Team: Scientist, Alex · Change
+Recording source & setup
+Check the room and cameras
+
+The previous recording used a different room or cameras. Choose what applies to this recording.
+
+w_alternation, epochs 2, 4
+Previous: Room B · overhead
+Task defaults: Room A · overhead
+Use previous context
+Keep defaults for this recording
+Epochs
+
+List epochs in recording order. Add the files recorded for each epoch.
+
+Show
+4 epochs
+4 videos needed
+2 statescripts missing
+0 custom filenames
+Generate missing
+Statescripts (2)
+Videos (4)
+Add epoch
+Templates ▾
+#	Task	Files	Camera(s)	
+Actions
+
+1	
+Sleep
+tag s1
+Details
+▾
+	
+Statescript: Not expected
+Video: Missing
+	overhead	
+⋮
+
+2	
+w_alternation
+tag r1
+Details
+▾
+	
+Statescript: Expected
+Video: Missing
+	overhead	
+⋮
+
+3	
+Sleep
+tag s2
+Details
+▾
+	
+Statescript: Not expected
+Video: Missing
+	overhead	
+⋮
+
+4	
+w_alternation
+tag r2
+Details
+▾
+	
+Statescript: Expected
+Video: Missing
+	overhead	
+⋮
+Supplemental files (optional) · 0 files
+▶
+Descriptions, data folder & search terms
+▶
+Session identity and animal context
+READ-ONLY
+Copyright © 2026 Loren Frank Lab
+The University of California at San Francisco

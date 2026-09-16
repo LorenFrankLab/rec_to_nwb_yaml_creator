@@ -1,0 +1,139 @@
+Skip to main content
+Skip to navigation
+Navigated to Day Editor: UxRat01-2023-06-23
+Workspace
+Validation & Export
+⌨
+Keyboard shortcuts
+Workspace
+Animal: UxRat01
+Day: 2023-06-23
+⟳
+Saving…
+Export
+Day Editor: UxRat01 - 2023-06-23
+Configuration v1
+↩ carried from 2023-06-22
+Needs attention
+Animal context
+Wild-type · M · Rattus norvegicus
+Config v1
+
+⚠
+5 issues block export
+
+1 in Daily log · 4 in Tasks & Files
+
+Daily log
+1 thing to fix
+Weight is required
+Fix
+Tasks & Files
+4 things to fix
+Epoch 1 has a task but no video file linked, and it isn't marked "no video". Add the video for this epoch, or mark it as having no video.
+Fix in Epoch 1
+Epoch 2 has a task but no video file linked, and it isn't marked "no video". Add the video for this epoch, or mark it as having no video.
+Fix in Epoch 2
+Epoch 3 has a task but no video file linked, and it isn't marked "no video". Add the video for this epoch, or mark it as having no video.
+Fix in Epoch 3
++1 more in Tasks & Files
+Section
+Daily log — Has errors
+Recording Setup — Complete
+Failed Channels — Complete
+DIO Wiring — Complete
+Fix & Export — Has errors (5 to fix)
+Daily log
+
+Started from Jun 22, 2023
+·
+Probe setup v1 (effective Sep 15, 2026)
+·
+Rig SpikeGadgets
+·
+entered Sep 16, 2026
+Change source…
+Change setup
+
+Weight
+Weight measured today (grams)
+Use 485 g
+Previous measurement: 485 g on 2023-06-22. Enter today’s measurement — the previous value is a suggestion, not a measurement.
+Team
+Experimenters present (one per line, "Last, First")
+Copied from 2023-06-22; edit for this day only.
+Epochs
+Supplemental files
+0
+Epochs
+
+Confirm what happened, then resolve expected statescript and video files.
+
+Show
+4 epochs
+4 videos needed
+2 statescripts expected
+0 custom filenames
+Generate missing
+Statescripts (2)
+Videos (4)
+Templates ▾
+1
+sleep
+tag s1
+Details
+▾
+Statescript: Not expected
+Video: Missing
+overhead_camera
+⋮
+2
+w_alternation
+tag r1
+Details
+▾
+Statescript: Expected
+Video: Missing
+overhead_camera
+⋮
+3
+sleep
+tag s2
+Details
+▾
+Statescript: Not expected
+Video: Missing
+overhead_camera
+⋮
+4
+w_alternation
+tag r2
+Details
+▾
+Statescript: Expected
+Video: Missing
+overhead_camera
+⋮
+Supplemental files
+
+Rare day-specific extras outside generated statescripts and videos, such as realtime output or stimulus scripts.
+
+0 files
+Supplemental file rows
+
+Optional files outside generated statescripts and videos.
+
+No supplemental files yet.
+
+Psychopy stim script
+Realtime output
+Behavior timeline
+FSGUI log
+Custom file
+▶
+Descriptions, data folder & search terms
+▶
+Session identity and animal context
+READ-ONLY
+Copyright © 2026 Loren Frank Lab
+The University of California at San Francisco

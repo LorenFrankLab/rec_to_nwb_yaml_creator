@@ -1,0 +1,49 @@
+Skip to main content
+Skip to navigation
+Workspace
+Review & export
+⌨
+Keyboard shortcuts
+Animal Workspace
+Genotype
+All genotypes
+Wild-type
+Status
+All statuses
+Needs review
+Draft
+Ready
+Exported
+Import YAML…
++ New Animal
+Animals
+Animal	Genotype	Species	Days	Last recording	Status	
+Actions
+
+
+FixRat
+Wild-type	Rattus norvegicus	0	—	
+No recording days	
+⋮
+
+
+FixRat2
+Wild-type	Rattus norvegicus	4	2023-06-25	
+1 ready	
+⋮
+
+
+DesignRat
+opto
+Wild-type	Rattus norvegicus	0	—	
+No recording days	
+⋮
+Saved on this browser
+
+Your workspace is stored only in this browser on this computer. Download a backup to keep a copy or continue on another computer.
+
+Download workspace backup
+Restore from backup…
+Restore last known good (9/16/2026, 1:29:30 PM)
+Copyright © 2026 Loren Frank Lab
+The University of California at San Francisco

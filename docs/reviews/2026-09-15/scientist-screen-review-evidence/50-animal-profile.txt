@@ -1,0 +1,91 @@
+Skip to main content
+Skip to navigation
+Navigated to Animal
+Workspace
+▸
+54
+54321
+▾
+Validation & Export
+⌨
+Keyboard shortcuts
+54321
+animal ID
+Rattus pyctoris · M
+✓
+Saved 1 min ago
+⋮
+Obese Prone CD Rat
+M
+Rattus pyctoris
+b. 2000-01-01
+32 probes — corpus callosum and associated subcortical white matter (cc-ec-cing-dwm)
+Config v1
+Team: lastname, firstname, lastname2, firstname2
+Optogenetics
+DAY WORK
+Recording Days
+1
+›
+Validation & Export
+0 ready
+›
+ANIMAL SETUP
+Electrode Groups
+32
+›
+Recording System
+1
+›
+Cameras
+2
+›
+Task Types
+›
+Optogenetics
+used
+›
+Recording Days for 54321
+Add Recording Days
+Start each new day from the nearest earlier day (latest: 2023-06-22) — review & adjust per day
+Log a recording day
+Log today (Sep 15, 2026)
+Choose recording date
+Create & open
+
+Today logs the current date; type any past date to backfill — it starts from the nearest earlier day and the setup in effect then.
+
+1 unfinished: Jun 22, 2023
+
+What do these statuses mean?
+	DATE	STATUS
+ACTIONS
+
+	2023-06-22
+test yaml insertion
+
+Needs attention — see the validation summary
+⋮
+›
+Edit animal profile
+
+⚠
+Affects all 1 dayShared subject facts. Editing them updates this animal and all 1 recording day, including any already exported. Nothing here belongs to a single recording day.
+
+Subject ID (exact spelling in the recording filenames)
+The converter matches {date}_{subject}_metadata.yml to {date}_{subject}_{epoch}_{tag}.rec by this exact token (case-sensitive). If this animal was entered in a different capitalization than its recordings use, correct it here — the workspace key (54321) stays the same. Letters, digits and hyphens only.
+Species
+Scientific name — a Latin binomial (e.g. Rattus norvegicus) or an NCBI Taxonomy URI. Free text like "Rat" is rejected by NWB/DANDI archives.
+Sex
+Unspecified
+Male (M)
+Female (F)
+Unknown (U)
+Date of Birth
+Stored as an ISO-8601 datetime (e.g. 2023-01-15T00:00:00) for NWB.
+Genotype
+Description
+Cancel
+Save profile changes
+Copyright © 2026 Loren Frank Lab
+The University of California at San Francisco

@@ -1,0 +1,78 @@
+Skip to main content
+Skip to navigation
+Workspace
+▸
+Fi
+FixRat2
+▾
+Review & export
+⌨
+Keyboard shortcuts
+FixRat2
+animal ID
+Rattus norvegicus · M
+⋮
+Wild-type
+M
+Rattus norvegicus
+b. 2023-01-01
+Config v1
+Team: Scientist, Alex
+DAY WORK
+Recording Days
+0
+›
+Review & export
+0 ready
+›
+ANIMAL SETUP
+Electrode Groups
+○
+›
+Recording System
+1
+›
+Cameras
+○
+›
+Task Types
+›
+Optogenetics
+○
+›
+Recording Days for FixRat2
+Set up this animal
+
+Finish animal facts and reusable defaults when you have them. You can log recording days while setup is incomplete.
+
+Resume setup
+
+Copy from another animal…
+Hardware setup · as needed
+Electrode Groups
+if ephys
+To enter
+Set up →
+Cameras
+if video
+To enter
+Set up →
+Optogenetics
+if opto
+To enter
+Set up →
+Log a recording day
+Log today (Sep 16, 2026)
+Choose recording date
+Create & open
+
+Today logs the current date; type any past date to backfill — it starts from the nearest earlier day and the setup in effect then.
+
+📅
+No recording days yet
+
+Add the first recording day to log what the animal did and where the files are — the next day will pre-fill from it, so you only edit what changed.
+
+＋ Add recording day
+Copyright © 2026 Loren Frank Lab
+The University of California at San Francisco

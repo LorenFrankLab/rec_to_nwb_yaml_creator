@@ -1,0 +1,46 @@
+Skip to main content
+Skip to navigation
+Navigated to Home - Animal Selection
+Workspace
+Validation & Export
+⌨
+Keyboard shortcuts
+Animals › New animal
+New animal — guided setup
+
+Set animal facts and reusable recording defaults. Each recording day records its own measurements, tasks and files. You can correct setup or record dated changes later.
+
+Starting fresh below, or Import a YAML… · Copy from another animal…
+
+1
+Identity
+2
+Electrodes
+3
+Cameras
+4
+Optogenetics
+optional
+5
+Tasks
+6
+Recording system
+Pre-filled — review
+7
+Team
+Electrodes / probes
+
+One group per probe (or tetrode). Channel maps and geometry come from the device type automatically. Verify the Trodes ntrode IDs and electrode order using the mapping editor below.
+
+Add First Electrode Group
+Copy from Existing Animal
+Probe setup effective date
+When this implant or probe arrangement first applied. If unknown, leave it blank and confirm the configuration for each recording date.
+
+No electrophysiology? This is a behavior-only animal — skip electrodes.
+
+← Back
+Save draft
+Next →
+Copyright © 2026 Loren Frank Lab
+The University of California at San Francisco

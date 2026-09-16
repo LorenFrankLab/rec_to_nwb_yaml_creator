@@ -1,0 +1,227 @@
+Skip to main content
+Skip to navigation
+Navigated to Day Editor: 54321-2023-06-22
+Workspace
+Validation & Export
+⌨
+Keyboard shortcuts
+Workspace
+›
+Animal: 54321
+›
+Day: 2023-06-22
+⟳
+Saving…
+Export
+Day Editor: 54321 - 2023-06-22
+Configuration v1
+◑ Optogenetics
+Needs attention
+Animal context
+Obese Prone CD Rat · M · Rattus pyctoris
+Config v1
+
+⚠
+2 issues block export
+
+2 in Tasks & Files
+
+Tasks & Files
+2 things to fix
+Epoch 4 has a task but no video file linked, and it isn't marked "no video". Add the video for this epoch, or mark it as having no video.
+Fix in Epoch 4
+Epoch 5 has a task but no video file linked, and it isn't marked "no video". Add the video for this epoch, or mark it as having no video.
+Fix in Epoch 5
+2 warnings to review
+DAY
+Daily log
+✗
+Has errors
+RECORDING
+Recording Setup
+✓
+Complete
+Failed Channels
+✓
+Complete
+DIO Wiring
+✓
+Complete
+FINISH
+Fix & Export
+2 to fix
+✗
+Has errors
+Daily log
+
+Started blank
+·
+Probe setup v1 (effective Sep 15, 2026)
+·
+Rig SpikeGadgets
+·
+entered Sep 16, 2026
+Change setup
+
+Weight
+Weight measured today (grams)
+Weight measured on this day — the value exported for this day.
+Team
+Experimenters present (one per line, "Last, First")
+This day’s actual team. Changing it here affects this day only.
+Epochs
+Supplemental files
+2
+Epochs
+
+Confirm what happened, then resolve expected statescript and video files.
+
+Show
+5 epochs
+2 videos needed
+2 statescripts expected
+2 custom filenames
+Data folder
+Set the data folder to generate statescript and video file names.
+Generate missing
+Statescripts (2)
+Videos (3)
+Templates ▾
+#	Task	Files	Camera(s)	Opto
+Actions
+
+1
+Sleep
+tag a1
+Details
+▾
+
+Statescript: Not expected
+Video: 1 video
+	test camera 1	77 mW
+⋮
+
+2
+wtrack
+tag a1
+Details
+▾
+
+Statescript: Expected
+Video: 1 video
+	test camera 2	77 mW
+⋮
+
+3
+Sleep
+tag s2
+Hide
+▴
+
+Statescript: Not expected
+Video: No video
+	test camera 1	—
+⋮
+
+4
+wtrack
+tag r2
+Details
+▾
+
+Statescript: Expected
+Video: Missing
+	test camera 2	—
+⋮
+
+5
+Sleep
+tag s3
+Details
+▾
+
+Statescript: Not expected
+Video: Missing
+	test camera 1	—
+⋮
+Epoch 3: Sleep
+tag s2
+Complete
+Close
+Files for this epoch
+needs review
+Statescript
+Not expected
+Expected: 20230622_54321_03_s2.stateScriptLog
+Add expected statescript
+Enter manually
+Video
+No video
+Declared no video for this epoch
+Add video after all
+Undo no video
+Task
+Change only if this epoch was assigned wrong.
+Task type
+Sleep
+wtrack
++ new task type
+Derived tag
+s2
+Task source
+animal catalog
+Environment
+sleep box
+Cameras
+test camera 1
+Edit for this day
+Where this task ran and which cameras recorded it, for this recording day only.
+Optogenetics
+Day-specific FsGUI values.
+Power
+ mW
+Pulse
+ ms
+Supplemental files
+
+Rare day-specific extras outside generated statescripts and videos, such as realtime output or stimulus scripts.
+
+2 files
+Supplemental file rows
+
+Optional files outside generated statescripts and videos.
+
+File name (required)
+Description
+Path
+Task epoch
+— select epoch —
+1
+2
+3
+4
+5
+Remove
+File name (required)
+Description
+Path
+Task epoch
+— select epoch —
+1
+2
+3
+4
+5
+Remove
+Psychopy stim script
+Realtime output
+Behavior timeline
+FSGUI log
+Custom file
+▶
+Descriptions, data folder & search terms
+▶
+Session identity and animal context
+READ-ONLY
+Copyright © 2026 Loren Frank Lab
+The University of California at San Francisco

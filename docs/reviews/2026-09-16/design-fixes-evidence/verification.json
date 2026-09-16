@@ -1,0 +1,233 @@
+{
+  "screens": [
+    {
+      "screen": "06-cameras",
+      "url": "http://127.0.0.1:3021/rec_to_nwb_yaml_creator/#/animal/FixRat2/cameras",
+      "geometry": {
+        "width": 1440,
+        "contentWidth": 1440,
+        "height": 960
+      },
+      "violations": [],
+      "errors": []
+    },
+    {
+      "screen": "07-camera-dialog",
+      "url": "http://127.0.0.1:3021/rec_to_nwb_yaml_creator/#/animal/FixRat2/cameras",
+      "geometry": {
+        "width": 1440,
+        "contentWidth": 1440,
+        "height": 960
+      },
+      "violations": [],
+      "errors": []
+    },
+    {
+      "screen": "08-cameras-phone",
+      "url": "http://127.0.0.1:3021/rec_to_nwb_yaml_creator/#/animal/FixRat2/cameras",
+      "geometry": {
+        "width": 390,
+        "contentWidth": 390,
+        "height": 1097
+      },
+      "violations": [],
+      "errors": []
+    },
+    {
+      "screen": "09-wizard-identity",
+      "url": "http://127.0.0.1:3021/rec_to_nwb_yaml_creator/#/home",
+      "geometry": {
+        "width": 1440,
+        "contentWidth": 1440,
+        "height": 1160
+      },
+      "violations": [],
+      "errors": []
+    },
+    {
+      "screen": "14-wizard-system",
+      "url": "http://127.0.0.1:3021/rec_to_nwb_yaml_creator/#/home",
+      "geometry": {
+        "width": 1440,
+        "contentWidth": 1440,
+        "height": 960
+      },
+      "violations": [],
+      "errors": []
+    },
+    {
+      "screen": "15-wizard-team",
+      "url": "http://127.0.0.1:3021/rec_to_nwb_yaml_creator/#/home",
+      "geometry": {
+        "width": 1440,
+        "contentWidth": 1440,
+        "height": 976
+      },
+      "violations": [],
+      "errors": []
+    },
+    {
+      "screen": "19-final-export",
+      "url": "http://127.0.0.1:3021/rec_to_nwb_yaml_creator/#/day/FixRat2-2023-06-24",
+      "geometry": {
+        "width": 1440,
+        "contentWidth": 1440,
+        "height": 1152
+      },
+      "violations": [],
+      "errors": []
+    },
+    {
+      "screen": "20-recording-setup",
+      "url": "http://127.0.0.1:3021/rec_to_nwb_yaml_creator/#/day/FixRat2-2023-06-24",
+      "geometry": {
+        "width": 1440,
+        "contentWidth": 1440,
+        "height": 1143
+      },
+      "violations": [],
+      "errors": []
+    },
+    {
+      "screen": "21-failed-channels",
+      "url": "http://127.0.0.1:3021/rec_to_nwb_yaml_creator/#/day/FixRat2-2023-06-24",
+      "geometry": {
+        "width": 1440,
+        "contentWidth": 1440,
+        "height": 1143
+      },
+      "violations": [],
+      "errors": []
+    },
+    {
+      "screen": "22-dio",
+      "url": "http://127.0.0.1:3021/rec_to_nwb_yaml_creator/#/day/FixRat2-2023-06-24",
+      "geometry": {
+        "width": 1440,
+        "contentWidth": 1440,
+        "height": 1143
+      },
+      "violations": [],
+      "errors": []
+    },
+    {
+      "screen": "23-new-configuration",
+      "url": "http://127.0.0.1:3021/rec_to_nwb_yaml_creator/#/animal/FixRat2/electrode-groups",
+      "geometry": {
+        "width": 1440,
+        "contentWidth": 1440,
+        "height": 960
+      },
+      "violations": [],
+      "errors": []
+    },
+    {
+      "screen": "24-final-followup-desktop",
+      "url": "http://127.0.0.1:3021/rec_to_nwb_yaml_creator/#/day/FixRat2-2023-06-25",
+      "geometry": {
+        "width": 1440,
+        "contentWidth": 1440,
+        "height": 1685
+      },
+      "violations": [],
+      "errors": []
+    },
+    {
+      "screen": "25-final-followup-phone",
+      "url": "http://127.0.0.1:3021/rec_to_nwb_yaml_creator/#/day/FixRat2-2023-06-25",
+      "geometry": {
+        "width": 390,
+        "contentWidth": 390,
+        "height": 2543
+      },
+      "violations": [],
+      "errors": []
+    },
+    {
+      "screen": "26-final-followup-320",
+      "url": "http://127.0.0.1:3021/rec_to_nwb_yaml_creator/#/day/FixRat2-2023-06-25",
+      "geometry": {
+        "width": 320,
+        "contentWidth": 320,
+        "height": 2772
+      },
+      "violations": [],
+      "errors": []
+    },
+    {
+      "screen": "27-final-blocked-review-phone",
+      "url": "http://127.0.0.1:3021/rec_to_nwb_yaml_creator/#/day/FixRat2-2023-06-25",
+      "geometry": {
+        "width": 320,
+        "contentWidth": 320,
+        "height": 2221
+      },
+      "violations": [],
+      "errors": []
+    },
+    {
+      "screen": "28-final-wizard-electrodes",
+      "url": "http://127.0.0.1:3021/rec_to_nwb_yaml_creator/#/home",
+      "geometry": {
+        "width": 1440,
+        "contentWidth": 1440,
+        "height": 960
+      },
+      "violations": [],
+      "errors": []
+    },
+    {
+      "screen": "29-final-wizard-saved-320",
+      "url": "http://127.0.0.1:3021/rec_to_nwb_yaml_creator/#/home",
+      "geometry": {
+        "width": 320,
+        "contentWidth": 320,
+        "height": 1478
+      },
+      "violations": [],
+      "errors": []
+    },
+    {
+      "screen": "30-final-opto-form",
+      "url": "http://127.0.0.1:3021/rec_to_nwb_yaml_creator/#/animal/DesignFinal/optogenetics",
+      "geometry": {
+        "width": 1440,
+        "contentWidth": 1440,
+        "height": 1598
+      },
+      "violations": [],
+      "errors": []
+    },
+    {
+      "screen": "31-animal-review",
+      "url": "http://127.0.0.1:3021/rec_to_nwb_yaml_creator/#/animal/FixRat2/export",
+      "geometry": {
+        "width": 1440,
+        "contentWidth": 1440,
+        "height": 960
+      },
+      "violations": [],
+      "errors": []
+    }
+  ],
+  "vitest": {
+    "fullPassed": 5680,
+    "fullFiles": 391,
+    "finalTargetedPassed": 131
+  },
+  "playwright": {
+    "scenariosPassed": 38,
+    "finalTargetedPassed": 14
+  },
+  "weightFieldY": {
+    "390px": 459,
+    "320px": 558
+  },
+  "typecheck": "passed",
+  "eslint": "passed",
+  "build": "passed",
+  "cssLint": {
+    "errors": 0,
+    "warnings": 205
+  }
+}

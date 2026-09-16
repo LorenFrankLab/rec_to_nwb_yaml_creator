@@ -1,0 +1,100 @@
+experimenter_name:
+  - Scientist, Alex
+lab: Frank
+institution: UCSF
+experiment_description: Spatial memory during W-track alternation.
+session_description: Recording session for FixRat2 on 2023-06-25
+session_id: FixRat2_20230625
+subject:
+  description: Wild-type Rattus norvegicus
+  genotype: Wild-type
+  sex: M
+  species: Rattus norvegicus
+  subject_id: FixRat2
+  date_of_birth: 2023-01-01T00:00:00.000Z
+  weight: 458
+data_acq_device:
+  - name: SpikeGadgets
+    system: SpikeGadgets
+    amplifier: Intan
+    adc_circuit: Intan
+cameras:
+  - id: 0
+    meters_per_pixel: 0.001
+    manufacturer: FLIR
+    model: Blackfly
+    lens: 6 mm
+    camera_name: overhead
+tasks:
+  - task_name: Sleep
+    task_description: Rest in home cage
+    task_environment: Room A
+    camera_id:
+      - 0
+    task_epochs:
+      - 1
+  - task_name: Sleep
+    task_description: Rest in home cage
+    task_environment: Room A
+    camera_id:
+      - 0
+    task_epochs:
+      - 3
+  - task_name: w_alternation
+    task_description: Continuous alternation for reward
+    task_environment: Room B
+    camera_id:
+      - 0
+    task_epochs:
+      - 2
+  - task_name: w_alternation
+    task_description: Continuous alternation for reward
+    task_environment: Room B
+    camera_id:
+      - 0
+    task_epochs:
+      - 4
+associated_files: []
+associated_video_files:
+  - name: 20230625_FixRat2_01_s1.1.h264
+    camera_id: 0
+    task_epochs: 1
+  - name: 20230625_FixRat2_02_r1.1.h264
+    camera_id: 0
+    task_epochs: 2
+  - name: 20230625_FixRat2_03_s2.1.h264
+    camera_id: 0
+    task_epochs: 3
+  - name: 20230625_FixRat2_04_r2.1.h264
+    camera_id: 0
+    task_epochs: 4
+times_period_multiplier: 1.5
+raw_data_to_volts: 1.95e-7
+behavioral_events: []
+device:
+  name:
+    - Trodes
+opto_excitation_source: []
+optical_fiber: []
+virus_injection: []
+fs_gui_yamls: []
+optogenetic_stimulation_software: ""
+electrode_groups:
+  - id: 0
+    location: CA1
+    device_type: tetrode_12.5
+    description: tetrode_12.5 targeting CA1
+    targeted_location: CA1
+    targeted_x: 1
+    targeted_y: 1
+    targeted_z: 1
+    units: mm
+ntrode_electrode_group_channel_map:
+  - ntrode_id: 7
+    electrode_group_id: 0
+    bad_channels: []
+    map:
+      "0": 2
+      "1": 0
+      "2": 3
+      "3": 1

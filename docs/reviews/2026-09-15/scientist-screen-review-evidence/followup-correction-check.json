@@ -1,0 +1,49 @@
+{
+  "earlier_bad_channels": {
+    "0": [
+      2
+    ]
+  },
+  "later_bad_channels": {
+    "0": []
+  },
+  "earlier_task_instances": [
+    {
+      "taskTypeId": "tasktype-0",
+      "task_epochs": [
+        1,
+        3
+      ]
+    },
+    {
+      "taskTypeId": "tasktype-1",
+      "task_epochs": [
+        2,
+        4
+      ],
+      "task_environment": "Room B"
+    }
+  ],
+  "later_task_instances": [
+    {
+      "taskTypeId": "tasktype-0",
+      "task_epochs": [
+        1,
+        3
+      ]
+    },
+    {
+      "taskTypeId": "tasktype-1",
+      "task_epochs": [
+        2,
+        4
+      ]
+    }
+  ],
+  "dio": [
+    {
+      "description": "Din1",
+      "name": "left_poke"
+    }
+  ]
+}

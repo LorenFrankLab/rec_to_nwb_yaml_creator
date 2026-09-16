@@ -1,0 +1,129 @@
+Skip to main content
+Skip to navigation
+Workspace
+Review all animals
+⌨
+Keyboard shortcuts
+Workspace
+›
+Animal: FixRat2
+FixRat2 · 2023-06-22
+⟳
+Saving…
+Changed since download
+Ready to export
+Review & export
+DAY
+Daily log
+✓
+RECORDING
+Recording Setup
+✓
+Failed Channels
+✓
+DIO Wiring
+✓
+FINISH
+Review & export
+✓
+Daily log
+
+Enter this recording’s measurement, then review its epochs and files. Changes save automatically.
+
+Weight measured on 2023-06-22 (grams)
+Weight measured on this day — the value exported for this day.
+Epochs
+
+List epochs in recording order. Add the files recorded for each epoch.
+
+Show
+4 epochs
+Data folder · /data/FixRat2/20230622
+Add epoch
+Templates ▾
+#	Task	Files	Camera(s)	Opto	
+Actions
+
+1	
+Sleep
+Room A
+tag s1
+Details
+▾
+	
+Statescript: Not expected
+Video: 1 video
+	overhead	—	
+⋮
+
+2	
+w_alternation
+Room B
+tag r1
+differs from task default
+Details
+▾
+	
+Statescript: Generated
+Video: 1 video
+	overhead	10 mW	
+⋮
+
+3	
+Sleep
+Room A
+tag s2
+Details
+▾
+	
+Statescript: Not expected
+Video: 1 video
+	overhead	—	
+⋮
+
+4	
+w_alternation
+Room B
+tag r2
+differs from task default
+Details
+▾
+	
+Statescript: Generated
+Video: 1 video
+	overhead	10 mW	
+⋮
+Stimulation protocols · 1
+Stimulation protocol
+
+Changes save automatically for this recording. This protocol is shared by epochs 2, 4; edits apply to all of them.
+
+* Required before export. You can save an unfinished draft.
+
+Protocol YAML file *
+Power (mW) *
+Stimulated epochs *
+1 · Sleep
+2 · w_alternation
+3 · Sleep
+4 · w_alternation
+Camera for spatial filters *
+Choose a camera…
+overhead
+DIO output *
+Choose a named output…
+laser_trigger · Dout7
+Set up DIO outputs
+Pulse and train settings (optional)
+Done
+Remove protocol
+Supplemental files (optional) · 0 files
+Session description / notes
+Recording details
+▶
+Experiment details & search terms
+▶
+Session identity and animal context
+READ-ONLY
+Copyright © 2026 Loren Frank Lab
+The University of California at San Francisco

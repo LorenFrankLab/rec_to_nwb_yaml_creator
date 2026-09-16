@@ -1,0 +1,18 @@
+{
+  "unit_integration": {
+    "passed": 5679,
+    "failed": 0,
+    "files": 391
+  },
+  "browser_regression": {
+    "passed": 22,
+    "failed": 0,
+    "note": "21 responsive/export/mistake-prevention checks plus the new statescript-description focus/repair check."
+  },
+  "subsequent_targeted_checks": {
+    "context_and_epochs": 67,
+    "description_validation_template": 66
+  },
+  "manual_browser": "Production build, first animal setup \u2192 first recording \u2192 description correction \u2192 follow-up context review \u2192 downloads; desktop and 390px phone; captured axe checks found no violations.",
+  "converter": "Actual trodes_to_nwb header/map validator and add_raw_ephys function. Recording I/O and NWB construction stubbed for voltage probes; no full NWB conversion or DANDI upload."
+}

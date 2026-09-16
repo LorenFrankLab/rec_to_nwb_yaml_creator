@@ -1,0 +1,71 @@
+Skip to main content
+Skip to navigation
+Navigated to Animal
+Workspace
+▸
+54
+54321
+▾
+Validation & Export
+⌨
+Keyboard shortcuts
+54321
+animal ID
+Rattus pyctoris · M
+✓
+Saved 11s ago
+⋮
+Obese Prone CD Rat
+M
+Rattus pyctoris
+b. 2000-01-01
+32 probes — corpus callosum and associated subcortical white matter (cc-ec-cing-dwm)
+Config v1
+Team: lastname, firstname, lastname2, firstname2
+Optogenetics
+DAY WORK
+Recording Days
+1
+›
+Validation & Export
+0 ready
+›
+ANIMAL SETUP
+Electrode Groups
+32
+›
+Recording System
+1
+›
+Cameras
+2
+›
+Task Types
+›
+Optogenetics
+used
+›
+Recording Days for 54321
+Add Recording Days
+Start each new day from the nearest earlier day (latest: 2023-06-22) — review & adjust per day
+Log a recording day
+Log today (Sep 15, 2026)
+Choose recording date
+Create & open
+
+Today logs the current date; type any past date to backfill — it starts from the nearest earlier day and the setup in effect then.
+
+1 unfinished: Jun 22, 2023
+
+What do these statuses mean?
+	DATE	STATUS
+ACTIONS
+
+	2023-06-22
+test yaml insertion
+
+Needs attention — Epoch 3 has a task but no video file linked, and it isn't marked "no video". Add the video for this epoch, or mark it as having no video.
+⋮
+›
+Copyright © 2026 Loren Frank Lab
+The University of California at San Francisco

@@ -1,0 +1,24 @@
+{
+  "ntrode_header_check": "passed",
+  "ntrode_id": 7,
+  "statescript_descriptions": [
+    "statescript log",
+    "statescript log"
+  ],
+  "voltage": [
+    {
+      "header_rawScalingToUv": null,
+      "metadata_volts_per_count": 1.95e-07,
+      "iterator_microvolts_per_count": 0.195,
+      "series_volts_per_microvolt": 1e-06,
+      "1000_counts_in_volts": 0.000195
+    },
+    {
+      "header_rawScalingToUv": "0.195",
+      "metadata_volts_per_count": 1.95e-07,
+      "iterator_microvolts_per_count": 0.195,
+      "series_volts_per_microvolt": 1e-06,
+      "1000_counts_in_volts": 0.000195
+    }
+  ]
+}

@@ -1,0 +1,60 @@
+Skip to main content
+Skip to navigation
+Navigated to Animal
+Workspace
+▸
+Fi
+FixRat2
+▾
+Review & export
+⌨
+Keyboard shortcuts
+FixRat2
+animal ID
+Rattus norvegicus · M
+⋮
+Wild-type
+M
+Rattus norvegicus
+b. 2023-01-01
+1 probe — CA1
+Config v1
+Team: Scientist, Alex
+DAY WORK
+Recording Days
+4
+›
+Review & export
+4 ready
+›
+ANIMAL SETUP
+Electrode Groups
+1
+›
+Recording System
+1
+›
+Cameras
+1
+›
+Task Types
+›
+Optogenetics
+○
+›
+
+Animal-wide catalog — each recording day uses one.
+
+Recording System
+
+Add the systems used for this animal. New recordings start with the default system; change it in a recording’s setup when needed.
+
+Check that this default matches the recording hardware.
+
+Confirm recording system
++ Add Recording System
+Name	System	Amplifier	ADC Circuit	Role	Actions
+SpikeGadgets	SpikeGadgets	Intan	Intan	Default	EditDelete
+Advanced Settings
+Copyright © 2026 Loren Frank Lab
+The University of California at San Francisco

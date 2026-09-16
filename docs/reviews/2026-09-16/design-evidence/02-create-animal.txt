@@ -1,0 +1,58 @@
+Skip to main content
+Skip to navigation
+Navigated to Home - Animal Selection
+Workspace
+Validation & Export
+⌨
+Keyboard shortcuts
+Animals › New animal
+New animal — guided setup
+
+Set animal facts and reusable recording defaults. Each recording day records its own measurements, tasks and files. You can correct setup or record dated changes later.
+
+Starting fresh below, or Import a YAML… · Copy from another animal…
+
+1
+Identity
+2
+Electrodes
+3
+Cameras
+4
+Optogenetics
+optional
+5
+Tasks
+6
+Recording system
+7
+Team
+Identity
+
+Who this animal is. Fixed for the animal's life — set carefully; it can't drift day to day. Anything you don't know yet can be left blank and filled in later on the animal's profile.
+
+Subject ID
+Use the exact animal ID in recording filenames, including capitalization. Letters, numbers and hyphens; must be unique.
+Species
+Rat (Rattus norvegicus)
+Mouse (Mus musculus)
+Marmoset (Callithrix jacchus)
+Rhesus macaque (Macaca mulatta)
+Other (specify)…
+Latin binomial — DANDI rejects free text like “Rat”.
+Sex
+Male (M)
+Female (F)
+Unknown (U)
+Single letter (NWB/DANDI), not “Male”.
+Genotype
+Genetic background — not the strain. Use “Wild-type” for unmodified.
+Date of birth
+Required before export — you can save a draft without it.
+Description
+Free-text note. Leave blank to auto-generate one from genotype and species.
+← Back
+Save draft
+Next →
+Copyright © 2026 Loren Frank Lab
+The University of California at San Francisco

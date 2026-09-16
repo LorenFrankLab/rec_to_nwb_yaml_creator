@@ -1,0 +1,190 @@
+Skip to main content
+Skip to navigation
+Navigated to Day Editor: UxRat01-2023-06-22
+Workspace
+Validation & Export
+⌨
+Keyboard shortcuts
+Workspace
+›
+Animal: UxRat01
+›
+Day: 2023-06-22
+✓
+Saved just now
+Export
+Day Editor: UxRat01 - 2023-06-22
+Configuration v1
+Needs attention
+Animal context
+Wild-type · M · Rattus norvegicus
+Config v1
+
+⚠
+2 issues block export
+
+2 in Tasks & Files
+
+Tasks & Files
+2 things to fix
+Description cannot be empty or contain only whitespace
+Fix
+Description cannot be empty or contain only whitespace
+Fix
+2 warnings to review
+DAY
+Daily log
+✗
+Has errors
+RECORDING
+Recording Setup
+✓
+Complete
+Failed Channels
+✓
+Complete
+DIO Wiring
+✓
+Complete
+FINISH
+Fix & Export
+2 to fix
+✗
+Has errors
+Daily log
+
+Started blank
+·
+Probe setup v1 (effective Sep 15, 2026)
+·
+Rig SpikeGadgets
+·
+entered Sep 16, 2026
+Change setup
+
+Weight
+Weight measured today (grams)
+Weight measured on this day — the value exported for this day.
+Team
+Experimenters present (one per line, "Last, First")
+This day’s actual team. Changing it here affects this day only.
+Epochs
+Supplemental files
+0
+Epochs
+
+Confirm what happened, then resolve expected statescript and video files.
+
+Show
+4 epochs
+0 videos needed
+0 statescripts expected
+0 custom filenames
+Templates ▾
+#	Task	Files	Camera(s)
+Actions
+
+1
+sleep
+tag s1
+Details
+▾
+
+Statescript: Not expected
+Video: 1 video
+	overhead_camera
+⋮
+
+2
+w_alternation
+tag r1
+differs from task default
+Hide
+▴
+
+Statescript: Generated
+Video: 1 video
+	overhead_camera
+⋮
+
+3
+sleep
+tag s2
+Details
+▾
+
+Statescript: Not expected
+Video: 1 video
+	overhead_camera
+⋮
+
+4
+w_alternation
+tag r2
+differs from task default
+Details
+▾
+
+Statescript: Generated
+Video: 1 video
+	overhead_camera
+⋮
+Epoch 2: w_alternation
+tag r1
+Complete
+Close
+Files for this epoch
+generated
+Statescript
+Generated
+20230622_UxRat01_02_r1.stateScriptLog
+generated
+Override name
+Video
+1 video
+20230622_UxRat01_02_r1.1.h264
+generated
+Rename
+· overhead_camera
+Remove
+Add another video
+Task
+Change only if this epoch was assigned wrong.
+Task type
+sleep
+w_alternation
+W-track
++ new task type
+Derived tag
+r1
+Task source
+animal catalog
+Environment
+Room Bthis day
+Cameras
+overhead_camera
+Edit for this day
+Where this task ran and which cameras recorded it, for this recording day only.
+Supplemental files
+
+Rare day-specific extras outside generated statescripts and videos, such as realtime output or stimulus scripts.
+
+0 files
+Supplemental file rows
+
+Optional files outside generated statescripts and videos.
+
+No supplemental files yet.
+
+Psychopy stim script
+Realtime output
+Behavior timeline
+FSGUI log
+Custom file
+▶
+Descriptions, data folder & search terms
+▶
+Session identity and animal context
+READ-ONLY
+Copyright © 2026 Loren Frank Lab
+The University of California at San Francisco

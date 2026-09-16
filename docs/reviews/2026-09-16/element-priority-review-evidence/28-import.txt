@@ -1,0 +1,19 @@
+Skip to main content
+Skip to navigation
+Navigated to Import Metadata YAML
+Workspace
+Review & export
+⌨
+Keyboard shortcuts
+Animals › Import
+Import metadata YAML
+
+Select one recording day or a whole history. Files are grouped by animal and date so configuration changes can be reconstructed before anything is written.
+
+Drop metadata YAML files here
+
+or choose one or more files from your computer
+
+Choose metadata YAML files
+Copyright © 2026 Loren Frank Lab
+The University of California at San Francisco

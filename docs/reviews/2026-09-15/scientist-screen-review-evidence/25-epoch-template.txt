@@ -1,0 +1,101 @@
+Skip to main content
+Skip to navigation
+Navigated to Day Editor: UxRat01-2023-06-22
+Workspace
+Validation & Export
+⌨
+Keyboard shortcuts
+Workspace
+›
+Animal: UxRat01
+›
+Day: 2023-06-22
+✓
+Saved just now
+Export
+Day Editor: UxRat01 - 2023-06-22
+Configuration v1
+Draft
+Animal context
+Wild-type · M · Rattus norvegicus
+Config v1
+✓
+Ready to export
+DAY
+Daily log
+⚠
+Incomplete
+RECORDING
+Recording Setup
+✓
+Complete
+Failed Channels
+✓
+Complete
+DIO Wiring
+✓
+Complete
+FINISH
+Fix & Export
+✓
+Complete
+Daily log
+
+Started blank
+·
+Probe setup v1 (effective Sep 15, 2026)
+·
+Rig SpikeGadgets
+·
+entered Sep 16, 2026
+Change setup
+
+Weight
+Weight measured today (grams)
+Weight measured on this day — the value exported for this day.
+Team
+Experimenters present (one per line, "Last, First")
+This day’s actual team. Changing it here affects this day only.
+Epochs
+Supplemental files
+0
+Epochs
+
+Confirm what happened, then resolve expected statescript and video files.
+
+Templates ▾
+Sleep day
+4 sleep epochs
+W-track day
+sleep / run alternation
+Blank
+add one epoch to start
+▦
+No epochs yet
+
+Each epoch is a numbered recording block belonging to a task. Use Templates for a full day, or add a single epoch and fill in its task and files. Need a new task? Add one on the animal's Task Types tab.
+
+＋ Add an epoch
+Supplemental files
+
+Rare day-specific extras outside generated statescripts and videos, such as realtime output or stimulus scripts.
+
+0 files
+Supplemental file rows
+
+Optional files outside generated statescripts and videos.
+
+No supplemental files yet.
+
+Psychopy stim script
+Realtime output
+Behavior timeline
+FSGUI log
+Custom file
+▶
+Descriptions, data folder & search terms
+▶
+Session identity and animal context
+READ-ONLY
+Copyright © 2026 Loren Frank Lab
+The University of California at San Francisco

@@ -1,0 +1,26 @@
+{
+  "captureCount": 57,
+  "viewports": [
+    320,
+    390,
+    1440
+  ],
+  "horizontalOverflow": [],
+  "pageErrors": [],
+  "accessibilityAuditRun": false,
+  "phoneMetrics": {
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "establishedAnimalWithUnreviewedRig": {
+      "logTodayTop": 583.578125,
+      "firstRecordingTop": 1398.34375
+    },
+    "newDraftAnimal": {
+      "logTodayTop": 1146.703125,
+      "alternateAddDayTop": 1628.09375
+    }
+  },
+  "method": "Fresh production build; isolated Chromium browser storage with synthetic animals. Browser screenshots and element inspection, supplemented with source review. No conversion or ingestion test in this review."
+}

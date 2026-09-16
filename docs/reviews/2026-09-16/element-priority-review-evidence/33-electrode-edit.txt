@@ -1,0 +1,107 @@
+Skip to main content
+Skip to navigation
+Navigated to Animal
+Workspace
+▸
+Fi
+FixRat2
+▾
+Review & export
+⌨
+Keyboard shortcuts
+FixRat2
+animal ID
+Rattus norvegicus · M
+Editing — Save or Cancel
+⋮
+Wild-type
+M
+Rattus norvegicus
+b. 2023-01-01
+1 probe — CA1
+Config v1
+Team: Scientist, Alex
+DAY WORK
+Recording Days
+4
+›
+Review & export
+4 ready
+›
+ANIMAL SETUP
+Electrode Groups
+1
+›
+Recording System
+1
+›
+Cameras
+1
+›
+Task Types
+›
+Optogenetics
+○
+›
+
+Shared across all recording days — a hardware change starts a new version (with an audit trail).
+
+Configuration · v1 (current) · effective 2023-06-01 · 4 days
+New configuration…
+Probe 0 · CA1
+tetrode_12.5 · (1, 1, 1) mm
+Electrode Groups
+
+Configure the electrode groups for this animal.
+
+Channel maps are generated automatically from each electrode group's device type.
+
++ Add Electrode Group
+Copy from Animal
+ID	DEVICE TYPE	LOCATION	CHANNELS	SHANKS	STATUS	ACTIONS
+0	Tetrode (12.5 µm)	CA1	4	1	
+✓
+	EditDelete
+
+Generated channel maps need verification against the recording’s Trodes IDs and your probe wiring records.
+
+Edit / verify Trodes channel mapping
+Edit Electrode Group
+Device Type *
+Select device type...
+Tetrode (12.5 µm)
+32-ch, 1-shank, 6 mm (A1x32 H32)
+128-ch, 4-shank, 8 mm (20/40 µm)
+128-ch, 4-shank, 8 mm (15/26 µm)
+128-ch, 4-shank, 6 mm (20/40 µm)
+128-ch, 4-shank, 6 mm (15/26 µm)
+128-ch, 4-shank, 4 mm (20/40 µm)
+128-ch, 4-shank, 4 mm (15/26 µm)
+32-ch, 2-shank, 8 mm (20/40 µm)
+64-ch, 4-shank, 6 mm (20/40 µm)
+64-ch, 3-shank, 6 mm (20/40 µm)
+128-ch, 1-shank (NET-EBL)
+Targeted Location
+▾
+* Required. Planned implant target region (e.g., CA1) — the region you know at recording time.
+Location (optional)
+▾
+Actual recorded region, confirmed by histology. Leave blank to use the targeted location for now; update it once histology is done.
+Description (optional)
+Free-text label for this group in the NWB file. Leave blank to auto-generate one from the device type and target.
+ML (Medial-Lateral) (mm) *
+AP (Anterior-Posterior) (mm) *
+DV (Dorsal-Ventral) (mm) *
+
+Stereotaxic coordinates in the unit selected below (millimeters by default).
+
+Units
+mm
+μm
+
+Failed channels are marked per recording day in the Day Editor (Devices step), not here, since channels fail over time.
+
+Cancel
+Save
+Copyright © 2026 Loren Frank Lab
+The University of California at San Francisco

@@ -1,0 +1,78 @@
+Skip to main content
+Skip to navigation
+Navigated to Day Editor: FixRat2-2023-06-22
+Workspace
+Validation & Export
+⌨
+Keyboard shortcuts
+Workspace
+›
+Animal: FixRat2
+›
+Day: 2023-06-22
+⟳
+Saving…
+Export
+Day Editor: FixRat2 - 2023-06-22
+Configuration v1
+Ready
+DAY
+Daily log
+✓
+Complete
+RECORDING
+Recording Setup
+✓
+Complete
+Failed Channels
+✓
+Complete
+DIO Wiring
+✓
+Complete
+FINISH
+Fix & Export
+✓
+Complete
+Fix & Export — 2023-06-22
+
+Fix blocking issues, then download the YAML next to your .rec files.
+
+✓
+Ready to export
+
+Check these values before downloading.
+
+What this day used (read-only) — configuration from 2023-06-01 · Initial configuration
+
+Animal & day
+FixRat2 — 2023-06-22
+Weight & team
+450 g — Scientist, Alex
+Configuration version
+Version 1 (current)
+Probes & failed channels
+1 electrode group, 0 failed channels
+Cameras / calibration
+overhead (0.001 m/px)
+Data acquisition
+1 device (SpikeGadgets)
+Tasks & videos
+Sleep (1, 3) — Room A; w_alternation (2, 4) — Room A · 4 videos
+Optogenetics
+No optogenetics
+Subject & session
+FixRat2 — session FixRat2_20230622
+Non-blocking warnings
+None
+Rig constants
+raw_data_to_volts 1.95e-7; times_period_multiplier 1.5
+Download
+Copy
+
+Not downloaded yet.
+
+20230622_FixRat2_metadata.yml
+View YAML · one file
+Copyright © 2026 Loren Frank Lab
+The University of California at San Francisco

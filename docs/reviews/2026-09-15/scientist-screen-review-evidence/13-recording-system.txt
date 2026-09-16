@@ -1,0 +1,47 @@
+Skip to main content
+Skip to navigation
+Navigated to Home - Animal Selection
+Workspace
+Validation & Export
+⌨
+Keyboard shortcuts
+Animals › New animal
+New animal — guided setup
+
+Enter once what stays the same for this animal across every recording day. Recording days reuse all of this; you'll only revisit it on a re-implant.
+
+Starting fresh below, or Import a YAML… · Copy from another animal…
+
+1
+Identity
+2
+Electrodes
+3
+Cameras
+4
+Optogenetics
+optional
+5
+Tasks
+6
+Recording system
+Pre-filled — review
+7
+Team
+Recording system
+
+The acquisition hardware. Usually the same across the lab — change only if this animal used a different rig.
+
+Recording System
+
+The recording systems this animal was recorded on. Each recording day uses one (chosen in the day's setup); the first here is the default a day inherits when it hasn't chosen its own. A single .rec session is recorded by one acquisition system — an animal recorded on different rigs over time is captured by different days, each using one of these.
+
++ Add Recording System
+NAME	SYSTEM	AMPLIFIER	ADC CIRCUIT	ROLE	ACTIONS
+SpikeGadgets	SpikeGadgets	Intan	Intan	DEFAULT	EditDelete
+Advanced Settings
+← Back
+Save draft
+Next →
+Copyright © 2026 Loren Frank Lab
+The University of California at San Francisco

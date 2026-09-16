@@ -1,0 +1,102 @@
+Skip to main content
+Skip to navigation
+Navigated to Day Editor: FixRat2-2023-06-24
+Workspace
+Validation & Export
+⌨
+Keyboard shortcuts
+Workspace
+›
+Animal: FixRat2
+›
+Day: 2023-06-24
+✓
+Saved 31s ago
+Export
+Day Editor: FixRat2 - 2023-06-24
+Configuration v1
+↩ carried from 2023-06-23
+Needs attention
+DAY
+Daily log
+✗
+Has errors
+RECORDING
+Recording Setup
+✓
+Complete
+Failed Channels
+✓
+Complete
+DIO Wiring
+✓
+Complete
+FINISH
+Fix & Export
+6 to fix
+✗
+Has errors
+Fix & Export — 2023-06-24
+
+Fix blocking issues, then download the YAML next to your .rec files.
+
+Resolve 6 validation errors before exporting.
+
+Day metadata
+Weight is required
+Fix this day’s recording facts
+Fix in Daily log
+Epoch 1 has a task but no video file linked, and it isn't marked "no video". Add the video for this epoch, or mark it as having no video.
+Fix this day’s recording facts
+Fix in Tasks & Files
+Epoch 2 has a task but no video file linked, and it isn't marked "no video". Add the video for this epoch, or mark it as having no video.
+Fix this day’s recording facts
+Fix in Tasks & Files
+Epoch 3 has a task but no video file linked, and it isn't marked "no video". Add the video for this epoch, or mark it as having no video.
+Fix this day’s recording facts
+Fix in Tasks & Files
+Epoch 4 has a task but no video file linked, and it isn't marked "no video". Add the video for this epoch, or mark it as having no video.
+Fix this day’s recording facts
+Fix in Tasks & Files
+The source recording used different task environments or cameras. Choose the context for this recording before export.
+Fix this day’s recording facts
+Fix in Tasks & Files
+
+Check these values before downloading.
+
+What this day used (read-only) — configuration from 2023-06-01 · Initial configuration
+
+Animal & day
+FixRat2 — 2023-06-24
+Weight & team
+not recorded — Scientist, Alex
+Configuration version
+Version 1 (current)
+Probes & failed channels
+1 electrode group, 0 failed channels
+Cameras / calibration
+overhead (0.001 m/px)
+Data acquisition
+1 device (SpikeGadgets)
+Tasks & videos
+Sleep (1) — Room A; Sleep (3) — Room A; w_alternation (2) — Room A; w_alternation (4) — Room A · 0 videos
+Optogenetics
+No optogenetics
+Subject & session
+FixRat2 — session FixRat2_20230624
+Non-blocking warnings
+None
+Rig constants
+raw_data_to_volts 1.95e-7; times_period_multiplier 1.5
+Download
+Copy
+
+Not downloaded yet.
+
+20230624_FixRat2_metadata.yml
+View YAML · one file
+
+Recording a block? Export all 3 days (one file each, only the days that pass checks).
+
+Copyright © 2026 Loren Frank Lab
+The University of California at San Francisco

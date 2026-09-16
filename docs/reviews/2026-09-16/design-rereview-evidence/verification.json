@@ -1,0 +1,548 @@
+{
+  "screen_count": 49,
+  "axe_violations": 0,
+  "page_errors": [],
+  "build": "passed; final key findings reconfirmed after fresh build",
+  "unit_tests": "not rerun; review only",
+  "screens": [
+    {
+      "screen": "01-empty-home",
+      "url": "http://127.0.0.1:3021/rec_to_nwb_yaml_creator/#/workspace",
+      "geometry": {
+        "width": 1440,
+        "contentWidth": 1440,
+        "height": 960
+      },
+      "violations": [],
+      "errors": []
+    },
+    {
+      "screen": "02-wizard-identity",
+      "url": "http://127.0.0.1:3021/rec_to_nwb_yaml_creator/#/home",
+      "geometry": {
+        "width": 1440,
+        "contentWidth": 1440,
+        "height": 1160
+      },
+      "violations": [],
+      "errors": []
+    },
+    {
+      "screen": "03-wizard-electrodes",
+      "url": "http://127.0.0.1:3021/rec_to_nwb_yaml_creator/#/home",
+      "geometry": {
+        "width": 1440,
+        "contentWidth": 1440,
+        "height": 960
+      },
+      "violations": [],
+      "errors": []
+    },
+    {
+      "screen": "04-wizard-cameras",
+      "url": "http://127.0.0.1:3021/rec_to_nwb_yaml_creator/#/home",
+      "geometry": {
+        "width": 1440,
+        "contentWidth": 1440,
+        "height": 960
+      },
+      "violations": [],
+      "errors": []
+    },
+    {
+      "screen": "05-wizard-opto",
+      "url": "http://127.0.0.1:3021/rec_to_nwb_yaml_creator/#/home",
+      "geometry": {
+        "width": 1440,
+        "contentWidth": 1440,
+        "height": 960
+      },
+      "violations": [],
+      "errors": []
+    },
+    {
+      "screen": "06-wizard-tasks",
+      "url": "http://127.0.0.1:3021/rec_to_nwb_yaml_creator/#/home",
+      "geometry": {
+        "width": 1440,
+        "contentWidth": 1440,
+        "height": 960
+      },
+      "violations": [],
+      "errors": []
+    },
+    {
+      "screen": "07-task-dialog",
+      "url": "http://127.0.0.1:3021/rec_to_nwb_yaml_creator/#/home",
+      "geometry": {
+        "width": 1440,
+        "contentWidth": 1440,
+        "height": 960
+      },
+      "violations": [],
+      "errors": []
+    },
+    {
+      "screen": "08-wizard-system",
+      "url": "http://127.0.0.1:3021/rec_to_nwb_yaml_creator/#/home",
+      "geometry": {
+        "width": 1440,
+        "contentWidth": 1440,
+        "height": 960
+      },
+      "violations": [],
+      "errors": []
+    },
+    {
+      "screen": "09-wizard-team",
+      "url": "http://127.0.0.1:3021/rec_to_nwb_yaml_creator/#/home",
+      "geometry": {
+        "width": 1440,
+        "contentWidth": 1440,
+        "height": 976
+      },
+      "violations": [],
+      "errors": []
+    },
+    {
+      "screen": "10-saved-draft-destination",
+      "url": "http://127.0.0.1:3021/rec_to_nwb_yaml_creator/#/animal/ReviewRat/days",
+      "geometry": {
+        "width": 1440,
+        "contentWidth": 1440,
+        "height": 1208
+      },
+      "violations": [],
+      "errors": []
+    },
+    {
+      "screen": "11-first-day-from-draft",
+      "url": "http://127.0.0.1:3021/rec_to_nwb_yaml_creator/#/day/ReviewRat-2026-09-16",
+      "geometry": {
+        "width": 1440,
+        "contentWidth": 1440,
+        "height": 1494
+      },
+      "violations": [],
+      "errors": []
+    },
+    {
+      "screen": "12-first-epoch-no-task",
+      "url": "http://127.0.0.1:3021/rec_to_nwb_yaml_creator/#/day/ReviewRat-2026-09-16",
+      "geometry": {
+        "width": 1440,
+        "contentWidth": 1440,
+        "height": 1492
+      },
+      "violations": [],
+      "errors": []
+    },
+    {
+      "screen": "13-task-required-feedback",
+      "url": "http://127.0.0.1:3021/rec_to_nwb_yaml_creator/#/day/ReviewRat-2026-09-16",
+      "geometry": {
+        "width": 1440,
+        "contentWidth": 1440,
+        "height": 1492
+      },
+      "violations": [],
+      "errors": []
+    },
+    {
+      "screen": "14-first-draft-review",
+      "url": "http://127.0.0.1:3021/rec_to_nwb_yaml_creator/#/day/ReviewRat-2026-09-16",
+      "geometry": {
+        "width": 1440,
+        "contentWidth": 1440,
+        "height": 1330
+      },
+      "violations": [],
+      "errors": []
+    },
+    {
+      "screen": "15-populated-workspace",
+      "url": "http://127.0.0.1:3021/rec_to_nwb_yaml_creator/#/workspace",
+      "geometry": {
+        "width": 1440,
+        "contentWidth": 1440,
+        "height": 960
+      },
+      "violations": [],
+      "errors": []
+    },
+    {
+      "screen": "16-recording-days",
+      "url": "http://127.0.0.1:3021/rec_to_nwb_yaml_creator/#/animal/FixRat2/days",
+      "geometry": {
+        "width": 1440,
+        "contentWidth": 1440,
+        "height": 960
+      },
+      "violations": [],
+      "errors": []
+    },
+    {
+      "screen": "17-followup-daily",
+      "url": "http://127.0.0.1:3021/rec_to_nwb_yaml_creator/#/day/FixRat2-2023-06-25",
+      "geometry": {
+        "width": 1440,
+        "contentWidth": 1440,
+        "height": 1745
+      },
+      "violations": [],
+      "errors": []
+    },
+    {
+      "screen": "18-epoch-drawer",
+      "url": "http://127.0.0.1:3021/rec_to_nwb_yaml_creator/#/day/FixRat2-2023-06-25",
+      "geometry": {
+        "width": 1440,
+        "contentWidth": 1440,
+        "height": 1743
+      },
+      "violations": [],
+      "errors": []
+    },
+    {
+      "screen": "19-review-missing-statescripts",
+      "url": "http://127.0.0.1:3021/rec_to_nwb_yaml_creator/#/day/FixRat2-2023-06-25",
+      "geometry": {
+        "width": 1440,
+        "contentWidth": 1440,
+        "height": 1158
+      },
+      "violations": [],
+      "errors": []
+    },
+    {
+      "screen": "20-recording-setup",
+      "url": "http://127.0.0.1:3021/rec_to_nwb_yaml_creator/#/day/FixRat2-2023-06-25",
+      "geometry": {
+        "width": 1440,
+        "contentWidth": 1440,
+        "height": 1143
+      },
+      "violations": [],
+      "errors": []
+    },
+    {
+      "screen": "21-failed-channels",
+      "url": "http://127.0.0.1:3021/rec_to_nwb_yaml_creator/#/day/FixRat2-2023-06-25",
+      "geometry": {
+        "width": 1440,
+        "contentWidth": 1440,
+        "height": 1143
+      },
+      "violations": [],
+      "errors": []
+    },
+    {
+      "screen": "23-dio",
+      "url": "http://127.0.0.1:3021/rec_to_nwb_yaml_creator/#/day/FixRat2-2023-06-25",
+      "geometry": {
+        "width": 1440,
+        "contentWidth": 1440,
+        "height": 1143
+      },
+      "violations": [],
+      "errors": []
+    },
+    {
+      "screen": "24-animal-cameras",
+      "url": "http://127.0.0.1:3021/rec_to_nwb_yaml_creator/#/animal/FixRat2/cameras",
+      "geometry": {
+        "width": 1440,
+        "contentWidth": 1440,
+        "height": 960
+      },
+      "violations": [],
+      "errors": []
+    },
+    {
+      "screen": "25-camera-dialog",
+      "url": "http://127.0.0.1:3021/rec_to_nwb_yaml_creator/#/animal/FixRat2/cameras",
+      "geometry": {
+        "width": 1440,
+        "contentWidth": 1440,
+        "height": 960
+      },
+      "violations": [],
+      "errors": []
+    },
+    {
+      "screen": "26-opto-setup",
+      "url": "http://127.0.0.1:3021/rec_to_nwb_yaml_creator/#/animal/DesignRat/optogenetics",
+      "geometry": {
+        "width": 1440,
+        "contentWidth": 1440,
+        "height": 1598
+      },
+      "violations": [],
+      "errors": []
+    },
+    {
+      "screen": "27-opto-disabled",
+      "url": "http://127.0.0.1:3021/rec_to_nwb_yaml_creator/#/animal/DesignRat/optogenetics",
+      "geometry": {
+        "width": 1440,
+        "contentWidth": 1440,
+        "height": 960
+      },
+      "violations": [],
+      "errors": []
+    },
+    {
+      "screen": "28-opto-reenabled",
+      "url": "http://127.0.0.1:3021/rec_to_nwb_yaml_creator/#/animal/DesignRat/optogenetics",
+      "geometry": {
+        "width": 1440,
+        "contentWidth": 1440,
+        "height": 1598
+      },
+      "violations": [],
+      "errors": []
+    },
+    {
+      "screen": "29-opto-entered",
+      "url": "http://127.0.0.1:3021/rec_to_nwb_yaml_creator/#/animal/DesignRat/optogenetics",
+      "geometry": {
+        "width": 1440,
+        "contentWidth": 1440,
+        "height": 2692
+      },
+      "violations": [],
+      "errors": []
+    },
+    {
+      "screen": "30-opto-values-lost",
+      "url": "http://127.0.0.1:3021/rec_to_nwb_yaml_creator/#/animal/DesignRat/optogenetics",
+      "geometry": {
+        "width": 1440,
+        "contentWidth": 1440,
+        "height": 1598
+      },
+      "violations": [],
+      "errors": []
+    },
+    {
+      "screen": "31-animal-review",
+      "url": "http://127.0.0.1:3021/rec_to_nwb_yaml_creator/#/animal/FixRat2/export",
+      "geometry": {
+        "width": 1440,
+        "contentWidth": 1440,
+        "height": 960
+      },
+      "violations": [],
+      "errors": []
+    },
+    {
+      "screen": "32-batch-review",
+      "url": "http://127.0.0.1:3021/rec_to_nwb_yaml_creator/#/animal/FixRat2/export",
+      "geometry": {
+        "width": 1440,
+        "contentWidth": 1440,
+        "height": 1183
+      },
+      "violations": [],
+      "errors": []
+    },
+    {
+      "screen": "33-followup-phone",
+      "url": "http://127.0.0.1:3021/rec_to_nwb_yaml_creator/#/day/FixRat2-2023-06-25",
+      "geometry": {
+        "width": 390,
+        "contentWidth": 390,
+        "height": 2168
+      },
+      "violations": [],
+      "errors": []
+    },
+    {
+      "screen": "34-epoch-phone",
+      "url": "http://127.0.0.1:3021/rec_to_nwb_yaml_creator/#/day/FixRat2-2023-06-25",
+      "geometry": {
+        "width": 390,
+        "contentWidth": 390,
+        "height": 2147
+      },
+      "violations": [],
+      "errors": []
+    },
+    {
+      "screen": "35-followup-320",
+      "url": "http://127.0.0.1:3021/rec_to_nwb_yaml_creator/#/day/FixRat2-2023-06-25",
+      "geometry": {
+        "width": 320,
+        "contentWidth": 320,
+        "height": 2362
+      },
+      "violations": [],
+      "errors": []
+    },
+    {
+      "screen": "36-cameras-320",
+      "url": "http://127.0.0.1:3021/rec_to_nwb_yaml_creator/#/animal/FixRat2/cameras",
+      "geometry": {
+        "width": 320,
+        "contentWidth": 352,
+        "height": 1124
+      },
+      "violations": [],
+      "errors": []
+    },
+    {
+      "screen": "37-wizard-320",
+      "url": "http://127.0.0.1:3021/rec_to_nwb_yaml_creator/#/home",
+      "geometry": {
+        "width": 320,
+        "contentWidth": 320,
+        "height": 1685
+      },
+      "violations": [],
+      "errors": []
+    },
+    {
+      "screen": "38-wizard-390",
+      "url": "http://127.0.0.1:3021/rec_to_nwb_yaml_creator/#/home",
+      "geometry": {
+        "width": 390,
+        "contentWidth": 390,
+        "height": 1408
+      },
+      "violations": [],
+      "errors": []
+    },
+    {
+      "screen": "39-electrodes",
+      "url": "http://127.0.0.1:3021/rec_to_nwb_yaml_creator/#/animal/FixRat2/electrode-groups",
+      "geometry": {
+        "width": 1440,
+        "contentWidth": 1440,
+        "height": 960
+      },
+      "violations": [],
+      "errors": []
+    },
+    {
+      "screen": "40-mapping",
+      "url": "http://127.0.0.1:3021/rec_to_nwb_yaml_creator/#/animal/FixRat2/electrode-groups",
+      "geometry": {
+        "width": 1440,
+        "contentWidth": 1440,
+        "height": 960
+      },
+      "violations": [],
+      "errors": []
+    },
+    {
+      "screen": "41-new-configuration",
+      "url": "http://127.0.0.1:3021/rec_to_nwb_yaml_creator/#/animal/FixRat2/electrode-groups",
+      "geometry": {
+        "width": 1440,
+        "contentWidth": 1440,
+        "height": 960
+      },
+      "violations": [],
+      "errors": []
+    },
+    {
+      "screen": "42-camera-320-overflow",
+      "url": "http://127.0.0.1:3021/rec_to_nwb_yaml_creator/#/animal/FixRat2/cameras",
+      "geometry": {
+        "width": 320,
+        "contentWidth": 352,
+        "height": 1124
+      },
+      "violations": [],
+      "errors": []
+    },
+    {
+      "screen": "43-camera-390",
+      "url": "http://127.0.0.1:3021/rec_to_nwb_yaml_creator/#/animal/FixRat2/cameras",
+      "geometry": {
+        "width": 390,
+        "contentWidth": 390,
+        "height": 1134
+      },
+      "violations": [],
+      "errors": []
+    },
+    {
+      "screen": "44-current-build-overflow",
+      "url": "http://127.0.0.1:3021/rec_to_nwb_yaml_creator/#/animal/FixRat2/cameras",
+      "geometry": {
+        "width": 320,
+        "contentWidth": 352,
+        "height": 1097
+      },
+      "violations": [],
+      "errors": []
+    },
+    {
+      "screen": "45-current-build-statescript-reminder",
+      "url": "http://127.0.0.1:3021/rec_to_nwb_yaml_creator/#/day/FixRat2-2023-06-25",
+      "geometry": {
+        "width": 1440,
+        "contentWidth": 1440,
+        "height": 1421
+      },
+      "violations": [],
+      "errors": []
+    },
+    {
+      "screen": "46-current-build-export",
+      "url": "http://127.0.0.1:3021/rec_to_nwb_yaml_creator/#/day/FixRat2-2023-06-25",
+      "geometry": {
+        "width": 1440,
+        "contentWidth": 1440,
+        "height": 1169
+      },
+      "violations": [],
+      "errors": []
+    },
+    {
+      "screen": "47-opto-progress-empty-fields",
+      "url": "http://127.0.0.1:3021/rec_to_nwb_yaml_creator/#/animal/DesignRat/optogenetics",
+      "geometry": {
+        "width": 1440,
+        "contentWidth": 1440,
+        "height": 3956
+      },
+      "violations": [],
+      "errors": []
+    },
+    {
+      "screen": "48-corrected-download",
+      "url": "http://127.0.0.1:3021/rec_to_nwb_yaml_creator/#/day/FixRat2-2023-06-25",
+      "geometry": {
+        "width": 1440,
+        "contentWidth": 1440,
+        "height": 1421
+      },
+      "violations": [],
+      "errors": []
+    },
+    {
+      "screen": "49-failed-channels-expanded",
+      "url": "http://127.0.0.1:3021/rec_to_nwb_yaml_creator/#/day/FixRat2-2023-06-25",
+      "geometry": {
+        "width": 1440,
+        "contentWidth": 1440,
+        "height": 1143
+      },
+      "violations": [],
+      "errors": []
+    },
+    {
+      "screen": "50-import-entry",
+      "url": "http://127.0.0.1:3021/rec_to_nwb_yaml_creator/#/import",
+      "geometry": {
+        "width": 1440,
+        "contentWidth": 1440,
+        "height": 960
+      },
+      "violations": [],
+      "errors": []
+    }
+  ]
+}

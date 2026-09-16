@@ -1,0 +1,33 @@
+{
+  "viewport": {
+    "width": 390,
+    "height": 844
+  },
+  "scroll": {
+    "x": 0,
+    "y": 0
+  },
+  "documentWidth": 404,
+  "weight": {
+    "x": 75.796875,
+    "y": 975.375,
+    "width": 178,
+    "height": 36,
+    "right": 253.796875
+  },
+  "overflow": [
+    {
+      "tag": "SUMMARY",
+      "id": "",
+      "cls": "inherited-metadata-toggle",
+      "text": "▶\nDescriptions, data folder & search terms",
+      "rect": {
+        "x": 51.796875,
+        "y": 3478.5625,
+        "width": 351.921875,
+        "height": 52,
+        "right": 403.71875
+      }
+    }
+  ]
+}

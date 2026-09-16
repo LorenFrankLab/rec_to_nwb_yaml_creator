@@ -1,0 +1,54 @@
+Skip to main content
+Skip to navigation
+Navigated to Home - Animal Selection
+Workspace
+Validation & Export
+⌨
+Keyboard shortcuts
+Animals › New animal
+New animal — guided setup
+
+Enter once what stays the same for this animal across every recording day. Recording days reuse all of this; you'll only revisit it on a re-implant.
+
+Starting fresh below, or Import a YAML… · Copy from another animal…
+
+1
+Identity
+2
+Electrodes
+3
+Cameras
+4
+Optogenetics
+optional
+5
+Tasks
+6
+Recording system
+Pre-filled — review
+7
+Team
+Electrodes / probes
+
+One group per probe (or tetrode). Channel maps and geometry come from the device type automatically.
+
+Electrode Groups
+
+Configure the electrode groups for this animal.
+
+Channel maps are generated automatically from each electrode group's device type.
+
++ Add Electrode Group
+Copy from Animal
+ID	DEVICE TYPE	LOCATION	CHANNELS	SHANKS	STATUS	ACTIONS
+0	Tetrode (12.5 µm)	CA1	4	1
+✓
+	EditDelete
+
+No electrophysiology? This is a behavior-only animal — skip electrodes.
+
+← Back
+Save draft
+Next →
+Copyright © 2026 Loren Frank Lab
+The University of California at San Francisco

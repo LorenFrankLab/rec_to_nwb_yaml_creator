@@ -1,0 +1,59 @@
+Skip to main content
+Skip to navigation
+Navigated to Home - Animal Selection
+Workspace
+Validation & Export
+⌨
+Keyboard shortcuts
+Animals › New animal
+New animal — guided setup
+
+Enter once what stays the same for this animal across every recording day. Recording days reuse all of this; you'll only revisit it on a re-implant.
+
+Starting fresh below, or Import a YAML… · Copy from another animal…
+
+1
+Identity
+2
+Electrodes
+3
+Cameras
+4
+Optogenetics
+optional
+5
+Tasks
+6
+Recording system
+Pre-filled — review
+7
+Team
+Cameras
+
+The cameras on this rig. Each day's epochs pick which cameras they used.
+
+📹
+No Cameras Configured
+
+Cameras define your video recording hardware: position tracking, behavioral monitoring, and experimental context.
+
+Configure camera metadata including manufacturer, model, lens, and meters per pixel for spatial calibration.
+
+Add First Camera
+Add Camera
+Camera ID
+Automatically assigned
+Camera Name
+Same name means the same camera. A camera with a different zoom, calibration, lens, model, or id is a different camera — give it a different name.
+Manufacturer
+Model
+Lens
+Meters per Pixel
+Spatial calibration — meters per pixel (how many meters one pixel spans in the tracking video). Typical overhead tracking: 0.0005–0.002 m/px. Changing this is a new camera identity.
+Cancel
+Save
+← Back
+Save draft
+Next →
+Copyright © 2026 Loren Frank Lab
+The University of California at San Francisco

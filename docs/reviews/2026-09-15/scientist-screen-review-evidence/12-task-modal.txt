@@ -1,0 +1,57 @@
+Skip to main content
+Skip to navigation
+Navigated to Home - Animal Selection
+Workspace
+Validation & Export
+⌨
+Keyboard shortcuts
+Animals › New animal
+New animal — guided setup
+
+Enter once what stays the same for this animal across every recording day. Recording days reuse all of this; you'll only revisit it on a re-implant.
+
+Starting fresh below, or Import a YAML… · Copy from another animal…
+
+1
+Identity
+2
+Electrodes
+3
+Cameras
+4
+Optogenetics
+optional
+5
+Tasks
+6
+Recording system
+Pre-filled — review
+7
+Team
+Tasks
+
+Define task types once. Each recording day's epochs pick from these.
+
+📋
+No Task Types Defined
+
+Define each behavioral task once here (e.g. sleep, w-track). Each recording day then picks which task types it ran and assigns their epochs — you never retype a task.
+
+A task type carries its name, description, environment, and the cameras it uses. The name is a Spyglass identity, so two task types can't share a name.
+
+Add First Task Type
+Add Task Type
+Task name
+The task's identity in Spyglass — same name means the same task. Two task types can't share a name with different details.
+Description
+Environment
+Cameras used
+0 · overhead_camera
+Which cameras recorded this task. Each day still confirms the cameras it actually used.
+Cancel
+Save
+← Back
+Save draft
+Next →
+Copyright © 2026 Loren Frank Lab
+The University of California at San Francisco

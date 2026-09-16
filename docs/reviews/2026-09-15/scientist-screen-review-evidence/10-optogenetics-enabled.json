@@ -1,0 +1,23 @@
+{
+  "url": "http://127.0.0.1:3020/#/home",
+  "geometry": {
+    "width": 1440,
+    "contentWidth": 1440,
+    "height": 1321
+  },
+  "violations": [
+    {
+      "id": "color-contrast",
+      "impact": "serious",
+      "nodes": [
+        {
+          "target": [
+            "#wizard-tab-recording-system > ._stepOptional_19xni_92"
+          ],
+          "summary": "Fix any of the following:\n  Element has insufficient color contrast of 4.2 (foreground color: #757575, background color: #fff3e0, font size: 8.3pt (11px), font weight: normal). Expected contrast ratio of 4.5:1"
+        }
+      ]
+    }
+  ],
+  "errors": []
+}

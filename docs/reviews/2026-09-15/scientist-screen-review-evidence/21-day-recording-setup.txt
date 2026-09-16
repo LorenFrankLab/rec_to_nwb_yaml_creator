@@ -1,0 +1,66 @@
+Skip to main content
+Skip to navigation
+Navigated to Day Editor: UxRat01-2023-06-22
+Workspace
+Validation & Export
+⌨
+Keyboard shortcuts
+Workspace
+›
+Animal: UxRat01
+›
+Day: 2023-06-22
+✓
+Saved 12s ago
+Export
+Day Editor: UxRat01 - 2023-06-22
+Configuration v1
+Needs attention
+Animal context
+Wild-type · M · Rattus norvegicus
+Config v1
+
+⚠
+1 issue blocks export
+
+1 in Recording Setup
+
+Recording Setup
+1 thing to fix
+The probe setup v1 was entered on 2026-09-15 and its effective period before that is not recorded, so it is not known to apply to this earlier recording. Confirm that v1 is the setup this day was recorded with, pick the right version, or set the version's effective date to cover 2023-06-22.
+Confirm this setup applies
+DAY
+Daily log
+⚠
+Incomplete
+RECORDING
+Recording Setup
+✗
+Has errors
+Failed Channels
+✓
+Complete
+DIO Wiring
+✓
+Complete
+FINISH
+Fix & Export
+1 to fix
+✗
+Has errors
+Recording Setup
+Recording system
+
+This session was recorded on SpikeGadgets. Add more systems in the animal's Recording System tab to choose a different one per day.
+
+Cameras used this day
+
+Check the cameras this recording day used. A camera already referenced by a task, video, or FsGUI protocol is used regardless and shown checked.
+
+overhead_camera (id 0)
+Day-only technical overrides
+OPTIONAL
+Hardware configuration
+V1
+Copyright © 2026 Loren Frank Lab
+The University of California at San Francisco

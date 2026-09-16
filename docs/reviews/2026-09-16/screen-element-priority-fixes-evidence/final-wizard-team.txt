@@ -1,0 +1,40 @@
+Skip to main content
+Skip to navigation
+Navigated to Home - Animal Selection
+Workspace
+Review all animals
+⌨
+Keyboard shortcuts
+Animals › New animal
+New animal — guided setup
+1
+Identity
+2
+Experiment & team
+3
+Recording system
+Pre-filled — review
+4
+Electrodes
+optional
+5
+Cameras
+optional
+6
+Tasks
+Experiment & team
+
+* Required before export. You can save an unfinished draft.
+
+Enter the experiment description and usual experimenters once. New recordings reuse these defaults.
+
+Experiment description *
+Required for export. New recording days inherit this unless a day overrides it.
+Experimenter names *
++ Add experimenter
+Frank Lab · UCSF · Edit
+← Back
+Save draft & exit
+Next →
+Copyright © 2026 Loren Frank Lab
+The University of California at San Francisco

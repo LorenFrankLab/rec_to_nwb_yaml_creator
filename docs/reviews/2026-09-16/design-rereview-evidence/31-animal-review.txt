@@ -1,0 +1,82 @@
+Skip to main content
+Skip to navigation
+Navigated to Animal
+Workspace
+▸
+Fi
+FixRat2
+▾
+Validation & Export
+⌨
+Keyboard shortcuts
+FixRat2
+animal ID
+Rattus norvegicus · M
+✓
+Saved just now
+⋮
+Wild-type
+M
+Rattus norvegicus
+b. 2023-01-01
+1 probe — CA1
+Config v1
+Team: Scientist, Alex
+DAY WORK
+Recording Days
+4
+›
+Validation & Export
+4 ready
+›
+ANIMAL SETUP
+Electrode Groups
+1
+›
+Recording System
+1
+›
+Cameras
+1
+›
+Task Types
+›
+Optogenetics
+○
+›
+Review & export — FixRat2
+
+Showing: FixRat2 — 4 days
+
+Validate & export all animals →
+
+4 valid / 0 with errors / 0 incomplete
+
+Validate All
+Review 4 ready recordings
+What gets exported?
+What do these statuses mean?
+Recording days across all animals with validation status
+Animal	Date	Session	Setup	Status	Editor
+FixRat2	2023-06-22	FixRat2_20230622
+Recording session for FixRat2 on 2023-06-22
+	
+config v1 (latest) · 1 camera (overhead 0.001 m/px) · No optogenetics
+	CHANGED SINCE DOWNLOAD	Open editor
+FixRat2	2023-06-23	FixRat2_20230623
+Recording session for FixRat2 on 2023-06-23
+	
+config v1 (latest) · 1 camera (overhead 0.001 m/px) · No optogenetics
+	DOWNLOADED	Open editor
+FixRat2	2023-06-24	FixRat2_20230624
+Recording session for FixRat2 on 2023-06-24
+	
+config v1 (latest) · 1 camera (overhead 0.001 m/px) · No optogenetics
+	DOWNLOADED	Open editor
+FixRat2	2023-06-25	FixRat2_20230625
+Recording session for FixRat2 on 2023-06-25
+	
+config v1 (latest) · 1 camera (overhead 0.001 m/px) · No optogenetics
+	DOWNLOADED	Open editor
+Copyright © 2026 Loren Frank Lab
+The University of California at San Francisco

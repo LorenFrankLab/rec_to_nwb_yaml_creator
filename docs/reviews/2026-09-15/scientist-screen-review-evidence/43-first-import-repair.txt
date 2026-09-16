@@ -1,0 +1,30 @@
+Skip to main content
+Skip to navigation
+Workspace
+Validation & Export
+⌨
+Keyboard shortcuts
+Animals › Import
+Import metadata YAML
+20230622_sample_metadata.yml
+Needs repair
+Choose different files
+
+This file will create a new animal: “54321”.
+
+Needs attention
+Apply safe suggestions (1)
+Associated file 2 — associated2.txt
+Associated file path
+path/
+Associated files 1 and 2 both point at path "path/". Each associated file row must point at its own raw file so epochs do not use the wrong log.
+Virus injection 1 — CA1
+Virus injection volume
+100 → 0.45
+volume_in_uL and volume_in_ul disagree. trodes_to_nwb reads volume_in_uL, so it is authoritative — both keys are kept, reconciled to that value.
+Accept
+Import as new animal
+2 flagged fields still need a response.
+Cancel
+Copyright © 2026 Loren Frank Lab
+The University of California at San Francisco

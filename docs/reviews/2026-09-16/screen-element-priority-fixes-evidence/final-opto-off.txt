@@ -1,0 +1,48 @@
+Skip to main content
+Skip to navigation
+Navigated to Animal
+Workspace
+▸
+Fi
+FixRat2
+▾
+Review all animals
+⌨
+Keyboard shortcuts
+FixRat2
+Rattus norvegicus · M
+Edit profile
+⋮
+Animal facts & setup summary
+DAY WORK
+Recording Days
+4
+›
+Review & export
+1 to download
+›
+ANIMAL SETUP
+Electrode Groups
+1
+›
+Recording System
+1
+›
+Cameras
+1
+›
+Task Types
+›
+Optogenetics
+not used
+›
+
+Not used — no stimulation
+
+Optogenetics Setup
+This animal has optogenetics
+
+Saved setup retained; enable to restore it. Existing recordings keep their saved setup.
+
+Copyright © 2026 Loren Frank Lab
+The University of California at San Francisco

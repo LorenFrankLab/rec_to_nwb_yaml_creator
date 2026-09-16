@@ -1,0 +1,45 @@
+Skip to main content
+Skip to navigation
+Navigated to Home - Animal Selection
+Workspace
+Validation & Export
+⌨
+Keyboard shortcuts
+Animals › New animal
+New animal — guided setup
+
+Enter once what stays the same for this animal across every recording day. Recording days reuse all of this; you'll only revisit it on a re-implant.
+
+Starting fresh below, or Import a YAML… · Copy from another animal…
+
+1
+Identity
+2
+Electrodes
+3
+Cameras
+4
+Optogenetics
+optional
+5
+Tasks
+6
+Recording system
+Pre-filled — review
+7
+Team
+Team
+
+Who works on this animal. This seeds each recording day's “who ran it” (editable per day).
+
+Experiment description
+Required for export. New recording days inherit this unless a day overrides it.
+Experimenter names
++ Add experimenter
+Lab
+Institution
+← Back
+Save draft
+✓ Create animal
+Copyright © 2026 Loren Frank Lab
+The University of California at San Francisco
