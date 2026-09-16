@@ -291,6 +291,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Importing a later calibration of a known camera goes straight to the split/unify choice instead
+  of a mapping repair.** Adding the next recording day of an animal whose camera had been split by an
+  earlier import stopped at "Needs repair", asking for the camera to be mapped onto an existing id or
+  for the YAML to be edited — even when the file recorded a calibration the animal already held under
+  its own split name. A same-name camera the import can split, unify, or recognise now reaches the
+  calibration decision directly; a reference nothing in the animal explains still asks for the
+  mapping.
+
 - **The scientific review no longer reports "None" for warnings the export gate is asking you to
   review.** The read-only "what this day used" review counted no warnings of its own, so it said
   "Non-blocking warnings — None" on the same screen as "Ready to export · 2 warnings to review". It

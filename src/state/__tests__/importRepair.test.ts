@@ -19,6 +19,7 @@ import {
   existingAnimalCatalogResolutionBlocker,
 } from '../importRepair';
 import type { RepairItem } from '../importRepair';
+import { classifyCameraAgainstCatalog } from '../cameraCalibrationConflicts';
 
 const fixtureDir = path.join(__dirname, '../../__tests__/fixtures/import');
 
@@ -580,23 +581,30 @@ describe('existing-animal add catalog refs — surface and resolve before import
     };
 
     const plan = buildImportRepairPlan(model, '06222023_remy_metadata.yml', workspace);
-    const camera = plan.items.find((item) => item.code === 'divergent_camera_identity');
-    expect(camera).toMatchObject({ kind: 'input' });
-    expect(camera!.suggested).toBeUndefined();
-    expect(camera!.why).toContain('meters_per_pixel');
-    expect(existingAnimalCatalogResolutionBlocker(plan, { [camera!.path]: 99 })).toMatch(
-      /existing camera id: 0/
-    );
-    expect(existingAnimalCatalogResolutionBlocker(plan, { [camera!.path]: 0 })).toBeNull();
 
-    const repaired = applyImportRepairs(model, { [camera!.path]: 0 }) as {
+    // The name is reused with a different calibration, which is the batch preview's split/unify
+    // question — not an identity mapping the scientist must answer first (R3). The row is left for
+    // that decision rather than being demanded here or silently collapsed onto the animal's camera.
+    expect(plan.items.some((item) => item.code === 'divergent_camera_identity')).toBe(false);
+    expect(plan.items.some((item) => item.code === 'existing_animal_missing_camera')).toBe(false);
+    expect(existingAnimalCatalogResolutionBlocker(plan, {})).toBeNull();
+    expect(
+      classifyCameraAgainstCatalog(
+        (model.cameras as Array<Record<string, unknown>>)[0],
+        workspace.animals.remy
+      )
+    ).toBe('conflict');
+
+    // A mapping is still AVAILABLE as a manual repair path elsewhere; nothing about the file is
+    // rewritten without one.
+    const repaired = applyImportRepairs(model, {}) as {
       cameras: Array<Record<string, unknown>>;
       tasks: Array<Record<string, unknown>>;
       associated_video_files: Array<Record<string, unknown>>;
     };
-    expect(repaired.cameras[0].id).toBe(0);
-    expect(repaired.tasks[0].camera_id).toEqual([0]);
-    expect(repaired.associated_video_files[0].camera_id).toBe(0);
+    expect(repaired.cameras[0].id).toBe(3);
+    expect(repaired.tasks[0].camera_id).toEqual([3]);
+    expect(repaired.associated_video_files[0].camera_id).toBe(3);
   });
 
   it('does not surface cross-day camera divergence when identity fields match', () => {
@@ -688,15 +696,81 @@ describe('existing-animal add catalog refs — surface and resolve before import
     };
 
     const plan = buildImportRepairPlan(model, '06222023_remy_metadata.yml', workspace);
+
+    // Same camera_name, same id, different calibration: the preview asks which calibration each day
+    // exports (split by default), so this file is ready to reach that question (R3).
+    expect(plan.items.some((item) => item.code === 'divergent_camera_identity')).toBe(false);
+    expect(existingAnimalCatalogResolutionBlocker(plan, {})).toBeNull();
+    expect(
+      classifyCameraAgainstCatalog(
+        (model.cameras as Array<Record<string, unknown>>)[0],
+        workspace.animals.remy
+      )
+    ).toBe('conflict');
+  });
+
+  it('still demands a mapping when the reused name matches with a DIFFERENT id only', () => {
+    // Identical calibration under one name, but the file numbers it differently AND that id is
+    // another of the animal's cameras: nothing the calibration analysis resolves, so the identity
+    // mapping is still the repair.
+    const model = loadCleanExport();
+    model.cameras = [
+      {
+        id: 1,
+        camera_name: 'maze_camera',
+        meters_per_pixel: 0.0025,
+        manufacturer: 'Allied',
+        model: 'Mako',
+        lens: '8mm',
+      },
+    ];
+    model.tasks = [
+      {
+        task_name: 'Run',
+        task_description: 'run',
+        task_environment: 'maze',
+        camera_id: [1],
+        task_epochs: [1],
+      },
+    ];
+    const existingCameras = [
+      {
+        id: 0,
+        camera_name: 'maze_camera',
+        meters_per_pixel: 0.0025,
+        manufacturer: 'Allied',
+        model: 'Mako',
+        lens: '8mm',
+      },
+      {
+        id: 1,
+        camera_name: 'side_camera',
+        meters_per_pixel: 0.0009,
+        manufacturer: 'Allied',
+        model: 'Mako',
+        lens: '8mm',
+      },
+    ];
+    const workspace = {
+      animals: {
+        remy: {
+          id: 'remy',
+          subject: { subject_id: 'remy' },
+          cameras: existingCameras,
+          devices: { data_acq_device: model.data_acq_device },
+        },
+      },
+    };
+
+    const plan = buildImportRepairPlan(model, '06222023_remy_metadata.yml', workspace);
     const camera = plan.items.find((item) => item.code === 'divergent_camera_identity');
 
-    expect(camera).toMatchObject({
-      kind: 'input',
-      was: 'camera id 0 (maze_camera)',
-    });
-    expect(camera!.suggested).toBeUndefined();
-    expect(camera!.why).toContain('meters_per_pixel');
-    expect(existingAnimalCatalogResolutionBlocker(plan, {})).toMatch(/Resolve Camera 0/);
+    expect(camera).toMatchObject({ kind: 'input', was: 'camera id 1 (maze_camera)' });
+    expect(classifyCameraAgainstCatalog(
+        (model.cameras as Array<Record<string, unknown>>)[0],
+        workspace.animals.remy
+      )).toBeNull();
+    expect(existingAnimalCatalogResolutionBlocker(plan, {})).toMatch(/Resolve Camera 1/);
     expect(existingAnimalCatalogResolutionBlocker(plan, { [camera!.path]: 0 })).toBeNull();
   });
 

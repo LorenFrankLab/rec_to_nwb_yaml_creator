@@ -944,13 +944,14 @@ describe('ImportRepair — a recalibrated camera on an EXISTING animal (F1)', ()
       screen.getByLabelText(/choose a metadata yaml file/i),
       makeFile('06222023_remy_metadata.yml', existingCatalogGapYaml())
     );
-    await screen.findByRole('heading', { name: /needs attention/i });
-    fireEvent.change(screen.getByLabelText(/Map camera 3 to existing camera id/i), {
-      target: { value: '0' },
-    });
+    // The disagreement is a calibration question, not an identity mapping: the file needs no
+    // repair answer to reach it (R3).
+    const addDay = await screen.findByRole('button', { name: /add recording day/i });
+    expect(addDay).toBeEnabled();
+    expect(screen.queryByLabelText(/Map camera 3 to existing camera id/i)).not.toBeInTheDocument();
 
     // Import does not commit while a calibration disagreement is unresolved: it asks first.
-    await user.click(screen.getByRole('button', { name: /add recording day/i }));
+    await user.click(addDay);
     const fieldset = await screen.findByRole('group', { name: /arena_side.*2 calibrations/i });
     expect(captured.days).toEqual({});
     expect(within(fieldset).getByText('meters_per_pixel 0.002')).toBeInTheDocument();
@@ -985,11 +986,7 @@ describe('ImportRepair — a recalibrated camera on an EXISTING animal (F1)', ()
       screen.getByLabelText(/choose a metadata yaml file/i),
       makeFile('06222023_remy_metadata.yml', existingCatalogGapYaml())
     );
-    await screen.findByRole('heading', { name: /needs attention/i });
-    fireEvent.change(screen.getByLabelText(/Map camera 3 to existing camera id/i), {
-      target: { value: '0' },
-    });
-    await user.click(screen.getByRole('button', { name: /add recording day/i }));
+    await user.click(await screen.findByRole('button', { name: /add recording day/i }));
 
     const fieldset = await screen.findByRole('group', { name: /arena_side.*2 calibrations/i });
     await user.click(
@@ -1000,5 +997,170 @@ describe('ImportRepair — a recalibrated camera on an EXISTING animal (F1)', ()
     await screen.findByRole('heading', { name: /import complete/i });
     expect(captured.animals.remy.cameras.map((c) => c.camera_name)).toEqual(['arena_side']);
     expect(captured.days['remy-2023-06-22'].associated_video_files[0].camera_id).toBe(0);
+  });
+});
+
+describe('ImportRepair — a LATER calibration of a camera the animal already has (R3)', () => {
+  // Importing a history one day at a time must reach the same split/unify decision a whole-batch
+  // import reaches. The old identity-mapping repair stood in front of it, so a scientist adding the
+  // next day was asked to map the camera onto an existing id (or edit the YAML) before the app
+  // would even show the choice — and a calibration the animal ALREADY holds under its split name
+  // was asked about too.
+
+  /**
+   * A clean remy day file whose `overhead_camera` carries the given calibration.
+   * @param {string} dateDigits - The recording date as `YYYYMMDD`.
+   * @param {number} metersPerPixel - The calibration recorded for `overhead_camera`.
+   * @returns {string} YAML text.
+   */
+  function dayYaml(dateDigits, metersPerPixel) {
+    const model = decodeYaml(cleanYaml);
+    model.session_id = `remy_${dateDigits}`;
+    model.cameras = model.cameras.map((camera) =>
+      camera.camera_name === 'overhead_camera'
+        ? { ...camera, meters_per_pixel: metersPerPixel }
+        : camera
+    );
+    return encodeYaml(model);
+  }
+
+  /**
+   * Import June 22 (0.001) and June 23 (0.002) as one batch, accepting the default split, and
+   * return to the file picker — the animal now holds `overhead_camera` AND
+   * `overhead_camera_20230623`.
+   * @param {object} user - userEvent session.
+   */
+  async function importSplitHistory(user) {
+    await user.upload(screen.getByLabelText(/choose a metadata yaml file/i), [
+      makeFile('06222023_remy_metadata.yml', dayYaml('20230622', 0.001)),
+      makeFile('06232023_remy_metadata.yml', dayYaml('20230623', 0.002)),
+    ]);
+    await user.click(await screen.findByRole('button', { name: /review 2 ready files/i }));
+    await user.click(screen.getByRole('button', { name: /confirm import/i }));
+    await screen.findByRole('heading', { name: /import complete/i });
+    expect(captured.animals.remy.cameras.map((c) => c.camera_name)).toEqual([
+      'overhead_camera',
+      'side_camera',
+      'overhead_camera_20230623',
+    ]);
+    await user.click(screen.getByRole('button', { name: /import more files/i }));
+  }
+
+  /**
+   * The camera id the animal's catalog holds a given camera under.
+   * @param {string} name - The camera name.
+   * @returns {number} Its catalog id.
+   */
+  const cameraIdOf = (name) =>
+    captured.animals.remy.cameras.find((camera) => camera.camera_name === name).id;
+
+  /**
+   * A day's overhead video camera reference.
+   * @param {string} dayId - The workspace day id.
+   * @returns {number} The referenced camera id.
+   */
+  const overheadRefOf = (dayId) =>
+    captured.days[dayId].associated_video_files.find((video) => video.name.startsWith('overhead'))
+      .camera_id;
+
+  it('goes straight to the split choice for a third calibration, with no mapping repair', async () => {
+    const user = userEvent.setup();
+    renderScreen();
+    await importSplitHistory(user);
+
+    await user.upload(
+      screen.getByLabelText(/choose a metadata yaml file/i),
+      makeFile('06242023_remy_metadata.yml', dayYaml('20230624', 0.003))
+    );
+
+    // No identity mapping stands in the way: the file is ready, and the camera question is the
+    // calibration one.
+    const add = await screen.findByRole('button', { name: /add recording day/i });
+    expect(add).toBeEnabled();
+    expect(screen.queryByLabelText(/Map camera 0 to existing camera id/i)).not.toBeInTheDocument();
+
+    await user.click(add);
+    const fieldset = await screen.findByRole('group', { name: /overhead_camera.*calibrations/i });
+    expect(within(fieldset).getByText('meters_per_pixel 0.001')).toBeInTheDocument();
+    expect(within(fieldset).getByText('meters_per_pixel 0.003')).toBeInTheDocument();
+    expect(within(fieldset).getByRole('radio', { name: /keep as separate cameras/i })).toBeChecked();
+
+    await user.click(screen.getByRole('button', { name: /confirm import/i }));
+    await screen.findByRole('heading', { name: /import complete/i });
+
+    // The new calibration is its own camera, and the new day's videos are on it.
+    expect(
+      captured.animals.remy.cameras.map((c) => [c.camera_name, c.meters_per_pixel])
+    ).toEqual([
+      ['overhead_camera', 0.001],
+      ['side_camera', 0.0009],
+      ['overhead_camera_20230623', 0.002],
+      ['overhead_camera_20230624', 0.003],
+    ]);
+    expect(overheadRefOf('remy-2023-06-24')).toBe(cameraIdOf('overhead_camera_20230624'));
+    // The earlier days are untouched.
+    expect(overheadRefOf('remy-2023-06-22')).toBe(cameraIdOf('overhead_camera'));
+    expect(overheadRefOf('remy-2023-06-23')).toBe(cameraIdOf('overhead_camera_20230623'));
+  });
+
+  it('asks nothing about a calibration the animal already holds under its split name', async () => {
+    const user = userEvent.setup();
+    renderScreen();
+    await importSplitHistory(user);
+    const camerasBefore = structuredClone(captured.animals.remy.cameras);
+
+    // The very same June 23 file again: its 0.002 overhead camera IS `overhead_camera_20230623`.
+    await user.upload(
+      screen.getByLabelText(/choose a metadata yaml file/i),
+      makeFile('06232023_remy_metadata.yml', dayYaml('20230623', 0.002))
+    );
+
+    const add = await screen.findByRole('button', { name: /add recording day/i });
+    expect(add).toBeEnabled();
+    expect(screen.queryByLabelText(/Map camera 0 to existing camera id/i)).not.toBeInTheDocument();
+
+    // No calibration question either — the row IS `overhead_camera_20230623`, so the file commits
+    // straight through to the existing duplicate-day answer rather than a camera decision.
+    await user.click(add);
+    expect(
+      screen.queryByRole('group', { name: /overhead_camera.*calibrations/i })
+    ).not.toBeInTheDocument();
+    expect(await screen.findByRole('alert')).toHaveTextContent(/already exists/i);
+
+    // Nothing new was invented, and the day still points at the camera it was imported under.
+    expect(captured.animals.remy.cameras).toEqual(camerasBefore);
+    expect(overheadRefOf('remy-2023-06-23')).toBe(cameraIdOf('overhead_camera_20230623'));
+  });
+
+  it('still asks about a camera the animal cannot explain at all', async () => {
+    const user = userEvent.setup();
+    renderScreen();
+    await importSplitHistory(user);
+
+    // A camera whose name this animal has never had: the calibration analysis has nothing to
+    // reroute or split it onto, so the catalog repair still has to be answered.
+    const model = decodeYaml(dayYaml('20230624', 0.003));
+    model.cameras = model.cameras.map((camera) =>
+      camera.camera_name === 'overhead_camera'
+        ? { ...camera, id: 7, camera_name: 'ceiling_camera' }
+        : camera
+    );
+    model.tasks = model.tasks.map((task) => ({
+      ...task,
+      camera_id: (task.camera_id || []).map((id) => (id === 0 ? 7 : id)),
+    }));
+    model.associated_video_files = model.associated_video_files.map((video) =>
+      video.camera_id === 0 ? { ...video, camera_id: 7 } : video
+    );
+    await user.upload(
+      screen.getByLabelText(/choose a metadata yaml file/i),
+      makeFile('06242023_remy_metadata.yml', encodeYaml(model))
+    );
+
+    await screen.findByRole('heading', { name: /needs attention/i });
+    expect(screen.getByRole('button', { name: /add recording day/i })).toBeDisabled();
+    expect(
+      screen.getByRole('spinbutton', { name: /Map camera 7 to existing camera id/i })
+    ).toBeInTheDocument();
   });
 });

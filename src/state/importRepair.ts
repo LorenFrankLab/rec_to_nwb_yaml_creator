@@ -22,6 +22,7 @@
 import { validate } from '../validation';
 import { isValidSpecies } from '../validation/dandiSubject';
 import { findIdentityDivergence } from './identityDivergence';
+import { classifyCameraAgainstCatalog } from './cameraCalibrationConflicts';
 import { extractRecordingDate, findExistingAnimalId } from './yamlImportPlan';
 import { getAnimalCameras, getDataAcqDevices } from './workspaceSelectors';
 import { inferredCameraRefs } from './cameraUsage';
@@ -685,6 +686,17 @@ function buildExistingAnimalCatalogItems(
     if (sourceId === undefined || sourceId === null || sourceId === '') continue;
     if (!cameraRefs.some((cameraRef) => sameRefValue(cameraRef, sourceId))) continue;
     if (divergentCameraRefs.some((cameraRef) => sameRefValue(cameraRef, sourceId))) continue;
+
+    // A row the batch preview's calibration analysis can account for is NOT a repair blocker: it
+    // either IS a camera the animal already holds under a split name (nothing to decide), or it
+    // raises the split/unify question the preview asks. Demanding an identity mapping first put the
+    // old gate in front of the very decision the scientist came to make — and asked it even for a
+    // calibration already stored under its own split name (R3). Recorded as handled so the
+    // missing-camera pass below does not re-ask it either.
+    if (classifyCameraAgainstCatalog(sourceRow, existingAnimal) !== null) {
+      divergentCameraRefs.push(sourceId);
+      continue;
+    }
 
     const divergence = findIdentityDivergence(
       String(sourceRow.camera_name ?? ''),

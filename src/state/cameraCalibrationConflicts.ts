@@ -353,6 +353,44 @@ export function analyzeCameraCalibrations(
 }
 
 /**
+ * How the calibration analysis will account for ONE file camera row against an animal's existing
+ * catalog — i.e. what the batch preview will do with it, decided from the same rules
+ * {@link analyzeCameraCalibrations} applies:
+ *
+ *  - `'recognized'`: the animal already holds this exact calibration under a split of this name, so
+ *    the row IS that camera (a reroute) and there is nothing to decide;
+ *  - `'conflict'`: the animal holds this `camera_name` with a DIFFERENT calibration, so the preview
+ *    raises the split/unify question (splitting by default);
+ *  - `null`: nothing in the catalog accounts for the row.
+ *
+ * Import & Repair reads this so it does not demand an identity mapping for a row the preview is
+ * about to resolve anyway (a same-name camera is not a repair blocker; an unexplained reference
+ * still is).
+ *
+ * @param camera - One camera row as the file declares it.
+ * @param existing - The existing workspace animal (its catalog), or null when the subject is new.
+ * @returns How the analysis accounts for the row, or null when it cannot.
+ */
+export function classifyCameraAgainstCatalog(
+  camera: Record<string, unknown> | null | undefined,
+  existing: unknown
+): 'recognized' | 'conflict' | null {
+  if (camera === null || camera === undefined) return null;
+  const name = cameraNameOf(camera);
+  if (name === '') return null;
+  const key = calibrationKey(calibrationFieldsOf(camera));
+  const rows = getAnimalCameras(existing).map((row) => ({
+    name: cameraNameOf(row as unknown as Record<string, unknown>),
+    calibration: calibrationKey(calibrationFieldsOf(row as unknown as Record<string, unknown>)),
+  }));
+  if (rows.some((row) => row.calibration === key && isSplitNameOf(row.name, name))) {
+    return 'recognized';
+  }
+  if (rows.some((row) => row.name === name && row.calibration !== key)) return 'conflict';
+  return null;
+}
+
+/**
  * Rewrite ONE file's camera rows so the batch's analysis is applied:
  *  - a REROUTE renames the row to the existing camera it already is (see
  *    {@link analyzeCameraCalibrations});
