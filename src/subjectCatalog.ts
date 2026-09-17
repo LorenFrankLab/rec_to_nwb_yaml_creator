@@ -1,3 +1,5 @@
+import { SEX_OPTIONS } from './domain/subjectOptions';
+
 /**
  * @fileoverview Subject + lab controlled-vocabulary suggestion lists (split from the legacy
  * `valueList.js`; re-exported by the `valueList` barrel). Gender acronyms/full names, the lab /
@@ -10,7 +12,7 @@
  * @returns Genders
  */
 export const genderAcronym = () => {
-  return [...['M', 'F', 'U', 'O']];
+  return SEX_OPTIONS.map((option) => option.value);
 };
 
 /**
@@ -19,7 +21,7 @@ export const genderAcronym = () => {
  * @returns  Provides the full meaning of gender
  */
 export const genders = () => {
-  return [...['Male', 'Female', 'Unspecified', '0ther']];
+  return SEX_OPTIONS.map((option) => option.label.replace(/ \([MFUO]\)$/, ''));
 };
 
 /**

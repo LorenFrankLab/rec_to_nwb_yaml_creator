@@ -6,6 +6,20 @@ import SaveIndicator from '../SaveIndicator';
 // internally (the field mapping lives in one place). These tests drive it through that single
 // `persistence` prop, mirroring what both call sites pass.
 describe('SaveIndicator', () => {
+  it('surfaces a rejected field commit instead of an earlier saved timestamp', () => {
+    render(
+      <SaveIndicator
+        persistence={{
+          enabled: true,
+          draftError: 'This tab is read-only',
+          hasPendingDrafts: true,
+          lastSaved: new Date().toISOString(),
+        }}
+      />,
+    );
+    expect(screen.getByRole('alert')).toHaveTextContent('This tab is read-only');
+    expect(screen.queryByText(/^Saved /)).not.toBeInTheDocument();
+  });
   it('describes an open Save/Cancel editor without claiming edits have already been made', () => {
     render(<SaveIndicator persistence={{ enabled: true, hasPendingDrafts: true, hasUnappliedDrafts: true, lastSaved: new Date().toISOString() }} />);
     expect(screen.getByRole('status')).toHaveTextContent('Editing — Save or Cancel');

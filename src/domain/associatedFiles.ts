@@ -27,6 +27,8 @@ function fileText(file: Partial<AssociatedFile> | null | undefined): string {
  * swept into the statescript workflow merely because it contains the word "script".
  */
 export function isStatescriptAssociatedFile(file: Partial<AssociatedFile> | null | undefined): boolean {
+  if (file?.kind === 'statescript') return true;
+  if (file?.kind === 'supplemental') return false;
   const text = fileText(file);
   return /\bstatescript\b/.test(text) || /statescriptlog/.test(text);
 }

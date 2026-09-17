@@ -15,6 +15,7 @@ const PULSE_FIELDS = [
 ] as const;
 
 interface Props {
+  draftScope?: string;
   protocol: FsGuiYaml;
   index: number;
   epochs: Array<{ epoch: number; taskName: string }>;
@@ -30,7 +31,7 @@ interface Props {
 
 /** The same complete day-owned protocol editor serves epoch entry and validation repair. */
 export default function StimulationProtocolEditor({ protocol, index, epochs, cameras, events, focusRequest,
-  onChange, onRemove, onClose, onEditWiring, onEditCameras }: Props) {
+  draftScope, onChange, onRemove, onClose, onEditWiring, onEditCameras }: Props) {
   const root = useRef<HTMLDivElement>(null);
   const [confirmRemove, setConfirmRemove] = useState(false);
   const selected = Array.isArray(protocol.epochs) ? protocol.epochs : [];
@@ -65,10 +66,12 @@ export default function StimulationProtocolEditor({ protocol, index, epochs, cam
       </div>}
       <label><span>Protocol YAML file <RequiredMark /></span>
         <DraftTextInput value={protocol.name ?? ''} onCommit={(value) => patch('name', value)}
+          draftKey={draftScope ? `${draftScope}:name` : undefined}
           data-field-path={path('name')} aria-required="true" placeholder="e.g. theta_trigger.yaml" />
       </label>
       <label><span>Power (mW) <RequiredMark /></span>
         <DraftNumberInput value={protocol.power_in_mW === '' || protocol.power_in_mW == null ? undefined : Number(protocol.power_in_mW)} onCommit={(value) => patch('power_in_mW', value)}
+          draftKey={draftScope ? `${draftScope}:power_in_mW` : undefined}
           min="0" step="any" data-field-path={path('power_in_mW')} aria-required="true" />
       </label>
       <fieldset data-field-path={path('epochs')} tabIndex={-1}>
@@ -109,6 +112,7 @@ export default function StimulationProtocolEditor({ protocol, index, epochs, cam
         <p className={styles.hint}>Enter these when the stimulation parameters are not supplied by the FsGUI protocol.</p>
         <div className={styles.form}>{PULSE_FIELDS.map(([field, label, step]) => <label key={field}>{label}
           <DraftNumberInput value={protocol[field] === '' || protocol[field] == null ? undefined : Number(protocol[field])} min="0" step={step}
+            draftKey={draftScope ? `${draftScope}:${field}` : undefined}
             data-field-path={path(field)} onCommit={(value) => patch(field, value)} />
         </label>)}</div>
       </details>

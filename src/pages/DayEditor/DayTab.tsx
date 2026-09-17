@@ -86,6 +86,7 @@ export default function DayTab(props: DayTabProps) {
   }, [props.focusRequest]);
   const keywords = getDayKeywords(day);
   const dayDateKey = String(day.date ?? '').replace(/-/g, '');
+  const draftKey = (fieldPath: string) => `day:${String(day.id)}:${fieldPath}`;
 
   const fieldsByPath = new Map((props.overviewFields ?? []).map((field) => [field.fieldPath, field]));
   const overviewField = (path: string) => fieldsByPath.get(path);
@@ -167,6 +168,7 @@ export default function DayTab(props: DayTabProps) {
                 </label>
                 <div className="daily-log-weight-row">
                   <DraftNumberInput
+                    draftKey={draftKey('session.weight')}
                     id="session-weight"
                     min="0"
                     step="any"
@@ -207,6 +209,7 @@ export default function DayTab(props: DayTabProps) {
                     Session Description
                   </label>
                   <DraftTextArea
+                    draftKey={draftKey('session.session_description')}
                     id="session-description"
                     name="session.session_description"
                     data-field-path="session_description"
@@ -246,6 +249,7 @@ export default function DayTab(props: DayTabProps) {
                   Experimenters present (one per line, &quot;Last, First&quot;)
                 </label>
                 <DraftTextArea
+                  draftKey={draftKey('experimenters.experimenter_name')}
                   id="day-team-names"
                   name="experimenters.experimenter_name"
                   data-field-path="experimenter_name"
@@ -283,6 +287,7 @@ export default function DayTab(props: DayTabProps) {
                     Experiment Description
                   </label>
                   <DraftTextArea
+                    draftKey={draftKey('session.experiment_description')}
                     id="experiment-description"
                     name="session.experiment_description"
                     data-field-path="experiment_description"
@@ -330,6 +335,7 @@ export default function DayTab(props: DayTabProps) {
                 <div className="form-field">
                   <label htmlFor="day-team-lab">Lab</label>
                   <DraftTextInput
+                    draftKey={draftKey('experimenters.lab')}
                     id="day-team-lab"
                     type="text"
                     name="experimenters.lab"
@@ -341,6 +347,7 @@ export default function DayTab(props: DayTabProps) {
                 <div className="form-field">
                   <label htmlFor="day-team-institution">Institution</label>
                   <DraftTextInput
+                    draftKey={draftKey('experimenters.institution')}
                     id="day-team-institution"
                     type="text"
                     name="experimenters.institution"

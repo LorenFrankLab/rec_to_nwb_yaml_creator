@@ -14,7 +14,7 @@ import { RIG_FALLBACK } from './rigConstants';
 import { getAnimalExperimenters } from '../state/workspaceSelectors';
 import { recordingFilenameIssue } from './recordingFilename';
 import { idHasSlash } from '../validation/dandiSubject';
-import type { WorkspaceSettings } from '../state/workspaceTypes';
+import type { SubjectMetadata, WorkspaceSettings } from '../state/workspaceTypes';
 
 /** The processed AnimalCreationForm payload (already trimmed/numbered) consumed by {@link buildAnimalFromForm}. */
 export interface AnimalCreationFormData {
@@ -223,7 +223,8 @@ export function buildAnimalFromForm(formData: AnimalCreationFormData) {
   const subject = {
     subject_id: animalId,
     species: formData.species,
-    sex: formData.sex,
+    // Validation limits the creation form to the schema enum before this builder is called.
+    sex: formData.sex as SubjectMetadata['sex'],
     genotype: formData.genotype,
     // An unknown fact is spelled as an explicit `undefined`, which BOTH store write paths read as
     // "this key is absent" (`createAnimal` / `applyAnimalUpdates` — see `workspaceTransitions`'s

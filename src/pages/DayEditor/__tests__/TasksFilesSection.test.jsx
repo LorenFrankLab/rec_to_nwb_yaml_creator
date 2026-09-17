@@ -40,10 +40,10 @@ describe('TasksFilesSection', () => {
   it('keeps supplemental files visible below the epoch workspace by default', async () => {
     renderSection();
 
-    const section = screen.getByRole('heading', { name: /supplemental files/i }).closest('section');
+    const section = screen.getByRole('heading', { name: /manage files/i }).closest('section');
     expect(section).toBeInTheDocument();
     expect(section).toHaveAttribute('tabindex', '-1');
-    expect(section).toHaveTextContent(/1 file/i);
+    expect(section).toHaveTextContent(/6 files/i);
     expect(within(section).getByRole('button', { name: /custom file/i })).toBeInTheDocument();
   });
 
@@ -56,7 +56,7 @@ describe('TasksFilesSection', () => {
   it('renders the supplemental files editor and writes associated_files', async () => {
     const user = userEvent.setup();
     const { onFieldUpdate } = renderSection();
-    const section = screen.getByRole('heading', { name: /supplemental files/i }).closest('section');
+    const section = screen.getByRole('heading', { name: /manage files/i }).closest('section');
 
     await user.click(within(section).getByRole('button', { name: /custom file/i }));
 

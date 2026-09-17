@@ -29,11 +29,12 @@ export default function SaveIndicator({ persistence }: SaveIndicatorProps) {
     enabled = true,
     lastSaved = null,
     saveError = null,
+    draftError = null,
     hasPendingWrite = false,
     hasPendingDrafts = false,
     hasUnappliedDrafts = false,
   } = persistence ?? {};
-  const error = saveError;
+  const error = saveError ?? draftError;
   const pending = hasPendingWrite;
 
   // Persistence off: never claim "Saved" for in-memory-only state.

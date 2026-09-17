@@ -25,6 +25,10 @@
 
 .saveRow {
   display: flex;
+
+  /* SaveIndicator can briefly be empty between a draft flush and the storage write.
+     Reserve its line so the review button below cannot move during a pointer click. */
+  min-height: calc(var(--font-size-sm) * 1.5 + var(--spacing-xs) * 2);
   flex-wrap: wrap;
   align-items: center;
   gap: var(--spacing-sm);

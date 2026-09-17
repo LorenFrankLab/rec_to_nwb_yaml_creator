@@ -1,4 +1,4 @@
-import { SPECIES_OPTIONS } from '../../domain/subjectOptions';
+import { SEX_OPTIONS, SPECIES_OPTIONS } from '../../domain/subjectOptions';
 import { RequiredMark, FieldRequirements } from '../../components/ui/FieldRequirements';
 import { useMediaQuery } from '../../hooks/useMediaQuery';
 /**
@@ -704,9 +704,9 @@ export default function CreateAnimalWizard() {
                     value={identity.sex}
                     onChange={(e) => handleIdentityChange('sex', e.target.value, true)}
                   >
-                    <option value="M">Male (M)</option>
-                    <option value="F">Female (F)</option>
-                    <option value="U">Unknown (U)</option>
+                    {SEX_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>{option.label}</option>
+                    ))}
                   </select>
 
                 </div>

@@ -138,9 +138,19 @@ export const DAY_SECTIONS = {
 
 export type DaySectionKey = keyof typeof DAY_SECTIONS;
 
+/** Current Day Editor navigation sections (the legacy `tasks` step is folded into `daily`). */
+export type DayEditorSectionKey = 'daily' | 'recording' | 'channels' | 'dio' | 'export';
+
 /** Section key for a day-owned path, or null when the path names no specific section. */
 export function daySectionForPath(path: string): DaySectionKey | null {
   const normalized = path.replace(/^\//, '').replace(/\//g, '.');
+  // Conversion settings own every units field. This must precede the generic
+  // `behavioral_events` test because `units.behavioral_events` is not DIO wiring.
+  if (
+    /^(?:technical\.)?(?:units(?:\.|$)|raw_data_to_volts$|times_period_multiplier$|default_header_file_path$)/.test(normalized)
+  ) {
+    return 'recording';
+  }
   if (
     normalized.startsWith('associated_files') ||
     normalized.startsWith('associated_video_files') ||
@@ -180,6 +190,37 @@ export function daySectionForPath(path: string): DaySectionKey | null {
     return 'daily';
   }
   return null;
+}
+
+const DAY_EDITOR_SECTION_FOR_STEP: Record<string, DayEditorSectionKey> = {
+  overview: 'daily',
+  devices: 'recording',
+  epochs: 'daily',
+  behavioral: 'dio',
+  validation: 'export',
+  export: 'export',
+};
+
+/** Resolve the current Day Editor section from the same field catalog used for issue labels. */
+export function dayEditorSectionForRepair(
+  step: string | null | undefined,
+  focusPath?: string
+): DayEditorSectionKey | null {
+  const section = daySectionForPath(String(focusPath ?? ''));
+  if (section === 'tasks' || section === 'daily') return 'daily';
+  if (section) return section;
+  return DAY_EDITOR_SECTION_FOR_STEP[step ?? ''] ?? null;
+}
+
+/** Translate an external validation path to the path registered by the mounted day input. */
+export function dayEditorFocusPath(path?: string): string | undefined {
+  if (path === 'subject.weight') return 'session.weight';
+  if (
+    /^(?:units(?:\.|$)|raw_data_to_volts$|times_period_multiplier$|default_header_file_path$)/.test(path ?? '')
+  ) {
+    return `technical.${path}`;
+  }
+  return path;
 }
 
 /** Section-label override for day-owned paths split out from their legacy validation step. */

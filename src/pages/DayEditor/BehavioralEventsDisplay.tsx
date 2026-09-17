@@ -56,6 +56,16 @@ const GROUPS: Array<{ type: 'Din' | 'Dout'; heading: string; blurb: string }> = 
 const channelsFor = (type: string): string[] =>
   Array.from({ length: ECU_DIGITAL_CHANNELS }, (_, i) => `${type}${i + 1}`);
 
+/** Find an unused line, wrapping after 32. Never replace an existing mapping on Add. */
+function nextUnusedIndex(events: BehavioralEvent[], type: string, after = 0): number {
+  const occupied = new Set(events.filter((event) => typeof event?.name === 'string' && event.name.trim()).map((event) => event.description));
+  for (let offset = 1; offset <= ECU_DIGITAL_CHANNELS; offset += 1) {
+    const index = ((after + offset - 1) % ECU_DIGITAL_CHANNELS) + 1;
+    if (!occupied.has(`${type}${index}`)) return index;
+  }
+  return 1; // All occupied: the add guard explains the selected mapping and prevents a write.
+}
+
 function channelSortKey(description: string): number {
   const match = description.match(/^(Din|Dout)(\d+)$/);
   if (!match) return Number.MAX_SAFE_INTEGER;
@@ -80,7 +90,7 @@ const channelId = (description: string): string => String(description).replace(/
  */
 export default function BehavioralEventsDisplay({ dayEvents = [], onDayEventsChange, copyableSources = [] }: BehavioralEventsDisplayProps) {
   const [newLineType, setNewLineType] = useState<'Din' | 'Dout'>('Din');
-  const [newLineIndex, setNewLineIndex] = useState(1);
+  const [newLineIndex, setNewLineIndex] = useState(() => nextUnusedIndex(Array.isArray(dayEvents) ? dayEvents : [], 'Din'));
   const [newLineName, setNewLineName] = useState('');
   const [advancedOpen, setAdvancedOpen] = useState(false);
   // Tolerate corrupt persisted state: a non-array events list (`{}`) must not crash.
@@ -94,6 +104,12 @@ export default function BehavioralEventsDisplay({ dayEvents = [], onDayEventsCha
       byDescription.set(event.description, event);
     }
   });
+  const newDescription = `${newLineType}${newLineIndex}`;
+  const selectedName = dayItems.find((event) => event?.description === newDescription && typeof event.name === 'string' && event.name.trim())?.name;
+  const occupiedName = typeof selectedName === 'string' ? selectedName.trim() : '';
+  const validNewIndex = Number.isInteger(newLineIndex) && newLineIndex >= 1 && newLineIndex <= ECU_DIGITAL_CHANNELS;
+  const directionFull = channelsFor(newLineType).every((description) =>
+    dayItems.some((event) => event?.description === description && typeof event.name === 'string' && event.name.trim()));
 
   // A duplicate NAME collides on the Spyglass DIOEvents primary key; a duplicate DESCRIPTION is a
   // trodes_to_nwb ValueError. The inline gates run on exactly what export sees — the NAMED events
@@ -139,10 +155,11 @@ export default function BehavioralEventsDisplay({ dayEvents = [], onDayEventsCha
   }
 
   function addNamedLine() {
-    const index = Math.max(1, Math.min(ECU_DIGITAL_CHANNELS, Number(newLineIndex) || 1));
     const name = newLineName.trim();
-    if (!name) return;
-    nameChannel(`${newLineType}${index}`, name);
+    if (!name || !validNewIndex || occupiedName) return;
+    const next = setChannelName(dayItems, newDescription, name);
+    onDayEventsChange(next);
+    setNewLineIndex(nextUnusedIndex(next, newLineType, newLineIndex));
     setNewLineName('');
   }
 
@@ -325,7 +342,11 @@ export default function BehavioralEventsDisplay({ dayEvents = [], onDayEventsCha
         <div className="dio-add-line" aria-label="Add DIO line">
           <label>
             Type
-            <select value={newLineType} onChange={(e) => setNewLineType(e.target.value as 'Din' | 'Dout')}>
+            <select value={newLineType} onChange={(e) => {
+              const type = e.target.value as 'Din' | 'Dout';
+              setNewLineType(type);
+              setNewLineIndex(nextUnusedIndex(dayItems, type));
+            }}>
               <option value="Din">Din</option>
               <option value="Dout">Dout</option>
             </select>
@@ -350,14 +371,19 @@ export default function BehavioralEventsDisplay({ dayEvents = [], onDayEventsCha
               suggestions={behavioralEventsNames(newLineType)}
               acceptsValue={isStandardEventName}
               placeholder="e.g. Poke1"
-              warnOffList
-              offListMessage="Not a standard event name. Pick a suggestion for consistency, or keep a custom name."
             />
           </label>
-          <Button variant="secondary" onClick={addNamedLine} disabled={!newLineName.trim()}>
+          <Button variant="secondary" onClick={addNamedLine} disabled={!newLineName.trim() || !validNewIndex || !!occupiedName}>
             Add line
           </Button>
         </div>
+        <p className="inline-info">Choose a suggested event name or enter your own. Add line selects the next unused channel.</p>
+        {occupiedName && <p className="inline-error" role="alert">
+          {directionFull
+            ? `All ${ECU_DIGITAL_CHANNELS} ${newLineType} lines are named. Edit an existing line or switch the line type.`
+            : `${newDescription} is already named “${occupiedName}”. Edit that line above, or choose an unused index.`}
+        </p>}
+        {!validNewIndex && <p className="inline-error" role="alert">Choose a whole-number index from 1 to {ECU_DIGITAL_CHANNELS}.</p>}
       </section>
 
       <details className="dio-advanced-grid" onToggle={(event) => setAdvancedOpen(event.currentTarget.open)}>

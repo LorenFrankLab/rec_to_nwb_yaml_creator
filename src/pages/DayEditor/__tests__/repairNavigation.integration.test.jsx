@@ -28,6 +28,7 @@ function seed(animal, day) {
 describe('Day editor repair-action navigation (integration)', () => {
   beforeEach(() => {
     Element.prototype.scrollIntoView = vi.fn();
+    window.history.replaceState(null, '', '#/day/remy-2023-06-22');
   });
 
   it('routes a day-surface repair from the readiness bar to the owning tab and focuses the field', async () => {

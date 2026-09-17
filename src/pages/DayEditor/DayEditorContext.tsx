@@ -1,6 +1,8 @@
 import { createContext, useContext } from 'react';
 import type { ReactNode } from 'react';
 import type { Animal, Day } from '../../state/workspaceTypes';
+import type { CommitResult } from '../../state/commitResult';
+import type { WorkspaceActions } from '../../state/store';
 
 /**
  * The per-day bundle every Day-Editor section needs to render and edit a day. `mergedDay` and
@@ -12,8 +14,12 @@ export interface DayEditorBundle {
   day: Day;
   mergedDay: Record<string, unknown>;
   animalDays: Day[];
-  onFieldUpdate: (fieldPath: string, value: unknown) => void;
-  actions: Record<string, unknown>;
+  onFieldUpdate: (fieldPath: string, value: unknown) => CommitResult | void;
+  /** Atomic writer for operations that change several related day fields. */
+  onFieldsUpdate?: (
+    changes: ReadonlyArray<readonly [fieldPath: string, value: unknown]>
+  ) => CommitResult | void;
+  actions: Partial<WorkspaceActions> & Record<string, unknown>;
   animalKey: string;
 }
 

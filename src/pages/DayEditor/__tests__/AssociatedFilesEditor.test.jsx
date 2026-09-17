@@ -130,7 +130,7 @@ describe('AssociatedFilesEditor', () => {
     expect(onChange).toHaveBeenLastCalledWith([expectedRow]);
   });
 
-  it('can render only supplemental rows while preserving original associated_files indices', async () => {
+  it('renders statescript and supplemental rows with their original indices', async () => {
     const user = userEvent.setup();
     const onChange = vi.fn();
     render(
@@ -140,17 +140,16 @@ describe('AssociatedFilesEditor', () => {
           { name: 'stim1', description: 'Psychopy stim generation script for stim 1', path: 'stim1.py', task_epochs: 1 },
         ]}
         tasks={tasks}
-        supplementalOnly
         onChange={onChange}
       />
     );
 
-    expect(screen.queryByDisplayValue('statescript_r1')).not.toBeInTheDocument();
+    expect(screen.getByDisplayValue('statescript_r1')).toBeInTheDocument();
     expect(screen.getByDisplayValue('stim1')).toBeInTheDocument();
-    expect(document.querySelector('[data-field-path="associated_files[0].path"]')).not.toBeInTheDocument();
+    expect(document.querySelector('[data-field-path="associated_files[0].path"]')).toBeInTheDocument();
     expect(document.querySelector('[data-field-path="associated_files[1].path"]')).toBeInTheDocument();
 
-    await user.type(screen.getByRole('textbox', { name: /file name/i }), 't');
+    await user.type(screen.getByDisplayValue('stim1'), 't');
 
     expect(onChange).toHaveBeenLastCalledWith([
       { name: 'statescript_r1', description: 'Statescript Log', path: 'r1.stateScriptLog', task_epochs: 1 },
@@ -163,7 +162,7 @@ describe('AssociatedFilesEditor', () => {
     ]);
   });
 
-  it('appends and removes supplemental-only rows without dropping statescript rows', async () => {
+  it('appends and removes selected rows without dropping other files', async () => {
     const user = userEvent.setup();
     const onChange = vi.fn();
     render(
@@ -173,7 +172,6 @@ describe('AssociatedFilesEditor', () => {
           { name: 'stim1', description: 'Psychopy stim generation script for stim 1', path: 'stim1.py', task_epochs: 1 },
         ]}
         tasks={tasks}
-        supplementalOnly
         onChange={onChange}
       />
     );

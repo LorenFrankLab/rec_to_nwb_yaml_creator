@@ -19,6 +19,8 @@ interface DayTechnicalSectionProps {
    * The link is omitted when absent.
    */
   animalKey?: string;
+  /** Recording id used to retain rejected drafts across section navigation. */
+  dayId?: string;
   /** Render without the outer card wrapper when nested inside a disclosure. */
   embedded?: boolean;
 }
@@ -43,8 +45,10 @@ export default function DayTechnicalSection({
   onFieldUpdate,
   recordingSystemDefaults = undefined,
   animalKey = undefined,
+  dayId = undefined,
   embedded = false,
 }: DayTechnicalSectionProps) {
+  const draftKey = (fieldPath: string) => dayId ? `day:${dayId}:${fieldPath}` : undefined;
   // Draft-tracked (see hooks/useDraftField): the typed text is committed on a debounce / blur /
   // Ctrl+S and is visible to persistence while pending. `units` is committed as a whole object
   // from BOTH drafts, so each field's commit reads the other's current draft.
@@ -59,14 +63,13 @@ export default function DayTechnicalSection({
       onFieldUpdate('technical.units', undefined);
       return;
     }
-    if (!analog || !behavioralEvents) {
-      return;
-    }
+    // Preserve incomplete drafts too. Validation blocks export until the pair is complete.
     onFieldUpdate('technical.units', { analog, behavioral_events: behavioralEvents });
   };
   const header = useDraftField<string>({
     value: technical?.default_header_file_path || '',
     onCommit: (text) => onFieldUpdate('technical.default_header_file_path', text.trim()),
+    draftKey: draftKey('technical.default_header_file_path'),
     label: 'technical.default_header_file_path',
   });
   const analog = useDraftField<string>({
@@ -76,6 +79,7 @@ export default function DayTechnicalSection({
       commitUnitsFrom(text, behavioralRef.current);
     },
     label: 'technical.units.analog',
+    draftKey: draftKey('technical.units.analog'),
   });
   const behavioral = useDraftField<string>({
     value: technical?.units?.behavioral_events || '',
@@ -84,6 +88,7 @@ export default function DayTechnicalSection({
       commitUnitsFrom(analogRef.current, text);
     },
     label: 'technical.units.behavioral_events',
+    draftKey: draftKey('technical.units.behavioral_events'),
   });
   analogRef.current = analog.value;
   behavioralRef.current = behavioral.value;
@@ -156,11 +161,13 @@ export default function DayTechnicalSection({
           If the intended scale is 0.195 µV/count, enter 1.95e-7 V/count. Existing data has not been rescaled.</p>}
         <label htmlFor="day-voltage-conversion">Voltage conversion for this recording (V/count)</label>
         <DraftNumberInput id="day-voltage-conversion" name="technical.raw_data_to_volts"
+          draftKey={draftKey('technical.raw_data_to_volts')}
           data-field-path="technical.raw_data_to_volts" step="any" min="0"
           value={technical.raw_data_to_volts}
           onCommit={(value) => onFieldUpdate('technical.raw_data_to_volts', value)} />
         <label htmlFor="day-period-multiplier">Legacy times period multiplier for this recording</label>
         <DraftNumberInput id="day-period-multiplier" name="technical.times_period_multiplier"
+          draftKey={draftKey('technical.times_period_multiplier')}
           data-field-path="technical.times_period_multiplier" step="any" min="0"
           value={technical.times_period_multiplier}
           onCommit={(value) => onFieldUpdate('technical.times_period_multiplier', value)} />
@@ -181,8 +188,9 @@ export default function DayTechnicalSection({
             placeholder="/path/to/config.trodesconf"
           />
           <span className="field-help-text">
-            Optional. Path to the .trodesconf configuration file for this day. If blank, the default
-            header from the .rec file is used.
+            Optional legacy metadata. This value does not change the header used by trodes_to_nwb.
+            To use a .trodesconf replacement, also pass its path as the converter’s
+            {' '}<code>header_reconfig_path</code> argument.
           </span>
         </div>
 

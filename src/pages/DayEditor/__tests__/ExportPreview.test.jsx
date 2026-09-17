@@ -88,6 +88,15 @@ afterEach(() => {
 });
 
 describe('ExportPreview — readiness gate', () => {
+  it('blocks emitted bytes while a displayed field edit is still pending acceptance', () => {
+    const { animal, day } = buildRealisticWorkspace();
+    renderPreview(animal, day, { hasPendingDrafts: true });
+
+    expect(screen.getByText(/edit is still unsaved/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^Download YAML$/i })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /^Copy YAML$/i })).toBeDisabled();
+  });
+
   it('is quiet ("Ready to export") with Download AND Copy ENABLED on a clean day', () => {
     const { animal, day } = buildRealisticWorkspace();
     renderPreview(animal, day);

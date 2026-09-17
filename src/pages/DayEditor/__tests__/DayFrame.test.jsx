@@ -58,6 +58,7 @@ describe('DayEditorFrame', () => {
 
   beforeEach(() => {
     useDayIdFromUrl.mockReturnValue('remy-2023-06-22');
+    window.history.replaceState(null, '', '#/day/remy-2023-06-22');
     Element.prototype.scrollIntoView = vi.fn();
   });
 
@@ -253,6 +254,37 @@ describe('DayEditorFrame', () => {
     expect(screen.getByRole('heading', { level: 2, name: /Failed Channels/i })).toBeInTheDocument();
   });
 
+  it('writes ordinary section navigation to the URL and restores a bookmarked section', async () => {
+    const user = userEvent.setup();
+    const view = renderFrame();
+    await user.click(screen.getByRole('button', { name: /^Recording Setup/ }));
+    expect(window.location.hash).toBe('#/day/remy-2023-06-22?section=recording');
+
+    view.unmount();
+    window.history.replaceState(null, '', '#/day/remy-2023-06-22?section=channels');
+    renderFrame();
+    expect(screen.getByRole('button', { name: /^Failed Channels/ })).toHaveAttribute('aria-current', 'page');
+  });
+
+  it('follows browser history hash changes between sections', async () => {
+    renderFrame();
+    await act(async () => {
+      window.location.hash = '#/day/remy-2023-06-22?section=dio';
+      window.dispatchEvent(new HashChangeEvent('hashchange'));
+    });
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: /^DIO Wiring/ })).toHaveAttribute('aria-current', 'page')
+    );
+
+    await act(async () => {
+      window.location.hash = '#/day/remy-2023-06-22?section=daily';
+      window.dispatchEvent(new HashChangeEvent('hashchange'));
+    });
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: /^Daily log/ })).toHaveAttribute('aria-current', 'page')
+    );
+  });
+
   it('steps tabs with the Alt+→ / Alt+← keyboard shortcuts', () => {
     renderFrame();
     act(() => emitStepperShortcut('next')); // daily → recording
@@ -261,6 +293,18 @@ describe('DayEditorFrame', () => {
     expect(screen.getByRole('button', { name: /^Failed Channels/ })).toHaveAttribute('aria-current', 'page');
     act(() => emitStepperShortcut('prev')); // → recording
     expect(screen.getByRole('button', { name: /^Recording Setup/ })).toHaveAttribute('aria-current', 'page');
+  });
+
+  it('applies a burst of section shortcuts in order before React rerenders', () => {
+    renderFrame();
+    act(() => {
+      for (let i = 0; i < 4; i += 1) emitStepperShortcut('next');
+    });
+    expect(screen.getByRole('button', { name: /^Review & export/ })).toHaveAttribute(
+      'aria-current',
+      'page'
+    );
+    expect(window.location.hash).toBe('#/day/remy-2023-06-22?section=export');
   });
 
   it('CLAMPS the Alt+ tab stepping at both ends (does not wrap)', () => {

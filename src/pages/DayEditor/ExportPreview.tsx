@@ -35,6 +35,8 @@ interface ExportPreviewProps extends DayEditorBundle {
   onRepair?: (dispatch: RepairDispatch) => void;
   /** The full workspace (`{ animals, days }`) — read by the "Export all days" batch only. */
   workspace?: unknown;
+  /** Pending/rejected input values must be accepted into the workspace before bytes are emitted. */
+  hasPendingDrafts?: boolean;
 }
 
 /**
@@ -57,7 +59,7 @@ interface ExportPreviewProps extends DayEditorBundle {
  */
 export default function ExportPreview(props: ExportPreviewProps) {
   const { animal, day, animalDays, animalKey = undefined, actions = {} } = useDayEditorContext(props);
-  const { issues = [], exportGate, onNavigate = () => {}, onRepair } = props;
+  const { issues = [], exportGate, onNavigate = () => {}, onRepair, hasPendingDrafts = false } = props;
   const ownerKey = animalKey ?? (animal as { id?: string })?.id;
 
   const { show: showToast, node: toastNode } = useUndoToast();
@@ -88,8 +90,10 @@ export default function ExportPreview(props: ExportPreviewProps) {
   }, [animal, day]);
 
   // The gate is the view-model's authoritative export gate; absent → fail closed (blocked).
-  const blocked = !exportGate?.open;
-  const disabledReason = exportGate?.action?.disabledReason;
+  const blocked = hasPendingDrafts || !exportGate?.open;
+  const disabledReason = hasPendingDrafts
+    ? 'A field edit has not been accepted yet. Return to it or retry Save before exporting.'
+    : exportGate?.action?.disabledReason;
   const vmErrorIssues = blockingIssues(issues);
   const incompleteEntries = vmErrorIssues.length > 0 && vmErrorIssues.every(isIncompleteEntryIssue);
   // The SAME issue list the gate is decided from — the readiness line never re-derives a second
@@ -165,8 +169,12 @@ export default function ExportPreview(props: ExportPreviewProps) {
       {/* Readiness gate — issue-driven. Loud + field-linked when blocking; compact when clean. */}
       {blocked ? (
         <div className={incompleteEntries ? styles.incomplete : styles.blocked} role={incompleteEntries ? 'status' : 'alert'}>
-          <p className={styles.blockedHeading}>{exportGate?.message ?? 'Export is blocked.'}</p>
-          {vmErrorIssues.length > 0 ? (
+          <p className={styles.blockedHeading}>
+            {hasPendingDrafts
+              ? 'An edit is still unsaved. Retry Save or return to the field before exporting.'
+              : exportGate?.message ?? 'Export is blocked.'}
+          </p>
+          {!hasPendingDrafts && vmErrorIssues.length > 0 ? (
             <RepairActions
               issues={vmErrorIssues}
               onNavigate={onNavigate}
@@ -174,7 +182,7 @@ export default function ExportPreview(props: ExportPreviewProps) {
               onRepair={onRepair}
               groupByCategory
             />
-          ) : (exportGate?.blockingSteps?.length ?? 0) > 0 ? (
+          ) : !hasPendingDrafts && (exportGate?.blockingSteps?.length ?? 0) > 0 ? (
             <div className={styles.stepBlockers}>
               {exportGate!.blockingSteps.map((step) => {
                 const action = step.action;

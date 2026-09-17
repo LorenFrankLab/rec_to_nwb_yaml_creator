@@ -52,7 +52,6 @@ import DayList from './DayList';
 import DuplicateDayModal from './DuplicateDayModal';
 import LogDayPanel, { formatShortDate } from './LogDayPanel';
 import { restoreDay } from './restoreDay';
-import type { CapturedDay } from './restoreDay';
 import styles from './AnimalWorkspace.module.css';
 import { pluralize } from '../../utils/pluralize';
 
@@ -168,7 +167,7 @@ export function RecordingDaysTab({ animalId }: RecordingDaysTabProps) {
     (ids: string[]) => {
       const records = ids
         .map((id) => days[id])
-        .filter((rec): rec is CapturedDay => Boolean(rec))
+        .filter((rec): rec is NonNullable<typeof rec> => Boolean(rec))
         .map((rec) => structuredClone(rec));
       if (records.length === 0) return;
       ids.forEach((id) => actions.deleteDay(id, selectedAnimalId));

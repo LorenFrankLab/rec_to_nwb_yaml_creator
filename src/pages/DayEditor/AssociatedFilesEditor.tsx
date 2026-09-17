@@ -1,11 +1,12 @@
 import { useId } from 'react';
 import Button from '../../components/ui/Button';
-import { isStatescriptAssociatedFile } from '../../domain/associatedFiles';
 import type { Task } from '../../state/workspaceTypes';
 import './AssociatedFilesEditor.scss';
 
 /** Editor row shape: `task_epochs` carries an empty-string sentinel for "unselected". */
 interface FileRow {
+  recordId?: string;
+  kind?: 'statescript' | 'supplemental';
   name?: string;
   description?: string;
   path?: string;
@@ -30,7 +31,7 @@ const SUPPLEMENTAL_FILE_PRESETS: Array<{ key: SupplementalFilePreset; label: str
  * contract that keeps the export from carrying a dangling `task_epochs` (the
  * `orphaned_file` validation error).
  */
-function collectValidEpochs(tasks: unknown): number[] {
+export function collectValidEpochs(tasks: unknown): number[] {
   const seen = new Set<number>();
   (Array.isArray(tasks) ? tasks : []).forEach((task) => {
     // A malformed task_epochs inside an otherwise-valid task (a string, not an
@@ -98,8 +99,6 @@ interface AssociatedFilesEditorProps {
   files?: FileRow[];
   /** The day's tasks (task_epochs options). */
   tasks?: Task[];
-  /** When true, hide epoch statescript rows and edit only true supplemental files. */
-  supplementalOnly?: boolean;
   /** Called with the next files array. */
   onChange: (files: FileRow[]) => void;
 }
@@ -130,15 +129,13 @@ interface AssociatedFilesEditorProps {
 export default function AssociatedFilesEditor({
   files = [],
   tasks = [],
-  supplementalOnly = false,
   onChange,
 }: AssociatedFilesEditorProps) {
   const baseId = useId();
   // Tolerate corrupt persisted state: a non-array `files` (`{}`) must not crash render.
   const fileList = Array.isArray(files) ? files : [];
-  const visibleFiles = fileList
-    .map((file, index) => ({ file, index }))
-    .filter(({ file }) => !supplementalOnly || !isStatescriptAssociatedFile(file));
+  // Never filter editable rows by their text: classification can change while typing.
+  const visibleFiles = fileList.map((file, index) => ({ file, index }));
   const validEpochs = collectValidEpochs(tasks);
   const validEpochSet = new Set(validEpochs);
 
@@ -166,24 +163,26 @@ export default function AssociatedFilesEditor({
   return (
     <section className="associated-files-editor" aria-labelledby={`${baseId}-heading`}>
       <div className="associated-files-header">
-        <h3 id={`${baseId}-heading`}>Supplemental file rows</h3>
+        <h3 id={`${baseId}-heading`}>Statescripts & other files</h3>
         <p className="associated-files-hint">
-          Optional files outside generated statescripts and videos.
+          Files are optional. Each added file needs a name, description, path and recording epoch.
         </p>
       </div>
 
       {visibleFiles.length === 0 ? (
-        <p className="associated-files-empty">No supplemental files yet.</p>
+        <p className="associated-files-empty">No associated files yet.</p>
       ) : (
         <ul className="associated-files-rows">
           {visibleFiles.map(({ file, index }, displayIndex) => {
             const epoch = file.task_epochs;
             const epochStale =
               epoch !== '' && epoch != null && !validEpochSet.has(Number(epoch));
+            const unassigned = epoch === '' || epoch == null;
+            const incomplete = !file.name?.trim() || !file.description?.trim() || !file.path?.trim();
             const staleId = `${baseId}-stale-${index}`;
             const label = file.name || `file ${displayIndex + 1}`;
             return (
-              <li key={index} className="associated-file-row">
+              <li key={file.recordId ?? index} data-record-id={file.recordId} className="associated-file-row">
                 <div className="form-group">
                   <label htmlFor={`${baseId}-name-${index}`}>File name (required)</label>
                   <input
@@ -199,39 +198,63 @@ export default function AssociatedFilesEditor({
                 </div>
 
                 <div className="form-group">
-                  <label htmlFor={`${baseId}-description-${index}`}>Description</label>
+                  <label htmlFor={`${baseId}-kind-${index}`}>File use</label>
+                  <select
+                    id={`${baseId}-kind-${index}`}
+                    value={file.kind ?? 'supplemental'}
+                    onChange={(e) => updateRow(
+                      index,
+                      'kind',
+                      e.target.value as NonNullable<FileRow['kind']>
+                    )}
+                  >
+                    <option value="statescript">Statescript log</option>
+                    <option value="supplemental">Other associated file</option>
+                  </select>
+                  <small className="field-help-text">
+                    This controls where the app manages the file. It does not change the file on disk.
+                  </small>
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor={`${baseId}-description-${index}`}>Description (required)</label>
                   <input
                     id={`${baseId}-description-${index}`}
                     type="text"
                     data-field-path={`associated_files[${index}].description`}
                     value={file.description || ''}
-                    placeholder="optional"
+                    placeholder="What does this file contain?"
+                    required
+                    aria-invalid={!file.description?.trim()}
                     onChange={(e) => updateRow(index, 'description', e.target.value)}
                   />
                 </div>
 
                 <div className="form-group">
-                  <label htmlFor={`${baseId}-path-${index}`}>Path</label>
+                  <label htmlFor={`${baseId}-path-${index}`}>Path (required)</label>
                   <input
                     id={`${baseId}-path-${index}`}
                     type="text"
                     data-field-path={`associated_files[${index}].path`}
                     value={file.path || ''}
-                    placeholder="optional"
+                    placeholder="/path/on/conversion/computer/file"
+                    required
+                    aria-invalid={!file.path?.trim()}
                     onChange={(e) => updateRow(index, 'path', e.target.value)}
                   />
                 </div>
 
                 <div className="form-group">
-                  <label htmlFor={`${baseId}-epoch-${index}`}>Task epoch</label>
+                  <label htmlFor={`${baseId}-epoch-${index}`}>Task epoch (required)</label>
                   <select
                     id={`${baseId}-epoch-${index}`}
                     /* Repair-focus anchor: matches the `orphaned_file` issue path so
                        a repair click lands on this row's epoch control. */
                     data-field-path={`associated_files[${index}].task_epochs`}
                     value={epoch === '' || epoch == null ? '' : String(epoch)}
-                    aria-invalid={epochStale}
-                    aria-describedby={epochStale ? staleId : undefined}
+                    required
+                    aria-invalid={epochStale || unassigned}
+                    aria-describedby={epochStale || unassigned ? staleId : undefined}
                     onChange={(e) =>
                       updateRow(index, 'task_epochs', e.target.value === '' ? '' : Number(e.target.value))
                     }
@@ -267,6 +290,10 @@ export default function AssociatedFilesEditor({
                   Remove
                 </Button>
 
+                {incomplete && <p className="inline-error">Complete the name, description and path for this file before export. The path must be readable on the computer running conversion.</p>}
+                {unassigned && <p id={staleId} className="inline-error">
+                  File “{label}” is unassigned. Select a recording epoch or remove this file before export.
+                </p>}
                 {epochStale && (
                   <div id={staleId} className="inline-error" role="alert">
                     File &quot;{label}&quot; references epoch {String(epoch)}, which is no

@@ -81,7 +81,7 @@ export default function OptogeneticsContainer({ animalId, onAfterUpdate }: Optog
       <OptogeneticsStep
         animal={animal}
         onUpdate={(updates) => {
-          actions.updateAnimal(animalId, updates);
+          actions.updateAnimal(animalId, updates as Parameters<typeof actions.updateAnimal>[1]);
           onAfterUpdate?.();
         }}
       />

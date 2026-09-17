@@ -47,6 +47,7 @@ function buildExportErrorWorkspace() {
 describe('Day editor export gate (integration)', () => {
   beforeEach(() => {
     Element.prototype.scrollIntoView = vi.fn();
+    window.history.replaceState(null, '', '#/day/remy-2023-06-22');
   });
 
   it('reaches the Export step and enables the download when every step is valid', async () => {

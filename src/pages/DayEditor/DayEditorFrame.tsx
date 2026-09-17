@@ -3,7 +3,6 @@ import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { useStoreContext } from '../../state/StoreContext';
 import { useStepperShortcut } from '../../hooks/stepperShortcuts';
 import { useDayIdFromUrl } from '../../hooks/useDayIdFromUrl';
-import { mergeDayMetadata } from '../../state/workspaceUtils';
 import {
   getCopyableDioSources,
   resolveDayOwner,
@@ -11,9 +10,14 @@ import {
 import { applyRepairCommand } from '../../state/repairCommands';
 import type { RepairCommand, RepairCommandContext } from '../../state/repairCommands';
 import { animalSetupTabForFieldPath } from '../../domain/validation';
-import { repairTargetForIssue, stepIdForIssue } from '../../domain/repairRouting';
+import {
+  dayEditorFocusPath,
+  dayEditorSectionForRepair,
+  repairTargetForIssue,
+  stepIdForIssue,
+} from '../../domain/repairRouting';
 import type { RepairableIssue } from '../../domain/repairRouting';
-import { validateDay } from '../../domain/dayValidationComposer';
+import { evaluateDay } from '../../domain/dayEvaluation';
 import {
   isDayValidationDeferred,
 } from '../../domain/validationPresentation';
@@ -32,6 +36,7 @@ import DayEditorSectionNav from './DayEditorSectionNav';
 import type { CopyableDioSource } from './BehavioralEventsDisplay';
 import ErrorState from './ErrorState';
 import styles from './DayEditorFrame.module.css';
+import { flushAllDrafts } from '../../state/draftRegistry';
 
 /** A repair-routed focus request: the target field path + a monotonic token to retrigger the effect. */
 interface FocusRequest {
@@ -42,6 +47,23 @@ interface FocusRequest {
 /** The frame's main-content modes: one of the six IA sections. */
 type FrameMode = DayTabKey;
 
+function modeFromHash(): FrameMode {
+  if (typeof window === 'undefined') return 'daily';
+  const params = new URLSearchParams(window.location.hash.split('?')[1] || '');
+  const section = params.get('section');
+  if (section && TAB_ORDER.includes(section as DayTabKey)) return section as FrameMode;
+  const step = params.get('step');
+  const field = params.get('field') ?? undefined;
+  return dayEditorSectionForRepair(step, field) ?? 'daily';
+}
+
+function sectionHash(dayId: string, section: FrameMode, fieldPath?: string): string {
+  const params = new URLSearchParams();
+  params.set('section', section);
+  if (fieldPath) params.set('field', fieldPath);
+  return `#/day/${encodeURIComponent(dayId)}?${params.toString()}`;
+}
+
 /**
  * The sections' fixed order (drives the Alt+←/→ cycle). The epoch editor lives INSIDE the daily
  * log (the first screen), so `tasks` is no longer a rail stop — a repair that targets it lands on
@@ -49,67 +71,8 @@ type FrameMode = DayTabKey;
  */
 const TAB_ORDER: DayTabKey[] = ['daily', 'recording', 'channels', 'dio', 'export'];
 
-/**
- * An underlying step key → the tab that folds it, for routing a repair (which targets the old step
- * keys) to its focused Day Editor section. Field-specific routing below refines split legacy steps
- * such as `devices`, which now spans Recording Setup and Failed Channels.
- */
-const TAB_FOR_STEP: Record<string, DayTabKey | null> = {
-  overview: 'daily',
-  devices: 'recording',
-  epochs: 'daily',
-  behavioral: 'dio',
-  validation: 'export',
-  export: 'export',
-};
-
-/** Presentation-only repair routing for fields that moved to new Phase 15 sections. */
-function sectionForRepair(step: string | null | undefined, focusPath?: string): DayTabKey | null {
-  const path = String(focusPath ?? '').replace(/^\//, '').replace(/\//g, '.');
-  if (
-    path.startsWith('associated_files') ||
-    path.startsWith('associated_video_files') ||
-    path.includes('fs_gui') ||
-    path.includes('task') ||
-    path.includes('epoch')
-  ) {
-    return 'daily';
-  }
-  if (path.includes('behavioral_events') || path.includes('dio_output_name')) return 'dio';
-  if (
-    path.includes('ntrode_electrode_group_channel_map') ||
-    path.includes('bad_channels') ||
-    path.includes('deviceOverrides.bad_channels')
-  ) {
-    return 'channels';
-  }
-  if (
-    path.includes('data_acq') ||
-    path.includes('cameras_used') ||
-    path.includes('technical') ||
-    path.includes('configurationVersion') ||
-    path.includes('deviceOverrides')
-  ) {
-    return 'recording';
-  }
-  if (
-    path === 'subject.weight' ||
-    path === 'session.weight' ||
-    path.includes('session') ||
-    path.includes('experiment_description') ||
-    path.includes('keywords') ||
-    path.includes('dataFolder')
-  ) {
-    return 'daily';
-  }
-  return TAB_FOR_STEP[step ?? ''] ?? null;
-}
-
-/** The field path rendered by the section, when it differs from the validation/export path. */
-function focusPathForSection(path?: string): string | undefined {
-  if (path === 'subject.weight') return 'session.weight';
-  return path;
-}
+const sectionForRepair = dayEditorSectionForRepair;
+const focusPathForSection = dayEditorFocusPath;
 
 /**
  * DayEditorFrame — the day editor's chrome and section navigation.
@@ -131,26 +94,25 @@ function focusPathForSection(path?: string): string | undefined {
 export default function DayEditorFrame() {
   const { model, actions, selectors, persistence } = useStoreContext();
   const dayId = useDayIdFromUrl();
-  const [mode, setMode] = useState<FrameMode>('daily');
+  const [mode, setMode] = useState<FrameMode>(modeFromHash);
+  // Keyboard shortcuts can arrive faster than React commits a render (for example four
+  // Alt+ArrowRight presses in quick succession). Keep the current section synchronously as well as
+  // in state so every intent advances from the section selected by the preceding intent.
+  const modeRef = useRef<FrameMode>(mode);
 
   const day = model.workspace?.days?.[dayId as string];
   const { ownerKey, animal } = resolveDayOwner(model.workspace, dayId);
 
-  // Merge animal + day for validation (before early returns, per Rules of Hooks). The merge throws
-  // BY DESIGN on a malformed animal (missing/non-array configurationHistory); tolerate it so the
-  // frame renders fail-closed (the readiness bar surfaces the merge-error blocker) instead of crashing.
-  const mergedDay = useMemo(() => {
-    if (!animal || !day) return null;
-    try {
-      return mergeDayMetadata(animal, day);
-    } catch (err) {
-      // eslint-disable-next-line no-console
-      console.error(`[day-editor] could not merge day "${dayId}" with its animal config:`, err);
-      return null;
-    }
-  }, [animal, day, dayId]);
+  const animalDays = useMemo(
+    () => ownerKey ? selectors.getAnimalDays(ownerKey) : [],
+    [selectors, ownerKey]
+  );
 
-  const animalDays = selectors.getAnimalDays(ownerKey as string);
+  const evaluation = useMemo(
+    () => animal && day ? evaluateDay(animal, day, animalDays) : null,
+    [animal, day, animalDays]
+  );
+  const mergedDay = evaluation && !evaluation.mergeFailed ? evaluation.merged : null;
 
   const copyableDioSources = useMemo(
     () => getCopyableDioSources(model.workspace, ownerKey as string),
@@ -160,39 +122,18 @@ export default function DayEditorFrame() {
   // The day-editor view-model: chips, grouped rail, breadcrumb, the Overview field slice, and the
   // bad-channel marks — all from the SAME builder, so the frame is a thin renderer.
   const vm = useMemo(
-    () => buildDayEditorViewModel(model.workspace, dayId, mode),
-    [model.workspace, dayId, mode]
+    () => buildDayEditorViewModel(model.workspace, dayId, mode, evaluation ?? undefined),
+    [model.workspace, dayId, mode, evaluation]
   );
 
-  // The issue-driven readiness bar's input: the AUTHORITATIVE `validateDay` (never a local re-check).
-  // Mirrors the view-model exactly — on a merge failure (null mergedDay) it validates the empty
-  // merged model, so the raw-shape animal blockers (e.g. a missing configuration history with its
-  // executable "Rebuild" repair) still surface and stay fixable. A validation contract violation is
-  // caught and surfaced as a single blocker rather than white-screening the editor.
-  const readinessIssues = useMemo<RepairableIssue[]>(() => {
-    if (!day || !animal) return [];
-    try {
-      const issues = validateDay(
-        day as unknown as Record<string, unknown>,
-        mergedDay ?? {},
-        animal,
-        animalDays
-      ) as RepairableIssue[];
-      return issues;
-    } catch (err) {
-      // eslint-disable-next-line no-console
-      console.error(`[day-editor] could not validate day "${dayId}":`, err);
-      return [
-        { severity: 'error', code: 'day_validation_failed', message: 'This day could not be validated.' } as RepairableIssue,
-      ];
-    }
-  }, [day, animal, mergedDay, animalDays, dayId]);
+  // The readiness bar and view-model share this authoritative evaluation; neither revalidates.
+  const readinessIssues = evaluation?.issues ?? [];
 
   useEffect(() => {
     if (!dayId || !day || !isDayValidationDeferred(day)) return;
     const state =
       day.state !== null && typeof day.state === 'object' && !Array.isArray(day.state)
-        ? (day.state as Record<string, unknown>)
+        ? (day.state as unknown as Record<string, unknown>)
         : {};
     actions.updateDay(dayId, { state: { ...state, validationDeferred: false } });
   }, [actions, day, dayId]);
@@ -251,6 +192,9 @@ export default function DayEditorFrame() {
   // Switch the active tab, optionally focusing a field after it renders (the repair-focus effect
   // owns focusing the field, so the generic mode-change focus is skipped exactly once).
   const goToTab = useCallback((tab: DayTabKey, fieldPath?: string) => {
+    const flushed = flushAllDrafts();
+    if (flushed.rejected.length > 0 || flushed.unapplied > 0) return;
+    modeRef.current = tab;
     setMode(tab);
     if (fieldPath) {
       skipNextModeFocusRef.current = true;
@@ -259,7 +203,11 @@ export default function DayEditorFrame() {
     } else {
       setFocusRequest(null);
     }
-  }, []);
+    if (dayId && typeof window !== 'undefined') {
+      const nextHash = sectionHash(dayId, tab, fieldPath);
+      if (window.location.hash !== nextHash) window.location.hash = nextHash;
+    }
+  }, [dayId]);
 
   // The hash QUERY (everything after `?`), synced on `hashchange`. A cross-day Fix link changes the day
   // id (which `useDayIdFromUrl` already tracks), but a SAME-day batch Fix link changes ONLY the query —
@@ -286,31 +234,59 @@ export default function DayEditorFrame() {
   const lastFieldRouteRef = useRef<string | null>(null);
   useEffect(() => {
     if (!dayId || !day || !animal) return;
+    // Ignore query strings belonging to another route. A repair handoff to Animal Setup can leave
+    // this component mounted until the router's next render; treating its `?field=` as a same-day
+    // repair would rewrite the destination back to the Day Editor.
+    const currentPath = window.location.hash.split('?')[0];
+    if (currentPath !== `#/day/${encodeURIComponent(dayId)}`) return;
     const params = new URLSearchParams(repairQuery);
     const field = params.get('field');
     const stepParam = params.get('step');
-    if (!field && !stepParam) {
+    const sectionParam = params.get('section');
+    if (!field && !stepParam && !sectionParam) {
       lastFieldRouteRef.current = null;
+      modeRef.current = 'daily';
+      setMode('daily');
+      setFocusRequest(null);
       return;
     }
-    const routeKey = `${dayId}::${stepParam ?? ''}::${field ?? ''}`;
+    const routeKey = `${dayId}::${sectionParam ?? ''}::${stepParam ?? ''}::${field ?? ''}`;
     if (lastFieldRouteRef.current === routeKey) return;
     lastFieldRouteRef.current = routeKey;
+    const explicitSection = sectionParam && TAB_ORDER.includes(sectionParam as DayTabKey)
+      ? sectionParam as DayTabKey
+      : null;
     const step = stepParam || stepIdForIssue({ path: field ?? '' });
-    const tab = sectionForRepair(step, field ?? undefined);
-    if (tab) goToTab(tab, focusPathForSection(field ?? undefined));
-  }, [dayId, day, animal, repairQuery, goToTab]);
+    const tab = explicitSection ?? sectionForRepair(step, field ?? undefined);
+    if (!tab) return;
+    const flushed = flushAllDrafts();
+    if (flushed.rejected.length > 0 || flushed.unapplied > 0) return;
+    modeRef.current = tab;
+    setMode(tab);
+    if (field) {
+      skipNextModeFocusRef.current = true;
+      focusTokenRef.current += 1;
+      setFocusRequest({ fieldPath: focusPathForSection(field) ?? field, token: focusTokenRef.current });
+    } else {
+      setFocusRequest(null);
+    }
+    // Normalize legacy `?step=` deep links without adding a second browser-history entry.
+    const canonical = sectionHash(dayId, tab, field ?? undefined);
+    if (window.location.hash !== canonical) {
+      window.history.replaceState(null, '', canonical);
+    }
+  }, [dayId, day, animal, repairQuery]);
 
   // Alt+←/→ steps through the sections and CLAMPS at the ends (it does not wrap), matching the
   // former stepper's section pager.
   const stepTab = useCallback((direction: 'next' | 'prev') => {
-    setMode((cur) => {
-      const idx = TAB_ORDER.indexOf(cur as DayTabKey);
-      const base = idx < 0 ? 0 : idx;
-      if (direction === 'next') return TAB_ORDER[Math.min(base + 1, TAB_ORDER.length - 1)];
-      return TAB_ORDER[Math.max(base - 1, 0)];
-    });
-  }, []);
+    const idx = TAB_ORDER.indexOf(modeRef.current);
+    const base = idx < 0 ? 0 : idx;
+    const next = direction === 'next'
+      ? TAB_ORDER[Math.min(base + 1, TAB_ORDER.length - 1)]
+      : TAB_ORDER[Math.max(base - 1, 0)];
+    goToTab(next);
+  }, [goToTab]);
   useStepperShortcut(
     useCallback((action: 'next' | 'prev' | 'add') => {
       if (action === 'next' || action === 'prev') stepTab(action);
@@ -320,20 +296,14 @@ export default function DayEditorFrame() {
   // ── Writers + repairs (mirrors the former stepper) ──
   const handleFieldUpdate = useCallback((fieldPath: string, value: unknown) => {
     if (!day || !dayId) return;
-    const pathSegments = fieldPath.split('.');
-    const updated = structuredClone(day) as Record<string, unknown>;
-    let target: Record<string, unknown> = updated;
-    for (let i = 0; i < pathSegments.length - 1; i++) {
-      const segment = pathSegments[i];
-      const child = target[segment];
-      if (child === null || typeof child !== 'object' || Array.isArray(child)) {
-        target[segment] = {};
-      }
-      target = target[segment] as Record<string, unknown>;
-    }
-    target[pathSegments[pathSegments.length - 1]] = value;
-    const topLevelKey = pathSegments[0];
-    actions.updateDay(dayId, { [topLevelKey]: updated[topLevelKey] });
+    return actions.updateDayField(dayId, fieldPath, value);
+  }, [day, dayId, actions]);
+
+  const handleFieldsUpdate = useCallback((
+    changes: ReadonlyArray<readonly [fieldPath: string, value: unknown]>
+  ) => {
+    if (!day || !dayId) return;
+    return actions.updateDayFields(dayId, changes);
   }, [day, dayId, actions]);
 
   const handleRepair = useCallback((issue: RepairableIssue) => {
@@ -400,7 +370,8 @@ export default function DayEditorFrame() {
     mergedDay: mergedDay as Record<string, unknown>,
     animalDays,
     onFieldUpdate: handleFieldUpdate,
-    actions: actions as unknown as Record<string, unknown>,
+    onFieldsUpdate: handleFieldsUpdate,
+    actions,
     animalKey: ownerKey as string,
   };
 
@@ -483,6 +454,7 @@ export default function DayEditorFrame() {
                 workspace={model.workspace}
                 issues={vm.issues}
                 exportGate={vm.export}
+                hasPendingDrafts={persistence.hasPendingDrafts}
                 // The blocked list dispatches an executable repair; run it in place. (Its
                 // RepairDispatch carries the repairCommand the executor reads.)
                 onRepair={(dispatch) => handleRepair(dispatch as unknown as RepairableIssue)}

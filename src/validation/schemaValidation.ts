@@ -48,11 +48,18 @@ export const schemaValidation = (model: ValidationModel): ValidationIssue[] => {
         : error.params.missingProperty;
     }
 
+    const fileMatch = /^(associated_(?:video_)?files)\[(\d+)\]\.task_epochs$/.exec(path);
+    const files = fileMatch ? model[fileMatch[1]] : undefined;
+    const file = Array.isArray(files) ? files[Number(fileMatch?.[2])] : undefined;
+    const epochMessage = fileMatch
+      ? `${fileMatch[1] === 'associated_video_files' ? 'Video' : 'File'} “${file?.name || `entry ${Number(fileMatch[2]) + 1}`}” needs a recording epoch. Select an epoch or remove this file in Manage files.`
+      : undefined;
+
     return {
       path,
       code: error.keyword,
       severity: 'error',
-      message: sanitizeMessage(error.message, error.instancePath, path),
+      message: epochMessage ?? sanitizeMessage(error.message, error.instancePath, path),
       instancePath: error.instancePath,
       schemaPath: error.schemaPath
     };

@@ -379,3 +379,37 @@ describe('BehavioralEventsDisplay - off-list nudge', () => {
     expect(screen.getByText(/not a standard event name/i)).toBeInTheDocument();
   });
 });
+
+
+describe('DIO add-line allocation', () => {
+  it('wraps past 32 to an unused index and leaves occupied lines intact', async () => {
+    const user = userEvent.setup();
+    const spy = vi.fn();
+    render(<ControlledHarness initialDayEvents={[{ description: 'Din1', name: 'Poke1' }]} spy={spy} />);
+    expect(screen.getByLabelText('Index')).toHaveValue(2);
+    await setNewLine(user, { index: 32, typedName: 'custom_last' });
+    await user.click(screen.getByRole('button', { name: 'Add line' }));
+    expect(screen.getByLabelText('Index')).toHaveValue(2);
+    expect(spy).toHaveBeenLastCalledWith([
+      { description: 'Din1', name: 'Poke1' }, { description: 'Din32', name: 'custom_last' },
+    ]);
+    await setNewLine(user, { index: 1, typedName: 'replacement' });
+    expect(screen.getByRole('button', { name: 'Add line' })).toBeDisabled();
+    expect(screen.getByRole('alert')).toHaveTextContent('Din1 is already named “Poke1”');
+    expect(spy).toHaveBeenCalledTimes(1);
+  });
+
+  it('explains a full direction and allows the next unused output', async () => {
+    const user = userEvent.setup();
+    const spy = vi.fn();
+    const inputs = Array.from({ length: 32 }, (_, index) => ({ description: `Din${index + 1}`, name: `Poke${index + 1}` }));
+    render(<ControlledHarness initialDayEvents={[...inputs, { description: 'Dout1', name: 'Pump1' }]} spy={spy} />);
+    expect(screen.getByRole('alert')).toHaveTextContent('All 32 Din lines are named');
+    await user.type(screen.getByLabelText('New DIO event name'), 'Pump2');
+    expect(screen.getByRole('button', { name: 'Add line' })).toBeDisabled();
+    await user.selectOptions(screen.getByLabelText('Type'), 'Dout');
+    expect(screen.getByLabelText('Index')).toHaveValue(2);
+    await user.click(screen.getByRole('button', { name: 'Add line' }));
+    expect(spy).toHaveBeenLastCalledWith([...inputs, { description: 'Dout1', name: 'Pump1' }, { description: 'Dout2', name: 'Pump2' }]);
+  });
+});

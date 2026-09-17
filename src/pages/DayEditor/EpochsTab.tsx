@@ -3,7 +3,7 @@ import { DraftTextInput } from '../../components/ui/DraftFields';
 import { STATESCRIPT_DESCRIPTION } from '../../domain/associatedFiles';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faArrowDown, faArrowUp } from '@fortawesome/free-solid-svg-icons';
-import { ConfirmDialog, useDialogBehavior } from '../../components/Modal';
+import { Modal, useDialogBehavior } from '../../components/Modal';
 import { useUndoToast } from '../../components/ui/UndoToast';
 import { EpochStatusPill } from '../../components/ui/StatusPill';
 import GeneratedValue from '../../components/ui/GeneratedValue';
@@ -148,8 +148,16 @@ function taskInstanceEpochs(instances: TaskInstance[]): Set<number> {
  * {@link module:domain/epochOperations} transforms — storage/export are unchanged. Replaces the
  * `TasksEpochsStep` bridge.
  */
-export default function EpochsTab(props: DayEditorBundle & { focusRequest?: FocusRequest | null }) {
-  const { animal, day, animalDays = [], onFieldUpdate, actions = undefined, animalKey = undefined } =
+export default function EpochsTab(props: DayEditorBundle & { focusRequest?: FocusRequest | null; onManageFile?: (fieldPath: string) => void }) {
+  const {
+    animal,
+    day,
+    animalDays = [],
+    onFieldUpdate,
+    onFieldsUpdate,
+    actions = undefined,
+    animalKey = undefined,
+  } =
     useDayEditorContext(props);
   const ownerKey = animalKey ?? (animal as { id?: string })?.id;
   const focusRequest = props.focusRequest ?? null;
@@ -207,12 +215,16 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
       return;
     }
 
+    if (props.onManageFile && /^associated_(?:video_)?files/.test(focusRequest?.fieldPath ?? '')) {
+      setActiveEpoch(null);
+      return;
+    }
     const fileIndex = associatedFileIndexFromFocusPath(focusRequest?.fieldPath);
     if (fileIndex != null) {
       const row = grid.rows.find((candidate) => candidate.statescript?.index === fileIndex);
       if (row) setActiveEpoch(row.epoch);
     }
-  }, [focusRequest, grid.rows]);
+  }, [focusRequest, grid.rows, props.onManageFile]);
 
   const statePatch = useCallback((patch: Record<string, unknown>, sourceDay = day) => {
     const state = (sourceDay as { state?: unknown }).state;
@@ -225,6 +237,18 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
 
   const statePatchWithVideoless = useCallback((videolessEpochs: number[], sourceDay = day) =>
     statePatch({ videolessEpochs }, sourceDay), [day, statePatch]);
+
+  const writeFields = useCallback((
+    changes: ReadonlyArray<readonly [fieldPath: string, value: unknown]>
+  ) => {
+    if (changes.length === 0) return;
+    if (onFieldsUpdate) {
+      onFieldsUpdate(changes);
+      return;
+    }
+    // Isolated component tests provide only the long-standing single-field callback.
+    changes.forEach(([fieldPath, value]) => onFieldUpdate(fieldPath, value));
+  }, [onFieldUpdate, onFieldsUpdate]);
 
   const clearDeferredEpoch = useCallback((epoch: number) => {
     const current = getDayDeferredEpochs(day);
@@ -260,27 +284,26 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
     (
       nextInstances: TaskInstance[],
       nextTaskTypes: TaskType[],
-      repair: boolean,
+      repair: boolean | 'remove',
       allowTaskCatalogDivergence = false,
-      options: { trackAddedEpochs?: boolean } = {}
+      options: {
+        trackAddedEpochs?: boolean;
+        additionalChanges?: ReadonlyArray<readonly [fieldPath: string, value: unknown]>;
+      } = {}
     ) => {
       if (unresolvedTaskCatalogDivergence && !allowTaskCatalogDivergence) return;
       // An imported day's working view may already contain newly derived types. Compare with the
       // stored catalog so those definitions are saved before their inline source is retired.
-      if (nextTaskTypes !== getAnimalTaskTypes(animal) && actions?.updateAnimal && ownerKey) {
-        (actions.updateAnimal as (id: string, patch: Record<string, unknown>) => void)(ownerKey, {
-          taskTypes: nextTaskTypes,
-        });
-      }
-      onFieldUpdate('taskInstances', nextInstances);
+      const taskCatalogChanged = nextTaskTypes !== getAnimalTaskTypes(animal);
+      const changes: Array<readonly [string, unknown]> = [['taskInstances', nextInstances]];
       const currentEpochs = taskInstanceEpochs(view.taskInstances);
       const addedEpochs = [...taskInstanceEpochs(nextInstances)].filter((epoch) => !currentEpochs.has(epoch));
       if ((options.trackAddedEpochs ?? true) && addedEpochs.length > 0) {
         const currentDeferred = getDayDeferredEpochs(day);
-        onFieldUpdate('state', statePatch({ deferredEpochs: [...new Set([...currentDeferred, ...addedEpochs])] }));
+        changes.push(['state', statePatch({ deferredEpochs: [...new Set([...currentDeferred, ...addedEpochs])] })]);
       }
       if (view.derived && Array.isArray((day as { tasks?: unknown[] }).tasks) && (day as { tasks: unknown[] }).tasks.length > 0) {
-        onFieldUpdate('tasks', []);
+        changes.push(['tasks', []]);
       }
       if (repair) {
         const valid = new Set<number>();
@@ -288,14 +311,24 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
           (Array.isArray(i.task_epochs) ? i.task_epochs : []).forEach((e) => valid.add(Number(e)))
         );
         const clear = <T extends { task_epochs?: number | string }>(entries: T[]) =>
-          entries.map((entry) =>
+          entries.filter((entry) => repair !== 'remove' || entry.task_epochs === '' || entry.task_epochs == null || valid.has(Number(entry.task_epochs))).map((entry) =>
             entry.task_epochs !== '' && entry.task_epochs != null && !valid.has(Number(entry.task_epochs))
               ? { ...entry, task_epochs: '' }
               : entry
           );
-        onFieldUpdate('associated_video_files', clear(getDayAssociatedVideos(day)));
-        onFieldUpdate('associated_files', clear(getDayAssociatedFiles(day)));
+        changes.push(['associated_video_files', clear(getDayAssociatedVideos(day))]);
+        changes.push(['associated_files', clear(getDayAssociatedFiles(day))]);
       }
+      changes.push(...(options.additionalChanges ?? []));
+      if (taskCatalogChanged && actions?.updateTaskCatalogAndDayFields && ownerKey) {
+        actions.updateTaskCatalogAndDayFields(ownerKey, String(day.id), nextTaskTypes, changes);
+        return;
+      }
+      // Isolated component tests and compatibility consumers can omit the composite action.
+      if (taskCatalogChanged && actions?.updateAnimal && ownerKey) {
+        actions.updateAnimal(ownerKey, { taskTypes: nextTaskTypes });
+      }
+      writeFields(changes);
     },
     [
       unresolvedTaskCatalogDivergence,
@@ -304,7 +337,7 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
       view.derived,
       actions,
       ownerKey,
-      onFieldUpdate,
+      writeFields,
       day,
       statePatch,
     ]
@@ -335,6 +368,7 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
       // The pending edit may also extend the catalog (a quick-add type); stash it for the confirm.
       pendingAfterRef.current = after ?? null;
       pendingTypesRef.current = nextTaskTypes;
+      pendingAdditionalChangesRef.current = [];
       setPendingOrphan({ nextInstances, videos, files });
     },
     [unresolvedTaskCatalogDivergence, view.taskTypes, day, applyCommit]
@@ -343,6 +377,7 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
   // A callback to run AFTER a pending orphan-repair is confirmed (e.g. the delete's undo toast — it
   // must fire only once the delete is actually committed, not while the confirm dialog is still open).
   const pendingAfterRef = useRef<(() => void) | null>(null);
+  const pendingAdditionalChangesRef = useRef<ReadonlyArray<readonly [string, unknown]>>([]);
 
   // ── Task / epoch write-backs (instance-array transforms) ──
   const reassignTask = (epoch: number, taskTypeId: string) => {
@@ -370,6 +405,7 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
   const renumberCommit = (nextInstances: TaskInstance[], remap: Map<number, number>, insertedEpoch?: number) => {
     if (unresolvedTaskCatalogDivergence) return;
     const stateUpdates: Record<string, unknown> = {};
+    const stateChanges: Array<readonly [string, unknown]> = [];
     const nextActiveEpoch = activeEpoch != null && remap.has(activeEpoch)
       ? remap.get(activeEpoch) ?? activeEpoch
       : activeEpoch;
@@ -379,13 +415,13 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
       const files = getDayAssociatedFiles(day);
       const fsgui = getDayFsGuiYamls(day);
       if (JSON.stringify(refs.associated_video_files) !== JSON.stringify(videos)) {
-        onFieldUpdate('associated_video_files', refs.associated_video_files);
+        stateChanges.push(['associated_video_files', refs.associated_video_files]);
       }
       if (JSON.stringify(refs.associated_files) !== JSON.stringify(files)) {
-        onFieldUpdate('associated_files', refs.associated_files);
+        stateChanges.push(['associated_files', refs.associated_files]);
       }
       if (JSON.stringify(refs.fs_gui_yamls) !== JSON.stringify(fsgui)) {
-        onFieldUpdate('fs_gui_yamls', refs.fs_gui_yamls);
+        stateChanges.push(['fs_gui_yamls', refs.fs_gui_yamls]);
       }
       const videoless = getDayVideolessEpochs(day);
       const nextVideoless = remapVideolessEpochs(videoless, remap);
@@ -405,12 +441,15 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
         : getDayDeferredEpochs(day);
       stateUpdates.deferredEpochs = [...new Set([...deferred, insertedEpoch])];
     }
-    applyCommit(nextInstances, view.taskTypes, false, false, { trackAddedEpochs: false });
+    if (Object.keys(stateUpdates).length > 0) {
+      stateChanges.push(['state', statePatch(stateUpdates)]);
+    }
+    applyCommit(nextInstances, view.taskTypes, false, false, {
+      trackAddedEpochs: false,
+      additionalChanges: stateChanges,
+    });
     if (nextActiveEpoch !== activeEpoch) {
       setActiveEpoch(nextActiveEpoch);
-    }
-    if (Object.keys(stateUpdates).length > 0) {
-      onFieldUpdate('state', statePatch(stateUpdates));
     }
   };
   const onInsertAfter = (epoch: number) =>
@@ -435,26 +474,27 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
     const nextDeferred = removeVideolessEpoch(snapDeferred, epoch);
     const videolessChanged = JSON.stringify(nextVideoless) !== JSON.stringify(snapVideoless);
     const deferredChanged = JSON.stringify(nextDeferred) !== JSON.stringify(snapDeferred);
-    const writeDeletedState = () => {
-      if (videolessChanged || deferredChanged) {
-        onFieldUpdate('state', statePatch({ videolessEpochs: nextVideoless, deferredEpochs: nextDeferred }));
-      }
-    };
+    const deletedStateChanges: Array<readonly [string, unknown]> =
+      videolessChanged || deferredChanged
+        ? [['state', statePatch({ videolessEpochs: nextVideoless, deferredEpochs: nextDeferred })]]
+        : [];
     const closeDeletedEpoch = () => {
       if (activeEpoch === epoch) setActiveEpoch(null);
     };
     const announce = () =>
       showToast(`Epoch ${epoch} deleted`, () => {
-        onFieldUpdate('taskInstances', snapInstances);
-        onFieldUpdate('associated_video_files', snapVideos);
-        onFieldUpdate('associated_files', snapFiles);
+        const changes: Array<readonly [string, unknown]> = [
+          ['taskInstances', snapInstances],
+          ['associated_video_files', snapVideos],
+          ['associated_files', snapFiles],
+        ];
         if (videolessChanged || deferredChanged) {
-          onFieldUpdate('state', statePatch({ videolessEpochs: snapVideoless, deferredEpochs: snapDeferred }));
+          changes.push(['state', statePatch({ videolessEpochs: snapVideoless, deferredEpochs: snapDeferred })]);
         }
+        writeFields(changes);
       });
     if (videos.length === 0 && files.length === 0) {
-      applyCommit(next, view.taskTypes, false);
-      writeDeletedState();
+      applyCommit(next, view.taskTypes, false, false, { additionalChanges: deletedStateChanges });
       closeDeletedEpoch();
       announce();
       return;
@@ -462,10 +502,10 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
     // Orphan: confirm first. The toast (and its full-restore Undo) fires only AFTER the user confirms.
     pendingTypesRef.current = view.taskTypes;
     pendingAfterRef.current = () => {
-      writeDeletedState();
       closeDeletedEpoch();
       announce();
     };
+    pendingAdditionalChangesRef.current = deletedStateChanges;
     setPendingOrphan({ nextInstances: next, videos, files });
   };
 
@@ -572,9 +612,16 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
     onFieldUpdate('associated_video_files', getDayAssociatedVideos(day).map((v, i) => (i === videoIndex ? { ...v, name } : v)));
   };
 
-  const confirmOrphanRepair = () => {
+  const confirmOrphanRepair = (choice: 'keep' | 'remove') => {
     if (!pendingOrphan) return;
-    applyCommit(pendingOrphan.nextInstances, pendingTypesRef.current, true);
+    applyCommit(
+      pendingOrphan.nextInstances,
+      pendingTypesRef.current,
+      choice === 'remove' ? 'remove' : true,
+      false,
+      { additionalChanges: pendingAdditionalChangesRef.current }
+    );
+    pendingAdditionalChangesRef.current = [];
     setPendingOrphan(null);
     // Fire any post-commit follow-up (e.g. the delete's undo toast) now that the write has happened.
     const after = pendingAfterRef.current;
@@ -737,6 +784,7 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
                     Data folder
                   </label>
                   <DraftTextInput
+                    draftKey={`day:${String(day.id)}:dataFolder`}
                     id="epochs-data-folder"
                     type="text"
                     name="dataFolder"
@@ -881,6 +929,7 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
           </div>
           {activeRow && (
             <EpochDetailsPanel
+              dayId={String(day.id)}
               row={activeRow}
               panelId="epoch-details-panel"
               hasOpto={hasOpto}
@@ -909,6 +958,7 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
                 setStatescriptManual(activeRow.epoch, false);
                 writeStatescriptPath(activeRow, deriveStatescriptPath(grid.dataFolder, statescriptDerivedName(activeRow)));
               }}
+              onManageFile={props.onManageFile ? (path) => { setActiveEpoch(null); props.onManageFile?.(path); } : undefined}
               onStatescriptChange={(path) => writeStatescriptPath(activeRow, path)}
               onStatescriptDescriptionChange={(description) => {
                 if (!activeRow.statescript) return;
@@ -992,25 +1042,26 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
         />
       )}
 
-      <ConfirmDialog
+      <Modal
         isOpen={pendingOrphan != null}
         title="Repair affected files?"
-        message={
-          pendingOrphan
-            ? `This change removes an epoch still referenced by: ${[...pendingOrphan.videos, ...pendingOrphan.files]
-                .map((e) => e.name || '(unnamed)')
-                .join(', ')}. Confirm to save and clear the orphaned epoch reference(s); cancel to discard this change.`
-            : ''
-        }
-        confirmLabel="Clear references"
-        cancelLabel="Cancel"
-        destructive
-        onConfirm={confirmOrphanRepair}
-        onCancel={() => {
-          setPendingOrphan(null);
-          pendingAfterRef.current = null;
-        }}
-      />
+        titleId="orphan-files-title"
+        role="alertdialog"
+        describedById="orphan-files-description"
+        closeOnOverlayClick={false}
+        onClose={() => { setPendingOrphan(null); pendingAfterRef.current = null; pendingAdditionalChangesRef.current = []; }}
+        footer={<div className="form-actions">
+          <Button variant="neutral" onClick={() => { setPendingOrphan(null); pendingAfterRef.current = null; pendingAdditionalChangesRef.current = []; }}>Cancel</Button>
+          <Button variant="secondary" onClick={() => confirmOrphanRepair('keep')}>Keep files unassigned</Button>
+          <Button variant="danger" onClick={() => confirmOrphanRepair('remove')}>Remove affected files</Button>
+        </div>}
+      >
+        <p id="orphan-files-description">This change removes an epoch referenced by the files below.
+          Keep them unassigned to choose another epoch in Manage files, or remove their metadata entries.
+          Files on disk are kept.</p>
+        <ul>{[...(pendingOrphan?.videos ?? []), ...(pendingOrphan?.files ?? [])].map((file, index) =>
+          <li key={index}>{file.name || '(unnamed file)'}</li>)}</ul>
+      </Modal>
 
       {(hasOpto || protocols.length > 0) && <details className="supplemental-disclosure">
         <summary>Stimulation protocols · {protocols.length}</summary>
@@ -1021,6 +1072,7 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
         <Button variant="secondary" onClick={() => openProtocol()}>Add stimulation protocol</Button>
       </details>}
       {protocolIndex !== null && protocols[protocolIndex] && <StimulationProtocolEditor
+        draftScope={`day:${String(day.id)}:fs_gui_yamls:${protocolIndex}`}
         key={protocolIndex} index={protocolIndex} protocol={protocols[protocolIndex]} epochs={grid.rows}
         cameras={cameras} events={getDayBehavioralEvents(day)} focusRequest={focusRequest}
         onChange={(protocol) => onFieldUpdate('fs_gui_yamls', protocols.map((entry, index) => index === protocolIndex ? protocol : entry))}
@@ -1093,6 +1145,7 @@ interface EpochRowProps {
 
 /** Props for the focused epoch details panel. */
 interface EpochDetailsPanelProps {
+  dayId: string;
   row: EpochGridRow;
   panelId: string;
   hasOpto: boolean;
@@ -1109,6 +1162,7 @@ interface EpochDetailsPanelProps {
   onNewTaskType: () => void;
   onEditProtocol: () => void;
   statescriptDerivedName: string;
+  onManageFile?: (fieldPath: string) => void;
   onStatescriptOverride: () => void;
   onStatescriptRevert: () => void;
   onStatescriptChange: (path: string) => void;
@@ -1424,7 +1478,7 @@ function EpochDetailsPanel(p: EpochDetailsPanelProps) {
                       <GeneratedValue
                         value={p.manualStatescript || row.statescriptNaming === 'manual' ? row.statescript.entry.path ?? '' : p.statescriptDerivedName}
                         derived={row.statescriptNaming === 'generated' && !p.manualStatescript}
-                        overrideLabel="Override name"
+                        overrideLabel="Override path"
                         ariaLabel={`Epoch ${row.epoch} statescript path`}
                         onOverride={p.onStatescriptOverride}
                         onRevert={p.onStatescriptRevert}
@@ -1432,6 +1486,7 @@ function EpochDetailsPanel(p: EpochDetailsPanelProps) {
                       />
                       <label htmlFor={`epoch-${row.epoch}-statescript-description`}>Statescript description (required)</label>
                       <DraftTextInput
+                        draftKey={`day:${p.dayId}:associated_file:${String(row.statescript.entry.recordId ?? row.statescript.index)}:description`}
                         id={`epoch-${row.epoch}-statescript-description`}
                         name={`associated_files[${row.statescript.index}].description`}
                         data-field-path={`associated_files[${row.statescript.index}].description`}
@@ -1441,6 +1496,10 @@ function EpochDetailsPanel(p: EpochDetailsPanelProps) {
                         aria-invalid={!row.statescript.entry.description?.trim()}
                       />
                       <small>Include “statescript” so Spyglass can identify this log.</small>
+                      {p.onManageFile && <Button variant="secondary" size="small"
+                        onClick={() => p.onManageFile?.(`associated_files[${row.statescript!.index}].name`)}>
+                        Edit name, epoch or remove file
+                      </Button>}
                     </>
                   ) : (
                     <>

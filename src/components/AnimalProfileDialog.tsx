@@ -1,4 +1,4 @@
-import { SPECIES_OPTIONS } from '../domain/subjectOptions';
+import { SEX_OPTIONS, SPECIES_OPTIONS } from '../domain/subjectOptions';
 import { FieldRequirements, RequiredMark } from './ui/FieldRequirements';
 import { useId, useMemo, useState, useEffect } from 'react';
 import { getAnimalSubject } from '../state/workspaceSelectors';
@@ -245,9 +245,9 @@ export default function AnimalProfileDialog({
               onChange={(e) => setField('sex', e.target.value)}
             >
               <option value="">Unspecified</option>
-              <option value="M">Male (M)</option>
-              <option value="F">Female (F)</option>
-              <option value="U">Unknown (U)</option>
+              {SEX_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>{option.label}</option>
+              ))}
             </select>
           </div>
 

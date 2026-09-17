@@ -10,8 +10,7 @@ import { isIncompleteEntryIssue } from '../domain/validationPresentation';
  * gate (open + reason + blocking issues/steps + the export action with its disabled reason).
  *
  * It COMPOSES domain truth rather than re-deriving it:
- *   - step status from `computeStepStatus` (with the editor's fail-closed fallback when the merge
- *     is unavailable), and the Validation step's "N to fix" from `validateDay`;
+ *   - effective metadata, issues, and step status from the shared `evaluateDay` result;
  *   - the export gate from `isExportEnabled` + an inline block-reason priority (merge-error /
  *     unlinked-day / validation-errors / incomplete-steps) + the day-in-index policy
  *     (`getAnimalDayIds`) — the exact AND-of-three the Export step gates on;
@@ -33,7 +32,6 @@ import { isIncompleteEntryIssue } from '../domain/validationPresentation';
  * dialogs, save status) are not represented — they belong to the page, not the view-model.
  */
 
-import { mergeDayMetadata } from '../state/workspaceUtils';
 import {
   getAnimalDayIds,
   getAnimalDays,
@@ -44,9 +42,9 @@ import {
   resolveDayOwner,
   resolveDayOptogenetics,
 } from '../state/workspaceSelectors';
-import { computeStepStatus } from '../domain/stepStatus';
 import { isExportEnabled } from '../domain/stepGate';
-import { validateDay } from '../domain/dayValidationComposer';
+import { evaluateDay } from '../domain/dayEvaluation';
+import type { DayEvaluation } from '../domain/dayEvaluation';
 import { ownershipForIssue } from '../domain/workflowOwnership';
 import {
   repairTargetForIssue,
@@ -1288,9 +1286,8 @@ function emptyShellViewModel(
  * @param workspace - `model.workspace` ({ animals, days }).
  * @param dayId - The recording-day store key to edit (from the URL); `null`/absent → the
  *   `no-day-id` shell state.
- * @param activeStep - The section the editor is currently showing (the page's local nav state).
- *   Defaults to the first step (the editor's initial state). The section nav is button/local-state,
- *   not routed, so the active step is a render-time input rather than something the VM derives.
+ * @param activeStep - The URL-backed section the editor is currently showing.
+ * @param suppliedEvaluation - Optional frame-level evaluation reused by all page surfaces.
  * @returns The page view-model — pure data, no React. Never throws: a corrupt animal config (which
  *   `mergeDayMetadata` throws on) AND a validation/step-status contract violation (an un-routed issue
  *   code, which `validateDay`/`computeStepStatus` throw on) are both caught and surfaced as an
@@ -1299,7 +1296,8 @@ function emptyShellViewModel(
 export function buildDayEditorViewModel(
   workspace: unknown,
   dayId: string | null | undefined,
-  activeStep: string = DEFAULT_STEP
+  activeStep: string = DEFAULT_STEP,
+  suppliedEvaluation?: DayEvaluation
 ): DayEditorViewModel {
   const ws = isRecord(workspace) ? workspace : {};
   const animalsMap: Record<string, unknown> = isRecord(ws.animals) ? ws.animals : {};
@@ -1339,46 +1337,17 @@ export function buildDayEditorViewModel(
   const shell: DayEditorShellViewModel = { state: 'ok' };
   if (ownerKey != null) shell.ownerKey = ownerKey;
 
-  // ── Merge (fail-closed on corrupt config) ──
-  let merged: Record<string, unknown> = {};
-  let mergeFailed = false;
-  try {
-    merged = mergeDayMetadata(animal as Animal, day as unknown as Day);
-  } catch {
-    // mergeDayMetadata throws BY DESIGN on a malformed animal (missing/non-array
-    // configurationHistory). Tolerate it: an empty merged fails validation and the gate fails
-    // closed, exactly as the day editor + export step do — never propagate the throw.
-    mergeFailed = true;
-    merged = {};
-  }
-
   // The animal's day records (date-sorted), the cross-day context the bad-channel monotonicity
   // block reads. `getAnimalDays` returns [] for a missing/unresolved owner.
   const animalDays =
     ownerKey != null ? getAnimalDays({ animals: animalsMap, days: daysMap }, ownerKey) : [];
 
   // ── Step status + authoritative issue list (the export gate + rendered repair lists share it) ──
-  // Both computeStepStatus and validateDay can throw on a repair-routing CONTRACT VIOLATION (a new
-  // issue code with no owner mapping — a programming error, not corrupt data). Guard them: on a throw,
-  // fail closed exactly like the merge-error path (a closed gate + the merge-error blocker) and LOG the
-  // real error, rather than letting it white-screen the day editor. Unreachable with the current issue
-  // set (every code routes), so this only protects against a future un-routed code reaching production.
-  let stepStatus: Record<string, StepStatus>;
-  let rawIssues: RepairableIssue[];
-  try {
-    stepStatus = mergeFailed
-      ? { ...FAIL_CLOSED_STEP_STATUS }
-      : computeStepStatus(day, merged, animal, animalDays);
-    // On a merge failure, validate the empty merged model so the raw-shape animal issue still surfaces.
-    rawIssues = validateDay(day as unknown as Record<string, unknown>, merged, animal, animalDays);
-  } catch (err) {
-    // eslint-disable-next-line no-console
-    console.error(`[day-editor-vm] validation could not complete for day "${dayId}":`, err);
-    mergeFailed = true;
-    merged = {};
-    stepStatus = { ...FAIL_CLOSED_STEP_STATUS };
-    rawIssues = [];
-  }
+  // The shared evaluator guards merge, validation, and repair-routing contract failures and fails
+  // closed, so every surface below reads one consistent snapshot.
+  const evaluation = suppliedEvaluation
+    ?? evaluateDay(animal as Animal, day as unknown as Day, animalDays as Day[]);
+  const { merged, issues: rawIssues, stepStatus, mergeFailed } = evaluation;
   const rawErrorIssues = blockingIssues(rawIssues);
   // The Validation step's "N to fix" scent matches the stepper, which shows NO count when the merge
   // failed (it cannot compute a trustworthy readiness) — so suppress the count on the merge-failed

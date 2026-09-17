@@ -344,6 +344,7 @@ export default function FailedChannelsTab(props: FailedChannelsTabProps) {
             onFieldUpdate={onFieldUpdate}
             recordingSystemDefaults={animal?.technicalDefaults}
             animalKey={ownerKey}
+            dayId={String(day.id)}
             embedded
           />
         </div>

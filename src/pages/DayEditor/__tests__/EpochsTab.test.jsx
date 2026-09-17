@@ -731,7 +731,7 @@ describe('EpochsTab — confirm-before-orphan (never auto-scrub)', () => {
     render(<EpochsTab {...bundle} />);
     await user.click(screen.getByRole('button', { name: /More actions for epoch 2/i }));
     await user.click(screen.getByRole('menuitem', { name: /Delete epoch 2/i }));
-    await user.click(screen.getByRole('button', { name: /Clear references/i }));
+    await user.click(screen.getByRole('button', { name: /Keep files unassigned/i }));
     expect(lastPatch(bundle.onFieldUpdate, 'taskInstances')).toEqual([
       { taskTypeId: 'tasktype-0', task_epochs: [1, 3] },
     ]);
@@ -750,7 +750,7 @@ describe('EpochsTab — confirm-before-orphan (never auto-scrub)', () => {
     expect(screen.getByText(/Repair affected files\?/i)).toBeInTheDocument();
     expect(lastPatch(bundle.onFieldUpdate, 'state')).toBeUndefined();
 
-    await user.click(screen.getByRole('button', { name: /Clear references/i }));
+    await user.click(screen.getByRole('button', { name: /Keep files unassigned/i }));
     expect(lastPatch(bundle.onFieldUpdate, 'associated_video_files')).toEqual([
       { name: 'run_video', camera_id: 1, task_epochs: '' },
     ]);
@@ -1057,7 +1057,7 @@ describe('EpochsTab — statescript naming', () => {
     ]);
     expect(screen.getByRole('button', { name: /Hide epoch 1 details/i })).toBeInTheDocument();
     expect(screen.getByText('20230622_r_01_s1.stateScriptLog')).toBeInTheDocument();
-    await waitFor(() => expect(screen.getByRole('button', { name: /Override name/i })).toHaveFocus());
+    await waitFor(() => expect(screen.getByRole('button', { name: /Override path/i })).toHaveFocus());
   });
 });
 
