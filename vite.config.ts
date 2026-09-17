@@ -1,20 +1,24 @@
 /// <reference types="vitest/config" />
 import { defineConfig } from 'vitest/config';
+import { loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
+const buildBase = (mode: string) =>
+  loadEnv(mode, __dirname, 'VITE_').VITE_BASE_PATH || '/rec_to_nwb_yaml_creator/';
+
 // ONE config for BOTH the app build (was `react-scripts`) and the Vitest test lane (was the
 // separate `vitest.config.js`). Vite and Vitest share this file; the `test` block below is the
 // former vitest.config.js merged in unchanged, so the test transform is byte-stable.
-export default defineConfig(({ command }) => ({
+export default defineConfig(({ command, mode }) => ({
   // GitHub Pages serves the PRODUCTION app under /rec_to_nwb_yaml_creator/ (was CRA's `homepage`
   // field). CRA applied that base only to the build and served dev at `/`; mirror that — a global
   // base would move the dev server to `/rec_to_nwb_yaml_creator/` and break Playwright + the
   // kill-stale-:3000 workflow, which drive `http://localhost:3000/`.
-  base: command === 'build' ? '/rec_to_nwb_yaml_creator/' : '/',
+  base: command === 'build' ? buildBase(mode) : '/',
   plugins: [react()],
   // Keep CRA's output dir so `gh-pages -d build` (deploy) and the CI build-artifact path are unchanged.
   build: { outDir: 'build' },

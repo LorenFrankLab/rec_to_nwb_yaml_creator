@@ -21,6 +21,7 @@ import AnimalSwitcher from '../components/AnimalSwitcher';
 import AnimalDeleteDialog from '../components/AnimalDeleteDialog';
 import AnimalProfileDialog from '../components/AnimalProfileDialog';
 import ReadOnlyTabBanner from '../components/ReadOnlyTabBanner';
+import { PilotBanner } from '../components/PilotBanner';
 import { getAnimalDayIds } from '../state/workspaceSelectors';
 import { RouteLoading } from './RouteLoading';
 import logo from '../logo.png';
@@ -362,6 +363,8 @@ export function AppLayout() {
         aria-atomic="true"
         className="visually-hidden"
       />
+
+      <PilotBanner />
 
       {/* Header with logo. The logo is the in-app "home": on the frozen legacy form (`#/`) it returns
           to the form, but on the new-model routes (workspace / animal / day / validation) it goes to

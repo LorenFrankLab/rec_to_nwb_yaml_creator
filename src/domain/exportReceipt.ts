@@ -8,8 +8,9 @@
  * an identity/date-token change counts) and comparing. A download is not evidence of a successful
  * conversion; that is a different event.
  *
- * The exact bytes are kept in the IndexedDB side store (`receipt:<dayId>`) so the scientist can
- * inspect what changed; the receipt itself stays small (the autosave blob is localStorage-bound).
+ * The exact bytes are kept in the deployment-namespaced IndexedDB side store (production key
+ * `receipt:<dayId>`) so the scientist can inspect what changed; the receipt itself stays small
+ * (the autosave blob is localStorage-bound).
  */
 
 import { encodeYaml } from '../io/yaml';
@@ -19,14 +20,15 @@ import { isRecord } from '../utils/records';
 import { sha256Hex } from '../utils/sha256';
 import { formatRecordingMetadataFilename } from './recordingFilename';
 import type { Animal, Day, ExportReceipt } from '../state/workspaceTypes';
+import { DEPLOYMENT } from '../config/deployment';
 
 /** Side-store key prefix for a day's last exported bytes. */
-export const RECEIPT_YAML_KEY_PREFIX = 'receipt:';
+export const RECEIPT_YAML_KEY_PREFIX = DEPLOYMENT.receiptKeyPrefix;
 
 /**
  * The side-store key holding a receipt's YAML bytes: the receipt's own `yamlKey` when it names one
  * (a restored receipt refers to the write-once key its restore attempt wrote), else the day's
- * default key (`receipt:<dayId>`, where a download in this browser puts them).
+ * deployment-specific default key (production uses `receipt:<dayId>`).
  *
  * @param dayId - The day id.
  * @param receipt - The receipt (or anything with an optional `yamlKey`).

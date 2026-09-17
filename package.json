@@ -59,8 +59,9 @@
   "scripts": {
     "start": "vite",
     "predeploy": "npm run build",
-    "deploy": "gh-pages -d build",
+    "deploy": "gh-pages -d build --add",
     "build": "vite build",
+    "build:pilot": "vite build --mode pilot",
     "preview": "vite preview",
     "test": "vitest",
     "test:ui": "vitest --ui",

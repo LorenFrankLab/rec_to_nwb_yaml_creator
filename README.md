@@ -84,10 +84,22 @@ troubleshooting.
 
 ## Deployment
 
-To deploy, run the command -
+The current application is served from the root of the `gh-pages` branch:
 
-```[bash]
+```bash
 npm run deploy
 ```
 
-**This deploys the code in branch - **gh-pages**. **gh-pages** should not be deleted.**
+The `--add` deployment mode preserves the separately published pilot directory. Do not delete the
+`gh-pages` branch.
+
+### Modern scientist pilot
+
+Every successful `modern` branch push is built in pilot mode after the full CI suite passes and is
+published without replacing the current application:
+
+<https://lorenfranklab.github.io/rec_to_nwb_yaml_creator/pilot/#/workspace>
+
+Pilot mode opens the workspace by default, displays its source commit, and uses separate
+localStorage, IndexedDB, Web Lock, and BroadcastChannel identities. Scientists can therefore test
+the pilot in the same browser without its saved workspace interacting with the current site.

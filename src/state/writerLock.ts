@@ -22,12 +22,14 @@
  * subscribes through {@link subscribeWriterState}.
  */
 
+import { DEPLOYMENT } from '../config/deployment';
+
 /** The lock name (Web Locks) / lease key (fallback). */
-export const WRITER_LOCK_NAME = 'rec_to_nwb_workspace_v1:writer';
+export const WRITER_LOCK_NAME = `${DEPLOYMENT.storageNamespace}:writer`;
 /** localStorage key of the fallback lease. */
-export const WRITER_LEASE_KEY = 'rec_to_nwb_workspace_v1.writer';
+export const WRITER_LEASE_KEY = `${DEPLOYMENT.storageNamespace}.writer`;
 /** BroadcastChannel name for the hand-over handshake. */
-export const WRITER_CHANNEL_NAME = 'rec_to_nwb_workspace_v1:writer-channel';
+export const WRITER_CHANNEL_NAME = `${DEPLOYMENT.storageNamespace}:writer-channel`;
 /** Fallback lease heartbeat period. */
 export const LEASE_HEARTBEAT_MS = 5_000;
 /** A fallback lease older than this is considered abandoned. */

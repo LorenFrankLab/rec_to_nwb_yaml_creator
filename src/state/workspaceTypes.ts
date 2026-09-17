@@ -21,7 +21,8 @@ export type DayId = string;
 /**
  * Top-level container for all animals and days.
  *
- * Persisted to localStorage (key "rec_to_nwb_workspace_v1", debounced autosave) when
+ * Persisted to deployment-namespaced localStorage (production key "rec_to_nwb_workspace_v1",
+ * debounced autosave) when
  * the persistence feature flag is enabled. Contains all animals, days, and settings.
  */
 export interface Workspace {

@@ -130,7 +130,8 @@ export const FLAGS = {
    *
    * Purpose: Autosave functionality
    * Milestone: M3
-   * Default: true (workspace autosaves to localStorage; key "rec_to_nwb_workspace_v1")
+   * Default: true (workspace autosaves to namespaced localStorage; the production key is
+   * "rec_to_nwb_workspace_v1" and pilot builds use an isolated key)
    */
   localStoragePersistence: true,
 

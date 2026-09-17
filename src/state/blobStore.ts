@@ -15,7 +15,9 @@
  * unaffected). Framework-free.
  */
 
-const DB_NAME = 'rec_to_nwb_yaml_creator';
+import { DEPLOYMENT } from '../config/deployment';
+
+const DB_NAME = DEPLOYMENT.blobDatabaseName;
 const DB_VERSION = 1;
 const STORE = 'blobs';
 

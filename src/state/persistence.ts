@@ -17,6 +17,7 @@ import { migrateWorkspace, WORKSPACE_SCHEMA_VERSION } from './workspaceMigration
 import { WRITER_ID } from './writerLock';
 import { getBlob, putBlob, deleteBlob } from './blobStore';
 import { receiptHash, receiptYamlKey, RECEIPT_YAML_KEY_PREFIX } from '../domain/exportReceipt';
+import { DEPLOYMENT } from '../config/deployment';
 
 // Re-exported so consumers keep importing the current schema version from the persistence layer
 // (its public home), while the migration registry owns its definition + the forward migrators.
@@ -96,20 +97,20 @@ function clearLoadedValidationDeferrals(workspace: Record<string, unknown>): Rec
 }
 
 /** localStorage key for the persisted workspace blob. */
-export const WORKSPACE_STORAGE_KEY = 'rec_to_nwb_workspace_v1';
+export const WORKSPACE_STORAGE_KEY = DEPLOYMENT.storageNamespace;
 /** localStorage key for the write-revision stamp `{ revision, writerId, savedAt }`. */
-export const WORKSPACE_META_KEY = 'rec_to_nwb_workspace_v1.meta';
+export const WORKSPACE_META_KEY = `${DEPLOYMENT.storageNamespace}.meta`;
 /**
  * Side-store (IndexedDB, see `blobStore`) key holding the ORIGINAL bytes of a blob that could not
  * be loaded (parse error / version mismatch / malformed), written BEFORE the main key is cleared so
  * the recovery source is never discarded (review finding F8). `{ savedAt, reason, raw }`.
  */
-export const WORKSPACE_QUARANTINE_KEY = 'rec_to_nwb_workspace_v1.quarantine';
+export const WORKSPACE_QUARANTINE_KEY = `${DEPLOYMENT.storageNamespace}.quarantine`;
 /**
  * Side-store key holding the original bytes of the last blob that was forward-migrated, so a
  * migration bug can be diagnosed and undone. `{ savedAt, reason: 'migration', schemaVersion, raw }`.
  */
-export const WORKSPACE_PREMIGRATION_KEY = 'rec_to_nwb_workspace_v1.premigration';
+export const WORKSPACE_PREMIGRATION_KEY = `${DEPLOYMENT.storageNamespace}.premigration`;
 /**
  * Side-store key of the last-known-good checkpoint: the most recent blob that (a) hydrated
  * cleanly at session start or (b) was written by an EXPLICIT save. Distinct from the autosave
@@ -119,7 +120,7 @@ export const WORKSPACE_PREMIGRATION_KEY = 'rec_to_nwb_workspace_v1.premigration'
  * (3 animals × 200 days, 128 channels) measures ~2.5 MiB per envelope, so four localStorage copies
  * would not fit the smallest supported quota (5 MiB). See storageBudget.test.js.
  */
-export const WORKSPACE_CHECKPOINT_KEY = 'rec_to_nwb_workspace_v1.checkpoint';
+export const WORKSPACE_CHECKPOINT_KEY = `${DEPLOYMENT.storageNamespace}.checkpoint`;
 
 /** A preserved copy of raw workspace bytes (quarantine / pre-migration / checkpoint). */
 export interface PreservedBlob {

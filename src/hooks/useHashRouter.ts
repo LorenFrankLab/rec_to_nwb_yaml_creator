@@ -8,6 +8,7 @@
  */
 
 import { useState, useEffect } from 'react';
+import { DEPLOYMENT } from '../config/deployment';
 
 /**
  * Canonical tab keys for the tabbed animal view (Phase 1 — tabbed-workspace-ia).
@@ -60,19 +61,20 @@ export interface RouteInfo {
  * // Returns: { view: 'legacy', params: {} }
  */
 export function parseHashRoute(
-  hash: string = typeof window !== 'undefined' ? window.location.hash : ''
+  hash: string = typeof window !== 'undefined' ? window.location.hash : '',
+  defaultView: 'legacy' | 'workspace' = DEPLOYMENT.defaultRoute
 ): RouteInfo {
   // Guard for SSR/testing environments
   if (typeof window === 'undefined') {
-    return { view: 'legacy', params: {} };
+    return { view: defaultView, params: {} };
   }
 
   // Remove leading # and normalize
   const cleanHash = hash.slice(1) || '';
 
-  // Empty hash -> legacy form (default)
+  // The public production root remains legacy; the isolated pilot root opens the workspace.
   if (!cleanHash || cleanHash === '/') {
-    return { view: 'legacy', params: {} };
+    return { view: defaultView, params: {} };
   }
 
   // Strip query parameters for route matching

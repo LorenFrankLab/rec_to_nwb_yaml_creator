@@ -10,6 +10,17 @@ import { renderHook, act, waitFor } from '@testing-library/react';
 import { parseHashRoute, useHashRouter } from '../useHashRouter';
 
 describe('parseHashRoute', () => {
+  it('uses the modern workspace as the pilot landing route', () => {
+    expect(parseHashRoute('', 'workspace')).toEqual({
+      view: 'workspace',
+      params: {},
+    });
+    expect(parseHashRoute('#/', 'workspace')).toEqual({
+      view: 'workspace',
+      params: {},
+    });
+  });
+
   describe('legacy route (default)', () => {
     it('parses empty hash as legacy route', () => {
       expect(parseHashRoute('')).toEqual({ view: 'legacy', params: {} });
