@@ -170,12 +170,13 @@ test.describe('redesign — Day Editor IA layout', () => {
       }
     }
 
-    const dailyLog = page
-      .locator('.day-editor-section')
-      .filter({ has: page.getByRole('heading', { level: 2, name: 'Daily log' }) });
-    await expect(dailyLog.getByRole('heading', { name: 'Weight' })).toBeVisible();
-    await expect(dailyLog.getByRole('heading', { name: 'Team' })).toBeVisible();
+    const dailyLog = page.getByRole('region', { name: 'Daily log' });
+    await expect(
+      dailyLog.getByRole('spinbutton', { name: /Weight measured on 2023-06-22/ }),
+    ).toBeVisible();
     await expect(dailyLog.getByRole('heading', { level: 2, name: 'Epochs' })).toBeVisible();
+    await dailyLog.getByText('Recording details', { exact: true }).click();
+    await expect(dailyLog.getByText(/^Experimenters:/)).toBeVisible();
     await expect(dailyLog.getByTestId('day-provenance')).toBeVisible();
   });
 });
@@ -231,7 +232,6 @@ test.describe('redesign — keyboard operability', () => {
 
     // Each electrode group is a native <details> disclosure (keyboard-operable); its per-channel
     // toggles live inside. Expand a group with all channels OK so every revealed checkbox is enabled.
-    await page.locator('summary').filter({ hasText: /Other groups/ }).click();
     await page.locator('summary').filter({ hasText: /Electrode Group 0/ }).click();
 
     // The per-channel toggles are native checkboxes — focusable + Space-operable by construction.
@@ -242,9 +242,7 @@ test.describe('redesign — keyboard operability', () => {
     await channel.focus();
     await expect(channel).toBeFocused();
     await page.keyboard.press('Space');
-    // Marking the first clean channel failed promotes its whole group out of the collapsed
-    // "Other groups" section, so the original checkbox is intentionally remounted. Assert the
-    // user-visible result of that keyboard action instead of retaining a stale row locator.
+    // Assert the user-visible result instead of retaining a row locator across the state update.
     await expect(page.getByText('3 failed channels', { exact: true })).toBeVisible();
   });
 });

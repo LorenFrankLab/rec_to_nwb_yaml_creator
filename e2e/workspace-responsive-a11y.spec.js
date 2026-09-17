@@ -100,7 +100,7 @@ test.describe('Responsive + a11y smoke — navigation reachable at both viewport
         'Primary nav "Workspace" link',
       );
       await expectWithinViewportHorizontally(
-        primaryNav.getByRole('link', { name: 'Review & export' }),
+        primaryNav.getByRole('link', { name: 'Review all animals' }),
         viewport,
         'Primary nav "Review & export" link',
       );

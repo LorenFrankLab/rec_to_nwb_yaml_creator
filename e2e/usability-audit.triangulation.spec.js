@@ -79,19 +79,20 @@ test.describe('Three-way agreement: UI ⇄ localStorage ⇄ exported YAML', () =
     await seedAndOpen(page, buildConfiguredWorkspaceBlob(), `/#/animal/${ANIMAL_ID}/cameras`);
     await expect(page.getByRole('heading', { level: 2, name: 'Cameras' })).toBeVisible();
 
-    const camerasTable = page.locator('table.cameras-table');
+    const camerasTable = page.getByRole('region', { name: 'Cameras' }).getByRole('table');
     await expect(camerasTable).toBeVisible();
-    // Read the rendered cells structurally (id / name / manufacturer / model / lens / meters_per_pixel).
+    // Read the current compact columns (id / name / combined hardware / calibration).
     const uiCameras = await camerasTable.locator('tbody tr').evaluateAll((rows) =>
       rows.map((tr) => {
         const td = [...tr.querySelectorAll('td')].map((c) => c.textContent.trim());
-        return { id: td[0], name: td[1], lens: td[4], mpp: td[5] };
+        return { id: td[0], name: td[1], hardware: td[2], mpp: td[3] };
       }),
     );
-    expect(uiCameras).toEqual([
-      { id: '0', name: 'overhead_camera', lens: 'Fujinon HF16HA-1B', mpp: '0.00085' },
-      { id: '1', name: 'side_camera', lens: 'Fujinon HF16HA-1B', mpp: '0.0009' },
+    expect(uiCameras.map(({ id, name, mpp }) => ({ id, name, mpp }))).toEqual([
+      { id: '0', name: 'overhead_camera', mpp: '0.00085' },
+      { id: '1', name: 'side_camera', mpp: '0.0009' },
     ]);
+    expect(uiCameras.every(({ hardware }) => hardware.includes('Fujinon HF16HA-1B'))).toBe(true);
 
     // PLANE 2 (localStorage) — the persisted animal carries the same calibration values.
     const { animal } = await readPersisted(page);
@@ -126,7 +127,7 @@ test.describe('Three-way agreement: UI ⇄ localStorage ⇄ exported YAML', () =
     await seedAndOpen(page, buildConfiguredWorkspaceBlob(), `/#/animal/${ANIMAL_ID}/recording-system`);
     await expect(page.getByRole('heading', { level: 2, name: 'Recording System' })).toBeVisible();
 
-    const acqTable = page.locator('table.data-acq-table');
+    const acqTable = page.getByRole('region', { name: 'Recording System' }).getByRole('table');
     await expect(acqTable).toBeVisible();
     const uiDevices = await acqTable.locator('tbody tr').evaluateAll((rows) =>
       rows.map((tr) => {

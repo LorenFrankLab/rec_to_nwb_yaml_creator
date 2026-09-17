@@ -37,6 +37,20 @@ import {
 } from './helpers/workspace.js';
 
 /**
+ * Reveal the secondary restore controls when a populated workspace keeps them collapsed.
+ *
+ * @param {import('@playwright/test').Page} page - The current Playwright page.
+ * @returns {Promise<void>} Resolves when the restore controls are visible.
+ */
+async function revealRestoreControls(page) {
+  const summary = page.locator('summary').filter({ hasText: /^Restore a workspace$/ });
+  const details = summary.locator('..');
+  if (!(await details.evaluate((element) => element.open))) {
+    await summary.click();
+  }
+}
+
+/**
  * Install a localStorage.setItem stub (via addInitScript, so it survives the reload into a
  * fresh document) that THROWS a QuotaExceeded-style error for writes to the workspace key,
  * while leaving reads and all other keys working. This is the intended mechanism for
@@ -199,6 +213,7 @@ test.describe('Workspace persistence & recovery', () => {
     await expect(page.getByRole('alert')).toContainText('could not keep a durable copy');
 
     const backup = JSON.stringify({ ...buildConfiguredWorkspaceBlob(), format: 'rec_to_nwb_workspace_backup', formatVersion: 2, artifacts: {} });
+    await revealRestoreControls(page);
     const chooser = page.waitForEvent('filechooser');
     await page.getByRole('button', { name: /Restore from backup/ }).click();
     await (await chooser).setFiles({ name: 'backup.json', mimeType: 'application/json', buffer: Buffer.from(backup) });
@@ -254,6 +269,7 @@ test.describe('Workspace persistence & recovery', () => {
     await page.evaluate(() => {
       window.__holdTx = true;
     });
+    await revealRestoreControls(page);
     const chooser = page.waitForEvent('filechooser');
     await page.getByRole('button', { name: /Restore from backup/ }).click();
     await (await chooser).setFiles({ name: 'backup.json', mimeType: 'application/json', buffer: Buffer.from(text) });
@@ -298,6 +314,7 @@ test.describe('Workspace persistence & recovery', () => {
     await page.evaluate(() => {
       window.__failMeta = true;
     });
+    await revealRestoreControls(page);
     const chooser = page.waitForEvent('filechooser');
     await page.getByRole('button', { name: /Restore from backup/ }).click();
     await (await chooser).setFiles({ name: 'backup.json', mimeType: 'application/json', buffer: Buffer.from(text) });
@@ -391,7 +408,7 @@ test.describe('Workspace persistence & recovery', () => {
     // Edit a day-owned field so a workspace change triggers the debounced autosave, whose
     // write will throw. Editing Session Description (inside the daily log's collapsed
     // "Descriptions…" group) → updateDay → autosave.
-    await page.getByText('Descriptions, data folder & search terms').click();
+    await page.getByText('Session description / notes', { exact: true }).click();
     const sessionDescription = page.getByRole('textbox', { name: 'Session Description *' });
     await expect(sessionDescription).toBeVisible();
     await sessionDescription.fill('Edited so autosave fires and fails');
@@ -564,7 +581,7 @@ test.describe('Workspace persistence & recovery', () => {
       },
     ]);
 
-    await expect(page.getByRole('region', { name: 'Import batch status' })).toContainText('2 to download');
+    await expect(page.getByRole('region', { name: 'Import batch status' })).toContainText('2 ready');
     await page.getByRole('button', { name: 'Review 2 ready files' }).click();
     await expect(page.getByRole('region', { name: 'Batch import summary' })).toContainText(
       '2 recording days → 1 animal',

@@ -115,21 +115,20 @@ test.describe('Workspace export workflows', () => {
     // Both days are ready.
     await expect(page.getByText('2 valid')).toBeVisible();
 
-    // Per-day scan fields are visible WITHOUT opening each day: each row carries date, session,
+    // Per-day scan fields are visible WITHOUT opening each day: each row carries date and session notes,
     // a config/camera/opto setup summary, a validation status chip, and an export/repair action.
     const table = page.getByRole('table', {
-      name: 'Recording days across all animals with validation status',
+      name: 'Recording days for this animal with validation status',
     });
     // Column headers expose the scan dimensions the catch-up surface promises.
-    for (const col of ['Animal', 'Date', 'Session', 'Setup', 'Status', 'Editor']) {
+    for (const col of ['Date', 'Setup', 'Status', 'Editor']) {
       await expect(table.getByRole('columnheader', { name: col })).toBeVisible();
     }
-    // Day 1 row (addressed by its stable per-day test id): date, session, the dated-config setup
+    // Day 1 row (addressed by its stable per-day test id): date, session notes, the dated-config setup
     // summary (config version + camera count + opto), a Valid status chip, and an Open-editor action.
     const row1 = page.getByTestId(`day-row-${DAY_ID}`);
-    await expect(row1.getByRole('cell', { name: '2023-06-22', exact: true })).toBeVisible();
-    // The Session cell now carries the session id AND the day's session description on its own line.
-    await expect(row1.getByRole('cell', { name: /remy_20230622/ })).toBeVisible();
+    await expect(row1.getByRole('cell', { name: /^2023-06-22/ })).toBeVisible();
+    // The Date cell includes the day’s session notes.
     await expect(
       row1.getByText('Day 45 of chronic recording, W-track alternation'),
     ).toBeVisible();
@@ -148,7 +147,7 @@ test.describe('Workspace export workflows', () => {
     ).toBeVisible();
     // Day 2 row is present too — proving the scan covers every day at a glance.
     const row2 = page.getByTestId(`day-row-${day2Id}`);
-    await expect(row2.getByRole('cell', { name: '2023-06-23', exact: true })).toBeVisible();
+    await expect(row2.getByRole('cell', { name: /^2023-06-23/ })).toBeVisible();
     await expect(row2.getByRole('cell', { name: 'Ready to export', exact: true })).toBeVisible();
 
     // Batch export: only ready days export. Both are valid, so the preflight names 2 days.
@@ -190,7 +189,7 @@ test.describe('Workspace export workflows', () => {
 
     // One valid, one not ready (has errors).
     await expect(page.getByText('1 valid')).toBeVisible();
-    await expect(page.getByText('1 with errors')).toBeVisible();
+    await expect(page.getByText('1 incomplete')).toBeVisible();
 
     // Batch export only stages the ONE ready day.
     await page.getByRole('button', { name: /Review \d+ selected recordings?/ }).click();

@@ -3,7 +3,7 @@
  *
  * These specs drive the SHIPPED export surfaces — the per-day Day Editor Export step
  * (`#/day/:id` → Export → the YAML preview + "Download") and the per-animal Review & export
- * tab (`#/animal/:id/export` → "Export Valid Only" → batch preflight → "Confirm export (N)")
+ * tab (`#/animal/:id/export` → review selected recordings → preflight → confirm)
  * — capture the YAML the browser actually downloads, and assert the high-risk, previously
  * data-corrupting sections are correct in the downloaded TEXT.
  *
@@ -76,18 +76,20 @@ test.describe('Browser export of a configured recording day', () => {
     await expect(page.getByText('1 valid')).toBeVisible();
 
     // Open the batch preflight.
-    await page.getByRole('button', { name: 'Export Valid Only' }).click();
+    await page.getByRole('button', { name: 'Review 1 selected recording' }).click();
     const batch = page.getByRole('region', { name: 'Batch export preflight' });
-    await expect(batch.getByRole('heading', { name: 'Confirm batch export' })).toBeVisible();
-    // The preflight line names the config version, electrode groups + failed channels,
-    // cameras, and opto state for the day about to export.
-    await expect(
-      batch.getByText('config v1 (latest); 8 electrode groups, 2 failed channels; 2 cameras; No optogenetics'),
-    ).toBeVisible();
+    await expect(batch.getByRole('heading', { name: 'Review recordings for download' })).toBeVisible();
+    // High-consequence setup is available on demand without crowding the initial review.
+    await batch.getByText('Calibration & hardware details', { exact: true }).click();
+    const effectiveSetup = batch.getByRole('group', { name: 'Effective setup for this day' });
+    await expect(effectiveSetup).toContainText('Version 1 (current)');
+    await expect(effectiveSetup).toContainText('8 electrode groups, 2 failed channels');
+    await expect(effectiveSetup).toContainText('overhead_camera (0.00085 m/px)');
+    await expect(effectiveSetup).toContainText('No optogenetics');
 
     // Confirm and capture the downloaded file.
     const { filename, text } = await captureDownload(page, async () => {
-      await batch.getByRole('button', { name: 'Confirm export (1)' }).click();
+      await batch.getByRole('button', { name: 'Download 1 YAML files' }).click();
     });
 
     expect(filename).toBe(EXPECTED_FILENAME);
@@ -167,7 +169,7 @@ function assertCorrectedYaml(text) {
 
   // Technical fields required downstream. (default_header_file_path is intentionally omitted
   // by the merge when empty, so it is NOT asserted here — only the always-emitted ones.)
-  expect(text).toContain('raw_data_to_volts: 0.195');
+  expect(text).toContain('raw_data_to_volts: 1.95e-7');
   expect(text).toContain('times_period_multiplier: 1.5');
 
   // Tasks and associated video files present.

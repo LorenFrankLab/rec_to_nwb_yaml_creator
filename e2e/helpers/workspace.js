@@ -33,7 +33,7 @@ export const STORAGE_KEY = 'rec_to_nwb_workspace_v1';
  * the export's inline-compat path until a builder seeds catalog `taskInstances`.)
  * @type {number}
  */
-export const SCHEMA_VERSION = 4;
+export const SCHEMA_VERSION = 5;
 
 /**
  * The animal id seeded by {@link buildConfiguredWorkspaceBlob} (via
@@ -252,20 +252,18 @@ export function buildConfiguredWorkspaceBlob(overrides = {}) {
  * @param {object} opts - Field values.
  * @param {string} opts.subjectId - Unique subject id (letters/numbers/-/_; no spaces).
  * @param {string} [opts.dateOfBirth] - ISO date (YYYY-MM-DD). Default '2023-01-01'.
- * @returns {Promise<{ animalId: string }>} The lowercased animal id now in the route.
+ * @returns {Promise<{ animalId: string }>} The animal id now in the route.
  */
 export async function createAnimalViaUI(page, { subjectId, dateOfBirth = '2023-01-01' }) {
   if (!subjectId) throw new Error('createAnimalViaUI requires a subjectId');
 
   // Open the wizard from the picker. Both the empty-state ("Create Animal") and the populated-picker
   // ("+ New Animal", aria-label "Create new animal") navigate to the guided wizard at #/home.
-  const newAnimalButton = page.getByRole('button', { name: 'Create new animal' });
-  const firstAnimalButton = page.getByRole('button', { name: 'Create Animal' }).first();
-  if (await newAnimalButton.isVisible().catch(() => false)) {
-    await newAnimalButton.click();
-  } else {
-    await firstAnimalButton.click();
-  }
+  const create = page.getByRole('button', { name: 'Create new animal', exact: true })
+    .or(page.getByRole('button', { name: 'Create Animal', exact: true }));
+  // Wait for the populated or empty picker; an immediate visibility check can race navigation.
+  await expect(create).toBeVisible();
+  await create.click();
 
   // The wizard (a tablist of setup steps) is now on screen at #/home.
   await expect(page).toHaveURL(/#\/home/);
@@ -277,9 +275,9 @@ export async function createAnimalViaUI(page, { subjectId, dateOfBirth = '2023-0
   await page.getByLabel('Date of birth').fill(dateOfBirth);
 
   // Save draft commits the animal (createAnimal) and lands on its days tab.
-  await page.getByRole('button', { name: 'Save draft' }).click();
+  await page.getByRole('button', { name: 'Save draft & exit' }).click();
 
-  const animalId = subjectId.toLowerCase().trim();
+  const animalId = subjectId.trim();
   await expect(page).toHaveURL(new RegExp(`#/animal/${animalId}/days`));
   await expect(page.getByRole('heading', { level: 1, name: animalId })).toBeVisible();
 

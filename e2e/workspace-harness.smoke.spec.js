@@ -84,12 +84,12 @@ test.describe('workspace harness', () => {
 
     // The realistic day is Valid → exportable from the animal's Review & export tab.
     await page.goto('/#/animal/remy/export');
-    const exportButton = page.getByRole('button', { name: 'Export Valid Only' });
+    const exportButton = page.getByRole('button', { name: 'Review 1 selected recording' });
     await expect(exportButton).toBeVisible();
     await exportButton.click();
 
     // The batch-export preflight requires an explicit confirm before downloading.
-    const confirmButton = page.getByRole('button', { name: /Confirm export/ });
+    const confirmButton = page.getByRole('button', { name: 'Download 1 YAML files' });
     await expect(confirmButton).toBeVisible();
 
     const { filename, text } = await captureDownload(page, async () => {

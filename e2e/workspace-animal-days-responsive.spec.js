@@ -44,9 +44,11 @@ for (const viewport of [NARROW, DESKTOP]) {
       );
       expect(overflow).toBeLessThanOrEqual(1);
 
-      // Primary action + carry-forward toggle are both visible and within the viewport.
+      // The primary action and concise carry-forward summary are visible. The less-common policy
+      // control remains one click away so the day screen stays calm for routine entry.
       const addButton = page.getByRole('button', { name: 'Add multiple dates…' });
       await expect(addButton).toBeVisible();
+      await page.getByText(/Copy prior epochs · Change/i).click();
       const toggle = page.getByRole('checkbox', { name: /start each new day from the nearest earlier day/i });
       await expect(toggle).toBeVisible();
       const addBox = await addButton.boundingBox();

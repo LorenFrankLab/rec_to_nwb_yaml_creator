@@ -325,11 +325,10 @@ test('a statescript description repair focuses the required field and restores e
   await page.getByRole('button', { name: /^Review & export$/ }).click();
   await expect(page.getByRole('button', { name: 'Download YAML', exact: true })).toBeDisabled();
   await page.getByRole('button', { name: 'Fix in Daily log', exact: true }).click();
-  const description = page.getByLabel('Statescript description (required)', { exact: true });
+  const description = page.getByLabel('Description (required)', { exact: true });
   await expect(description).toBeFocused();
   await description.fill('statescript log');
   await description.press('Tab');
-  await page.getByRole('button', { name: 'Close epoch 2 details' }).click();
   await page.getByRole('button', { name: /^Review & export$/ }).click();
   await expect(page.getByRole('button', { name: 'Download YAML', exact: true })).toBeEnabled();
 });

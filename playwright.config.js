@@ -7,7 +7,7 @@ function getTestIgnore() {
   if (process.env.RUN_SCREENSHOT_SPECS) {
     return process.env.CI ? visualRegressionSpecs : undefined;
   }
-  return process.env.CI ? [visualRegressionSpecs, screenshotSpecs] : screenshotSpecs;
+  return [visualRegressionSpecs, screenshotSpecs];
 }
 
 export default defineConfig({

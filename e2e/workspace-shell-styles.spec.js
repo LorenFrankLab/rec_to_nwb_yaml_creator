@@ -126,7 +126,7 @@ test.describe('The app shell is styled on a direct workspace load (R4)', () => {
       .locator('.form-container')
       .first()
       .evaluate((el) => getComputedStyle(el).rowGap);
-    expect(rowGap).toBe('10px');
+    expect(rowGap).toBe('16px');
   });
 
   test('the legacy form still gets its own form styles', async ({ page }) => {

@@ -229,7 +229,7 @@ test.describe('Day lifecycle — undo-able delete + cleanup coherence', () => {
     await seedWorkspace(page, buildConfiguredWorkspaceBlob());
     await page.goto(`/#/animal/${ANIMAL_ID}/days`);
     await page.reload();
-    await expect(page.getByRole('heading', { level: 2, name: `Recording Days for ${ANIMAL_ID}` })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 2, name: 'Recording Days' })).toBeVisible();
 
     const dayLink = page.getByRole('link', { name: '2023-06-22', exact: true });
     await expect(dayLink).toBeVisible();

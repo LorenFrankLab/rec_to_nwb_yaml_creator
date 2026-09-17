@@ -44,8 +44,6 @@ import {
 const TAB_SCOPE = {
   'electrode-groups':
     'Shared across all recording days — a hardware change starts a new version (with an audit trail).',
-  'recording-system': 'Animal-wide catalog — each recording day uses one.',
-  cameras: 'Catalog — referenced per day.',
 };
 
 /**
@@ -73,15 +71,14 @@ test.describe('Ownership & discoverability — AnimalView header + section-nav +
     await resetWorkspace(page);
   });
 
-  test('header band shows the animal identity (name, animal ID badge, species · sex) and a ⋮ menu', async ({
+  test('header band shows the animal identity (name, species · sex) and a ⋮ menu', async ({
     page,
   }) => {
     await seedAndOpen(page, buildConfiguredWorkspaceBlob(), `/#/animal/${ANIMAL_ID}/days`);
 
     // The animal name is the page h1.
     await expect(page.getByRole('heading', { level: 1, name: ANIMAL_ID })).toBeVisible();
-    // An "animal ID" badge + the species · sex facts identify whose data this is (ownership cue).
-    await expect(page.getByText('animal ID', { exact: true })).toBeVisible();
+    // The animal heading and species · sex facts identify whose data this is.
     await expect(page.getByText('Rattus norvegicus · M')).toBeVisible();
     // The per-animal lifecycle ⋮ is present (its menu is exercised in the lifecycle spec).
     await expect(page.getByRole('button', { name: `Actions for ${ANIMAL_ID}` })).toBeVisible();
@@ -112,7 +109,7 @@ test.describe('Ownership & discoverability — AnimalView header + section-nav +
     await expect(daysRow.getByText('›', { exact: true })).toBeVisible();
   });
 
-  test('each setup tab shows its scope descriptor (ownership / blast-radius framing) — VISIBLE', async ({
+  test('electrode setup shows its shared scope and hardware-version consequences', async ({
     page,
   }) => {
     for (const [tab, scope] of Object.entries(TAB_SCOPE)) {
@@ -142,15 +139,17 @@ test.describe('Ownership & discoverability — AnimalView header + section-nav +
     await page.goto('/#/animal/totoro/days');
     await page.reload();
 
-    const card = page.getByRole('region', { name: 'Set up this animal' });
+    await page.getByText(/^Setup to finish:/).click();
+    const card = page.getByLabel('Set up this animal', { exact: true });
     await expect(card).toBeVisible();
     // Honest, conditional hints — none mandatory (a behavior-only day needs no electrodes).
-    await expect(card.getByText('Add only what your recordings use')).toBeVisible();
-    // Per-section rows with honest hints + a "Set up →" link to the owning tab.
+    await expect(card.getByText(/You can log recording days while setup is incomplete/)).toBeVisible();
+    await card.getByText(/^Hardware setup/).click();
+    // Per-section rows offer Set up or Review according to whether the hardware is used.
     const expectRow = async (label, hint) => {
       const item = card.getByRole('listitem').filter({ hasText: label });
       await expect(item.getByText(hint, { exact: true })).toBeVisible();
-      const link = card.getByRole('link', { name: `Set up ${label}` });
+      const link = card.getByRole('link', { name: `${label === 'Recording System' ? 'Set up' : 'Review'} ${label}` });
       await expect(link).toBeVisible();
       await expect(link).toHaveAttribute(
         'href',
@@ -163,10 +162,11 @@ test.describe('Ownership & discoverability — AnimalView header + section-nav +
     await expectRow('Optogenetics', 'if opto');
 
     // NON-gating: a behavior-only animal can still reach its days surface — the empty-day onboarding
-    // state is shown (no mandatory-setup block prevents adding/exporting days), and the "Add Recording
-    // Days" primary action is available.
+    // state is shown, and choosing a recording date enables Create & open.
     await expect(page.getByRole('heading', { name: /no recording days yet/i })).toBeVisible();
-    await expect(page.getByRole('button', { name: /add recording day/i })).toBeVisible();
+    await expect(page.getByLabel('Choose recording date', { exact: true })).toBeVisible();
+    await page.getByLabel('Choose recording date', { exact: true }).fill('2023-06-23');
+    await expect(page.getByRole('button', { name: 'Create & open', exact: true })).toBeEnabled();
   });
 
   test('a camera missing meters_per_pixel: the Cameras nav row shows a blocking ● and the in-animal export-review link targets THIS animal', async ({
@@ -300,12 +300,12 @@ test.describe('Section-nav: navigation, focus, and route guards (the jsdom-can\'
     // Bare route → days. seedAndOpen reloads on a fresh document, so the canonicalize effect runs.
     await seedAndOpen(page, buildConfiguredWorkspaceBlob(), `/#/animal/${ANIMAL_ID}`);
     await expect(page).toHaveURL(new RegExp(`#/animal/${ANIMAL_ID}/days$`));
-    await expect(page.getByRole('heading', { level: 2, name: `Recording Days for ${ANIMAL_ID}` })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 2, name: 'Recording Days' })).toBeVisible();
 
     // Stale legacy `/editor` route → days (graceful redirect of a removed route, cold-load).
     await seedAndOpen(page, buildConfiguredWorkspaceBlob(), `/#/animal/${ANIMAL_ID}/editor`);
     await expect(page).toHaveURL(new RegExp(`#/animal/${ANIMAL_ID}/days$`));
-    await expect(page.getByRole('heading', { level: 2, name: `Recording Days for ${ANIMAL_ID}` })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 2, name: 'Recording Days' })).toBeVisible();
   });
 
   test('a cold deep-link to a non-existent animal renders a non-stranding "Animal not found" with a way out', async ({

@@ -90,7 +90,7 @@ test.describe('Review & export — narrow viewport layout', () => {
     await page.reload(); // fresh document → store hydrates from the seeded blob
 
     // The cross-animal page heading and the day table are present.
-    await expect(page.getByRole('heading', { level: 1, name: 'Validation Summary' })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1, name: 'Review & export — all animals' })).toBeVisible();
     const table = page.getByRole('table', {
       name: 'Recording days across all animals with validation status',
     });
@@ -143,7 +143,7 @@ test.describe('Review & export — narrow viewport layout', () => {
     expect(await pageOverflow()).toBeLessThanOrEqual(1);
 
     // Open the batch preflight (its long session-name values previously pushed the page wide).
-    await page.getByRole('button', { name: 'Export Valid Only' }).click();
+    await page.getByRole('button', { name: 'Review 2 selected recordings' }).click();
     await expect(
       page.getByRole('region', { name: 'Batch export preflight' }),
     ).toBeVisible();

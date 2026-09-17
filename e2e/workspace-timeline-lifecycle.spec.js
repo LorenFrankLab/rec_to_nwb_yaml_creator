@@ -85,7 +85,7 @@ test.describe('Shared day-lifecycle vocabulary', () => {
 
   test('Validation Summary: a live-valid, unsaved day reads "Ready to export"', async ({ page }) => {
     await seedAndOpen(page, buildConfiguredWorkspaceBlob(), '/#/validation');
-    await expect(page.getByRole('heading', { level: 1, name: 'Validation Summary' })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1, name: 'Review & export — all animals' })).toBeVisible();
 
     const row = page.getByTestId(`day-row-${DAY_ID}`);
     await expect(row.getByText('Ready to export')).toBeVisible();
