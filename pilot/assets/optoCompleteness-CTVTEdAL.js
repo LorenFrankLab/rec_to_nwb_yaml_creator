@@ -1,0 +1,1 @@
+const e=t=>Array.isArray(t)&&t.length>0,c=t=>typeof t=="string"&&t.trim()!=="";function _(t){const o=t||{},i=e(o.opto_excitation_source),n=e(o.optical_fiber),s=e(o.virus_injection),r=c(o.optogenetic_stimulation_software);return{opto_excitation_source:i,optical_fiber:n,virus_injection:s,optogenetic_stimulation_software:r,count:[i,n,s,r].filter(Boolean).length}}export{_ as o};

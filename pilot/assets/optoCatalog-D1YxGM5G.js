@@ -1,0 +1,1 @@
+const e=()=>["","Omicron LuxX+ 488-100","LuxX+ 638-200"],o=()=>["","demo fiber device","optogenix_lambda_fiber"],a=()=>["","AAV-1-EF1a-DIO-ChRmine-mScarlet-WPRE","AAV-8-EF1a-DIO-ChRmine-mScarlet-WPRE","demo_virus_1"];export{o as a,e as o,a as v};

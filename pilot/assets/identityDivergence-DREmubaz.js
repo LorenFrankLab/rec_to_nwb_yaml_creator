@@ -1,0 +1,1 @@
+function o(t,n){return typeof t=="number"&&typeof n=="number"?t===n:String(t??"").trim()===String(n??"").trim()}function l(t,n,u){const e=String(t??"").trim();if(!e)return null;for(const r of u){if(String(r.name??"").trim()!==e)continue;const i=Object.keys(n).filter(f=>!o(n[f],r.fields[f]));if(i.length>0)return{existing:r,differingFields:i}}return null}export{l as f};
