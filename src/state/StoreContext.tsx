@@ -42,10 +42,11 @@
 import { createContext, useContext, useMemo } from 'react';
 import type { ReactNode } from 'react';
 import { useStore } from './store';
+import type { StoreValue } from './store';
 import type { InitialWorkspaceState } from './workspaceHydration';
 
 /** The shared store value exposed via context: the same object `useStore` returns. */
-export type StoreContextValue = ReturnType<typeof useStore>;
+export type StoreContextValue = StoreValue;
 
 /** Props for {@link StoreProvider}. */
 export interface StoreProviderProps {
@@ -100,7 +101,8 @@ export function StoreProvider({ children, initialState }: StoreProviderProps) {
   // useStore returns a new object { model, actions, selectors } on every render,
   // but actions and selectors are already memoized internally via useMemo.
   // We recreate the store object here only when the dependencies actually change.
-  // This prevents ALL context consumers from re-rendering when unrelated state changes.
+  // Context consumers update when any dependency changes; this memo only avoids a fresh value when
+  // model, actions, selectors, and persistence are all referentially unchanged.
   const memoizedStore = useMemo(
     () => ({
       model: store.model,

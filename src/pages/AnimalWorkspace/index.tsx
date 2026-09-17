@@ -293,7 +293,13 @@ export function AnimalWorkspace() {
         isOpen={pendingProfileAnimalId != null}
         animal={pendingProfileAnimal}
         dayCount={pendingProfileAnimal ? getAnimalDayIds(pendingProfileAnimal).length : 0}
-        onSave={(subject) => actions.updateAnimal(pendingProfileAnimalId, { subject })}
+        onSave={(subject) => {
+          if (pendingProfileAnimalId) {
+            actions.updateAnimal(pendingProfileAnimalId, {
+              subject: subject as Parameters<typeof actions.updateAnimal>[1]['subject'],
+            });
+          }
+        }}
         onClose={() => setPendingProfileAnimalId(null)}
       />
     </main>

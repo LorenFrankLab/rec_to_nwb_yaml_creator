@@ -1,8 +1,40 @@
 import { useMemo } from 'react';
+import type { Dispatch, SetStateAction } from 'react';
 import { useLegacyForm } from './useLegacyForm';
 import { useWorkspace } from './useWorkspace';
 import { useEpochCleanup } from './useEpochCleanup';
+import { createWorkspaceActions } from './workspaceActions';
 import type { InitialWorkspaceState } from './workspaceHydration';
+import type { Workspace } from './workspaceTypes';
+import type { WorkspacePersistence } from './useWorkspacePersistence';
+
+// The legacy JavaScript form remains permissive, but it is contained here instead of allowing one
+// `any` destructure to erase the typed workspace API returned by this facade.
+type LegacyFormModel = Record<string, any>;
+type LegacyActions = Record<string, (...args: any[]) => any>;
+interface LegacySelectors {
+  getCameraIds: () => string[];
+  getTaskEpochs: () => number[];
+  getDioEvents: () => string[];
+  [key: string]: (...args: any[]) => any;
+}
+interface LegacyStoreSlice {
+  formData: LegacyFormModel;
+  setFormData: Dispatch<SetStateAction<LegacyFormModel>>;
+  legacyActions: LegacyActions;
+  legacySelectors: LegacySelectors;
+}
+
+export type WorkspaceActions = ReturnType<typeof createWorkspaceActions>;
+export interface WorkspaceSelectors {
+  getAnimalDays: ReturnType<typeof useWorkspace>['workspaceSelectors']['getAnimalDays'];
+}
+export interface StoreValue {
+  model: LegacyFormModel & { workspace: Workspace };
+  actions: LegacyActions & WorkspaceActions;
+  selectors: LegacySelectors & WorkspaceSelectors;
+  persistence: WorkspacePersistence;
+}
 
 /**
  * Lightweight store facade that provides unified access to form state, actions, and selectors.
@@ -32,10 +64,9 @@ import type { InitialWorkspaceState } from './workspaceHydration';
  * actions.createAnimal('remy', { species: 'Rattus norvegicus', ... });
  * const days = selectors.getAnimalDays('remy');
  */
-export function useStore(initialState: InitialWorkspaceState | null = null) {
-  // `useLegacyForm` is still untyped JS (the legacy form slice, converted in a later phase); treat
-  // its result loosely until then.
-  const { formData, setFormData, legacyActions, legacySelectors }: any = useLegacyForm(initialState);
+export function useStore(initialState: InitialWorkspaceState | null = null): StoreValue {
+  const { formData, setFormData, legacyActions, legacySelectors } =
+    useLegacyForm(initialState) as unknown as LegacyStoreSlice;
   const { workspace, workspaceActions, workspaceSelectors, persistence } = useWorkspace(initialState);
 
   // Cross-slice data integrity: clear orphaned task epochs from associated files,
@@ -43,13 +74,13 @@ export function useStore(initialState: InitialWorkspaceState | null = null) {
   useEpochCleanup({ formData, setFormData });
 
   // Actions combine all mutation functions; same key set as before the decomposition.
-  const actions = useMemo(
+  const actions = useMemo<LegacyActions & WorkspaceActions>(
     () => ({ ...legacyActions, ...workspaceActions }),
     [legacyActions, workspaceActions]
   );
 
   // Selectors combine legacy (formData-derived) and workspace (workspace-derived) selectors.
-  const selectors = useMemo(
+  const selectors = useMemo<LegacySelectors & WorkspaceSelectors>(
     () => ({ ...legacySelectors, ...workspaceSelectors }),
     [legacySelectors, workspaceSelectors]
   );
@@ -58,7 +89,7 @@ export function useStore(initialState: InitialWorkspaceState | null = null) {
   // workspace actually change. `formData` is initialized to defaultYMLValues and never
   // set to a falsy value, so an undefined here is a real bug — fail loudly rather than
   // masking it with a silent fallback.
-  const model = useMemo(() => {
+  const model = useMemo<LegacyFormModel & { workspace: Workspace }>(() => {
     if (!formData) {
       throw new Error('useStore: formData is undefined');
     }

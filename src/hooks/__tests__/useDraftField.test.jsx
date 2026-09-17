@@ -37,6 +37,34 @@ function Harness({ onCommit, debounceMs = 400 }) {
   );
 }
 
+/**
+ * A keyed field whose writer can accept or reject.
+ * @param {object} props Props.
+ * @param {(value: string) => unknown} props.onCommit Writer.
+ * @returns {JSX.Element} Field fixture.
+ */
+function RejectingHarness({ onCommit }) {
+  const field = useDraftField({ value: 'old', onCommit, label: 'rejecting-field', draftKey: 'day:d1:notes' });
+  return (
+    <>
+      <input aria-label="rejecting" value={field.value} onChange={(e) => field.setValue(e.target.value)} />
+      <output data-testid="commit-error">{field.commitError}</output>
+    </>
+  );
+}
+
+/**
+ * Mount/unmount wrapper used to exercise retained drafts.
+ * @param {object} props Props.
+ * @param {boolean} props.visible Whether the field is mounted.
+ * @param {(value: string) => unknown} props.onCommit Writer.
+ * @returns {JSX.Element | null} Conditional field fixture.
+ */
+function MaybeKeyedHarness({ visible, onCommit }) {
+  if (!visible) return null;
+  return <RejectingHarness onCommit={onCommit} />;
+}
+
 describe('useDraftField + draftRegistry', () => {
   beforeEach(() => {
     resetDraftRegistryForTests();
@@ -72,11 +100,11 @@ describe('useDraftField + draftRegistry', () => {
     const onCommit = vi.fn();
     render(<Harness onCommit={onCommit} />);
     fireEvent.change(screen.getByLabelText('desc'), { target: { value: 'mid-typing' } });
-    let flushed = 0;
+    let flushed;
     act(() => {
       flushed = flushAllDrafts();
     });
-    expect(flushed).toBe(1);
+    expect(flushed).toMatchObject({ attempted: 1, accepted: 1, rejected: [], unapplied: 0 });
     expect(onCommit).toHaveBeenCalledWith('mid-typing');
     expect(hasPendingDrafts()).toBe(false);
   });
@@ -116,8 +144,39 @@ describe('useDraftField + draftRegistry', () => {
     const unregister = registerDraft({ isDirty: () => true, flush: null, label: 'dialog' });
     expect(hasPendingDrafts()).toBe(true);
     expect(hasUnflushableDrafts()).toBe(true);
-    expect(flushAllDrafts()).toBe(0);
+    expect(flushAllDrafts()).toMatchObject({ attempted: 0, accepted: 0, rejected: [], unapplied: 1 });
     unregister();
+    expect(hasPendingDrafts()).toBe(false);
+  });
+
+  it('keeps a rejected edit pending and reports the writer reason', () => {
+    render(<RejectingHarness onCommit={() => { throw new Error('writer rejected'); }} />);
+    fireEvent.change(screen.getByLabelText('rejecting'), { target: { value: 'new' } });
+    let result;
+    act(() => { result = flushAllDrafts(); });
+    expect(result).toMatchObject({ attempted: 1, accepted: 0, unapplied: 0 });
+    expect(result.rejected).toHaveLength(1);
+    expect(result.rejected[0].reason).toBe('writer rejected');
+    expect(screen.getByLabelText('rejecting')).toHaveValue('new');
+    expect(screen.getByTestId('commit-error')).toHaveTextContent('writer rejected');
+    expect(hasPendingDrafts()).toBe(true);
+  });
+
+  it('restores a rejected value after remount and retries it through the current writer', () => {
+    const rejectedWriter = vi.fn(() => { throw new Error('read-only writer'); });
+    const acceptedWriter = vi.fn(() => ({ accepted: true }));
+    const view = render(<MaybeKeyedHarness visible onCommit={rejectedWriter} />);
+    fireEvent.change(screen.getByLabelText('rejecting'), { target: { value: 'keep me' } });
+    act(() => { flushAllDrafts(); });
+
+    view.rerender(<MaybeKeyedHarness visible={false} onCommit={rejectedWriter} />);
+    view.rerender(<MaybeKeyedHarness visible onCommit={acceptedWriter} />);
+    expect(screen.getByLabelText('rejecting')).toHaveValue('keep me');
+
+    let retried;
+    act(() => { retried = flushAllDrafts(); });
+    expect(retried).toMatchObject({ attempted: 1, accepted: 1, rejected: [], unapplied: 0 });
+    expect(acceptedWriter).toHaveBeenCalledWith('keep me');
     expect(hasPendingDrafts()).toBe(false);
   });
 });

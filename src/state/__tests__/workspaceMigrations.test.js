@@ -26,6 +26,7 @@ import v1Blob from './fixtures/persistence/v1-workspace.json';
 import v2Blob from './fixtures/persistence/v2-workspace.json';
 import v3Blob from './fixtures/persistence/v3-workspace.json';
 import v4Blob from './fixtures/persistence/v4-workspace.json';
+import v5Blob from './fixtures/persistence/v5-workspace.json';
 
 const fixtureDir = path.join(path.dirname(fileURLToPath(import.meta.url)), 'fixtures/persistence');
 
@@ -35,8 +36,8 @@ describe('workspace migration registry', () => {
     expect(WORKSPACE_SCHEMA_VERSION).toBe(Math.max(...MIGRATABLE_SCHEMA_VERSIONS) + 1);
   });
 
-  it('derives MIGRATABLE_SCHEMA_VERSIONS from the registry (currently the source set {1, 2, 3})', () => {
-    expect([...MIGRATABLE_SCHEMA_VERSIONS].sort((a, b) => a - b)).toEqual([1, 2, 3]);
+  it('derives MIGRATABLE_SCHEMA_VERSIONS from the registry (currently the source set {1, 2, 3, 4})', () => {
+    expect([...MIGRATABLE_SCHEMA_VERSIONS].sort((a, b) => a - b)).toEqual([1, 2, 3, 4]);
   });
 
   it('has a CONTIGUOUS source chain 1..(current-1) — a registry gap would silently discard old blobs', () => {
@@ -47,25 +48,39 @@ describe('workspace migration registry', () => {
     expect([...MIGRATABLE_SCHEMA_VERSIONS].sort((a, b) => a - b)).toEqual(expected);
   });
 
-  it('passes a current-version (v4) blob through untouched (no migrator runs)', () => {
-    const result = migrateWorkspace(v4Blob);
-    expect(result).toEqual({ workspace: v4Blob.workspace });
-    expect(result.workspace).toBe(v4Blob.workspace); // same reference — not transformed
+  it('passes a current-version (v5) blob through untouched (no migrator runs)', () => {
+    const result = migrateWorkspace(v5Blob);
+    expect(result).toEqual({ workspace: v5Blob.workspace });
+    expect(result.workspace).toBe(v5Blob.workspace); // same reference — not transformed
   });
 
-  it('upgrades a v3 blob to the v4 dated-facts shape (day-owned team / opto / provenance)', () => {
+  it('upgrades a v4 blob to stable associated-record identity', () => {
+    const source = structuredClone(v4Blob);
+    source.workspace.days['remy-2023-06-22'].associated_files = [
+      { name: 'statescript', description: 'statescript log', path: 'x', task_epochs: 1 },
+      { name: 'statescript', description: 'statescript log', path: 'y', task_epochs: 1 },
+    ];
+    const result = migrateWorkspace(source);
+    expect(result.workspace.days['remy-2023-06-22'].associated_files).toEqual([
+      expect.objectContaining({ recordId: 'remy-2023-06-22-file-1', kind: 'statescript' }),
+      expect.objectContaining({ recordId: 'remy-2023-06-22-file-2', kind: 'statescript' }),
+    ]);
+    expect(source.workspace.days['remy-2023-06-22'].associated_files[0]).not.toHaveProperty('recordId');
+  });
+
+  it('upgrades a v3 blob through the current dated-facts and identity shape', () => {
     const result = migrateWorkspace(v3Blob);
     expect(result.discarded).toBeUndefined();
-    expect(result.workspace).toEqual(v4Blob.workspace);
+    expect(result.workspace).toEqual(v5Blob.workspace);
     expect(result.workspace).not.toBe(v3Blob.workspace);
   });
 
-  it('upgrades a v2 blob through v3 to the v4 shape (inline tasks → catalog → dated facts)', () => {
+  it('upgrades a v2 blob through the current shape (inline tasks → catalog → dated facts)', () => {
     const result = migrateWorkspace(v2Blob);
     expect(result.discarded).toBeUndefined();
     // The v2→v3 migrator promotes inline day.tasks into the animal catalog + per-day instances,
     // then v3→v4 copies the dated facts onto the day.
-    expect(result.workspace).toEqual(v4Blob.workspace);
+    expect(result.workspace).toEqual(v5Blob.workspace);
     // Non-destructive but TRANSFORMING — must be a fresh object, never the stored reference.
     expect(result.workspace).not.toBe(v2Blob.workspace);
     // Spot-check the catalog promotion explicitly.
@@ -78,12 +93,12 @@ describe('workspace migration registry', () => {
     expect(result.workspace.days['remy-2023-06-22']).not.toHaveProperty('tasks');
   });
 
-  it('upgrades a v1 blob through the full chain (v1→v2→v3→v4) onto the same shape', () => {
+  it('upgrades a v1 blob through the full chain onto the same current shape', () => {
     const result = migrateWorkspace(v1Blob);
     expect(result.discarded).toBeUndefined();
     // v1→v2 is the identity (shared pre-catalog shape); v2→v3 applies the catalog; v3→v4 the dated
     // facts. End state equals the v2 blob's migration result and the checked-in v4 fixture.
-    expect(result.workspace).toEqual(v4Blob.workspace);
+    expect(result.workspace).toEqual(v5Blob.workspace);
   });
 
   it('discards an unknown / too-old / too-new / non-integer version (caller maps to mismatch)', () => {
@@ -141,7 +156,7 @@ describe('loadWorkspace upgrades old blobs losslessly (fixtures)', () => {
     });
   });
 
-  it('v1, v2, v3 and v4 fixture blobs all hydrate to the SAME workspace (no discard)', () => {
+  it('v1 through v5 fixture blobs all hydrate to the SAME workspace (no discard)', () => {
     window.localStorage.setItem(WORKSPACE_STORAGE_KEY, JSON.stringify(v1Blob));
     const fromV1 = loadWorkspace();
 
@@ -154,11 +169,15 @@ describe('loadWorkspace upgrades old blobs losslessly (fixtures)', () => {
     window.localStorage.setItem(WORKSPACE_STORAGE_KEY, JSON.stringify(v4Blob));
     const fromV4 = loadWorkspace();
 
+    window.localStorage.setItem(WORKSPACE_STORAGE_KEY, JSON.stringify(v5Blob));
+    const fromV5 = loadWorkspace();
+
     expect(fromV1.discarded).toBeUndefined();
     expect(fromV1.recovered).toBeUndefined(); // a complete blob needs no recovery
     expect(fromV1).toEqual(fromV2); // identical hydration regardless of stored version
     expect(fromV2).toEqual(fromV3);
-    expect(fromV3).toEqual(fromV4); // a current-shape blob hydrates the same as a migrated one
+    expect(fromV3).toEqual(fromV4);
+    expect(fromV4).toEqual(fromV5); // a current-shape blob hydrates the same as a migrated one
     // The catalog is live after hydration.
     expect(fromV1.workspace.animals.remy.taskTypes).toHaveLength(1);
     expect(fromV1.workspace.days['remy-2023-06-22'].taskInstances).toHaveLength(1);

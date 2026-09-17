@@ -712,7 +712,14 @@ describe('update allow-list tables', () => {
 
   it.each(Object.keys(DAY_REPLACE_KEYS))('applyDayUpdates persists a %s write', (key) => {
     const updated = applyDayUpdates({ id: 'd1' }, { [key]: SAMPLE[key] }, NOW);
-    expect(updated[key]).toEqual(SAMPLE[key]);
+    if (key === 'associated_files' || key === 'associated_video_files') {
+      expect(updated[key]).toHaveLength(1);
+      expect(updated[key][0]).toMatchObject(SAMPLE[key][0]);
+      expect(updated[key][0].recordId).toMatch(/^d1-(?:file|video)-1$/);
+      if (key === 'associated_files') expect(updated[key][0].kind).toBe('supplemental');
+    } else {
+      expect(updated[key]).toEqual(SAMPLE[key]);
+    }
   });
 
   it.each(Object.keys(ANIMAL_REPLACE_KEYS))('applyAnimalUpdates persists a %s write', (key) => {

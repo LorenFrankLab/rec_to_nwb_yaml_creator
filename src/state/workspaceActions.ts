@@ -16,6 +16,8 @@ import {
   createDayRecord,
   reseedDayFromSource,
   applyDayUpdates,
+  applyDayFieldUpdate,
+  applyDayFieldUpdates,
   nextConfigurationVersion,
   sortDayIdsByDate,
   withoutUnknownFacts,
@@ -31,7 +33,9 @@ import type {
   OptogeneticsConfig,
   SessionMetadata,
   WorkspaceSettings,
+  TaskType,
 } from './workspaceTypes';
+import type { CommitResult } from './commitResult';
 
 /**
  * The store commit primitives injected into {@link createWorkspaceActions}. `commitWorkspace` is
@@ -40,7 +44,7 @@ import type {
  */
 export interface WorkspaceActionPrimitives {
   /** Ref-lockstep commit (keeps `workspaceRef.current` in step for same-tick composite batches). */
-  commitWorkspace: (updater: (prev: Workspace) => Workspace) => void;
+  commitWorkspace: (updater: (prev: Workspace) => Workspace) => CommitResult;
   /** Live ref to the always-current committed workspace. */
   workspaceRef: { current: Workspace };
 }
@@ -686,7 +690,7 @@ export function createWorkspaceActions({
      */
     updateDay: (dayId: string, updates: DayUpdates) => {
       // commitWorkspace (ref-lockstep): see updateAnimal.
-      commitWorkspace((prev) => {
+      return commitWorkspace((prev) => {
         if (!prev.days[dayId]) {
           throw new Error(`Day "${dayId}" not found`);
         }
@@ -702,6 +706,71 @@ export function createWorkspaceActions({
             [dayId]: updated,
           },
           lastModified: updated.lastModified,
+        };
+      });
+    },
+
+    /**
+     * Update one day field against the latest committed record. This is the UI editing primitive:
+     * callers do not submit a render-captured parent object, so sibling edits in the same event
+     * cannot restore one another's old values.
+     */
+    updateDayField: (dayId: string, fieldPath: string, value: unknown) => {
+      return commitWorkspace((prev) => {
+        const day = prev.days[dayId];
+        if (!day) throw new Error(`Day "${dayId}" not found`);
+        const updated = applyDayFieldUpdate(day, fieldPath, value, getCurrentTimestamp());
+        return {
+          ...prev,
+          days: { ...prev.days, [dayId]: updated },
+          lastModified: updated.lastModified,
+        };
+      });
+    },
+
+    /** Apply related Day Editor field changes atomically against one latest record. */
+    updateDayFields: (
+      dayId: string,
+      changes: ReadonlyArray<readonly [fieldPath: string, value: unknown]>
+    ) => {
+      return commitWorkspace((prev) => {
+        const day = prev.days[dayId];
+        if (!day) throw new Error(`Day "${dayId}" not found`);
+        const updated = applyDayFieldUpdates(day, changes, getCurrentTimestamp());
+        return {
+          ...prev,
+          days: { ...prev.days, [dayId]: updated },
+          lastModified: updated.lastModified,
+        };
+      });
+    },
+
+    /**
+     * Atomically update an animal's task catalog and the related day fields. Epoch operations use
+     * this when a new/imported task definition and its day assignment must become visible together.
+     */
+    updateTaskCatalogAndDayFields: (
+      animalId: string,
+      dayId: string,
+      taskTypes: TaskType[],
+      changes: ReadonlyArray<readonly [fieldPath: string, value: unknown]>
+    ) => {
+      return commitWorkspace((prev) => {
+        const animal = prev.animals[animalId];
+        const day = prev.days[dayId];
+        if (!animal) throw new Error(`Animal "${animalId}" not found`);
+        if (!day) throw new Error(`Day "${dayId}" not found`);
+        if (day.animalId != null && day.animalId !== animalId) {
+          throw new Error(`Day "${dayId}" does not belong to animal "${animalId}"`);
+        }
+        const now = getCurrentTimestamp();
+        const updatedAnimal = applyAnimalUpdates(animal, { taskTypes }, now);
+        const updatedDay = applyDayFieldUpdates(day, changes, now);
+        return {
+          ...prev,
+          animals: { ...prev.animals, [animalId]: updatedAnimal },
+          days: { ...prev.days, [dayId]: updatedDay },
+          lastModified: now,
         };
       });
     },

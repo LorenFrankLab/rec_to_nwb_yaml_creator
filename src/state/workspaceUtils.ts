@@ -108,6 +108,20 @@ function reorderKeys(obj: unknown, order: string[]): unknown {
   return result;
 }
 
+/** Remove workspace-only collection identity before applying the lossless external key order. */
+function externalAssociatedFile(file: unknown): unknown {
+  if (!file || typeof file !== 'object' || Array.isArray(file)) return file;
+  const { recordId: _recordId, kind: _kind, ...external } = file as Record<string, unknown>;
+  return reorderKeys(external, ASSOCIATED_FILE_ORDER);
+}
+
+/** Remove workspace-only video identity before applying the lossless external key order. */
+function externalAssociatedVideo(video: unknown): unknown {
+  if (!video || typeof video !== 'object' || Array.isArray(video)) return video;
+  const { recordId: _recordId, ...external } = video as Record<string, unknown>;
+  return reorderKeys(external, ASSOCIATED_VIDEO_FILE_ORDER);
+}
+
 /**
  * Emit virus_injection items carrying BOTH volume spellings with one value.
  *
@@ -419,12 +433,8 @@ export function mergeDayMetadata(animal: Animal, day: Day): Record<string, unkno
     tasks: resolvedTasks.map((t) => reorderKeys(t, TASK_ORDER)),
 
     // === From Day: Data Files ===
-    associated_files: getDayAssociatedFiles(day).map((f) =>
-      reorderKeys(f, ASSOCIATED_FILE_ORDER)
-    ),
-    associated_video_files: getDayAssociatedVideos(day).map((v) =>
-      reorderKeys(v, ASSOCIATED_VIDEO_FILE_ORDER)
-    ),
+    associated_files: getDayAssociatedFiles(day).map(externalAssociatedFile),
+    associated_video_files: getDayAssociatedVideos(day).map(externalAssociatedVideo),
 
     // === From Day: Technical Parameters ===
     units: reorderKeys(technical.units, UNITS_ORDER),

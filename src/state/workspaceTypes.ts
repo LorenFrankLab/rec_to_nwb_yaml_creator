@@ -55,6 +55,8 @@ export interface PersistenceStatus {
   lastSaved: string | null;
   /** Message if the last write failed, or null. */
   saveError: string | null;
+  /** Message if a field writer rejected its latest draft, or null. */
+  draftError?: string | null;
   /** True while a debounced write is in flight. */
   hasPendingWrite: boolean;
   /**
@@ -710,6 +712,10 @@ export interface BehavioralEvent {
 
 /** Associated file metadata. */
 export interface AssociatedFile {
+  /** Stable workspace-only identity. Removed at the YAML export boundary. */
+  recordId?: string;
+  /** Explicit workspace-only editor classification. Removed at the YAML export boundary. */
+  kind?: 'statescript' | 'supplemental';
   /** File name. */
   name: string;
   /** File description. */
@@ -722,6 +728,8 @@ export interface AssociatedFile {
 
 /** Associated video file metadata. */
 export interface AssociatedVideoFile {
+  /** Stable workspace-only identity. Removed at the YAML export boundary. */
+  recordId?: string;
   /** Video file name. */
   name: string;
   /** Camera ID. */

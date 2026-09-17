@@ -5,6 +5,7 @@ import {
   hasUnflushableDrafts,
   subscribeDrafts,
   getDraftVersion,
+  getPendingDraftError,
 } from './draftRegistry';
 import { FLAGS } from '../featureFlags';
 import {
@@ -295,6 +296,7 @@ export function useWorkspacePersistence({
   useSyncExternalStore(subscribeDrafts, getDraftVersion, getDraftVersion);
   const hasPendingDrafts = readPendingDrafts();
   const hasUnappliedDrafts = hasUnflushableDrafts();
+  const draftError = getPendingDraftError();
 
   // Force an immediate write (Ctrl/Cmd+S, the Save button, pagehide), bypassing the autosave
   // debounce. FLUSHES pending field drafts first: their commits go through the ref-lockstep
@@ -302,7 +304,15 @@ export function useWorkspacePersistence({
   // below runs. An explicit save also refreshes the last-known-good checkpoint. No-op when
   // persistence is disabled; refused (with a visible reason) in a read-only tab.
   const saveNow = useCallback((): boolean => {
-    flushAllDrafts();
+    const flush = flushAllDrafts();
+    if (flush.rejected.length > 0) {
+      setSaveError(flush.rejected[0].reason ?? 'A pending edit could not be saved.');
+      return false;
+    }
+    if (flush.unapplied > 0) {
+      setSaveError('Apply or cancel the open dialog before saving.');
+      return false;
+    }
     if (!enabled) return true;
     const blocked = writeBlocker();
     if (blocked) {
@@ -340,7 +350,8 @@ export function useWorkspacePersistence({
     /** Flush + write if anything is unsaved; true when nothing is left unsaved afterwards. */
     const finalWrite = (): boolean => {
       const flushed = flushAllDrafts();
-      const dirty = flushed > 0 || unsavedRef.current || workspaceRef.current !== lastPersistedRef.current;
+      if (flushed.rejected.length > 0 || flushed.unapplied > 0) return false;
+      const dirty = flushed.accepted > 0 || unsavedRef.current || workspaceRef.current !== lastPersistedRef.current;
       return dirty ? saveNowRef.current() : true;
     };
     const onPageHide = () => {
@@ -485,6 +496,7 @@ export function useWorkspacePersistence({
       enabled,
       lastSaved,
       saveError,
+      draftError,
       hasPendingWrite,
       hasPendingDrafts,
       hasUnappliedDrafts,
@@ -505,6 +517,7 @@ export function useWorkspacePersistence({
       enabled,
       lastSaved,
       saveError,
+      draftError,
       hasPendingWrite,
       hasPendingDrafts,
       hasUnappliedDrafts,

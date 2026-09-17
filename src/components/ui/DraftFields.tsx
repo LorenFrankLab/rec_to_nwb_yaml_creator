@@ -1,5 +1,6 @@
 import type { InputHTMLAttributes, TextareaHTMLAttributes, FocusEvent } from 'react';
 import { useDraftField } from '../../hooks/useDraftField';
+import type { CommitResponse } from '../../state/commitResult';
 
 /**
  * Draft-tracked text controls. Each renders a controlled input whose value is committed to the
@@ -16,16 +17,18 @@ interface DraftTextInputProps extends NativeInputProps {
   /** The committed value. */
   value: string;
   /** Commit a value (called on the debounce, on blur, and on unmount when dirty). */
-  onCommit: (value: string) => void;
+  onCommit: (value: string) => CommitResponse;
   /** Optional blur hook that receives the FINAL value (after the commit) — e.g. validation. */
   onBlurValue?: (value: string) => void;
   /** Debounce before a typed value is committed (ms). */
   debounceMs?: number;
+  /** Stable record-and-field identity for retained rejected drafts. */
+  draftKey?: string;
 }
 
 /** A draft-tracked single-line text input. */
-export function DraftTextInput({ value, onCommit, onBlurValue, debounceMs, onBlur, ...rest }: DraftTextInputProps) {
-  const field = useDraftField<string>({ value, onCommit, debounceMs, label: rest.id ?? rest.name });
+export function DraftTextInput({ value, onCommit, onBlurValue, debounceMs, draftKey, onBlur, ...rest }: DraftTextInputProps) {
+  const field = useDraftField<string>({ value, onCommit, debounceMs, draftKey, label: rest.id ?? rest.name });
   const handleBlur = (e: FocusEvent<HTMLInputElement>) => {
     field.flush();
     onBlurValue?.(e.target.value);
@@ -43,14 +46,15 @@ export function DraftTextInput({ value, onCommit, onBlurValue, debounceMs, onBlu
 
 interface DraftTextAreaProps extends NativeTextareaProps {
   value: string;
-  onCommit: (value: string) => void;
+  onCommit: (value: string) => CommitResponse;
   onBlurValue?: (value: string) => void;
   debounceMs?: number;
+  draftKey?: string;
 }
 
 /** A draft-tracked textarea. */
-export function DraftTextArea({ value, onCommit, onBlurValue, debounceMs, onBlur, ...rest }: DraftTextAreaProps) {
-  const field = useDraftField<string>({ value, onCommit, debounceMs, label: rest.id ?? rest.name });
+export function DraftTextArea({ value, onCommit, onBlurValue, debounceMs, draftKey, onBlur, ...rest }: DraftTextAreaProps) {
+  const field = useDraftField<string>({ value, onCommit, debounceMs, draftKey, label: rest.id ?? rest.name });
   const handleBlur = (e: FocusEvent<HTMLTextAreaElement>) => {
     field.flush();
     onBlurValue?.(e.target.value);
@@ -70,9 +74,10 @@ interface DraftNumberInputProps extends NativeInputProps {
   /** The committed value (`undefined` = not entered). */
   value: number | undefined;
   /** Commit a value; `undefined` when the field is cleared or not a finite number. */
-  onCommit: (value: number | undefined) => void;
+  onCommit: (value: number | undefined) => CommitResponse;
   onBlurValue?: (value: number | undefined) => void;
   debounceMs?: number;
+  draftKey?: string;
 }
 
 /**
@@ -89,12 +94,13 @@ function parseNumber(text: string): number | undefined {
  * A draft-tracked number input. The draft is kept as TEXT so partial entries ("4.", "-") are not
  * clobbered mid-typing; the committed value is the parsed number (or `undefined`).
  */
-export function DraftNumberInput({ value, onCommit, onBlurValue, debounceMs, onBlur, ...rest }: DraftNumberInputProps) {
+export function DraftNumberInput({ value, onCommit, onBlurValue, debounceMs, draftKey, onBlur, ...rest }: DraftNumberInputProps) {
   const committedText = value === undefined ? '' : String(value);
   const field = useDraftField<string>({
     value: committedText,
     onCommit: (text) => onCommit(parseNumber(text)),
     debounceMs,
+    draftKey,
     // Two spellings of the same number ("450" vs "450.0") are not a pending draft.
     isEqual: (a, b) => a === b || (parseNumber(a) !== undefined && parseNumber(a) === parseNumber(b)),
     label: rest.id ?? rest.name,

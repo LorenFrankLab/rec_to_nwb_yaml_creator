@@ -27,6 +27,7 @@
 
 import { migrateTasksToCatalogV2ToV3 } from './taskCatalogMigration';
 import { migrateDatedFactsV3ToV4 } from './datedFactsMigration';
+import { migrateAssociatedRecordIdentityV4ToV5 } from './associatedRecordIdentity';
 
 /**
  * Whether `value` is a plain object record (not null, not an array).
@@ -61,11 +62,14 @@ function migrateV1ToV2(workspace: object): object {
  *   description onto each day (what the v3 export emitted), stamps provenance + unverified download
  *   receipts, flags entry-stamped v1 snapshots as effective-date-unknown. Reproduces every v3
  *   export byte-for-byte; leaves review flags where a historical fact cannot be verified.
+ * - `4`: adds stable workspace-only identities to associated files/videos and freezes the inferred
+ *   file editor kind. Export removes these fields, so effective YAML is unchanged.
  */
 const MIGRATORS: Record<number, (workspace: object) => object> = {
   1: migrateV1ToV2,
   2: migrateTasksToCatalogV2ToV3,
   3: migrateDatedFactsV3ToV4,
+  4: migrateAssociatedRecordIdentityV4ToV5,
 };
 
 /**
@@ -73,7 +77,7 @@ const MIGRATORS: Record<number, (workspace: object) => object> = {
  * `max(registered source version) + 1` (enforced by a unit test), so it cannot advance without
  * a registered migrator.
  */
-export const WORKSPACE_SCHEMA_VERSION = 4;
+export const WORKSPACE_SCHEMA_VERSION = 5;
 
 /**
  * The `schemaVersion`s a stored blob can be migrated FROM — the registry's source versions.

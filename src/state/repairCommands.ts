@@ -15,6 +15,7 @@
  */
 
 import type { Animal, Day } from './workspaceTypes';
+import type { AnimalUpdates, DayUpdates } from './workspaceTransitions';
 import { isRecord } from '../utils/records';
 
 /** A serializable repair command (persisted/rehydrated, then executed by {@link applyRepairCommand}). */
@@ -32,11 +33,11 @@ export interface RepairCommand {
 /** The store actions the executor writes through (a subset of the workspace actions). */
 export interface RepairCommandActions {
   /** Apply a partial update to a day (no-op-safe when the id is absent — see the surface guard). */
-  updateDay: (dayId: string | undefined, updates: Record<string, unknown>) => void;
+  updateDay: (dayId: string, updates: DayUpdates) => unknown;
   /** Apply a partial update to an animal. */
-  updateAnimal: (animalId: string | undefined, updates: Record<string, unknown>) => void;
+  updateAnimal: (animalId: string, updates: AnimalUpdates) => unknown;
   /** Rebuild an animal's configuration history. */
-  rebuildConfigurationHistory: (animalId: string | undefined) => void;
+  rebuildConfigurationHistory: (animalId: string) => unknown;
 }
 
 /** Execution context for {@link applyRepairCommand}. */
@@ -131,30 +132,34 @@ export function applyRepairCommand(command: RepairCommand, ctx: RepairCommandCon
   const surface = command.type ? COMMAND_SURFACE[command.type] : undefined;
   if (surface === 'day' && !dayId) return;
   if (surface === 'animal' && !animalId) return;
+  // Every known switch branch has a declared surface above. The aliases keep that runtime guard
+  // visible to TypeScript without weakening the public action signatures to accept undefined ids.
+  const guardedDayId = dayId as string;
+  const guardedAnimalId = animalId as string;
 
   switch (command.type) {
     case 'resetDayCollection': {
       // Reset one raw day-owned collection (tasks / associated_* / behavioral_events /
       // fs_gui_yamls / keywords) to an empty list, clearing the laundering-class corruption.
       if (typeof command.field !== 'string') return;
-      actions.updateDay(dayId, { [command.field]: [] });
+      actions.updateDay(guardedDayId, { [command.field]: [] } as DayUpdates);
       return;
     }
     case 'resetAnimalCameras': {
-      actions.updateAnimal(animalId, { cameras: [] });
+      actions.updateAnimal(guardedAnimalId, { cameras: [] });
       return;
     }
     case 'resetDataAcqDevice': {
-      actions.updateAnimal(animalId, { data_acq_device: [] });
+      actions.updateAnimal(guardedAnimalId, { data_acq_device: [] });
       return;
     }
     case 'rebuildConfigurationHistory': {
-      actions.rebuildConfigurationHistory(animalId);
+      actions.rebuildConfigurationHistory(guardedAnimalId);
       return;
     }
     case 'resetDeviceOverrides': {
       // Drop ALL day device overrides; the merge falls back to the saved configuration.
-      actions.updateDay(dayId, { deviceOverrides: {} });
+      actions.updateDay(guardedDayId, { deviceOverrides: {} });
       return;
     }
     case 'removeDeviceOverrideKey': {
@@ -162,23 +167,23 @@ export function applyRepairCommand(command: RepairCommand, ctx: RepairCommandCon
       if (typeof command.key !== 'string') return;
       const next = { ...currentOverrides(day) };
       delete next[command.key];
-      actions.updateDay(dayId, { deviceOverrides: next });
+      actions.updateDay(guardedDayId, { deviceOverrides: next });
       return;
     }
     case 'resetBadChannelOverrides': {
       // Drop the whole bad_channels container, preserving geometry overrides.
       const next = { ...currentOverrides(day) };
       delete next.bad_channels;
-      actions.updateDay(dayId, { deviceOverrides: next });
+      actions.updateDay(guardedDayId, { deviceOverrides: next });
       return;
     }
     case 'removeBadChannelOverrideKey': {
       // Drop one stale/corrupt bad_channels entry (keyed by ntrode id), preserving the rest.
       if (typeof command.key !== 'string') return;
       const overrides = currentOverrides(day);
-      const bad = isRecord(overrides.bad_channels) ? { ...overrides.bad_channels } : {};
+      const bad = (isRecord(overrides.bad_channels) ? { ...overrides.bad_channels } : {}) as Record<string, number[]>;
       delete bad[command.key];
-      actions.updateDay(dayId, { deviceOverrides: { ...overrides, bad_channels: bad } });
+      actions.updateDay(guardedDayId, { deviceOverrides: { ...overrides, bad_channels: bad } });
       return;
     }
     case 'acknowledgeBadChannelRemovals': {
@@ -195,13 +200,18 @@ export function applyRepairCommand(command: RepairCommand, ctx: RepairCommandCon
         isRecord(current) && isRecord(current.badChannelRemovalAcks)
           ? current.badChannelRemovalAcks
           : {};
-      const merged: Record<string, unknown> = { ...existing };
+      const merged: Record<string, number[]> = {};
+      for (const [ntrodeId, channels] of Object.entries(existing)) {
+        if (Array.isArray(channels)) {
+          merged[ntrodeId] = channels.filter((channel): channel is number => typeof channel === 'number');
+        }
+      }
       for (const ntrodeId of Object.keys(command.acks)) {
         const add = Array.isArray(command.acks[ntrodeId]) ? command.acks[ntrodeId] : [];
-        const prior = Array.isArray(merged[ntrodeId]) ? merged[ntrodeId] : [];
+        const prior = merged[ntrodeId] ?? [];
         merged[ntrodeId] = Array.from(new Set([...prior, ...add])).sort((a, b) => a - b);
       }
-      actions.updateDay(dayId, { state: { badChannelRemovalAcks: merged } });
+      actions.updateDay(guardedDayId, { state: { badChannelRemovalAcks: merged } });
       return;
     }
     case 'resetDaySession': {
@@ -229,21 +239,21 @@ export function applyRepairCommand(command: RepairCommand, ctx: RepairCommandCon
       const dayIdDate = String(dayId ?? '').match(/(\d{4}-\d{2}-\d{2})$/)?.[1] ?? '';
       const sessionDate = ctx.day?.date ?? dayIdDate;
       const sessionId = `${sessionAnimalId}_${String(sessionDate).replace(/-/g, '')}`;
-      actions.updateDay(dayId, { session: { session_id: sessionId } });
+      actions.updateDay(guardedDayId, { session: { session_id: sessionId } });
       return;
     }
     case 'confirmConfigurationChoice': {
       // The user asserts the pinned probe configuration IS the setup this day recorded, even though
       // its effective date does not cover the day (a backfill before the first entered setup). An
       // explicit, off-export provenance fact — never an invented effective date.
-      actions.updateDay(dayId, { provenance: { configuration: { source: 'explicit', confirmed: true } } });
+      actions.updateDay(guardedDayId, { provenance: { configuration: { source: 'explicit', confirmed: true } } });
       return;
     }
     case 'confirmWeightMeasurement': {
       // The user asserts the migrated baseline value WAS the weight that day: drop the review flag
       // and record the value as explicit. (Typing a different weight clears the flag on its own.)
       const review = Array.isArray(ctx.day?.provenance?.review) ? ctx.day.provenance.review : [];
-      actions.updateDay(dayId, {
+      actions.updateDay(guardedDayId, {
         provenance: {
           review: review.filter((flag) => flag !== 'weight_from_baseline'),
           fields: { 'session.weight': 'entered' },

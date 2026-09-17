@@ -23,7 +23,19 @@ export interface CapturedDay {
   animalId?: string;
   date?: string;
   session?: unknown;
-  [key: string]: unknown;
+  tasks?: unknown;
+  taskInstances?: unknown;
+  behavioral_events?: unknown;
+  associated_files?: unknown;
+  associated_video_files?: unknown;
+  fs_gui_yamls?: unknown;
+  technical?: unknown;
+  deviceOverrides?: unknown;
+  state?: unknown;
+  configurationVersion?: unknown;
+  keywords?: unknown;
+  data_acq_device_name?: unknown;
+  cameras_used?: unknown;
 }
 
 /**

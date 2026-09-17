@@ -36,6 +36,10 @@ import {
 } from './workspaceSelectors';
 import { selectConfigurationForDate } from '../domain/configurationSelection';
 import { stripTaskContext } from './taskCatalog';
+import {
+  ensureAssociatedFileIdentity,
+  ensureAssociatedVideoIdentity,
+} from './associatedRecordIdentity';
 import { deriveDataFolderForDate } from '../domain/dayCarryPolicy';
 import {
   normalizeDeviceOverrides,
@@ -930,6 +934,15 @@ export function applyDayUpdates(day: Day, updates: DayUpdates, now: string): Day
     }
   }
   applyReplacements(updated, updates as Partial<Day>, DAY_REPLACE_KEYS);
+  if (updates.associated_files !== undefined) {
+    updated.associated_files = ensureAssociatedFileIdentity(day.id, updated.associated_files ?? []);
+  }
+  if (updates.associated_video_files !== undefined) {
+    updated.associated_video_files = ensureAssociatedVideoIdentity(
+      day.id,
+      updated.associated_video_files ?? []
+    );
+  }
 
   updated.lastModified = now;
   // A receipt written in this update describes THIS state of the day: stamp it with the same
@@ -939,4 +952,65 @@ export function applyDayUpdates(day: Day, updates: DayUpdates, now: string): Day
     updated.exportReceipt = { ...updated.exportReceipt, dayLastModified: now };
   }
   return updated;
+}
+
+const FORBIDDEN_FIELD_SEGMENTS = new Set(['__proto__', 'prototype', 'constructor']);
+
+/**
+ * Apply a dot-separated Day Editor field path to the latest day. The generated top-level update is
+ * passed through {@link applyDayUpdates}, preserving its normalization and provenance rules.
+ */
+export function applyDayFieldUpdate(
+  day: Day,
+  fieldPath: string,
+  value: unknown,
+  now: string
+): Day {
+  const segments = fieldPath.split('.').filter(Boolean);
+  if (segments.length === 0 || segments.some((segment) => FORBIDDEN_FIELD_SEGMENTS.has(segment))) {
+    throw new Error(`Invalid day field path: "${fieldPath}"`);
+  }
+  const topLevelKey = segments[0] as keyof DayUpdates;
+  const recognized = new Set<keyof DayUpdates>([
+    'session', 'tasks', 'taskInstances', 'behavioral_events', 'associated_files',
+    'associated_video_files', 'fs_gui_yamls', 'technical', 'deviceOverrides', 'state',
+    'configurationVersion', 'keywords', 'data_acq_device_name', 'cameras_used', 'dataFolder',
+    'experimenters', 'optogenetics', 'provenance', 'exportReceipt',
+  ]);
+  if (!recognized.has(topLevelKey)) {
+    throw new Error(`Unsupported day field path: "${fieldPath}"`);
+  }
+
+  if (segments.length === 1) {
+    return applyDayUpdates(day, { [topLevelKey]: value } as DayUpdates, now);
+  }
+
+  const currentTop = (day as unknown as Record<string, unknown>)[segments[0]];
+  const nextTop: Record<string, unknown> =
+    currentTop !== null && typeof currentTop === 'object' && !Array.isArray(currentTop)
+      ? structuredClone(currentTop as Record<string, unknown>)
+      : {};
+  let target = nextTop;
+  for (let index = 1; index < segments.length - 1; index += 1) {
+    const segment = segments[index];
+    const child = target[segment];
+    target[segment] = child !== null && typeof child === 'object' && !Array.isArray(child)
+      ? structuredClone(child as Record<string, unknown>)
+      : {};
+    target = target[segment] as Record<string, unknown>;
+  }
+  target[segments[segments.length - 1]] = value;
+  return applyDayUpdates(day, { [topLevelKey]: nextTop } as DayUpdates, now);
+}
+
+/** Apply several UI field changes as one pure transition with one timestamp. */
+export function applyDayFieldUpdates(
+  day: Day,
+  changes: ReadonlyArray<readonly [fieldPath: string, value: unknown]>,
+  now: string
+): Day {
+  return changes.reduce(
+    (current, [fieldPath, value]) => applyDayFieldUpdate(current, fieldPath, value, now),
+    day
+  );
 }

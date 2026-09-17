@@ -8,6 +8,8 @@ import type { LoadDiscardReason } from './persistence';
 import type { Workspace } from './workspaceTypes';
 import { FLAGS } from '../featureFlags';
 import { getWriterState } from './writerLock';
+import { ACCEPTED_COMMIT } from './commitResult';
+import type { CommitResult } from './commitResult';
 
 /**
  * Thrown by every record-mutating action in a READ-ONLY tab (another tab holds the writer lease).
@@ -73,30 +75,30 @@ export function useWorkspace(initialState: InitialWorkspaceState | null = null) 
    * configuration version) from the STALE pre-batch animal, which can duplicate version 1 and pin
    * days to the wrong hardware config.
    *
-   * The updater is run once here against the ref and again inside `setWorkspace` (React may also
-   * re-invoke it under batching/StrictMode), so it should be pure for any value field a LATER
-   * same-tick step reads. A captured timestamp does differ by a tick between the two runs, but only
-   * the React-committed copy persists (the ref is overwritten on the next render) and the version
-   * reservation reads `configurationHistory`, not timestamps, so that difference is inert.
+   * The updater is evaluated exactly once against the live ref. Publishing that same object to
+   * React prevents clocks, ids, and other operation inputs from being evaluated a second time by a
+   * queued state updater or Strict Mode.
    *
    * Stable across renders (it closes over only the stable `workspaceRef` and `setWorkspace`), so
    * the actions memo can build once.
    *
    * @param updater - Workspace transform.
    */
-  const applyWorkspace = useCallback((updater: (prev: Workspace) => Workspace) => {
-    workspaceRef.current = updater(workspaceRef.current);
-    setWorkspace(updater);
+  const applyWorkspace = useCallback((updater: (prev: Workspace) => Workspace): CommitResult => {
+    const next = updater(workspaceRef.current);
+    workspaceRef.current = next;
+    setWorkspace(next);
+    return ACCEPTED_COMMIT;
   }, []);
 
   // The single mutation boundary for record edits: refused while this tab is read-only (the
   // persistence layer also refuses to write, but an accepted-then-discarded edit is data loss).
   const commitWorkspace = useCallback(
-    (updater: (prev: Workspace) => Workspace) => {
+    (updater: (prev: Workspace) => Workspace): CommitResult => {
       if (FLAGS.localStoragePersistence && getWriterState().role === 'reader') {
         throw new ReadOnlyWorkspaceError();
       }
-      applyWorkspace(updater);
+      return applyWorkspace(updater);
     },
     [applyWorkspace]
   );

@@ -28,12 +28,36 @@ export interface DraftEntry {
   /** True while the input holds a value the store has not received. */
   isDirty: () => boolean;
   /** Commit the current value to the store. `null` when only the user can resolve it. */
-  flush: (() => void) | null;
+  flush: (() => DraftFlushItemResult | void) | null;
   /** A short label for diagnostics (never shown as-is to users). */
   label?: string;
+  /** Last rejected writer reason for this draft, if any. */
+  error?: () => string | null;
+  /** Stable workspace-record + field identity. A later mount replaces the stale writer. */
+  key?: string;
 }
 
-const entries = new Map<symbol, DraftEntry>();
+/** Value retained while its writer has not accepted it, including across input unmount/remount. */
+export interface RetainedDraft<T = unknown> {
+  value: T;
+  error: string | null;
+}
+
+export interface DraftFlushItemResult {
+  accepted: boolean;
+  reason?: string;
+  error?: unknown;
+}
+
+export interface DraftFlushResult {
+  attempted: number;
+  accepted: number;
+  rejected: DraftFlushItemResult[];
+  unapplied: number;
+}
+
+const entries = new Map<symbol | string, DraftEntry>();
+const retainedDrafts = new Map<string, RetainedDraft>();
 const listeners = new Set<() => void>();
 // A monotonic version the subscribers compare (useSyncExternalStore needs a stable snapshot).
 let version = 0;
@@ -54,13 +78,36 @@ export function notifyDraftChange(): void {
  * @returns Unregister.
  */
 export function registerDraft(entry: DraftEntry): () => void {
-  const key = Symbol('draft');
+  const key = entry.key ?? Symbol('draft');
   entries.set(key, entry);
   notifyDraftChange();
   return () => {
-    entries.delete(key);
-    notifyDraftChange();
+    // A keyed input may have remounted and replaced this entry. Its old cleanup must not remove
+    // the new writer.
+    if (entries.get(key) === entry) {
+      entries.delete(key);
+      notifyDraftChange();
+    }
   };
+}
+
+/** Read a rejected/pending value retained for a stable record-and-field key. */
+export function getRetainedDraft<T>(key: string | undefined): RetainedDraft<T> | null {
+  if (!key) return null;
+  return (retainedDrafts.get(key) as RetainedDraft<T> | undefined) ?? null;
+}
+
+/** Retain the latest unaccepted value so a remounted field can restore it. */
+export function retainDraft<T>(key: string | undefined, value: T, error: string | null): void {
+  if (!key) return;
+  retainedDrafts.set(key, { value, error });
+  notifyDraftChange();
+}
+
+/** Dispose a retained value after acceptance or an explicit return to the committed value. */
+export function clearRetainedDraft(key: string | undefined): void {
+  if (!key || !retainedDrafts.delete(key)) return;
+  notifyDraftChange();
 }
 
 /**
@@ -87,21 +134,44 @@ export function hasUnflushableDrafts(): boolean {
   return false;
 }
 
+/** First rejected pending-draft reason, for truthful global save feedback. */
+export function getPendingDraftError(): string | null {
+  for (const entry of entries.values()) {
+    if (entry.isDirty()) {
+      const error = entry.error?.();
+      if (error) return error;
+    }
+  }
+  return null;
+}
+
 /**
  * Commit every dirty, flushable draft to the store. Safe to call when nothing is pending.
  *
  * @returns The number of drafts flushed.
  */
-export function flushAllDrafts(): number {
-  let flushed = 0;
+export function flushAllDrafts(): DraftFlushResult {
+  const result: DraftFlushResult = { attempted: 0, accepted: 0, rejected: [], unapplied: 0 };
   for (const entry of entries.values()) {
     if (entry.flush && entry.isDirty()) {
-      entry.flush();
-      flushed += 1;
+      result.attempted += 1;
+      try {
+        const outcome = entry.flush();
+        if (outcome?.accepted === false) result.rejected.push(outcome);
+        else result.accepted += 1;
+      } catch (error) {
+        result.rejected.push({
+          accepted: false,
+          reason: error instanceof Error ? error.message : 'A pending edit could not be saved.',
+          error,
+        });
+      }
+    } else if (entry.flush === null && entry.isDirty()) {
+      result.unapplied += 1;
     }
   }
-  if (flushed > 0) notifyDraftChange();
-  return flushed;
+  if (result.attempted > 0) notifyDraftChange();
+  return result;
 }
 
 /**
@@ -129,6 +199,7 @@ export function getDraftVersion(): number {
 /** Test-only: drop every registration. */
 export function resetDraftRegistryForTests(): void {
   entries.clear();
+  retainedDrafts.clear();
   listeners.clear();
   version = 0;
 }

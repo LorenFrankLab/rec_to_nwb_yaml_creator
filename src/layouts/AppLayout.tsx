@@ -500,7 +500,13 @@ export function AppLayout() {
         animalId={pendingProfileAnimalId}
         animals={animals}
         dayCount={pendingProfileAnimal ? getAnimalDayIds(pendingProfileAnimal).length : 0}
-        onSave={(subject) => actions.updateAnimal(pendingProfileAnimalId, { subject })}
+        onSave={(subject) => {
+          if (pendingProfileAnimalId) {
+            actions.updateAnimal(pendingProfileAnimalId, {
+              subject: subject as Parameters<typeof actions.updateAnimal>[1]['subject'],
+            });
+          }
+        }}
         onClose={() => setPendingProfileAnimalId(null)}
       />
 

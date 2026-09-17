@@ -15,7 +15,7 @@ export function useAnimalFieldUpdate(animalId: string) {
 
   /** Update a single top-level animal field. */
   const handleFieldUpdate = (field: string, value: unknown) => {
-    actions.updateAnimal(animalId, { [field]: value });
+    actions.updateAnimal(animalId, { [field]: value } as Parameters<typeof actions.updateAnimal>[1]);
   };
 
   /** Execute a raw-shape corruption repair in place (same executor the editor banners use). */

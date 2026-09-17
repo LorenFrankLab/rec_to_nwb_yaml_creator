@@ -53,8 +53,11 @@ describe('useStore public API contract', () => {
       'unlinkDayReference',
       'updateAnimal',
       'updateDay',
+      'updateDayField',
+      'updateDayFields',
       'updateFormArray',
       'updateFormData',
+      'updateTaskCatalogAndDayFields',
       'updateWorkspaceSettings',
     ]);
   });
@@ -75,6 +78,7 @@ describe('useStore public API contract', () => {
       'acknowledgeUnpreservedOriginal',
       'cancelRestore',
       'dismissLoadNotice',
+      'draftError',
       'enabled',
       'hasPendingDrafts',
       'hasPendingWrite',
