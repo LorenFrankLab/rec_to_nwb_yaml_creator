@@ -116,3 +116,12 @@
 .needsVideo .dot {
   background-color: var(--color-warning);
 }
+
+.optional {
+  color: var(--color-grey-700);
+  background-color: var(--color-grey-100);
+}
+
+.optional .dot {
+  background-color: var(--color-grey-500);
+}

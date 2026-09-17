@@ -73,6 +73,8 @@ for (const viewport of [
     await expect(page.getByLabel(/Weight measured on/)).toHaveValue('');
     await expect(page.getByText(/Previous measurement: 480 g on 2023-06-22/)).toBeVisible();
     // The usual experimenters are reused; a source-day exception is not propagated.
+    await page.getByText(/^People & copied settings/).click();
+    await page.getByRole('button', { name: 'Change for this day', exact: true }).click();
     await expect(page.getByLabel(/Experimenters present/)).toHaveValue(buildBackfillBlob().workspace.animals[ANIMAL_ID].experimenters.experimenter_name.join('\n'));
 
     // Persisted with the right pin, provenance and re-dated folder.
@@ -100,8 +102,8 @@ test('Log today creates today’s day and opens it; a second press just opens it
 
 test('typing into a focused field, Ctrl+S, and reloading preserves the text (F3)', async ({ page }) => {
   await seedAndOpen(page, buildConfiguredWorkspaceBlob(), `/#/day/${DAY_ID}`);
-  await page.getByText(/^Recording details/).click();
-  await page.getByText(/^Experimenters:/).click();
+  await page.getByText(/^People & copied settings/).click();
+  await page.getByRole('button', { name: 'Change for this day', exact: true }).click();
   const team = page.getByLabel(/Experimenters present/);
   await team.click();
   await team.fill('Doe, Jane\nTyped, Without Blur');
@@ -111,6 +113,8 @@ test('typing into a focused field, Ctrl+S, and reloading preserves the text (F3)
   await page.keyboard.press('Control+s');
   await expect(page.getByRole('status', { name: /^Saved/ })).toBeVisible();
   await page.reload();
+  await page.getByText(/^People & copied settings/).click();
+  await page.getByRole('button', { name: 'Change for this day', exact: true }).click();
   await expect(page.getByLabel(/Experimenters present/)).toHaveValue('Doe, Jane\nTyped, Without Blur');
 });
 

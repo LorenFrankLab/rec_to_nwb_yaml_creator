@@ -77,7 +77,7 @@ test('delete with affected file removal preserves other epochs and supports Undo
 
 test('a second statescript stays editable during entry, after reload, and from the epoch shortcut', async ({ page }) => {
   await seedAndOpen(page, twoEpochs(), `/#/day/${DAY_ID}`);
-  await page.getByText(/^Manage files & add supplemental files/).click();
+  await page.getByText(/^Other files & advanced file editing/).click();
   await page.getByRole('button', { name: 'Add Custom file', exact: true }).click();
   const name = page.getByRole('textbox', { name: 'File name (required)', exact: true }).nth(2);
   await name.fill('statescript extra');
@@ -185,7 +185,7 @@ test('the full file manager fits a narrow screen and exposes labeled repair cont
   blob.workspace.days[DAY_ID].associated_files[1].task_epochs = '';
   blob.workspace.days[DAY_ID].associated_video_files[1].task_epochs = '';
   await seedAndOpen(page, blob, `/#/day/${DAY_ID}`);
-  await expect(page.getByRole('heading', { name: 'Manage files', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Other files and advanced editing', exact: true })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(1);
   expect((await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa']).analyze()).violations).toEqual([]);
 });

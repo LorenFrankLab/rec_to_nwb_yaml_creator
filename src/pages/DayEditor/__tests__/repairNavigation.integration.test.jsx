@@ -34,8 +34,7 @@ describe('Day editor repair-action navigation (integration)', () => {
   it('routes a day-surface repair from the readiness bar to the owning tab and focuses the field', async () => {
     const user = userEvent.setup();
     const { animal, day } = buildRealisticWorkspace();
-    // A blank session description is an export-blocking daily-log error whose field has a focusable
-    // anchor (inside the collapsed "Descriptions…" group, which the focus opens).
+    // Blank recording notes are an export-blocking daily-log error with an always-visible focus anchor.
     day.session.session_description = '';
     useDayIdFromUrl.mockReturnValue(day.id);
 
@@ -52,8 +51,8 @@ describe('Day editor repair-action navigation (integration)', () => {
 
     // Navigated to the daily log…
     expect(screen.getByRole('heading', { name: /daily log/i })).toBeInTheDocument();
-    // …and focused the session-description control.
-    const textarea = screen.getByRole('textbox', { name: /session description/i });
+    // …and focused the recording-notes control.
+    const textarea = screen.getByRole('textbox', { name: /recording notes/i });
     await waitFor(() => expect(textarea).toHaveFocus());
   });
 

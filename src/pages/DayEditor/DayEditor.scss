@@ -181,6 +181,12 @@
   margin-bottom: var(--spacing-xs);
 }
 
+.daily-log-today > h3 {
+  margin: 0 0 var(--spacing-sm);
+  color: var(--color-grey-900);
+  font-size: var(--font-size-md);
+}
+
 .daily-setup-lede {
   max-width: 620px;
   margin: 0 0 var(--spacing-lg);
@@ -1664,6 +1670,33 @@
   max-width: 10rem;
 }
 
+.daily-log-notes textarea {
+  min-height: 6.25rem;
+}
+
+.daily-log-team-summary {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--spacing-md);
+  margin: var(--spacing-md) 0;
+}
+
+.daily-log-team-summary h3,
+.daily-log-team-summary p {
+  margin: 0;
+}
+
+.daily-log-team-summary h3 {
+  font-size: var(--font-size-sm);
+}
+
+.daily-log-team-summary p {
+  margin-top: var(--spacing-xs);
+  color: var(--color-grey-700);
+  font-size: var(--font-size-sm);
+}
+
 .daily-log-epochs {
   margin-top: 0.5rem;
 }
@@ -1672,9 +1705,18 @@
   padding: 0.5rem 0;
 }
 
+details[open] > .inherited-metadata-toggle .toggle-icon {
+  transform: rotate(90deg);
+}
+
 @media (max-width: 720px) {
   .daily-log-primary-grid {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .daily-log-team-summary {
+    align-items: stretch;
+    flex-direction: column;
   }
 }
 

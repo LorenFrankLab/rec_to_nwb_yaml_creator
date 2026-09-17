@@ -48,7 +48,7 @@ export default function TaskTemplateDialog({ kind, types, defaults, onClose, onA
         {selectTask('Sleep task', sleep, setSleep)}
         {kind === 'wtrack' && selectTask('Run task', run, setRun)}
       </div>
-      {types.length === 0 && <p>Add a task type using “Add epoch” first, then choose this template again.</p>}
+      {types.length === 0 && <p>Create the first task and epoch, then reopen this template.</p>}
       <h3>Recording sequence</h3>
       <ol>{sequence.map((id, index) => {
         const type = types.find((candidate) => candidate.id === id);

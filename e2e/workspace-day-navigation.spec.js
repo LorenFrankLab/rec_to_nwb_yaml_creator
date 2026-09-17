@@ -37,10 +37,7 @@ test.describe('Day Editor — direct day-to-day navigation', () => {
     blob.workspace.animals[ANIMAL_ID].days = [dayAId, dayBId];
 
     await seedAndOpen(page, blob, `/#/day/${dayAId}`);
-    // The descriptions live in the daily log's collapsed group; open it to read the field.
-    await page.getByText('Session description / notes').click();
-
-    const sessionDescription = () => page.getByRole('textbox', { name: 'Session Description' });
+    const sessionDescription = () => page.getByRole('textbox', { name: 'Recording notes' });
     await expect(sessionDescription()).toHaveValue('DAY A SESSION DESC');
 
     // Direct day→day hash change (no view change, no full reload) — the back/forward path.
@@ -59,8 +56,7 @@ test.describe('Day Editor — direct day-to-day navigation', () => {
     await expect(page.locator('#main-content')).toBeFocused();
     await expect(page.locator('#route-announcer')).toContainText('remy-2023-06-23');
 
-    // The keyed remount re-collapses the group; open it again to read DAY B's field.
-    await page.getByText('Session description / notes').click();
+    // The keyed remount must replace the always-visible notes field with DAY B's value.
     await expect(sessionDescription()).toHaveValue('DAY B SESSION DESC');
   });
 });

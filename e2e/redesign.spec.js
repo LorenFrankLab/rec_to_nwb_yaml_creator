@@ -175,8 +175,8 @@ test.describe('redesign — Day Editor IA layout', () => {
       dailyLog.getByRole('spinbutton', { name: /Weight measured on 2023-06-22/ }),
     ).toBeVisible();
     await expect(dailyLog.getByRole('heading', { level: 2, name: 'Epochs' })).toBeVisible();
-    await dailyLog.getByText('Recording details', { exact: true }).click();
-    await expect(dailyLog.getByText(/^Experimenters:/)).toBeVisible();
+    await dailyLog.getByText(/^People & copied settings/).click();
+    await expect(dailyLog.getByRole('heading', { name: 'Experimenters present' })).toBeVisible();
     await expect(dailyLog.getByTestId('day-provenance')).toBeVisible();
   });
 });

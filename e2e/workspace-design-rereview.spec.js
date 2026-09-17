@@ -87,7 +87,7 @@ test('optional statescript reminders survive review and batch review without blo
   await expect(page.getByRole('button', { name: 'Download YAML', exact: true })).toBeEnabled();
   await page.getByRole('button', { name: 'Review epoch 2', exact: true }).click();
   await expect(page.getByRole('dialog')).toBeVisible();
-  await expect(page.getByText('Review optional log', { exact: true })).toBeVisible();
+  await expect(page.getByText('Optional log not added', { exact: true })).toBeVisible();
   await page.keyboard.press('Escape');
   await page.getByRole('button', { name: 'Review & export', exact: true }).click();
   const download = await captureDownload(page, () => page.getByRole('button', { name: 'Download YAML', exact: true }).click());

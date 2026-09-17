@@ -149,15 +149,15 @@ describe('EpochsTab — grid render + collapsed state cells', () => {
   it('renders one row per epoch with a task disclosure <button aria-expanded>', () => {
     render(<EpochsTab {...makeBundle()} />);
     expect(screen.getByText(/List epochs in recording order/i)).toBeInTheDocument();
-    expect(screen.getByText('Show')).toBeInTheDocument();
-    expect(screen.getByText('Generate missing')).toBeInTheDocument();
+    expect(screen.getByText('Filter epochs')).toBeInTheDocument();
+    expect(screen.getByText('Quick add file entries')).toBeInTheDocument();
     expect(screen.getByLabelText(/epoch status summary/i)).toHaveTextContent(/3 epochs/i);
-    expect(screen.getByLabelText(/epoch status summary/i)).toHaveTextContent(/2 videos needed/i);
-    expect(screen.getByLabelText(/epoch status summary/i)).toHaveTextContent(/1 statescript missing/i);
-    expect(screen.getByLabelText(/epoch status summary/i)).toHaveTextContent(/1 custom filename/i);
+    expect(screen.getByLabelText(/epoch status summary/i)).toHaveTextContent(/2 epochs need a video decision/i);
+    expect(screen.getByLabelText(/epoch status summary/i)).toHaveTextContent(/1 optional statescript not added/i);
+    expect(screen.getByLabelText(/epoch status summary/i)).toHaveTextContent(/1 custom file name/i);
     const edit = screen.getByRole('button', { name: /Show epoch 1 details/i });
     expect(edit.tagName).toBe('BUTTON');
-    expect(edit).toHaveTextContent(/details/i);
+    expect(edit).toHaveTextContent(/review/i);
     expect(edit).not.toHaveTextContent(/tag/i);
     expect(edit).toHaveAttribute('aria-expanded', 'false');
     expect(edit).toHaveAttribute('aria-controls', 'epoch-details-panel');
@@ -170,12 +170,12 @@ describe('EpochsTab — grid render + collapsed state cells', () => {
     const user = userEvent.setup();
     render(<EpochsTab {...makeBundle()} />);
 
-    await user.click(screen.getByRole('button', { name: /2 videos needed/i }));
+    await user.click(screen.getByRole('button', { name: /2 epochs need a video decision/i }));
     expect(screen.getByRole('button', { name: /Show epoch 1 details/i })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Show epoch 2 details/i })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Show epoch 3 details/i })).toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: /1 custom filename/i }));
+    await user.click(screen.getByRole('button', { name: /1 custom file name/i }));
     expect(screen.queryByRole('button', { name: /Show epoch 1 details/i })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Show epoch 2 details/i })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Show epoch 3 details/i })).not.toBeInTheDocument();
@@ -190,9 +190,9 @@ describe('EpochsTab — grid render + collapsed state cells', () => {
     render(<EpochsTab {...makeBundle()} />);
     // epoch 2 has a bound video; epochs 1,3 still need video declarations.
     expect(screen.getByText(/Video:\s*1 video/i)).toBeInTheDocument();
-    expect(screen.getAllByText(/Video:\s*Missing/i)).toHaveLength(2);
+    expect(screen.getAllByText(/Video:\s*Decision needed/i)).toHaveLength(2);
     // Epoch 2 is a run epoch (a statescript is expected); the sleep epochs have no precedent yet.
-    expect(screen.getAllByText(/Statescript:\s*Expected/i)).toHaveLength(1);
+    expect(screen.getAllByText(/Statescript:\s*Optional log not added/i)).toHaveLength(1);
     expect(screen.getAllByText(/Statescript:\s*Not expected/i)).toHaveLength(2);
     // The video filename lives only in the drill-in, never the collapsed grid.
     expect(screen.queryByText('run_video')).not.toBeInTheDocument();
@@ -208,9 +208,8 @@ describe('EpochsTab — grid render + collapsed state cells', () => {
     expect(screen.getByRole('heading', { name: /^Task$/i })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: /Files for this epoch/i })).toBeInTheDocument();
     const rowActions = within(edit.closest('tr'));
-    expect(rowActions.getByRole('button', { name: /Move epoch 1 up/i })).toBeInTheDocument();
-    expect(rowActions.getByRole('button', { name: /Move epoch 1 down/i })).toBeInTheDocument();
     expect(rowActions.getByRole('button', { name: /More actions for epoch 1/i })).toBeInTheDocument();
+    expect(rowActions.queryByRole('button', { name: /Move epoch 1/i })).not.toBeInTheDocument();
     expect(screen.queryByText(/Epoch structure actions/i)).not.toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: /Show epoch 2 details/i }));
@@ -242,7 +241,7 @@ describe('EpochsTab — grid render + collapsed state cells', () => {
     await user.click(screen.getByRole('button', { name: /Show epoch 1 details/i }));
     expect(screen.getByRole('dialog', { name: /Epoch 1: Sleep/i })).toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: /1 custom filename/i }));
+    await user.click(screen.getByRole('button', { name: /1 custom file name/i }));
 
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Show epoch 1 details/i })).not.toBeInTheDocument();
@@ -279,7 +278,7 @@ describe('EpochsTab — no-epochs onboarding empty state (Phase 8)', () => {
     expect(screen.getByRole('heading', { name: /no epochs yet/i })).toBeInTheDocument();
     // No epoch rows are rendered (no task disclosure buttons).
     expect(screen.queryByRole('button', { name: /Show epoch/i })).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /add an epoch/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /build one epoch at a time/i })).toBeInTheDocument();
   });
 
   it('the add-epoch CTA writes a taskInstances patch adding one epoch to the first task type', async () => {
@@ -287,11 +286,26 @@ describe('EpochsTab — no-epochs onboarding empty state (Phase 8)', () => {
     // A genuine no-epochs day has no file/video refs (so adding the first epoch orphans nothing).
     const bundle = makeBundle({ taskInstances: [], associated_video_files: [], associated_files: [] });
     render(<EpochsTab {...bundle} />);
-    await user.click(screen.getByRole('button', { name: /add an epoch/i }));
+    await user.click(screen.getByRole('button', { name: /build one epoch at a time/i }));
     // 'blank' template adds one epoch to the first task type (Sleep / tasktype-0).
     expect(lastPatch(bundle.onFieldUpdate, 'taskInstances')).toEqual([
       { taskTypeId: 'tasktype-0', task_epochs: [1] },
     ]);
+  });
+
+  it('starts by creating a task when the animal has no task catalog yet', async () => {
+    const user = userEvent.setup();
+    const bundle = makeBundle(
+      { taskInstances: [], associated_video_files: [], associated_files: [] },
+      { taskTypes: [] }
+    );
+    render(<EpochsTab {...bundle} />);
+
+    expect(screen.queryByRole('button', { name: /choose a template/i })).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /create first task and epoch/i }));
+
+    expect(screen.getByRole('dialog', { name: /add task type/i })).toBeInTheDocument();
+    expect(screen.getByLabelText(/task name/i)).toHaveFocus();
   });
 });
 
@@ -420,7 +434,7 @@ describe('EpochsTab — write-back patches', () => {
       );
       render(<EpochsTab {...bundle} animalDays={[priorDay, bundle.day]} />);
 
-      await user.click(screen.getByRole('button', { name: /Templates/i }));
+      await user.click(screen.getByRole('button', { name: /Choose a template/i }));
       await user.click(screen.getByRole('menuitem', { name: /Copy structure from prior day/i }));
 
       expect(lastPatch(bundle.onFieldUpdate, 'taskInstances')).toEqual([
@@ -775,19 +789,15 @@ describe('EpochsTab — confirm-before-orphan (never auto-scrub)', () => {
 });
 
 describe('EpochsTab — renumber moves bound refs in lockstep (no silent misassociation)', () => {
-  it('keeps the details panel attached to the moved task after Move up renumbers it', async () => {
+  it('keeps move controls in the row overflow menu', async () => {
     const user = userEvent.setup();
     const bundle = makeBundle();
     render(<StatefulEpochsTab bundle={bundle} />);
 
-    await user.click(screen.getByRole('button', { name: /Show epoch 2 details/i }));
-    expect(screen.getByRole('dialog', { name: /Epoch 2: Run/i })).toBeInTheDocument();
-
-    await user.click(screen.getByRole('button', { name: /Move epoch 2 up/i }));
-
-    expect(screen.getByRole('button', { name: /Hide epoch 1 details/i })).toBeInTheDocument();
-    expect(screen.getByRole('dialog', { name: /Epoch 1: Run/i })).toBeInTheDocument();
-    expect(screen.queryByRole('dialog', { name: /Epoch 2: Sleep/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Move epoch 2 up/i })).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /More actions for epoch 2/i }));
+    expect(screen.getByRole('menuitem', { name: /Move epoch 2 up/i })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: /Move epoch 2 down/i })).toBeInTheDocument();
   });
 
   it('Move up swaps the epoch numbers AND remaps the bound video to follow its task (no confirm)', async () => {
@@ -795,7 +805,8 @@ describe('EpochsTab — renumber moves bound refs in lockstep (no silent misasso
     const bundle = makeBundle();
     render(<EpochsTab {...bundle} />);
     // Epoch 2 (Run) owns the video. Move it up → swap 1↔2.
-    await user.click(screen.getByRole('button', { name: /Move epoch 2 up/i }));
+    await user.click(screen.getByRole('button', { name: /More actions for epoch 2/i }));
+    await user.click(screen.getByRole('menuitem', { name: /Move epoch 2 up/i }));
     // No orphan confirm — the ref follows.
     expect(screen.queryByText(/Repair affected files\?/i)).not.toBeInTheDocument();
     // The Run instance moved to epoch 1; its video's task_epochs followed to 1.
@@ -832,6 +843,52 @@ describe('EpochsTab — renumber moves bound refs in lockstep (no silent misasso
 });
 
 describe('EpochsTab — video 3-state', () => {
+  it('previews and applies the copied day’s video decisions atomically', async () => {
+    const user = userEvent.setup();
+    const priorDay = {
+      id: 'r-2023-06-21',
+      animalId: 'r',
+      date: '2023-06-21',
+      taskInstances: [
+        { taskTypeId: 'tasktype-0', task_epochs: [1, 3] },
+        { taskTypeId: 'tasktype-1', task_epochs: [2] },
+      ],
+      associated_files: [],
+      associated_video_files: [
+        { name: 'prior_sleep_video', camera_id: 0, task_epochs: 1 },
+        { name: 'prior_run_video', camera_id: 1, task_epochs: 2 },
+      ],
+      fs_gui_yamls: [],
+      state: { videolessEpochs: [3] },
+    };
+    const bundle = makeBundle({
+      associated_video_files: [],
+      provenance: { copiedFromDayId: priorDay.id },
+    });
+    const onFieldsUpdate = vi.fn();
+    render(
+      <EpochsTab
+        {...bundle}
+        animalDays={[priorDay, bundle.day]}
+        onFieldsUpdate={onFieldsUpdate}
+      />
+    );
+
+    await user.click(screen.getByRole('button', { name: /Review 2023-06-21 video plan/i }));
+    const dialog = screen.getByRole('dialog', { name: /Use the 2023-06-21 video plan/i });
+    expect(dialog).toHaveTextContent(/mark 1 epoch as having no video/i);
+    expect(dialog).toHaveTextContent(/create 2 camera-specific video entries/i);
+    await user.click(within(dialog).getByRole('button', { name: /Apply previous plan/i }));
+
+    expect(onFieldsUpdate).toHaveBeenCalledTimes(1);
+    const changes = onFieldsUpdate.mock.calls[0][0];
+    expect(changes).toContainEqual(['associated_video_files', [
+      { name: '20230622_r_01_s1.1.h264', camera_id: 0, task_epochs: 1 },
+      { name: '20230622_r_02_r1.1.h264', camera_id: 1, task_epochs: 2 },
+    ]]);
+    expect(changes).toContainEqual(['state', expect.objectContaining({ videolessEpochs: [3] })]);
+  });
+
   it('a missing epoch can be declared video-less (off-export videolessEpochs patch)', async () => {
     const user = userEvent.setup();
     const bundle = makeBundle();
@@ -849,7 +906,7 @@ describe('EpochsTab — video 3-state', () => {
     const bundle = makeBundle();
     render(<EpochsTab {...bundle} />);
     await user.click(screen.getByRole('button', { name: /Show epoch 1 details/i }));
-    await user.click(screen.getByRole('button', { name: /^Add expected video$/i }));
+    await user.click(screen.getByRole('button', { name: /^Add video entry$/i }));
     const patch = lastPatch(bundle.onFieldUpdate, 'associated_video_files');
     // Derived name for epoch 1 (Sleep, tag s1) in the day's data folder convention.
     expect(patch).toContainEqual({ name: '20230622_r_01_s1.1.h264', camera_id: 0, task_epochs: 1 });
@@ -882,7 +939,7 @@ describe('EpochsTab — video 3-state', () => {
     render(<StatefulEpochsTab bundle={bundle} />);
 
     await user.click(screen.getByRole('button', { name: /Show epoch 1 details/i }));
-    await user.click(screen.getByRole('button', { name: /^Add expected video$/i }));
+    await user.click(screen.getByRole('button', { name: /^Add video entry$/i }));
 
     expect(lastPatch(bundle.onFieldUpdate, 'associated_video_files')).toBeUndefined();
     expect(screen.getByRole('status')).toHaveTextContent(/camera/i);
@@ -908,7 +965,7 @@ describe('EpochsTab — video 3-state', () => {
     const bundle = makeBundle();
     render(<EpochsTab {...bundle} />);
 
-    await user.click(screen.getByRole('button', { name: /Videos \(2\)/i }));
+    await user.click(screen.getByRole('button', { name: /Add 2 video entries/i }));
 
     expect(lastPatch(bundle.onFieldUpdate, 'associated_video_files')).toEqual([
       { name: 'run_video', camera_id: 1, task_epochs: 2 },
@@ -931,7 +988,7 @@ describe('EpochsTab — video 3-state', () => {
     expect(screen.queryByRole('button', { name: /Add video for epoch 1/i })).not.toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: /Show epoch 1 details/i }));
-    await user.click(screen.getByRole('button', { name: /^Add expected video$/i }));
+    await user.click(screen.getByRole('button', { name: /^Add video entry$/i }));
 
     expect(lastPatch(bundle.onFieldUpdate, 'associated_video_files')).toContainEqual({
       name: '20230622_r_01_s1.1.h264',
@@ -948,9 +1005,9 @@ describe('EpochsTab — video 3-state', () => {
     const bundle = makeBundle();
     render(<StatefulEpochsTab bundle={bundle} />);
 
-    await user.click(screen.getByRole('button', { name: /2 videos needed/i }));
+    await user.click(screen.getByRole('button', { name: /2 epochs need a video decision/i }));
     await user.click(screen.getByRole('button', { name: /Show epoch 1 details/i }));
-    await user.click(screen.getByRole('button', { name: /^Add expected video$/i }));
+    await user.click(screen.getByRole('button', { name: /^Add video entry$/i }));
 
     expect(screen.getByRole('button', { name: /3 epochs/i })).toHaveAttribute('aria-pressed', 'true');
     expect(screen.getByRole('button', { name: /Hide epoch 1 details/i })).toBeInTheDocument();
@@ -971,7 +1028,7 @@ describe('EpochsTab — statescript naming', () => {
     const bundle = makeBundle();
     render(<EpochsTab {...bundle} />);
     await user.click(screen.getByRole('button', { name: /Show epoch 1 details/i }));
-    await user.click(screen.getByRole('button', { name: /^Add expected statescript$/i }));
+    await user.click(screen.getByRole('button', { name: /^Add optional statescript$/i }));
     expect(lastPatch(bundle.onFieldUpdate, 'associated_files')).toEqual([
       {
         name: '20230622_r_01_s1.stateScriptLog',
@@ -1009,7 +1066,7 @@ describe('EpochsTab — statescript naming', () => {
     // A prior day logged a sleep statescript, so all three epochs expect one here.
     render(<EpochsTab {...bundle} animalDays={[PRIOR_SLEEP_DAY, bundle.day]} />);
 
-    await user.click(screen.getByRole('button', { name: /Statescripts \(3\)/i }));
+    await user.click(screen.getByRole('button', { name: /Add 3 optional statescripts/i }));
 
     expect(lastPatch(bundle.onFieldUpdate, 'associated_files')).toEqual([
       {
@@ -1045,7 +1102,7 @@ describe('EpochsTab — statescript naming', () => {
     expect(screen.queryByRole('button', { name: /Add statescript for epoch 1/i })).not.toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: /Show epoch 1 details/i }));
-    await user.click(screen.getByRole('button', { name: /^Add expected statescript$/i }));
+    await user.click(screen.getByRole('button', { name: /^Add optional statescript$/i }));
 
     expect(lastPatch(bundle.onFieldUpdate, 'associated_files')).toEqual([
       {
@@ -1074,8 +1131,8 @@ describe('EpochsTab — accessibility', () => {
 describe('EpochsTab — statescript expectation + the data-folder prerequisite (F6)', () => {
   it('counts only EXPECTED statescripts and shows them as a warning, never an error', () => {
     render(<EpochsTab {...makeBundle()} />);
-    const chip = screen.getByRole('button', { name: /1 statescript missing/i });
-    expect(chip).toHaveClass(styles.summaryReview);
+    const chip = screen.getByRole('button', { name: /1 optional statescript not added/i });
+    expect(chip).toHaveClass(styles.summaryButton);
     expect(chip).not.toHaveClass(styles.summaryNeedsAttention);
     expect(screen.queryByText(/statescripts? expected/i)).not.toBeInTheDocument();
   });
@@ -1083,15 +1140,15 @@ describe('EpochsTab — statescript expectation + the data-folder prerequisite (
   it('expects sleep statescripts once an earlier same-configuration day logged one', () => {
     const bundle = makeBundle();
     render(<EpochsTab {...bundle} animalDays={[PRIOR_SLEEP_DAY, bundle.day]} />);
-    expect(screen.getByRole('button', { name: /3 statescripts missing/i })).toBeInTheDocument();
-    expect(screen.getAllByText(/Statescript:\s*Expected/i)).toHaveLength(3);
+    expect(screen.getByRole('button', { name: /3 optional statescripts not added/i })).toBeInTheDocument();
+    expect(screen.getAllByText(/Statescript:\s*Optional log not added/i)).toHaveLength(3);
   });
 
   it('filters the grid to the epochs that expect a statescript', async () => {
     const user = userEvent.setup();
     render(<EpochsTab {...makeBundle()} />);
 
-    await user.click(screen.getByRole('button', { name: /1 statescript missing/i }));
+    await user.click(screen.getByRole('button', { name: /1 optional statescript not added/i }));
     expect(screen.queryByRole('button', { name: /Show epoch 1 details/i })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Show epoch 2 details/i })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Show epoch 3 details/i })).not.toBeInTheDocument();
@@ -1113,7 +1170,7 @@ describe('EpochsTab — statescript expectation + the data-folder prerequisite (
       'title',
       '/data/r/20230622/20230622_r_02_r1.stateScriptLog'
     );
-    expect(screen.queryByText(/Statescript:\s*Expected/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Statescript:\s*Optional log not added/i)).not.toBeInTheDocument();
   });
 
   it('never bulk-generates a statescript for an epoch that expects none', async () => {
@@ -1122,7 +1179,7 @@ describe('EpochsTab — statescript expectation + the data-folder prerequisite (
     render(<EpochsTab {...bundle} />);
 
     // Only the run epoch expects one; the two sleep epochs have no precedent on this animal.
-    await user.click(screen.getByRole('button', { name: /^Statescripts \(1\)$/ }));
+    await user.click(screen.getByRole('button', { name: /^Add 1 optional statescript$/ }));
 
     expect(lastPatch(bundle.onFieldUpdate, 'associated_files')).toEqual([
       {
@@ -1134,8 +1191,10 @@ describe('EpochsTab — statescript expectation + the data-folder prerequisite (
     ]);
   });
 
-  it('has no axe violations while the data-folder prompt is showing', async () => {
+  it('has no axe violations with the data-folder disclosure open', async () => {
+    const user = userEvent.setup();
     const { container } = render(<EpochsTab {...makeBundle({ dataFolder: '' })} />);
+    await user.click(screen.getByRole('button', { name: /^Add 1 optional statescript$/ }));
     expect(await axe(container)).toHaveNoViolations();
   });
 
@@ -1145,12 +1204,16 @@ describe('EpochsTab — statescript expectation + the data-folder prerequisite (
     render(<StatefulEpochsTab bundle={bundle} />);
 
     expect(screen.queryByText(/Daily Setup/i)).not.toBeInTheDocument();
-    expect(
-      screen.getByText(/Folder containing this recording’s files/i)
-    ).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /^Statescripts \(1\)$/ })).toBeDisabled();
+    const help = screen.getByText(/Folder containing this recording’s files/i);
+    expect(help).not.toBeVisible();
+    const addStatescript = screen.getByRole('button', { name: /^Add 1 optional statescript$/ });
+    expect(addStatescript).toBeEnabled();
+
+    await user.click(addStatescript);
+    expect(help).toBeVisible();
 
     const input = screen.getByLabelText(/^Data folder$/i);
+    await waitFor(() => expect(input).toHaveFocus());
     await user.type(input, '/data/r/20230622');
     await user.tab();
 
@@ -1158,11 +1221,11 @@ describe('EpochsTab — statescript expectation + the data-folder prerequisite (
       expect(bundle.onFieldUpdate).toHaveBeenCalledWith('dataFolder', '/data/r/20230622')
     );
     await waitFor(() =>
-      expect(screen.getByRole('button', { name: /^Statescripts \(1\)$/ })).toBeEnabled()
+      expect(screen.getByRole('button', { name: /^Add 1 optional statescript$/ })).toBeEnabled()
     );
     // Once the folder is known the prompt is gone — it is a prerequisite, not a permanent field.
     expect(
-      screen.getByText(/Folder containing this recording’s files/i)
+      help
     ).not.toBeVisible();
   });
 });

@@ -1,9 +1,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { DraftTextInput } from '../../components/ui/DraftFields';
 import { STATESCRIPT_DESCRIPTION } from '../../domain/associatedFiles';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faArrowDown, faArrowUp } from '@fortawesome/free-solid-svg-icons';
-import { Modal, useDialogBehavior } from '../../components/Modal';
+import { ConfirmDialog, Modal, useDialogBehavior } from '../../components/Modal';
 import { useUndoToast } from '../../components/ui/UndoToast';
 import { EpochStatusPill } from '../../components/ui/StatusPill';
 import GeneratedValue from '../../components/ui/GeneratedValue';
@@ -196,6 +194,9 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
   // `derived` flag is consumer-driven). A name only becomes stored-manual once the user types.
   const [manualStatescript, setManualStatescript] = useState<Set<number>>(new Set());
   const [manualVideo, setManualVideo] = useState<Set<string>>(new Set());
+  const [priorVideoPlanOpen, setPriorVideoPlanOpen] = useState(false);
+  const [dataFolderOpen, setDataFolderOpen] = useState(focusRequest?.fieldPath === 'dataFolder');
+  const focusDataFolderOnOpenRef = useRef(false);
   const { show: showToast, node: toastNode } = useUndoToast();
 
   // Alt+N (the stepper "add" intent) opens the template menu — the grid's primary add affordance.
@@ -225,6 +226,17 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
       if (row) setActiveEpoch(row.epoch);
     }
   }, [focusRequest, grid.rows, props.onManageFile]);
+
+  useEffect(() => {
+    if (focusRequest?.fieldPath === 'dataFolder') setDataFolderOpen(true);
+  }, [focusRequest]);
+
+  useEffect(() => {
+    if (!dataFolderOpen || !focusDataFolderOnOpenRef.current) return undefined;
+    focusDataFolderOnOpenRef.current = false;
+    const frame = requestAnimationFrame(() => document.getElementById('epochs-data-folder')?.focus());
+    return () => cancelAnimationFrame(frame);
+  }, [dataFolderOpen]);
 
   const statePatch = useCallback((patch: Record<string, unknown>, sourceDay = day) => {
     const state = (sourceDay as { state?: unknown }).state;
@@ -633,10 +645,43 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
   const epochCount = grid.rows.length;
   const missingVideoCount = grid.rows.filter((row) => row.status === 'needs_video').length;
   // Only the epochs that actually EXPECT a statescript are counted: a lab that never logs a sleep
-  // statescript is not missing one. Never a blocker — the chip is a warning-toned filter.
+  // statescript is not missing one. Never a blocker — the chip is a neutral filter.
   const expectedStatescriptCount = grid.rows.filter((row) => row.statescriptState === 'expected').length;
   const generatedStatescriptCount = countMissingGeneratedStatescripts(grid);
   const generatedVideoCount = countMissingGeneratedVideos(grid, cameras);
+  const priorVideoPlan = useMemo(() => {
+    const copiedFrom = day.provenance?.copiedFromDayId
+      ? siblingDays.find((candidate) => String(candidate.id) === String(day.provenance?.copiedFromDayId))
+      : undefined;
+    const source = copiedFrom ?? [...siblingDays]
+      .filter((candidate) => candidate.id !== day.id && String(candidate.date ?? '') < String(day.date ?? ''))
+      .filter((candidate) => candidate.configurationVersion === day.configurationVersion)
+      .sort((a, b) => String(b.date ?? '').localeCompare(String(a.date ?? '')))[0];
+    if (!source) return null;
+
+    const sourceGrid = buildEpochGrid(animal, source, siblingDays);
+    const sourceRows = new Map(sourceGrid.rows.map((row) => [row.epoch, row]));
+    const matchingMissingRows = grid.rows.filter((row) => {
+      const previous = sourceRows.get(row.epoch);
+      return row.videoPresence === 'missing' && previous?.taskName === row.taskName;
+    });
+    const noVideoEpochs = matchingMissingRows
+      .filter((row) => sourceRows.get(row.epoch)?.videoPresence === 'absent')
+      .map((row) => row.epoch);
+    const videoRows = matchingMissingRows
+      .filter((row) => sourceRows.get(row.epoch)?.videoPresence === 'present')
+      .filter((row) => countMissingGeneratedVideos({ ...grid, rows: [row] }, cameras) > 0);
+    if (noVideoEpochs.length === 0 && videoRows.length === 0) return null;
+
+    const videoEntries = countMissingGeneratedVideos({ ...grid, rows: videoRows }, cameras);
+    return {
+      date: String(source.date ?? ''),
+      noVideoEpochs,
+      videoRows,
+      videoEntries,
+      coveredEpochs: noVideoEpochs.length + videoRows.length,
+    };
+  }, [animal, cameras, day, grid, siblingDays]);
   const hasCustomFilename = (row: EpochGridRow) =>
     row.statescriptNaming === 'manual' ||
     row.videos.some((video, index) => !isDerivedVideo(video.entry, {
@@ -683,6 +728,18 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
       onFieldUpdate('associated_files', current);
     });
   };
+  const addOptionalStatescripts = () => {
+    if (grid.dataFolder) {
+      generateMissingStatescripts();
+      return;
+    }
+    if (dataFolderOpen) {
+      document.getElementById('epochs-data-folder')?.focus();
+      return;
+    }
+    focusDataFolderOnOpenRef.current = true;
+    setDataFolderOpen(true);
+  };
   const generateMissingVideos = () => {
     if (unresolvedTaskCatalogDivergence) return;
     const current = getDayAssociatedVideos(day);
@@ -693,6 +750,30 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
     showToast(`Generated ${next.length - current.length} video files`, () => {
       onFieldUpdate('associated_video_files', current);
     });
+  };
+  const applyPriorVideoPlan = () => {
+    if (!priorVideoPlan || unresolvedTaskCatalogDivergence) return;
+    const currentVideos = getDayAssociatedVideos(day);
+    const nextVideos = addMissingGeneratedVideos(
+      { ...grid, rows: priorVideoPlan.videoRows },
+      currentVideos,
+      cameras
+    );
+    const covered = new Set([
+      ...priorVideoPlan.noVideoEpochs,
+      ...priorVideoPlan.videoRows.map((row) => row.epoch),
+    ]);
+    const nextVideoless = [
+      ...getDayVideolessEpochs(day).filter((epoch) => !covered.has(epoch)),
+      ...priorVideoPlan.noVideoEpochs,
+    ].sort((a, b) => a - b);
+    writeFields([
+      ['associated_video_files', nextVideos],
+      ['state', statePatchWithVideoless([...new Set(nextVideoless)])],
+    ]);
+    setPriorVideoPlanOpen(false);
+    setEpochFilter('all');
+    showToast(`Applied the ${priorVideoPlan.date} video plan`);
   };
 
   return (
@@ -730,7 +811,7 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
           {epochCount > 0 && (
             <div className={styles.epochToolbar}>
               <div className={styles.toolbarGroup}>
-                <span className={styles.toolbarLabel}>Show</span>
+                <span className={styles.toolbarLabel}>Filter epochs</span>
                 <div className={styles.summaryStrip} aria-label="Epoch status summary">
                   <button
                     type="button"
@@ -741,77 +822,80 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
                     {epochCount} {pluralize(epochCount, 'epoch')}
                   </button>
                   {(missingVideoCount > 0 || epochFilter === 'needs-video') && (
-                  <button
-                    type="button"
-                    className={filterButtonClass(
-                      'needs-video',
-                      missingVideoCount > 0 ? styles.summaryNeedsAttention : ''
-                    )}
-                    aria-pressed={epochFilter === 'needs-video'}
-                    onClick={() => changeFilter('needs-video')}
-                  >
-                    {missingVideoCount} {pluralize(missingVideoCount, 'video')} needed
-                  </button>)}
+                    <button
+                      type="button"
+                      className={filterButtonClass(
+                        'needs-video',
+                        missingVideoCount > 0 ? styles.summaryNeedsAttention : ''
+                      )}
+                      aria-pressed={epochFilter === 'needs-video'}
+                      onClick={() => changeFilter('needs-video')}
+                    >
+                      {missingVideoCount} {pluralize(missingVideoCount, 'epoch')} need a video decision
+                    </button>
+                  )}
                   {(expectedStatescriptCount > 0 || epochFilter === 'expected-statescript') && (
-                  <button
-                    type="button"
-                    className={filterButtonClass(
-                      'expected-statescript',
-                      expectedStatescriptCount > 0 ? styles.summaryReview : ''
-                    )}
-                    aria-pressed={epochFilter === 'expected-statescript'}
-                    onClick={() => changeFilter('expected-statescript')}
-                  >
-                    {expectedStatescriptCount} {pluralize(expectedStatescriptCount, 'statescript')} missing
-                  </button>)}
+                    <button
+                      type="button"
+                      className={filterButtonClass('expected-statescript')}
+                      aria-pressed={epochFilter === 'expected-statescript'}
+                      onClick={() => changeFilter('expected-statescript')}
+                    >
+                      {expectedStatescriptCount} optional {pluralize(expectedStatescriptCount, 'statescript')} not added
+                    </button>
+                  )}
                   {(customFilenameCount > 0 || epochFilter === 'custom-filenames') && (
-                  <button
-                    type="button"
-                    className={filterButtonClass(
-                      'custom-filenames',
-                      customFilenameCount > 0 ? styles.summaryReview : ''
-                    )}
-                    aria-pressed={epochFilter === 'custom-filenames'}
-                    onClick={() => changeFilter('custom-filenames')}
-                  >
-                    {customFilenameCount} custom {pluralize(customFilenameCount, 'filename')}
-                  </button>)}
+                    <button
+                      type="button"
+                      className={filterButtonClass('custom-filenames')}
+                      aria-pressed={epochFilter === 'custom-filenames'}
+                      onClick={() => changeFilter('custom-filenames')}
+                    >
+                      {customFilenameCount} custom file {pluralize(customFilenameCount, 'name')}
+                    </button>
+                  )}
                 </div>
               </div>
-              <details className={`${styles.toolbarGroup} ${styles.dataFolderGroup}`} open={!grid.dataFolder || focusRequest?.fieldPath === 'dataFolder' || undefined}>
-                <summary>Data folder{grid.dataFolder ? ` · ${grid.dataFolder}` : ' · enter for statescript paths'}</summary>
-                  <label className={styles.toolbarLabel} htmlFor="epochs-data-folder">
-                    Data folder
-                  </label>
-                  <DraftTextInput
-                    draftKey={`day:${String(day.id)}:dataFolder`}
-                    id="epochs-data-folder"
-                    type="text"
-                    name="dataFolder"
-                    data-field-path="dataFolder"
-                    className={styles.dataFolderInput}
-                    value={grid.dataFolder}
-                    onCommit={(value) => onFieldUpdate('dataFolder', value)}
-                    placeholder="e.g. /stelmo/denisse/Laurent/20260514/"
-                    aria-describedby="epochs-data-folder-help"
-                  />
-                  <span id="epochs-data-folder-help" className={styles.dataFolderHelp}>
-                    Folder containing this recording’s files. Statescript paths are generated inside it.
-                  </span>
+              <details
+                className={`${styles.toolbarGroup} ${styles.dataFolderGroup}`}
+                open={dataFolderOpen}
+                onToggle={(event) => setDataFolderOpen(event.currentTarget.open)}
+              >
+                <summary>File naming folder{grid.dataFolder ? ` · ${grid.dataFolder}` : ' · enter for statescript paths'}</summary>
+                <label className={styles.toolbarLabel} htmlFor="epochs-data-folder">
+                  Data folder
+                </label>
+                <DraftTextInput
+                  draftKey={`day:${String(day.id)}:dataFolder`}
+                  id="epochs-data-folder"
+                  type="text"
+                  name="dataFolder"
+                  data-field-path="dataFolder"
+                  className={styles.dataFolderInput}
+                  value={grid.dataFolder}
+                  onCommit={(value) => {
+                    onFieldUpdate('dataFolder', value);
+                    if (value.trim() !== '') setDataFolderOpen(false);
+                  }}
+                  placeholder="e.g. /stelmo/denisse/Laurent/20260514/"
+                  aria-describedby="epochs-data-folder-help"
+                />
+                <span id="epochs-data-folder-help" className={styles.dataFolderHelp}>
+                  Folder containing this recording’s files. Statescript paths are generated inside it.
+                </span>
               </details>
               {(generatedStatescriptCount > 0 || generatedVideoCount > 0) && (
                 <div className={`${styles.toolbarGroup} ${styles.bulkGroup}`}>
-                  <span className={styles.toolbarLabel}>Generate missing</span>
+                  <span className={styles.toolbarLabel}>Quick add file entries</span>
                   <div className={styles.bulkActions} aria-label="Generate expected files">
                     {generatedStatescriptCount > 0 && (
                       <Button
                         variant="secondary"
                         size="small"
-                        disabled={!grid.dataFolder}
-                        title={!grid.dataFolder ? 'Set the data folder first' : undefined}
-                        onClick={generateMissingStatescripts}
+                        title={!grid.dataFolder ? 'Enter the file naming folder first' : undefined}
+                        onClick={addOptionalStatescripts}
                       >
-                        Statescripts ({generatedStatescriptCount})
+                        Add {generatedStatescriptCount} optional {pluralize(generatedStatescriptCount, 'statescript')}
                       </Button>
                     )}
                     {generatedVideoCount > 0 && (
@@ -820,16 +904,30 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
                         size="small"
                         onClick={generateMissingVideos}
                       >
-                        Videos ({generatedVideoCount})
+                        Add {generatedVideoCount} video {generatedVideoCount === 1 ? 'entry' : 'entries'}
                       </Button>
                     )}
                   </div>
                 </div>
               )}
+              {missingVideoCount > 0 && generatedVideoCount > 0 && (
+                <p className={styles.videoCountHelp}>
+                  {missingVideoCount} {pluralize(missingVideoCount, 'epoch')} need a decision;{' '}
+                  {generatedVideoCount} camera-specific {generatedVideoCount === 1 ? 'entry' : 'entries'} would be created.
+                </p>
+              )}
+              {priorVideoPlan && missingVideoCount > 0 && (
+                <div className={`${styles.toolbarGroup} ${styles.priorPlanGroup}`}>
+                  <span className={styles.toolbarLabel}>Repeat a familiar day</span>
+                  <Button variant="secondary" size="small" onClick={() => setPriorVideoPlanOpen(true)}>
+                    Review {priorVideoPlan.date} video plan
+                  </Button>
+                </div>
+              )}
             </div>
           )}
         </div>
-        <div className={styles.templateMenu}>
+        {epochCount > 0 && <div className={styles.templateMenu}>
           <Button onClick={() => applyTemplate('blank')}>Add epoch</Button>
           <OverflowMenu
             ref={templateMenuRef}
@@ -843,7 +941,7 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
                 : []),
             ]}
           />
-        </div>
+        </div>}
       </div>
 
       {unresolvedTaskCatalogDivergence && (
@@ -879,15 +977,35 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
         <EmptyState
           icon="▦"
           title="No epochs yet"
-          actions={
-            <Button variant="primary" onClick={() => applyTemplate('blank')}>
-              ＋ Add an epoch
-            </Button>
-          }
+          actions={<div className={styles.emptyActions}>
+            {view.taskTypes.length > 0 ? (
+              <>
+                <OverflowMenu
+                  ref={templateMenuRef}
+                  label="Choose a recording-day template"
+                  trigger={<>Choose a template ▾</>}
+                  items={[
+                    { key: 'sleep', label: 'Sleep day', description: '4 sleep epochs', onSelect: () => applyTemplate('sleep') },
+                    { key: 'wtrack', label: 'W-track day', description: 'sleep / run alternation', onSelect: () => applyTemplate('wtrack') },
+                    ...(priorDayInstances()
+                      ? [{ key: 'copy', label: 'Copy structure from prior day', description: 'same epochs; files re-derive', onSelect: () => applyTemplate('copy') }]
+                      : []),
+                  ]}
+                />
+                <Button variant="secondary" onClick={() => applyTemplate('blank')}>
+                  Build one epoch at a time
+                </Button>
+              </>
+            ) : (
+              <Button onClick={() => applyTemplate('blank')}>
+                Create first task and epoch
+              </Button>
+            )}
+          </div>}
         >
-          Each epoch is a numbered recording block belonging to a task. Use Templates for a full
-          day, or add a single epoch and fill in its task and files. Need a new task? Add one on the
-          animal&apos;s Task Types tab.
+          {view.taskTypes.length > 0
+            ? 'Each epoch is a numbered recording block belonging to a task. Start with a familiar day template, or build the sequence one epoch at a time.'
+            : 'Each epoch is a numbered recording block belonging to a task. Define the first task used by this animal, then add the recording sequence.'}
         </EmptyState>
       ) : filteredRows.length === 0 ? (
         <div className={styles.filterEmpty} role="status">
@@ -1025,6 +1143,22 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
           setPendingTemplate(null);
         }}
       />}
+
+      <ConfirmDialog
+        isOpen={priorVideoPlanOpen && priorVideoPlan != null}
+        title={`Use the ${priorVideoPlan?.date ?? 'previous day'} video plan?`}
+        message={priorVideoPlan ? <>
+          This will mark {priorVideoPlan.noVideoEpochs.length} {pluralize(priorVideoPlan.noVideoEpochs.length, 'epoch')} as having no video and create{' '}
+          {priorVideoPlan.videoEntries} camera-specific video {priorVideoPlan.videoEntries === 1 ? 'entry' : 'entries'} for matching epochs.
+          {priorVideoPlan.coveredEpochs < missingVideoCount
+            ? ` ${missingVideoCount - priorVideoPlan.coveredEpochs} unmatched ${pluralize(missingVideoCount - priorVideoPlan.coveredEpochs, 'epoch')} will still need review.`
+            : ''}{' '}
+          Review any epoch that differed today. No files on disk are changed.
+        </> : ''}
+        confirmLabel="Apply previous plan"
+        onConfirm={applyPriorVideoPlan}
+        onCancel={() => setPriorVideoPlanOpen(false)}
+      />
 
       {quickAddEpoch !== null && (
         <TaskTypeModal
@@ -1188,7 +1322,7 @@ const STATESCRIPT_NAMING_LABEL: Record<EpochGridRow['statescriptNaming'], string
 
 /** The unlinked half of the three-state vocabulary — a warning at worst, never an error. */
 const STATESCRIPT_UNLINKED_LABEL: Record<'expected' | 'not_expected', string> = {
-  expected: 'Expected',
+  expected: 'Optional log not added',
   not_expected: 'Not expected',
 };
 
@@ -1220,7 +1354,7 @@ function EpochRowBlock(p: EpochRowProps) {
     row.videoPresence === 'absent'
       ? 'No video'
       : row.videoPresence === 'missing'
-        ? 'Missing'
+        ? 'Decision needed'
         : `${row.videos.length} ${pluralize(row.videos.length, 'video')}`;
   const statescript = statescriptCell(row);
   const videoSummaryClass =
@@ -1269,7 +1403,7 @@ function EpochRowBlock(p: EpochRowProps) {
               aria-label={`${isActive ? 'Hide' : 'Show'} epoch ${row.epoch} details`}
               onClick={p.onToggle}
             >
-              <span>{isActive ? 'Hide' : 'Details'}</span>
+              <span>{isActive ? 'Hide' : 'Review'}</span>
               <span className={styles.editChevron} aria-hidden="true">{isActive ? '▴' : '▾'}</span>
             </button>
           </div>
@@ -1297,31 +1431,15 @@ function EpochRowBlock(p: EpochRowProps) {
       )}
       <td className={styles.menuCell}>
         <div className={styles.rowActionGroup} role="group" aria-label={`Epoch ${row.epoch} structure actions`}>
-          <button
-            type="button"
-            className={styles.rowIconButton}
-            aria-label={`Move epoch ${row.epoch} up`}
-            title="Move up"
-            onClick={p.onMoveUp}
-          >
-            <FontAwesomeIcon icon={faArrowUp} aria-hidden="true" />
-          </button>
-          <button
-            type="button"
-            className={styles.rowIconButton}
-            aria-label={`Move epoch ${row.epoch} down`}
-            title="Move down"
-            onClick={p.onMoveDown}
-          >
-            <FontAwesomeIcon icon={faArrowDown} aria-hidden="true" />
-          </button>
           <OverflowMenu
             label={`More actions for epoch ${row.epoch}`}
             buttonClassName={styles.menuButton}
             items={[
+              { key: 'up', label: `Move epoch ${row.epoch} up`, onSelect: p.onMoveUp },
+              { key: 'down', label: `Move epoch ${row.epoch} down`, onSelect: p.onMoveDown },
               { key: 'insert', label: 'Insert epoch after', onSelect: p.onInsertAfter },
               { key: 'duplicate', label: 'Duplicate epoch', onSelect: p.onDuplicate },
-              { key: 'delete', label: `Delete epoch ${row.epoch}`, onSelect: p.onDelete },
+              { key: 'delete', label: `Delete epoch ${row.epoch}`, onSelect: p.onDelete, separatorBefore: true },
             ]}
           />
         </div>
@@ -1343,7 +1461,7 @@ function EpochDetailsPanel(p: EpochDetailsPanelProps) {
   useEffect(() => setEditingContext(false), [row.epoch]);
   const hasManualVideo = row.videos.some((v) => p.manualVideoKeys.has(`e${row.epoch}-v${v.index}`));
   const generatedFilesNeedReview =
-    !row.statescript ||
+    row.statescriptState === 'expected' ||
     row.statescriptNaming === 'manual' ||
     row.videoPresence !== 'present' ||
     hasManualVideo;
@@ -1371,7 +1489,7 @@ function EpochDetailsPanel(p: EpochDetailsPanelProps) {
     row.videoPresence === 'absent'
       ? 'No video'
       : row.videoPresence === 'missing'
-        ? 'Missing'
+        ? 'Decision needed'
         : hasManualVideo
           ? 'Manual'
           : `${row.videos.length} ${pluralize(row.videos.length, 'video')}`;
@@ -1456,7 +1574,7 @@ function EpochDetailsPanel(p: EpochDetailsPanelProps) {
           <div className={styles.panelGroupHeader}>
             <h3 id={`epoch-${row.epoch}-files-heading`} className={styles.groupHeading}>Files for this epoch</h3>
             <span className={styles.generatedStatus}>
-              {generatedFilesNeedReview ? 'needs review' : 'generated'}
+              {generatedFilesNeedReview ? 'action available' : 'complete'}
             </span>
           </div>
           <div className={styles.generatedContent}>
@@ -1503,10 +1621,10 @@ function EpochDetailsPanel(p: EpochDetailsPanelProps) {
                     </>
                   ) : (
                     <>
-                      <code className={styles.pathValue}>Expected: {expectedStatescriptPath}</code>
+                      <code className={styles.pathValue}>Suggested name: {expectedStatescriptPath}</code>
                       <div className={styles.fileActions}>
                         <button type="button" className={styles.filePrimaryAction} onClick={p.onAddStatescript}>
-                          Add expected statescript
+                          Add optional statescript
                         </button>
                         <button
                           type="button"
@@ -1566,10 +1684,10 @@ function EpochDetailsPanel(p: EpochDetailsPanelProps) {
                   )}
                   {row.videoPresence === 'missing' && (
                     <>
-                      <code className={styles.pathValue}>Expected: {expectedVideoName}</code>
+                      <code className={styles.pathValue}>Expected name: {expectedVideoName}</code>
                       <div className={styles.fileActions}>
                         <button type="button" className={styles.filePrimaryAction} onClick={p.onAddVideo}>
-                          Add expected video
+                          Add video entry
                         </button>
                         <button
                           type="button"

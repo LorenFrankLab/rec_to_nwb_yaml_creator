@@ -79,11 +79,11 @@ interface EpochStatusPillProps {
  */
 export const EpochStatusPill = ({ status, fileReminder = false }: EpochStatusPillProps) => {
   const reminder = status === 'complete' && fileReminder;
-  const classes = [styles.pill, reminder ? styles.needsVideo : EPOCH_CLASS[status] ?? styles.incomplete].filter(Boolean).join(' ');
+  const classes = [styles.pill, reminder ? styles.optional : EPOCH_CLASS[status] ?? styles.incomplete].filter(Boolean).join(' ');
   return (
     <span className={classes}>
       <span className={styles.dot} aria-hidden="true" />
-      {reminder ? 'Review optional log' : EPOCH_LABEL[status]}
+      {reminder ? 'Optional statescript available' : EPOCH_LABEL[status]}
     </span>
   );
 };

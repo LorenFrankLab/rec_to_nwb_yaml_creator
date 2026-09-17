@@ -37,10 +37,16 @@ function renderSection(focusRequest = null) {
 }
 
 describe('TasksFilesSection', () => {
-  it('keeps supplemental files visible below the epoch workspace by default', async () => {
+  it('keeps the advanced file editor collapsed when saved files are already assigned', async () => {
+    const user = userEvent.setup();
     renderSection();
 
-    const section = screen.getByRole('heading', { name: /manage files/i }).closest('section');
+    const summary = screen.getByText(/Other files & advanced file editing/i);
+    const disclosure = summary.closest('details');
+    expect(disclosure).not.toHaveAttribute('open');
+
+    await user.click(summary);
+    const section = screen.getByRole('heading', { name: /other files and advanced editing/i }).closest('section');
     expect(section).toBeInTheDocument();
     expect(section).toHaveAttribute('tabindex', '-1');
     expect(section).toHaveTextContent(/6 files/i);
@@ -51,12 +57,14 @@ describe('TasksFilesSection', () => {
     const { container } = renderSection({ fieldPath: 'associated_files[1].path', token: 1 });
 
     expect(container.querySelector('[data-field-path="associated_files[1].path"]')).toBeInTheDocument();
+    expect(screen.getByText(/Other files & advanced file editing/i).closest('details')).toHaveAttribute('open');
   });
 
   it('renders the supplemental files editor and writes associated_files', async () => {
     const user = userEvent.setup();
     const { onFieldUpdate } = renderSection();
-    const section = screen.getByRole('heading', { name: /manage files/i }).closest('section');
+    await user.click(screen.getByText(/Other files & advanced file editing/i));
+    const section = screen.getByRole('heading', { name: /other files and advanced editing/i }).closest('section');
 
     await user.click(within(section).getByRole('button', { name: /custom file/i }));
 

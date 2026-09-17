@@ -73,7 +73,7 @@ describe('focused-field save (F3)', () => {
       </StoreProvider>
     );
 
-    const box = await screen.findByLabelText(/session description/i);
+    const box = await screen.findByLabelText(/recording notes/i);
     box.focus();
     fireEvent.change(box, { target: { value: 'Typed but not blurred' } });
 
@@ -96,7 +96,7 @@ describe('focused-field save (F3)', () => {
         <AppLayout />
       </StoreProvider>
     );
-    const reloaded = await screen.findByLabelText(/session description/i);
+    const reloaded = await screen.findByLabelText(/recording notes/i);
     expect(reloaded.value).toBe('Typed but not blurred');
   });
 
@@ -108,7 +108,7 @@ describe('focused-field save (F3)', () => {
         <AppLayout />
       </StoreProvider>
     );
-    const box = await screen.findByLabelText(/session description/i);
+    const box = await screen.findByLabelText(/recording notes/i);
     fireEvent.change(box, { target: { value: 'Closing the tab' } });
     expect(storedDescription(day.id)).not.toBe('Closing the tab');
     await act(async () => {
@@ -126,7 +126,7 @@ describe('focused-field save (F3)', () => {
         <AppLayout />
       </StoreProvider>
     );
-    const box = await screen.findByLabelText(/session description/i);
+    const box = await screen.findByLabelText(/recording notes/i);
     fireEvent.change(box, { target: { value: 'Paused typing' } });
     await act(async () => {
       // draft debounce (400ms)

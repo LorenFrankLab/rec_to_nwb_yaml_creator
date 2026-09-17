@@ -129,11 +129,24 @@ export default function DayTab(props: DayTabProps) {
     setChangeSourceOpen(false);
   };
 
-  const weightHelp =
-    overviewField('session.weight')?.helpText ??
-    (session.weight !== undefined
-      ? 'Weight measured on this day — the value exported for this day.'
-      : 'No weight entered for this day — required for export.');
+  const weightHelp = (() => {
+    if (typeof session.weight === 'number' && Number.isFinite(session.weight)) {
+      if (suggestion?.source === 'previous-day') {
+        return `Saved for ${day.date}. Previous measurement: ${suggestion.weight} g on ${suggestion.date}.`;
+      }
+      if (suggestion?.source === 'animal-baseline') {
+        return `Saved for ${day.date}. Baseline at setup: ${suggestion.weight} g.`;
+      }
+      return overviewField('session.weight')?.helpText ?? `Saved for ${day.date}.`;
+    }
+    if (suggestion?.source === 'previous-day') {
+      return `Previous measurement: ${suggestion.weight} g on ${suggestion.date}. Enter the measurement for ${day.date}.`;
+    }
+    if (suggestion?.source === 'animal-baseline') {
+      return `Baseline at setup: ${suggestion.weight} g. Enter the measurement for ${day.date}.`;
+    }
+    return overviewField('session.weight')?.helpText ?? 'No weight entered for this day — required for export.';
+  })();
 
   return (
     <div className="overview-step">
@@ -156,57 +169,41 @@ export default function DayTab(props: DayTabProps) {
         <div className="daily-setup-header">
           <h2 id="daily-log-heading">Daily log</h2>
           <p className="daily-setup-lede">Enter this recording’s measurement, then review its epochs and files. Changes save automatically.</p>
-
         </div>
 
         <div className="daily-setup-stack">
-          <div className="daily-log-primary-grid">
-            <div className="daily-setup-group daily-setup-group-primary">
-              <div className="form-field">
-                <label htmlFor="session-weight" className="required">
-                  Weight measured on {day.date} (grams)
-                </label>
-                <div className="daily-log-weight-row">
-                  <DraftNumberInput
-                    draftKey={draftKey('session.weight')}
-                    id="session-weight"
-                    min="0"
-                    step="any"
-                    name="session.weight"
-                    data-field-path="session.weight"
-                    value={typeof session.weight === 'number' ? session.weight : undefined}
-                    onCommit={(value) => onFieldUpdate('session.weight', value)}
-                    aria-describedby="session-weight-help"
-                    aria-required="true"
-                    placeholder="e.g. 450"
-                  />
-
+          <section className="daily-log-today" aria-labelledby="daily-log-today-heading">
+            <h3 id="daily-log-today-heading">Today</h3>
+            <div className="daily-log-primary-grid">
+              <div className="daily-setup-group daily-setup-group-primary">
+                <div className="form-field">
+                  <label htmlFor="session-weight" className="required">
+                    Weight measured on {day.date} (grams)
+                  </label>
+                  <div className="daily-log-weight-row">
+                    <DraftNumberInput
+                      draftKey={draftKey('session.weight')}
+                      id="session-weight"
+                      min="0"
+                      step="any"
+                      name="session.weight"
+                      data-field-path="session.weight"
+                      value={typeof session.weight === 'number' ? session.weight : undefined}
+                      onCommit={(value) => onFieldUpdate('session.weight', value)}
+                      aria-describedby="session-weight-help"
+                      aria-required="true"
+                      placeholder="e.g. 450"
+                    />
+                  </div>
+                  <span id="session-weight-help" className="field-help-text">
+                    {weightHelp}
+                  </span>
                 </div>
-                <span id="session-weight-help" className="field-help-text">
-                  {suggestion
-                    ? suggestion.source === 'previous-day'
-                      ? `Previous measurement: ${suggestion.weight} g on ${suggestion.date}. Enter the measurement for ${day.date}.`
-                      : `Baseline at setup: ${suggestion.weight} g. Enter the measurement for ${day.date}.`
-                    : weightHelp}
-                </span>
               </div>
-            </div>
-
-
-          </div>
-
-
-
-          {/* The epoch sequence editor — the same component as the Tasks & Files section. */}
-          <div className="daily-log-epochs">
-            <TasksFilesSection {...props} focusRequest={props.focusRequest ?? null} />
-          </div>
-
-          <details className="daily-setup-group" open={!session.session_description || undefined}>
-            <summary>Session description / notes</summary>
+              <div className="daily-setup-group daily-setup-group-primary daily-log-notes">
                 <div className="form-field">
                   <label htmlFor="session-description" className="required">
-                    Session Description
+                    Recording notes
                   </label>
                   <DraftTextArea
                     draftKey={draftKey('session.session_description')}
@@ -219,31 +216,52 @@ export default function DayTab(props: DayTabProps) {
                     onBlurValue={(value) => handleBlur('session.session_description', value)}
                     className={fieldErrors['session.session_description'] ? 'invalid' : ''}
                     aria-invalid={!!fieldErrors['session.session_description']}
-                    aria-describedby={
-                      fieldErrors['session.session_description'] ? 'session-description-error' : undefined
-                    }
+                    aria-describedby={fieldErrors['session.session_description']
+                      ? 'session-description-help session-description-error'
+                      : 'session-description-help'}
                     required
                     aria-required="true"
                   />
+                  <span id="session-description-help" className="field-help-text">
+                    Briefly describe this recording day. Saved as the NWB session description.
+                  </span>
                   {fieldErrors['session.session_description'] && (
                     <span id="session-description-error" className="validation-error" role="alert">
                       {fieldErrors['session.session_description'].message}
                     </span>
                   )}
                 </div>
+              </div>
+            </div>
+          </section>
 
-          </details>
+          {/* The epoch sequence editor — the same component as the Tasks & Files section. */}
+          <div className="daily-log-epochs">
+            <TasksFilesSection {...props} focusRequest={props.focusRequest ?? null} />
+          </div>
 
           <details className="daily-log-context" open={teamNames.length === 0 || teamOpen || undefined}>
-            <summary>Recording details{teamNames.length === 0 ? ' · experimenters to enter' : teamException ? ' · experimenter exception' : ''}</summary>
-          <DayProvenanceLine
-            animal={animal}
-            day={day}
-            onChangeSource={animalDays.length > 1 ? () => setChangeSourceOpen(true) : undefined}
-            onChangeSetup={onGoToRecordingSetup}
-          />
-            <details className="daily-setup-group" open={teamOpen} onToggle={(event) => setTeamOpen(event.currentTarget.open)}>
-              <summary>Experimenters: {teamNames.join('; ') || 'To enter'}{teamException && teamNames.length > 0 ? ' · differs from usual team' : ''}</summary>
+            <summary>
+              People &amp; copied settings · {teamNames.length === 0 ? 'experimenters to enter' : teamException ? 'team differs today' : 'usual team'}
+            </summary>
+            <DayProvenanceLine
+              animal={animal}
+              day={day}
+              onChangeSource={animalDays.length > 1 ? () => setChangeSourceOpen(true) : undefined}
+              onChangeSetup={onGoToRecordingSetup}
+            />
+            <div className="daily-log-team-summary">
+              <div>
+                <h3>Experimenters present</h3>
+                <p>{teamNames.join('; ') || 'No experimenters entered'}</p>
+              </div>
+              {teamNames.length > 0 && (
+                <Button variant="secondary" size="small" onClick={() => setTeamOpen((open) => !open)}>
+                  {teamOpen ? 'Hide team editor' : 'Change for this day'}
+                </Button>
+              )}
+            </div>
+            {(teamOpen || teamNames.length === 0) && (
               <div className="form-field">
                 <label htmlFor="day-team-names" className="required">
                   Experimenters present (one per line, &quot;Last, First&quot;)
@@ -272,13 +290,13 @@ export default function DayTab(props: DayTabProps) {
                     : 'This day’s actual team. Changing it here affects this day only.'}
                 </span>
               </div>
-            </details>
+            )}
           </details>
 
-          <details className="daily-setup-group daily-log-more" open={!session.experiment_description || !team.lab || !team.institution || undefined}>
+          <details className="daily-setup-group daily-log-more" open={!session.experiment_description || undefined}>
             <summary className="inherited-metadata-toggle">
               <span className="toggle-icon" aria-hidden="true">▶</span>
-              Experiment details &amp; search terms
+              Experiment description{session.experiment_description ? ' · inherited for this recording' : ' · required'}
             </summary>
             <div className="daily-setup-stack">
               <div className="form-grid daily-setup-description-grid">
@@ -322,39 +340,33 @@ export default function DayTab(props: DayTabProps) {
                 </div>
               </div>
 
+            </div>
+          </details>
+
+          <details className="daily-setup-group daily-log-more">
+            <summary className="inherited-metadata-toggle">
+              <span className="toggle-icon" aria-hidden="true">▶</span>
+              Lab, institution &amp; optional search terms
+            </summary>
+            <div className="daily-setup-stack">
               <div className="daily-setup-secondary-grid">
                 <div className="daily-setup-group">
-                  <div className="daily-setup-group-header">
-                    <h3>Search terms</h3>
-                  </div>
+                  <div className="daily-setup-group-header"><h3>Search terms</h3></div>
                   <KeywordsEditor value={keywords} onChange={(next) => onFieldUpdate('keywords', next)} />
                 </div>
               </div>
-
               <div className="form-grid daily-setup-description-grid">
                 <div className="form-field">
                   <label htmlFor="day-team-lab">Lab</label>
-                  <DraftTextInput
-                    draftKey={draftKey('experimenters.lab')}
-                    id="day-team-lab"
-                    type="text"
-                    name="experimenters.lab"
-                    data-field-path="lab"
-                    value={team.lab ?? ''}
-                    onCommit={(value) => commitTeam({ lab: value })}
-                  />
+                  <DraftTextInput draftKey={draftKey('experimenters.lab')} id="day-team-lab" type="text"
+                    name="experimenters.lab" data-field-path="lab" value={team.lab ?? ''}
+                    onCommit={(value) => commitTeam({ lab: value })} />
                 </div>
                 <div className="form-field">
                   <label htmlFor="day-team-institution">Institution</label>
-                  <DraftTextInput
-                    draftKey={draftKey('experimenters.institution')}
-                    id="day-team-institution"
-                    type="text"
-                    name="experimenters.institution"
-                    data-field-path="institution"
-                    value={team.institution ?? ''}
-                    onCommit={(value) => commitTeam({ institution: value })}
-                  />
+                  <DraftTextInput draftKey={draftKey('experimenters.institution')} id="day-team-institution" type="text"
+                    name="experimenters.institution" data-field-path="institution" value={team.institution ?? ''}
+                    onCommit={(value) => commitTeam({ institution: value })} />
                 </div>
               </div>
             </div>

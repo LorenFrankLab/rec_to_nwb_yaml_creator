@@ -2,7 +2,6 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import EpochsTab from './EpochsTab';
 import AssociatedFilesEditor, { collectValidEpochs } from './AssociatedFilesEditor';
 import AssociatedVideosEditor from './AssociatedVideosEditor';
-import { getIndexedSupplementalFiles } from '../../domain/associatedFiles';
 import { getAnimalCameras, getDayAssociatedFiles, getDayAssociatedVideos } from '../../state/workspaceSelectors';
 import { useDayEditorContext } from './DayEditorContext';
 import type { DayEditorBundle } from './DayEditorContext';
@@ -36,7 +35,10 @@ export default function TasksFilesSection(props: TasksFilesSectionProps) {
   const unassignedCount = [...files, ...videos].filter((file) =>
     file.task_epochs === '' || file.task_epochs == null || !validEpochs.includes(Number(file.task_epochs))
   ).length;
-  const [managerOpen, setManagerOpen] = useState(getIndexedSupplementalFiles(files).length > 0 || unassignedCount > 0);
+  // The complete manager duplicates the routine per-epoch file controls and can become several
+  // screens tall. Keep it closed for ordinary saved files; open it automatically only when a file
+  // cannot be reached from an epoch or a repair link targets it.
+  const [managerOpen, setManagerOpen] = useState(unassignedCount > 0);
   const [manageRequest, setManageRequest] = useState<FocusRequest | null>(null);
   const managerRef = useRef<HTMLElement>(null);
   const fileRepair = /^associated_(?:video_)?files(?:\[|$)/.test(focusRequest?.fieldPath ?? '');
@@ -63,7 +65,7 @@ export default function TasksFilesSection(props: TasksFilesSectionProps) {
 
       <details className="supplemental-disclosure" open={managerOpen}
         onToggle={(event) => setManagerOpen(event.currentTarget.open)}>
-        <summary>Manage files &amp; add supplemental files · {fileCount} {pluralize(fileCount, 'file')}{unassignedCount > 0 ? ` · ${unassignedCount} need an epoch` : ''}</summary>
+        <summary>Other files &amp; advanced file editing · {fileCount} saved{unassignedCount > 0 ? ` · ${unassignedCount} need an epoch` : ''}</summary>
         <section
           ref={managerRef}
           id="other-associated-files"
@@ -73,9 +75,9 @@ export default function TasksFilesSection(props: TasksFilesSectionProps) {
         >
           <div className="supplemental-files-header">
             <div>
-              <h2 id="supplemental-files-heading">Manage files</h2>
+              <h2 id="supplemental-files-heading">Other files and advanced editing</h2>
               <p>
-                Edit or remove any statescript, supplemental file or video. Changes apply to this recording day only.
+                Add supplemental files, or edit any saved file directly. Routine video and statescript entry stays in each epoch.
               </p>
             </div>
             <span className="supplemental-files-badge">

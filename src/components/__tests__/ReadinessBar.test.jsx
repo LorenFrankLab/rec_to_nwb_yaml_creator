@@ -99,7 +99,7 @@ describe('ReadinessBar (issue-driven export readiness)', () => {
       ...[1, 2, 3, 4].map((epoch) => ({ severity: 'error', code: 'epoch_video_undeclared', message: `Epoch ${epoch} needs a video` })),
     ]} onFix={vi.fn()} onReview={onReview} exportGate={{ open: false, message: 'Complete the entries' }} />);
     expect(screen.getByRole('status')).toHaveTextContent('To finish');
-    expect(screen.getByText(/Weight · 4 epochs need video files/)).toBeVisible();
+    expect(screen.getByText(/Weight · 4 epochs need a video decision/)).toBeVisible();
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
     expect(screen.queryByText('Epoch 1 needs a video')).not.toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Review & export' }));

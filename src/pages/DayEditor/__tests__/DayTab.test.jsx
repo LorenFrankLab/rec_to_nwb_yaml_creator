@@ -84,7 +84,7 @@ describe('DayTab', () => {
     );
   });
 
-  it('puts weight and team first, the epoch editor next, and the rarely-changed fields + read-only context collapsed below', () => {
+  it('puts today’s weight and notes first, then epochs, with stable context below', () => {
     render(
       <DayTab
         animal={mockAnimal}
@@ -96,28 +96,32 @@ describe('DayTab', () => {
 
     expect(screen.getByTestId('day-provenance')).toBeInTheDocument();
     expect(screen.getByLabelText(/Weight measured on/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/Experimenters present/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Recording notes/i)).toBeRequired();
+    expect(screen.queryByLabelText(/Experimenters present/i)).not.toBeInTheDocument();
     expect(screen.queryByLabelText(/Data folder/i)).not.toBeInTheDocument();
-    expect(screen.getByLabelText(/Session Description/i)).toBeRequired();
     expect(screen.getByLabelText(/Experiment Description/i)).toBeRequired();
     expect(screen.getByRole('heading', { name: /search terms/i })).toBeInTheDocument();
     expect(screen.queryByText(/start here/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/export required/i)).not.toBeInTheDocument();
 
     const weight = screen.getByLabelText(/Weight measured on/i);
-    const team = screen.getByLabelText(/Experimenters present/i);
+    const notes = screen.getByLabelText(/Recording notes/i);
     const epochs = screen.getByRole('heading', { name: /^epochs$/i });
-    const more = screen.getByText(/Experiment details & search terms/i);
-    const sessionDescription = screen.getByLabelText(/Session Description/i);
+    const people = screen.getByText(/People & copied settings/i);
+    const experiment = screen.getByText(/Experiment description · required/i);
+    const optional = screen.getByText(/Lab, institution & optional search terms/i);
     const context = screen.getByText(/session identity and animal context/i);
     const sessionId = screen.getByDisplayValue('remy_20230622');
 
-    expect(weight.compareDocumentPosition(team) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(epochs.compareDocumentPosition(team) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(epochs.compareDocumentPosition(more) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(sessionDescription.compareDocumentPosition(more) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(sessionDescription.compareDocumentPosition(context) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(more.closest('details')).toHaveAttribute('open'); // Required experiment description is missing.
+    expect(weight.compareDocumentPosition(notes) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(notes.compareDocumentPosition(epochs) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(epochs.compareDocumentPosition(people) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(people.compareDocumentPosition(experiment) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(experiment.compareDocumentPosition(optional) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(optional.compareDocumentPosition(context) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(people.closest('details')).not.toHaveAttribute('open');
+    expect(experiment.closest('details')).toHaveAttribute('open'); // Required experiment description is missing.
+    expect(optional.closest('details')).not.toHaveAttribute('open');
     expect(context.closest('details')).not.toHaveAttribute('open');
     expect(sessionId).not.toBeVisible();
   });
@@ -175,11 +179,28 @@ describe('DayTab', () => {
     expect(screen.getByText(/baseline at setup: 450 g/i)).toBeInTheDocument();
   });
 
+  it('marks an entered daily weight as saved instead of prompting for another measurement', () => {
+    const dayWithWeight = { ...mockDay, session: { ...mockDay.session, weight: 412 } };
+    render(
+      <DayTab
+        animal={mockAnimal}
+        day={dayWithWeight}
+        mergedDay={{ ...mockMergedDay, weight: 412 }}
+        onFieldUpdate={vi.fn()}
+      />
+    );
+
+    expect(screen.getByText(/saved for 2023-06-22/i)).toBeInTheDocument();
+    expect(screen.queryByText(/enter the measurement for 2023-06-22/i)).not.toBeInTheDocument();
+  });
+
   it('edits the DAY\u2019s team (one name per line) and writes day.experimenters', async () => {
     const user = userEvent.setup();
     const onFieldUpdate = vi.fn();
     const dayWithTeam = { ...mockDay, experimenters: { experimenter_name: ['Doe, Jane'], lab: 'L', institution: 'I' } };
     render(<DayTab animal={mockAnimal} day={dayWithTeam} mergedDay={mockMergedDay} onFieldUpdate={onFieldUpdate} />);
+    await user.click(screen.getByText(/People & copied settings/i));
+    await user.click(screen.getByRole('button', { name: /Change for this day/i }));
     const box = screen.getByLabelText(/experimenters present/i);
     expect(box).toHaveValue('Doe, Jane');
     await user.type(box, '\nRoe, Richard');
@@ -212,6 +233,7 @@ describe('DayTab', () => {
       />
     );
 
+    await user.click(screen.getByText(/Lab, institution & optional search terms/i));
     await user.type(screen.getByRole('textbox', { name: /keywords/i }), 'spatial');
     await user.click(screen.getByRole('button', { name: /add keyword/i }));
 
@@ -231,7 +253,7 @@ describe('DayTab', () => {
       />
     );
 
-    const sessionDescriptionInput = screen.getByLabelText(/Session Description/i);
+    const sessionDescriptionInput = screen.getByLabelText(/Recording notes/i);
     await user.clear(sessionDescriptionInput);
     await user.type(sessionDescriptionInput, 'Updated description');
     await user.tab();
@@ -317,6 +339,7 @@ describe('DayTab', () => {
       />
     );
 
+    await user.click(screen.getByText(/Experiment description · inherited/i));
     const field = screen.getByLabelText(/Experiment Description/i);
     await user.clear(field);
     await user.tab();
