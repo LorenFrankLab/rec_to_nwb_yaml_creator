@@ -1,0 +1,4 @@
+model: any
+selectors: any
+actions: any
+persistence: WorkspacePersistence

@@ -1,0 +1,349 @@
+{
+  "pynwb_validation": [],
+  "inspector_counts": {
+    "BEST_PRACTICE_SUGGESTION": 53
+  },
+  "inspector_messages": [
+    {
+      "importance": "BEST_PRACTICE_SUGGESTION",
+      "check": "check_description",
+      "message": "Description is missing."
+    },
+    {
+      "importance": "BEST_PRACTICE_SUGGESTION",
+      "check": "check_description",
+      "message": "Description is missing."
+    },
+    {
+      "importance": "BEST_PRACTICE_SUGGESTION",
+      "check": "check_description",
+      "message": "Description is missing."
+    },
+    {
+      "importance": "BEST_PRACTICE_SUGGESTION",
+      "check": "check_description",
+      "message": "Description is missing."
+    },
+    {
+      "importance": "BEST_PRACTICE_SUGGESTION",
+      "check": "check_description",
+      "message": "Description is missing."
+    },
+    {
+      "importance": "BEST_PRACTICE_SUGGESTION",
+      "check": "check_description",
+      "message": "Description is missing."
+    },
+    {
+      "importance": "BEST_PRACTICE_SUGGESTION",
+      "check": "check_description",
+      "message": "Description is missing."
+    },
+    {
+      "importance": "BEST_PRACTICE_SUGGESTION",
+      "check": "check_description",
+      "message": "Description is missing."
+    },
+    {
+      "importance": "BEST_PRACTICE_SUGGESTION",
+      "check": "check_description",
+      "message": "Description is missing."
+    },
+    {
+      "importance": "BEST_PRACTICE_SUGGESTION",
+      "check": "check_description",
+      "message": "Description is missing."
+    },
+    {
+      "importance": "BEST_PRACTICE_SUGGESTION",
+      "check": "check_description",
+      "message": "Description is missing."
+    },
+    {
+      "importance": "BEST_PRACTICE_SUGGESTION",
+      "check": "check_description",
+      "message": "Description is missing."
+    },
+    {
+      "importance": "BEST_PRACTICE_SUGGESTION",
+      "check": "check_description",
+      "message": "Description is missing."
+    },
+    {
+      "importance": "BEST_PRACTICE_SUGGESTION",
+      "check": "check_description",
+      "message": "Description is missing."
+    },
+    {
+      "importance": "BEST_PRACTICE_SUGGESTION",
+      "check": "check_description",
+      "message": "Description is missing."
+    },
+    {
+      "importance": "BEST_PRACTICE_SUGGESTION",
+      "check": "check_description",
+      "message": "Description is missing."
+    },
+    {
+      "importance": "BEST_PRACTICE_SUGGESTION",
+      "check": "check_description",
+      "message": "Description is missing."
+    },
+    {
+      "importance": "BEST_PRACTICE_SUGGESTION",
+      "check": "check_description",
+      "message": "Description is missing."
+    },
+    {
+      "importance": "BEST_PRACTICE_SUGGESTION",
+      "check": "check_description",
+      "message": "Description is missing."
+    },
+    {
+      "importance": "BEST_PRACTICE_SUGGESTION",
+      "check": "check_description",
+      "message": "Description is missing."
+    },
+    {
+      "importance": "BEST_PRACTICE_SUGGESTION",
+      "check": "check_description",
+      "message": "Description is missing."
+    },
+    {
+      "importance": "BEST_PRACTICE_SUGGESTION",
+      "check": "check_description",
+      "message": "Description is missing."
+    },
+    {
+      "importance": "BEST_PRACTICE_SUGGESTION",
+      "check": "check_description",
+      "message": "Description is missing."
+    },
+    {
+      "importance": "BEST_PRACTICE_SUGGESTION",
+      "check": "check_description",
+      "message": "Description is missing."
+    },
+    {
+      "importance": "BEST_PRACTICE_SUGGESTION",
+      "check": "check_description",
+      "message": "Description is missing."
+    },
+    {
+      "importance": "BEST_PRACTICE_SUGGESTION",
+      "check": "check_description",
+      "message": "Description is missing."
+    },
+    {
+      "importance": "BEST_PRACTICE_SUGGESTION",
+      "check": "check_description",
+      "message": "Description is missing."
+    },
+    {
+      "importance": "BEST_PRACTICE_SUGGESTION",
+      "check": "check_description",
+      "message": "Description is missing."
+    },
+    {
+      "importance": "BEST_PRACTICE_SUGGESTION",
+      "check": "check_description",
+      "message": "Description is missing."
+    },
+    {
+      "importance": "BEST_PRACTICE_SUGGESTION",
+      "check": "check_description",
+      "message": "Description is missing."
+    },
+    {
+      "importance": "BEST_PRACTICE_SUGGESTION",
+      "check": "check_description",
+      "message": "Description is missing."
+    },
+    {
+      "importance": "BEST_PRACTICE_SUGGESTION",
+      "check": "check_description",
+      "message": "Description is missing."
+    },
+    {
+      "importance": "BEST_PRACTICE_SUGGESTION",
+      "check": "check_description",
+      "message": "Description is missing."
+    },
+    {
+      "importance": "BEST_PRACTICE_SUGGESTION",
+      "check": "check_description",
+      "message": "Description is missing."
+    },
+    {
+      "importance": "BEST_PRACTICE_SUGGESTION",
+      "check": "check_description",
+      "message": "Description is missing."
+    },
+    {
+      "importance": "BEST_PRACTICE_SUGGESTION",
+      "check": "check_description",
+      "message": "Description is missing."
+    },
+    {
+      "importance": "BEST_PRACTICE_SUGGESTION",
+      "check": "check_description",
+      "message": "Description is missing."
+    },
+    {
+      "importance": "BEST_PRACTICE_SUGGESTION",
+      "check": "check_description",
+      "message": "Description is missing."
+    },
+    {
+      "importance": "BEST_PRACTICE_SUGGESTION",
+      "check": "check_description",
+      "message": "Description ('no description') is a placeholder."
+    },
+    {
+      "importance": "BEST_PRACTICE_SUGGESTION",
+      "check": "check_description",
+      "message": "Description ('no description') is a placeholder."
+    },
+    {
+      "importance": "BEST_PRACTICE_SUGGESTION",
+      "check": "check_description",
+      "message": "Description ('no description') is a placeholder."
+    },
+    {
+      "importance": "BEST_PRACTICE_SUGGESTION",
+      "check": "check_description",
+      "message": "Description ('no description') is a placeholder."
+    },
+    {
+      "importance": "BEST_PRACTICE_SUGGESTION",
+      "check": "check_description",
+      "message": "Description ('no description') is a placeholder."
+    },
+    {
+      "importance": "BEST_PRACTICE_SUGGESTION",
+      "check": "check_small_dataset_compression",
+      "message": "data is not compressed. Consider enabling compression when writing a dataset."
+    },
+    {
+      "importance": "BEST_PRACTICE_SUGGESTION",
+      "check": "check_keywords",
+      "message": "Metadata /general/keywords is missing."
+    },
+    {
+      "importance": "BEST_PRACTICE_SUGGESTION",
+      "check": "check_processing_module_name",
+      "message": "Processing module is named video_files. It is recommended to use the schema module names: ophys, ecephys, icephys, behavior, misc, ogen, retinotopy"
+    },
+    {
+      "importance": "BEST_PRACTICE_SUGGESTION",
+      "check": "check_processing_module_name",
+      "message": "Processing module is named tasks. It is recommended to use the schema module names: ophys, ecephys, icephys, behavior, misc, ogen, retinotopy"
+    },
+    {
+      "importance": "BEST_PRACTICE_SUGGESTION",
+      "check": "check_processing_module_name",
+      "message": "Processing module is named sample_count. It is recommended to use the schema module names: ophys, ecephys, icephys, behavior, misc, ogen, retinotopy"
+    },
+    {
+      "importance": "BEST_PRACTICE_SUGGESTION",
+      "check": "check_processing_module_name",
+      "message": "Processing module is named position_frame_index. It is recommended to use the schema module names: ophys, ecephys, icephys, behavior, misc, ogen, retinotopy"
+    },
+    {
+      "importance": "BEST_PRACTICE_SUGGESTION",
+      "check": "check_processing_module_name",
+      "message": "Processing module is named non_repeat_timestamp_labels. It is recommended to use the schema module names: ophys, ecephys, icephys, behavior, misc, ogen, retinotopy"
+    },
+    {
+      "importance": "BEST_PRACTICE_SUGGESTION",
+      "check": "check_processing_module_name",
+      "message": "Processing module is named associated_files. It is recommended to use the schema module names: ophys, ecephys, icephys, behavior, misc, ogen, retinotopy"
+    },
+    {
+      "importance": "BEST_PRACTICE_SUGGESTION",
+      "check": "check_processing_module_name",
+      "message": "Processing module is named analog. It is recommended to use the schema module names: ophys, ecephys, icephys, behavior, misc, ogen, retinotopy"
+    },
+    {
+      "importance": "BEST_PRACTICE_SUGGESTION",
+      "check": "check_single_row",
+      "message": "This table has only a single row; it may be better represented by another data type."
+    }
+  ],
+  "contents": {
+    "subject_id": "sample",
+    "weight": "100 g",
+    "electrodes": 128,
+    "electrode_groups": 32,
+    "epochs": 2,
+    "experimenter": [
+      "lastname, firstname",
+      "lastname2, firstname2"
+    ],
+    "devices": [
+      "camera_device 0",
+      "camera_device 1",
+      "dataacq_device0",
+      "header_device",
+      "probe 0",
+      "probe 1",
+      "probe 10",
+      "probe 11",
+      "probe 12",
+      "probe 13",
+      "probe 14",
+      "probe 15",
+      "probe 16",
+      "probe 17",
+      "probe 18",
+      "probe 19",
+      "probe 2",
+      "probe 20",
+      "probe 21",
+      "probe 22",
+      "probe 23",
+      "probe 24",
+      "probe 25",
+      "probe 26",
+      "probe 27",
+      "probe 28",
+      "probe 29",
+      "probe 3",
+      "probe 30",
+      "probe 31",
+      "probe 4",
+      "probe 5",
+      "probe 6",
+      "probe 7",
+      "probe 8",
+      "probe 9"
+    ],
+    "processing": [
+      "analog",
+      "associated_files",
+      "behavior",
+      "non_repeat_timestamp_labels",
+      "position_frame_index",
+      "sample_count",
+      "tasks",
+      "video_files"
+    ],
+    "acquisition": [
+      "e-series"
+    ],
+    "associated_files": [
+      {
+        "name": "20230622_sample_01_a1.stateScriptLog",
+        "description": "statescript log",
+        "content_length": 4289,
+        "task_epochs": "1, "
+      },
+      {
+        "name": "20230622_sample_02_a1.stateScriptLog",
+        "description": "statescript log",
+        "content_length": 3755,
+        "task_epochs": "2, "
+      }
+    ]
+  }
+}

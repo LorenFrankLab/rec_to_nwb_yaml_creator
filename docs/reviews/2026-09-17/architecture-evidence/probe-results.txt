@@ -1,0 +1,24 @@
+
+ RUN  v4.0.1 /Users/edeno/Documents/GitHub/rec_to_nwb_yaml_creator
+
+(node:48371) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+stdout | src/__tests__/architectureReview.probe.test.jsx > architecture review probes — current behavior > a rejected commit clears the registry dirty flag
+DRAFT_REJECTION { displayed: 'new', pending: false, committed: 'old' }
+
+stdout | src/__tests__/architectureReview.probe.test.jsx > architecture review probes — current behavior > two writes through the frame can overwrite an earlier sibling field edit
+SIBLING_WRITES {
+  firstRequested: 'description A',
+  firstActual: 'Day 45 of chronic recording, W-track alternation',
+  secondActual: 'description B'
+}
+
+stdout | src/__tests__/architectureReview.probe.test.jsx > architecture review probes — current behavior > the shared repair catalog still disagrees about the units fields
+UNIT_ROUTES [{"path":"units.analog","section":null,"target":{"surface":"day","step":"validation","label":"Fix in Review & export"}},{"path":"units.behavioral_events","section":"dio","target":{"surface":"day","step":"behavioral","label":"Fix in DIO Wiring"}}]
+
+ ✓ src/__tests__/architectureReview.probe.test.jsx (3 tests) 180ms
+
+ Test Files  1 passed (1)
+      Tests  3 passed (3)
+   Start at  10:32:11
+   Duration  1.60s (transform 605ms, setup 321ms, collect 669ms, tests 180ms, environment 344ms, prepare 3ms)

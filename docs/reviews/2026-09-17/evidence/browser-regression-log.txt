@@ -1,0 +1,545 @@
+(node:58312) [DEP0205] DeprecationWarning: `module.register()` is deprecated. Use `module.registerHooks()` instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+
+Running 59 tests using 3 workers
+
+(node:58315) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:58316) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:58314) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:58315) [DEP0205] DeprecationWarning: `module.register()` is deprecated. Use `module.registerHooks()` instead.
+(node:58316) [DEP0205] DeprecationWarning: `module.register()` is deprecated. Use `module.registerHooks()` instead.
+(node:58314) [DEP0205] DeprecationWarning: `module.register()` is deprecated. Use `module.registerHooks()` instead.
+(node:58315) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:58316) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:58314) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   2 e2e/workspace-design-entry.spec.js:6:7 › follow-up entry stays calm, usable and within the page at 390px (1.8s)
+  ✓   3 e2e/workspace-design-entry.spec.js:6:7 › follow-up entry stays calm, usable and within the page at 320px (2.2s)
+  ✓   5 e2e/workspace-design-entry.spec.js:36:5 › Add epoch is visible and preserves existing epochs and their files (633ms)
+  ✓   4 e2e/workspace-design-entry.spec.js:6:7 › follow-up entry stays calm, usable and within the page at 1440px (1.2s)
+  ✓   6 e2e/workspace-design-entry.spec.js:48:5 › camera headers and full hardware values remain readable on desktop (967ms)
+  ✓   7 e2e/workspace-design-entry.spec.js:69:5 › saving a first-time setup draft keeps the footer within a 320px screen (1.5s)
+  ✓   9 e2e/workspace-element-priority.spec.js:64:5 › batch selection defaults to pending files and all bulk entry points use review (1.2s)
+  ✓   8 e2e/workspace-element-priority.spec.js:19:5 › create, share, repair and remove a stimulation protocol entirely in the modern UI (2.9s)
+  ✓  11 e2e/workspace-element-priority.spec.js:128:5 › setup row menus remain reachable on a narrow screen (700ms)
+  ✓  10 e2e/workspace-element-priority.spec.js:100:5 › first-time behavior-only setup skips unused hardware and follows through to dated entry (1.8s)
+  ✓  12 e2e/workspace-export-gate.spec.js:82:7 › Fail-closed export gate + repair navigation › Export step shows a disabled Download and a blocking message with a repair action (1.0s)
+  ✓  13 e2e/workspace-export-gate.spec.js:109:7 › Fail-closed export gate + repair navigation › no download fires from the Export-step Download button while the day is invalid (2.5s)
+  ✓  14 e2e/workspace-export-gate.spec.js:124:7 › Fail-closed export gate + repair navigation › the Alt+ keyboard cycle reaches Review & export, and the gate still blocks (2.3s)
+  ✓  16 e2e/workspace-export-gate.spec.js:181:7 › Fail-closed export gate + repair navigation › the repair action deep-links to the owning animal Cameras tab and highlights the target (1.1s)
+  ✓  15 e2e/workspace-export-gate.spec.js:154:7 › Fail-closed export gate + repair navigation › per-animal "Export Valid Only" is disabled (with a reason) when the only day is in error (2.4s)
+  ✓  18 e2e/workspace-lifecycle.spec.js:69:7 › Animal lifecycle — create & switch › the top object-selector lists every animal with switch link + day count + per-row ⋮, and manages focus (829ms)
+  ✓  19 e2e/workspace-lifecycle.spec.js:104:7 › Animal lifecycle — create & switch › the picker-card / switcher-row / header ⋮ menus carry no dead "Rename…" placeholder (1.3s)
+  ✓  20 e2e/workspace-lifecycle.spec.js:135:7 › Animal lifecycle — destructive delete confirms › selector ⋮ → Delete animal… for a NON-current animal: type-to-confirm gate, cascade copy, stays put (1.2s)
+  ✓  21 e2e/workspace-lifecycle.spec.js:193:7 › Animal lifecycle — destructive delete confirms › header ⋮ → Delete animal… for the CURRENTLY-VIEWED animal: navigates to #/workspace, not a 404 (1.3s)
+  ✘  22 e2e/workspace-lifecycle.spec.js:223:7 › Day lifecycle — undo-able delete + cleanup coherence › OK day → ⋯ → Delete day…: deletes immediately (no typed gate) and Undo restores it (5.6s)
+(node:58911) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:58911) [DEP0205] DeprecationWarning: `module.register()` is deprecated. Use `module.registerHooks()` instead.
+(node:58911) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  23 e2e/workspace-lifecycle.spec.js:251:7 › Day lifecycle — undo-able delete + cleanup coherence › deleting one day via its ⋯ menu removes ONLY that day; a sibling day survives (773ms)
+  ✓  24 e2e/workspace-mistake-prevention.spec.js:44:7 › Mistake-prevention UX on high-risk edit surfaces › camera divergence: reusing a name with a different calibration is blocked and offers a new name (1.2s)
+  ✓  25 e2e/workspace-mistake-prevention.spec.js:96:7 › Mistake-prevention UX on high-risk edit surfaces › data-acq divergence: reusing a device name on another animal with different hardware is blocked (1.1s)
+  ✓  26 e2e/workspace-mistake-prevention.spec.js:144:7 › Mistake-prevention UX on high-risk edit surfaces › region case-drift: a case-only brain-region variant is canonicalized, not saved as a new region (1.6s)
+  ✓  27 e2e/workspace-mistake-prevention.spec.js:180:7 › Mistake-prevention UX on high-risk edit surfaces › controlled task/video references: camera + epoch are picked from known choices, never free-typed ids (992ms)
+  ✓  28 e2e/workspace-mistake-prevention.spec.js:212:7 › Mistake-prevention UX on high-risk edit surfaces › task-name divergence is structurally prevented: the day picks a type, and a duplicate name is blocked at the catalog (1.1s)
+  ✘   1 e2e/workspace-day-navigation.spec.js:17:7 › Day Editor — direct day-to-day navigation › a direct #/day/A → #/day/B hash change shows the NEW day's fields, never the prior day's (30.1s)
+(node:59105) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:59105) [DEP0205] DeprecationWarning: `module.register()` is deprecated. Use `module.registerHooks()` instead.
+(node:59105) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  29 e2e/workspace-mistake-prevention.spec.js:240:7 › Mistake-prevention UX on high-risk edit surfaces › behavioral events: the day owns a DIO wiring table grouped into Inputs/Outputs (no animal library) (857ms)
+  ✓  30 e2e/workspace-mistake-prevention.spec.js:275:7 › Mistake-prevention UX on high-risk edit surfaces › day technical values: rig constants read as effective recording-system values, not routine day edits (1.1s)
+  ✓  31 e2e/workspace-mistake-prevention.spec.js:317:5 › a statescript description repair focuses the required field and restores export (1.1s)
+  ✓  32 e2e/workspace-optogenetics.spec.js:130:7 › Optogenetics export gating and the two-layer opto model › opto OFF: the realistic day exports a clean no-opto state with no required-field noise (1.1s)
+  ✓  33 e2e/workspace-optogenetics.spec.js:166:7 › Optogenetics export gating and the two-layer opto model › opto ON but incomplete: the four sections are required and partial config BLOCKS export (1.2s)
+  ✓  34 e2e/workspace-optogenetics.spec.js:220:7 › Optogenetics export gating and the two-layer opto model › per-epoch optogenetics: power/pulse are controlled numeric inputs applied to a SELECTED epoch subset (1.2s)
+  ✓  35 e2e/workspace-optogenetics.spec.js:256:7 › Optogenetics export gating and the two-layer opto model › complete opto session exports BOTH converter and schema key spellings, fields non-empty (1.0s)
+  ✓  37 e2e/workspace-ownership.spec.js:90:7 › Ownership & discoverability — AnimalView header + section-nav + scope cues › section-nav is a landmark grouped "Day work" / "Animal setup" with name · count · › rows (986ms)
+  ✘  36 e2e/workspace-ownership.spec.js:76:7 › Ownership & discoverability — AnimalView header + section-nav + scope cues › header band shows the animal identity (name, animal ID badge, species · sex) and a ⋮ menu (6.0s)
+(node:59313) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:59313) [DEP0205] DeprecationWarning: `module.register()` is deprecated. Use `module.registerHooks()` instead.
+(node:59313) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  39 e2e/workspace-ownership.spec.js:124:7 › Ownership & discoverability — AnimalView header + section-nav + scope cues › behavior-only animal: optogenetics shows the neutral "Not used" chip (not an error) (719ms)
+  ✘  38 e2e/workspace-ownership.spec.js:115:7 › Ownership & discoverability — AnimalView header + section-nav + scope cues › each setup tab shows its scope descriptor (ownership / blast-radius framing) — VISIBLE (6.0s)
+(node:59357) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:59357) [DEP0205] DeprecationWarning: `module.register()` is deprecated. Use `module.registerHooks()` instead.
+(node:59357) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  17 e2e/workspace-lifecycle.spec.js:44:7 › Animal lifecycle — create & switch › "+ New Animal" routes to the guided create wizard and lands on the new animal (30.1s)
+(node:59368) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:59368) [DEP0205] DeprecationWarning: `module.register()` is deprecated. Use `module.registerHooks()` instead.
+(node:59368) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  41 e2e/workspace-ownership.spec.js:172:7 › Ownership & discoverability — AnimalView header + section-nav + scope cues › a camera missing meters_per_pixel: the Cameras nav row shows a blocking ● and the in-animal export-review link targets THIS animal (788ms)
+  ✓  42 e2e/workspace-ownership.spec.js:209:7 › Ownership & discoverability — AnimalView header + section-nav + scope cues › reconfiguration deep-link lands on the electrode-groups tab with the context banner and preserved params (958ms)
+  ✓  43 e2e/workspace-ownership.spec.js:249:7 › Section-nav: navigation, focus, and route guards (the jsdom-can't-prove core) › clicking a section-nav link updates the URL, sets aria-current, and MOVES FOCUS to the panel (906ms)
+  ✓  44 e2e/workspace-ownership.spec.js:269:7 › Section-nav: navigation, focus, and route guards (the jsdom-can't-prove core) › a setup editor (a focus-trapping Modal) blocks the section-nav — the overlay intercepts the click (2.8s)
+  ✘  40 e2e/workspace-ownership.spec.js:138:7 › Ownership & discoverability — AnimalView header + section-nav + scope cues › behavior-only animal: first-run "Set up this animal" card lists sections with honest hints and is NON-gating (5.6s)
+(node:59459) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  46 e2e/workspace-ownership.spec.js:311:7 › Section-nav: navigation, focus, and route guards (the jsdom-can't-prove core) › a cold deep-link to a non-existent animal renders a non-stranding "Animal not found" with a way out (686ms)
+(node:59459) [DEP0205] DeprecationWarning: `module.register()` is deprecated. Use `module.registerHooks()` instead.
+(node:59459) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  48 e2e/workspace-persistence.spec.js:13:7 › Workspace persistence › creating an animal autosaves and survives a full reload (1.5s)
+  ✘  45 e2e/workspace-ownership.spec.js:297:7 › Section-nav: navigation, focus, and route guards (the jsdom-can't-prove core) › bare #/animal/:id and a stale #/animal/:id/editor both resolve to the days tab (6.0s)
+(node:59539) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:59539) [DEP0205] DeprecationWarning: `module.register()` is deprecated. Use `module.registerHooks()` instead.
+(node:59539) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  50 e2e/workspace-responsive-a11y.spec.js:141:9 › Responsive + a11y smoke — a setup modal traps and restores focus at both viewports › electrode-group modal: focus enters, is trapped, fits the viewport, and is restored on close (desktop 1280×720) (2.2s)
+  ✘  47 e2e/workspace-responsive-a11y.spec.js:85:9 › Responsive + a11y smoke — navigation reachable at both viewports › primary nav, section-nav tabs, and object-selector are visible and in-viewport (desktop 1280×720) (5.8s)
+(node:59771) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:59771) [DEP0205] DeprecationWarning: `module.register()` is deprecated. Use `module.registerHooks()` instead.
+(node:59771) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  52 e2e/workspace-responsive-a11y.spec.js:202:7 › Responsive + a11y smoke — epoch cards and details on a narrow phone › epoch rows fit as cards and the details dialog traps and restores focus (940ms)
+  ✓  51 e2e/workspace-responsive-a11y.spec.js:141:9 › Responsive + a11y smoke — a setup modal traps and restores focus at both viewports › electrode-group modal: focus enters, is trapped, fits the viewport, and is restored on close (narrow 390×844) (2.2s)
+  ✘  49 e2e/workspace-responsive-a11y.spec.js:85:9 › Responsive + a11y smoke — navigation reachable at both viewports › primary nav, section-nav tabs, and object-selector are visible and in-viewport (narrow 390×844) (5.8s)
+(node:59818) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:59818) [DEP0205] DeprecationWarning: `module.register()` is deprecated. Use `module.registerHooks()` instead.
+(node:59818) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  53 e2e/workspace-responsive-a11y.spec.js:247:9 › Responsive + a11y smoke — validation summary reachable at both viewports › per-animal export tab: invalid day's row, chip, and repair action are in-viewport + keyboard reachable (desktop 1280×720) (1.2s)
+  ✓  54 e2e/workspace-responsive-a11y.spec.js:247:9 › Responsive + a11y smoke — validation summary reachable at both viewports › per-animal export tab: invalid day's row, chip, and repair action are in-viewport + keyboard reachable (narrow 390×844) (1.2s)
+  ✓  55 e2e/workspace-responsive-a11y.spec.js:299:9 › Responsive + a11y smoke — Export reachable at both viewports › valid day's export-preview: YAML preview + Download are in-viewport and keyboard reachable (desktop 1280×720) (1.2s)
+  ✓  56 e2e/workspace-responsive-a11y.spec.js:299:9 › Responsive + a11y smoke — Export reachable at both viewports › valid day's export-preview: YAML preview + Download are in-viewport and keyboard reachable (narrow 390×844) (1.1s)
+  ✓  57 e2e/workspace-workflows.spec.js:58:7 › Workspace export workflows › same-day: a prepared animal exports one day without re-entering shared setup (1.1s)
+  ✘  58 e2e/workspace-workflows.spec.js:98:7 › Workspace export workflows › catch-up: per-day scan fields are visible and batch export ships every ready day (6.0s)
+  ✘  59 e2e/workspace-workflows.spec.js:173:7 › Workspace export workflows › catch-up: an unready day is excluded from batch export (5.8s)
+
+
+  1) e2e/workspace-day-navigation.spec.js:17:7 › Day Editor — direct day-to-day navigation › a direct #/day/A → #/day/B hash change shows the NEW day's fields, never the prior day's
+
+    [31mTest timeout of 30000ms exceeded.[39m
+
+    Error: locator.click: Test timeout of 30000ms exceeded.
+    Call log:
+    [2m  - waiting for getByText('Descriptions, data folder & search terms')[22m
+
+
+      39 |     await seedAndOpen(page, blob, `/#/day/${dayAId}`);
+      40 |     // The descriptions live in the daily log's collapsed group; open it to read the field.
+    > 41 |     await page.getByText('Descriptions, data folder & search terms').click();
+         |                                                                      ^
+      42 |
+      43 |     const sessionDescription = () => page.getByRole('textbox', { name: 'Session Description *' });
+      44 |     await expect(sessionDescription()).toHaveValue('DAY A SESSION DESC');
+        at /Users/edeno/Documents/GitHub/rec_to_nwb_yaml_creator/e2e/workspace-day-navigation.spec.js:41:70
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../../../tmp/parity-review-playwright-results/workspace-day-navigation-D-5e037-ields-never-the-prior-day-s/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../../../../tmp/parity-review-playwright-results/workspace-day-navigation-D-5e037-ields-never-the-prior-day-s/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../../../../tmp/parity-review-playwright-results/workspace-day-navigation-D-5e037-ields-never-the-prior-day-s/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../../../../tmp/parity-review-playwright-results/workspace-day-navigation-D-5e037-ields-never-the-prior-day-s/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  2) e2e/workspace-lifecycle.spec.js:44:7 › Animal lifecycle — create & switch › "+ New Animal" routes to the guided create wizard and lands on the new animal
+
+    [31mTest timeout of 30000ms exceeded.[39m
+
+    Error: locator.click: Test timeout of 30000ms exceeded.
+    Call log:
+    [2m  - waiting for getByRole('button', { name: 'Create Animal' }).first()[22m
+
+
+       at helpers/workspace.js:267
+
+      265 |     await newAnimalButton.click();
+      266 |   } else {
+    > 267 |     await firstAnimalButton.click();
+          |                             ^
+      268 |   }
+      269 |
+      270 |   // The wizard (a tablist of setup steps) is now on screen at #/home.
+        at createAnimalViaUI (/Users/edeno/Documents/GitHub/rec_to_nwb_yaml_creator/e2e/helpers/workspace.js:267:29)
+        at /Users/edeno/Documents/GitHub/rec_to_nwb_yaml_creator/e2e/workspace-lifecycle.spec.js:64:26
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../../../tmp/parity-review-playwright-results/workspace-lifecycle-Animal-74a34-and-lands-on-the-new-animal/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../../../../tmp/parity-review-playwright-results/workspace-lifecycle-Animal-74a34-and-lands-on-the-new-animal/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../../../../tmp/parity-review-playwright-results/workspace-lifecycle-Animal-74a34-and-lands-on-the-new-animal/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../../../../tmp/parity-review-playwright-results/workspace-lifecycle-Animal-74a34-and-lands-on-the-new-animal/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  3) e2e/workspace-lifecycle.spec.js:223:7 › Day lifecycle — undo-able delete + cleanup coherence › OK day → ⋯ → Delete day…: deletes immediately (no typed gate) and Undo restores it
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[22m failed
+
+    Locator: getByRole('heading', { name: 'Recording Days for remy', level: 2 })
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+    [2m  - Expect "toBeVisible" with timeout 5000ms[22m
+    [2m  - waiting for getByRole('heading', { name: 'Recording Days for remy', level: 2 })[22m
+
+
+      230 |     await page.goto(`/#/animal/${ANIMAL_ID}/days`);
+      231 |     await page.reload();
+    > 232 |     await expect(page.getByRole('heading', { level: 2, name: `Recording Days for ${ANIMAL_ID}` })).toBeVisible();
+          |                                                                                                    ^
+      233 |
+      234 |     const dayLink = page.getByRole('link', { name: '2023-06-22', exact: true });
+      235 |     await expect(dayLink).toBeVisible();
+        at /Users/edeno/Documents/GitHub/rec_to_nwb_yaml_creator/e2e/workspace-lifecycle.spec.js:232:100
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../../../tmp/parity-review-playwright-results/workspace-lifecycle-Day-li-74425-d-gate-and-Undo-restores-it/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../../../../tmp/parity-review-playwright-results/workspace-lifecycle-Day-li-74425-d-gate-and-Undo-restores-it/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../../../../tmp/parity-review-playwright-results/workspace-lifecycle-Day-li-74425-d-gate-and-Undo-restores-it/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../../../../tmp/parity-review-playwright-results/workspace-lifecycle-Day-li-74425-d-gate-and-Undo-restores-it/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  4) e2e/workspace-ownership.spec.js:76:7 › Ownership & discoverability — AnimalView header + section-nav + scope cues › header band shows the animal identity (name, animal ID badge, species · sex) and a ⋮ menu
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[22m failed
+
+    Locator: getByText('animal ID', { exact: true })
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+    [2m  - Expect "toBeVisible" with timeout 5000ms[22m
+    [2m  - waiting for getByText('animal ID', { exact: true })[22m
+
+
+      82 |     await expect(page.getByRole('heading', { level: 1, name: ANIMAL_ID })).toBeVisible();
+      83 |     // An "animal ID" badge + the species · sex facts identify whose data this is (ownership cue).
+    > 84 |     await expect(page.getByText('animal ID', { exact: true })).toBeVisible();
+         |                                                                ^
+      85 |     await expect(page.getByText('Rattus norvegicus · M')).toBeVisible();
+      86 |     // The per-animal lifecycle ⋮ is present (its menu is exercised in the lifecycle spec).
+      87 |     await expect(page.getByRole('button', { name: `Actions for ${ANIMAL_ID}` })).toBeVisible();
+        at /Users/edeno/Documents/GitHub/rec_to_nwb_yaml_creator/e2e/workspace-ownership.spec.js:84:64
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../../../tmp/parity-review-playwright-results/workspace-ownership-Owners-47696--species-·-sex-and-a-⋮-menu/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../../../../tmp/parity-review-playwright-results/workspace-ownership-Owners-47696--species-·-sex-and-a-⋮-menu/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../../../../tmp/parity-review-playwright-results/workspace-ownership-Owners-47696--species-·-sex-and-a-⋮-menu/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../../../../tmp/parity-review-playwright-results/workspace-ownership-Owners-47696--species-·-sex-and-a-⋮-menu/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  5) e2e/workspace-ownership.spec.js:115:7 › Ownership & discoverability — AnimalView header + section-nav + scope cues › each setup tab shows its scope descriptor (ownership / blast-radius framing) — VISIBLE
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoHaveText[2m([22m[32mexpected[39m[2m)[22m failed
+
+    Locator: getByTestId('panel-scope-recording-system')
+    Expected: [32m"Animal-wide catalog — each recording day uses one."[39m
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+    [2m  - Expect "toHaveText" with timeout 5000ms[22m
+    [2m  - waiting for getByTestId('panel-scope-recording-system')[22m
+
+
+      118 |     for (const [tab, scope] of Object.entries(TAB_SCOPE)) {
+      119 |       await seedAndOpen(page, buildConfiguredWorkspaceBlob(), `/#/animal/${ANIMAL_ID}/${tab}`);
+    > 120 |       await expect(page.getByTestId(`panel-scope-${tab}`)).toHaveText(scope);
+          |                                                            ^
+      121 |     }
+      122 |   });
+      123 |
+        at /Users/edeno/Documents/GitHub/rec_to_nwb_yaml_creator/e2e/workspace-ownership.spec.js:120:60
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../../../tmp/parity-review-playwright-results/workspace-ownership-Owners-b5ab7-st-radius-framing-—-VISIBLE/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../../../../tmp/parity-review-playwright-results/workspace-ownership-Owners-b5ab7-st-radius-framing-—-VISIBLE/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../../../../tmp/parity-review-playwright-results/workspace-ownership-Owners-b5ab7-st-radius-framing-—-VISIBLE/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../../../../tmp/parity-review-playwright-results/workspace-ownership-Owners-b5ab7-st-radius-framing-—-VISIBLE/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  6) e2e/workspace-ownership.spec.js:138:7 › Ownership & discoverability — AnimalView header + section-nav + scope cues › behavior-only animal: first-run "Set up this animal" card lists sections with honest hints and is NON-gating
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[22m failed
+
+    Locator: getByRole('region', { name: 'Set up this animal' })
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+    [2m  - Expect "toBeVisible" with timeout 5000ms[22m
+    [2m  - waiting for getByRole('region', { name: 'Set up this animal' })[22m
+
+
+      144 |
+      145 |     const card = page.getByRole('region', { name: 'Set up this animal' });
+    > 146 |     await expect(card).toBeVisible();
+          |                        ^
+      147 |     // Honest, conditional hints — none mandatory (a behavior-only day needs no electrodes).
+      148 |     await expect(card.getByText('Add only what your recordings use')).toBeVisible();
+      149 |     // Per-section rows with honest hints + a "Set up →" link to the owning tab.
+        at /Users/edeno/Documents/GitHub/rec_to_nwb_yaml_creator/e2e/workspace-ownership.spec.js:146:24
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../../../tmp/parity-review-playwright-results/workspace-ownership-Owners-e23b6-est-hints-and-is-NON-gating/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../../../../tmp/parity-review-playwright-results/workspace-ownership-Owners-e23b6-est-hints-and-is-NON-gating/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../../../../tmp/parity-review-playwright-results/workspace-ownership-Owners-e23b6-est-hints-and-is-NON-gating/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../../../../tmp/parity-review-playwright-results/workspace-ownership-Owners-e23b6-est-hints-and-is-NON-gating/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  7) e2e/workspace-ownership.spec.js:297:7 › Section-nav: navigation, focus, and route guards (the jsdom-can't-prove core) › bare #/animal/:id and a stale #/animal/:id/editor both resolve to the days tab
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[22m failed
+
+    Locator: getByRole('heading', { name: 'Recording Days for remy', level: 2 })
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+    [2m  - Expect "toBeVisible" with timeout 5000ms[22m
+    [2m  - waiting for getByRole('heading', { name: 'Recording Days for remy', level: 2 })[22m
+
+
+      301 |     await seedAndOpen(page, buildConfiguredWorkspaceBlob(), `/#/animal/${ANIMAL_ID}`);
+      302 |     await expect(page).toHaveURL(new RegExp(`#/animal/${ANIMAL_ID}/days$`));
+    > 303 |     await expect(page.getByRole('heading', { level: 2, name: `Recording Days for ${ANIMAL_ID}` })).toBeVisible();
+          |                                                                                                    ^
+      304 |
+      305 |     // Stale legacy `/editor` route → days (graceful redirect of a removed route, cold-load).
+      306 |     await seedAndOpen(page, buildConfiguredWorkspaceBlob(), `/#/animal/${ANIMAL_ID}/editor`);
+        at /Users/edeno/Documents/GitHub/rec_to_nwb_yaml_creator/e2e/workspace-ownership.spec.js:303:100
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../../../tmp/parity-review-playwright-results/workspace-ownership-Sectio-9173f-oth-resolve-to-the-days-tab/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../../../../tmp/parity-review-playwright-results/workspace-ownership-Sectio-9173f-oth-resolve-to-the-days-tab/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../../../../tmp/parity-review-playwright-results/workspace-ownership-Sectio-9173f-oth-resolve-to-the-days-tab/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../../../../tmp/parity-review-playwright-results/workspace-ownership-Sectio-9173f-oth-resolve-to-the-days-tab/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  8) e2e/workspace-responsive-a11y.spec.js:85:9 › Responsive + a11y smoke — navigation reachable at both viewports › primary nav, section-nav tabs, and object-selector are visible and in-viewport (desktop 1280×720)
+
+    Error: Primary nav "Review & export" link should be visible
+
+    [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[22m failed
+
+    Locator: getByRole('navigation', { name: 'Primary' }).getByRole('link', { name: 'Review & export' })
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+    [2m  - Primary nav "Review & export" link should be visible with timeout 5000ms[22m
+    [2m  - waiting for getByRole('navigation', { name: 'Primary' }).getByRole('link', { name: 'Review & export' })[22m
+
+
+      58 |  */
+      59 | async function expectWithinViewportHorizontally(locator, viewport, label) {
+    > 60 |   await expect(locator, `${label} should be visible`).toBeVisible();
+         |                                                       ^
+      61 |   await locator.scrollIntoViewIfNeeded();
+      62 |   const box = await locator.boundingBox();
+      63 |   expect(box, `${label} should have a bounding box`).not.toBeNull();
+        at expectWithinViewportHorizontally (/Users/edeno/Documents/GitHub/rec_to_nwb_yaml_creator/e2e/workspace-responsive-a11y.spec.js:60:55)
+        at /Users/edeno/Documents/GitHub/rec_to_nwb_yaml_creator/e2e/workspace-responsive-a11y.spec.js:102:13
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../../../tmp/parity-review-playwright-results/workspace-responsive-a11y--361cc--viewport-desktop-1280×720-/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../../../../tmp/parity-review-playwright-results/workspace-responsive-a11y--361cc--viewport-desktop-1280×720-/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../../../../tmp/parity-review-playwright-results/workspace-responsive-a11y--361cc--viewport-desktop-1280×720-/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../../../../tmp/parity-review-playwright-results/workspace-responsive-a11y--361cc--viewport-desktop-1280×720-/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  9) e2e/workspace-responsive-a11y.spec.js:85:9 › Responsive + a11y smoke — navigation reachable at both viewports › primary nav, section-nav tabs, and object-selector are visible and in-viewport (narrow 390×844)
+
+    Error: Primary nav "Review & export" link should be visible
+
+    [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[22m failed
+
+    Locator: getByRole('navigation', { name: 'Primary' }).getByRole('link', { name: 'Review & export' })
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+    [2m  - Primary nav "Review & export" link should be visible with timeout 5000ms[22m
+    [2m  - waiting for getByRole('navigation', { name: 'Primary' }).getByRole('link', { name: 'Review & export' })[22m
+
+
+      58 |  */
+      59 | async function expectWithinViewportHorizontally(locator, viewport, label) {
+    > 60 |   await expect(locator, `${label} should be visible`).toBeVisible();
+         |                                                       ^
+      61 |   await locator.scrollIntoViewIfNeeded();
+      62 |   const box = await locator.boundingBox();
+      63 |   expect(box, `${label} should have a bounding box`).not.toBeNull();
+        at expectWithinViewportHorizontally (/Users/edeno/Documents/GitHub/rec_to_nwb_yaml_creator/e2e/workspace-responsive-a11y.spec.js:60:55)
+        at /Users/edeno/Documents/GitHub/rec_to_nwb_yaml_creator/e2e/workspace-responsive-a11y.spec.js:102:13
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../../../tmp/parity-review-playwright-results/workspace-responsive-a11y--b3944-in-viewport-narrow-390×844-/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../../../../tmp/parity-review-playwright-results/workspace-responsive-a11y--b3944-in-viewport-narrow-390×844-/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../../../../tmp/parity-review-playwright-results/workspace-responsive-a11y--b3944-in-viewport-narrow-390×844-/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../../../../tmp/parity-review-playwright-results/workspace-responsive-a11y--b3944-in-viewport-narrow-390×844-/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  10) e2e/workspace-workflows.spec.js:98:7 › Workspace export workflows › catch-up: per-day scan fields are visible and batch export ships every ready day
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[22m failed
+
+    Locator: getByRole('table', { name: 'Recording days across all animals with validation status' }).getByRole('columnheader', { name: 'Animal' })
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+    [2m  - Expect "toBeVisible" with timeout 5000ms[22m
+    [2m  - waiting for getByRole('table', { name: 'Recording days across all animals with validation status' }).getByRole('columnheader', { name: 'Animal' })[22m
+
+
+      123 |     // Column headers expose the scan dimensions the catch-up surface promises.
+      124 |     for (const col of ['Animal', 'Date', 'Session', 'Setup', 'Status', 'Editor']) {
+    > 125 |       await expect(table.getByRole('columnheader', { name: col })).toBeVisible();
+          |                                                                    ^
+      126 |     }
+      127 |     // Day 1 row (addressed by its stable per-day test id): date, session, the dated-config setup
+      128 |     // summary (config version + camera count + opto), a Valid status chip, and an Open-editor action.
+        at /Users/edeno/Documents/GitHub/rec_to_nwb_yaml_creator/e2e/workspace-workflows.spec.js:125:68
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../../../tmp/parity-review-playwright-results/workspace-workflows-Worksp-e219e-xport-ships-every-ready-day/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../../../../tmp/parity-review-playwright-results/workspace-workflows-Worksp-e219e-xport-ships-every-ready-day/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../../../../tmp/parity-review-playwright-results/workspace-workflows-Worksp-e219e-xport-ships-every-ready-day/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../../../../tmp/parity-review-playwright-results/workspace-workflows-Worksp-e219e-xport-ships-every-ready-day/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  11) e2e/workspace-workflows.spec.js:173:7 › Workspace export workflows › catch-up: an unready day is excluded from batch export
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[22m failed
+
+    Locator: getByText('1 with errors')
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+    [2m  - Expect "toBeVisible" with timeout 5000ms[22m
+    [2m  - waiting for getByText('1 with errors')[22m
+
+
+      191 |     // One valid, one not ready (has errors).
+      192 |     await expect(page.getByText('1 valid')).toBeVisible();
+    > 193 |     await expect(page.getByText('1 with errors')).toBeVisible();
+          |                                                   ^
+      194 |
+      195 |     // Batch export only stages the ONE ready day.
+      196 |     await page.getByRole('button', { name: /Review \d+ selected recordings?/ }).click();
+        at /Users/edeno/Documents/GitHub/rec_to_nwb_yaml_creator/e2e/workspace-workflows.spec.js:193:51
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../../../tmp/parity-review-playwright-results/workspace-workflows-Worksp-4a5a8--excluded-from-batch-export/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../../../../tmp/parity-review-playwright-results/workspace-workflows-Worksp-4a5a8--excluded-from-batch-export/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../../../../tmp/parity-review-playwright-results/workspace-workflows-Worksp-4a5a8--excluded-from-batch-export/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../../../../tmp/parity-review-playwright-results/workspace-workflows-Worksp-4a5a8--excluded-from-batch-export/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  11 failed
+    e2e/workspace-day-navigation.spec.js:17:7 › Day Editor — direct day-to-day navigation › a direct #/day/A → #/day/B hash change shows the NEW day's fields, never the prior day's
+    e2e/workspace-lifecycle.spec.js:44:7 › Animal lifecycle — create & switch › "+ New Animal" routes to the guided create wizard and lands on the new animal
+    e2e/workspace-lifecycle.spec.js:223:7 › Day lifecycle — undo-able delete + cleanup coherence › OK day → ⋯ → Delete day…: deletes immediately (no typed gate) and Undo restores it
+    e2e/workspace-ownership.spec.js:76:7 › Ownership & discoverability — AnimalView header + section-nav + scope cues › header band shows the animal identity (name, animal ID badge, species · sex) and a ⋮ menu
+    e2e/workspace-ownership.spec.js:115:7 › Ownership & discoverability — AnimalView header + section-nav + scope cues › each setup tab shows its scope descriptor (ownership / blast-radius framing) — VISIBLE
+    e2e/workspace-ownership.spec.js:138:7 › Ownership & discoverability — AnimalView header + section-nav + scope cues › behavior-only animal: first-run "Set up this animal" card lists sections with honest hints and is NON-gating
+    e2e/workspace-ownership.spec.js:297:7 › Section-nav: navigation, focus, and route guards (the jsdom-can't-prove core) › bare #/animal/:id and a stale #/animal/:id/editor both resolve to the days tab
+    e2e/workspace-responsive-a11y.spec.js:85:9 › Responsive + a11y smoke — navigation reachable at both viewports › primary nav, section-nav tabs, and object-selector are visible and in-viewport (desktop 1280×720)
+    e2e/workspace-responsive-a11y.spec.js:85:9 › Responsive + a11y smoke — navigation reachable at both viewports › primary nav, section-nav tabs, and object-selector are visible and in-viewport (narrow 390×844)
+    e2e/workspace-workflows.spec.js:98:7 › Workspace export workflows › catch-up: per-day scan fields are visible and batch export ships every ready day
+    e2e/workspace-workflows.spec.js:173:7 › Workspace export workflows › catch-up: an unready day is excluded from batch export
+  48 passed (1.0m)

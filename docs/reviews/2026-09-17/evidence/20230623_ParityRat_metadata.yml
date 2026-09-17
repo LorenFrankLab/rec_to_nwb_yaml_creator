@@ -1,0 +1,148 @@
+experimenter_name:
+  - Scientist, Alex
+  - Scientist, Sam
+lab: Loren Frank Lab
+institution: University of California, San Francisco
+experiment_description: Spatial learning with tetrode recordings
+session_description: Recording session for ParityRat on 2023-06-23
+session_id: ParityRat_20230623
+subject:
+  description: Wild-type Rattus norvegicus
+  genotype: Wild-type
+  sex: F
+  species: Rattus norvegicus
+  subject_id: ParityRat
+  date_of_birth: 2022-10-01T00:00:00.000Z
+  weight: 326
+data_acq_device:
+  - name: SpikeGadgets
+    system: SpikeGadgets
+    amplifier: Intan
+    adc_circuit: Intan
+cameras:
+  - id: 0
+    meters_per_pixel: 0.001
+    manufacturer: Allied Vision
+    model: Manta G-158C
+    lens: Theia SL183M
+    camera_name: ParityMaze
+tasks:
+  - task_name: W-track
+    task_description: Continuous alternation
+    task_environment: W-shaped maze
+    camera_id:
+      - 0
+    task_epochs:
+      - 1
+      - 2
+associated_files:
+  - name: 20230623_ParityRat_01_r1.stateScriptLog
+    description: statescript log
+    path: /tmp/parity-recording/20230623_ParityRat_01_r1.stateScriptLog
+    task_epochs: 1
+  - name: 20230623_ParityRat_02_r2.stateScriptLog
+    description: statescript log
+    path: /tmp/parity-recording/20230623_ParityRat_02_r2.stateScriptLog
+    task_epochs: 2
+associated_video_files:
+  - name: 20230623_ParityRat_01_r1.1.h264
+    camera_id: 0
+    task_epochs: 1
+  - name: 20230623_ParityRat_02_r2.1.h264
+    camera_id: 0
+    task_epochs: 2
+times_period_multiplier: 1.5
+raw_data_to_volts: 1.95e-7
+behavioral_events:
+  - description: Dout1
+    name: reward_left
+device:
+  name:
+    - Trodes
+opto_excitation_source:
+  - name: Blue laser
+    model_name: Omicron LuxX+ 488-100
+    description: CA1 stimulation source
+    wavelength_in_nm: 488
+    power_in_W: 0.077
+    intensity_in_W_per_m2: 10000000000
+optical_fiber:
+  - name: CA1 fiber
+    hardware_name: demo fiber device
+    implanted_fiber_description: CA1 implanted fiber
+    location: CA1
+    hemisphere: right
+    ap_in_mm: -3.6
+    ml_in_mm: 1.2
+    dv_in_mm: 2.5
+    roll_in_deg: 0
+    pitch_in_deg: 0
+    yaw_in_deg: 0
+    reference: Bregma at cortical surface
+virus_injection:
+  - name: CA1 injection
+    description: CA1 optogenetic injection
+    hemisphere: right
+    location: CA1
+    ap_in_mm: -3.6
+    ml_in_mm: 1.2
+    dv_in_mm: 2.5
+    roll_in_deg: 0
+    pitch_in_deg: 0
+    yaw_in_deg: 0
+    reference: Bregma at cortical surface
+    virus_name: demo_virus_1
+    titer_in_vg_per_ml: 1000000000
+    volume_in_uL: 0.45
+    volume_in_ul: 0.45
+fs_gui_yamls:
+  - name: theta_trigger.yaml
+    epochs:
+      - 2
+    power_in_mW: 77
+    dio_output_name: reward_left
+    camera_id: 0
+    pulseLength: 10
+    nPulses: 5
+    sequencePeriod: 100
+    nOutputTrains: 2
+    trainInterval: 1000
+optogenetic_stimulation_software: fsgui
+opto_software: fsgui
+electrode_groups:
+  - id: 0
+    location: CA1
+    device_type: tetrode_12.5
+    description: tetrode_12.5 targeting CA1
+    targeted_location: CA1
+    targeted_x: -1.2
+    targeted_y: -3.6
+    targeted_z: 2.5
+    units: mm
+  - id: 1
+    location: CA1
+    device_type: tetrode_12.5
+    description: tetrode_12.5 targeting CA1
+    targeted_location: CA1
+    targeted_x: -1.2
+    targeted_y: -3.6
+    targeted_z: 2.5
+    units: mm
+ntrode_electrode_group_channel_map:
+  - ntrode_id: 7
+    electrode_group_id: 0
+    bad_channels:
+      - 2
+    map:
+      "0": 2
+      "1": 0
+      "2": 3
+      "3": 1
+  - ntrode_id: 8
+    electrode_group_id: 1
+    bad_channels: []
+    map:
+      "0": 0
+      "1": 1
+      "2": 2
+      "3": 3

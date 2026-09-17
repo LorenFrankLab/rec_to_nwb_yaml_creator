@@ -1,0 +1,55 @@
+import { describe, it, expect, vi, afterEach } from 'vitest';
+import { act, render, renderHook, screen, fireEvent, cleanup } from '@testing-library/react';
+import { useDraftField } from '../hooks/useDraftField';
+import { hasPendingDrafts, resetDraftRegistryForTests } from '../state/draftRegistry';
+import { StoreProvider, useStoreContext } from '../state/StoreContext';
+import { buildRealisticWorkspace } from './fixtures/workspaceBuilders';
+import DayEditorFrame from '../pages/DayEditor/DayEditorFrame';
+import { repairTargetForIssue, daySectionForPath } from '../domain/repairRouting';
+
+vi.mock('../hooks/useDayIdFromUrl', () => ({ useDayIdFromUrl: () => 'remy-2023-06-22' }));
+vi.mock('../pages/DayEditor/DioTab', async () => {
+  const { createElement } = await import('react');
+  const { useDayEditorContext } = await import('../pages/DayEditor/DayEditorContext');
+  return { default: function ProbeEditor() {
+    const { onFieldUpdate } = useDayEditorContext({});
+    return createElement('button', { onClick: () => {
+      onFieldUpdate('session.session_description', 'description A');
+      onFieldUpdate('session.experiment_description', 'description B');
+    } }, 'Apply two independent edits');
+  } };
+});
+let observed;
+function StoreProbe() { observed = useStoreContext(); return null; }
+afterEach(() => { cleanup(); resetDraftRegistryForTests(); });
+
+describe('architecture review probes — current behavior', () => {
+  it('a rejected commit clears the registry dirty flag', () => {
+    const { result } = renderHook(() => useDraftField({ value: 'old', onCommit: () => { throw new Error('writer rejected'); } }));
+    act(() => result.current.setValue('new'));
+    expect(hasPendingDrafts()).toBe(true);
+    act(() => { expect(() => result.current.flush()).toThrow('writer rejected'); });
+    expect(hasPendingDrafts()).toBe(false);
+    console.log('DRAFT_REJECTION', { displayed: result.current.value, pending: hasPendingDrafts(), committed: 'old' });
+  });
+
+  it('two writes through the frame can overwrite an earlier sibling field edit', () => {
+    const { animal, day } = buildRealisticWorkspace();
+    const original = day.session.session_description;
+    render(<StoreProvider initialState={{ workspace: { animals: { [animal.id]: animal }, days: { [day.id]: day }, settings: {} } }}><DayEditorFrame /><StoreProbe /></StoreProvider>);
+    fireEvent.click(screen.getByRole('button', { name: /^DIO Wiring/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Apply two independent edits' }));
+    const session = observed.model.workspace.days[day.id].session;
+    expect(session.session_description).toBe(original);
+    expect(session.experiment_description).toBe('description B');
+    console.log('SIBLING_WRITES', { firstRequested: 'description A', firstActual: session.session_description, secondActual: session.experiment_description });
+  });
+
+  it('the shared repair catalog still disagrees about the units fields', () => {
+    const paths = ['units.analog', 'units.behavioral_events'];
+    const result = paths.map((path) => ({ path, section: daySectionForPath(path), target: repairTargetForIssue({ path, code: 'pattern', severity: 'error' }) }));
+    console.log('UNIT_ROUTES', JSON.stringify(result));
+    expect(result[0].section).toBe(null);
+    expect(result[1].section).toBe('dio');
+  });
+});

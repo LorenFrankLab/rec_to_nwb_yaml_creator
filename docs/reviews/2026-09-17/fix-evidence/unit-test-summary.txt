@@ -1,0 +1,6 @@
+Command: npx vitest run
+
+ Test Files  392 passed (392)
+      Tests  5691 passed (5691)
+   Start at  10:22:16
+   Duration  56.80s (transform 22.46s, setup 189.99s, collect 55.53s, tests 315.26s, environment 155.55s, prepare 2.41s)
