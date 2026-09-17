@@ -1,13 +1,7 @@
 // AlertModal styles - Accessible modal dialog for alerts
 
 .alert-modal-content {
-  background: white;
-  border-radius: 8px;
-  padding: 2rem;
   max-width: 500px;
-  width: 90%;
-  box-shadow: 0 4px 6px rgb(0 0 0 / 10%), 0 10px 20px rgb(0 0 0 / 15%);
-  animation: slideIn 0.3s ease-out;
   border-left: 4px solid #1976d2; // Default info color
 }
 
@@ -40,24 +34,4 @@
   line-height: 1.5;
   color: #424242;
   white-space: pre-wrap; // Preserve line breaks in messages
-}
-
-// Animations
-@keyframes slideIn {
-  from {
-    opacity: 0;
-    transform: translateY(-20px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-// Respect user preference for reduced motion (accessibility)
-@media (prefers-reduced-motion: reduce) {
-  .alert-modal-content {
-    animation: none;
-  }
 }

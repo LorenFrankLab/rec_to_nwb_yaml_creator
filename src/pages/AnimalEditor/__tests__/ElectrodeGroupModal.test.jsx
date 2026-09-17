@@ -11,10 +11,6 @@ import userEvent from '@testing-library/user-event';
 import ElectrodeGroupModal from '../ElectrodeGroupModal';
 import { deviceTypes } from '../../../valueList';
 
-const electrodeModalCss = readFileSync(
-  join(process.cwd(), 'src/pages/AnimalEditor/ElectrodeGroupModal.scss'),
-  'utf8'
-);
 const sharedModalCss = readFileSync(
   join(process.cwd(), 'src/components/Modal/Modal.module.scss'),
   'utf8'
@@ -169,11 +165,10 @@ describe('ElectrodeGroupModal', () => {
       expect(within(footer).getByRole('button', { name: /cancel/i })).toBeInTheDocument();
       expect(within(footer).getByRole('button', { name: /save/i })).toBeInTheDocument();
 
-      expect(cssRule(electrodeModalCss, '.electrode-group-modal-content')).toMatch(
-        /max-height:\s*90vh/
-      );
-      expect(cssRule(sharedModalCss, '.withFooter')).toMatch(/overflow:\s*hidden/);
+      expect(cssRule(sharedModalCss, '.content')).toMatch(/max-height:\s*calc\(100dvh - 2rem\)/);
+      expect(cssRule(sharedModalCss, '.content')).toMatch(/overflow:\s*hidden/);
       expect(cssRule(sharedModalCss, '.body')).toMatch(/overflow-y:\s*auto/);
+      expect(cssRule(sharedModalCss, '.body')).toMatch(/min-height:\s*0/);
       expect(cssRule(sharedModalCss, '.footer')).toMatch(/flex-shrink:\s*0/);
     });
   });

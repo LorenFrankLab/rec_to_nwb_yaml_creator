@@ -14,6 +14,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  box-sizing: border-box;
+  padding: 1rem;
+  overflow: hidden;
   z-index: var(--z-modal);
   animation: modalFadeIn 0.2s ease-in;
 }
@@ -29,13 +32,17 @@
 }
 
 .content {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
   background-color: var(--color-white);
   border-radius: 8px;
-  padding: 2rem;
+  padding: 0;
   max-width: 600px;
-  width: 90%;
-  max-height: 90vh;
-  overflow-y: auto;
+  width: min(600px, 100%);
+  max-height: calc(100vh - 2rem);
+  max-height: calc(100dvh - 2rem);
+  overflow: hidden;
   box-shadow: var(--shadow-modal);
   animation: modalSlideUp 0.3s ease-out;
 }
@@ -53,36 +60,28 @@
 }
 
 .title {
-  margin: 0 0 1.5rem;
+  flex: 0 0 auto;
+  margin: 0;
+  padding: 2rem 2rem 1.5rem;
   font-size: 1.5rem;
   font-weight: 600;
   color: var(--color-grey-900);
 }
 
 /**
- * Footer variant (Modal `footer` prop): the content box becomes a
- * header / scrollable body / pinned footer column so a tall dialog's actions
- * stay reachable without scrolling. The box stops scrolling itself; only the
- * body scrolls. Padding moves off the box onto the regions so the body scrolls
- * edge-to-edge while the title and footer stay pinned — for a SHORT dialog the
- * geometry is identical to the no-footer layout (2rem inset on all sides, the
- * 1.5rem title gap, and the action row's own divider/spacing).
+ * Every dialog is a fixed title / scrollable body column. A supplied footer is
+ * pinned beneath the body, so long forms never push their actions below the viewport.
  */
-.withFooter {
-  display: flex;
-  flex-direction: column;
-  padding: 0;
-  overflow: hidden;
-}
-
-.withFooter .title {
-  padding: 2rem 2rem 0;
-}
-
 .body {
   flex: 1 1 auto;
-  padding: 0 2rem;
+  min-height: 0;
+  padding: 0 2rem 2rem;
   overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.hasFooter .body {
+  padding-bottom: 0;
 }
 
 .footer {
@@ -94,20 +93,46 @@
   background-color: var(--color-white);
 }
 
-.content::-webkit-scrollbar,
 .body::-webkit-scrollbar {
   width: 8px;
 }
 
-.content::-webkit-scrollbar-track,
 .body::-webkit-scrollbar-track {
   background: transparent;
 }
 
-.content::-webkit-scrollbar-thumb,
 .body::-webkit-scrollbar-thumb {
   background: #ccc;
   border-radius: 4px;
+}
+
+@media (max-width: 600px), (max-height: 600px) {
+  .overlay {
+    padding: 0.5rem;
+  }
+
+  .content {
+    width: 100%;
+    max-height: calc(100vh - 1rem);
+    max-height: calc(100dvh - 1rem);
+  }
+
+  .title {
+    padding: 1rem 1rem 0.75rem;
+    font-size: 1.25rem;
+  }
+
+  .body {
+    padding: 0 1rem 1rem;
+  }
+
+  .hasFooter .body {
+    padding-bottom: 0;
+  }
+
+  .footer {
+    padding: 0 1rem 1rem;
+  }
 }
 
 /* Honor reduced-motion: every dialog built on Modal inherits this. */

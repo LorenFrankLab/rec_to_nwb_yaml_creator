@@ -3,8 +3,8 @@
  *
  * jsdom can prove the routing/status LOGIC but NOT layout-in-a-real-viewport or live focus
  * management. This pass drives the highest-traffic surfaces (navigation, a setup modal, the
- * validation summary, and Export) at TWO viewports — the config-default desktop (1280×720) and a
- * narrow phone (390×844) — and asserts, with hard checks, that:
+ * validation summary, and Export) at desktop and narrow-phone viewports, with an additional
+ * short-phone check for dialogs, and asserts with hard checks that:
  *
  *  1. the primary nav, the AnimalView section-nav tabs, and the top object-selector trigger are
  *     VISIBLE and not horizontally clipped off-screen at both widths (the narrow layout WRAPS /
@@ -45,6 +45,11 @@ const VIEWPORTS = [
   { name: 'narrow 390×844', width: 390, height: 844 },
 ];
 
+const MODAL_VIEWPORTS = [
+  ...VIEWPORTS,
+  { name: 'short phone 390×568', width: 390, height: 568 },
+];
+
 /**
  * Assert a control is rendered within the viewport's HORIZONTAL bounds (not clipped off-screen
  * left/right). A critical always-present control (nav link, modal action, Download) must never be
@@ -66,6 +71,24 @@ async function expectWithinViewportHorizontally(locator, viewport, label) {
     box.x + box.width,
     `${label} right edge should not be clipped past the viewport width`,
   ).toBeLessThanOrEqual(viewport.width + 1);
+}
+
+/**
+ * Assert a fixed dialog surface is fully contained by both viewport axes.
+ *
+ * @param {import('@playwright/test').Locator} locator - The dialog or fixed action to measure.
+ * @param {{ width: number, height: number }} viewport - The active viewport size.
+ * @param {string} label - A human label for the assertion message.
+ * @returns {Promise<void>}
+ */
+async function expectWithinViewport(locator, viewport, label) {
+  await expectWithinViewportHorizontally(locator, viewport, label);
+  const box = await locator.boundingBox();
+  expect(box.y, `${label} top edge should not be off-screen`).toBeGreaterThanOrEqual(-1);
+  expect(
+    box.y + box.height,
+    `${label} bottom edge should not be clipped past the viewport height`,
+  ).toBeLessThanOrEqual(viewport.height + 1);
 }
 
 /**
@@ -136,8 +159,8 @@ test.describe('Responsive + a11y smoke — navigation reachable at both viewport
   }
 });
 
-test.describe('Responsive + a11y smoke — a setup modal traps and restores focus at both viewports', () => {
-  for (const viewport of VIEWPORTS) {
+test.describe('Responsive + a11y smoke — a setup modal traps and restores focus across viewports', () => {
+  for (const viewport of MODAL_VIEWPORTS) {
     test(`electrode-group modal: focus enters, is trapped, fits the viewport, and is restored on close (${viewport.name})`, async ({
       page,
     }) => {
@@ -162,8 +185,13 @@ test.describe('Responsive + a11y smoke — a setup modal traps and restores focu
         'focus should move into the dialog on open',
       ).toBe(true);
 
-      // --- The dialog fits within the viewport horizontally (not clipped) at this width. ---
-      await expectWithinViewportHorizontally(dialog, viewport, 'Electrode group dialog');
+      // --- The dialog is bounded by the viewport. Its body scrolls while actions stay pinned. ---
+      await expectWithinViewport(dialog, viewport, 'Electrode group dialog');
+      const save = dialog.getByRole('button', { name: 'Save electrode group configuration' });
+      await expectWithinViewport(save, viewport, 'Electrode group Save action');
+      const saveY = (await save.boundingBox()).y;
+      await dialog.getByTestId('modal-body').evaluate((body) => { body.scrollTop = body.scrollHeight; });
+      expect((await save.boundingBox()).y, 'the pinned Save action should not move when the body scrolls').toBe(saveY);
 
       // --- Focus trap: tabbing forward many times (more than the dialog's focusable count) keeps
       //     focus INSIDE the dialog — it never escapes to the page behind. ---
@@ -200,7 +228,7 @@ test.describe('Responsive + a11y smoke — a setup modal traps and restores focu
 
 test.describe('Responsive + a11y smoke — epoch cards and details on a narrow phone', () => {
   test('epoch rows fit as cards and the details dialog traps and restores focus', async ({ page }) => {
-    const viewport = { name: 'narrow 390×844', width: 390, height: 844 };
+    const viewport = { name: 'short phone 390×568', width: 390, height: 568 };
     await page.setViewportSize({ width: viewport.width, height: viewport.height });
     await resetWorkspace(page);
     await seedAndOpen(page, buildConfiguredWorkspaceBlob(), `/#/day/${DAY_ID}`);
@@ -215,7 +243,12 @@ test.describe('Responsive + a11y smoke — epoch cards and details on a narrow p
 
     await opener.click();
     const dialog = page.getByRole('dialog', { name: /Epoch 1:/i });
-    await expectWithinViewportHorizontally(dialog, viewport, 'Epoch details dialog');
+    await expectWithinViewport(dialog, viewport, 'Epoch details dialog');
+    const pageScroll = await page.evaluate(() => window.scrollY);
+    const dayContext = dialog.getByRole('button', { name: 'Edit for this day' });
+    await dayContext.scrollIntoViewIfNeeded();
+    await expectWithinViewport(dayContext, viewport, 'Epoch day-context action');
+    expect(await page.evaluate(() => window.scrollY), 'drawer scrolling should not move the page behind it').toBe(pageScroll);
     expect(await activeElementIsInside(page, dialog), 'focus should enter epoch details').toBe(true);
     for (let i = 0; i < 8; i += 1) {
       await page.keyboard.press('Tab');

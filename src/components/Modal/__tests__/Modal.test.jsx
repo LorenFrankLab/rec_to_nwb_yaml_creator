@@ -156,14 +156,14 @@ describe('Modal', () => {
       expect(body.compareDocumentPosition(footer) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     });
 
-    it('renders children directly with no body/footer wrappers when no footer is given', () => {
+    it('keeps footerless content in the same bounded scrollable body', () => {
       render(
         <Modal isOpen onClose={() => {}} title="T" titleId="t">
           <p>plain body</p>
         </Modal>
       );
 
-      expect(screen.queryByTestId('modal-body')).toBeNull();
+      expect(screen.getByTestId('modal-body')).toHaveTextContent('plain body');
       expect(screen.queryByTestId('modal-footer')).toBeNull();
       expect(screen.getByText('plain body')).toBeInTheDocument();
     });

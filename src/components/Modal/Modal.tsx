@@ -21,10 +21,8 @@ interface ModalProps {
   /** Extra class on the content box. */
   className?: string;
   /**
-   * Optional sticky action row pinned below a scrollable body. When provided, the
-   * content box becomes a header / scrollable body / pinned footer column so a tall
-   * dialog's actions stay reachable without scrolling. When omitted, the dialog
-   * renders exactly as a plain title + children (no body/footer wrappers).
+   * Optional sticky action row pinned below the scrollable body. Every dialog uses
+   * the same bounded header/body layout so tall content remains within the viewport.
    */
   footer?: ReactNode;
   /** Dialog body. */
@@ -63,9 +61,9 @@ const Modal = ({
     }
   };
 
-  const contentClassName = footer
-    ? `${styles.content} ${styles.withFooter} ${className}`.trim()
-    : `${styles.content} ${className}`.trim();
+  const contentClassName = [styles.content, footer ? styles.hasFooter : '', className]
+    .filter(Boolean)
+    .join(' ');
 
   return (
     <div
@@ -86,18 +84,14 @@ const Modal = ({
         <h2 id={titleId} className={styles.title}>
           {title}
         </h2>
+        <div className={styles.body} data-testid="modal-body">
+          {children}
+        </div>
         {footer ? (
-          <>
-            <div className={styles.body} data-testid="modal-body">
-              {children}
-            </div>
-            <div className={styles.footer} data-testid="modal-footer">
-              {footer}
-            </div>
-          </>
-        ) : (
-          children
-        )}
+          <div className={styles.footer} data-testid="modal-footer">
+            {footer}
+          </div>
+        ) : null}
       </div>
     </div>
   );
