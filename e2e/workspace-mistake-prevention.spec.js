@@ -169,7 +169,8 @@ test.describe('Mistake-prevention UX on high-risk edit surfaces', () => {
     const targeted = dialog.getByRole('combobox', { name: 'Targeted Location' });
     await targeted.fill('ca1');
     // Histology is optional; reveal it before moving focus to its location field.
-    await dialog.locator('summary').filter({ hasText: 'Histology & description' }).click();
+    await expect(dialog.getByRole('textbox', { name: 'Description (optional)' })).toBeVisible();
+    await dialog.locator('summary').filter({ hasText: 'Histology (optional)' }).click();
     await dialog.getByRole('combobox', { name: 'Location (optional)' }).click();
 
     // The current guard CANONICALIZES on blur: the field visibly snaps "ca1" → "CA1" while the

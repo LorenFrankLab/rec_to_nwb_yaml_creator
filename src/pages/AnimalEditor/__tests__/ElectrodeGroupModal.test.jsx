@@ -108,7 +108,7 @@ describe('ElectrodeGroupModal', () => {
 
       expect(screen.getByLabelText(/device type/i)).toBeInTheDocument();
       expect(screen.getByLabelText('Location (optional)')).toBeInTheDocument();
-      expect(screen.getByLabelText(/description/i)).toBeInTheDocument();
+      expect(screen.getByRole('textbox', { name: /description/i })).toBeVisible();
       expect(screen.getByLabelText('Targeted Location')).toBeInTheDocument();
       expect(screen.getByLabelText(/ML \(Medial-Lateral\)/i)).toBeInTheDocument();
       expect(screen.getByLabelText(/AP \(Anterior-Posterior\)/i)).toBeInTheDocument();
@@ -337,6 +337,12 @@ describe('ElectrodeGroupModal', () => {
         expect.objectContaining({ location: 'Subiculum-tail', targeted_location: 'Subiculum-tail' })
       );
     });
+  });
+
+  it.each([['-2', 'Target hemisphere: Left.'], ['2', 'Target hemisphere: Right.'], ['0', 'ML is zero (midline); Spyglass currently records this as Right.']])('explains hemisphere for ML %s', (value, message) => {
+    render(<ElectrodeGroupModal isOpen mode="add" onSave={() => {}} onCancel={() => {}} />);
+    fireEvent.change(screen.getByLabelText(/ML \(Medial-Lateral\)/i), { target: { value } });
+    expect(screen.getByText((_, node) => node?.tagName === 'P' && node.textContent.startsWith(message))).toBeVisible();
   });
 
   describe('Save button behavior', () => {

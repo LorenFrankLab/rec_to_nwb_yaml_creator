@@ -186,6 +186,7 @@ export default function ElectrodeGroupsStep({ animal, onFieldUpdate, onEdit, onA
         <thead>
           <tr>
             <th>ID</th>
+            <th>Description / probe label</th>
             <th>Device Type</th>
             <th>Location</th>
             <th>Channels</th>
@@ -198,6 +199,7 @@ export default function ElectrodeGroupsStep({ animal, onFieldUpdate, onEdit, onA
           {electrodeGroups.map((group) => (
             <tr key={group.id}>
               <td data-label="ID">{group.id}</td>
+              <td data-label="Description / probe label">{group.description || '—'}</td>
               <td data-label="Device Type" title={String(group.device_type ?? '')}>
                 {deviceTypeLabel(group.device_type)}
               </td>

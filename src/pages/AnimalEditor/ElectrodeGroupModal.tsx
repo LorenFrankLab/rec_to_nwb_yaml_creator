@@ -209,6 +209,9 @@ function ElectrodeGroupForm({ mode, group = null, knownRegions = [], onSave, onC
         </select>
       </div>
 
+      <p className="help-text">Device type selects the probe model. Group IDs are assigned automatically;
+        use Description for the physical probe’s name or serial number.</p>
+
       {/* Count (Add mode only) */}
       {mode === 'add' && (
         <div className="form-group">
@@ -246,24 +249,6 @@ function ElectrodeGroupForm({ mode, group = null, knownRegions = [], onSave, onC
         </span>
       </div>
 
-      <details className="optional-probe-details">
-        <summary>Histology &amp; description (optional)</summary>
-      {/* Location (actual, post-histology). Optional here — defaults to the target
-          until the confirmed location is known. */}
-      <div className="form-group">
-        <BrainRegionAutocomplete
-          value={formData.location}
-          onChange={(value) => setFormData((prev) => ({ ...prev, location: value }))}
-          label="Location (optional)"
-          name="location"
-          suggestions={knownRegions}
-        />
-        <span className="help-text">
-          Actual recorded region, confirmed by histology. Leave blank to use the
-          targeted location for now; update it once histology is done.
-        </span>
-      </div>
-
       {/* Description (optional; auto-derived from device + target when left blank). */}
       <div className="form-group">
         <label htmlFor="description">Description (optional)</label>
@@ -276,11 +261,28 @@ function ElectrodeGroupForm({ mode, group = null, knownRegions = [], onSave, onC
           onChange={handleInputChange}
         />
         <span className="help-text">
-          Free-text label for this group in the NWB file. Leave blank to auto-generate
-          one from the device type and target.
+          Free-text label for this group in the NWB file; include a probe name or serial
+          number here. Leave blank to auto-generate one from the device type and target.
         </span>
       </div>
 
+      <details className="optional-probe-details">
+        <summary>Histology (optional)</summary>
+        {/* Location (actual, post-histology). Optional here — defaults to the target
+            until the confirmed location is known. */}
+        <div className="form-group">
+          <BrainRegionAutocomplete
+            value={formData.location}
+            onChange={(value) => setFormData((prev) => ({ ...prev, location: value }))}
+            label="Location (optional)"
+            name="location"
+            suggestions={knownRegions}
+          />
+          <span className="help-text">
+            Actual recorded region, confirmed by histology. Leave blank to use the
+            targeted location for now; update it once histology is done.
+          </span>
+        </div>
       </details>
 
       {/*
@@ -339,6 +341,14 @@ function ElectrodeGroupForm({ mode, group = null, knownRegions = [], onSave, onC
           />
         </div>
       </div>
+      <p className="help-text" aria-live="polite">
+        {formData.targeted_x.trim() === '' || !Number.isFinite(Number(formData.targeted_x))
+          ? 'Enter ML to show the target hemisphere.'
+          : Number(formData.targeted_x) === 0
+            ? 'ML is zero (midline); Spyglass currently records this as Right.'
+            : `Target hemisphere: ${Number(formData.targeted_x) < 0 ? 'Left' : 'Right'}.`}
+        {' '}Negative ML means left; positive ML means right. Keep the region name, such as CA1, separate.
+      </p>
       <p className="help-text">
         Stereotaxic coordinates in the unit selected below (millimeters by default).
       </p>

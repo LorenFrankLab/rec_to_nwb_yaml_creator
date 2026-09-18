@@ -103,3 +103,10 @@ published without replacing the current application:
 Pilot mode opens the workspace by default, displays its source commit, and uses separate
 localStorage, IndexedDB, Web Lock, and BroadcastChannel identities. Scientists can therefore test
 the pilot in the same browser without its saved workspace interacting with the current site.
+
+## Editing recording metadata
+
+Electrode descriptions are visible when adding or editing a group and in the group table. Use the
+description for a physical probe's name or serial number. The ML coordinate determines the target
+hemisphere: negative is left and positive is right. The editor calls out zero separately because
+Spyglass currently classifies zero as right.
