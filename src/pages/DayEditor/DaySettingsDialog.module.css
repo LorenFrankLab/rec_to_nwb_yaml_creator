@@ -1,0 +1,66 @@
+.dialog {
+  max-width: 44rem;
+}
+
+.intro {
+  margin: 0 0 var(--spacing-lg);
+  color: var(--color-grey-700);
+  font-size: var(--font-size-sm);
+}
+
+.section {
+  padding: 0 0 var(--spacing-lg);
+}
+
+.section h3 {
+  margin: 0 0 var(--spacing-xs);
+  font-size: var(--font-size-base);
+}
+
+.sectionHint {
+  margin: 0 0 var(--spacing-md);
+  color: var(--color-grey-600);
+  font-size: var(--font-size-sm);
+}
+
+.details {
+  padding-bottom: var(--spacing-lg);
+}
+
+.section + .section,
+.section + .details,
+.details + .details {
+  padding-top: var(--spacing-lg);
+  border-top: 1px solid var(--color-grey-200);
+}
+
+.details:last-child {
+  padding-bottom: 0;
+}
+
+.details > summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.detailsBody {
+  display: grid;
+  gap: var(--spacing-lg);
+  padding-top: var(--spacing-md);
+}
+
+.fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--spacing-md);
+}
+
+.fullWidth {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 600px) {
+  .fields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

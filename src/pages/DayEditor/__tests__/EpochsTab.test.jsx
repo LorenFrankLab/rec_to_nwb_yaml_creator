@@ -148,16 +148,16 @@ function lastPatch(onFieldUpdate, field) {
 describe('EpochsTab — grid render + collapsed state cells', () => {
   it('renders one row per epoch with a task disclosure <button aria-expanded>', () => {
     render(<EpochsTab {...makeBundle()} />);
-    expect(screen.getByText(/List epochs in recording order/i)).toBeInTheDocument();
-    expect(screen.getByText('Filter epochs')).toBeInTheDocument();
-    expect(screen.getByText('Quick add file entries')).toBeInTheDocument();
+    expect(screen.getByText(/An epoch is one numbered block/i)).toBeInTheDocument();
+    expect(screen.getByText('Show epochs')).toBeInTheDocument();
+    expect(screen.getByText('Add suggested files')).toBeInTheDocument();
     expect(screen.getByLabelText(/epoch status summary/i)).toHaveTextContent(/3 epochs/i);
     expect(screen.getByLabelText(/epoch status summary/i)).toHaveTextContent(/2 epochs need a video decision/i);
-    expect(screen.getByLabelText(/epoch status summary/i)).toHaveTextContent(/1 optional statescript not added/i);
+    expect(screen.getByLabelText(/epoch status summary/i)).toHaveTextContent(/1 with a suggested StateScript log/i);
     expect(screen.getByLabelText(/epoch status summary/i)).toHaveTextContent(/1 custom file name/i);
     const edit = screen.getByRole('button', { name: /Show epoch 1 details/i });
     expect(edit.tagName).toBe('BUTTON');
-    expect(edit).toHaveTextContent(/review/i);
+    expect(edit).toHaveTextContent(/edit epoch/i);
     expect(edit).not.toHaveTextContent(/tag/i);
     expect(edit).toHaveAttribute('aria-expanded', 'false');
     expect(edit).toHaveAttribute('aria-controls', 'epoch-details-panel');
@@ -192,8 +192,8 @@ describe('EpochsTab — grid render + collapsed state cells', () => {
     expect(screen.getByText(/Video:\s*1 video/i)).toBeInTheDocument();
     expect(screen.getAllByText(/Video:\s*Decision needed/i)).toHaveLength(2);
     // Epoch 2 is a run epoch (a statescript is expected); the sleep epochs have no precedent yet.
-    expect(screen.getAllByText(/Statescript:\s*Optional log not added/i)).toHaveLength(1);
-    expect(screen.getAllByText(/Statescript:\s*Not expected/i)).toHaveLength(2);
+    expect(screen.getAllByText(/StateScript:\s*Suggested log not added/i)).toHaveLength(1);
+    expect(screen.getAllByText(/StateScript:\s*No log expected/i)).toHaveLength(2);
     // The video filename lives only in the drill-in, never the collapsed grid.
     expect(screen.queryByText('run_video')).not.toBeInTheDocument();
   });
@@ -275,10 +275,10 @@ describe('EpochsTab — grid render + collapsed state cells', () => {
 describe('EpochsTab — no-epochs onboarding empty state (Phase 8)', () => {
   it('renders the EmptyState onboarding card with an add-epoch CTA when there are no epochs', () => {
     render(<EpochsTab {...makeBundle({ taskInstances: [] })} />);
-    expect(screen.getByRole('heading', { name: /no epochs yet/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /no recording epochs yet/i })).toBeInTheDocument();
     // No epoch rows are rendered (no task disclosure buttons).
     expect(screen.queryByRole('button', { name: /Show epoch/i })).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /build one epoch at a time/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /add one recording epoch/i })).toBeInTheDocument();
   });
 
   it('the add-epoch CTA writes a taskInstances patch adding one epoch to the first task type', async () => {
@@ -286,7 +286,7 @@ describe('EpochsTab — no-epochs onboarding empty state (Phase 8)', () => {
     // A genuine no-epochs day has no file/video refs (so adding the first epoch orphans nothing).
     const bundle = makeBundle({ taskInstances: [], associated_video_files: [], associated_files: [] });
     render(<EpochsTab {...bundle} />);
-    await user.click(screen.getByRole('button', { name: /build one epoch at a time/i }));
+    await user.click(screen.getByRole('button', { name: /add one recording epoch/i }));
     // 'blank' template adds one epoch to the first task type (Sleep / tasktype-0).
     expect(lastPatch(bundle.onFieldUpdate, 'taskInstances')).toEqual([
       { taskTypeId: 'tasktype-0', task_epochs: [1] },
@@ -434,7 +434,7 @@ describe('EpochsTab — write-back patches', () => {
       );
       render(<EpochsTab {...bundle} animalDays={[priorDay, bundle.day]} />);
 
-      await user.click(screen.getByRole('button', { name: /Choose a template/i }));
+      await user.click(screen.getByRole('button', { name: /Use a day template/i }));
       await user.click(screen.getByRole('menuitem', { name: /Copy structure from prior day/i }));
 
       expect(lastPatch(bundle.onFieldUpdate, 'taskInstances')).toEqual([
@@ -1028,7 +1028,7 @@ describe('EpochsTab — statescript naming', () => {
     const bundle = makeBundle();
     render(<EpochsTab {...bundle} />);
     await user.click(screen.getByRole('button', { name: /Show epoch 1 details/i }));
-    await user.click(screen.getByRole('button', { name: /^Add optional statescript$/i }));
+    await user.click(screen.getByRole('button', { name: /^Add suggested StateScript log$/i }));
     expect(lastPatch(bundle.onFieldUpdate, 'associated_files')).toEqual([
       {
         name: '20230622_r_01_s1.stateScriptLog',
@@ -1066,7 +1066,7 @@ describe('EpochsTab — statescript naming', () => {
     // A prior day logged a sleep statescript, so all three epochs expect one here.
     render(<EpochsTab {...bundle} animalDays={[PRIOR_SLEEP_DAY, bundle.day]} />);
 
-    await user.click(screen.getByRole('button', { name: /Add 3 optional statescripts/i }));
+    await user.click(screen.getByRole('button', { name: /Add 3 suggested StateScript logs/i }));
 
     expect(lastPatch(bundle.onFieldUpdate, 'associated_files')).toEqual([
       {
@@ -1102,7 +1102,7 @@ describe('EpochsTab — statescript naming', () => {
     expect(screen.queryByRole('button', { name: /Add statescript for epoch 1/i })).not.toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: /Show epoch 1 details/i }));
-    await user.click(screen.getByRole('button', { name: /^Add optional statescript$/i }));
+    await user.click(screen.getByRole('button', { name: /^Add suggested StateScript log$/i }));
 
     expect(lastPatch(bundle.onFieldUpdate, 'associated_files')).toEqual([
       {
@@ -1131,7 +1131,7 @@ describe('EpochsTab — accessibility', () => {
 describe('EpochsTab — statescript expectation + the data-folder prerequisite (F6)', () => {
   it('counts only EXPECTED statescripts and shows them as a warning, never an error', () => {
     render(<EpochsTab {...makeBundle()} />);
-    const chip = screen.getByRole('button', { name: /1 optional statescript not added/i });
+    const chip = screen.getByRole('button', { name: /1 with a suggested StateScript log/i });
     expect(chip).toHaveClass(styles.summaryButton);
     expect(chip).not.toHaveClass(styles.summaryNeedsAttention);
     expect(screen.queryByText(/statescripts? expected/i)).not.toBeInTheDocument();
@@ -1140,15 +1140,15 @@ describe('EpochsTab — statescript expectation + the data-folder prerequisite (
   it('expects sleep statescripts once an earlier same-configuration day logged one', () => {
     const bundle = makeBundle();
     render(<EpochsTab {...bundle} animalDays={[PRIOR_SLEEP_DAY, bundle.day]} />);
-    expect(screen.getByRole('button', { name: /3 optional statescripts not added/i })).toBeInTheDocument();
-    expect(screen.getAllByText(/Statescript:\s*Optional log not added/i)).toHaveLength(3);
+    expect(screen.getByRole('button', { name: /3 with suggested StateScript logs/i })).toBeInTheDocument();
+    expect(screen.getAllByText(/StateScript:\s*Suggested log not added/i)).toHaveLength(3);
   });
 
   it('filters the grid to the epochs that expect a statescript', async () => {
     const user = userEvent.setup();
     render(<EpochsTab {...makeBundle()} />);
 
-    await user.click(screen.getByRole('button', { name: /1 optional statescript not added/i }));
+    await user.click(screen.getByRole('button', { name: /1 with a suggested StateScript log/i }));
     expect(screen.queryByRole('button', { name: /Show epoch 1 details/i })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Show epoch 2 details/i })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Show epoch 3 details/i })).not.toBeInTheDocument();
@@ -1166,11 +1166,11 @@ describe('EpochsTab — statescript expectation + the data-folder prerequisite (
       ],
     });
     render(<EpochsTab {...bundle} />);
-    expect(screen.getByText(/Statescript:\s*Generated/i)).toHaveAttribute(
+    expect(screen.getByText(/StateScript:\s*Suggested name added/i)).toHaveAttribute(
       'title',
       '/data/r/20230622/20230622_r_02_r1.stateScriptLog'
     );
-    expect(screen.queryByText(/Statescript:\s*Optional log not added/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/StateScript:\s*Suggested log not added/i)).not.toBeInTheDocument();
   });
 
   it('never bulk-generates a statescript for an epoch that expects none', async () => {
@@ -1179,7 +1179,7 @@ describe('EpochsTab — statescript expectation + the data-folder prerequisite (
     render(<EpochsTab {...bundle} />);
 
     // Only the run epoch expects one; the two sleep epochs have no precedent on this animal.
-    await user.click(screen.getByRole('button', { name: /^Add 1 optional statescript$/ }));
+    await user.click(screen.getByRole('button', { name: /^Add 1 suggested StateScript log$/ }));
 
     expect(lastPatch(bundle.onFieldUpdate, 'associated_files')).toEqual([
       {
@@ -1194,7 +1194,7 @@ describe('EpochsTab — statescript expectation + the data-folder prerequisite (
   it('has no axe violations with the data-folder disclosure open', async () => {
     const user = userEvent.setup();
     const { container } = render(<EpochsTab {...makeBundle({ dataFolder: '' })} />);
-    await user.click(screen.getByRole('button', { name: /^Add 1 optional statescript$/ }));
+    await user.click(screen.getByRole('button', { name: /^Add 1 suggested StateScript log$/ }));
     expect(await axe(container)).toHaveNoViolations();
   });
 
@@ -1206,13 +1206,13 @@ describe('EpochsTab — statescript expectation + the data-folder prerequisite (
     expect(screen.queryByText(/Daily Setup/i)).not.toBeInTheDocument();
     const help = screen.getByText(/Folder containing this recording’s files/i);
     expect(help).not.toBeVisible();
-    const addStatescript = screen.getByRole('button', { name: /^Add 1 optional statescript$/ });
+    const addStatescript = screen.getByRole('button', { name: /^Add 1 suggested StateScript log$/ });
     expect(addStatescript).toBeEnabled();
 
     await user.click(addStatescript);
     expect(help).toBeVisible();
 
-    const input = screen.getByLabelText(/^Data folder$/i);
+    const input = screen.getByLabelText(/^StateScript file folder$/i);
     await waitFor(() => expect(input).toHaveFocus());
     await user.type(input, '/data/r/20230622');
     await user.tab();
@@ -1221,7 +1221,7 @@ describe('EpochsTab — statescript expectation + the data-folder prerequisite (
       expect(bundle.onFieldUpdate).toHaveBeenCalledWith('dataFolder', '/data/r/20230622')
     );
     await waitFor(() =>
-      expect(screen.getByRole('button', { name: /^Add 1 optional statescript$/ })).toBeEnabled()
+      expect(screen.getByRole('button', { name: /^Add 1 suggested StateScript log$/ })).toBeEnabled()
     );
     // Once the folder is known the prompt is gone — it is a prerequisite, not a permanent field.
     expect(

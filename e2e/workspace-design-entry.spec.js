@@ -28,18 +28,18 @@ for (const width of [320, 390, 1440]) {
     await expect(page.getByRole('button', { name: 'Copy YAML', exact: true })).toBeDisabled();
     const scan = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa']).analyze();
     expect(scan.violations).toEqual([]);
-    await page.getByRole('button', { name: 'Review epoch files', exact: true }).click();
+    await page.getByRole('button', { name: 'Review recording epochs and files', exact: true }).click();
     await expect(page.locator('#epochs-workspace')).toBeFocused();
   });
 }
 
-test('Add epoch is visible and preserves existing epochs and their files', async ({ page }) => {
+test('Add recording epoch is visible and preserves existing epochs and their files', async ({ page }) => {
   await seedAndOpen(page, buildConfiguredWorkspaceBlob(), `/#/day/${DAY_ID}`);
   const readDay = () => page.evaluate(({ key, id }) => JSON.parse(localStorage.getItem(key)).workspace.days[id], { key: STORAGE_KEY, id: DAY_ID });
   const before = await readDay();
   await page.getByRole('button', { name: /^Show epoch \d+ details$/ }).first().waitFor();
   const rowCount = await page.getByRole('button', { name: /^Show epoch \d+ details$/ }).count();
-  await page.getByRole('button', { name: 'Add epoch', exact: true }).click();
+  await page.getByRole('button', { name: 'Add recording epoch', exact: true }).click();
   await expect(page.getByRole('button', { name: /^Show epoch \d+ details$/ })).toHaveCount(rowCount + 1);
   await expect.poll(async () => (await readDay()).associated_video_files).toEqual(before.associated_video_files);
   await expect.poll(async () => (await readDay()).associated_files).toEqual(before.associated_files);

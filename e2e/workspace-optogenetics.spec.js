@@ -229,7 +229,7 @@ test.describe('Optogenetics export gating and the two-layer opto model', () => {
     blob.workspace.days[DAY_ID].fs_gui_yamls = [];
     await seedAndOpen(page, blob, `/#/day/${DAY_ID}`);
 
-    await expect(page.getByRole('heading', { level: 2, name: 'Epochs' })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 2, name: 'Recording epochs' })).toBeVisible();
 
     // The compact grid signals opto only for an implanted animal; its numeric controls live in the
     // selected epoch's details drawer so the table remains readable on narrow screens.

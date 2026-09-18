@@ -32,9 +32,7 @@ body:has(.modern-app) {
   padding: 0;
   border: 0;
 }
-.modern-app .daily-setup-header { margin-bottom: var(--spacing-lg); }
-.modern-app .daily-setup-lede { margin-bottom: var(--spacing-sm); }
-.modern-app .daily-log-context { margin-top: var(--spacing-sm); }
+.modern-app .daily-setup-header { margin-bottom: var(--spacing-sm); }
 .modern-app .daily-log-primary-grid { min-width: 0; }
 
 .modern-app .daily-setup-group {

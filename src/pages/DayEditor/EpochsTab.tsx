@@ -805,13 +805,31 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
         </section>
       ) : null}
       <div className={styles.workspaceHeader}>
-        <div>
-          <h2>Epochs</h2>
-          <p className={styles.workspaceIntro}>List epochs in recording order. Add the files recorded for each epoch.</p>
+        <div className={styles.workspaceLead}>
+          <h2>Recording epochs</h2>
+          <p className={styles.workspaceIntro}>
+            An epoch is one numbered block in the recording, such as sleep or a run. Edit each
+            epoch to confirm its task, room, cameras and files.
+          </p>
+          {epochCount > 0 && <div className={styles.templateMenu}>
+            <Button onClick={() => applyTemplate('blank')}>Add recording epoch</Button>
+            <OverflowMenu
+              ref={templateMenuRef}
+              label="Epoch templates"
+              trigger={<>Use a day template ▾</>}
+              items={[
+                { key: 'sleep', label: 'Sleep day', description: '4 sleep epochs', onSelect: () => applyTemplate('sleep') },
+                { key: 'wtrack', label: 'W-track day', description: 'sleep / run alternation', onSelect: () => applyTemplate('wtrack') },
+                ...(priorDayInstances()
+                  ? [{ key: 'copy', label: 'Copy structure from prior day', description: 'same epochs; files re-derive', onSelect: () => applyTemplate('copy') }]
+                  : []),
+              ]}
+            />
+          </div>}
           {epochCount > 0 && (
             <div className={styles.epochToolbar}>
               <div className={styles.toolbarGroup}>
-                <span className={styles.toolbarLabel}>Filter epochs</span>
+                <span className={styles.toolbarLabel}>Show epochs</span>
                 <div className={styles.summaryStrip} aria-label="Epoch status summary">
                   <button
                     type="button"
@@ -819,7 +837,7 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
                     aria-pressed={epochFilter === 'all'}
                     onClick={() => changeFilter('all')}
                   >
-                    {epochCount} {pluralize(epochCount, 'epoch')}
+                    All {epochCount} {pluralize(epochCount, 'epoch')}
                   </button>
                   {(missingVideoCount > 0 || epochFilter === 'needs-video') && (
                     <button
@@ -841,7 +859,7 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
                       aria-pressed={epochFilter === 'expected-statescript'}
                       onClick={() => changeFilter('expected-statescript')}
                     >
-                      {expectedStatescriptCount} optional {pluralize(expectedStatescriptCount, 'statescript')} not added
+                      {expectedStatescriptCount} with {expectedStatescriptCount === 1 ? 'a suggested' : 'suggested'} StateScript {pluralize(expectedStatescriptCount, 'log')}
                     </button>
                   )}
                   {(customFilenameCount > 0 || epochFilter === 'custom-filenames') && (
@@ -861,9 +879,9 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
                 open={dataFolderOpen}
                 onToggle={(event) => setDataFolderOpen(event.currentTarget.open)}
               >
-                <summary>File naming folder{grid.dataFolder ? ` · ${grid.dataFolder}` : ' · enter for statescript paths'}</summary>
+                <summary>StateScript folder{grid.dataFolder ? ` · ${grid.dataFolder}` : ' · set to generate paths'}</summary>
                 <label className={styles.toolbarLabel} htmlFor="epochs-data-folder">
-                  Data folder
+                  StateScript file folder
                 </label>
                 <DraftTextInput
                   draftKey={`day:${String(day.id)}:dataFolder`}
@@ -881,12 +899,12 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
                   aria-describedby="epochs-data-folder-help"
                 />
                 <span id="epochs-data-folder-help" className={styles.dataFolderHelp}>
-                  Folder containing this recording’s files. Statescript paths are generated inside it.
+                  Folder containing this recording’s files. StateScript paths are generated inside it.
                 </span>
               </details>
               {(generatedStatescriptCount > 0 || generatedVideoCount > 0) && (
                 <div className={`${styles.toolbarGroup} ${styles.bulkGroup}`}>
-                  <span className={styles.toolbarLabel}>Quick add file entries</span>
+                  <span className={styles.toolbarLabel}>Add suggested files</span>
                   <div className={styles.bulkActions} aria-label="Generate expected files">
                     {generatedStatescriptCount > 0 && (
                       <Button
@@ -895,7 +913,7 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
                         title={!grid.dataFolder ? 'Enter the file naming folder first' : undefined}
                         onClick={addOptionalStatescripts}
                       >
-                        Add {generatedStatescriptCount} optional {pluralize(generatedStatescriptCount, 'statescript')}
+                        Add {generatedStatescriptCount} suggested StateScript {pluralize(generatedStatescriptCount, 'log')}
                       </Button>
                     )}
                     {generatedVideoCount > 0 && (
@@ -927,21 +945,6 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
             </div>
           )}
         </div>
-        {epochCount > 0 && <div className={styles.templateMenu}>
-          <Button onClick={() => applyTemplate('blank')}>Add epoch</Button>
-          <OverflowMenu
-            ref={templateMenuRef}
-            label="Epoch templates"
-            trigger={<>Templates ▾</>}
-            items={[
-              { key: 'sleep', label: 'Sleep day', description: '4 sleep epochs', onSelect: () => applyTemplate('sleep') },
-              { key: 'wtrack', label: 'W-track day', description: 'sleep / run alternation', onSelect: () => applyTemplate('wtrack') },
-              ...(priorDayInstances()
-                ? [{ key: 'copy', label: 'Copy structure from prior day', description: 'same epochs; files re-derive', onSelect: () => applyTemplate('copy') }]
-                : []),
-            ]}
-          />
-        </div>}
       </div>
 
       {unresolvedTaskCatalogDivergence && (
@@ -976,14 +979,14 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
       {grid.rows.length === 0 ? (
         <EmptyState
           icon="▦"
-          title="No epochs yet"
+          title="No recording epochs yet"
           actions={<div className={styles.emptyActions}>
             {view.taskTypes.length > 0 ? (
               <>
                 <OverflowMenu
                   ref={templateMenuRef}
                   label="Choose a recording-day template"
-                  trigger={<>Choose a template ▾</>}
+                  trigger={<>Use a day template ▾</>}
                   items={[
                     { key: 'sleep', label: 'Sleep day', description: '4 sleep epochs', onSelect: () => applyTemplate('sleep') },
                     { key: 'wtrack', label: 'W-track day', description: 'sleep / run alternation', onSelect: () => applyTemplate('wtrack') },
@@ -993,7 +996,7 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
                   ]}
                 />
                 <Button variant="secondary" onClick={() => applyTemplate('blank')}>
-                  Build one epoch at a time
+                  Add one recording epoch
                 </Button>
               </>
             ) : (
@@ -1009,7 +1012,7 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
         </EmptyState>
       ) : filteredRows.length === 0 ? (
         <div className={styles.filterEmpty} role="status">
-          No epochs match this filter.
+          No recording epochs match this filter.
         </div>
       ) : (
         <>
@@ -1017,10 +1020,10 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
             <table className={styles.table}>
               <thead>
                 <tr>
-                  <th scope="col" className={styles.numCell}>#</th>
-                  <th scope="col">Task</th>
+                  <th scope="col" className={styles.numCell}>Epoch</th>
+                  <th scope="col">Task or activity</th>
                   <th scope="col">Files</th>
-                  <th scope="col">Camera(s)</th>
+                  <th scope="col">Cameras</th>
                   {hasOpto && <th scope="col">Opto</th>}
                   <th scope="col" className={styles.menuCell}><span className="sr-only">Actions</span></th>
                 </tr>
@@ -1315,15 +1318,15 @@ interface EpochDetailsPanelProps {
 
 /** How a LINKED statescript got its name (the collapsed cell's label once a file is bound). */
 const STATESCRIPT_NAMING_LABEL: Record<EpochGridRow['statescriptNaming'], string> = {
-  generated: 'Generated',
-  manual: 'Manual',
+  generated: 'Suggested name added',
+  manual: 'Custom name',
   none: '—',
 };
 
 /** The unlinked half of the three-state vocabulary — a warning at worst, never an error. */
 const STATESCRIPT_UNLINKED_LABEL: Record<'expected' | 'not_expected', string> = {
-  expected: 'Optional log not added',
-  not_expected: 'Not expected',
+  expected: 'Suggested log not added',
+  not_expected: 'No log expected',
 };
 
 /**
@@ -1403,7 +1406,7 @@ function EpochRowBlock(p: EpochRowProps) {
               aria-label={`${isActive ? 'Hide' : 'Show'} epoch ${row.epoch} details`}
               onClick={p.onToggle}
             >
-              <span>{isActive ? 'Hide' : 'Review'}</span>
+              <span>{isActive ? 'Close' : 'Edit epoch'}</span>
               <span className={styles.editChevron} aria-hidden="true">{isActive ? '▴' : '▾'}</span>
             </button>
           </div>
@@ -1412,7 +1415,7 @@ function EpochRowBlock(p: EpochRowProps) {
       <td className={styles.fileSummaryCell}>
         <span className={styles.fileSummaryStack}>
           <span className={`${styles.fileSummaryChip} ${statescript.tone}`} title={statescript.title}>
-            Statescript: {statescript.label}
+            StateScript: {statescript.label}
           </span>
           <span className={`${styles.fileSummaryChip} ${videoSummaryClass}`}>
             Video: {videoLabel}
@@ -1581,7 +1584,7 @@ function EpochDetailsPanel(p: EpochDetailsPanelProps) {
             <div className={styles.fileCards}>
               <div className={styles.fileCard} data-field-path={`epoch-${row.epoch}-statescript`} tabIndex={-1}>
                 <div className={styles.fileCardTop}>
-                  <span className={styles.fileCardTitle}>Statescript</span>
+                  <span className={styles.fileCardTitle}>StateScript log</span>
                   <span className={`${styles.fileState} ${statescriptStateClass}`}>{statescriptStateLabel}</span>
                 </div>
                 <div
@@ -1602,7 +1605,7 @@ function EpochDetailsPanel(p: EpochDetailsPanelProps) {
                         onRevert={p.onStatescriptRevert}
                         onChange={p.onStatescriptChange}
                       />
-                      <label htmlFor={`epoch-${row.epoch}-statescript-description`}>Statescript description (required)</label>
+                      <label htmlFor={`epoch-${row.epoch}-statescript-description`}>StateScript description (required)</label>
                       <DraftTextInput
                         draftKey={`day:${p.dayId}:associated_file:${String(row.statescript.entry.recordId ?? row.statescript.index)}:description`}
                         id={`epoch-${row.epoch}-statescript-description`}
@@ -1613,7 +1616,7 @@ function EpochDetailsPanel(p: EpochDetailsPanelProps) {
                         aria-required="true"
                         aria-invalid={!row.statescript.entry.description?.trim()}
                       />
-                      <small>Include “statescript” so Spyglass can identify this log.</small>
+                      <small>Include “StateScript” so Spyglass can identify this log.</small>
                       {p.onManageFile && <Button variant="secondary" size="small"
                         onClick={() => p.onManageFile?.(`associated_files[${row.statescript!.index}].name`)}>
                         Edit name, epoch or remove file
@@ -1624,7 +1627,7 @@ function EpochDetailsPanel(p: EpochDetailsPanelProps) {
                       <code className={styles.pathValue}>Suggested name: {expectedStatescriptPath}</code>
                       <div className={styles.fileActions}>
                         <button type="button" className={styles.filePrimaryAction} onClick={p.onAddStatescript}>
-                          Add optional statescript
+                          Add suggested StateScript log
                         </button>
                         <button
                           type="button"

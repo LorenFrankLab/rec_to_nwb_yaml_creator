@@ -188,7 +188,7 @@ test.describe('Mistake-prevention UX on high-risk edit surfaces', () => {
       page.getByRole('heading', { level: 1, name: `${ANIMAL_ID} · 2023-06-22` }),
     ).toBeVisible();
 
-    await expect(page.getByRole('heading', { level: 2, name: 'Epochs' })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 2, name: 'Recording epochs' })).toBeVisible();
 
     // In the epoch grid, epochs ARE the rows (never free-typed) and a video inherits its task's
     // camera (defined once on the animal catalog) — so the normal path cannot persist a stale camera
@@ -217,7 +217,7 @@ test.describe('Mistake-prevention UX on high-risk edit surfaces', () => {
     // reuses an existing name is blocked at its SOURCE — the animal catalog — the structural guarantee
     // behind the Spyglass task-name identity. (The seeded day uses task_name "w_alternation".)
     await seedAndOpen(page, buildConfiguredWorkspaceBlob(), `/#/day/${DAY_ID}`);
-    await expect(page.getByRole('heading', { level: 2, name: 'Epochs' })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 2, name: 'Recording epochs' })).toBeVisible();
 
     // Expand an epoch to reach its task picker — a controlled combobox, no free-text task name.
     await page.getByRole('button', { name: /Show epoch 2 details/i }).click();

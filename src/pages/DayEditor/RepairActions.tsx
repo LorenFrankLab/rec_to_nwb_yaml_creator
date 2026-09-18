@@ -64,7 +64,7 @@ export default function RepairActions({
       return <li key="missing-videos" className="repair-action-item repair-action-video-group">
         <div><strong>{missingVideos.length} epochs need video files</strong>
           <p>Add the recorded videos, or mark the epochs with no video.</p></div>
-        <button type="button" className="repair-action-button" onClick={() => onNavigate('epochs', 'epochs-workspace')}>Review epoch files</button>
+        <button type="button" className="repair-action-button" onClick={() => onNavigate('epochs', 'epochs-workspace')}>Review recording epochs and files</button>
         <details><summary>Review an individual epoch</summary><div className="repair-epoch-links">
           {missingVideos.map((entry, i) => <RepairActionButton key={entry.repairFocusPath ?? i}
             issue={{ ...entry, repair: entry.repair ? { ...entry.repair, label: `Review epoch ${entry.message.match(/^Epoch (\d+)/)?.[1] ?? i + 1}` } : undefined }} onNavigate={onNavigate} animalId={animalId} onRepair={onRepair} />)}

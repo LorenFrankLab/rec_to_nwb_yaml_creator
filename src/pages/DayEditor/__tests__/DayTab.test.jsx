@@ -84,7 +84,7 @@ describe('DayTab', () => {
     );
   });
 
-  it('puts today’s weight and notes first, then epochs, with stable context below', () => {
+  it('shows only routine daily work until the scientist opens Day settings', () => {
     render(
       <DayTab
         animal={mockAnimal}
@@ -94,36 +94,24 @@ describe('DayTab', () => {
       />
     );
 
-    expect(screen.getByTestId('day-provenance')).toBeInTheDocument();
     expect(screen.getByLabelText(/Weight measured on/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/Recording notes/i)).toBeRequired();
     expect(screen.queryByLabelText(/Experimenters present/i)).not.toBeInTheDocument();
     expect(screen.queryByLabelText(/Data folder/i)).not.toBeInTheDocument();
-    expect(screen.getByLabelText(/Experiment Description/i)).toBeRequired();
-    expect(screen.getByRole('heading', { name: /search terms/i })).toBeInTheDocument();
+    expect(screen.queryByLabelText(/Experiment Description/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: /search terms/i })).not.toBeInTheDocument();
+    expect(screen.queryByTestId('day-provenance')).not.toBeInTheDocument();
+    expect(screen.queryByText(/session identity and animal context/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/start here/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/export required/i)).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Day settings' })).toBeVisible();
 
     const weight = screen.getByLabelText(/Weight measured on/i);
     const notes = screen.getByLabelText(/Recording notes/i);
-    const epochs = screen.getByRole('heading', { name: /^epochs$/i });
-    const people = screen.getByText(/People & copied settings/i);
-    const experiment = screen.getByText(/Experiment description · required/i);
-    const optional = screen.getByText(/Lab, institution & optional search terms/i);
-    const context = screen.getByText(/session identity and animal context/i);
-    const sessionId = screen.getByDisplayValue('remy_20230622');
+    const epochs = screen.getByRole('heading', { name: /^recording epochs$/i });
 
     expect(weight.compareDocumentPosition(notes) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(notes.compareDocumentPosition(epochs) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(epochs.compareDocumentPosition(people) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(people.compareDocumentPosition(experiment) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(experiment.compareDocumentPosition(optional) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(optional.compareDocumentPosition(context) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(people.closest('details')).not.toHaveAttribute('open');
-    expect(experiment.closest('details')).toHaveAttribute('open'); // Required experiment description is missing.
-    expect(optional.closest('details')).not.toHaveAttribute('open');
-    expect(context.closest('details')).not.toHaveAttribute('open');
-    expect(sessionId).not.toBeVisible();
   });
 
   it('writes the recording-day weight to session.weight', async () => {
@@ -199,8 +187,7 @@ describe('DayTab', () => {
     const onFieldUpdate = vi.fn();
     const dayWithTeam = { ...mockDay, experimenters: { experimenter_name: ['Doe, Jane'], lab: 'L', institution: 'I' } };
     render(<DayTab animal={mockAnimal} day={dayWithTeam} mergedDay={mockMergedDay} onFieldUpdate={onFieldUpdate} />);
-    await user.click(screen.getByText(/People & copied settings/i));
-    await user.click(screen.getByRole('button', { name: /Change for this day/i }));
+    await user.click(screen.getByRole('button', { name: 'Day settings' }));
     const box = screen.getByLabelText(/experimenters present/i);
     expect(box).toHaveValue('Doe, Jane');
     await user.type(box, '\nRoe, Richard');
@@ -233,7 +220,7 @@ describe('DayTab', () => {
       />
     );
 
-    await user.click(screen.getByText(/Lab, institution & optional search terms/i));
+    await user.click(screen.getByRole('button', { name: 'Day settings' }));
     await user.type(screen.getByRole('textbox', { name: /keywords/i }), 'spatial');
     await user.click(screen.getByRole('button', { name: /add keyword/i }));
 
@@ -263,7 +250,8 @@ describe('DayTab', () => {
     });
   });
 
-  it('prefers the provided overview view-model for displayed values and inherited facts', () => {
+  it('uses view-model help in Day settings without repeating identity and animal context', async () => {
+    const user = userEvent.setup();
     const overviewFields = [
       { fieldPath: 'session.session_id', label: 'Session ID', value: 'remy_VM', source: 'derived', readOnly: true, helpText: 'VM session id help' },
       { fieldPath: 'session.experiment_description', label: 'Experiment Description', value: '', source: 'default', helpText: 'VM experiment help' },
@@ -284,15 +272,16 @@ describe('DayTab', () => {
       />
     );
 
-    expect(screen.getByDisplayValue('remy_VM')).toBeInTheDocument();
-    expect(screen.getByText('VM session id help')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Day settings' }));
     expect(screen.getByText('VM experiment help')).toBeInTheDocument();
-    for (const v of ['VM_SUBJECT', 'VM_SPECIES', 'VM_SEX', 'VM_GENO', 'VM_DOB', 'VM_DESC']) {
-      expect(screen.getByDisplayValue(v)).toBeInTheDocument();
+    expect(screen.queryByText('VM session id help')).not.toBeInTheDocument();
+    for (const value of ['remy_VM', 'VM_SUBJECT', 'VM_SPECIES', 'VM_SEX', 'VM_GENO', 'VM_DOB', 'VM_DESC']) {
+      expect(screen.queryByDisplayValue(value)).not.toBeInTheDocument();
     }
   });
 
-  it('shows inherited subject/team facts as collapsed read-only context with an animal setup link', () => {
+  it('does not repeat inherited animal facts on the Daily Log', async () => {
+    const user = userEvent.setup();
     render(
       <DayTab
         animal={mockAnimal}
@@ -302,14 +291,12 @@ describe('DayTab', () => {
       />
     );
 
-    expect(screen.getByText(/session identity and animal context/i)).toBeInTheDocument();
-    expect(screen.getByDisplayValue('Rat')).toBeDisabled();
-    expect(screen.getByDisplayValue('Long Evans')).toBeDisabled();
-    expect(screen.getByDisplayValue('2023-01-01')).toBeDisabled();
-    expect(screen.getByRole('link', { name: /edit animal setup/i })).toHaveAttribute(
-      'href',
-      '#/animal/remy/days?field=subject.species'
-    );
+    expect(screen.queryByText(/session identity and animal context/i)).not.toBeInTheDocument();
+    expect(screen.queryByDisplayValue('Rat')).not.toBeInTheDocument();
+    expect(screen.queryByDisplayValue('Long Evans')).not.toBeInTheDocument();
+    expect(screen.queryByDisplayValue('2023-01-01')).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Day settings' }));
+    expect(screen.queryByDisplayValue('Rat')).not.toBeInTheDocument();
   });
 
   it('does not render controls that write animal-static subject facts from the day view', () => {
@@ -328,6 +315,49 @@ describe('DayTab', () => {
     expect(document.querySelector('[data-field-path="subject.description"]')).not.toBeInTheDocument();
   });
 
+  it('opens Day settings and focuses a rare field requested by a validation repair', async () => {
+    render(
+      <DayTab
+        animal={mockAnimal}
+        day={mockDay}
+        mergedDay={mockMergedDay}
+        onFieldUpdate={vi.fn()}
+        focusRequest={{ fieldPath: 'experiment_description', token: 1 }}
+      />
+    );
+
+    expect(screen.getByRole('dialog', { name: 'Day settings' })).toBeInTheDocument();
+    const field = screen.getByLabelText(/Experiment description/i);
+    await waitFor(() => expect(field).toHaveFocus());
+  });
+
+  it('keeps Study metadata open when autosave fills a missing experiment description', async () => {
+    const user = userEvent.setup();
+    const onFieldUpdate = vi.fn();
+    const { rerender } = render(
+      <DayTab animal={mockAnimal} day={mockDay} mergedDay={mockMergedDay} onFieldUpdate={onFieldUpdate} />
+    );
+    await user.click(screen.getByRole('button', { name: 'Day settings' }));
+    const studyDetails = screen.getByText('Study metadata').closest('details');
+    expect(studyDetails).toHaveAttribute('open');
+
+    const dayWithDescription = {
+      ...mockDay,
+      session: { ...mockDay.session, experiment_description: 'Spatial navigation' },
+    };
+    rerender(
+      <DayTab
+        animal={mockAnimal}
+        day={dayWithDescription}
+        mergedDay={{ ...mockMergedDay, experiment_description: 'Spatial navigation' }}
+        onFieldUpdate={onFieldUpdate}
+      />
+    );
+
+    expect(studyDetails).toHaveAttribute('open');
+    expect(screen.getByLabelText(/Experiment description/i)).toBeVisible();
+  });
+
   it('shows an inline error when experiment description is cleared (validated at the merged path)', async () => {
     const user = userEvent.setup();
     render(
@@ -339,7 +369,8 @@ describe('DayTab', () => {
       />
     );
 
-    await user.click(screen.getByText(/Experiment description · inherited/i));
+    await user.click(screen.getByRole('button', { name: 'Day settings' }));
+    await user.click(screen.getByText('Study metadata'));
     const field = screen.getByLabelText(/Experiment Description/i);
     await user.clear(field);
     await user.tab();

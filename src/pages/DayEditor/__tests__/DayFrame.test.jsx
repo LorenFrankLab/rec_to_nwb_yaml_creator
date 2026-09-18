@@ -151,7 +151,8 @@ describe('DayEditorFrame', () => {
     renderFrame();
     expect(screen.queryByRole('complementary', { name: /animal setup/i })).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: /Animal: remy/i })).toHaveAttribute('href', '#/animal/remy/days');
-    await user.click(screen.getByText(/^People & copied settings/));
+    await user.click(screen.getByRole('button', { name: 'Day settings' }));
+    await user.click(screen.getByText('Source and recording setup'));
     expect(screen.getByText(/Probe setup v1/i)).toBeVisible();
   });
 

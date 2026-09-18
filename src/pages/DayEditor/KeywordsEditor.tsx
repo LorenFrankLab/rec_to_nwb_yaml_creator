@@ -70,6 +70,7 @@ export default function KeywordsEditor({ value, onChange }: KeywordsEditorProps)
         <input
           id="day-keyword-input"
           type="text"
+          data-field-path="keywords"
           value={draft}
           placeholder="Add a keyword"
           aria-describedby={error ? 'day-keyword-error' : undefined}
