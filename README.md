@@ -123,3 +123,8 @@ applying them to selected epochs. For example, base folder `/data/Peter/20260918
 `{stem}` combines date, subject, padded epoch and recording tag; individual tokens are also supported.
 Imported paths stay unchanged unless selected for replacement. The saved pattern is used for new
 StateScript entries and carries forward to new days; it is not included in exported YAML.
+
+Stimulation protocols show pulse and train settings directly. Select all epochs that used the same
+protocol, or use **Copy settings from another protocol** for a separate entry. Copying keeps the
+receiving entry's filename and epochs. FsGUI file values take precedence during conversion; enter
+fallback pulse/train values when the referenced file does not supply them.

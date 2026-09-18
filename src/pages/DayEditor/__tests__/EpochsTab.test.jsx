@@ -1393,4 +1393,21 @@ describe('imported metadata reuse', () => {
       .toBe('/new/20230622_r_02_r1/20230622_r_02_r1.stateScriptLog');
   });
 
+  it('copies all pulse settings into a second protocol while preserving its filename and epochs', async () => {
+    const user = userEvent.setup();
+    const source = { name: 'first.yaml', epochs: [1], power_in_mW: 5, camera_id: 0, dio_output_name: 'Laser',
+      pulseLength: 2, nPulses: 3, sequencePeriod: 4, nOutputTrains: 5, trainInterval: 6 };
+    const bundle = makeBundle({ fs_gui_yamls: [source, { name: 'second.yaml', epochs: [2, 3], pulseLength: 99 }] });
+    render(<StatefulEpochsTab bundle={bundle} />);
+    await user.click(screen.getByText('Stimulation protocols · 2'));
+    await user.click(screen.getByRole('button', { name: 'Edit protocol 2' }));
+    const dialog = screen.getByRole('dialog', { name: 'Stimulation protocol' });
+    expect(within(dialog).getByLabelText('Pulse length (ms)')).toBeVisible();
+    await user.selectOptions(within(dialog).getByLabelText('Source protocol'), '0');
+    await user.click(within(dialog).getByRole('button', { name: 'Copy settings', exact: true }));
+    expect(lastPatch(bundle.onFieldUpdate, 'fs_gui_yamls')).toEqual([
+      source, { ...source, name: 'second.yaml', epochs: [2, 3] },
+    ]);
+    expect(within(dialog).getByLabelText('Pulse length (ms)')).toHaveValue(2);
+  });
 });

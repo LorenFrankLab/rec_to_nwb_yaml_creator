@@ -1237,7 +1237,7 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
       </details>}
       {protocolIndex !== null && protocols[protocolIndex] && <StimulationProtocolEditor
         draftScope={`day:${String(day.id)}:fs_gui_yamls:${protocolIndex}`}
-        key={protocolIndex} index={protocolIndex} protocol={protocols[protocolIndex]} epochs={grid.rows}
+        key={protocolIndex} index={protocolIndex} protocol={protocols[protocolIndex]} protocols={protocols} epochs={grid.rows}
         cameras={cameras} events={getDayBehavioralEvents(day)} focusRequest={focusRequest}
         onChange={(protocol) => onFieldUpdate('fs_gui_yamls', protocols.map((entry, index) => index === protocolIndex ? protocol : entry))}
         onRemove={() => {

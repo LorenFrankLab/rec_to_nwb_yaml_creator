@@ -17,6 +17,7 @@ const PULSE_FIELDS = [
 interface Props {
   draftScope?: string;
   protocol: FsGuiYaml;
+  protocols?: FsGuiYaml[];
   index: number;
   epochs: Array<{ epoch: number; taskName: string }>;
   cameras: Camera[];
@@ -30,19 +31,39 @@ interface Props {
 }
 
 /** The same complete day-owned protocol editor serves epoch entry and validation repair. */
-export default function StimulationProtocolEditor({ protocol, index, epochs, cameras, events, focusRequest,
+export default function StimulationProtocolEditor({ protocol, protocols = [], index, epochs, cameras, events, focusRequest,
   draftScope, onChange, onRemove, onClose, onEditWiring, onEditCameras }: Props) {
   const root = useRef<HTMLDivElement>(null);
   const [confirmRemove, setConfirmRemove] = useState(false);
+  const [copyIndex, setCopyIndex] = useState('');
+  const [copyVersion, setCopyVersion] = useState(0);
+  const currentProtocol = useRef(protocol);
+  currentProtocol.current = protocol;
   const selected = Array.isArray(protocol.epochs) ? protocol.epochs : [];
   const outputs = events.filter((event) => event?.name?.trim() && !/^Din\d+$/i.test(String(event.description)));
   const path = (field: string) => `fs_gui_yamls[${index}].${field}`;
-  const patch = (field: string, value: unknown) => onChange({ ...protocol, [field]: value });
+  const replace = (next: FsGuiYaml) => {
+    currentProtocol.current = next;
+    onChange(next);
+  };
+  const patch = (field: string, value: unknown) => replace({ ...currentProtocol.current, [field]: value });
+  const copySettings = () => {
+    const source = protocols[Number(copyIndex)];
+    if (copyIndex === '' || !source) return;
+    const next = { ...currentProtocol.current };
+    const keys = ['power_in_mW', 'camera_id', 'dio_output_name', ...PULSE_FIELDS.map(([field]) => field)] as const;
+    for (const field of keys) {
+      delete next[field];
+      if (source[field] !== undefined) Object.assign(next, { [field]: source[field] });
+    }
+    replace(next);
+    setCopyVersion((version) => version + 1);
+    setCopyIndex('');
+  };
   const missingEpochs = selected.filter((epoch) => !epochs.some((choice) => choice.epoch === epoch));
   const unknownCamera = protocol.camera_id !== undefined && protocol.camera_id !== '' &&
     !cameras.some((camera) => camera.id === protocol.camera_id);
   const unknownOutput = protocol.dio_output_name && !outputs.some((event) => event.name === protocol.dio_output_name);
-  const advancedFocus = PULSE_FIELDS.some(([field]) => focusRequest?.fieldPath === path(field));
 
   useEffect(() => {
     if (!focusRequest) return;
@@ -59,6 +80,19 @@ export default function StimulationProtocolEditor({ protocol, index, epochs, cam
     <div ref={root} className={styles.form} tabIndex={-1}>
       <p>Changes save automatically for this recording. {selected.length > 1 && `This protocol is shared by epochs ${selected.join(', ')}; edits apply to all of them.`}</p>
       <FieldRequirements when="export" />
+      {protocols.length > 1 && <fieldset>
+        <legend>Copy settings from another protocol</legend>
+        <p>Copies power, camera, DIO output, and pulse/train values. This entry keeps its own filename and epochs.</p>
+        <label htmlFor="copy-protocol-source">Source protocol</label>
+          <select id="copy-protocol-source" value={copyIndex} onChange={(event) => setCopyIndex(event.target.value)}>
+            <option value="">Choose a protocol…</option>
+            {protocols.map((entry, i) => i === index ? null : <option key={i} value={i}>
+              {entry.name || `Protocol ${i + 1}`} · epochs {(entry.epochs ?? []).join(', ')}
+            </option>)}
+          </select>
+        <Button variant="secondary" disabled={copyIndex === ''} onClick={copySettings}>Copy settings</Button>
+      </fieldset>}
+      <div key={copyVersion} className={styles.form}>
       {confirmRemove && <div role="alert" className={styles.confirm}>
         <p>Remove this protocol from {selected.length ? `epochs ${selected.join(', ')}` : 'this recording'}?</p>
         <Button variant="dangerSubtle" onClick={onRemove}>Confirm removal</Button>{' '}
@@ -75,7 +109,7 @@ export default function StimulationProtocolEditor({ protocol, index, epochs, cam
           min="0" step="any" data-field-path={path('power_in_mW')} aria-required="true" />
       </label>
       <fieldset data-field-path={path('epochs')} tabIndex={-1}>
-        <legend>Stimulated epochs <RequiredMark /></legend>
+        <legend>Use this protocol for epochs <RequiredMark /></legend>
         <div className={styles.epochs}>
           {epochs.map(({ epoch, taskName }) => <label key={epoch}>
             <input type="checkbox" checked={selected.includes(epoch)} onChange={(event) =>
@@ -107,15 +141,18 @@ export default function StimulationProtocolEditor({ protocol, index, epochs, cam
         </select>
       </label>
       <Button variant="neutral" size="small" onClick={onEditWiring}>Set up DIO outputs</Button>
-      <details open={advancedFocus || undefined}>
-        <summary>Pulse and train settings (optional)</summary>
-        <p className={styles.hint}>Enter these when the stimulation parameters are not supplied by the FsGUI protocol.</p>
+      <fieldset>
+        <legend>Pulse and train settings</legend>
+        <p className={styles.hint}>Leave a value blank only if the referenced FsGUI YAML supplies it.
+          FsGUI file values take precedence during conversion; these fallback values are shared by
+          every epoch selected above. New protocols start with blank values.</p>
         <div className={styles.form}>{PULSE_FIELDS.map(([field, label, step]) => <label key={field}>{label}
           <DraftNumberInput value={protocol[field] === '' || protocol[field] == null ? undefined : Number(protocol[field])} min="0" step={step}
             draftKey={draftScope ? `${draftScope}:${field}` : undefined}
             data-field-path={path(field)} onCommit={(value) => patch(field, value)} />
         </label>)}</div>
-      </details>
+      </fieldset>
+      </div>
     </div>
   </Modal>;
 }

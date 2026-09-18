@@ -27,7 +27,7 @@ test('create, share, repair and remove a stimulation protocol entirely in the mo
   await dialog.getByRole('combobox', { name: /DIO output/ }).selectOption('laser_trigger');
   await dialog.getByRole('checkbox', { name: /^4 ·/ }).check();
   await expect(dialog.getByText(/shared by epochs 2, 4/)).toBeVisible();
-  await dialog.getByText('Pulse and train settings (optional)', { exact: true }).click();
+  await expect(dialog.getByLabel('Pulse length (ms)', { exact: true })).toBeVisible();
   await dialog.getByLabel('Pulse length (ms)', { exact: true }).fill('5');
   await dialog.getByRole('button', { name: 'Done', exact: true }).click();
   await page.getByRole('button', { name: 'Review & export', exact: true }).click();
@@ -138,4 +138,23 @@ test('setup row menus remain reachable on a narrow screen', async ({ page }) => 
   expect(box.y + box.height).toBeLessThanOrEqual(780);
   await page.keyboard.press('Escape');
   await expect(trigger).toBeFocused();
+});
+
+test('copy stimulation settings preserves destination epoch assignments and exports every pulse field', async ({ page }) => {
+  const blob = optoBlob();
+  const source = { name: 'first.yaml', epochs: [2], camera_id: 0, dio_output_name: 'laser_trigger',
+    power_in_mW: 5, pulseLength: 2, nPulses: 3, sequencePeriod: 4, nOutputTrains: 5, trainInterval: 6 };
+  blob.workspace.days[DAY_ID].fs_gui_yamls = [source, { ...source, name: 'second.yaml', epochs: [4], pulseLength: 99 }];
+  await seedAndOpen(page, blob, `/#/day/${DAY_ID}`);
+  await page.getByText('Stimulation protocols · 2', { exact: true }).click();
+  await page.getByRole('button', { name: 'Edit protocol 2', exact: true }).click();
+  const dialog = page.getByRole('dialog', { name: 'Stimulation protocol' });
+  await expect(dialog.getByLabel('Pulse length (ms)', { exact: true })).toBeVisible();
+  await dialog.getByLabel('Source protocol', { exact: true }).selectOption('0');
+  await dialog.getByRole('button', { name: 'Copy settings', exact: true }).click();
+  await expect(dialog.getByLabel('Pulse length (ms)', { exact: true })).toHaveValue('2');
+  await dialog.getByRole('button', { name: 'Done', exact: true }).click();
+  await page.getByRole('button', { name: 'Review & export', exact: true }).click();
+  const download = await captureDownload(page, () => page.getByRole('button', { name: 'Download YAML', exact: true }).click());
+  expect(YAML.parse(download.text).fs_gui_yamls).toEqual([source, { ...source, name: 'second.yaml', epochs: [4] }]);
 });
