@@ -780,6 +780,7 @@ export function createDayRecord(
     // acknowledge repair command treat an absent container as "no acks" and create it on demand
     // via `applyDayUpdates`'s `state` deep-merge. `mergeDayMetadata` never reads `state`.
     state: {
+      ...(carryFrom?.state?.statescriptPathTemplate ? { statescriptPathTemplate: carryFrom.state.statescriptPathTemplate } : {}),
       draft: true,
       validated: false,
       exported: false,

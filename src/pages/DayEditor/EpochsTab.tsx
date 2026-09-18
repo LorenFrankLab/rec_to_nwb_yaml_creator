@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import StatescriptPathEditor from './StatescriptPathEditor';
 import { DraftTextInput } from '../../components/ui/DraftFields';
 import { STATESCRIPT_DESCRIPTION } from '../../domain/associatedFiles';
 import { ConfirmDialog, Modal, useDialogBehavior } from '../../components/Modal';
@@ -36,8 +37,7 @@ import {
 } from '../../domain/epochOperations';
 import type { OrphanedReferences, TaskContextPatch } from '../../domain/epochOperations';
 import {
-  deriveStatescriptName,
-  deriveStatescriptPath,
+  deriveEpochStatescript,
   deriveVideoName,
   isDerivedVideo,
 } from '../../domain/fileNaming';
@@ -570,8 +570,10 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
   };
 
   // ── Statescript naming (Override / Revert) ──
-  const statescriptDerivedName = (row: EpochGridRow) =>
-    deriveStatescriptName({ date: grid.date, subjectId: grid.subjectId, epoch: row.epoch, tag: row.tag });
+  const statescriptFile = (row: EpochGridRow) => deriveEpochStatescript({
+    ...grid, epoch: row.epoch, tag: row.tag,
+  });
+  const statescriptDerivedName = (row: EpochGridRow) => statescriptFile(row).name;
   const setStatescriptManual = (epoch: number, on: boolean) =>
     setManualStatescript((prev) => {
       const next = new Set(prev);
@@ -579,18 +581,17 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
       else next.delete(epoch);
       return next;
     });
-  const writeStatescriptPath = (row: EpochGridRow, path: string) => {
+  const writeStatescriptPath = (row: EpochGridRow, path: string, generated = false) => {
     if (unresolvedTaskCatalogDivergence) return;
     clearDeferredEpoch(row.epoch);
     const files = getDayAssociatedFiles(day);
     if (!row.statescript) return;
-    onFieldUpdate('associated_files', files.map((f, i) => (i === row.statescript!.index ? { ...f, path } : f)));
+    onFieldUpdate('associated_files', files.map((f, i) => (i === row.statescript!.index ? { ...f, path, ...(generated ? { name: statescriptFile(row).name } : {}) } : f)));
   };
   const addStatescript = (row: EpochGridRow) => {
     if (unresolvedTaskCatalogDivergence) return;
     clearDeferredEpoch(row.epoch);
-    const name = statescriptDerivedName(row);
-    const path = deriveStatescriptPath(grid.dataFolder, name);
+    const { name, path } = statescriptFile(row);
     onFieldUpdate('associated_files', [
       ...getDayAssociatedFiles(day),
       { name, description: STATESCRIPT_DESCRIPTION, path, task_epochs: row.epoch },
@@ -1026,7 +1027,7 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
               onStatescriptOverride={() => setStatescriptManual(activeRow.epoch, true)}
               onStatescriptRevert={() => {
                 setStatescriptManual(activeRow.epoch, false);
-                writeStatescriptPath(activeRow, deriveStatescriptPath(grid.dataFolder, statescriptDerivedName(activeRow)));
+                writeStatescriptPath(activeRow, statescriptFile(activeRow).path, true);
               }}
               onManageFile={props.onManageFile ? (path) => { setActiveEpoch(null); props.onManageFile?.(path); } : undefined}
               onStatescriptChange={(path) => writeStatescriptPath(activeRow, path)}
@@ -1099,6 +1100,22 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
         onToggle={(event) => setDataFolderOpen(event.currentTarget.open)}>
         <summary>File naming &amp; bulk entry</summary>
         <p>Add metadata for files you recorded. Suggested filenames are not checked against files on disk.</p>
+        <StatescriptPathEditor key={String(day.id)} grid={grid} files={getDayAssociatedFiles(day)}
+          disabled={unresolvedTaskCatalogDivergence}
+          onApply={(folder, pattern, files) => {
+            const before = getDayAssociatedFiles(day);
+            const changes: Array<[string, unknown]> = [
+              ['dataFolder', folder], ['state', statePatch({ statescriptPathTemplate: pattern })], ['associated_files', files],
+            ];
+            if (onFieldsUpdate) onFieldsUpdate(changes);
+            else changes.forEach(([field, value]) => onFieldUpdate(field, value));
+            setManualStatescript(new Set());
+            showToast('StateScript naming pattern applied', () => {
+              const undo: Array<[string, unknown]> = [['dataFolder', grid.dataFolder], ['state', day.state], ['associated_files', before]];
+              if (onFieldsUpdate) onFieldsUpdate(undo);
+              else undo.forEach(([field, value]) => onFieldUpdate(field, value));
+            });
+          }} />
         <div className={styles.fileToolsContent}>
           <div className={styles.folderField}><label htmlFor="epochs-data-folder">StateScript file folder</label>
             <DraftTextInput draftKey={`day:${String(day.id)}:dataFolder`} id="epochs-data-folder"
@@ -1430,9 +1447,7 @@ function EpochDetailsPanel(p: EpochDetailsPanelProps) {
   // was prefilled from the PREVIOUS epoch and would otherwise write that day-context onto this one.
   useEffect(() => setEditingContext(false), [row.epoch]);
   const hasManualVideo = row.videos.some((v) => p.manualVideoKeys.has(`e${row.epoch}-v${v.index}`));
-  const expectedStatescriptPath = grid.dataFolder
-    ? deriveStatescriptPath(grid.dataFolder, p.statescriptDerivedName)
-    : p.statescriptDerivedName;
+  const expectedStatescriptPath = deriveEpochStatescript({ ...grid, epoch: row.epoch, tag: row.tag }).path;
   const expectedVideoName = deriveVideoName({
     date: grid.date,
     subjectId: grid.subjectId,

@@ -1,6 +1,5 @@
 import {
-  deriveStatescriptName,
-  deriveStatescriptPath,
+  deriveEpochStatescript,
   deriveVideoName,
 } from './fileNaming';
 import type { StatescriptState } from './statescriptExpectation';
@@ -29,6 +28,7 @@ interface GeneratedFileGrid {
   date: string;
   subjectId: string;
   dataFolder: string;
+  pathTemplate?: string;
 }
 
 function cameraId(value: unknown): number | null {
@@ -124,16 +124,16 @@ export function addMissingGeneratedStatescripts(
 ): AssociatedFile[] {
   const additions = expectedStatescriptRows(grid)
     .map((row) => {
-      const name = deriveStatescriptName({
+      const file = deriveEpochStatescript({
+        dataFolder: grid.dataFolder, pathTemplate: grid.pathTemplate,
         date: grid.date,
         subjectId: grid.subjectId,
         epoch: row.epoch,
         tag: row.tag,
       });
       return {
-        name,
+        ...file,
         description: STATESCRIPT_DESCRIPTION,
-        path: deriveStatescriptPath(grid.dataFolder, name),
         task_epochs: row.epoch,
       };
     });

@@ -820,6 +820,8 @@ export interface DeviceOverrides {
  * Tracks the current state of a day through the editing workflow.
  */
 export interface DayState {
+  /** Relative StateScript naming pattern; authoring preference, never exported. */
+  statescriptPathTemplate?: string;
   /** true if editing in progress, false if ready to export. */
   draft: boolean;
   /** true if passed validation pipeline. */

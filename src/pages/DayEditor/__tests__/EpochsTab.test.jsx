@@ -8,7 +8,7 @@
  */
 import { useState } from 'react';
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { axe } from 'jest-axe';
 import EpochsTab from '../EpochsTab';
@@ -1364,4 +1364,33 @@ describe('EpochsTab — statescript expectation + the data-folder prerequisite (
     // Keep the tools open so the next action (adding the logs) stays in place.
     expect(help).toBeVisible();
   });
+});
+
+describe('imported metadata reuse', () => {
+  it('previews epoch paths, preserves imported files until Apply, and uses the saved pattern for new logs', async () => {
+    const user = userEvent.setup();
+    const imported = { name: 'old.stateScriptLog', path: '/old/old.stateScriptLog', description: 'statescript log', task_epochs: 1 };
+    const bundle = makeBundle({ associated_files: [imported] });
+    render(<StatefulEpochsTab bundle={bundle} />);
+    await user.click(screen.getByText('File naming & bulk entry'));
+    await user.click(screen.getByRole('button', { name: 'Set epoch path pattern' }));
+    const editor = screen.getByRole('group', { name: 'StateScript path pattern' });
+    await user.clear(within(editor).getByLabelText('Base folder'));
+    await user.type(within(editor).getByLabelText('Base folder'), '/new');
+    // fireEvent avoids treating the literal template braces as keyboard commands.
+    fireEvent.change(within(editor).getByLabelText('Relative path pattern'), { target: { value: '{stem}/{stem}.stateScriptLog' } });
+    expect(within(editor).getByText('/new/20230622_r_01_s1/20230622_r_01_s1.stateScriptLog')).toBeVisible();
+    expect(bundle.onFieldUpdate).not.toHaveBeenCalled();
+    await user.click(within(editor).getByLabelText('Epoch 1'));
+    await user.click(within(editor).getByRole('button', { name: 'Apply paths to 1 epoch' }));
+    expect(lastPatch(bundle.onFieldUpdate, 'associated_files')).toEqual([
+      { ...imported, name: '20230622_r_01_s1.stateScriptLog', path: '/new/20230622_r_01_s1/20230622_r_01_s1.stateScriptLog' },
+    ]);
+    expect(lastPatch(bundle.onFieldUpdate, 'state').statescriptPathTemplate).toBe('{stem}/{stem}.stateScriptLog');
+    // Remaining rows can be generated with the new naming pattern via the ordinary bulk action.
+    await user.click(screen.getByRole('button', { name: /Add .*suggested StateScript/ }));
+    expect(lastPatch(bundle.onFieldUpdate, 'associated_files').find((file) => file.task_epochs === 2)?.path)
+      .toBe('/new/20230622_r_02_r1/20230622_r_02_r1.stateScriptLog');
+  });
+
 });

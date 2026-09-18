@@ -39,6 +39,7 @@ import {
   statescriptStateFor,
 } from '../domain/statescriptExpectation';
 import type { StatescriptState } from '../domain/statescriptExpectation';
+import { getDayStatescriptPathTemplate } from '../state/workspaceSelectors';
 import { isDerivedStatescript } from '../domain/fileNaming';
 import { isRecord } from '../utils/records';
 import type {
@@ -135,6 +136,7 @@ export interface EpochGrid {
   duplicateEpochs: number[];
   /** The day's data folder (`day.dataFolder`), or `''`. */
   dataFolder: string;
+  pathTemplate?: string;
   /** Whether the owning animal has optogenetics (drives the opto columns). */
   isOpto: boolean;
   /** The `YYYYMMDD` date token used for filename derivation. */
@@ -237,6 +239,7 @@ export function buildEpochGrid(animal: unknown, day: unknown, animalDays: unknow
   const fsgui = getDayFsGuiYamls(day);
   const absentSet = new Set(getDayVideolessEpochs(day));
   const deferredSet = new Set(getDayDeferredEpochs(day));
+  const pathTemplate = getDayStatescriptPathTemplate(day);
   const dataFolder = (isRecord(day) && typeof day.dataFolder === 'string' ? day.dataFolder : '') || '';
   const subjectId = getAnimalSubject(animal).subject_id || '';
   const date = deriveDateToken(isRecord(day) ? day.date : undefined);
@@ -296,7 +299,7 @@ export function buildEpochGrid(animal: unknown, day: unknown, animalDays: unknow
     const statescriptNaming: StatescriptNaming =
       statescript == null
         ? 'none'
-        : isDerivedStatescript(statescript.entry, { dataFolder, date, subjectId, epoch, tag })
+        : isDerivedStatescript(statescript.entry, { dataFolder, pathTemplate, date, subjectId, epoch, tag })
           ? 'generated'
           : 'manual';
 
@@ -340,5 +343,5 @@ export function buildEpochGrid(animal: unknown, day: unknown, animalDays: unknow
     };
   });
 
-  return { rows, duplicateEpochs, dataFolder, isOpto, date, subjectId };
+  return { rows, duplicateEpochs, dataFolder, pathTemplate, isOpto, date, subjectId };
 }

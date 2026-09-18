@@ -193,6 +193,29 @@ test('the full file manager fits a narrow screen and exposes labeled repair cont
   expect((await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa']).analyze()).violations).toEqual([]);
 });
 
+for (const width of [1440, 390]) {
+  test(`epoch path pattern previews imported paths and survives reload at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 });
+    await seedAndOpen(page, twoEpochs(), `/#/day/${DAY_ID}`);
+    await page.getByText('File naming & bulk entry', { exact: true }).click();
+    await page.getByRole('button', { name: 'Set epoch path pattern' }).click();
+    const editor = page.getByRole('group', { name: 'StateScript path pattern' });
+    await editor.getByLabel('Base folder', { exact: true }).fill('/new');
+    await editor.getByLabel('Relative path pattern', { exact: true }).fill('{stem}/{stem}.stateScriptLog');
+    await expect(editor.getByText('/data/log1.stateScriptLog', { exact: true })).toBeVisible();
+    await expect(editor.getByText('/new/20230622_remy_02_log2/20230622_remy_02_log2.stateScriptLog', { exact: true })).toBeVisible();
+    await editor.getByLabel('Epoch 2', { exact: true }).check();
+    await editor.getByRole('button', { name: 'Apply paths to 1 epoch' }).click();
+    await page.keyboard.press('ControlOrMeta+s');
+    await page.reload();
+    const doc = await exported(page);
+    expect(doc.associated_files[0].path).toBe('/data/log1.stateScriptLog');
+    expect(doc.associated_files[1]).toMatchObject({ task_epochs: 2,
+      name: '20230622_remy_02_log2.stateScriptLog', path: '/new/20230622_remy_02_log2/20230622_remy_02_log2.stateScriptLog' });
+    expect(doc.state).toBeUndefined();
+  });
+}
+
 test('focused keywords survive Save and reload and are included in the exported YAML', async ({ page }) => {
   await seedAndOpen(page, twoEpochs(), `/#/day/${DAY_ID}`);
   await page.getByLabel('Keywords (optional)', { exact: true }).fill('opto\nhippocampus\nmPFC');

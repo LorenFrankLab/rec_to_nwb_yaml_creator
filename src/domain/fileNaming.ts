@@ -37,6 +37,7 @@ export interface VideoNameTokens extends FileNameTokens {
 
 /** The statescript classification context: the file-name tokens plus the day's data folder. */
 export interface StatescriptContext extends FileNameTokens {
+  pathTemplate?: string;
   /** The day's data folder (`day.dataFolder`); absent/empty → nothing derives (always `manual`). */
   dataFolder?: string;
 }
@@ -107,7 +108,7 @@ export function deriveStatescriptPath(dataFolder: string, name: string): string 
  */
 export function isDerivedStatescript(file: StoredStatescriptFile, ctx: StatescriptContext): boolean {
   if (!ctx.dataFolder) return false;
-  return file.path === deriveStatescriptPath(ctx.dataFolder, deriveStatescriptName(ctx));
+  return file.path === deriveEpochStatescript(ctx).path;
 }
 
 /**
@@ -120,4 +121,33 @@ export function isDerivedStatescript(file: StoredStatescriptFile, ctx: Statescri
  */
 export function isDerivedVideo(video: StoredVideoFile, ctx: VideoNameTokens): boolean {
   return video.name === deriveVideoName(ctx);
+}
+
+export const DEFAULT_STATESCRIPT_TEMPLATE = '{stem}.stateScriptLog';
+const TEMPLATE_TOKENS = ['date', 'subject', 'epoch', 'epoch:02d', 'tag', 'stem'];
+
+/** Reject typos and paths that escape the selected base folder before applying a pattern. */
+export function statescriptTemplateError(pattern: string): string | null {
+  if (!pattern.trim()) return 'Enter a path pattern.';
+  const unknown = [...pattern.matchAll(/\{([^{}]+)\}/g)].find((match) => !TEMPLATE_TOKENS.includes(match[1]));
+  if (unknown) return `Unknown token ${unknown[0]}. Use date, subject, epoch, epoch:02d, tag, or stem.`;
+  if (/[{}]/.test(pattern.replace(/\{([^{}]+)\}/g, 'token'))) return 'Check the braces in the path pattern.';
+  if (pattern.startsWith('/') || pattern.includes('\\') || pattern.split('/').some((part) => !part || part === '.' || part === '..')) {
+    return 'Use a relative path inside the base folder, without empty, . or .. segments.';
+  }
+  if (!/\{(?:epoch(?::02d)?|stem)\}/.test(pattern.split('/').pop() ?? '')) return 'Include {epoch}, {epoch:02d}, or {stem} in the filename so each epoch has its own name.';
+  if (!pattern.endsWith('.stateScriptLog')) return 'The filename must end with .stateScriptLog.';
+  return null;
+}
+
+/** Expand a relative directory/filename pattern for one epoch. Defaults cover older workspaces. */
+export function deriveEpochStatescript(ctx: StatescriptContext): { name: string; path: string } {
+  const pattern = ctx.pathTemplate && !statescriptTemplateError(ctx.pathTemplate)
+    ? ctx.pathTemplate : DEFAULT_STATESCRIPT_TEMPLATE;
+  const values: Record<string, string> = {
+    date: ctx.date, subject: ctx.subjectId, epoch: String(ctx.epoch),
+    'epoch:02d': String(ctx.epoch).padStart(2, '0'), tag: ctx.tag, stem: nameStem(ctx),
+  };
+  const relative = pattern.replace(/\{([^{}]+)\}/g, (_, token: string) => values[token]);
+  return { name: relative.split('/').pop()!, path: deriveStatescriptPath(ctx.dataFolder ?? '', relative) };
 }

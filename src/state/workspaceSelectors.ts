@@ -432,3 +432,9 @@ export const getDayDataAcqDeviceName = (day: unknown): string | undefined => {
   const name = asRecord(day).data_acq_device_name;
   return typeof name === 'string' ? name : undefined;
 };
+
+/** Optional authoring-only pattern for StateScript paths. */
+export const getDayStatescriptPathTemplate = (day: unknown): string | undefined => {
+  const pattern = asRecord(asRecord(day).state).statescriptPathTemplate;
+  return typeof pattern === 'string' ? pattern : undefined;
+};

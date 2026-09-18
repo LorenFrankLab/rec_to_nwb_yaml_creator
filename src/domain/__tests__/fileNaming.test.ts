@@ -1,3 +1,4 @@
+import { deriveEpochStatescript, statescriptTemplateError } from '../fileNaming';
 /**
  * Tests for the per-epoch filename derivation (Phase 4 — epoch grid).
  *
@@ -132,5 +133,23 @@ describe('isDerivedStatescript — generated vs manual classification', () => {
         { dataFolder: '', date: '20230622', subjectId: 'remy', epoch: 1, tag: 's1' }
       )
     ).toBe(false);
+  });
+});
+
+// Paths include the epoch in every requested directory segment as well as the filename.
+describe('epoch directory patterns', () => {
+  it('expands date, subject and padded epoch in nested paths', () => {
+    const ctx = { date: '20260918', subjectId: 'Peter', epoch: 2, tag: 's2',
+      dataFolder: '/stelmo/denisse/Peter/20260918/',
+      pathTemplate: '{stem}/{stem}.stateScriptLog/{date}_{subject}_{epoch:02d}_{tag}.stateScriptLog' };
+    expect(deriveEpochStatescript(ctx)).toEqual({
+      name: '20260918_Peter_02_s2.stateScriptLog',
+      path: '/stelmo/denisse/Peter/20260918/20260918_Peter_02_s2/20260918_Peter_02_s2.stateScriptLog/20260918_Peter_02_s2.stateScriptLog',
+    });
+    expect(isDerivedStatescript(deriveEpochStatescript(ctx), ctx)).toBe(true);
+  });
+
+  it.each(['{epoc}.stateScriptLog', '../{stem}.stateScriptLog', '/{stem}.stateScriptLog', 'same.stateScriptLog'])('rejects ambiguous or invalid pattern %s', (pattern) => {
+    expect(statescriptTemplateError(pattern)).not.toBeNull();
   });
 });

@@ -115,3 +115,11 @@ Electrode descriptions are visible when adding or editing a group and in the gro
 description for a physical probe's name or serial number. The ML coordinate determines the target
 hemisphere: negative is left and positive is right. The editor calls out zero separately because
 Spyglass currently classifies zero as right.
+
+Under **File naming & bulk entry → Set epoch path pattern**, preview StateScript paths before
+applying them to selected epochs. For example, base folder `/data/Peter/20260918` and pattern
+`{stem}/{stem}.stateScriptLog` produce
+`/data/Peter/20260918/20260918_Peter_02_s2/20260918_Peter_02_s2.stateScriptLog` for epoch 2 with tag `s2`.
+`{stem}` combines date, subject, padded epoch and recording tag; individual tokens are also supported.
+Imported paths stay unchanged unless selected for replacement. The saved pattern is used for new
+StateScript entries and carries forward to new days; it is not included in exported YAML.

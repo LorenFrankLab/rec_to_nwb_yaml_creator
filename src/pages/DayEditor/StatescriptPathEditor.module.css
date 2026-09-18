@@ -1,0 +1,35 @@
+.editor fieldset {
+  display: grid;
+  gap: var(--spacing-md);
+  min-width: 0;
+  margin-top: var(--spacing-md);
+}
+
+.editor label {
+  display: grid;
+  gap: var(--spacing-xs);
+}
+
+.editor input:not([type='checkbox']) {
+  width: 100%;
+  min-width: 0;
+}
+
+.preview {
+  overflow-x: auto;
+}
+
+.preview table {
+  width: 100%;
+  table-layout: fixed;
+}
+
+.preview th:first-child {
+  width: 6rem;
+}
+
+.preview td {
+  overflow-wrap: anywhere;
+  padding: var(--spacing-sm);
+  vertical-align: top;
+}
