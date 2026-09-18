@@ -289,7 +289,7 @@ describe('FailedChannelsTab', () => {
 
     expect(screen.getByRole('heading', { level: 2, name: /recording setup/i })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: /recording system/i })).toBeInTheDocument();
-    expect(screen.getByText(/day-only technical overrides/i)).toBeInTheDocument();
+    expect(screen.getByText(/^conversion values for this recording$/i)).toBeInTheDocument();
     expect(screen.queryByText(/electrode group 0/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/mark failed channels/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/behavioral events/i)).not.toBeInTheDocument();

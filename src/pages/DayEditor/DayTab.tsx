@@ -4,6 +4,7 @@ import MalformedCollectionNotice from './MalformedCollectionNotice';
 import RawCorruptionBanner from '../../components/RawCorruptionBanner';
 import TasksFilesSection from './TasksFilesSection';
 import ChangeSourceDialog from './ChangeSourceDialog';
+import KeywordsEditor from './KeywordsEditor';
 import DaySettingsDialog, { isDaySettingsFieldPath } from './DaySettingsDialog';
 import { validateField } from './validation';
 import { RAW_DAY_ARRAY_FIELDS } from '../../validation/rawShape';
@@ -225,6 +226,10 @@ export default function DayTab(props: DayTabProps) {
             </div>
           </section>
 
+          <KeywordsEditor value={keywords} onChange={(next) => onFieldUpdate('keywords', next)}
+            draftKey={draftKey('keywords')}
+            suggestions={animalDays.flatMap((recording) => getDayKeywords(recording))} />
+
           {/* The epoch sequence editor — the same component as the Tasks & Files section. */}
           <div className="daily-log-epochs">
             <TasksFilesSection {...props} focusRequest={props.focusRequest ?? null} />
@@ -238,7 +243,6 @@ export default function DayTab(props: DayTabProps) {
         day={day}
         animalDays={animalDays}
         team={team}
-        keywords={keywords}
         experimentDescription={session.experiment_description ?? ''}
         experimentDescriptionHelp={
           overviewField('session.experiment_description')?.helpText ??
@@ -249,7 +253,7 @@ export default function DayTab(props: DayTabProps) {
         draftKey={draftKey}
         onClose={() => setSettingsOpen(false)}
         onTeamChange={commitTeam}
-        onKeywordsChange={(next) => onFieldUpdate('keywords', next)}
+        onFieldUpdate={onFieldUpdate}
         onExperimentDescriptionCommit={(value) => onFieldUpdate('session.experiment_description', value)}
         onExperimentDescriptionBlur={(value) => handleBlur('session.experiment_description', value)}
         onUseAnimalDefault={animal.experiment_description

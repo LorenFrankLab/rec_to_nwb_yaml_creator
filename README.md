@@ -106,6 +106,11 @@ the pilot in the same browser without its saved workspace interacting with the c
 
 ## Editing recording metadata
 
+Keywords are visible in the Daily log. Enter one per line; they save automatically, including when
+saving or exporting with the field still focused. Previously used keywords are offered as suggestions.
+Optional units and the legacy header path are under **Day settings → Conversion metadata**. Leave
+both unit fields blank to omit them, or fill both. A blank header path is also omitted.
+
 Electrode descriptions are visible when adding or editing a group and in the group table. Use the
 description for a physical probe's name or serial number. The ML coordinate determines the target
 hemisphere: negative is left and positive is right. The editor calls out zero separately because

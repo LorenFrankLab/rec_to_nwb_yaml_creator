@@ -1,100 +1,44 @@
 import { useState } from 'react';
+import { useDraftField } from '../../hooks/useDraftField';
 
 interface KeywordsEditorProps {
-  /** Current keywords (treated as [] when absent). */
   value?: string[];
-  /** Called with the new keyword array on change. */
   onChange: (keywords: string[]) => void;
+  draftKey?: string;
+  suggestions?: string[];
 }
 
-/**
- * KeywordsEditor - add/remove searchable keyword tags for a recording day.
- *
- * Keywords are optional in the NWB schema, but when present they must be a
- * non-empty list of unique, non-blank strings. This editor enforces those
- * constraints at entry (trimming, de-duplicating, ignoring blanks) so the
- * exported metadata stays schema-valid.
- */
-export default function KeywordsEditor({ value, onChange }: KeywordsEditorProps) {
-  // Tolerate corrupt persisted state: a non-array `value` (`{}`) must not crash render.
+/** Whole-list editing keeps the last typed keyword visible to autosave and export. */
+export default function KeywordsEditor({ value, onChange, draftKey, suggestions = [] }: KeywordsEditorProps) {
   const keywords = Array.isArray(value) ? value : [];
-  const [draft, setDraft] = useState('');
-  const [error, setError] = useState('');
-
-  const addKeyword = () => {
-    const trimmed = draft.trim();
-    if (!trimmed) {
-      setDraft('');
-      return;
-    }
-    if (keywords.includes(trimmed)) {
-      // Keep the draft so the user can see/edit what was rejected.
-      setError(`"${trimmed}" is already added.`);
-      return;
-    }
-    setError('');
-    setDraft('');
-    onChange([...keywords, trimmed]);
-  };
-
-  const removeKeyword = (keyword: string) => {
-    onChange(keywords.filter((k) => k !== keyword));
-  };
-
+  // Preserve line breaks/caret while autosave normalizes the stored list.
+  const [focusedValue, setFocusedValue] = useState<string | null>(null);
+  const draft = useDraftField({
+    value: focusedValue ?? keywords.join('\n'),
+    onCommit: (text) => onChange([...new Set(text.split('\n').map((word) => word.trim()).filter(Boolean))]),
+    draftKey,
+    label: 'keywords',
+  });
+  const entered = draft.value.split('\n').map((word) => word.trim());
+  const choices = [...new Set(suggestions)].filter((word) => word.trim() && !entered.includes(word));
   return (
     <div className="form-field keywords-editor">
       <label htmlFor="day-keyword-input">Keywords (optional)</label>
-      <span className="field-help-text">
-        Searchable tags saved in the NWB file (e.g. spatial, w-track).
+      <textarea id="day-keyword-input" data-field-path="keywords" rows={3}
+        value={draft.value} onChange={(event) => draft.setValue(event.target.value)}
+        onFocus={() => setFocusedValue(keywords.join('\n'))}
+        onBlur={() => { setFocusedValue(null); draft.flush(); }}
+        aria-describedby="day-keyword-help" placeholder={'opto\nhippocampus\nmPFC'} />
+      <span id="day-keyword-help" className="field-help-text">
+        One keyword per line. Saved automatically in the metadata YAML; blank lines and duplicates are removed.
       </span>
-
-      {keywords.length > 0 && (
-        <ul className="keywords-list">
-          {keywords.map((keyword) => (
-            <li key={keyword} className="keyword-chip">
-              <span className="keyword-chip-label">{keyword}</span>
-              <button
-                type="button"
-                className="keyword-remove-button"
-                aria-label={`Remove keyword ${keyword}`}
-                onClick={() => removeKeyword(keyword)}
-              >
-                ×
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
-
-      <div className="keyword-add-row">
-        <input
-          id="day-keyword-input"
-          type="text"
-          data-field-path="keywords"
-          value={draft}
-          placeholder="Add a keyword"
-          aria-describedby={error ? 'day-keyword-error' : undefined}
-          onChange={(e) => {
-            setDraft(e.target.value);
-            if (error) setError('');
-          }}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') {
-              e.preventDefault();
-              addKeyword();
-            }
-          }}
-        />
-        <button type="button" className="keyword-add-button" onClick={addKeyword}>
-          Add keyword
-        </button>
-      </div>
-
-      {error && (
-        <span id="day-keyword-error" role="alert" className="keyword-input-error">
-          {error}
-        </span>
-      )}
+      {choices.length > 0 && <div aria-label="Previously used keywords">
+        {choices.map((word) => <button type="button" key={word} onClick={() => {
+          draft.setValue([...entered.filter(Boolean), word].join('\n'));
+          draft.flush();
+        }}>Add {word}</button>)}
+      </div>}
+      {draft.commitError && <span role="alert">{draft.commitError}</span>}
     </div>
   );
 }

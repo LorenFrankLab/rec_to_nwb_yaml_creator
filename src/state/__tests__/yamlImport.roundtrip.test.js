@@ -440,3 +440,31 @@ describe('yamlImport round-trip (genuine merge outputs)', () => {
     });
   }
 });
+
+
+describe('legacy YAML import, edit and export', () => {
+  it('preserves keywords, string units, probe labels, paths and every epoch’s pulse settings through an unrelated edit', () => {
+    const { animal, day } = buildOptoWorkspace();
+    const source = mergeDayMetadata(animal, day);
+    source.keywords = ['opto', 'hippocampus', 'mPFC'];
+    source.units = { analog: '1', behavioral_events: '1' };
+    source.tasks[0].task_epochs = [1, 2];
+    source.fs_gui_yamls = [1, 2].map((epoch) => ({ ...source.fs_gui_yamls[0],
+      name: `epoch${epoch}.yaml`, epochs: [epoch], pulseLength: 2, state_script_parameters: false }));
+    source.associated_files = [1, 2].map((epoch) => ({ name: `epoch${epoch}.stateScriptLog`,
+      description: 'statescript log', path: `/old/epoch${epoch}/epoch${epoch}.stateScriptLog`, task_epochs: epoch }));
+    source.electrode_groups[0].description = 'Physical probe Peter-004';
+    const imported = decomposeYaml(decodeYaml(encodeYaml(source)));
+    expect(imported.ok).toBe(true);
+    const restored = recomposeDayModel(imported);
+    restored.day.session.session_description = 'Edited recording notes';
+    const output = decodeYaml(reExport(restored.animal, restored.day));
+    expect(output.keywords).toEqual(source.keywords);
+    expect(output.units).toEqual(source.units);
+    expect(output.default_header_file_path).toBe(source.default_header_file_path);
+    expect(output.associated_files).toEqual(source.associated_files);
+    expect(output.electrode_groups[0].description).toBe('Physical probe Peter-004');
+    expect(output.fs_gui_yamls).toEqual(source.fs_gui_yamls.map(({ state_script_parameters, ...protocol }) => protocol));
+    expect(output.session_description).toBe('Edited recording notes');
+  });
+});

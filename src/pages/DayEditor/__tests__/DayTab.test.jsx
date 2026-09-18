@@ -220,9 +220,8 @@ describe('DayTab', () => {
       />
     );
 
-    await user.click(screen.getByRole('button', { name: 'Day settings' }));
     await user.type(screen.getByRole('textbox', { name: /keywords/i }), 'spatial');
-    await user.click(screen.getByRole('button', { name: /add keyword/i }));
+    await user.tab();
 
     expect(onFieldUpdate).toHaveBeenCalledWith('keywords', ['spatial']);
   });

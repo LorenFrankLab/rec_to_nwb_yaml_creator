@@ -144,6 +144,7 @@ export type DayEditorSectionKey = 'daily' | 'recording' | 'channels' | 'dio' | '
 /** Section key for a day-owned path, or null when the path names no specific section. */
 export function daySectionForPath(path: string): DaySectionKey | null {
   const normalized = path.replace(/^\//, '').replace(/\//g, '.');
+  if (/^(?:technical\.)?(?:units(?:\.|$)|default_header_file_path$)/.test(normalized)) return 'daily';
   // Conversion settings own every units field. This must precede the generic
   // `behavioral_events` test because `units.behavioral_events` is not DIO wiring.
   if (

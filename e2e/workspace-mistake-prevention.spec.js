@@ -288,7 +288,7 @@ test.describe('Mistake-prevention UX on high-risk edit surfaces', () => {
 
     // Recording Setup hosts the Technical parameters block.
     await page.getByRole('button', { name: /^Recording Setup\b/ }).click();
-    await page.locator('summary').filter({ hasText: /Day-only technical overrides/i }).click();
+    await page.locator('summary').filter({ hasText: /^Conversion values for this recording/i }).click();
     await expect(page.getByText('Technical parameters', { exact: true })).toBeVisible();
     await expect(page.getByText('Raw data to volts', { exact: true })).toBeVisible();
 

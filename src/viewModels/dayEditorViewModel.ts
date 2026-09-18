@@ -259,6 +259,7 @@ function isDailySetupIssue(issue: RepairableIssue): boolean {
     path.includes('session') ||
     path.includes('experiment_description') ||
     path.includes('keywords') ||
+    /^(?:technical\.)?(?:units(?:\.|$)|default_header_file_path$)/.test(path) ||
     path === 'subject.weight' ||
     path === 'session.weight' ||
     issue.field === 'session' ||

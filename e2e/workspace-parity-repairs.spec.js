@@ -102,32 +102,36 @@ test('a second statescript stays editable during entry, after reload, and from t
 test('partial units survive save, navigation and reload while export requires the complete pair', async ({ page }) => {
   await seedAndOpen(page, twoEpochs(), `/#/day/${DAY_ID}`);
   const openUnits = async () => {
-    await page.getByRole('button', { name: /^Recording Setup/ }).click();
-    const disclosure = page.getByText('Day-only technical overrides', { exact: true }).locator('xpath=ancestor::details[1]');
-    if (!(await disclosure.getAttribute('open') === '')) await page.getByText('Day-only technical overrides', { exact: true }).click();
+    await page.goto(`/#/day/${DAY_ID}`);
+    await page.getByRole('button', { name: 'Day settings', exact: true }).click();
+    await page.getByText('Conversion metadata', { exact: true }).click();
   };
   await openUnits();
   await expect(page.getByText(/This value does not change the header used by trodes_to_nwb/)).toBeVisible();
-  await page.getByLabel('Analog units', { exact: true }).fill('millivolts');
+  await page.getByLabel('Analog units (optional)', { exact: true }).fill('millivolts');
   await page.keyboard.press('ControlOrMeta+s');
+  await page.getByRole('button', { name: 'Done', exact: true }).click();
   await page.getByRole('button', { name: 'Review & export', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Download YAML', exact: true })).toBeDisabled();
   await page.getByRole('button', { name: /^Fix in / }).click();
-  await expect(page.getByLabel('Behavioral-event units', { exact: true })).toBeFocused();
+  await expect(page.getByLabel('Behavioral-event units (optional)', { exact: true })).toBeFocused();
   await page.reload();
   await openUnits();
-  await expect(page.getByLabel('Analog units', { exact: true })).toHaveValue('millivolts');
-  await page.getByLabel('Behavioral-event units', { exact: true }).fill('n/a');
+  await expect(page.getByLabel('Analog units (optional)', { exact: true })).toHaveValue('millivolts');
+  await page.getByLabel('Behavioral-event units (optional)', { exact: true }).fill('n/a');
+  await page.getByRole('button', { name: 'Done', exact: true }).click();
   expect((await exported(page)).units).toEqual({ analog: 'millivolts', behavioral_events: 'n/a' });
   await openUnits();
-  await page.getByLabel('Analog units', { exact: true }).clear();
+  await page.getByLabel('Analog units (optional)', { exact: true }).clear();
+  await page.getByRole('button', { name: 'Done', exact: true }).click();
   await page.getByRole('button', { name: 'Review & export', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Download YAML', exact: true })).toBeDisabled();
   await page.reload();
   await openUnits();
-  await expect(page.getByLabel('Analog units', { exact: true })).toHaveValue('');
-  await expect(page.getByLabel('Behavioral-event units', { exact: true })).toHaveValue('n/a');
-  await page.getByLabel('Behavioral-event units', { exact: true }).clear();
+  await expect(page.getByLabel('Analog units (optional)', { exact: true })).toHaveValue('');
+  await expect(page.getByLabel('Behavioral-event units (optional)', { exact: true })).toHaveValue('n/a');
+  await page.getByLabel('Behavioral-event units (optional)', { exact: true }).clear();
+  await page.getByRole('button', { name: 'Done', exact: true }).click();
   expect((await exported(page)).units).toBeUndefined();
 });
 
@@ -187,4 +191,13 @@ test('the full file manager fits a narrow screen and exposes labeled repair cont
   await expect(page.getByRole('heading', { name: 'All saved file details', exact: true })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(1);
   expect((await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa']).analyze()).violations).toEqual([]);
+});
+
+test('focused keywords survive Save and reload and are included in the exported YAML', async ({ page }) => {
+  await seedAndOpen(page, twoEpochs(), `/#/day/${DAY_ID}`);
+  await page.getByLabel('Keywords (optional)', { exact: true }).fill('opto\nhippocampus\nmPFC');
+  await page.keyboard.press('ControlOrMeta+s');
+  await page.reload();
+  await expect(page.getByLabel('Keywords (optional)', { exact: true })).toHaveValue('opto\nhippocampus\nmPFC');
+  expect((await exported(page)).keywords).toEqual(['opto', 'hippocampus', 'mPFC']);
 });

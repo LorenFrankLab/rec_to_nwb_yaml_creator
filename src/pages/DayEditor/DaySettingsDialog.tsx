@@ -4,7 +4,7 @@ import Button from '../../components/ui/Button';
 import { DraftTextArea, DraftTextInput } from '../../components/ui/DraftFields';
 import type { Animal, Day, ExperimenterInfo } from '../../state/workspaceTypes';
 import DayProvenanceLine from './DayProvenanceLine';
-import KeywordsEditor from './KeywordsEditor';
+import DayTechnicalSection from './DayTechnicalSection';
 import styles from './DaySettingsDialog.module.css';
 
 interface FocusRequest {
@@ -18,7 +18,6 @@ interface DaySettingsDialogProps {
   day: Day;
   animalDays: Day[];
   team: ExperimenterInfo;
-  keywords: string[];
   experimentDescription: string;
   experimentDescriptionHelp: string;
   experimentDescriptionError?: { message: string } | null;
@@ -26,7 +25,7 @@ interface DaySettingsDialogProps {
   draftKey: (fieldPath: string) => string;
   onClose: () => void;
   onTeamChange: (patch: Partial<ExperimenterInfo>) => void;
-  onKeywordsChange: (keywords: string[]) => void;
+  onFieldUpdate: (path: string, value: unknown) => void;
   onExperimentDescriptionCommit: (value: string) => void;
   onExperimentDescriptionBlur: (value: string) => void;
   onUseAnimalDefault?: () => void;
@@ -37,7 +36,6 @@ interface DaySettingsDialogProps {
 const SETTINGS_FIELDS = new Set([
   'experimenter_name',
   'experiment_description',
-  'keywords',
   'lab',
   'institution',
 ]);
@@ -47,7 +45,7 @@ const normalizedFieldPath = (fieldPath = '') =>
 
 /** Whether a Daily Log repair target belongs in the compact Day settings dialog. */
 export const isDaySettingsFieldPath = (fieldPath: string): boolean =>
-  SETTINGS_FIELDS.has(normalizedFieldPath(fieldPath));
+  SETTINGS_FIELDS.has(normalizedFieldPath(fieldPath)) || /^(?:technical\.)?(?:units(?:\.|$)|default_header_file_path$)/.test(fieldPath);
 
 /** Rare day-level exceptions, kept out of the routine Daily Log. */
 export default function DaySettingsDialog({
@@ -56,7 +54,6 @@ export default function DaySettingsDialog({
   day,
   animalDays,
   team,
-  keywords,
   experimentDescription,
   experimentDescriptionHelp,
   experimentDescriptionError,
@@ -64,7 +61,7 @@ export default function DaySettingsDialog({
   draftKey,
   onClose,
   onTeamChange,
-  onKeywordsChange,
+  onFieldUpdate,
   onExperimentDescriptionCommit,
   onExperimentDescriptionBlur,
   onUseAnimalDefault,
@@ -74,9 +71,12 @@ export default function DaySettingsDialog({
   const rootRef = useRef<HTMLDivElement | null>(null);
   const wasOpenRef = useRef(false);
   const focusPath = normalizedFieldPath(focusRequest?.fieldPath);
-  const focusIsStudyMetadata = ['experiment_description', 'keywords', 'lab', 'institution'].includes(focusPath);
+  const focusIsStudyMetadata = ['experiment_description', 'lab', 'institution'].includes(focusPath);
   const [studyMetadataOpen, setStudyMetadataOpen] = useState(!experimentDescription);
   const [sourceOpen, setSourceOpen] = useState(false);
+  const conversionFocus = /^(?:technical\.)?(?:units(?:\.|$)|default_header_file_path$)/.test(focusPath);
+  const [conversionOpen, setConversionOpen] = useState(false);
+  useEffect(() => { if (isOpen && conversionFocus) setConversionOpen(true); }, [isOpen, conversionFocus, focusRequest?.token]);
 
   useEffect(() => {
     const justOpened = isOpen && !wasOpenRef.current;
@@ -93,12 +93,13 @@ export default function DaySettingsDialog({
   useEffect(() => {
     if (!isOpen || !focusPath || !isDaySettingsFieldPath(focusPath)) return undefined;
     if (focusIsStudyMetadata && !studyMetadataOpen) return undefined;
+    if (conversionFocus && !conversionOpen) return undefined;
     let secondFrame: number | undefined;
     let removeTimer: ReturnType<typeof setTimeout> | undefined;
     let target: HTMLElement | null | undefined;
     const firstFrame = requestAnimationFrame(() => {
       secondFrame = requestAnimationFrame(() => {
-        target = rootRef.current?.querySelector<HTMLElement>(`[data-field-path="${focusPath}"]`);
+        target = rootRef.current?.querySelector<HTMLElement>(`[data-field-path="${conversionFocus && !focusPath.startsWith('technical.') ? `technical.${focusPath}` : focusPath}"]`);
         target?.focus();
         target?.classList.add('repair-target-highlight');
         if (target) removeTimer = setTimeout(() => target?.classList.remove('repair-target-highlight'), 2000);
@@ -110,7 +111,7 @@ export default function DaySettingsDialog({
       if (removeTimer !== undefined) clearTimeout(removeTimer);
       target?.classList.remove('repair-target-highlight');
     };
-  }, [focusIsStudyMetadata, focusPath, isOpen, studyMetadataOpen]);
+  }, [focusIsStudyMetadata, focusPath, isOpen, studyMetadataOpen, conversionFocus, conversionOpen]);
 
   const teamNames = Array.isArray(team.experimenter_name) ? team.experimenter_name.map(String) : [];
 
@@ -222,10 +223,16 @@ export default function DaySettingsDialog({
                   onCommit={(value) => onTeamChange({ institution: value })}
                 />
               </div>
-              <div className={styles.fullWidth}>
-                <KeywordsEditor value={keywords} onChange={onKeywordsChange} />
-              </div>
             </div>
+          </div>
+        </details>
+
+        <details className={styles.details} open={conversionOpen}
+          onToggle={(event) => setConversionOpen(event.currentTarget.open)}>
+          <summary>Conversion metadata</summary>
+          <div className={styles.detailsBody}>
+            <DayTechnicalSection technical={day.technical} onFieldUpdate={onFieldUpdate}
+              dayId={String(day.id)} embedded mode="metadata" />
           </div>
         </details>
 

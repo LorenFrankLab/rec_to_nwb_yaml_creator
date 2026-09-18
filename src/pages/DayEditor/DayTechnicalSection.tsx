@@ -23,6 +23,7 @@ interface DayTechnicalSectionProps {
   dayId?: string;
   /** Render without the outer card wrapper when nested inside a disclosure. */
   embedded?: boolean;
+  mode?: 'all' | 'conversion' | 'metadata';
 }
 
 /**
@@ -47,6 +48,7 @@ export default function DayTechnicalSection({
   animalKey = undefined,
   dayId = undefined,
   embedded = false,
+  mode = 'all',
 }: DayTechnicalSectionProps) {
   const draftKey = (fieldPath: string) => dayId ? `day:${dayId}:${fieldPath}` : undefined;
   // Draft-tracked (see hooks/useDraftField): the typed text is committed on a debounce / blur /
@@ -128,6 +130,7 @@ export default function DayTechnicalSection({
 
   const content = (
     <>
+      {mode !== 'metadata' && <>
       <h3>Technical parameters</h3>
 
       {/* Recording-system rig constants — effective, READ-ONLY values for this day (copied
@@ -173,10 +176,11 @@ export default function DayTechnicalSection({
           onCommit={(value) => onFieldUpdate('technical.times_period_multiplier', value)} />
       </details>
 
-      <div className="form-grid">
+      </>}
+      {mode !== 'conversion' && <div className="form-grid">
         <div className="form-field">
           <label htmlFor="default-header-file-path">
-            Default header file path <span className="ownership-cue">This day only</span>
+            Default header file path (optional) <span className="ownership-cue">This day only</span>
           </label>
           <input
             id="default-header-file-path"
@@ -195,7 +199,7 @@ export default function DayTechnicalSection({
         </div>
 
         <div className="form-field">
-          <label htmlFor="units-analog">Analog units</label>
+          <label htmlFor="units-analog">Analog units (optional)</label>
           <input
             id="units-analog"
             type="text"
@@ -208,7 +212,7 @@ export default function DayTechnicalSection({
         </div>
 
         <div className="form-field">
-          <label htmlFor="units-behavioral-events">Behavioral-event units</label>
+          <label htmlFor="units-behavioral-events">Behavioral-event units (optional)</label>
           <input
             id="units-behavioral-events"
             type="text"
@@ -219,7 +223,7 @@ export default function DayTechnicalSection({
             placeholder="e.g. unspecified"
           />
           <span className="field-help-text">
-            Analog and behavioral-event units are required together when either is set.
+            Optional legacy unit metadata. Enter both units when either is set; leave both blank to omit them from YAML.
           </span>
           {unitsPartial && (
             <span className="validation-error" role="alert">
@@ -227,7 +231,7 @@ export default function DayTechnicalSection({
             </span>
           )}
         </div>
-      </div>
+      </div>}
     </>
   );
 

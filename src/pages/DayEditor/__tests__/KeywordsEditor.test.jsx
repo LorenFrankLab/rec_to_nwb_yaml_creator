@@ -1,78 +1,68 @@
+import { useState } from 'react';
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import KeywordsEditor from '../KeywordsEditor';
+import { flushAllDrafts } from '../../../state/draftRegistry';
 
 describe('KeywordsEditor', () => {
-  it('renders the existing keywords', () => {
+  it('renders existing keywords in a visible editable list', () => {
     render(<KeywordsEditor value={['spatial', 'w-track']} onChange={vi.fn()} />);
-
-    expect(screen.getByText('spatial')).toBeInTheDocument();
-    expect(screen.getByText('w-track')).toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: /keywords/i })).toHaveValue('spatial\nw-track');
   });
 
-  it('adds a trimmed keyword via the Add button', async () => {
+  it('saves all lines on blur, trimming and deduplicating without losing a pending keyword', async () => {
     const user = userEvent.setup();
     const onChange = vi.fn();
-    render(<KeywordsEditor value={['spatial']} onChange={onChange} />);
-
-    await user.type(screen.getByRole('textbox', { name: /keyword/i }), '  w-track  ');
-    await user.click(screen.getByRole('button', { name: /add keyword/i }));
-
-    expect(onChange).toHaveBeenCalledWith(['spatial', 'w-track']);
+    render(<KeywordsEditor value={[]} onChange={onChange} />);
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: ' opto \nhippocampus\n\nmPFC\nopto' } });
+    screen.getByRole('textbox').focus();
+    await user.tab();
+    expect(onChange).toHaveBeenLastCalledWith(['opto', 'hippocampus', 'mPFC']);
   });
 
-  it('removes a keyword', async () => {
-    const user = userEvent.setup();
+  it('flushes the focused draft before export without requiring blur or Enter', () => {
     const onChange = vi.fn();
-    render(<KeywordsEditor value={['spatial', 'w-track']} onChange={onChange} />);
-
-    await user.click(screen.getByRole('button', { name: /remove keyword spatial/i }));
-
-    expect(onChange).toHaveBeenCalledWith(['w-track']);
+    render(<KeywordsEditor value={[]} onChange={onChange} draftKey="test:keywords" />);
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: 'opto\nmPFC' } });
+    act(() => { flushAllDrafts(); });
+    expect(onChange).toHaveBeenCalledWith(['opto', 'mPFC']);
   });
 
-  it('ignores empty input and does not call onChange', async () => {
-    const user = userEvent.setup();
+  it('preserves a newly typed line break while autosave normalizes the stored list', () => {
+    vi.useFakeTimers();
+    /** Store-backed editor exercises normalization after an autosave. */
+    function Editor() {
+      const [value, setValue] = useState([]);
+      return <KeywordsEditor value={value} onChange={setValue} />;
+    }
+    const { unmount } = render(<Editor />);
+    const input = screen.getByRole('textbox');
+    fireEvent.focus(input);
+    fireEvent.change(input, { target: { value: 'opto\n' } });
+    act(() => { vi.advanceTimersByTime(450); });
+    expect(input).toHaveValue('opto\n');
+    fireEvent.change(input, { target: { value: 'opto\nhippocampus' } });
+    fireEvent.blur(input);
+    expect(input).toHaveValue('opto\nhippocampus');
+    unmount();
+    vi.useRealTimers();
+  });
+
+  it('clearing the list saves an empty array', () => {
     const onChange = vi.fn();
-    render(<KeywordsEditor value={['spatial']} onChange={onChange} />);
-
-    await user.type(screen.getByRole('textbox', { name: /keyword/i }), '   ');
-    await user.click(screen.getByRole('button', { name: /add keyword/i }));
-
-    expect(onChange).not.toHaveBeenCalled();
+    render(<KeywordsEditor value={['opto']} onChange={onChange} />);
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: '' } });
+    fireEvent.blur(screen.getByRole('textbox'));
+    expect(onChange).toHaveBeenCalledWith([]);
   });
 
-  it('does not add a duplicate keyword (schema requires unique items)', async () => {
-    const user = userEvent.setup();
+  it('adds a previous keyword without losing a typed line', async () => {
     const onChange = vi.fn();
-    render(<KeywordsEditor value={['spatial']} onChange={onChange} />);
-
-    await user.type(screen.getByRole('textbox', { name: /keyword/i }), 'spatial');
-    await user.click(screen.getByRole('button', { name: /add keyword/i }));
-
-    expect(onChange).not.toHaveBeenCalled();
-  });
-
-  it('shows an alert explaining why a duplicate keyword was rejected', async () => {
     const user = userEvent.setup();
-    render(<KeywordsEditor value={['spatial']} onChange={vi.fn()} />);
-
-    await user.type(screen.getByRole('textbox', { name: /keyword/i }), 'spatial');
-    await user.click(screen.getByRole('button', { name: /add keyword/i }));
-
-    expect(screen.getByRole('alert')).toHaveTextContent(/already added/i);
-  });
-
-  it('uses the visible label as the input accessible name (no orphaned aria-label)', () => {
-    render(<KeywordsEditor value={[]} onChange={vi.fn()} />);
-
-    expect(screen.getByRole('textbox', { name: /keywords/i })).toBeInTheDocument();
-  });
-
-  it('treats undefined value as an empty list', () => {
-    render(<KeywordsEditor value={undefined} onChange={vi.fn()} />);
-
-    expect(screen.getByRole('textbox', { name: /keyword/i })).toBeInTheDocument();
+    render(<KeywordsEditor value={[]} suggestions={['opto', 'opto']} onChange={onChange} />);
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: 'hippocampus' } });
+    await user.click(screen.getByRole('button', { name: 'Add opto' }));
+    expect(onChange).toHaveBeenLastCalledWith(['hippocampus', 'opto']);
   });
 });

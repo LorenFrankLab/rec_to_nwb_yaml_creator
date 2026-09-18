@@ -108,10 +108,8 @@ export default function FailedChannelsTab(props: FailedChannelsTabProps) {
   const focusPath = String(focusRequest?.fieldPath ?? '');
   const technical = day.technical ?? {};
   const hasTechnicalOverrides =
-    !!technical.default_header_file_path ||
-    !!technical.units?.analog ||
-    !!technical.units?.behavioral_events;
-  const technicalOpen = hasTechnicalOverrides || focusPath.startsWith('technical.');
+    technical.raw_data_to_volts !== undefined || technical.times_period_multiplier !== undefined;
+  const technicalOpen = focusPath.startsWith('technical.');
 
   // Configuration-version legibility (only when wired with store actions + the
   // animal's days, i.e. inside the real Day Editor — not in isolated unit renders).
@@ -333,7 +331,7 @@ export default function FailedChannelsTab(props: FailedChannelsTabProps) {
 
       <details className="day-editor-section secondary-disclosure" open={technicalOpen}>
         <summary className="secondary-disclosure-summary">
-          <span>Day-only technical overrides</span>
+          <span>Conversion values for this recording</span>
           <span className="secondary-disclosure-badge">
             {hasTechnicalOverrides ? 'set' : 'optional'}
           </span>
@@ -345,7 +343,7 @@ export default function FailedChannelsTab(props: FailedChannelsTabProps) {
             recordingSystemDefaults={animal?.technicalDefaults}
             animalKey={ownerKey}
             dayId={String(day.id)}
-            embedded
+            embedded mode="conversion"
           />
         </div>
       </details>
