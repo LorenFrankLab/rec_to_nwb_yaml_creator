@@ -226,8 +226,8 @@ test.describe('Responsive + a11y smoke — a setup modal traps and restores focu
   }
 });
 
-test.describe('Responsive + a11y smoke — epoch cards and details on a narrow phone', () => {
-  test('epoch rows fit as cards and the details dialog traps and restores focus', async ({ page }) => {
+test.describe('Responsive + a11y smoke — epoch and file entry on a narrow phone', () => {
+  test('epoch cards, details, and additional-file actions fit and remain reachable', async ({ page }) => {
     const viewport = { name: 'short phone 390×568', width: 390, height: 568 };
     await page.setViewportSize({ width: viewport.width, height: viewport.height });
     await resetWorkspace(page);
@@ -258,7 +258,42 @@ test.describe('Responsive + a11y smoke — epoch cards and details on a narrow p
     await page.keyboard.press('Escape');
     await expect(dialog).toBeHidden();
     await expect(opener).toBeFocused();
+
+    await expectWithinViewportHorizontally(
+      page.getByRole('button', { name: 'Add Custom file' }),
+      viewport,
+      'Add custom file action',
+    );
+    await expectWithinViewportHorizontally(
+      page.getByRole('button', { name: /Edit additional file/ }).first(),
+      viewport,
+      'Edit additional file action',
+    );
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth),
+      'the additional-file section should not introduce horizontal page scrolling',
+    ).toBe(true);
   });
+});
+
+test('Daily Log stays focused and its settings dialog fits a short phone', async ({ page }) => {
+  const viewport = { name: 'short phone 390×568', width: 390, height: 568 };
+  await page.setViewportSize({ width: viewport.width, height: viewport.height });
+  await resetWorkspace(page);
+  await seedAndOpen(page, buildConfiguredWorkspaceBlob(), `/#/day/${DAY_ID}`);
+
+  await expect(page.getByText(/People & copied settings/i)).toHaveCount(0);
+  await expect(page.getByText(/Session identity and animal context/i)).toHaveCount(0);
+  await page.getByRole('button', { name: 'Day settings' }).click();
+
+  const dialog = page.getByRole('dialog', { name: 'Day settings' });
+  await dialog.getByText('Study metadata', { exact: true }).click();
+  await expectWithinViewport(dialog, viewport, 'Day settings dialog');
+  const done = dialog.getByRole('button', { name: 'Done', exact: true });
+  await expectWithinViewport(done, viewport, 'Day settings Done action');
+  const doneY = (await done.boundingBox()).y;
+  await dialog.getByTestId('modal-body').evaluate((body) => { body.scrollTop = body.scrollHeight; });
+  expect((await done.boundingBox()).y, 'the pinned Done action should not move when settings scroll').toBe(doneY);
 });
 
 test.describe('Responsive + a11y smoke — validation summary reachable at both viewports', () => {

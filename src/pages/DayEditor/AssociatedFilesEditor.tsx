@@ -4,7 +4,7 @@ import type { Task } from '../../state/workspaceTypes';
 import './AssociatedFilesEditor.scss';
 
 /** Editor row shape: `task_epochs` carries an empty-string sentinel for "unselected". */
-interface FileRow {
+export interface FileRow {
   recordId?: string;
   kind?: 'statescript' | 'supplemental';
   name?: string;
@@ -13,9 +13,9 @@ interface FileRow {
   task_epochs?: number | string;
 }
 
-type SupplementalFilePreset = 'custom' | 'psychopy' | 'realtime' | 'behaviorTimeline' | 'fsgui';
+export type SupplementalFilePreset = 'custom' | 'psychopy' | 'realtime' | 'behaviorTimeline' | 'fsgui';
 
-const SUPPLEMENTAL_FILE_PRESETS: Array<{ key: SupplementalFilePreset; label: string }> = [
+export const SUPPLEMENTAL_FILE_PRESETS: Array<{ key: SupplementalFilePreset; label: string }> = [
   { key: 'psychopy', label: 'Psychopy stim script' },
   { key: 'realtime', label: 'Realtime output' },
   { key: 'behaviorTimeline', label: 'Behavior timeline' },
@@ -54,7 +54,7 @@ function getNextPresetNumber(files: FileRow[], pattern: RegExp): number {
   return used.length === 0 ? 1 : Math.max(...used) + 1;
 }
 
-function createPresetRow(preset: SupplementalFilePreset, files: FileRow[]): FileRow {
+export function createSupplementalFileRow(preset: SupplementalFilePreset, files: FileRow[]): FileRow {
   switch (preset) {
     case 'psychopy': {
       const stimNumber = getNextPresetNumber(files, /^stim(\d+)$/i);
@@ -101,6 +101,8 @@ interface AssociatedFilesEditorProps {
   tasks?: Task[];
   /** Called with the next files array. */
   onChange: (files: FileRow[]) => void;
+  /** Whether to repeat the add-file shortcuts below the complete record editor. */
+  showAddActions?: boolean;
 }
 
 /**
@@ -130,6 +132,7 @@ export default function AssociatedFilesEditor({
   files = [],
   tasks = [],
   onChange,
+  showAddActions = true,
 }: AssociatedFilesEditorProps) {
   const baseId = useId();
   // Tolerate corrupt persisted state: a non-array `files` (`{}`) must not crash render.
@@ -150,7 +153,7 @@ export default function AssociatedFilesEditor({
    * Append a supplemental file row, optionally seeded from corpus-backed presets.
    */
   function addRow(preset: SupplementalFilePreset) {
-    onChange([...fileList, createPresetRow(preset, visibleFiles.map(({ file }) => file))]);
+    onChange([...fileList, createSupplementalFileRow(preset, visibleFiles.map(({ file }) => file))]);
   }
 
   /**
@@ -163,9 +166,10 @@ export default function AssociatedFilesEditor({
   return (
     <section className="associated-files-editor" aria-labelledby={`${baseId}-heading`}>
       <div className="associated-files-header">
-        <h3 id={`${baseId}-heading`}>Statescripts & other files</h3>
+        <h3 id={`${baseId}-heading`}>Associated file records</h3>
         <p className="associated-files-hint">
-          Files are optional. Each added file needs a name, description, path and recording epoch.
+          Correct StateScript logs and additional files here. Every saved record needs a name,
+          description, path and recording epoch.
         </p>
       </div>
 
@@ -208,7 +212,7 @@ export default function AssociatedFilesEditor({
                       e.target.value as NonNullable<FileRow['kind']>
                     )}
                   >
-                    <option value="statescript">Statescript log</option>
+                    <option value="statescript">StateScript log</option>
                     <option value="supplemental">Other associated file</option>
                   </select>
                   <small className="field-help-text">
@@ -307,19 +311,21 @@ export default function AssociatedFilesEditor({
         </ul>
       )}
 
-      <div className="associated-file-presets" aria-label="Add supplemental file">
-        {SUPPLEMENTAL_FILE_PRESETS.map((preset) => (
-          <Button
-            key={preset.key}
-            variant="secondary"
-            size="small"
-            onClick={() => addRow(preset.key)}
-            aria-label={`Add ${preset.label}`}
-          >
-            {preset.label}
-          </Button>
-        ))}
-      </div>
+      {showAddActions && (
+        <div className="associated-file-presets" aria-label="Add supplemental file">
+          {SUPPLEMENTAL_FILE_PRESETS.map((preset) => (
+            <Button
+              key={preset.key}
+              variant="secondary"
+              size="small"
+              onClick={() => addRow(preset.key)}
+              aria-label={`Add ${preset.label}`}
+            >
+              {preset.label}
+            </Button>
+          ))}
+        </div>
+      )}
     </section>
   );
 }
