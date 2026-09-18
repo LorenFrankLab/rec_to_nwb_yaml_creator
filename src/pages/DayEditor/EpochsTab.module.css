@@ -1,145 +1,304 @@
-/* Epochs tab — the epoch grid (the day-editor spine). Tokens come from src/index.css :root. */
-
+/* Recording sequence: the inputs are the primary surface; file tools follow the list. */
 .root {
-  padding: var(--spacing-md, 16px) 0;
+  padding: var(--spacing-md) 0;
 }
 
 .workspaceHeader {
-  margin-bottom: var(--spacing-md, 16px);
+  margin-bottom: var(--spacing-md);
 }
 
 .workspaceLead {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  column-gap: var(--spacing-md, 16px);
-  align-items: start;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--spacing-lg);
 }
 
 .workspaceHeader h2 {
-  grid-column: 1;
-  grid-row: 1;
-  margin-bottom: var(--spacing-xs, 6px);
+  margin: 0 0 var(--spacing-sm);
+}
+
+.workspaceLead .templateTrigger {
+  border-color: transparent;
+  box-shadow: none;
+  padding: var(--spacing-sm);
+  color: var(--color-grey-800);
+  font-size: var(--font-size-sm);
+  white-space: nowrap;
 }
 
 .workspaceIntro {
-  grid-column: 1;
-  grid-row: 2;
-  max-width: 46rem;
-  margin: 0 0 var(--spacing-sm, 8px);
-  color: var(--color-grey-600, #555);
-  font-size: var(--font-size-sm, 0.875rem);
-}
-
-.epochToolbar {
-  grid-column: 1 / -1;
-  grid-row: 3;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-start;
-  gap: var(--spacing-sm, 8px) var(--spacing-lg, 16px);
-  padding: var(--spacing-sm, 8px);
-  border: 1px solid var(--color-grey-200, #e6e6e6);
-  border-radius: var(--radius-md, 8px);
-  background: var(--color-grey-50, #fafbfc);
-}
-
-.toolbarGroup {
-  display: grid;
-  gap: 4px;
-}
-
-.toolbarLabel {
-  color: var(--color-grey-600, #555);
-  font-size: var(--font-size-xs, 0.75rem);
-  font-weight: 700;
-}
-
-.bulkGroup {
-  padding-left: var(--spacing-md, 12px);
-  border-left: 1px solid var(--color-grey-200, #e6e6e6);
-}
-
-.summaryStrip {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--spacing-xs, 6px);
-}
-
-.bulkActions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--spacing-xs, 6px);
-}
-
-.videoCountHelp {
-  flex-basis: 100%;
+  max-width: 43rem;
   margin: 0;
-  color: var(--color-grey-600);
-  font-size: var(--font-size-xs);
+  color: var(--color-grey-700);
+  font-size: var(--font-size-sm);
+  line-height: 1.5;
 }
 
-.priorPlanGroup {
-  padding-left: var(--spacing-md, 12px);
-  border-left: 1px solid var(--color-grey-200, #e6e6e6);
+.copiedNote {
+  margin: var(--spacing-sm) 0 0;
+  color: var(--color-grey-700);
+  font-size: var(--font-size-sm);
 }
 
-.emptyActions {
+.previousPlan {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-md);
+  padding: var(--spacing-md);
+  margin-top: var(--spacing-md);
+  border-left: 3px solid var(--color-primary);
+  border-radius: var(--radius-sm);
+  background: var(--color-primary-light);
+  font-size: var(--font-size-sm);
+}
+
+.previousPlan p {
+  margin: var(--spacing-xs) 0 0;
+  color: var(--color-grey-800);
+  line-height: 1.4;
+}
+
+.planPreview {
+  list-style: none;
+  padding: 0;
+}
+
+.planPreview li {
+  display: grid;
+  gap: var(--spacing-xs);
+  padding: var(--spacing-sm) 0;
+  border-bottom: 1px solid var(--color-grey-200);
+  font-size: var(--font-size-sm);
+  overflow-wrap: anywhere;
+}
+
+.sequenceBar {
   display: flex;
   flex-wrap: wrap;
-  justify-content: center;
-  gap: var(--spacing-sm, 8px);
-}
-
-.summaryChip {
-  display: inline-flex;
   align-items: center;
-  min-height: 24px;
-  padding: 2px 8px;
-  border: 1px solid var(--color-grey-200, #e6e6e6);
-  border-radius: var(--radius-sm, 4px);
-  background: var(--color-grey-100, #f2f2f2);
-  color: var(--color-grey-700, #444);
-  font-size: var(--font-size-xs, 0.75rem);
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
+  justify-content: space-between;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-sm);
+  font-size: var(--font-size-sm);
 }
 
-.summaryButton {
-  font: inherit;
-  cursor: pointer;
-}
-
-.summaryButton:hover,
-.summaryButton:focus-visible {
-  border-color: var(--color-primary, #2b6cb0);
-  color: var(--color-primary, #2b6cb0);
-}
-
-.summaryActive {
-  box-shadow: 0 0 0 2px var(--color-primary-light, #e3f2fd);
-  border-color: var(--color-primary, #2b6cb0);
-}
-
-.summaryNeedsAttention {
-  border-color: var(--color-grey-300);
-  background: var(--color-grey-100);
+.sequenceBar p {
+  margin: 0;
   color: var(--color-grey-700);
 }
 
-.templateMenu {
-  grid-column: 2;
-  grid-row: 1 / span 2;
-  position: relative;
-  flex: none;
-  display: flex;
-  gap: var(--spacing-sm);
-  flex-wrap: wrap;
+.sequenceBar strong {
+  color: var(--color-grey-900);
 }
 
-.dataFolderGroup {
-  padding-left: var(--spacing-md, 12px);
-  border-left: 1px solid var(--color-grey-200, #e6e6e6);
-  max-width: 22rem;
+.filterLabel {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  color: var(--color-grey-700);
+}
+
+.filterLabel select {
+  min-height: 40px;
+  max-width: 100%;
+  border: 1px solid var(--color-grey-300);
+  border-radius: var(--radius-sm);
+  padding: 6px;
+  font: inherit;
+  background: var(--color-white);
+  color: var(--color-grey-900);
+}
+
+.epochNumber {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-sm);
+  background: var(--color-grey-100);
+  color: var(--color-grey-800);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+
+.taskSelect {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 42px;
+  padding: 8px;
+  border: 1px solid var(--color-grey-300);
+  border-radius: var(--radius-sm);
+  background: var(--color-white);
+  color: var(--color-grey-900);
+  font: inherit;
+  font-weight: 600;
+}
+
+.cameraSummary,
+.answerHelp,
+.fileSummaryText {
+  display: block;
+  color: var(--color-grey-700);
+  font-size: 0.75rem;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.answerHelp,
+.fileSummaryText {
+  margin-top: var(--spacing-sm);
+}
+
+.videoCell {
+  width: 31%;
+}
+
+.videoChoice {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  min-width: 0;
+}
+
+.videoChoice label {
+  position: relative;
+  margin: 0;
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+  font-weight: 400;
+}
+
+.videoChoice input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+.videoChoice span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 42px;
+  box-sizing: border-box;
+  padding: 8px 10px;
+  border: 1px solid var(--color-grey-300);
+  border-radius: var(--radius-sm);
+  background: var(--color-white);
+  color: var(--color-grey-800);
+}
+
+.composer {
+  margin-top: var(--spacing-md);
+  padding: var(--spacing-md);
+  border: 1px solid var(--color-grey-200);
+  border-radius: var(--radius-md);
+  background: var(--color-grey-100);
+}
+
+.composerHeading {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-md);
+}
+
+.composerHeading h3 {
+  margin: 0;
+  font-size: var(--font-size-base);
+}
+
+.composerHeading p,
+.composerFields p {
+  margin: var(--spacing-xs) 0 0;
+  color: var(--color-grey-700);
+  font-size: var(--font-size-sm);
+  line-height: 1.5;
+}
+
+.composerFields {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--spacing-sm) var(--spacing-md);
+}
+
+.composerTask {
+  display: grid;
+  gap: var(--spacing-xs);
+  flex: 1 1 220px;
+  max-width: 26rem;
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+}
+
+.composerFields select {
+  min-height: 44px;
+  max-width: 100%;
+  padding: 8px;
+  border: 1px solid var(--color-grey-300);
+  border-radius: var(--radius-sm);
+  background: var(--color-white);
+  color: var(--color-grey-900);
+  font: inherit;
+  font-weight: 400;
+}
+
+.textAction {
+  min-height: 44px;
+  padding: 4px 0;
+  border: 0;
+  background: transparent;
+  color: var(--color-primary);
+  font: inherit;
+  font-size: var(--font-size-sm);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.fileTools {
+  margin-top: var(--spacing-md);
+  border-bottom: 1px solid var(--color-grey-200);
+  padding: 0 0 var(--spacing-md);
+  font-size: var(--font-size-sm);
+}
+
+.fileTools summary {
+  width: fit-content;
+  padding: var(--spacing-sm) 0;
+  color: var(--color-grey-800);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.fileTools p,
+.fileHelp {
+  color: var(--color-grey-700);
+  font-size: var(--font-size-sm);
+  line-height: 1.5;
+}
+
+.fileToolsContent {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--spacing-md);
+}
+
+.folderField {
+  display: grid;
+  gap: var(--spacing-xs);
+  width: min(100%, 26rem);
+  font-weight: 600;
 }
 
 .dataFolderInput {
@@ -149,8 +308,15 @@
 }
 
 .dataFolderHelp {
-  color: var(--color-grey-600, #555);
-  font-size: var(--font-size-xs, 0.75rem);
+  color: var(--color-grey-700);
+  font-size: 0.75rem;
+  font-weight: 400;
+}
+
+.bulkActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-sm);
 }
 
 .catalogConflict {
@@ -204,9 +370,9 @@
 .table th,
 .table td {
   text-align: left;
-  padding: var(--spacing-xs, 6px) var(--spacing-sm, 8px);
+  padding: var(--spacing-md) var(--spacing-sm);
   border-bottom: 1px solid var(--color-grey-200, #e6e6e6);
-  vertical-align: middle;
+  vertical-align: top;
 }
 
 .table th {
@@ -216,23 +382,14 @@
 }
 
 .menuCell {
-  width: 134px;
+  width: 44px;
   position: relative;
   text-align: center;
 }
 
 .numCell {
-  width: 58px;
+  width: 48px;
   font-variant-numeric: tabular-nums;
-}
-
-.editChevron {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 1em;
-  font-size: var(--font-size-xs, 0.75rem);
-  color: currentcolor;
 }
 
 .taskDisclosureButton {
@@ -241,7 +398,7 @@
   justify-content: center;
   gap: 6px;
   min-width: 92px;
-  min-height: 30px;
+  min-height: 42px;
   padding: 4px 9px;
   border: 1px solid var(--color-grey-300, #ccc);
   border-radius: var(--radius-sm, 4px);
@@ -266,44 +423,13 @@
 }
 
 .taskCell {
-  width: 38%;
-  min-width: 180px;
+  min-width: 0;
 }
 
 .taskCellStack {
   display: grid;
   gap: 6px;
   align-items: start;
-}
-
-.taskDisclosureRow {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: var(--spacing-sm, 8px);
-  align-items: center;
-}
-
-.taskIdentity {
-  display: grid;
-  min-width: 0;
-  gap: 4px;
-}
-
-.taskName {
-  display: block;
-  min-width: 0;
-  color: var(--color-grey-900, #222);
-  font-weight: 600;
-  line-height: 1.35;
-  overflow-wrap: normal;
-  word-break: normal;
-}
-
-.taskMeta {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px;
 }
 
 .tag {
@@ -325,66 +451,8 @@
   font-size: var(--font-size-xs, 0.75rem);
 }
 
-.vidNone {
-  color: var(--color-grey-500, #777);
-}
-
 .fileSummaryCell {
-  width: 26%;
-}
-
-.fileSummaryStack {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-}
-
-.fileSummaryChip {
-  display: inline-flex;
-  align-items: center;
-  min-height: 22px;
-  border: 1px solid var(--color-grey-200, #e6e6e6);
-  border-radius: var(--radius-sm, 4px);
-  background: var(--color-grey-50, #fafbfc);
-  color: var(--color-grey-700, #444);
-  font-size: var(--font-size-xs, 0.75rem);
-  font-weight: 600;
-  line-height: 1.2;
-  padding: 2px 7px;
-}
-
-.fileSummaryReady {
-  background: var(--color-success-light, #eaf6ee);
-  border-color: #cce8d7;
-  color: var(--color-success, #1f7f4c);
-}
-
-.fileSummaryReview {
-  background: var(--color-warning-light, #fff3e0);
-  border-color: #f3d59b;
-  color: var(--color-warning, #bf360c);
-}
-
-.fileSummaryMissing {
-  background: var(--color-grey-100);
-  border-color: var(--color-grey-300);
-  color: var(--color-grey-700);
-}
-
-.fileSummaryExpected {
-  background: var(--color-grey-100, #f2f2f2);
-  border-color: var(--color-grey-300, #ccc);
-  color: var(--color-grey-700, #444);
-}
-
-.fileSummaryMuted {
-  background: var(--color-grey-100, #f2f2f2);
-  color: var(--color-grey-600, #555);
-}
-
-.optoInput {
-  width: 56px;
-  font-variant-numeric: tabular-nums;
+  width: 24%;
 }
 
 .rowActionGroup {
@@ -535,6 +603,7 @@
 
 .detailsPanelBody {
   display: grid;
+  align-content: start;
   flex: 1 1 auto;
   gap: var(--spacing-lg, 18px);
   min-height: 0;
@@ -639,17 +708,6 @@
 
 .panelGroupHeader .groupHeading {
   margin-bottom: 0;
-}
-
-.generatedStatus {
-  margin-left: auto;
-  padding: 1px 7px;
-  border-radius: var(--radius-sm, 4px);
-  background: var(--color-grey-100, #f2f2f2);
-  color: var(--color-grey-600, #555);
-  font-size: var(--font-size-xs, 0.7rem);
-  text-transform: none;
-  letter-spacing: 0;
 }
 
 .generatedContent {
@@ -787,14 +845,6 @@
   color: var(--color-white, #fff);
 }
 
-.fieldRow {
-  display: grid;
-  grid-template-columns: 110px 1fr;
-  gap: 8px 14px;
-  align-items: center;
-  margin-bottom: 8px;
-}
-
 .videoEditorRow {
   display: flex;
   flex-wrap: wrap;
@@ -813,32 +863,31 @@
   color: var(--color-grey-500, #999);
 }
 
-.mono {
-  font-family: var(--font-mono, monospace);
-  color: var(--color-grey-700, #445);
-}
-
 .duplicateBadge {
   color: var(--color-error, #c0392b);
   font-size: var(--font-size-xs, 0.75rem);
   font-weight: 600;
 }
 
-@media (max-width: 768px) {
-  .workspaceLead {
-    grid-template-columns: minmax(0, 1fr);
+@media (max-width: 1000px) {
+  .workspaceLead,
+  .previousPlan {
+    flex-direction: column;
+    gap: var(--spacing-sm);
   }
 
-  .templateMenu {
-    grid-column: 1;
-    grid-row: 3;
-    width: 100%;
-    margin-bottom: var(--spacing-sm, 8px);
+  .composerTask {
+    max-width: none;
+    min-width: 0;
   }
 
-  .epochToolbar {
-    grid-column: 1;
-    grid-row: 4;
+  .sequenceBar {
+    align-items: flex-start;
+  }
+
+  .filterLabel {
+    flex-wrap: wrap;
+    min-width: 0;
   }
 
   .detailsPanel {
@@ -863,7 +912,7 @@
   }
 
   /* A dense six-column epoch table cannot remain legible at phone width. Each row becomes a
-     self-contained card, keeping the task, generated-file state, camera assignment, and structural
+     self-contained card, keeping the task, video answer, file details, and structural
      actions readable without horizontal scrolling or overlapping controls. */
   .tablePane {
     overflow-x: visible;
@@ -881,7 +930,7 @@
 
   .table tr {
     display: grid;
-    grid-template-columns: 2rem minmax(0, 1fr);
+    grid-template-columns: 2rem minmax(0, 1fr) 2rem;
     gap: 8px 10px;
     padding: 12px;
     margin-bottom: 10px;
@@ -912,7 +961,7 @@
   }
 
   .fileSummaryCell,
-  .cameraCell,
+  .videoCell,
   .optoCell,
   .menuCell {
     grid-column: 1 / -1;
@@ -921,19 +970,21 @@
 
   /* Stacked cells announce their column the way every other table in this folder does: the
      label rides on `data-label` and only exists at this breakpoint. */
-  .cameraCell::before,
+  .videoCell::before,
   .optoCell::before {
     content: attr(data-label);
     display: inline-block;
     min-width: 5.5rem;
-    margin-right: 6px;
+    margin-bottom: var(--spacing-sm);
     color: var(--color-grey-600, #555);
     font-size: var(--font-size-xs, 0.75rem);
     font-weight: 600;
   }
 
   .menuCell {
-    justify-self: stretch;
+    grid-column: 3;
+    grid-row: 1;
+    justify-self: end;
   }
 
   .rowActionGroup {
@@ -966,7 +1017,7 @@
   padding: 1px var(--spacing-xs, 6px);
   font-size: var(--font-size-xs, 0.75rem);
   font-weight: 600;
-  white-space: nowrap;
+  white-space: normal;
 }
 
 .taskContextActions {
@@ -1045,7 +1096,20 @@
   overflow-wrap: anywhere;
 }
 
-.dataFolderGroup summary {
-  overflow-wrap: anywhere;
-  cursor: pointer;
+.videoChoice input:checked + span {
+  border-color: var(--color-primary);
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+  box-shadow: inset 0 0 0 1px var(--color-primary);
+  font-weight: 600;
+}
+
+.videoChoice input:focus-visible + span {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 3px;
+}
+
+.videoChoice input:disabled + span {
+  opacity: 0.6;
+  cursor: not-allowed;
 }

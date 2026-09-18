@@ -845,6 +845,8 @@ export interface DayState {
    * the epoch is first opened/edited. The raw export gate still sees the missing video.
    */
   deferredEpochs?: number[];
+  /** Durable, off-export "Enter later" video answers. These epochs still require a video answer before export. */
+  videoPendingEpochs?: number[];
   /**
    * Off-export acknowledgments of deliberate bad-channel un-marks, keyed by ntrode id
    * (string); lives ONLY in state, never read by the export merge.

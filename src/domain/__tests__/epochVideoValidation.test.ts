@@ -58,6 +58,19 @@ describe('epochVideoUndeclared — missing vs declared', () => {
     expect(epochVideoUndeclared(day)).toHaveLength(0);
   });
 
+  it('keeps Enter later unfinished and leaves the exported YAML unchanged', () => {
+    const { animal, day } = buildCatalogWorkspace() as {
+      animal: Parameters<typeof mergeDayMetadata>[0];
+      day: Parameters<typeof mergeDayMetadata>[1];
+    };
+    const unanswered = { ...day, state: { ...day.state, videolessEpochs: [] } };
+    const later = { ...unanswered, state: { ...unanswered.state, videoPendingEpochs: [1, 3, 5] } };
+    expect(epochVideoUndeclared(later).map((issue) => issue.focusPath)).toEqual([
+      'epoch-1-video', 'epoch-3-video', 'epoch-5-video',
+    ]);
+    expect(encodeYaml(mergeDayMetadata(animal, later))).toBe(encodeYaml(mergeDayMetadata(animal, unanswered)));
+  });
+
   it('reads the remapped videoless number after an epoch insert', () => {
     const day = {
       id: 'd',

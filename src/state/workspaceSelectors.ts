@@ -417,6 +417,14 @@ export const getDayDeferredEpochs = (day: unknown): number[] =>
   dayStateEpochSet(day, 'deferredEpochs');
 
 /**
+ * Explicit "Enter later" answers survive reloads, but never satisfy video validation or export.
+ * @param day
+ * @returns Epoch numbers with video information left for later.
+ */
+export const getDayPendingVideoEpochs = (day: unknown): number[] =>
+  dayStateEpochSet(day, 'videoPendingEpochs');
+
+/**
  * @param day
  * @returns The day's recording-system catalog reference, or `undefined` when absent/non-string.
  */

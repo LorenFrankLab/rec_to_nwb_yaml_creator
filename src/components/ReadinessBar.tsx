@@ -24,7 +24,7 @@ function entrySummary(issues: RepairableIssue[]): string {
     else labels.add(humanizeValidationMessage(issue.message, issue.path ?? issue.instancePath)
       .replace(/ is required\.?$/i, '').replace(/ must have required property /i, ''));
   }
-  if (videos) labels.add(`${videos} ${pluralize(videos, 'epoch')} need a video decision`);
+  if (videos) labels.add(`Video information for ${videos} ${pluralize(videos, 'epoch')}`);
   return [...labels].join(' · ');
 }
 

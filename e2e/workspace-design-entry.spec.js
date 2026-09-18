@@ -39,7 +39,8 @@ test('Add recording epoch is visible and preserves existing epochs and their fil
   const before = await readDay();
   await page.getByRole('button', { name: /^Show epoch \d+ details$/ }).first().waitFor();
   const rowCount = await page.getByRole('button', { name: /^Show epoch \d+ details$/ }).count();
-  await page.getByRole('button', { name: 'Add recording epoch', exact: true }).click();
+  await page.getByLabel(`Task for epoch ${rowCount + 1}`, { exact: true }).selectOption({ label: 'sleep' });
+  await page.getByRole('button', { name: `Add epoch ${rowCount + 1}`, exact: true }).click();
   await expect(page.getByRole('button', { name: /^Show epoch \d+ details$/ })).toHaveCount(rowCount + 1);
   await expect.poll(async () => (await readDay()).associated_video_files).toEqual(before.associated_video_files);
   await expect.poll(async () => (await readDay()).associated_files).toEqual(before.associated_files);

@@ -199,6 +199,7 @@ describe('workspace persistence', () => {
       validationDeferred: true,
       deferredEpochs: [3],
       videolessEpochs: [1],
+      videoPendingEpochs: [2],
     };
     window.localStorage.setItem(
       WORKSPACE_STORAGE_KEY,
@@ -210,6 +211,7 @@ describe('workspace persistence', () => {
     expect(result.workspace.days[dayId].state).toEqual({
       draft: true,
       videolessEpochs: [1],
+      videoPendingEpochs: [2],
     });
   });
 

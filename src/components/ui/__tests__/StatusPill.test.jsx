@@ -44,7 +44,7 @@ describe('EpochStatusPill (epoch-row scope — its own vocabulary)', () => {
     rerender(<EpochStatusPill status="incomplete" />);
     expect(screen.getByText('Incomplete')).toBeInTheDocument();
     rerender(<EpochStatusPill status="needs_video" />);
-    expect(screen.getByText('Needs video')).toBeInTheDocument();
+    expect(screen.getByText('Video to enter')).toBeInTheDocument();
   });
 
   it('maps each epoch state to a distinct token-driven class', () => {

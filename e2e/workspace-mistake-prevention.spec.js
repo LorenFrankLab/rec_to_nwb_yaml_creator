@@ -200,12 +200,14 @@ test.describe('Mistake-prevention UX on high-risk edit surfaces', () => {
     await expect(page.getByRole('combobox', { name: /Epoch 2 task/i })).toBeVisible();
     await expect(page.getByRole('textbox', { name: /^task name$/i })).toHaveCount(0);
 
-    // The epoch's video is bound to a KNOWN camera shown BY NAME, and its epoch is the enclosing
-    // record. The video surface therefore exposes neither reference as a free-typed input. (The
-    // separate supplemental-files section has its own controlled Task epoch selects.)
+    // Each video's camera can be corrected using known camera names. Its epoch is still the
+    // enclosing record, so neither reference is free-typed.
     const epochFiles = page.getByRole('region', { name: 'Files for this epoch' });
-    await expect(epochFiles.getByText('side_camera', { exact: false }).first()).toBeVisible();
-    await expect(epochFiles.getByRole('combobox', { name: 'Camera' })).toHaveCount(0);
+    const camera = epochFiles.getByRole('combobox', { name: 'Epoch 2 video 2 camera', exact: true });
+    await expect(camera).toBeVisible();
+    await expect(camera).toHaveValue('1');
+    await expect(camera.locator('option:checked')).toHaveText('side_camera');
+    await expect(epochFiles.getByRole('textbox', { name: /camera/i })).toHaveCount(0);
     await expect(epochFiles.getByRole('combobox', { name: 'Task epoch' })).toHaveCount(0);
   });
 

@@ -7,8 +7,8 @@ import { EpochStatusPill } from '../../components/ui/StatusPill';
 import GeneratedValue from '../../components/ui/GeneratedValue';
 import Button from '../../components/ui/Button';
 import OverflowMenu from '../../components/OverflowMenu';
-import type { OverflowMenuHandle } from '../../components/OverflowMenu';
-import EmptyState from '../../components/ui/EmptyState';
+import { EpochComposer, EpochVideoChoice } from './EpochEntryControls';
+import type { VideoAnswer } from './EpochEntryControls';
 import { changedTaskContext, restoreCopiedTaskContext } from '../../domain/copiedTaskContext';
 import TaskTemplateDialog from './TaskTemplateDialog';
 import StimulationProtocolEditor from './StimulationProtocolEditor';
@@ -54,6 +54,7 @@ import {
   getDayAssociatedVideos,
   getDayAssociatedFiles,
   getDayDeferredEpochs,
+  getDayPendingVideoEpochs,
   getDayFsGuiYamls,
   getDayBehavioralEvents,
   getDayVideolessEpochs,
@@ -187,7 +188,6 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
   const [pendingOrphan, setPendingOrphan] = useState<PendingOrphan | null>(null);
   const [quickAddEpoch, setQuickAddEpoch] = useState<number | null>(null);
   const [quickAddError, setQuickAddError] = useState<string | null>(null);
-  const templateMenuRef = useRef<OverflowMenuHandle | null>(null);
   const [epochFilter, setEpochFilter] = useState<EpochFilter>('all');
   const [pendingFileFocus, setPendingFileFocus] = useState<PendingFileFocus | null>(null);
   // Epochs whose statescript/video name is being manually overridden (UI mode; GeneratedValue's
@@ -195,12 +195,16 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
   const [manualStatescript, setManualStatescript] = useState<Set<number>>(new Set());
   const [manualVideo, setManualVideo] = useState<Set<string>>(new Set());
   const [priorVideoPlanOpen, setPriorVideoPlanOpen] = useState(false);
+  const [pendingVideoAnswer, setPendingVideoAnswer] = useState<{ epoch: number; answer: 'no' | 'later' } | null>(null);
+  const latestDayRef = useRef(day);
+  latestDayRef.current = day;
   const [dataFolderOpen, setDataFolderOpen] = useState(focusRequest?.fieldPath === 'dataFolder');
   const focusDataFolderOnOpenRef = useRef(false);
   const { show: showToast, node: toastNode } = useUndoToast();
 
-  // Alt+N (the stepper "add" intent) opens the template menu — the grid's primary add affordance.
-  useStepperShortcut(useCallback((action) => { if (action === 'add') templateMenuRef.current?.open(); }, []));
+  useStepperShortcut(useCallback((action) => {
+    if (action === 'add') (document.getElementById('next-epoch-task') ?? document.getElementById('create-first-epoch'))?.focus();
+  }, []));
 
   // Repair landing: open the targeted epoch panel (the frame's focus effect then focuses the control).
   useEffect(() => {
@@ -247,9 +251,6 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
     return { ...base, validationDeferred: false, ...patch };
   }, [day]);
 
-  const statePatchWithVideoless = useCallback((videolessEpochs: number[], sourceDay = day) =>
-    statePatch({ videolessEpochs }, sourceDay), [day, statePatch]);
-
   const writeFields = useCallback((
     changes: ReadonlyArray<readonly [fieldPath: string, value: unknown]>
   ) => {
@@ -273,9 +274,8 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
       setActiveEpoch(null);
       return;
     }
-    clearDeferredEpoch(epoch);
     setActiveEpoch(epoch);
-  }, [activeEpoch, clearDeferredEpoch]);
+  }, [activeEpoch]);
 
   const openFileEditor = useCallback((epoch: number, target: FileFocusTarget) => {
     setEpochFilter('all');
@@ -393,7 +393,6 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
 
   // ── Task / epoch write-backs (instance-array transforms) ──
   const reassignTask = (epoch: number, taskTypeId: string) => {
-    clearDeferredEpoch(epoch);
     commit(setEpochTask(view.taskInstances, epoch, taskTypeId));
   };
   const onDuplicate = (epoch: number) => commit(duplicateEpoch(view.taskInstances, epoch));
@@ -406,7 +405,6 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
    * @param context - Values to record, or `null` per field to follow the task default again.
    */
   const setTaskContext = (epoch: number, context: TaskContextPatch) => {
-    clearDeferredEpoch(epoch);
     commit(setEpochTaskContext(view.taskInstances, epoch, context));
   };
 
@@ -439,6 +437,9 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
       const nextVideoless = remapVideolessEpochs(videoless, remap);
       const deferred = getDayDeferredEpochs(day);
       const nextDeferred = remapVideolessEpochs(deferred, remap);
+      const pendingVideo = getDayPendingVideoEpochs(day);
+      const nextPendingVideo = remapVideolessEpochs(pendingVideo, remap);
+      if (JSON.stringify(pendingVideo) !== JSON.stringify(nextPendingVideo)) stateUpdates.videoPendingEpochs = nextPendingVideo;
       if (
         JSON.stringify(nextVideoless) !== JSON.stringify(videoless) ||
         JSON.stringify(nextDeferred) !== JSON.stringify(deferred)
@@ -482,13 +483,17 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
     const snapFiles = getDayAssociatedFiles(day);
     const snapVideoless = getDayVideolessEpochs(day);
     const snapDeferred = getDayDeferredEpochs(day);
+    const snapPendingVideo = getDayPendingVideoEpochs(day);
+    const nextPendingVideo = removeVideolessEpoch(snapPendingVideo, epoch);
+    const pendingVideoChanged = JSON.stringify(nextPendingVideo) !== JSON.stringify(snapPendingVideo);
     const nextVideoless = removeVideolessEpoch(snapVideoless, epoch);
     const nextDeferred = removeVideolessEpoch(snapDeferred, epoch);
     const videolessChanged = JSON.stringify(nextVideoless) !== JSON.stringify(snapVideoless);
     const deferredChanged = JSON.stringify(nextDeferred) !== JSON.stringify(snapDeferred);
     const deletedStateChanges: Array<readonly [string, unknown]> =
-      videolessChanged || deferredChanged
-        ? [['state', statePatch({ videolessEpochs: nextVideoless, deferredEpochs: nextDeferred })]]
+      videolessChanged || deferredChanged || pendingVideoChanged
+        ? [['state', statePatch({ videolessEpochs: nextVideoless, deferredEpochs: nextDeferred,
+          ...(pendingVideoChanged ? { videoPendingEpochs: nextPendingVideo } : {}) })]]
         : [];
     const closeDeletedEpoch = () => {
       if (activeEpoch === epoch) setActiveEpoch(null);
@@ -500,8 +505,9 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
           ['associated_video_files', snapVideos],
           ['associated_files', snapFiles],
         ];
-        if (videolessChanged || deferredChanged) {
-          changes.push(['state', statePatch({ videolessEpochs: snapVideoless, deferredEpochs: snapDeferred })]);
+        if (videolessChanged || deferredChanged || pendingVideoChanged) {
+          changes.push(['state', statePatch({ videolessEpochs: snapVideoless, deferredEpochs: snapDeferred,
+            ...(pendingVideoChanged ? { videoPendingEpochs: snapPendingVideo } : {}) })]);
         }
         writeFields(changes);
       });
@@ -540,8 +546,15 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
     setQuickAddError(null);
     if (epoch == null) commit(addEpochToTask(view.taskInstances, newId), nextTypes);
     else {
-      commit(setEpochTask(view.taskInstances, epoch, newId), nextTypes);
-      setActiveEpoch(epoch);
+      const existing = grid.rows.some((row) => row.epoch === epoch);
+      if (existing) {
+        commit(setEpochTask(view.taskInstances, epoch, newId), nextTypes);
+        setActiveEpoch(epoch);
+      } else {
+        applyCommit(addEpochToTask(view.taskInstances, newId), nextTypes, false, false, { trackAddedEpochs: false });
+        setEpochFilter('all');
+        showToast(`Epoch ${epoch} added: ${definition.task_name}`);
+      }
     }
   };
 
@@ -587,10 +600,11 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
   // ── Video 3-state ──
   const setVideoless = (epoch: number, on: boolean) => {
     if (unresolvedTaskCatalogDivergence) return;
-    clearDeferredEpoch(epoch);
     const current = getDayVideolessEpochs(day);
     const next = on ? [...new Set([...current, epoch])] : current.filter((e) => e !== epoch);
-    onFieldUpdate('state', statePatchWithVideoless(next));
+    onFieldUpdate('state', statePatch({ videolessEpochs: next,
+      ...(getDayDeferredEpochs(day).includes(epoch) ? { deferredEpochs: getDayDeferredEpochs(day).filter((value) => value !== epoch) } : {}),
+      ...(getDayPendingVideoEpochs(day).includes(epoch) ? { videoPendingEpochs: getDayPendingVideoEpochs(day).filter((value) => value !== epoch) } : {}) }));
   };
   const addVideo = (row: EpochGridRow) => {
     if (unresolvedTaskCatalogDivergence) return null;
@@ -616,6 +630,56 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
   const removeVideo = (videoIndex: number) => {
     if (unresolvedTaskCatalogDivergence) return;
     onFieldUpdate('associated_video_files', getDayAssociatedVideos(day).filter((_, i) => i !== videoIndex));
+  };
+  // Change the scientific answer and its file entries in one update. Replacing a saved answer
+  // with No/Later requires review if it would remove video metadata; Undo restores that metadata.
+  const applyVideoAnswer = (epoch: number, answer: VideoAnswer) => {
+    if (unresolvedTaskCatalogDivergence) return;
+    const row = grid.rows.find((candidate) => candidate.epoch === epoch);
+    if (!row) return;
+    const videos = getDayAssociatedVideos(day);
+    const videoless = getDayVideolessEpochs(day).filter((value) => value !== epoch);
+    const deferred = getDayDeferredEpochs(day).filter((value) => value !== epoch);
+    const pendingVideo = getDayPendingVideoEpochs(day).filter((value) => value !== epoch);
+    let nextVideos = videos;
+    if (answer === 'yes') {
+      nextVideos = addMissingGeneratedVideos({ ...grid, rows: [{ ...row, videoPresence: 'missing' }] }, videos, cameras);
+      if (!nextVideos.some((video) => Number(video.task_epochs) === epoch)) {
+        showToast('Choose a camera for this epoch before adding video. Open Task to select or add a camera.');
+        setActiveEpoch(epoch);
+        return;
+      }
+    } else {
+      nextVideos = videos.filter((video) => Number(video.task_epochs) !== epoch);
+      if (answer === 'no') videoless.push(epoch);
+      else pendingVideo.push(epoch);
+    }
+    writeFields([
+      ['associated_video_files', nextVideos],
+      ['state', statePatch({ videolessEpochs: videoless, deferredEpochs: deferred, videoPendingEpochs: pendingVideo })],
+    ]);
+    setPendingVideoAnswer(null);
+    showToast(answer === 'yes' ? `Video filenames added for epoch ${epoch}. Check that they match your recording.`
+      : answer === 'no' ? `Epoch ${epoch}: no video recorded` : `Epoch ${epoch}: video information left for later`, () => {
+      const currentDay = latestDayRef.current;
+      const restoredVideos = getDayAssociatedVideos(currentDay).filter((video) => Number(video.task_epochs) !== epoch);
+      videos.forEach((video, index) => {
+        if (Number(video.task_epochs) === epoch) restoredVideos.splice(Math.min(index, restoredVideos.length), 0, video);
+      });
+      writeFields([
+        ['associated_video_files', restoredVideos],
+        ['state', statePatch({
+          videolessEpochs: [...getDayVideolessEpochs(currentDay).filter((value) => value !== epoch), ...getDayVideolessEpochs(day).filter((value) => value === epoch)].sort((a, b) => a - b),
+          deferredEpochs: [...getDayDeferredEpochs(currentDay).filter((value) => value !== epoch), ...getDayDeferredEpochs(day).filter((value) => value === epoch)].sort((a, b) => a - b),
+          videoPendingEpochs: [...getDayPendingVideoEpochs(currentDay).filter((value) => value !== epoch), ...getDayPendingVideoEpochs(day).filter((value) => value === epoch)].sort((a, b) => a - b),
+        }, currentDay)],
+      ]);
+    });
+  };
+  const chooseVideoAnswer = (row: EpochGridRow, answer: VideoAnswer) => {
+    if (unresolvedTaskCatalogDivergence) return;
+    if (row.videos.length > 0 && answer !== 'yes') setPendingVideoAnswer({ epoch: row.epoch, answer });
+    else applyVideoAnswer(row.epoch, answer);
   };
   const writeVideoName = (videoIndex: number, name: string) => {
     if (unresolvedTaskCatalogDivergence) return;
@@ -643,7 +707,7 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
 
   const hasOpto = grid.isOpto;
   const epochCount = grid.rows.length;
-  const missingVideoCount = grid.rows.filter((row) => row.status === 'needs_video').length;
+  const missingVideoCount = grid.rows.filter((row) => row.videoPresence === 'missing').length;
   // Only the epochs that actually EXPECT a statescript are counted: a lab that never logs a sleep
   // statescript is not missing one. Never a blocker — the chip is a neutral filter.
   const expectedStatescriptCount = grid.rows.filter((row) => row.statescriptState === 'expected').length;
@@ -670,6 +734,12 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
       .map((row) => row.epoch);
     const videoRows = matchingMissingRows
       .filter((row) => sourceRows.get(row.epoch)?.videoPresence === 'present')
+      // Reuse the cameras that actually recorded video, not every camera listed on the task.
+      // A changed/deleted camera makes that epoch a manual choice for this day.
+      .filter((row) => sourceRows.get(row.epoch)!.videos.every(({ entry }) =>
+        cameras.some((camera) => String(camera.id) === String(entry.camera_id)) &&
+        row.cameras.some((id) => String(id) === String(entry.camera_id))))
+      .map((row) => ({ ...row, cameras: [...new Set(sourceRows.get(row.epoch)!.videos.map(({ entry }) => entry.camera_id))] }))
       .filter((row) => countMissingGeneratedVideos({ ...grid, rows: [row] }, cameras) > 0);
     if (noVideoEpochs.length === 0 && videoRows.length === 0) return null;
 
@@ -693,7 +763,7 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
     }));
   const customFilenameCount = grid.rows.filter(hasCustomFilename).length;
   const matchesEpochFilter = (row: EpochGridRow, filter: EpochFilter) => {
-    if (filter === 'needs-video') return row.status === 'needs_video';
+    if (filter === 'needs-video') return row.videoPresence === 'missing';
     if (filter === 'expected-statescript') return row.statescriptState === 'expected';
     if (filter === 'custom-filenames') return hasCustomFilename(row);
     return true;
@@ -708,15 +778,6 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
     const row = grid.rows.find((candidate) => candidate.epoch === activeEpoch);
     if (!row || !matchesEpochFilter(row, filter)) setActiveEpoch(null);
   };
-  const filterButtonClass = (filter: EpochFilter, tone?: string) =>
-    [
-      styles.summaryChip,
-      styles.summaryButton,
-      epochFilter === filter ? styles.summaryActive : '',
-      tone ?? '',
-    ]
-      .filter(Boolean)
-      .join(' ');
   const generateMissingStatescripts = () => {
     if (unresolvedTaskCatalogDivergence || !grid.dataFolder) return;
     const current = getDayAssociatedFiles(day);
@@ -724,7 +785,7 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
     if (next === current) return;
     onFieldUpdate('associated_files', next);
     setEpochFilter('all');
-    showToast(`Generated ${next.length - current.length} statescript files`, () => {
+    showToast(`Added ${next.length - current.length} StateScript metadata entries`, () => {
       onFieldUpdate('associated_files', current);
     });
   };
@@ -745,10 +806,18 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
     const current = getDayAssociatedVideos(day);
     const next = addMissingGeneratedVideos(grid, current, cameras);
     if (next === current) return;
-    onFieldUpdate('associated_video_files', next);
+    const pendingVideo = getDayPendingVideoEpochs(day);
+    const nextPendingVideo = pendingVideo.filter((epoch) => !next.some((video) => Number(video.task_epochs) === epoch));
+    writeFields([
+      ['associated_video_files', next],
+      ...(pendingVideo.length === nextPendingVideo.length ? [] : [['state', statePatch({ videoPendingEpochs: nextPendingVideo })] as const]),
+    ]);
     setEpochFilter('all');
-    showToast(`Generated ${next.length - current.length} video files`, () => {
-      onFieldUpdate('associated_video_files', current);
+    showToast(`Added ${next.length - current.length} video metadata entries`, () => {
+      writeFields([
+        ['associated_video_files', current],
+        ...(pendingVideo.length === nextPendingVideo.length ? [] : [['state', statePatch({ videoPendingEpochs: pendingVideo }, latestDayRef.current)] as const]),
+      ]);
     });
   };
   const applyPriorVideoPlan = () => {
@@ -769,7 +838,8 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
     ].sort((a, b) => a - b);
     writeFields([
       ['associated_video_files', nextVideos],
-      ['state', statePatchWithVideoless([...new Set(nextVideoless)])],
+      ['state', statePatch({ videolessEpochs: [...new Set(nextVideoless)], deferredEpochs: getDayDeferredEpochs(day).filter((epoch) => !covered.has(epoch)),
+        videoPendingEpochs: getDayPendingVideoEpochs(day).filter((epoch) => !covered.has(epoch)) })],
     ]);
     setPriorVideoPlanOpen(false);
     setEpochFilter('all');
@@ -806,146 +876,53 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
       ) : null}
       <div className={styles.workspaceHeader}>
         <div className={styles.workspaceLead}>
-          <h2>Recording epochs</h2>
-          <p className={styles.workspaceIntro}>
-            An epoch is one numbered block in the recording, such as sleep or a run. Edit each
-            epoch to confirm its task, room, cameras and files.
-          </p>
-          {epochCount > 0 && <div className={styles.templateMenu}>
-            <Button onClick={() => applyTemplate('blank')}>Add recording epoch</Button>
-            <OverflowMenu
-              ref={templateMenuRef}
-              label="Epoch templates"
-              trigger={<>Use a day template ▾</>}
-              items={[
-                { key: 'sleep', label: 'Sleep day', description: '4 sleep epochs', onSelect: () => applyTemplate('sleep') },
-                { key: 'wtrack', label: 'W-track day', description: 'sleep / run alternation', onSelect: () => applyTemplate('wtrack') },
-                ...(priorDayInstances()
-                  ? [{ key: 'copy', label: 'Copy structure from prior day', description: 'same epochs; files re-derive', onSelect: () => applyTemplate('copy') }]
-                  : []),
-              ]}
-            />
-          </div>}
-          {epochCount > 0 && (
-            <div className={styles.epochToolbar}>
-              <div className={styles.toolbarGroup}>
-                <span className={styles.toolbarLabel}>Show epochs</span>
-                <div className={styles.summaryStrip} aria-label="Epoch status summary">
-                  <button
-                    type="button"
-                    className={filterButtonClass('all')}
-                    aria-pressed={epochFilter === 'all'}
-                    onClick={() => changeFilter('all')}
-                  >
-                    All {epochCount} {pluralize(epochCount, 'epoch')}
-                  </button>
-                  {(missingVideoCount > 0 || epochFilter === 'needs-video') && (
-                    <button
-                      type="button"
-                      className={filterButtonClass(
-                        'needs-video',
-                        missingVideoCount > 0 ? styles.summaryNeedsAttention : ''
-                      )}
-                      aria-pressed={epochFilter === 'needs-video'}
-                      onClick={() => changeFilter('needs-video')}
-                    >
-                      {missingVideoCount} {pluralize(missingVideoCount, 'epoch')} need a video decision
-                    </button>
-                  )}
-                  {(expectedStatescriptCount > 0 || epochFilter === 'expected-statescript') && (
-                    <button
-                      type="button"
-                      className={filterButtonClass('expected-statescript')}
-                      aria-pressed={epochFilter === 'expected-statescript'}
-                      onClick={() => changeFilter('expected-statescript')}
-                    >
-                      {expectedStatescriptCount} with {expectedStatescriptCount === 1 ? 'a suggested' : 'suggested'} StateScript {pluralize(expectedStatescriptCount, 'log')}
-                    </button>
-                  )}
-                  {(customFilenameCount > 0 || epochFilter === 'custom-filenames') && (
-                    <button
-                      type="button"
-                      className={filterButtonClass('custom-filenames')}
-                      aria-pressed={epochFilter === 'custom-filenames'}
-                      onClick={() => changeFilter('custom-filenames')}
-                    >
-                      {customFilenameCount} custom file {pluralize(customFilenameCount, 'name')}
-                    </button>
-                  )}
-                </div>
-              </div>
-              <details
-                className={`${styles.toolbarGroup} ${styles.dataFolderGroup}`}
-                open={dataFolderOpen}
-                onToggle={(event) => setDataFolderOpen(event.currentTarget.open)}
-              >
-                <summary>StateScript folder{grid.dataFolder ? ` · ${grid.dataFolder}` : ' · set to generate paths'}</summary>
-                <label className={styles.toolbarLabel} htmlFor="epochs-data-folder">
-                  StateScript file folder
-                </label>
-                <DraftTextInput
-                  draftKey={`day:${String(day.id)}:dataFolder`}
-                  id="epochs-data-folder"
-                  type="text"
-                  name="dataFolder"
-                  data-field-path="dataFolder"
-                  className={styles.dataFolderInput}
-                  value={grid.dataFolder}
-                  onCommit={(value) => {
-                    onFieldUpdate('dataFolder', value);
-                    if (value.trim() !== '') setDataFolderOpen(false);
-                  }}
-                  placeholder="e.g. /stelmo/denisse/Laurent/20260514/"
-                  aria-describedby="epochs-data-folder-help"
-                />
-                <span id="epochs-data-folder-help" className={styles.dataFolderHelp}>
-                  Folder containing this recording’s files. StateScript paths are generated inside it.
-                </span>
-              </details>
-              {(generatedStatescriptCount > 0 || generatedVideoCount > 0) && (
-                <div className={`${styles.toolbarGroup} ${styles.bulkGroup}`}>
-                  <span className={styles.toolbarLabel}>Add suggested files</span>
-                  <div className={styles.bulkActions} aria-label="Generate expected files">
-                    {generatedStatescriptCount > 0 && (
-                      <Button
-                        variant="secondary"
-                        size="small"
-                        title={!grid.dataFolder ? 'Enter the file naming folder first' : undefined}
-                        onClick={addOptionalStatescripts}
-                      >
-                        Add {generatedStatescriptCount} suggested StateScript {pluralize(generatedStatescriptCount, 'log')}
-                      </Button>
-                    )}
-                    {generatedVideoCount > 0 && (
-                      <Button
-                        variant="secondary"
-                        size="small"
-                        onClick={generateMissingVideos}
-                      >
-                        Add {generatedVideoCount} video {generatedVideoCount === 1 ? 'entry' : 'entries'}
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              )}
-              {missingVideoCount > 0 && generatedVideoCount > 0 && (
-                <p className={styles.videoCountHelp}>
-                  {missingVideoCount} {pluralize(missingVideoCount, 'epoch')} need a decision;{' '}
-                  {generatedVideoCount} camera-specific {generatedVideoCount === 1 ? 'entry' : 'entries'} would be created.
-                </p>
-              )}
-              {priorVideoPlan && missingVideoCount > 0 && (
-                <div className={`${styles.toolbarGroup} ${styles.priorPlanGroup}`}>
-                  <span className={styles.toolbarLabel}>Repeat a familiar day</span>
-                  <Button variant="secondary" size="small" onClick={() => setPriorVideoPlanOpen(true)}>
-                    Review {priorVideoPlan.date} video plan
-                  </Button>
-                </div>
-              )}
-            </div>
-          )}
+          <div>
+            <h2>Recording epochs</h2>
+            <p className={styles.workspaceIntro}>
+              An epoch is one numbered block in the recording, such as sleep or a run.
+              Add them in recording order, then enter whether video was recorded.
+            </p>
+          </div>
+          {view.taskTypes.length > 0 && <OverflowMenu
+            label="Epoch templates"
+            buttonClassName={styles.templateTrigger}
+            trigger={<>Use a day template ▾</>}
+            items={[
+              { key: 'sleep', label: 'Sleep day', description: '4 sleep epochs', onSelect: () => applyTemplate('sleep') },
+              { key: 'wtrack', label: 'W-track day', description: 'sleep / run alternation', onSelect: () => applyTemplate('wtrack') },
+              ...(priorDayInstances()
+                ? [{ key: 'copy', label: 'Copy structure from prior day', description: 'same epochs; files re-derive', onSelect: () => applyTemplate('copy') }]
+                : []),
+            ]}
+          />}
         </div>
+        {day.provenance?.copiedFromDayId && epochCount > 0 && <p className={styles.copiedNote}>
+          Sequence copied from {siblingDays.find((candidate) => candidate.id === day.provenance?.copiedFromDayId)?.date ?? 'a previous recording'}.
+          {' '}Check that the tasks and their order match this recording.
+        </p>}
+        {priorVideoPlan && missingVideoCount > 0 && <div className={styles.previousPlan}>
+          <div><strong>Similar video setup to {priorVideoPlan.date}?</strong>
+            <p>Review the previous choices for matching epochs and apply them to this day.</p>
+          </div>
+          <Button variant="secondary" size="small" onClick={() => setPriorVideoPlanOpen(true)}>
+            Review {priorVideoPlan.date} video plan
+          </Button>
+        </div>}
       </div>
+      {epochCount > 0 && <div className={styles.sequenceBar}>
+        <p aria-label="Epoch status summary">
+          <strong>{epochCount} {pluralize(epochCount, 'epoch')}</strong>
+          {missingVideoCount > 0 && <span> · Video information to enter for {missingVideoCount}</span>}
+        </p>
+        {epochCount > 1 && <label className={styles.filterLabel}>Show
+          <select aria-label="Show epochs" value={epochFilter} onChange={(event) => changeFilter(event.target.value as EpochFilter)}>
+            <option value="all">All epochs</option>
+            <option value="needs-video">Video to enter ({missingVideoCount})</option>
+            <option value="expected-statescript">Suggested StateScript logs ({expectedStatescriptCount})</option>
+            <option value="custom-filenames">Custom filenames ({customFilenameCount})</option>
+          </select>
+        </label>}
+      </div>}
 
       {unresolvedTaskCatalogDivergence && (
         <section className={styles.catalogConflict} aria-labelledby="task-catalog-conflict-heading">
@@ -976,41 +953,7 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
         </section>
       )}
 
-      {grid.rows.length === 0 ? (
-        <EmptyState
-          icon="▦"
-          title="No recording epochs yet"
-          actions={<div className={styles.emptyActions}>
-            {view.taskTypes.length > 0 ? (
-              <>
-                <OverflowMenu
-                  ref={templateMenuRef}
-                  label="Choose a recording-day template"
-                  trigger={<>Use a day template ▾</>}
-                  items={[
-                    { key: 'sleep', label: 'Sleep day', description: '4 sleep epochs', onSelect: () => applyTemplate('sleep') },
-                    { key: 'wtrack', label: 'W-track day', description: 'sleep / run alternation', onSelect: () => applyTemplate('wtrack') },
-                    ...(priorDayInstances()
-                      ? [{ key: 'copy', label: 'Copy structure from prior day', description: 'same epochs; files re-derive', onSelect: () => applyTemplate('copy') }]
-                      : []),
-                  ]}
-                />
-                <Button variant="secondary" onClick={() => applyTemplate('blank')}>
-                  Add one recording epoch
-                </Button>
-              </>
-            ) : (
-              <Button onClick={() => applyTemplate('blank')}>
-                Create first task and epoch
-              </Button>
-            )}
-          </div>}
-        >
-          {view.taskTypes.length > 0
-            ? 'Each epoch is a numbered recording block belonging to a task. Start with a familiar day template, or build the sequence one epoch at a time.'
-            : 'Each epoch is a numbered recording block belonging to a task. Define the first task used by this animal, then add the recording sequence.'}
-        </EmptyState>
-      ) : filteredRows.length === 0 ? (
+      {grid.rows.length === 0 ? null : filteredRows.length === 0 ? (
         <div className={styles.filterEmpty} role="status">
           No recording epochs match this filter.
         </div>
@@ -1022,8 +965,8 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
                 <tr>
                   <th scope="col" className={styles.numCell}>Epoch</th>
                   <th scope="col">Task or activity</th>
-                  <th scope="col">Files</th>
-                  <th scope="col">Cameras</th>
+                  <th scope="col" className={styles.videoCell}>Was video recorded?</th>
+                  <th scope="col" className={styles.fileSummaryCell}>Files &amp; details</th>
                   {hasOpto && <th scope="col">Opto</th>}
                   <th scope="col" className={styles.menuCell}><span className="sr-only">Actions</span></th>
                 </tr>
@@ -1037,6 +980,11 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
                     panelId="epoch-details-panel"
                     hasOpto={hasOpto}
                     cameras={cameras}
+                    taskTypes={view.taskTypes}
+                    pendingVideo={getDayPendingVideoEpochs(day).includes(row.epoch)}
+                    disabled={unresolvedTaskCatalogDivergence}
+                    onTaskChange={(taskId) => reassignTask(row.epoch, taskId)}
+                    onVideoAnswer={(answer) => chooseVideoAnswer(row, answer)}
                     onToggle={() => toggle(row.epoch)}
                     onInsertAfter={() => onInsertAfter(row.epoch)}
                     onDuplicate={() => onDuplicate(row.epoch)}
@@ -1051,6 +999,7 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
           {activeRow && (
             <EpochDetailsPanel
               dayId={String(day.id)}
+              cameraSetupHref={`#/animal/${encodeURIComponent(String(ownerKey))}/cameras`}
               row={activeRow}
               panelId="epoch-details-panel"
               hasOpto={hasOpto}
@@ -1127,10 +1076,55 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
                 }));
               }}
               onVideoNameChange={writeVideoName}
+              onVideoCameraChange={(videoIndex, cameraId) => onFieldUpdate('associated_video_files',
+                getDayAssociatedVideos(day).map((video, index) => index === videoIndex ? { ...video, camera_id: cameraId } : video))}
             />
           )}
         </>
       )}
+
+      <EpochComposer nextEpoch={nextEpochNumber(view.taskInstances)} empty={epochCount === 0}
+        types={view.taskTypes} disabled={unresolvedTaskCatalogDivergence}
+        onCreateTask={() => { setQuickAddError(null); setQuickAddEpoch(nextEpochNumber(view.taskInstances)); }}
+        onAdd={(taskId) => {
+          const epoch = nextEpochNumber(view.taskInstances);
+          // Appending preserves every existing epoch/reference. Leave its video question
+          // unanswered; Enter later is a deliberate choice in the row.
+          applyCommit(addEpochToTask(view.taskInstances, taskId), view.taskTypes, false, false, { trackAddedEpochs: false });
+          setEpochFilter('all');
+          showToast(`Epoch ${epoch} added: ${view.taskTypes.find((task) => task.id === taskId)?.task_name}`);
+        }}
+      />
+      {epochCount > 0 && <details className={styles.fileTools} open={dataFolderOpen}
+        onToggle={(event) => setDataFolderOpen(event.currentTarget.open)}>
+        <summary>File naming &amp; bulk entry</summary>
+        <p>Add metadata for files you recorded. Suggested filenames are not checked against files on disk.</p>
+        <div className={styles.fileToolsContent}>
+          <div className={styles.folderField}><label htmlFor="epochs-data-folder">StateScript file folder</label>
+            <DraftTextInput draftKey={`day:${String(day.id)}:dataFolder`} id="epochs-data-folder"
+              type="text" name="dataFolder" data-field-path="dataFolder" className={styles.dataFolderInput}
+              value={grid.dataFolder} onCommit={(value) => onFieldUpdate('dataFolder', value)}
+              placeholder="e.g. /data/animal/20230622/" aria-describedby="epochs-data-folder-help" />
+            <span id="epochs-data-folder-help" className={styles.dataFolderHelp}>
+              Folder containing this recording’s files. StateScript paths are generated inside it.
+            </span>
+          </div>
+          <div className={styles.bulkActions} aria-label="Add metadata entries">
+            {generatedStatescriptCount > 0 && <Button variant="secondary" size="small" onClick={addOptionalStatescripts}>
+              Add {generatedStatescriptCount} suggested StateScript {pluralize(generatedStatescriptCount, 'log')}
+            </Button>}
+            {generatedVideoCount > 0 && <Button variant="secondary" size="small" onClick={generateMissingVideos}>
+              Add {generatedVideoCount} video {generatedVideoCount === 1 ? 'entry' : 'entries'}
+            </Button>}
+          </div>
+        </div>
+      </details>}
+      <ConfirmDialog isOpen={pendingVideoAnswer != null}
+        title={`Change video answer for epoch ${pendingVideoAnswer?.epoch ?? ''}?`}
+        message="This removes this epoch’s video metadata entries, including any custom filenames. Files on disk are kept. You can undo the change."
+        confirmLabel={pendingVideoAnswer?.answer === 'no' ? 'Remove entries and mark no video' : 'Remove entries and enter later'}
+        onConfirm={() => { if (pendingVideoAnswer) applyVideoAnswer(pendingVideoAnswer.epoch, pendingVideoAnswer.answer); }}
+        onCancel={() => setPendingVideoAnswer(null)} />
 
       {pendingTemplate && <TaskTemplateDialog
         kind={pendingTemplate}
@@ -1147,21 +1141,37 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
         }}
       />}
 
-      <ConfirmDialog
+      <Modal
         isOpen={priorVideoPlanOpen && priorVideoPlan != null}
         title={`Use the ${priorVideoPlan?.date ?? 'previous day'} video plan?`}
-        message={priorVideoPlan ? <>
+        titleId="previous-video-plan-title"
+        onClose={() => setPriorVideoPlanOpen(false)}
+        footer={<div className="form-actions">
+          <Button variant="neutral" onClick={() => setPriorVideoPlanOpen(false)}>Cancel</Button>
+          <Button onClick={applyPriorVideoPlan}>Apply previous plan</Button>
+        </div>}
+      >
+        {priorVideoPlan && <>
+        <p>
           This will mark {priorVideoPlan.noVideoEpochs.length} {pluralize(priorVideoPlan.noVideoEpochs.length, 'epoch')} as having no video and create{' '}
           {priorVideoPlan.videoEntries} camera-specific video {priorVideoPlan.videoEntries === 1 ? 'entry' : 'entries'} for matching epochs.
+        </p>
+        <ol className={styles.planPreview}>
+          {grid.rows.filter((row) => priorVideoPlan.noVideoEpochs.includes(row.epoch) || priorVideoPlan.videoRows.some((videoRow) => videoRow.epoch === row.epoch)).map((row) => {
+            const videoRow = priorVideoPlan.videoRows.find((candidate) => candidate.epoch === row.epoch);
+            return <li key={row.epoch}><strong>Epoch {row.epoch}: {row.taskName}</strong>
+              <span>{videoRow ? `Video: ${videoRow.cameras.map((id) => cameraName(cameras, id)).join(', ')}` : 'No video recorded'}</span>
+            </li>;
+          })}
+        </ol>
+        <p>
           {priorVideoPlan.coveredEpochs < missingVideoCount
             ? ` ${missingVideoCount - priorVideoPlan.coveredEpochs} unmatched ${pluralize(missingVideoCount - priorVideoPlan.coveredEpochs, 'epoch')} will still need review.`
             : ''}{' '}
-          Review any epoch that differed today. No files on disk are changed.
-        </> : ''}
-        confirmLabel="Apply previous plan"
-        onConfirm={applyPriorVideoPlan}
-        onCancel={() => setPriorVideoPlanOpen(false)}
-      />
+          Confirm that these choices match this recording. Filenames will be suggested for this date; check them in Files &amp; details.
+        </p>
+        </>}
+      </Modal>
 
       {quickAddEpoch !== null && (
         <TaskTypeModal
@@ -1174,7 +1184,7 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
             const epoch = quickAddEpoch;
             setQuickAddEpoch(null);
             setQuickAddError(null);
-            if (epoch !== null) setActiveEpoch(epoch);
+            if (epoch !== null && grid.rows.some((row) => row.epoch === epoch)) setActiveEpoch(epoch);
           }}
         />
       )}
@@ -1243,7 +1253,7 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
   }
 
   /** Apply a starter template, writing the corresponding instances (+ minted task types). */
-  function applyTemplate(kind: 'sleep' | 'wtrack' | 'copy' | 'blank') {
+  function applyTemplate(kind: 'sleep' | 'wtrack' | 'copy') {
     if (unresolvedTaskCatalogDivergence) return;
     if (kind === 'copy') {
       // The prior day's STRUCTURE — which tasks ran in which epochs. Its own recorded room/cameras
@@ -1253,12 +1263,6 @@ export default function EpochsTab(props: DayEditorBundle & { focusRequest?: Focu
       if (prior) commit(stripTaskContext(prior), view.taskTypes, () => {
         onFieldUpdate('provenance', { ...day.provenance, taskContextReset: changedTaskContext(prior, view.taskTypes) });
       });
-      return;
-    }
-    if (kind === 'blank') {
-      const firstType = view.taskTypes[0];
-      if (firstType) commit(addEpochToTask(view.taskInstances, firstType.id));
-      else setQuickAddEpoch(nextEpochNumber(view.taskInstances)); // define a type first
       return;
     }
     setPendingTemplate(kind);
@@ -1272,6 +1276,11 @@ interface EpochRowProps {
   panelId: string;
   hasOpto: boolean;
   cameras: Camera[];
+  taskTypes: TaskType[];
+  pendingVideo: boolean;
+  disabled: boolean;
+  onTaskChange: (taskId: string) => void;
+  onVideoAnswer: (answer: VideoAnswer) => void;
   onToggle: () => void;
   onInsertAfter: () => void;
   onDuplicate: () => void;
@@ -1283,6 +1292,7 @@ interface EpochRowProps {
 /** Props for the focused epoch details panel. */
 interface EpochDetailsPanelProps {
   dayId: string;
+  cameraSetupHref: string;
   row: EpochGridRow;
   panelId: string;
   hasOpto: boolean;
@@ -1314,6 +1324,7 @@ interface EpochDetailsPanelProps {
   onVideoOverride: (key: string) => void;
   onVideoRevert: (key: string, videoIndex: number) => void;
   onVideoNameChange: (videoIndex: number, name: string) => void;
+  onVideoCameraChange: (videoIndex: number, cameraId: number) => void;
 }
 
 /** How a LINKED statescript got its name (the collapsed cell's label once a file is bound). */
@@ -1330,121 +1341,77 @@ const STATESCRIPT_UNLINKED_LABEL: Record<'expected' | 'not_expected', string> = 
 };
 
 /**
- * The collapsed statescript cell's label + tone. A linked file is named by HOW it was named; an
- * unlinked one reads "Expected" (amber — a reminder, not a blocker) or "Not expected" (quiet).
+ * A short StateScript summary for scanning the sequence; file editing lives in the details panel.
  *
  * @param row - The epoch row.
- * @returns The label, its tone class, and the linked file's path for the cell's tooltip.
+ * @returns The label and the linked file's path for the cell's tooltip.
  */
-function statescriptCell(row: EpochGridRow): { label: string; tone: string; title?: string } {
+function statescriptCell(row: EpochGridRow): { label: string; title?: string } {
   if (row.statescriptState === 'linked') {
     return {
       label: STATESCRIPT_NAMING_LABEL[row.statescriptNaming],
-      tone: row.statescriptNaming === 'manual' ? styles.fileSummaryReview : styles.fileSummaryReady,
       title: row.statescript?.entry.path || row.statescript?.entry.name || undefined,
     };
   }
   return {
     label: STATESCRIPT_UNLINKED_LABEL[row.statescriptState],
-    tone: row.statescriptState === 'expected' ? styles.fileSummaryExpected : styles.fileSummaryMuted,
   };
 }
 
 /** One epoch row: scan-friendly state, quick missing-file fixes, and structural actions. */
 function EpochRowBlock(p: EpochRowProps) {
   const { row, isActive, panelId, hasOpto, cameras } = p;
-  const videoLabel =
-    row.videoPresence === 'absent'
-      ? 'No video'
-      : row.videoPresence === 'missing'
-        ? 'Decision needed'
-        : `${row.videos.length} ${pluralize(row.videos.length, 'video')}`;
   const statescript = statescriptCell(row);
-  const videoSummaryClass =
-    row.videoPresence === 'missing'
-      ? styles.fileSummaryMissing
-      : row.videoPresence === 'absent'
-        ? styles.fileSummaryMuted
-        : styles.fileSummaryReady;
-  const optoLabel = row.opto?.entry.power_in_mW != null && row.opto.entry.power_in_mW !== ''
-    ? `${row.opto.entry.power_in_mW} mW`
-    : '—';
-
+  const answer = row.videoPresence === 'present' ? 'yes' : row.videoPresence === 'absent' ? 'no' : p.pendingVideo ? 'later' : '';
   return (
     <tr className={isActive ? styles.activeRow : undefined}>
-      <td className={styles.numCell}>{row.epoch}</td>
+      <td className={styles.numCell}><span className={styles.epochNumber}>{String(row.epoch).padStart(2, '0')}</span></td>
       <td className={styles.taskCell}>
         <div className={styles.taskCellStack}>
-          <div className={styles.taskDisclosureRow}>
-            <div className={styles.taskIdentity}>
-              <span className={styles.taskName}>{row.taskName || <em>(no task)</em>}</span>
-              <span className={styles.taskEnvironment}>{row.taskEnvironment || 'Environment to enter'}</span>
-              <span className={styles.taskMeta}>
-                <span className={styles.tag}>tag {row.tag}</span>
-                {row.duplicate && (
-                  <span className={styles.duplicateBadge} title="This epoch is claimed by more than one task">
-                    duplicate
-                  </span>
-                )}
-                {(row.taskEnvironmentOverridden || row.camerasOverridden) && (
-                  <span
-                    className={styles.contextBadge}
-                    title={`This day recorded its own ${contextDifferenceLabel(row)} for this task`}
-                  >
-                    differs from task default
-                  </span>
-                )}
-              </span>
-            </div>
-            {/* The task disclosure opens the editor; the trailing menu is reserved for row
-                structure actions such as insert, move, duplicate, and delete. */}
-            <button
-              type="button"
-              className={styles.taskDisclosureButton}
-              aria-expanded={isActive}
-              aria-controls={panelId}
-              aria-label={`${isActive ? 'Hide' : 'Show'} epoch ${row.epoch} details`}
-              onClick={p.onToggle}
-            >
-              <span>{isActive ? 'Close' : 'Edit epoch'}</span>
-              <span className={styles.editChevron} aria-hidden="true">{isActive ? '▴' : '▾'}</span>
-            </button>
-          </div>
+          <label className="sr-only" htmlFor={`epoch-task-${row.epoch}`}>Task for epoch {row.epoch}</label>
+          <select id={`epoch-task-${row.epoch}`} className={styles.taskSelect} value={row.taskTypeId}
+            disabled={p.disabled} onChange={(event) => p.onTaskChange(event.target.value)}>
+            {!p.taskTypes.some((task) => task.id === row.taskTypeId) && <option value={row.taskTypeId}>Choose a task…</option>}
+            {p.taskTypes.map((task) => <option key={task.id} value={task.id}>{task.task_name || task.id}</option>)}
+          </select>
+          <span className={styles.taskEnvironment}>{row.taskEnvironment || 'Room not entered'}</span>
+          <span className={styles.cameraSummary}>
+            {row.cameras.length ? row.cameras.map((id) => cameraName(cameras, id)).join(' · ') : 'No cameras selected'}
+          </span>
+          {row.duplicate && <span className={styles.duplicateBadge}>Epoch assigned to more than one task</span>}
+          {(row.taskEnvironmentOverridden || row.camerasOverridden) && <span className={styles.contextBadge}
+            title={`This day recorded its own ${contextDifferenceLabel(row)} for this task`}>Room or cameras changed for this day</span>}
         </div>
       </td>
-      <td className={styles.fileSummaryCell}>
-        <span className={styles.fileSummaryStack}>
-          <span className={`${styles.fileSummaryChip} ${statescript.tone}`} title={statescript.title}>
-            StateScript: {statescript.label}
-          </span>
-          <span className={`${styles.fileSummaryChip} ${videoSummaryClass}`}>
-            Video: {videoLabel}
-          </span>
+      <td className={styles.videoCell} data-label="Was video recorded?">
+        <EpochVideoChoice epoch={row.epoch} value={answer} disabled={p.disabled} onChange={p.onVideoAnswer} />
+        <span id={`epoch-video-help-${row.epoch}`} className={styles.answerHelp}>
+          {answer === 'yes' ? `${row.videos.length} video ${pluralize(row.videos.length, 'filename')} entered`
+            : answer === 'no' ? 'No video recorded'
+              : answer === 'later' ? 'Saved for later · needed before export' : 'Choose an answer'}
         </span>
       </td>
-      <td className={styles.cameraCell} data-label="Camera(s)">
-        {row.cameras.length === 0
-          ? <span className={styles.vidNone}>—</span>
-          : row.cameras.map((id) => <span key={String(id)} className={styles.cam}>{cameraName(cameras, id)}</span>)}
+      <td className={styles.fileSummaryCell} data-label="Files & details">
+        <button type="button" className={styles.taskDisclosureButton}
+          aria-expanded={isActive} aria-controls={panelId}
+          aria-label={`${isActive ? 'Hide' : 'Show'} epoch ${row.epoch} details`} onClick={p.onToggle}>
+          {isActive ? 'Close details' : 'Files & details'} <span aria-hidden="true">{isActive ? '−' : '→'}</span>
+        </button>
+        <span className={styles.fileSummaryText} title={statescript.title}>StateScript: {statescript.label}</span>
       </td>
-      {hasOpto && (
-        <td className={styles.optoCell} data-label="Opto">
-          <span className={styles.optoReadout}>{optoLabel}</span>
-        </td>
-      )}
+      {hasOpto && <td className={styles.optoCell} data-label="Opto">
+        <span className={styles.optoReadout}>{row.opto?.entry.power_in_mW != null && row.opto.entry.power_in_mW !== '' ? `${row.opto.entry.power_in_mW} mW` : '—'}</span>
+      </td>}
       <td className={styles.menuCell}>
         <div className={styles.rowActionGroup} role="group" aria-label={`Epoch ${row.epoch} structure actions`}>
-          <OverflowMenu
-            label={`More actions for epoch ${row.epoch}`}
-            buttonClassName={styles.menuButton}
+          <OverflowMenu label={`More actions for epoch ${row.epoch}`} buttonClassName={styles.menuButton}
             items={[
-              { key: 'up', label: `Move epoch ${row.epoch} up`, onSelect: p.onMoveUp },
-              { key: 'down', label: `Move epoch ${row.epoch} down`, onSelect: p.onMoveDown },
-              { key: 'insert', label: 'Insert epoch after', onSelect: p.onInsertAfter },
-              { key: 'duplicate', label: 'Duplicate epoch', onSelect: p.onDuplicate },
+              { key: 'up', label: `Move epoch ${row.epoch} up`, description: 'Swaps epoch numbers; linked metadata follows.', onSelect: p.onMoveUp },
+              { key: 'down', label: `Move epoch ${row.epoch} down`, description: 'Swaps epoch numbers; linked metadata follows.', onSelect: p.onMoveDown },
+              { key: 'insert', label: 'Insert epoch after', description: 'Repeats this task and renumbers later epochs.', onSelect: p.onInsertAfter },
+              { key: 'duplicate', label: 'Duplicate epoch', description: 'Adds this task at the end without copying files.', onSelect: p.onDuplicate },
               { key: 'delete', label: `Delete epoch ${row.epoch}`, onSelect: p.onDelete, separatorBefore: true },
-            ]}
-          />
+            ]} />
         </div>
       </td>
     </tr>
@@ -1463,11 +1430,6 @@ function EpochDetailsPanel(p: EpochDetailsPanelProps) {
   // was prefilled from the PREVIOUS epoch and would otherwise write that day-context onto this one.
   useEffect(() => setEditingContext(false), [row.epoch]);
   const hasManualVideo = row.videos.some((v) => p.manualVideoKeys.has(`e${row.epoch}-v${v.index}`));
-  const generatedFilesNeedReview =
-    row.statescriptState === 'expected' ||
-    row.statescriptNaming === 'manual' ||
-    row.videoPresence !== 'present' ||
-    hasManualVideo;
   const expectedStatescriptPath = grid.dataFolder
     ? deriveStatescriptPath(grid.dataFolder, p.statescriptDerivedName)
     : p.statescriptDerivedName;
@@ -1492,7 +1454,7 @@ function EpochDetailsPanel(p: EpochDetailsPanelProps) {
     row.videoPresence === 'absent'
       ? 'No video'
       : row.videoPresence === 'missing'
-        ? 'Decision needed'
+        ? 'Choose video status'
         : hasManualVideo
           ? 'Manual'
           : `${row.videos.length} ${pluralize(row.videos.length, 'video')}`;
@@ -1570,16 +1532,87 @@ function EpochDetailsPanel(p: EpochDetailsPanelProps) {
       </div>
 
       <div className={styles.detailsPanelBody}>
+        <section className={styles.group} aria-labelledby={`epoch-${row.epoch}-task-heading`}>
+          <div className={styles.taskEditorHeader}>
+            <h3 id={`epoch-${row.epoch}-task-heading`} className={styles.groupHeading}>Task</h3>
+            <span className={styles.groupNote}>Task, room and cameras for this recording.</span>
+          </div>
+          <div className={styles.taskEditorGrid}>
+            <label className={styles.stackedField}>
+              <span className={styles.fieldLabel}>Task type</span>
+              <select
+                aria-label={`Epoch ${row.epoch} task`}
+                value={ownerTypeId}
+                onChange={(e) => p.onReassignTask(e.target.value)}
+              >
+                {taskTypes.length === 0 && <option value="">(no task types)</option>}
+                {taskTypes.map((t) => (
+                  <option key={t.id} value={t.id}>{t.task_name || t.id}</option>
+                ))}
+              </select>
+            </label>
+            <Button variant="secondary" size="small" onClick={p.onNewTaskType}>
+              + new task type
+            </Button>
+          </div>
+          <dl className={styles.taskContextGrid}>
+            <div>
+              <dt>Environment</dt>
+              <dd>
+                {row.taskEnvironment || '—'}
+                {row.taskEnvironmentOverridden && <span className={styles.contextBadge}>this day</span>}
+              </dd>
+            </div>
+            <div>
+              <dt>Cameras</dt>
+              <dd>
+                {row.cameras.length === 0
+                  ? <span className={styles.derivedNote}>none</span>
+                  : row.cameras.map((id) => <span key={String(id)} className={styles.cam}>{cameraName(cameras, id)}</span>)}
+                {row.camerasOverridden && <span className={styles.contextBadge}>this day</span>}
+              </dd>
+            </div>
+          </dl>
+          {cameras.length === 0 && <p className={styles.groupNote}>
+            Recording video? <a href={p.cameraSetupHref}>Add a camera in animal setup</a>, then return to this day.
+          </p>}
+          {editingContext ? (
+            <TaskContextForm
+              row={row}
+              cameras={cameras}
+              taskType={ownerType}
+              onSave={(context) => {
+                p.onSetTaskContext(context);
+                setEditingContext(false);
+              }}
+              onUseTaskDefault={() => {
+                p.onSetTaskContext({ task_environment: null, camera_id: null });
+                setEditingContext(false);
+              }}
+              onCancel={() => setEditingContext(false)}
+            />
+          ) : (
+            <div className={styles.taskContextActions}>
+              <Button variant="secondary" size="small" onClick={() => setEditingContext(true)}>
+                Edit for this day
+              </Button>
+              <span className={styles.groupNote}>
+                Where this task ran and which cameras recorded it, for this recording day only.
+              </span>
+            </div>
+          )}
+        </section>
+
+
         <section
           className={`${styles.group} ${styles.genPanel}`}
           aria-labelledby={`epoch-${row.epoch}-files-heading`}
         >
           <div className={styles.panelGroupHeader}>
             <h3 id={`epoch-${row.epoch}-files-heading`} className={styles.groupHeading}>Files for this epoch</h3>
-            <span className={styles.generatedStatus}>
-              {generatedFilesNeedReview ? 'action available' : 'complete'}
-            </span>
+
           </div>
+          <p className={styles.fileHelp}>Enter the filenames used for this epoch. Suggested names are not checked against files on disk.</p>
           <div className={styles.generatedContent}>
             <div className={styles.fileCards}>
               <div className={styles.fileCard} data-field-path={`epoch-${row.epoch}-statescript`} tabIndex={-1}>
@@ -1626,8 +1659,8 @@ function EpochDetailsPanel(p: EpochDetailsPanelProps) {
                     <>
                       <code className={styles.pathValue}>Suggested name: {expectedStatescriptPath}</code>
                       <div className={styles.fileActions}>
-                        <button type="button" className={styles.filePrimaryAction} onClick={p.onAddStatescript}>
-                          Add suggested StateScript log
+                        <button type="button" className={row.statescriptState === 'expected' ? styles.filePrimaryAction : styles.fileAction} onClick={p.onAddStatescript}>
+                          {row.statescriptState === 'expected' ? 'Add suggested StateScript log' : 'Add StateScript log'}
                         </button>
                         <button
                           type="button"
@@ -1675,7 +1708,15 @@ function EpochDetailsPanel(p: EpochDetailsPanelProps) {
                               onRevert={() => p.onVideoRevert(key, v.index)}
                               onChange={(name) => p.onVideoNameChange(v.index, name)}
                             />
-                            <span className={styles.derivedNote}> · {cameraName(cameras, v.entry.camera_id)}</span>
+                            <label className={styles.stackedField}>
+                              <span className={styles.fieldLabel}>Camera for video {vi + 1}</span>
+                              <select aria-label={`Epoch ${row.epoch} video ${vi + 1} camera`} value={v.entry.camera_id}
+                                onChange={(event) => p.onVideoCameraChange(v.index, Number(event.target.value))}>
+                                {!cameras.some((camera) => String(camera.id) === String(v.entry.camera_id)) &&
+                                  <option value={v.entry.camera_id}>Choose a camera…</option>}
+                                {cameras.map((camera) => <option key={camera.id} value={camera.id}>{camera.camera_name || `Camera ${camera.id}`}</option>)}
+                              </select>
+                            </label>
                             <button type="button" className={styles.fileAction} onClick={() => p.onRemoveVideo(v.index)} aria-label={`Remove video ${vi + 1}`}>Remove</button>
                           </span>
                         );
@@ -1687,7 +1728,7 @@ function EpochDetailsPanel(p: EpochDetailsPanelProps) {
                   )}
                   {row.videoPresence === 'missing' && (
                     <>
-                      <code className={styles.pathValue}>Expected name: {expectedVideoName}</code>
+                      <code className={styles.pathValue}>Suggested name: {expectedVideoName}</code>
                       <div className={styles.fileActions}>
                         <button type="button" className={styles.filePrimaryAction} onClick={p.onAddVideo}>
                           Add video entry
@@ -1721,79 +1762,6 @@ function EpochDetailsPanel(p: EpochDetailsPanelProps) {
           </div>
         </section>
 
-        <section className={styles.group} aria-labelledby={`epoch-${row.epoch}-task-heading`}>
-          <div className={styles.taskEditorHeader}>
-            <h3 id={`epoch-${row.epoch}-task-heading`} className={styles.groupHeading}>Task</h3>
-            <span className={styles.groupNote}>Change only if this epoch was assigned wrong.</span>
-          </div>
-          <div className={styles.taskEditorGrid}>
-            <label className={styles.stackedField}>
-              <span className={styles.fieldLabel}>Task type</span>
-              <select
-                aria-label={`Epoch ${row.epoch} task`}
-                value={ownerTypeId}
-                onChange={(e) => p.onReassignTask(e.target.value)}
-              >
-                {taskTypes.length === 0 && <option value="">(no task types)</option>}
-                {taskTypes.map((t) => (
-                  <option key={t.id} value={t.id}>{t.task_name || t.id}</option>
-                ))}
-              </select>
-            </label>
-            <Button variant="secondary" size="small" onClick={p.onNewTaskType}>
-              + new task type
-            </Button>
-          </div>
-          <dl className={styles.taskContextGrid}>
-            <div>
-              <dt>Derived tag</dt>
-              <dd><code className={styles.mono}>{row.tag}</code></dd>
-            </div>
-            <div>
-            </div>
-            <div>
-              <dt>Environment</dt>
-              <dd>
-                {row.taskEnvironment || '—'}
-                {row.taskEnvironmentOverridden && <span className={styles.contextBadge}>this day</span>}
-              </dd>
-            </div>
-            <div>
-              <dt>Cameras</dt>
-              <dd>
-                {row.cameras.length === 0
-                  ? <span className={styles.derivedNote}>none</span>
-                  : row.cameras.map((id) => <span key={String(id)} className={styles.cam}>{cameraName(cameras, id)}</span>)}
-                {row.camerasOverridden && <span className={styles.contextBadge}>this day</span>}
-              </dd>
-            </div>
-          </dl>
-          {editingContext ? (
-            <TaskContextForm
-              row={row}
-              cameras={cameras}
-              taskType={ownerType}
-              onSave={(context) => {
-                p.onSetTaskContext(context);
-                setEditingContext(false);
-              }}
-              onUseTaskDefault={() => {
-                p.onSetTaskContext({ task_environment: null, camera_id: null });
-                setEditingContext(false);
-              }}
-              onCancel={() => setEditingContext(false)}
-            />
-          ) : (
-            <div className={styles.taskContextActions}>
-              <Button variant="secondary" size="small" onClick={() => setEditingContext(true)}>
-                Edit for this day
-              </Button>
-              <span className={styles.groupNote}>
-                Where this task ran and which cameras recorded it, for this recording day only.
-              </span>
-            </div>
-          )}
-        </section>
 
         {hasOpto && (
           <section className={styles.group} aria-labelledby={`epoch-${row.epoch}-opto-heading`}>

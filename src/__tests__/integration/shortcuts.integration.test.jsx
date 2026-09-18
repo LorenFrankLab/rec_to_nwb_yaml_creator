@@ -68,14 +68,14 @@ describe('global shortcuts + help (integration)', () => {
     expect(await screen.findByRole('heading', { name: /daily log/i })).toBeInTheDocument();
   });
 
-  it('Alt+N opens the epoch template menu on the daily log (the epoch editor lives there)', async () => {
+  it('Alt+N focuses the next task choice on the daily log', async () => {
     await renderRoute(`#/day/${DAY_ID}`);
     await screen.findByRole('heading', { name: /remy · 2023-06-22/i });
     await screen.findByRole('heading', { name: /^Recording epochs$/i });
 
-    // Alt+N opens the grid's add affordance — the "+ from template" menu.
+    // The shortcut lands on the same explicit task choice as pointer entry.
     fireEvent.keyDown(document.body, { key: 'n', altKey: true });
-    expect(await screen.findByRole('menuitem', { name: /Sleep day/i })).toBeInTheDocument();
+    expect(document.getElementById('next-epoch-task')).toHaveFocus();
   });
 
   it('Alt+N is a no-op on a section with no add target (Recording Setup)', async () => {

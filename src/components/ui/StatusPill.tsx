@@ -56,7 +56,7 @@ type EpochStatus = 'complete' | 'incomplete' | 'needs_video';
 const EPOCH_LABEL: Record<EpochStatus, string> = {
   complete: 'Complete',
   incomplete: 'Incomplete',
-  needs_video: 'Needs video',
+  needs_video: 'Video to enter',
 };
 
 const EPOCH_CLASS: Record<EpochStatus, string> = {
@@ -73,8 +73,8 @@ interface EpochStatusPillProps {
 
 /**
  * EpochStatusPill — the epoch-grid row scope. A deliberately separate component from
- * {@link StatusPill}: its words (`Complete` / `Incomplete` / `Needs video`) belong only to an
- * epoch row and must never collide with the day-lifecycle words. `Needs video` is the row face of
+ * {@link StatusPill}: its words (`Complete` / `Incomplete` / `Video to enter`) belong only to an
+ * epoch row and must never collide with the day-lifecycle words. `Video to enter` is the row face of
  * the video-declaration readiness rule.
  */
 export const EpochStatusPill = ({ status, fileReminder = false }: EpochStatusPillProps) => {
