@@ -832,6 +832,7 @@
   .templateMenu {
     grid-column: 1;
     grid-row: 3;
+    width: 100%;
     margin-bottom: var(--spacing-sm, 8px);
   }
 
@@ -943,10 +944,6 @@
   .rowActionGroup .menuButton {
     min-width: 44px;
     min-height: 44px;
-  }
-
-  .templateMenu {
-    width: 100%;
   }
 
   .taskEditorHeader {
