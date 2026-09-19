@@ -1,1 +1,0 @@
-import{r as e}from"./index-CVqpfuQu.js";let u=0;function c(r,l="stable-id"){const t=e.useRef(null);if(t.current===null){if(r!=null){const n=String(r).trim();n!==""&&(t.current=n)}t.current===null&&(u+=1,t.current=`${l}-${u}`)}else if(r!=null){const n=String(r).trim();n!==""&&n!==t.current&&(t.current=n)}return t.current}export{c as u};
