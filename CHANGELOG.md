@@ -291,6 +291,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Importing a file with an empty entry in its channel map no longer silently does nothing.** A
+  YAML list item with no value (`-`) parses to `null`, and two channel-map rules read it without a
+  check, so validation threw and the legacy form's import never finished or reported anything. The
+  entry is now reported like any other invalid value: the legacy import leaves out the channel map
+  and names it in the import summary. A test now checks that an empty entry in any list section
+  cannot make validation throw.
+
 - **Fixes released on `main` now apply to the legacy form.** Merged from `main` (#69, #70 and the
   June controlled-input fixes). In the legacy form:
   - The Optogenetic Stimulation Software field saves to `optogenetic_stimulation_software`, the key

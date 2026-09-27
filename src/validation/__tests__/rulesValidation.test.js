@@ -14,6 +14,8 @@
 
 import { describe, it, expect } from 'vitest';
 import { rulesValidation } from '../rulesValidation';
+import { validate } from '../index';
+import JsonSchema from '../../nwb_schema.json';
 import { createTestYaml } from '../../__tests__/helpers/test-utils';
 
 // Issues about camera references, as opposed to other rules a minimal fixture can trip (an epoch
@@ -1092,6 +1094,27 @@ describe('rulesValidation()', () => {
       const issues = rulesValidation({});
       expect(Array.isArray(issues)).toBe(true);
       expect(issues).toEqual([]); // No rules violations for empty object
+    });
+
+    // A YAML list item with no value (`-`) parses to null. Rules run on parsed files before the
+    // schema reports that entry, so each rule must skip it instead of throwing.
+    it('does not throw on an empty (null) entry in any list section', () => {
+      const listSections = Object.entries(JsonSchema.properties)
+        .filter(([, definition]) => definition.type === 'array')
+        .map(([key]) => key);
+      expect(listSections).toContain('ntrode_electrode_group_channel_map');
+
+      listSections.forEach((key) => {
+        expect(() => rulesValidation(createTestYaml({ [key]: [null] })), key).not.toThrow();
+      });
+    });
+
+    it('reports an empty channel-map entry as a validation issue', () => {
+      const model = createTestYaml({ ntrode_electrode_group_channel_map: [null] });
+
+      expect(validate(model)).toContainEqual(
+        expect.objectContaining({ path: 'ntrode_electrode_group_channel_map[0]' })
+      );
     });
   });
 });
