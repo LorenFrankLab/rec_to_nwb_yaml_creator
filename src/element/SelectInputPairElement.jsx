@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useLayoutEffect, useRef } from 'react';
 import PropTypes from 'prop-types';
 import { sanitizeTitle } from '../utils';
 import { behavioralEventsDescription } from '../valueList';
@@ -78,7 +78,7 @@ const SelectInputPairElement = (prop) => {
   // so accept either. (Without this the field ignored the stored value and
   // always rendered the "Din/1" default.) Note: unlike CheckboxList/RadioList,
   // the inner select/input below remain uncontrolled (defaultValue=), so this
-  // only seeds them at mount; a later value change is reflected on remount.
+  // seeds them at mount and the effect below re-seeds them when it changes.
   const seedValue = value !== undefined ? value : defaultValue;
 
   const selectRef = useRef(null);
@@ -98,6 +98,24 @@ const SelectInputPairElement = (prop) => {
 
   const splitTextNumberText = splitTextNumber(seedValue).text;
   const splitTextNumberNumber = splitTextNumber(seedValue).number;
+
+  // Importing another file changes the stored value without remounting this element, so
+  // defaultValue alone would leave the select/input showing the old value, and leaving either
+  // one would save that old value back. Re-seed them whenever the stored value changes. Typing
+  // that has not been saved is untouched: the stored value only changes when a field is left.
+  useLayoutEffect(() => {
+    const select = selectRef.current;
+    const input = inputRef.current;
+    if (!select || !input) {
+      return;
+    }
+    select.value = splitTextNumberText;
+    if (select.selectedIndex === -1 && select.options.length > 0) {
+      // No option matches: show the first one, as defaultValue does at mount.
+      select.selectedIndex = 0;
+    }
+    input.value = splitTextNumberNumber;
+  }, [splitTextNumberText, splitTextNumberNumber]);
 
   return (
     <div>

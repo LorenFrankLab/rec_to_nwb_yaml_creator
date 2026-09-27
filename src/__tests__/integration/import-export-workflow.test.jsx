@@ -1,6 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import fs from 'fs';
+import path from 'path';
 import { App } from '../../App';
 import { StoreProvider } from '../../state/StoreContext';
 import YAML from 'yaml';
@@ -391,6 +393,85 @@ describe('Import/Export Workflow Integration', () => {
 
       expect(exportedData.lab).toBe('Modified Lab'); // Modified value
       expect(exportedData.session_id).toBe('TEST001'); // Original value preserved
+    });
+  });
+
+  /**
+   * A scientist edits a downloaded file in a text editor and uploads it into the page that still
+   * has the previous file loaded.
+   */
+  describe('Importing another file into an open form', () => {
+    const sampleModel = () => {
+      const model = YAML.parse(
+        fs.readFileSync(path.join(__dirname, '../fixtures/valid/20230622_sample_metadata.yml'), 'utf8')
+      );
+      model.subject.subject_id = 'sample-rat';
+      return model;
+    };
+    const yamlFile = (model, name) => new File([YAML.stringify(model)], name, { type: 'text/yaml' });
+
+    it("shows and exports the second file's DIO description", { timeout: 30000 }, async () => {
+      // ARRANGE - a file whose first DIO event is Din1 is loaded
+      const user = userEvent.setup();
+      render(
+        <StoreProvider>
+          <App />
+        </StoreProvider>
+      );
+      const edited = sampleModel();
+      edited.behavioral_events[0].description = 'Dout9';
+      const dioType = () => document.querySelector('#behavioral_events-description-0-list');
+      const dioIndex = () => document.querySelector('#behavioral_events-description-0');
+
+      await user.upload(getFileInput(), yamlFile(sampleModel(), 'first.yml'));
+      await waitFor(() => expect(dioIndex()).toHaveValue(1));
+
+      // ACT - load the edited file into the same page
+      await user.upload(getFileInput(), yamlFile(edited, 'edited.yml'));
+
+      // ASSERT - the field shows the edited value...
+      await waitFor(() => expect(dioType()).toHaveValue('Dout'));
+      expect(dioIndex()).toHaveValue(9);
+
+      // ...and leaving the field, which saves what it shows, keeps it
+      fireEvent.blur(dioIndex());
+      await triggerExport();
+      await waitFor(() => expect(mockBlob).not.toBeNull());
+      expect(YAML.parse(mockBlob.content[0]).behavioral_events[0].description).toBe('Dout9');
+    });
+
+    it('keeps the loaded form when an uploaded file cannot be read', { timeout: 30000 }, async () => {
+      // ARRANGE - a valid file is loaded
+      const user = userEvent.setup();
+      render(
+        <StoreProvider>
+          <App />
+        </StoreProvider>
+      );
+      await user.upload(
+        getFileInput(),
+        new File([getMinimalCompleteYaml()], 'good.yml', { type: 'text/yaml' })
+      );
+      await waitFor(() => expect(screen.getByLabelText(/^lab$/i)).toHaveValue('Test Lab'));
+
+      // ACT - upload a file that TextEdit saved as rich text
+      const richText = [
+        '{\\rtf1\\ansi\\ansicpg1252\\cocoartf2761',
+        '\\cocoatextscaling0\\cocoaplatform0{\\fonttbl\\f0\\fswiss\\fcharset0 Helvetica;}',
+        '\\f0\\fs24 \\cf0 lab: Other Lab\\',
+        '}',
+      ].join('\n');
+      await user.upload(getFileInput(), new File([richText], 'edited.yml', { type: 'text/yaml' }));
+      await waitFor(() =>
+        expect(window.alert).toHaveBeenCalledWith(expect.stringContaining('Invalid YAML file'))
+      );
+      // Let the import finish before checking what the form holds.
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      });
+
+      // ASSERT - the loaded form is unchanged
+      expect(screen.getByLabelText(/^lab$/i)).toHaveValue('Test Lab');
     });
   });
 });

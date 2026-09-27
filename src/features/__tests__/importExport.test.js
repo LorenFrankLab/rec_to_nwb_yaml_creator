@@ -86,7 +86,9 @@ describe('importExport', () => {
         expect(result.formData).toBeNull();
       });
 
-      it('returns error and empty form data when file read fails', async () => {
+      // A file that cannot be read leaves the form as it was: the page applies `formData` only
+      // when it is set, so returning an empty form here would wipe what the user had loaded.
+      it('returns error and leaves the form alone when file read fails', async () => {
         // ARRANGE
         const file = new File(['content'], 'test.yml', { type: 'text/yaml' });
         // Mock FileReader error
@@ -97,20 +99,22 @@ describe('importExport', () => {
           }
         };
 
-        // ACT
-        const result = await importFiles(file);
+        try {
+          // ACT
+          const result = await importFiles(file);
 
-        // ASSERT
-        expect(result.success).toBe(false);
-        expect(result.error).toContain('Error reading file');
-        expect(result.formData).toEqual(emptyFormData);
-        expect(mockAlert).toHaveBeenCalledWith('Error reading file. Please try again.');
-
-        // Cleanup
-        global.FileReader = originalFileReader;
+          // ASSERT
+          expect(result.success).toBe(false);
+          expect(result.error).toContain('Error reading file');
+          expect(result.formData).toBeNull();
+          expect(mockAlert).toHaveBeenCalledWith('Error reading file. Please try again.');
+        } finally {
+          // Restore even when an assertion fails, so later tests read files normally
+          global.FileReader = originalFileReader;
+        }
       });
 
-      it('returns error and empty form data when YAML parsing fails', async () => {
+      it('returns error and leaves the form alone when YAML parsing fails', async () => {
         // ARRANGE
         const invalidYaml = 'invalid: yaml: content: [unclosed';
         const file = new File([invalidYaml], 'test.yml', { type: 'text/yaml' });
@@ -121,9 +125,25 @@ describe('importExport', () => {
         // ASSERT
         expect(result.success).toBe(false);
         expect(result.error).toContain('Invalid YAML file');
-        expect(result.formData).toEqual(emptyFormData);
+        expect(result.formData).toBeNull();
         expect(mockAlert).toHaveBeenCalled();
         expect(mockAlert.mock.calls[0][0]).toContain('Invalid YAML file');
+      });
+
+      it.each([
+        ['an empty file', ''],
+        ['plain text', 'just some notes'],
+        ['a list', '- a\n- b'],
+      ])('returns error and leaves the form alone for %s (not a metadata document)', async (_label, content) => {
+        const file = new File([content], 'test.yml', { type: 'text/yaml' });
+
+        const result = await importFiles(file);
+
+        expect(result.success).toBe(false);
+        expect(result.error).toContain('metadata document');
+        expect(result.formData).toBeNull();
+        expect(mockAlert).toHaveBeenCalledTimes(1);
+        expect(mockAlert.mock.calls[0][0]).toContain('metadata document');
       });
     });
 

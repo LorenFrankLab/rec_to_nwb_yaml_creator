@@ -31,7 +31,9 @@ import { emptyFormData, genderAcronym } from '../valueList';
  * @returns {Promise<Object>} Result object
  * @returns {boolean} result.success - Whether import succeeded
  * @returns {string|null} result.error - Error message if failed
- * @returns {Object|null} result.formData - Validated form data
+ * @returns {Object|null} result.formData - Validated form data; null when the file cannot be
+ *   read (no file, unreadable, not valid YAML, or not a metadata document), so the caller keeps
+ *   the form it already has
  * @returns {Object} [result.importSummary] - Import summary (only present on success)
  * @returns {number} result.importSummary.totalFields - Total fields in YAML file
  * @returns {string[]} result.importSummary.importedFields - Successfully imported field names
@@ -70,13 +72,15 @@ export async function importFiles(file, options = {}) {
   return new Promise((resolve) => {
     const reader = new FileReader();
 
+    // A file that cannot be read leaves the form as it was: formData is null, and the page applies
+    // formData only when it is set. (An empty form here would wipe what the user had loaded.)
     reader.onerror = () => {
       // eslint-disable-next-line no-alert
       window.alert('Error reading file. Please try again.');
       resolve({
         success: false,
         error: 'Error reading file. Please try again.',
-        formData: structuredClone(emptyFormData),
+        formData: null,
       });
     };
 
@@ -98,7 +102,26 @@ export async function importFiles(file, options = {}) {
         resolve({
           success: false,
           error: `Invalid YAML file: ${parseError.message}`,
-          formData: structuredClone(emptyFormData),
+          formData: null,
+        });
+        return;
+      }
+
+      // An empty file, plain text or a list parses without error but is not a metadata document.
+      if (
+        jsonFileContent === null ||
+        typeof jsonFileContent !== 'object' ||
+        Array.isArray(jsonFileContent)
+      ) {
+        // eslint-disable-next-line no-alert
+        window.alert(
+          'The file does not contain a metadata document.\n\n' +
+          'Expected a YAML mapping of metadata fields, but the file was empty or not an object.'
+        );
+        resolve({
+          success: false,
+          error: 'The file does not contain a valid metadata document (expected a YAML mapping).',
+          formData: null,
         });
         return;
       }
