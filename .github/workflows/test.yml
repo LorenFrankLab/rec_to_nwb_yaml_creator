@@ -351,6 +351,7 @@ jobs:
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./build
-          # Keep the rest of gh-pages, in particular the /pilot directory that
-          # pilot-deploy publishes. The default (false) deletes everything first.
+          # Keep the rest of gh-pages, in particular the /pilot directory that the
+          # modern branch's pilot-deploy job publishes. The default (false) deletes
+          # everything first.
           keep_files: true
