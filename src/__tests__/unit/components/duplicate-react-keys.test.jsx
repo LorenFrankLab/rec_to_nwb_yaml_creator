@@ -248,7 +248,7 @@ describe('Duplicate React Keys Fix', () => {
           onMapInput={mockOnMapInput}
           electrodeGroupId={1}
           updateFormArray={mockUpdateFormArray}
-          metaData={{ index: 0 }}
+          nTrodeIndices={nTrodeItems.map((_, i) => i)}
         />
       );
 
@@ -286,7 +286,7 @@ describe('Duplicate React Keys Fix', () => {
           onMapInput={vi.fn()}
           electrodeGroupId={1}
           updateFormArray={vi.fn()}
-          metaData={{ index: 0 }}
+          nTrodeIndices={nTrodeItems.map((_, i) => i)}
         />
       );
 

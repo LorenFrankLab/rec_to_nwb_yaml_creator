@@ -291,6 +291,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Fixes released on `main` now apply to the legacy form.** Merged from `main` (#69, #70 and the
+  June controlled-input fixes). In the legacy form:
+  - The Optogenetic Stimulation Software field saves to `optogenetic_stimulation_software`, the key
+    trodes_to_nwb reads. A typed value went to `opto_software`, so the converter saw an empty name and
+    silently dropped all optogenetics.
+  - The FsGUI train interval is written as `trainInterval`, the schema and converter key; values
+    stored as `train_interval` never reached the NWB file. The five pulse/train fields show their
+    stored values, and a new FsGUI entry starts them at 0.
+  - A new virus injection keeps its default volume under `volume_in_ul`, and the download also writes
+    `volume_in_uL`, the spelling released converters read, with the same value. Before, an untouched
+    0.45 default under `volume_in_uL` sat beside the entered volume and the converter recorded 0.45.
+  - Bad Channels marks are saved to the ntrode being edited. On a multi-shank probe, or after
+    duplicating a group, they were saved to another ntrode.
+  - Removing or renumbering a camera drops the task, video and FsGUI references to it. Importing a
+    file with such references keeps its tasks instead of excluding the whole section.
+  - Orphaned task epochs are cleared from associated files, videos and FsGUI entries, including after
+    loading a file whose tasks define the same epochs as the previous file. An epoch of 0 counts.
+  - A stored 0 in Times Period Multiplier or Raw Data to Volts shows as 0 instead of a blank field
+    that became NaN when left.
+  - The DIO description and the virus-injection hemisphere show their stored values.
+
+  Validation also no longer throws on a malformed file whose task list has an empty (`null`) entry;
+  schema validation reports it instead.
+
 - **The legacy form's download no longer includes the browser's saved workspace.** The legacy form
   exported the store's whole model: its form fields plus a top-level `workspace:` block holding every
   animal and recording day saved in this browser (with none saved, still the workspace settings). The

@@ -65,12 +65,21 @@ const SelectInputPairElement = (prop) => {
     step,
     min,
     placeholder,
+    value,
     defaultValue,
     required,
     metaData,
     onBlur,
     readOnly,
   } = prop;
+
+  // Seed the select/input from the value actually stored in form state.
+  // `value` is the canonical prop; some call sites still pass `defaultValue`,
+  // so accept either. (Without this the field ignored the stored value and
+  // always rendered the "Din/1" default.) Note: unlike CheckboxList/RadioList,
+  // the inner select/input below remain uncontrolled (defaultValue=), so this
+  // only seeds them at mount; a later value change is reflected on remount.
+  const seedValue = value !== undefined ? value : defaultValue;
 
   const selectRef = useRef(null);
   const inputRef = useRef(null);
@@ -87,8 +96,8 @@ const SelectInputPairElement = (prop) => {
     onBlur(eventData, metaData);
   };
 
-  const splitTextNumberText = splitTextNumber(defaultValue).text;
-  const splitTextNumberNumber = splitTextNumber(defaultValue).number;
+  const splitTextNumberText = splitTextNumber(seedValue).text;
+  const splitTextNumberNumber = splitTextNumber(seedValue).number;
 
   return (
     <div>
@@ -156,6 +165,7 @@ SelectInputPairElement.propTypes = {
   required: PropTypes.bool,
   step: PropTypes.string,
   metaData: PropTypes.instanceOf(Object),
+  value: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
   defaultValue: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
   onBlur: PropTypes.func,
 };
@@ -164,6 +174,7 @@ SelectInputPairElement.defaultProps = {
   items: [],
   required: false,
   placeholder: '',
+  value: undefined,
   defaultValue: '',
   min: '',
   readOnly: false,

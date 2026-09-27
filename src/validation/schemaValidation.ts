@@ -39,8 +39,10 @@ export const schemaValidation = (model: ValidationModel): ValidationIssue[] => {
   }
 
   return compiledValidator.errors.map((error: any) => {
-    // For required field errors, AJV puts the field name in params.missingProperty
-    // instead of instancePath (which is empty string for root object)
+    // For required field errors, AJV's instancePath is the PARENT object and
+    // the missing field name is in params.missingProperty. Join them so the
+    // path names the missing field itself ("subject.weight", "cameras[0].id",
+    // or just "lab" at the root) and import can map it to a top-level section.
     let path = normalizeAjvPath(error.instancePath);
     if (error.keyword === 'required' && error.params?.missingProperty) {
       path = path

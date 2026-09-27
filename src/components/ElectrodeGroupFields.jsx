@@ -42,10 +42,17 @@ export default function ElectrodeGroupFields() {
         <div className="form-container">
           {formData?.electrode_groups?.map((electrodeGroup, index) => {
             const electrodeGroupId = electrodeGroup.id;
-            const nTrodeItems =
-              formData?.ntrode_electrode_group_channel_map?.filter(
-                (n) => n.electrode_group_id === electrodeGroupId
-              ) || [];
+            // ntrode_electrode_group_channel_map is one flat array across all
+            // groups; keep each matching ntrode's position in it so edits
+            // target the right entry regardless of group order or shank count.
+            const nTrodeItems = [];
+            const nTrodeIndices = [];
+            (formData?.ntrode_electrode_group_channel_map || []).forEach((n, i) => {
+              if (n.electrode_group_id === electrodeGroupId) {
+                nTrodeItems.push(n);
+                nTrodeIndices.push(i);
+              }
+            });
             const key = 'electrode_groups';
 
             return (
@@ -224,6 +231,7 @@ export default function ElectrodeGroupFields() {
                       title="Ntrode"
                       electrodeGroupId={electrodeGroupId}
                       nTrodeItems={nTrodeItems}
+                      nTrodeIndices={nTrodeIndices}
                       updateFormArray={updateFormArray}
                       onBlur={(e) =>
                         onBlur(e, {
@@ -232,9 +240,6 @@ export default function ElectrodeGroupFields() {
                           index,
                         })
                       }
-                      metaData={{
-                        index,
-                      }}
                       onMapInput={onMapInput}
                     />
                   </div>

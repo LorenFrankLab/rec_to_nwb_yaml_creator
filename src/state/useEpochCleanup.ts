@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 
 /** Inputs to {@link useEpochCleanup}. */
 export interface UseEpochCleanupParams {
@@ -13,9 +13,16 @@ export interface UseEpochCleanupParams {
  * **legacy single-session `formData`** only.
  *
  * When a task is removed in the legacy form, any `task_epochs` reference in
- * `associated_files` / `associated_video_files` pointing at one of its epochs
- * becomes invalid; this hook scrubs those to `''`. A ref-based change-guard keyed
- * on the valid-epoch set runs cleanup only when that set actually changes.
+ * `associated_files` / `associated_video_files`, and any `fs_gui_yamls[].epochs` entry, pointing
+ * at one of its epochs becomes invalid. This hook clears the single-valued references to `''` and
+ * drops the stale entries from the multi-valued FsGUI `epochs`. An epoch of `0` counts as set.
+ *
+ * It runs whenever the tasks change, including a load whose tasks define the same epochs as the
+ * file before it. No loop guard is needed: the update returns the current state object when there
+ * is nothing to clean, so React bails out of the render. (An earlier version skipped the check
+ * whenever the set of valid epochs was unchanged, which let an orphan survive in a file loaded on
+ * top of one that defined the same epochs.) A section with the wrong shape is left untouched for
+ * schema validation to report.
  *
  * Workspace days are NOT scrubbed here (Load-Time Orphan Visibility Contract):
  * silently erasing a loaded stale reference hides corruption from the user. The
@@ -29,63 +36,52 @@ export interface UseEpochCleanupParams {
  * @param params.setFormData - Legacy form state setter.
  */
 export function useEpochCleanup({ formData, setFormData }: UseEpochCleanupParams): void {
-  // ----- Legacy formData cleanup (unchanged behavior) -----
-  // Uses a ref to track the last set of valid epochs to avoid infinite loops; only
-  // runs cleanup when the valid epochs actually change (when tasks change).
-  const lastValidEpochsRef = useRef('[]');
-
   useEffect(() => {
+    const isSet = (epoch: unknown) => epoch !== '' && epoch !== undefined && epoch !== null;
+    const section = (form: Record<string, any>, key: string): any[] =>
+      Array.isArray(form[key]) ? form[key] : [];
+
     // Get currently valid task epochs from all tasks
-    const validTaskEpochs = (formData.tasks || [])
-      .flatMap((task: any) => task.task_epochs || [])
-      .filter(Boolean); // Remove empty/null values
-
-    // Serialize for comparison
-    const validEpochsStr = JSON.stringify([...validTaskEpochs].sort());
-
-    // Only proceed if the set of valid epochs has changed
-    if (validEpochsStr === lastValidEpochsRef.current) {
-      return;
-    }
-
-    // Update ref to mark this epoch set as processed
-    // Do this BEFORE the setFormData callback to prevent duplicate cleanup attempts
-    lastValidEpochsRef.current = validEpochsStr;
+    const validTaskEpochs = section(formData, 'tasks')
+      .flatMap((task: any) => task?.task_epochs || [])
+      .filter(isSet);
+    const isStale = (epoch: unknown) => isSet(epoch) && !validTaskEpochs.includes(epoch);
 
     // Use callback form to get latest state at update time
     setFormData((currentFormData) => {
       // Check if any cleanup is needed
-      const hasOrphanedEpochsInFiles = (currentFormData.associated_files || []).some(
-        (file: any) => file.task_epochs && !validTaskEpochs.includes(file.task_epochs)
+      const hasOrphanedEpochsInFiles = section(currentFormData, 'associated_files').some(
+        (file: any) => isStale(file?.task_epochs)
       );
-      const hasOrphanedEpochsInVideos = (currentFormData.associated_video_files || []).some(
-        (file: any) => file.task_epochs && !validTaskEpochs.includes(file.task_epochs)
+      const hasOrphanedEpochsInVideos = section(currentFormData, 'associated_video_files').some(
+        (file: any) => isStale(file?.task_epochs)
+      );
+      const hasOrphanedEpochsInFsGui = section(currentFormData, 'fs_gui_yamls').some(
+        (item: any) => Array.isArray(item?.epochs) && item.epochs.some(isStale)
       );
 
-      if (!hasOrphanedEpochsInFiles && !hasOrphanedEpochsInVideos) {
+      if (!hasOrphanedEpochsInFiles && !hasOrphanedEpochsInVideos && !hasOrphanedEpochsInFsGui) {
         return currentFormData; // No changes needed
       }
 
       // Clone and clean up
       const updated = structuredClone(currentFormData);
 
-      // Clean up associated_files
-      if (updated.associated_files) {
-        updated.associated_files.forEach((file: any) => {
-          if (file.task_epochs && !validTaskEpochs.includes(file.task_epochs)) {
+      // Clean up associated_files and associated_video_files (single-valued task_epochs)
+      [...section(updated, 'associated_files'), ...section(updated, 'associated_video_files')].forEach(
+        (file: any) => {
+          if (isStale(file?.task_epochs)) {
             file.task_epochs = '';
           }
-        });
-      }
+        }
+      );
 
-      // Clean up associated_video_files
-      if (updated.associated_video_files) {
-        updated.associated_video_files.forEach((file: any) => {
-          if (file.task_epochs && !validTaskEpochs.includes(file.task_epochs)) {
-            file.task_epochs = '';
-          }
-        });
-      }
+      // Clean up fs_gui_yamls, whose epochs field is multi-valued
+      section(updated, 'fs_gui_yamls').forEach((item: any) => {
+        if (Array.isArray(item?.epochs)) {
+          item.epochs = item.epochs.filter((epoch: unknown) => !isStale(epoch));
+        }
+      });
 
       return updated;
     });
