@@ -54,8 +54,11 @@ import {
  * @returns {JSX.Element} The complete form interface
  */
 export function LegacyFormView() {
-  // Access shared store via Context
-  const { model: formData, actions } = useStoreContext();
+  // Access shared store via Context. The store's `model` is the legacy form data plus its
+  // `workspace` slice (every animal and day saved in this browser). The workspace is not
+  // session metadata, so it stays out of `formData`, which this view exports as the YAML file.
+  const { model, actions } = useStoreContext();
+  const { workspace: _workspace, ...formData } = model;
 
   /**
    * Ref to always access latest formData (avoids stale closures in event handlers)

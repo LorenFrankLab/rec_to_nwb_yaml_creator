@@ -291,6 +291,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **The legacy form's download no longer includes the browser's saved workspace.** The legacy form
+  exported the store's whole model: its form fields plus a top-level `workspace:` block holding every
+  animal and recording day saved in this browser (with none saved, still the workspace settings). The
+  schema allows extra top-level keys, so validation did not flag it. The download now contains only the
+  form's metadata. The released app was never affected. A file downloaded from the legacy form of an
+  unreleased build is cleaned by importing it into the legacy form and downloading it again.
+
 - **Editing an imported day's task environment or cameras preserves its task definitions.** The
   first epoch edit now saves newly imported task types before replacing inline tasks with catalog
   references. Task definitions, camera order, and earlier days remain intact after saving and reloading,
