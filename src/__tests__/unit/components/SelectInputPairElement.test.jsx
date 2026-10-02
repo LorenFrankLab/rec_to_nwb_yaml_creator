@@ -126,6 +126,41 @@ describe('SelectInputPairElement', () => {
 
       expect(input).toHaveValue(7);
     });
+
+    // The fields follow the stored text, not only its parsed type and number: a file that corrects
+    // "Din01" to "Din1" must show "Din1", and leaving the field must save it. (A browser keeps a
+    // typed "01" in a number input; fireEvent sets it directly, as userEvent would strip the 0.)
+    it('shows a new stored value that parses the same as the one shown', () => {
+      const onBlur = vi.fn();
+      const props = { ...defaultProps, defaultValue: '', onBlur };
+      const { rerender } = render(<SelectInputPairElement {...props} value="Din1" />);
+      const input = screen.getByRole('spinbutton');
+      fireEvent.change(input, { target: { value: '01' } });
+      fireEvent.blur(input);
+      expect(onBlur.mock.lastCall[0].target.value).toBe('Din01');
+      rerender(<SelectInputPairElement {...props} value="Din01" />);
+
+      rerender(<SelectInputPairElement {...props} value="Din1" />);
+      expect(input.value).toBe('1');
+
+      fireEvent.blur(input);
+      expect(onBlur.mock.lastCall[0].target.value).toBe('Din1');
+    });
+
+    // Once saved, the field keeps showing what was typed, which is the value that was saved.
+    it('keeps showing a saved value as it was typed', () => {
+      const onBlur = vi.fn();
+      const props = { ...defaultProps, defaultValue: '', onBlur };
+      const { rerender } = render(<SelectInputPairElement {...props} value="Din2" />);
+      const input = screen.getByRole('spinbutton');
+      fireEvent.change(input, { target: { value: '01' } });
+      fireEvent.blur(input);
+      expect(onBlur.mock.lastCall[0].target.value).toBe('Din01');
+
+      rerender(<SelectInputPairElement {...props} value="Din01" />);
+
+      expect(input.value).toBe('01');
+    });
   });
 
   describe('Default Value Splitting', () => {

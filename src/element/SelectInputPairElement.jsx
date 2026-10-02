@@ -101,21 +101,24 @@ const SelectInputPairElement = (prop) => {
 
   // Importing another file changes the stored value without remounting this element, so
   // defaultValue alone would leave the select/input showing the old value, and leaving either
-  // one would save that old value back. Re-seed them whenever the stored value changes. Typing
-  // that has not been saved is untouched: the stored value only changes when a field is left.
+  // one would save that old value back. Re-seed them whenever the stored value changes, unless
+  // they already show it: a typed "01" saved as "Din01" keeps showing "01", while a file that
+  // changes "Din01" to "Din1" shows "1". Typing that has not been saved is untouched: the stored
+  // value only changes when a field is left.
   useLayoutEffect(() => {
     const select = selectRef.current;
     const input = inputRef.current;
-    if (!select || !input) {
+    if (!select || !input || `${select.value}${input.value}` === seedValue) {
       return;
     }
-    select.value = splitTextNumberText;
+    const { text, number } = splitTextNumber(seedValue);
+    select.value = text;
     if (select.selectedIndex === -1 && select.options.length > 0) {
       // No option matches: show the first one, as defaultValue does at mount.
       select.selectedIndex = 0;
     }
-    input.value = splitTextNumberNumber;
-  }, [splitTextNumberText, splitTextNumberNumber]);
+    input.value = number;
+  }, [seedValue]);
 
   return (
     <div>
