@@ -1,25 +1,14 @@
 /**
  * Tests for YAML.parse() error handling in importFile()
  *
- * Phase 3, Task 3.3 - CRITICAL BUG FIX
- *
- * KNOWN BUG: importFile() clears form BEFORE parsing YAML (line 82)
- * If YAML.parse() fails (line 92), form is already cleared = DATA LOSS
- *
- * Location: App.js lines 80-154
- *
  * Critical scenario:
  * 1. User has filled out complex metadata form (30 minutes of work)
  * 2. User tries to import a reference YAML file
  * 3. YAML file is malformed (syntax error, encoding issue, etc.)
- * 4. YAML.parse() throws error, crashes app
- * 5. Form is already cleared (line 82) - ALL DATA LOST
  *
- * Required fix:
- * - Add try/catch around YAML.parse()
- * - On error: restore form to defaults (or previous state)
- * - Show user-friendly error message
- * - Prevent data loss
+ * The app must not crash, must say what went wrong, and must keep the form
+ * exactly as it was: a file that cannot be read used to replace the form with
+ * an empty one.
  */
 
 import { describe, it, expect, vi } from 'vitest';
@@ -105,7 +94,7 @@ subject:
       alertSpy.mockRestore();
     });
 
-    it('should restore form to defaults when YAML parsing fails', async () => {
+    it('keeps what the form holds when YAML parsing fails', async () => {
       const user = userEvent.setup();
       render(
         <StoreProvider>
@@ -134,11 +123,8 @@ subject:
 
       await new Promise(resolve => setTimeout(resolve, 200));
 
-      // Form should be cleared/reset (default behavior)
-      // After failed import, form should be in a valid state
-      // Re-query the input after re-render
-      const sessionIdInputAfter = getById('session_id');
-      expect(sessionIdInputAfter).toBeInTheDocument();
+      // The form keeps what the user typed
+      expect(getById('session_id')).toHaveValue('my_session');
 
       alertSpy.mockRestore();
     });
@@ -275,7 +261,7 @@ subject:
   });
 
   describe('Data Loss Prevention', () => {
-    it('should prevent data loss when user has existing form data', async () => {
+    it('keeps existing form data when a malformed file is uploaded', async () => {
       const user = userEvent.setup();
       render(
         <StoreProvider>
@@ -312,13 +298,10 @@ subject:
 
       await new Promise(resolve => setTimeout(resolve, 200));
 
-      // After failed import, form should be cleared (current behavior after line 82)
-      // but app should not have crashed
+      // The app has not crashed, and nothing the user typed was lost
       expect(getMainForm()).toBeInTheDocument();
-
-      // Note: Current implementation DOES clear the form (line 82 runs before parse)
-      // This test documents the data loss bug
-      // After fix, we might want to preserve the data or at least warn the user
+      expect(getById('session_id')).toHaveValue('critical_experiment_session');
+      expect(getById('subject-subjectId')).toHaveValue('rare_animal_001');
 
       alertSpy.mockRestore();
     });

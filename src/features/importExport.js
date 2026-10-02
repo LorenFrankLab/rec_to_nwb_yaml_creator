@@ -18,6 +18,9 @@ import {
 } from '../io/yaml';
 import { emptyFormData, genderAcronym } from '../valueList';
 
+/** Every message for an import that fails says so: the page keeps the form it already has. */
+const FORM_NOT_CHANGED = 'The form was not changed.';
+
 /**
  * Import YAML files and prepare form data
  *
@@ -31,9 +34,9 @@ import { emptyFormData, genderAcronym } from '../valueList';
  * @returns {Promise<Object>} Result object
  * @returns {boolean} result.success - Whether import succeeded
  * @returns {string|null} result.error - Error message if failed
- * @returns {Object|null} result.formData - Validated form data; null when the file cannot be
- *   read (no file, unreadable, not valid YAML, or not a metadata document), so the caller keeps
- *   the form it already has
+ * @returns {Object|null} result.formData - Validated form data; null when nothing can be imported
+ *   (no file, unreadable, rich text, not valid YAML, no metadata fields, or an unexpected error),
+ *   so the caller keeps the form it already has
  * @returns {Object} [result.importSummary] - Import summary (only present on success)
  * @returns {number} result.importSummary.totalFields - Total fields in YAML file
  * @returns {string[]} result.importSummary.importedFields - Successfully imported field names
@@ -76,7 +79,7 @@ export async function importFiles(file, options = {}) {
     // formData only when it is set. (An empty form here would wipe what the user had loaded.)
     reader.onerror = () => {
       // eslint-disable-next-line no-alert
-      window.alert('Error reading file. Please try again.');
+      window.alert(`Error reading file. Please try again.\n\n${FORM_NOT_CHANGED}`);
       resolve({
         success: false,
         error: 'Error reading file. Please try again.',
@@ -84,9 +87,26 @@ export async function importFiles(file, options = {}) {
       });
     };
 
-    reader.onload = (evt) => {
+    const handleLoad = (evt) => {
       if (onProgress) {
         onProgress({ stage: 'parsing', progress: 30 });
+      }
+
+      // TextEdit saves a new document as rich text unless it is made plain text first. The
+      // parser's error for that says nothing useful, so say what to do instead.
+      if (/^\s*\{\\rtf/.test(evt.target.result)) {
+        // eslint-disable-next-line no-alert
+        window.alert(
+          'This file is saved as rich text (RTF), not plain text, so it cannot be read.\n\n' +
+          'In TextEdit, choose Format > Make Plain Text, save the file, and upload it again.\n\n' +
+          FORM_NOT_CHANGED
+        );
+        resolve({
+          success: false,
+          error: 'The file is rich text (RTF), not plain-text YAML.',
+          formData: null,
+        });
+        return;
       }
 
       // Parse YAML with error handling
@@ -97,7 +117,8 @@ export async function importFiles(file, options = {}) {
         // eslint-disable-next-line no-alert
         window.alert(
           `Invalid YAML file: ${parseError.message}\n\n` +
-          `The file could not be parsed. Please check the YAML syntax and try again.`
+          `The file could not be parsed. Please check the YAML syntax and try again.\n\n` +
+          FORM_NOT_CHANGED
         );
         resolve({
           success: false,
@@ -107,20 +128,25 @@ export async function importFiles(file, options = {}) {
         return;
       }
 
-      // An empty file, plain text or a list parses without error but is not a metadata document.
+      // An empty file, plain text, a list, or a mapping with none of the form's fields (`{}`, or
+      // another tool's YAML picked by mistake) parses without error but holds no metadata.
+      // Importing it would replace the form with an empty one.
       if (
         jsonFileContent === null ||
         typeof jsonFileContent !== 'object' ||
-        Array.isArray(jsonFileContent)
+        Array.isArray(jsonFileContent) ||
+        !Object.keys(emptyFormData).some((key) => Object.hasOwn(jsonFileContent, key))
       ) {
         // eslint-disable-next-line no-alert
         window.alert(
-          'The file does not contain a metadata document.\n\n' +
-          'Expected a YAML mapping of metadata fields, but the file was empty or not an object.'
+          'No metadata was found in this file, so nothing was imported.\n\n' +
+          'The file is empty, or it is not a metadata YAML file (one with fields such as lab, ' +
+          'session_id and subject).\n\n' +
+          FORM_NOT_CHANGED
         );
         resolve({
           success: false,
-          error: 'The file does not contain a valid metadata document (expected a YAML mapping).',
+          error: 'The file does not contain any metadata fields.',
           formData: null,
         });
         return;
@@ -245,6 +271,25 @@ export async function importFiles(file, options = {}) {
           hasExclusions: excludedFields.length > 0,
         },
       });
+    };
+
+    // An error nothing above expects must still settle the import with a message: uncaught, it
+    // left the upload doing nothing at all.
+    reader.onload = (evt) => {
+      try {
+        handleLoad(evt);
+      } catch (error) {
+        // eslint-disable-next-line no-alert
+        window.alert(
+          `The file could not be imported because of an unexpected error: ${error.message}\n\n` +
+          FORM_NOT_CHANGED
+        );
+        resolve({
+          success: false,
+          error: `The file could not be imported: ${error.message}`,
+          formData: null,
+        });
+      }
     };
 
     reader.readAsText(file, 'UTF-8');

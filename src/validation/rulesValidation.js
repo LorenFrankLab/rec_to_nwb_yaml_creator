@@ -117,7 +117,7 @@ export const rulesValidation = (model) => {
   // Hardware constraint: each logical channel must map to a unique physical channel
   if (model.ntrode_electrode_group_channel_map?.length > 0) {
     model.ntrode_electrode_group_channel_map.forEach((ntrode) => {
-      if (ntrode.map && typeof ntrode.map === 'object') {
+      if (ntrode?.map && typeof ntrode.map === 'object') {
         const channelValues = Object.values(ntrode.map);
         const uniqueValues = new Set(channelValues);
 

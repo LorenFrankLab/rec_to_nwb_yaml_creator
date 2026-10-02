@@ -463,7 +463,7 @@ describe('Import/Export Workflow Integration', () => {
       ].join('\n');
       await user.upload(getFileInput(), new File([richText], 'edited.yml', { type: 'text/yaml' }));
       await waitFor(() =>
-        expect(window.alert).toHaveBeenCalledWith(expect.stringContaining('Invalid YAML file'))
+        expect(window.alert).toHaveBeenCalledWith(expect.stringContaining('Make Plain Text'))
       );
       // Let the import finish before checking what the form holds.
       await act(async () => {
