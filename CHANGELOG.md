@@ -301,8 +301,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Fixes released on `main` now apply to the legacy form.** Merged from `main` (#69, #70 and the
   June controlled-input fixes). In the legacy form:
   - The Optogenetic Stimulation Software field saves to `optogenetic_stimulation_software`, the key
-    trodes_to_nwb reads. A typed value went to `opto_software`, so the converter saw an empty name and
-    silently dropped all optogenetics.
+    trodes_to_nwb reads. It saved to `opto_software`, so a session with optogenetics could not be
+    downloaded: validation reported the optogenetics configuration as incomplete. (On `main`, the
+    download went through and the converter silently dropped all optogenetics.)
   - The FsGUI train interval is written as `trainInterval`, the schema and converter key; values
     stored as `train_interval` never reached the NWB file. The five pulse/train fields show their
     stored values, and a new FsGUI entry starts them at 0.
@@ -331,7 +332,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   animal and recording day saved in this browser (with none saved, still the workspace settings). The
   schema allows extra top-level keys, so validation did not flag it. The download now contains only the
   form's metadata. The released app was never affected. A file downloaded from the legacy form of an
-  unreleased build is cleaned by importing it into the legacy form and downloading it again.
+  unreleased build, including the `/pilot` site (where the legacy form opened only from an
+  unrecognized link), is cleaned by importing it into the legacy form and downloading it again.
 
 - **Editing an imported day's task environment or cameras preserves its task definitions.** The
   first epoch edit now saves newly imported task types before replacing inline tasks with catalog
