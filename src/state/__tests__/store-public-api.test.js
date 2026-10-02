@@ -39,6 +39,7 @@ describe('useStore public API contract', () => {
       'duplicateElectrodeGroupItem',
       'handleChange',
       'itemSelected',
+      'loadImportedFormData',
       'nTrodeMapSelected',
       'onBlur',
       'onMapInput',

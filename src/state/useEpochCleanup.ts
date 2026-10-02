@@ -1,4 +1,13 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
+
+/** The most recent whole-form load (see `useLegacyForm`). A new object for each load. */
+export interface LegacyFormLoad {
+  /**
+   * True for an imported file (`loadImportedFormData`): references into a section the import
+   * left out are kept for validation to report. False for `setFormData` (e.g. clearing the form).
+   */
+  keepReferences: boolean;
+}
 
 /** Inputs to {@link useEpochCleanup}. */
 export interface UseEpochCleanupParams {
@@ -6,6 +15,8 @@ export interface UseEpochCleanupParams {
   formData: Record<string, any>;
   /** Legacy form state setter (callback form). */
   setFormData: (updater: (prev: any) => any) => void;
+  /** The most recent whole-form load, or `null` before the first one. */
+  lastLoad: { readonly current: LegacyFormLoad | null };
 }
 
 /**
@@ -17,12 +28,19 @@ export interface UseEpochCleanupParams {
  * at one of its epochs becomes invalid. This hook clears the single-valued references to `''` and
  * drops the stale entries from the multi-valued FsGUI `epochs`. An epoch of `0` counts as set.
  *
- * It runs whenever the tasks change, including a load whose tasks define the same epochs as the
- * file before it. No loop guard is needed: the update returns the current state object when there
- * is nothing to clean, so React bails out of the render. (An earlier version skipped the check
- * whenever the set of valid epochs was unchanged, which let an orphan survive in a file loaded on
- * top of one that defined the same epochs.) A section with the wrong shape is left untouched for
- * schema validation to report.
+ * An edit clears the references to the epochs it removed. Replacing the whole form with
+ * `setFormData` clears every reference to an epoch the new state does not define, including when
+ * its tasks define the same epochs as the state before it. (An earlier version skipped the check
+ * whenever the set of valid epochs was unchanged, which let an orphan survive a load.) No loop
+ * guard is needed: the update returns the current state object when there is nothing to clean,
+ * so React bails out of the render. A section with the wrong shape is left untouched for schema
+ * validation to report.
+ *
+ * Loading an imported file (`loadImportedFormData`) clears nothing. The import validates the file
+ * as a whole and leaves out a section with an orphaned reference, so a dangling reference after an
+ * import points into a tasks section the import left out: it was valid in the file. It stays and
+ * validation reports it (`orphaned_file` / `orphaned_video` / `orphaned_fs_gui_epoch`) until the
+ * tasks are fixed. Edits after the import still clear only the epochs they remove.
  *
  * Workspace days are NOT scrubbed here (Load-Time Orphan Visibility Contract):
  * silently erasing a loaded stale reference hides corruption from the user. The
@@ -34,8 +52,12 @@ export interface UseEpochCleanupParams {
  * @param params - The legacy form slice.
  * @param params.formData - Legacy single-session form state.
  * @param params.setFormData - Legacy form state setter.
+ * @param params.lastLoad - The most recent whole-form load.
  */
-export function useEpochCleanup({ formData, setFormData }: UseEpochCleanupParams): void {
+export function useEpochCleanup({ formData, setFormData, lastLoad }: UseEpochCleanupParams): void {
+  // The load and the task epochs seen by the previous run; null before the first run.
+  const previous = useRef<{ load: LegacyFormLoad | null; epochs: unknown[] } | null>(null);
+
   useEffect(() => {
     const isSet = (epoch: unknown) => epoch !== '' && epoch !== undefined && epoch !== null;
     const section = (form: Record<string, any>, key: string): any[] =>
@@ -45,7 +67,26 @@ export function useEpochCleanup({ formData, setFormData }: UseEpochCleanupParams
     const validTaskEpochs = section(formData, 'tasks')
       .flatMap((task: any) => task?.task_epochs || [])
       .filter(isSet);
-    const isStale = (epoch: unknown) => isSet(epoch) && !validTaskEpochs.includes(epoch);
+
+    const load = lastLoad.current;
+    const before = previous.current;
+    previous.current = { load, epochs: validTaskEpochs };
+
+    let isStale: (epoch: unknown) => boolean;
+    if (before === null || before.load !== load) {
+      // The first run, or the whole form was just replaced.
+      if (load?.keepReferences) {
+        return;
+      }
+      isStale = (epoch) => isSet(epoch) && !validTaskEpochs.includes(epoch);
+    } else {
+      // An edit: clear only the epochs it removed.
+      const removedEpochs = before.epochs.filter((epoch) => !validTaskEpochs.includes(epoch));
+      if (removedEpochs.length === 0) {
+        return;
+      }
+      isStale = (epoch) => removedEpochs.includes(epoch);
+    }
 
     // Use callback form to get latest state at update time
     setFormData((currentFormData) => {

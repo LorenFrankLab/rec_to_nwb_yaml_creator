@@ -311,10 +311,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     0.45 default under `volume_in_uL` sat beside the entered volume and the converter recorded 0.45.
   - Bad Channels marks are saved to the ntrode being edited. On a multi-shank probe, or after
     duplicating a group, they were saved to another ntrode.
-  - Removing or renumbering a camera drops the task, video and FsGUI references to it. Importing a
-    file with such references keeps its tasks instead of excluding the whole section.
-  - Orphaned task epochs are cleared from associated files, videos and FsGUI entries, including after
-    loading a file whose tasks define the same epochs as the previous file. An epoch of 0 counts.
+  - Removing or renumbering a camera drops the task, video and FsGUI references to it. Removing a task
+    or changing its epochs clears the associated-file, video and FsGUI references to the epochs it
+    removed; an epoch of 0 counts. Importing a file drops references to cameras the file does not
+    define, so its tasks are kept instead of the whole section being left out.
+  - References into a section the import leaves out (for example the cameras, when one is named `1`)
+    are kept. They block the download until that section is fixed, and adding the cameras or tasks
+    back restores them. As before, a file with an orphaned task-epoch reference is imported without
+    that section.
   - A stored 0 in Times Period Multiplier or Raw Data to Volts shows as 0 instead of a blank field
     that became NaN when left.
   - The DIO description and the virus-injection hemisphere show their stored values.

@@ -448,4 +448,40 @@ describe('Import/Export Workflow Integration', () => {
       expect(exportedData.session_id).toBe('TEST001'); // Original value preserved
     });
   });
+
+  describe('Importing a file whose cameras are left out', () => {
+    /**
+     * A camera named "1" (a placeholder) makes the import leave out the cameras section. The
+     * reference cleanup used to clear the tasks' camera links in response, and an empty camera
+     * list is valid, so the loss was silent: adding the cameras back left every task unlinked.
+     */
+    it('keeps the task camera links, so adding the cameras back restores them', async () => {
+      const user = userEvent.setup();
+      await renderLegacyApp();
+
+      const session = YAML.parse(getMinimalCompleteYaml());
+      session.cameras[0].camera_name = '1';
+      const yamlFile = new File([YAML.stringify(session)], 'session.yml', { type: 'text/yaml' });
+
+      await user.upload(getFileInput(), yamlFile);
+      await waitFor(() => {
+        expect(screen.getByLabelText(/^lab$/i)).toHaveValue('Test Lab');
+      });
+      await user.click(screen.getByRole('button', { name: /close alert/i }));
+      expect(screen.queryAllByLabelText(/camera name/i)).toHaveLength(0);
+
+      // New cameras are numbered 0, then 1: the ids the tasks were linked to.
+      await user.click(screen.getByTitle(/Add cameras/i));
+      await user.click(screen.getByTitle(/Add cameras/i));
+      await waitFor(() => {
+        expect(screen.queryAllByLabelText(/camera name/i)).toHaveLength(2);
+      });
+
+      // Task 0 (Sleep) used camera 0 and task 1 (Run) used camera 1.
+      expect(document.getElementById('tasks-camera_id-0-0')).toBeChecked();
+      expect(document.getElementById('tasks-camera_id-0-1')).not.toBeChecked();
+      expect(document.getElementById('tasks-camera_id-1-0')).not.toBeChecked();
+      expect(document.getElementById('tasks-camera_id-1-1')).toBeChecked();
+    });
+  });
 });

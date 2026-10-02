@@ -3,6 +3,7 @@ import type { Dispatch, SetStateAction } from 'react';
 import { useLegacyForm } from './useLegacyForm';
 import { useWorkspace } from './useWorkspace';
 import { useEpochCleanup } from './useEpochCleanup';
+import type { LegacyFormLoad } from './useEpochCleanup';
 import { useCameraReferenceCleanup } from './useCameraReferenceCleanup';
 import { createWorkspaceActions } from './workspaceActions';
 import type { InitialWorkspaceState } from './workspaceHydration';
@@ -22,6 +23,7 @@ interface LegacySelectors {
 interface LegacyStoreSlice {
   formData: LegacyFormModel;
   setFormData: Dispatch<SetStateAction<LegacyFormModel>>;
+  lastLoad: { readonly current: LegacyFormLoad | null };
   legacyActions: LegacyActions;
   legacySelectors: LegacySelectors;
 }
@@ -68,14 +70,15 @@ export interface StoreValue {
  * const days = selectors.getAnimalDays('remy');
  */
 export function useStore(initialState: InitialWorkspaceState | null = null): StoreValue {
-  const { formData, setFormData, legacyActions, legacySelectors } =
+  const { formData, setFormData, lastLoad, legacyActions, legacySelectors } =
     useLegacyForm(initialState) as unknown as LegacyStoreSlice;
   const { workspace, workspaceActions, workspaceSelectors, persistence } = useWorkspace(initialState);
 
-  // Legacy-form data integrity: clear orphaned task epochs and stale camera references.
-  // Workspace days are not scrubbed; validation reports their stale references instead.
-  useEpochCleanup({ formData, setFormData });
-  useCameraReferenceCleanup({ formData, setFormData });
+  // Legacy-form data integrity: clear orphaned task epochs and stale camera references, except
+  // after loading an imported file (see the hooks). Workspace days are not scrubbed; validation
+  // reports their stale references instead.
+  useEpochCleanup({ formData, setFormData, lastLoad });
+  useCameraReferenceCleanup({ formData, setFormData, lastLoad });
 
   // Actions combine all mutation functions; same key set as before the decomposition.
   const actions = useMemo<LegacyActions & WorkspaceActions>(
