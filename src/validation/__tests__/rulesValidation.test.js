@@ -13,6 +13,9 @@
  */
 
 import { describe, it, expect } from 'vitest';
+import fs from 'fs';
+import path from 'path';
+import YAML from 'yaml';
 import { rulesValidation } from '../rulesValidation';
 import { validate } from '../index';
 import JsonSchema from '../../nwb_schema.json';
@@ -1106,6 +1109,47 @@ describe('rulesValidation()', () => {
 
       listSections.forEach((key) => {
         expect(() => rulesValidation(createTestYaml({ [key]: [null] })), key).not.toThrow();
+      });
+    });
+
+    // The minimal model above has few cross-references, so a rule that looks one section up from
+    // another (e.g. FsGUI camera ids in cameras) never meets the null. Repeat on full sessions,
+    // with the null first and last in each list and inside the nested lists.
+    it.each([
+      '20230622_sample_metadata.yml',
+      'realistic-session.yml',
+      '20230622_sample_metadataProbeReconfig.yml',
+    ])('does not throw on empty (null) entries in the full session %s', (fixture) => {
+      const session = YAML.parse(
+        fs.readFileSync(path.join(__dirname, '../../__tests__/fixtures/valid', fixture), 'utf8')
+      );
+      const listSections = Object.entries(JsonSchema.properties)
+        .filter(([, definition]) => definition.type === 'array')
+        .map(([key]) => key);
+      const withNull = [];
+      listSections.forEach((key) => {
+        const entries = Array.isArray(session[key]) ? session[key] : [];
+        withNull.push([`${key} first`, { ...session, [key]: [null, ...entries] }]);
+        withNull.push([`${key} last`, { ...session, [key]: [...entries, null] }]);
+      });
+      const nested = (key, field, value) => {
+        const model = structuredClone(session);
+        (model[key] || []).forEach((entry) => {
+          entry[field] = value;
+        });
+        return [`${key}[].${field}`, model];
+      };
+      withNull.push(
+        nested('tasks', 'camera_id', [null]),
+        nested('tasks', 'task_epochs', [null]),
+        nested('fs_gui_yamls', 'epochs', [null]),
+        nested('ntrode_electrode_group_channel_map', 'bad_channels', [null]),
+        nested('ntrode_electrode_group_channel_map', 'map', null)
+      );
+
+      withNull.forEach(([label, model]) => {
+        expect(() => rulesValidation(model), label).not.toThrow();
+        expect(() => validate(model), label).not.toThrow();
       });
     });
 
