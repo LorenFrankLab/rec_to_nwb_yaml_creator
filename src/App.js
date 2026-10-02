@@ -71,8 +71,8 @@ export function App() {
     const result = await importFiles(file);
 
     if (result.formData) {
-      // Import updates entire form state at once
-      actions.setFormData(result.formData);
+      // Import updates entire form state at once, keeping camera links into a section it left out
+      actions.loadImportedFormData(result.formData);
 
       // Show import summary if available
       if (result.importSummary) {

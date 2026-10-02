@@ -83,7 +83,7 @@ describe('Store - camera_id cleanup', () => {
     expect(result.current.model.tasks[0].camera_id).toEqual([]);
   });
 
-  it('removes stale references present in freshly loaded (imported) state', async () => {
+  it('removes stale references from a state loaded with setFormData', async () => {
     const { result } = await setup(stateWith([{ id: 4 }]));
     expect(result.current.model.tasks[0].camera_id).toEqual([4]);
     expect(result.current.model.associated_video_files[0].camera_id).toBe('');

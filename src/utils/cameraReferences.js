@@ -31,28 +31,15 @@ const toInt = (value) => parseInt(value, 10);
 const SINGLE_CAMERA_SECTIONS = ['associated_video_files', 'fs_gui_yamls'];
 
 /**
- * Return a copy of `form` with camera_id references to undefined cameras
- * removed. Returns `form` itself (same reference) when nothing is stale, so
- * callers can bail out of a state update.
+ * Return a copy of `form` without the camera_id references `isStale` selects.
+ * Returns `form` itself (same reference) when it selects none, so callers can
+ * bail out of a state update.
  *
  * @param {object} form - Form data
+ * @param {(value: unknown) => boolean} isStale - Selects the references to drop
  * @returns {object} The same object, or a cleaned structuredClone
  */
-export const removeStaleCameraReferences = (form) => {
-  if (!form || typeof form !== 'object') {
-    return form;
-  }
-
-  // This helper also runs on parsed YAML before schema validation. If the
-  // cameras section has the wrong shape, preserve the document so AJV can
-  // report that error instead of guessing which references are stale.
-  if (form.cameras !== undefined && !Array.isArray(form.cameras)) {
-    return form;
-  }
-
-  const valid = new Set(getDefinedCameraIds(form?.cameras));
-  const isStale = (value) => !valid.has(toInt(value));
-
+const dropCameraReferences = (form, isStale) => {
   const isSet = (value) => value !== '' && value !== undefined && value !== null;
   const arraySection = (key) => (Array.isArray(form[key]) ? form[key] : []);
 
@@ -83,4 +70,47 @@ export const removeStaleCameraReferences = (form) => {
     });
   });
   return updated;
+};
+
+/**
+ * Return a copy of `form` with camera_id references to undefined cameras
+ * removed. Returns `form` itself (same reference) when nothing is stale, so
+ * callers can bail out of a state update.
+ *
+ * @param {object} form - Form data
+ * @returns {object} The same object, or a cleaned structuredClone
+ */
+export const removeStaleCameraReferences = (form) => {
+  if (!form || typeof form !== 'object') {
+    return form;
+  }
+
+  // This helper also runs on parsed YAML before schema validation. If the
+  // cameras section has the wrong shape, preserve the document so AJV can
+  // report that error instead of guessing which references are stale.
+  if (form.cameras !== undefined && !Array.isArray(form.cameras)) {
+    return form;
+  }
+
+  const valid = new Set(getDefinedCameraIds(form?.cameras));
+  return dropCameraReferences(form, (value) => !valid.has(toInt(value)));
+};
+
+/**
+ * Return a copy of `form` without camera_id references to the given camera
+ * ids, for an edit that removes or renumbers cameras. References to other
+ * cameras are kept, including ones the form does not define. Returns `form`
+ * itself (same reference) when there is nothing to remove.
+ *
+ * @param {object} form - Form data
+ * @param {number[]} cameraIds - Integer ids of the cameras the edit removed
+ * @returns {object} The same object, or a cleaned structuredClone
+ */
+export const removeCameraReferences = (form, cameraIds) => {
+  if (!form || typeof form !== 'object' || cameraIds.length === 0) {
+    return form;
+  }
+
+  const removed = new Set(cameraIds);
+  return dropCameraReferences(form, (value) => removed.has(toInt(value)));
 };

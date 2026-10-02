@@ -46,7 +46,7 @@ const FORM_NOT_CHANGED = 'The form was not changed.';
  * @example
  * const result = await importFiles(file);
  * if (result.success) {
- *   setFormData(result.formData);
+ *   actions.loadImportedFormData(result.formData);
  *   if (result.importSummary) {
  *     showImportSummary(result.importSummary);
  *   }

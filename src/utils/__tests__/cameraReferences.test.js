@@ -10,6 +10,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   getDefinedCameraIds,
+  removeCameraReferences,
   removeStaleCameraReferences,
 } from '../cameraReferences';
 
@@ -105,5 +106,47 @@ describe('removeStaleCameraReferences', () => {
       fs_gui_yamls: { camera_id: 1 },
     };
     expect(removeStaleCameraReferences(model)).toBe(model);
+  });
+});
+
+describe('removeCameraReferences', () => {
+  // Camera 7 is referenced but not defined, as after an import that left out the cameras.
+  const base = {
+    cameras: [{ id: 0 }, { id: 4 }],
+    tasks: [{ task_name: 'Run', camera_id: [0, 4, 7] }],
+    associated_video_files: [
+      { name: 'a.mp4', camera_id: 4 },
+      { name: 'b.mp4', camera_id: 7 },
+      { name: 'c.mp4', camera_id: '' },
+    ],
+    fs_gui_yamls: [{ name: 'x.yaml', camera_id: 4 }, { name: 'y.yaml', camera_id: 0 }],
+  };
+
+  it('drops only references to the given cameras', () => {
+    const cleaned = removeCameraReferences(base, [4]);
+    expect(cleaned.tasks[0].camera_id).toEqual([0, 7]);
+    expect(cleaned.associated_video_files.map((video) => video.camera_id)).toEqual(['', 7, '']);
+    expect(cleaned.fs_gui_yamls.map((fsGui) => fsGui.camera_id)).toEqual(['', 0]);
+  });
+
+  it('matches string ids (the id input holds a string while being typed)', () => {
+    const cleaned = removeCameraReferences({ tasks: [{ camera_id: ['4', 0] }] }, [4]);
+    expect(cleaned.tasks[0].camera_id).toEqual([0]);
+  });
+
+  it('does not mutate its input', () => {
+    const before = structuredClone(base);
+    removeCameraReferences(base, [4]);
+    expect(base).toEqual(before);
+  });
+
+  it('returns the same object when there is nothing to remove', () => {
+    expect(removeCameraReferences(base, [])).toBe(base);
+    expect(removeCameraReferences(base, [9])).toBe(base);
+  });
+
+  it('tolerates missing sections and a missing form', () => {
+    expect(removeCameraReferences({}, [4])).toEqual({});
+    expect(removeCameraReferences(null, [4])).toBeNull();
   });
 });

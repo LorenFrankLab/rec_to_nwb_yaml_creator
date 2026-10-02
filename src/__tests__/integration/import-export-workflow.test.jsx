@@ -473,5 +473,35 @@ describe('Import/Export Workflow Integration', () => {
       // ASSERT - the loaded form is unchanged
       expect(screen.getByLabelText(/^lab$/i)).toHaveValue('Test Lab');
     });
+
+    // A camera missing a required field makes the import leave out the cameras. The camera
+    // cleanup used to drop the tasks' camera links in response, and an empty camera list is valid,
+    // so the loss was silent: adding the cameras back left every task unlinked.
+    it('keeps the task camera links when the cameras are left out', { timeout: 30000 }, async () => {
+      const user = userEvent.setup();
+      render(
+        <StoreProvider>
+          <App />
+        </StoreProvider>
+      );
+      const session = YAML.parse(getMinimalCompleteYaml());
+      delete session.cameras[0].lens;
+
+      await user.upload(getFileInput(), yamlFile(session, 'edited.yml'));
+      await waitFor(() => expect(screen.getByLabelText(/^lab$/i)).toHaveValue('Test Lab'));
+      await user.click(screen.getByRole('button', { name: /close alert/i }));
+      expect(screen.queryAllByLabelText(/camera name/i)).toHaveLength(0);
+
+      // New cameras are numbered 0, then 1: the ids the tasks were linked to.
+      await user.click(screen.getByTitle(/Add cameras/i));
+      await user.click(screen.getByTitle(/Add cameras/i));
+      await waitFor(() => expect(screen.queryAllByLabelText(/camera name/i)).toHaveLength(2));
+
+      // Task 0 (Sleep) used camera 0 and task 1 (Run) used camera 1.
+      expect(document.getElementById('tasks-camera_id-0-0')).toBeChecked();
+      expect(document.getElementById('tasks-camera_id-0-1')).not.toBeChecked();
+      expect(document.getElementById('tasks-camera_id-1-0')).not.toBeChecked();
+      expect(document.getElementById('tasks-camera_id-1-1')).toBeChecked();
+    });
   });
 });
