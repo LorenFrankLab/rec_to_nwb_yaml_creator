@@ -291,6 +291,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Import & Repair no longer suggests the old app's fixed 0.45 µL in place of a virus injection's
+  entered volume.** Files from older versions of this app carry `volume_in_uL: 0.45`, a fixed value,
+  beside the volume entered in the form (`volume_in_ul`), and the converter reads `volume_in_uL`. The
+  import's suggestion for the two disagreeing keys was the 0.45, so "Apply safe suggestions" wrote it
+  to both keys and the imported day exported the wrong volume. For that pattern the suggestion is now
+  the entered volume. When the two keys disagree any other way there is no suggestion: the row asks
+  for the injected volume, and the import waits for it. A file imported this way before the fix still
+  has 0.45 µL: check its virus injection's volume, or import the file again.
+
 - **Importing a file with an empty entry in its channel map no longer silently does nothing.** A
   YAML list item with no value (`-`) parses to `null`, and two channel-map rules read it without a
   check, so validation threw and the legacy form's import never finished or reported anything. The

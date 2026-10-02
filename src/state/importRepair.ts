@@ -451,6 +451,13 @@ function formatCameraIdentityFields(fields: ReadonlyArray<string>): string {
   return fields.map((field) => CAMERA_IDENTITY_FIELD_LABELS[field] ?? field).join(', ');
 }
 
+/**
+ * The volume older versions of this app saved under `volume_in_uL` for every virus injection,
+ * beside the volume entered in the form (`volume_in_ul`). trodes_to_nwb reads `volume_in_uL`, so
+ * files from those versions record this instead of the injected volume.
+ */
+const OLD_APP_FIXED_VOLUME_IN_UL = 0.45;
+
 /** A virus-injection array item carrying the two volume spellings. */
 interface VolumeShimItem {
   volume_in_uL?: unknown;
@@ -1112,18 +1119,46 @@ function buildBenignAndShim(model: ValidationModel): {
       const hasUpper = inj.volume_in_uL !== undefined;
       const hasLower = inj.volume_in_ul !== undefined;
       if (hasUpper && hasLower && inj.volume_in_uL !== inj.volume_in_ul) {
-        // Conflict: trodes_to_nwb reads the capital-L spelling, so it is authoritative.
-        shimItems.push({
-          path: `virus_injection[${i}].volume_in_ul`,
-          label: 'Virus injection volume',
-          code: 'volume_shim_conflict',
-          group: 'attention',
-          kind: 'suggestion',
-          was: inj.volume_in_ul,
-          suggested: inj.volume_in_uL,
-          why: 'volume_in_uL and volume_in_ul disagree. trodes_to_nwb reads volume_in_uL, so it is authoritative — both keys are kept, reconciled to that value.',
-          inputType: 'number',
-        });
+        // Conflict. The row repairs the converter's key; the chosen value is written to both.
+        const path = `virus_injection[${i}].volume_in_uL`;
+        const entered = inj.volume_in_ul;
+        if (
+          inj.volume_in_uL === OLD_APP_FIXED_VOLUME_IN_UL &&
+          typeof entered === 'number' &&
+          Number.isFinite(entered)
+        ) {
+          // The known pattern: the old app's fixed value beside the volume entered in the form.
+          shimItems.push({
+            path,
+            label: 'Volume (µL)',
+            code: 'volume_shim_conflict',
+            group: 'attention',
+            kind: 'suggestion',
+            was: inj.volume_in_uL,
+            suggested: entered,
+            why:
+              `volume_in_uL is ${OLD_APP_FIXED_VOLUME_IN_UL}, the fixed value older versions of this app ` +
+              `saved beside the volume entered in the form (volume_in_ul: ${entered}). trodes_to_nwb ` +
+              `reads volume_in_uL, so it would record ${OLD_APP_FIXED_VOLUME_IN_UL} µL. Both keys are ` +
+              'set to the entered volume.',
+            inputType: 'number',
+          });
+        } else {
+          // Nothing says which value is right, so there is no suggestion to accept unread.
+          shimItems.push({
+            path,
+            label: 'Volume (µL)',
+            code: 'volume_shim_conflict',
+            group: 'attention',
+            kind: 'input',
+            was: inj.volume_in_uL,
+            why:
+              `The two volume keys disagree: volume_in_ul (the form's field) is ${String(entered)} ` +
+              `and volume_in_uL (the key trodes_to_nwb reads) is ${String(inj.volume_in_uL)}. ` +
+              'Enter the volume that was injected; both keys are set to it.',
+            inputType: 'number',
+          });
+        }
       } else if (hasUpper !== hasLower) {
         benign.push({
           path: `virus_injection[${i}]`,
@@ -1303,8 +1338,8 @@ export function applyImportRepairs(
   // Benign, lossless normalizations (space-key aliases, task_epoch rename, single-spelling volume fill).
   applyBenignNormalizations(model);
 
-  // Accepted/edited resolutions, applied at their paths. A reconciled volume sets BOTH spellings
-  // to the chosen value (keeping the shim key, never dropping it).
+  // Accepted/edited resolutions, applied at their paths. A reconciled volume, under either
+  // spelling, sets BOTH spellings to the chosen value (keeping the shim key, never dropping it).
   for (const [path, value] of Object.entries(resolutions)) {
     if (path.startsWith(EXISTING_CAMERA_REF_PREFIX)) {
       if (value !== BRING_CATALOG_ENTRY) {
@@ -1327,8 +1362,11 @@ export function applyImportRepairs(
       continue;
     }
     setAtPath(model, path, value);
-    const volMatch = path.match(/^(virus_injection\[\d+\])\.volume_in_ul$/);
-    if (volMatch) setAtPath(model, `${volMatch[1]}.volume_in_uL`, value);
+    const volMatch = path.match(/^(virus_injection\[\d+\])\.volume_in_u[lL]$/);
+    if (volMatch) {
+      setAtPath(model, `${volMatch[1]}.volume_in_uL`, value);
+      setAtPath(model, `${volMatch[1]}.volume_in_ul`, value);
+    }
     const taskEpochMatch = path.match(/^(associated_(?:video_)?files\[\d+\])\.task_epochs$/);
     if (taskEpochMatch) deleteAtPath(model, `${taskEpochMatch[1]}.task_epoch`);
   }

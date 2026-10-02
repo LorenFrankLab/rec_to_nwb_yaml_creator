@@ -1211,3 +1211,41 @@ describe('ImportRepair — a LATER calibration of a camera the animal already ha
     ).toBeInTheDocument();
   });
 });
+
+describe('ImportRepair — virus injection volume', () => {
+  // Older versions of this app saved a fixed `volume_in_uL: 0.45` beside the volume entered in the
+  // form (`volume_in_ul`), and trodes_to_nwb reads `volume_in_uL`. Applying the safe suggestions
+  // used to set both keys to 0.45, so the imported day exported the wrong volume.
+  it('keeps the entered volume when the safe suggestions are applied', async () => {
+    const sample = decodeYaml(
+      fs.readFileSync(
+        path.join(__dirname, '../../../__tests__/fixtures/valid/20230622_sample_metadata.yml'),
+        'utf8'
+      )
+    );
+    const model = decodeYaml(cleanYaml);
+    for (const key of [
+      'virus_injection',
+      'opto_excitation_source',
+      'optical_fiber',
+      'optogenetic_stimulation_software',
+    ]) {
+      model[key] = sample[key];
+    }
+    expect(model.virus_injection[0]).toMatchObject({ volume_in_uL: 0.45, volume_in_ul: 100 });
+
+    const user = userEvent.setup();
+    renderScreen();
+    await user.upload(
+      screen.getByLabelText(/choose a metadata yaml file/i),
+      makeFile('06222023_remy_metadata.yml', encodeYaml(model))
+    );
+    await user.click(await screen.findByRole('button', { name: /^apply safe suggestions/i }));
+    await user.click(screen.getByRole('button', { name: /import as new animal/i }));
+
+    const [dayId] = Object.keys(captured.days);
+    const merged = mergeDayMetadata(captured.animals.remy, captured.days[dayId]);
+    expect(merged.virus_injection[0].volume_in_uL).toBe(100);
+    expect(merged.virus_injection[0].volume_in_ul).toBe(100);
+  });
+});

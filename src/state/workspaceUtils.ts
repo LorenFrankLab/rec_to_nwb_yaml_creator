@@ -132,9 +132,10 @@ function externalAssociatedVideo(video: unknown): unknown {
  * from whichever spelling the stored data carried — lets the same YAML pass app AJV and
  * convert without that crash. The duplicate is a deliberate, documented compatibility
  * shim until the schema and converter agree on one canonical spelling (see
- * docs/REFACTOR_CHANGELOG.md and docs/PIPELINE_REQUIREMENTS.md). When BOTH spellings are
- * present but differ (only reachable from imported data — the editor stores only
- * `volume_in_uL`), `volume_in_uL` is treated as authoritative.
+ * docs/REFACTOR_CHANGELOG.md and docs/PIPELINE_REQUIREMENTS.md). Stored data rarely carries
+ * both spellings with different values: the editor stores only `volume_in_uL`, and Import &
+ * Repair sets both to the volume the user accepts or enters. If it does, `volume_in_uL`, the
+ * key the editor writes, wins.
  *
  * @param items - Raw virus_injection items.
  * @returns Reordered items with both `volume_in_uL` and `volume_in_ul` set.
