@@ -11,6 +11,8 @@ import {
   validate,
   blockingIssues,
   isBlockingIssue,
+  isSchemaIssue,
+  rulesValidation,
   unknownSubjectFields,
 } from '../validation';
 import { removeStaleCameraReferences } from '../utils/cameraReferences';
@@ -26,10 +28,92 @@ import {
   downloadYamlFile,
   formatDeterministicFilename
 } from '../io/yaml';
-import { emptyFormData, genderAcronym } from '../valueList';
+import { arrayDefaultValues, emptyFormData, genderAcronym } from '../valueList';
 
 /** Every message for an import that fails says so: the page keeps the form it already has. */
 const FORM_NOT_CHANGED = 'The form was not changed.';
+
+/**
+ * Repairs the rule problems an imported file can have that the form has no input to fix, and
+ * says what it did. A section is left out of an import only for a schema error, and a rule error
+ * the form can fix is loaded for the download gate to block, so these are the rest:
+ * - a channel-map row naming an electrode group the file does not define is left out (the form
+ *   shows rows only under their group, and trodes_to_nwb fails looking the group up);
+ * - an optical fiber or virus injection without a coordinate reference gets the one the form
+ *   writes for every new item (trodes_to_nwb requires it; leaving the item out would lose its
+ *   coordinates and leave the optogenetics incomplete);
+ * - a subject age, age__reference or strain pynwb rejects is left out (the form has no field
+ *   for them).
+ *
+ * @param {object} content - The parsed file (not changed)
+ * @returns {{content: object, leftOut: Array<{field: string, reason: string}>,
+ *   changed: Array<{field: string, reason: string}>}} The repaired copy, and what was left out
+ *   or changed
+ */
+function repairForImport(content) {
+  const repaired = { ...content };
+  const leftOut = [];
+  const changed = [];
+  const isSet = (value) => value !== undefined && value !== null;
+
+  const groups = content.electrode_groups;
+  const ntrodes = content.ntrode_electrode_group_channel_map;
+  if (Array.isArray(groups) && Array.isArray(ntrodes)) {
+    const groupIds = new Set(groups.map((group) => group?.id).filter(isSet));
+    repaired.ntrode_electrode_group_channel_map = ntrodes.filter((ntrode) => {
+      const groupId = ntrode?.electrode_group_id;
+      if (!isSet(groupId) || groupIds.has(groupId)) return true;
+      leftOut.push({
+        field: `ntrode_electrode_group_channel_map (ntrode ${ntrode.ntrode_id})`,
+        reason:
+          `Left out: ntrode ${ntrode.ntrode_id} belongs to electrode group ${groupId}, which the ` +
+          'file does not define. trodes_to_nwb fails looking the group up.',
+      });
+      return false;
+    });
+  }
+
+  [
+    ['optical_fiber', 'optical fiber'],
+    ['virus_injection', 'virus injection'],
+  ].forEach(([key, label]) => {
+    if (!Array.isArray(content[key])) return;
+    repaired[key] = content[key].map((item, index) => {
+      if (!item || typeof item !== 'object' || Array.isArray(item)) return item;
+      const { reference } = item;
+      if (typeof reference === 'string' && reference.trim() !== '') return item;
+      // The coordinate reference the form gives every optical fiber and virus injection
+      const formReference = arrayDefaultValues[key].reference;
+      changed.push({
+        field: `${key}[${index}].reference`,
+        reason:
+          `Set to "${formReference}"` +
+          `${reference === undefined ? '' : ` (was ${JSON.stringify(reference)})`}: trodes_to_nwb ` +
+          `requires a coordinate reference, and this is the one the form gives every ${label}. ` +
+          'If the coordinates were measured from another point, correct it in the file and ' +
+          'import it again.',
+      });
+      return { ...item, reference: formReference };
+    });
+  });
+
+  const subjectIssues = rulesValidation({ subject: content.subject }).filter(
+    (issue) => issue.code === 'subject_value_type'
+  );
+  if (subjectIssues.length > 0) {
+    const subject = { ...content.subject };
+    subjectIssues.forEach((issue) => {
+      delete subject[issue.path.replace('subject.', '')];
+      leftOut.push({
+        field: issue.path,
+        reason: `Left out (the form has no field to correct it): ${issue.message}`,
+      });
+    });
+    repaired.subject = subject;
+  }
+
+  return { content: repaired, leftOut, changed };
+}
 
 /**
  * Says where an issue is, in words: `cameras[0].meters_per_pixel` → "Cameras 1, meters per pixel",
@@ -90,6 +174,8 @@ function warningsConfirmMessage(warnings) {
  * @returns {string[]} result.importSummary.importedFields - Successfully imported field names
  * @returns {Array<{field: string, reason: string}>} result.importSummary.excludedFields - Excluded fields with validation reasons
  * @returns {boolean} result.importSummary.hasExclusions - Whether any fields were excluded
+ * @returns {Array<{field: string, reason: string}>} result.importSummary.changedFields - Values the
+ *   import set because the form has no input for them, with what was set and why
  *
  * @example
  * const result = await importFiles(file);
@@ -217,20 +303,27 @@ export async function importFiles(file, options = {}) {
       // trodes_to_nwb passes the subject to pynwb's Subject, which fails on any field it does not
       // know, and the form has no way to remove one. Leave such fields out before validating (so
       // they cannot cost the whole subject) and name each one in the summary.
-      const leftOutSubjectFields = unknownSubjectFields(jsonFileContent.subject).map((key) => ({
+      const leftOutFields = unknownSubjectFields(jsonFileContent.subject).map((key) => ({
         field: `subject.${key}`,
         reason: `Left out: "${key}" is not a field of the NWB subject, and trodes_to_nwb fails on it.`,
       }));
-      if (leftOutSubjectFields.length > 0) {
+      if (leftOutFields.length > 0) {
         const subject = { ...jsonFileContent.subject };
         unknownSubjectFields(subject).forEach((key) => delete subject[key]);
         jsonFileContent = { ...jsonFileContent, subject };
       }
 
-      // Validate YAML content. Only ERRORS leave a section out: a warning is advisory (a
-      // placeholder subject id, an unusual camera calibration), so the value is imported for the
-      // user to see and fix in the form. Leaving it out would silently drop valid metadata.
-      const issues = blockingIssues(validate(jsonFileContent));
+      // Rule problems the form has no input to fix: repair them, or leave out just the item or
+      // field, and name each one in the summary.
+      const repairs = repairForImport(jsonFileContent);
+      jsonFileContent = repairs.content;
+      leftOutFields.push(...repairs.leftOut);
+
+      // Validate YAML content. Only SCHEMA errors leave a section out. A business-rule error (a
+      // repeated name, a stale choice, a duplicate ntrode id) is one the form can fix, so it is
+      // loaded and the download gate blocks it until it is fixed: leaving out the section would
+      // lose every item in it. A warning is advisory, so its value is imported too.
+      const issues = blockingIssues(validate(jsonFileContent)).filter(isSchemaIssue);
 
       if (issues.length === 0) {
         // No validation errors - ensure relevant keys exist and load all data
@@ -259,8 +352,9 @@ export async function importFiles(file, options = {}) {
           importSummary: {
             totalFields: formContentKeys.filter(key => Object.hasOwn(jsonFileContent, key)).length,
             importedFields,
-            excludedFields: leftOutSubjectFields,
-            hasExclusions: leftOutSubjectFields.length > 0,
+            excludedFields: leftOutFields,
+            hasExclusions: leftOutFields.length > 0,
+            changedFields: repairs.changed,
           },
         });
         return;
@@ -329,8 +423,13 @@ export async function importFiles(file, options = {}) {
           .map(issue => issue.message)[0] || 'Validation error'
       }));
 
-      // Subject fields left out before validation (see above).
-      excludedFields.push(...leftOutSubjectFields);
+      // Subject fields, and items, left out before validation (see above).
+      excludedFields.push(...leftOutFields);
+
+      // A change to a section that is left out did not happen.
+      const changedFields = repairs.changed.filter(
+        ({ field }) => !allErrorIds.includes(field.split(/[.[]/)[0])
+      );
 
       resolve({
         success: true,
@@ -341,6 +440,7 @@ export async function importFiles(file, options = {}) {
           importedFields,
           excludedFields,
           hasExclusions: excludedFields.length > 0,
+          changedFields,
         },
       });
     };

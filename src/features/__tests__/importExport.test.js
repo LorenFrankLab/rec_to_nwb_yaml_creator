@@ -331,6 +331,7 @@ cameras:
             path: 'cameras[0].id',
             code: 'type',
             severity: 'error',
+            schemaPath: '#/properties/cameras/items/properties/id/type',
             message: 'cameras[0].id must be integer',
           },
         ]);
@@ -386,6 +387,30 @@ cameras:
         expect(result.importSummary.excludedFields).toEqual([]);
       });
 
+      // A business-rule error is one the form can fix; the download gate blocks it until then.
+      it('keeps a section whose only errors are business-rule errors', async () => {
+        const yamlContent = `
+lab: Test Lab
+cameras:
+  - id: 0
+  - id: 0
+`;
+        const file = new File([yamlContent], 'test.yml', { type: 'text/yaml' });
+        validate.mockReturnValue([
+          {
+            path: 'cameras',
+            code: 'duplicate_camera_id',
+            severity: 'error',
+            message: 'Duplicate camera id "0"',
+          },
+        ]);
+
+        const result = await importFiles(file);
+
+        expect(result.formData.cameras).toEqual([{ id: 0 }, { id: 0 }]);
+        expect(result.importSummary.excludedFields).toEqual([]);
+      });
+
       it('leaves out only the sections with errors when errors and warnings are mixed', async () => {
         // ARRANGE
         const yamlContent = `
@@ -408,6 +433,7 @@ electrode_groups:
             path: 'electrode_groups[0].location',
             code: 'required',
             severity: 'error',
+            schemaPath: '#/properties/electrode_groups/items/required',
             message: 'must have required property location',
           },
         ]);
@@ -440,6 +466,7 @@ electrode_groups:
             path: 'electrode_groups[0].device_type',
             code: 'pattern',
             severity: 'error',
+            schemaPath: '#/properties/electrode_groups/items/properties/device_type/pattern',
             message: 'Invalid device type',
           },
         ]);
@@ -470,6 +497,7 @@ cameras:
             path: 'cameras[0].id',
             code: 'type',
             severity: 'error',
+            schemaPath: '#/properties/cameras/items/properties/id/type',
             message: 'cameras[0].id must be integer',
           },
         ]);
@@ -503,6 +531,7 @@ cameras:
             path: 'cameras[0].id',
             code: 'type',
             severity: 'error',
+            schemaPath: '#/properties/cameras/items/properties/id/type',
             message: 'cameras[0].id must be integer',
           },
         ]);
@@ -576,7 +605,7 @@ subject:
       it('lists them beside the sections a partial import leaves out', async () => {
         const file = new File([yamlContent], 'test.yml', { type: 'text/yaml' });
         validate.mockReturnValue([
-          { path: 'lab', code: 'pattern', severity: 'error', message: 'lab is wrong' },
+          { path: 'lab', code: 'pattern', severity: 'error', message: 'lab is wrong', schemaPath: '#/properties/lab/pattern' },
         ]);
 
         const result = await importFiles(file);

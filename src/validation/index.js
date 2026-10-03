@@ -76,5 +76,14 @@ export const isBlockingIssue = (issue) => issue?.severity === 'error';
  */
 export const blockingIssues = (issues) => issues.filter(isBlockingIssue);
 
+/**
+ * Whether an issue comes from the JSON schema (every schema issue carries its AJV schemaPath;
+ * a business-rule issue does not). The import leaves a section out only for these.
+ *
+ * @param {Issue} issue - Any validation issue
+ * @returns {boolean} True for a schema issue
+ */
+export const isSchemaIssue = (issue) => typeof issue?.schemaPath === 'string';
+
 // Re-export individual validation functions for advanced use cases
 export { schemaValidation, rulesValidation, unknownSubjectFields };
