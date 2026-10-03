@@ -115,7 +115,7 @@ export function LegacyFormView() {
    * @param {object} summary Import summary with imported/excluded fields
    */
   const showImportSummary = (summary) => {
-    const { importedFields, excludedFields, hasExclusions, totalFields } = summary;
+    const { importedFields, excludedFields, hasExclusions, totalFields, toFix = [] } = summary;
 
     // Format field names for display (convert snake_case to Title Case)
     const formatFieldName = (field) =>
@@ -151,11 +151,23 @@ export function LegacyFormView() {
       }).join('\n');
     }
 
+    // Imported values that stop trodes_to_nwb: the download stays blocked until they are fixed
+    if (toFix.length > 0) {
+      message += `\n\nTO FIX BEFORE DOWNLOAD (${toFix.length}):\n`;
+      message += toFix.map(({ location, message: issueMessage }) => `  ${location}: ${issueMessage}`).join('\n');
+    }
+
+    let title = 'Import Summary - Success';
+    if (hasExclusions) {
+      title = 'Import Summary - Partial Import';
+    } else if (toFix.length > 0) {
+      title = 'Import Summary - Values to Fix';
+    }
     setAlertState({
       isOpen: true,
       message,
-      title: hasExclusions ? 'Import Summary - Partial Import' : 'Import Summary - Success',
-      type: hasExclusions ? 'warning' : 'success',
+      title,
+      type: hasExclusions || toFix.length > 0 ? 'warning' : 'success',
     });
   };
 

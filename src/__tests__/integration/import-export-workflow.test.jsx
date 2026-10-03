@@ -710,4 +710,26 @@ describe('Import/Export Workflow Integration', () => {
       expect(exported().subject).not.toHaveProperty('age');
     });
   });
+
+  /**
+   * Two optical fibers with one name stop trodes_to_nwb, but the user can rename one in the form:
+   * the upload keeps both and the summary says what to fix before downloading.
+   */
+  describe('Importing a file with a value to fix', () => {
+    it('keeps both fibers and lists the repeated name to fix', { timeout: 30000 }, async () => {
+      const user = userEvent.setup();
+      await renderLegacyApp();
+      const session = YAML.parse(
+        fs.readFileSync(path.join(__dirname, '../fixtures/valid/20230622_sample_metadata.yml'), 'utf8')
+      );
+      session.optical_fiber = [session.optical_fiber[0], { ...session.optical_fiber[0] }];
+
+      await user.upload(getFileInput(), new File([YAML.stringify(session)], 'fibers.yml', { type: 'text/yaml' }));
+
+      expect(await screen.findByText(/TO FIX BEFORE DOWNLOAD \(1\)/)).toBeInTheDocument();
+      expect(screen.getByText(/Optical fiber: More than one optical fiber is named "Fiber 1"/)).toBeInTheDocument();
+      expect(document.getElementById('optical_fiber-name-0')).toHaveValue('Fiber 1');
+      expect(document.getElementById('optical_fiber-name-1')).toHaveValue('Fiber 1');
+    });
+  });
 });

@@ -23,7 +23,7 @@ import {
 } from '../io/yaml';
 import { emptyFormData, genderAcronym } from '../valueList';
 import { blockingIssues, isBlockingIssue } from '../validation/issueTypes';
-import { unknownSubjectFields } from '../validation/rules/subjectValueRules';
+import { subjectValueRules, unknownSubjectFields } from '../validation/rules/subjectValueRules';
 import { legacyFormRules } from '../validation/rules/legacyFormRules';
 
 /**
@@ -54,6 +54,20 @@ function topLevelFieldFromPath(issuePath) {
   if (typeof issuePath !== 'string' || issuePath.length === 0) return '';
   return issuePath.split('[')[0].split('.')[0];
 }
+
+/**
+ * Blocking issues an upload does NOT leave a section out for: the value stops trodes_to_nwb, but
+ * the user can fix it in the form, so it is imported and the download stays blocked until it is.
+ * Leaving out the section threw away every other value in it (all the fibers, or the whole
+ * subject). Files written by earlier versions often have repeated opto names: Add copied the name.
+ */
+const FIXED_IN_FORM = new Set([
+  'duplicate_opto_device_name', // rename the fiber, injection or source
+  'invalid_injection_hemisphere', // choose left or right
+  'subject_date_of_birth_format', // pick the date of birth again
+  'subject_value_type', // only a numeric age is left by now (see below): retype it in the Age field
+  'no_tasks', // add a task
+]);
 
 /** Every message for an import that fails says so: the page keeps the form it already has. */
 const FORM_NOT_CHANGED = 'The form was not changed.';
@@ -103,6 +117,8 @@ function warningsConfirmMessage(warnings) {
  * form data with appropriate defaults. Handles partial imports when some
  * fields have validation ERRORS; warning-severity issues never exclude a
  * section — the value is imported so the user can see and fix it in the form.
+ * Neither do the errors the form can fix (FIXED_IN_FORM): those are imported and
+ * listed in `importSummary.toFix`, and they block the download until fixed.
  *
  * @param {File} file - File object to import
  * @param {object} [options] - Optional configuration
@@ -118,6 +134,7 @@ function warningsConfirmMessage(warnings) {
  * @returns {string[]} result.importSummary.importedFields - Successfully imported field names
  * @returns {Array<{field: string, reason: string, paths: string[]}>} result.importSummary.excludedFields - Excluded fields with the first validation reason and the full nested paths under that section
  * @returns {boolean} result.importSummary.hasExclusions - Whether any fields were excluded
+ * @returns {Array<{path: string, location: string, code: string, message: string}>} result.importSummary.toFix - Errors in imported values that block the download until fixed in the form
  *
  * @example
  * const result = await importFiles(file);
@@ -250,17 +267,44 @@ export async function importFiles(file, options = {}) {
         reason: `Left out: "${key}" is not a field of the NWB subject, and trodes_to_nwb fails on it.`,
         paths: [],
       }));
+      // The same for a subject value of a type pynwb rejects that the form has no field to fix: a
+      // strain or age__reference (no field), or an age that is not text (a number shows in the Age
+      // field, so it is kept and retyped there).
+      const subjectAge = jsonFileContent.subject?.age;
+      const uneditableSubjectValues = subjectValueRules({ subject: jsonFileContent.subject })
+        .filter((issue) => issue.code === 'subject_value_type')
+        .filter((issue) => !(issue.field === 'age' && typeof subjectAge === 'number'));
+      leftOutSubjectFields.push(
+        ...uneditableSubjectValues.map((issue) => ({
+          field: `subject.${issue.field}`,
+          reason: `Left out: ${issue.message}`,
+          paths: [],
+        }))
+      );
       if (leftOutSubjectFields.length > 0) {
         const subject = { ...jsonFileContent.subject };
         unknownSubjectFields(subject).forEach((key) => delete subject[key]);
+        uneditableSubjectValues.forEach((issue) => delete subject[issue.field]);
         jsonFileContent = { ...jsonFileContent, subject };
       }
 
       // Validate YAML content. Only ERRORS exclude a section: a warning is advisory (a
       // placeholder subject id, a non-absolute associated-file path) and the value must survive
       // the import so the user can see and fix it in the form. Excluding on a warning silently
-      // discards a whole section of a scientifically valid file.
-      const issues = blockingIssues(validateLegacyForm(jsonFileContent));
+      // discards a whole section of a scientifically valid file. Nor do the errors the user can
+      // fix in the form (FIXED_IN_FORM): those are listed in the summary and block the download.
+      const errors = blockingIssues(validateLegacyForm(jsonFileContent));
+      const issues = errors.filter((issue) => !FIXED_IN_FORM.has(issue.code));
+      const issuesToFix = (excludedSections) =>
+        errors
+          .filter((issue) => FIXED_IN_FORM.has(issue.code))
+          .filter((issue) => !excludedSections.includes(topLevelFieldFromPath(issue.path)))
+          .map(({ path: issuePath, code, message }) => ({
+            path: issuePath,
+            location: describeIssueLocation(issuePath),
+            code,
+            message,
+          }));
 
       if (issues.length === 0) {
         // No validation errors - ensure relevant keys exist and load all data
@@ -291,6 +335,7 @@ export async function importFiles(file, options = {}) {
             importedFields,
             excludedFields: leftOutSubjectFields,
             hasExclusions: leftOutSubjectFields.length > 0,
+            toFix: issuesToFix([]),
           },
         });
         return;
@@ -401,6 +446,7 @@ export async function importFiles(file, options = {}) {
           importedFields,
           excludedFields,
           hasExclusions: excludedFields.length > 0,
+          toFix: issuesToFix(allErrorIds),
         },
       });
     };
