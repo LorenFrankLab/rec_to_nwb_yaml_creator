@@ -151,15 +151,7 @@ DataListElementComponent.defaultProps = {
   validation: null,
 };
 
-const arePropsEqual = (prevProps, nextProps) => {
-  return (
-    prevProps.value === nextProps.value &&
-    prevProps.name === nextProps.name &&
-    prevProps.dataItems === nextProps.dataItems &&
-    prevProps.required === nextProps.required
-  );
-};
-
-const DataListElement = memo(DataListElementComponent, arePropsEqual);
+// memo compares every prop, handlers and id included (see InputElement).
+const DataListElement = memo(DataListElementComponent);
 
 export default DataListElement;
