@@ -9,9 +9,9 @@
  * Key behaviors:
  * 1. Sets device_type on electrode group
  * 2. Generates ntrode objects (one per shank) with channel mappings
- * 3. Removes old ntrode maps for this electrode group
- * 4. Adds new ntrode maps to formData
- * 5. Renumbers all ntrode_id values sequentially (1, 2, 3, ...)
+ * 3. Replaces this group's old ntrode maps with them, in the same place
+ * 4. Keeps the group's ntrode_ids; extra shanks get ids after the largest in
+ *    use, and other groups' ntrode_ids never change
  *
  * Architecture understanding:
  * - getProbeShanks(type): each shank's electrode ids (the map structure)
@@ -275,7 +275,7 @@ describe('App.js - nTrodeMapSelected()', () => {
       });
     });
 
-    it('should renumber all ntrode_id values after replacement', async () => {
+    it('should keep the group\'s ntrode_id and number added shanks after it', async () => {
       const { container } = await renderLegacyApp();
       const user = userEvent.setup();
 
