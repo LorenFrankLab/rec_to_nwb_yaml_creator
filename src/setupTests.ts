@@ -1,10 +1,16 @@
 import '@testing-library/jest-dom';
 import { afterEach, expect } from 'vitest';
-import { cleanup } from '@testing-library/react';
+import { cleanup, configure } from '@testing-library/react';
 import { toHaveNoViolations } from 'jest-axe';
 
 // Import custom matchers
 import './__tests__/helpers/custom-matchers';
+
+// The app's routes are lazy-loaded: the first render of a route in a fresh worker compiles it,
+// which can exceed Testing Library's 1 s default for findBy/waitFor on a busy machine (the Day
+// Editor and legacy form tests timed out that way). A longer ceiling only matters when an
+// element is slow to appear; passing waits return as soon as it does.
+configure({ asyncUtilTimeout: 5000 });
 
 // Suite-wide Axe matcher for the accessibility integration tests.
 expect.extend(toHaveNoViolations);
