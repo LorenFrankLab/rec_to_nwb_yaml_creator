@@ -79,9 +79,9 @@ const importYaml = async (page, fixturePath, settleMs = 500) => {
 };
 
 // The pinned upstream trodes_to_nwb sample ships `subject_id: "54321"`, which the app flags as a
-// template placeholder (`placeholder_subject_id`) and refuses to export. That is correct behavior,
-// so the export smoke tests below upload the fixture BYTE FOR BYTE and then correct that one field
-// in the form, exactly as a user would, rather than uploading a doctored copy of the fixture.
+// template placeholder (`placeholder_subject_id`, a warning). The export smoke tests below upload the
+// fixture BYTE FOR BYTE and then correct that one field in the form, exactly as a user would, rather
+// than uploading a doctored copy of the fixture.
 const setRealSubjectId = async (page, subjectId = 'sample-rat') => {
   const subjectIdInput = page.locator('#subject-subjectId');
   await expect(subjectIdInput).toBeVisible({ timeout: 5000 });
@@ -107,6 +107,9 @@ const exportYaml = async (page) => {
     })),
   );
   expect(invalidFields, 'the imported YAML should satisfy legacy form validation').toEqual([]);
+  // The sample still has warnings (e.g. its relative associated-file paths): the download asks once
+  // to confirm them. Accept, as a user who has read them would.
+  page.once('dialog', (dialog) => dialog.accept());
   return await waitForDownload(page, async () => {
     await downloadButton.click();
     await page.waitForTimeout(500);
