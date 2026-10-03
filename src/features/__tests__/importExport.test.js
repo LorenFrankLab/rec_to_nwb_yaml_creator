@@ -20,10 +20,11 @@ vi.mock('../../validation', () => ({
   validate: vi.fn(),
 }));
 
-vi.mock('../../io/yaml', () => ({
+vi.mock('../../io/yaml', async (importOriginal) => ({
   encodeYaml: vi.fn(),
   formatDeterministicFilename: vi.fn(),
-  decodeYaml: vi.fn(),
+  // importFiles reads the file with the real decoder; only the export side is mocked.
+  decodeYaml: (await importOriginal()).decodeYaml,
   downloadYamlFile: vi.fn(),
 }));
 
@@ -133,6 +134,22 @@ describe('importExport', () => {
         expect(result.formData).toBeNull();
         expect(mockAlert).toHaveBeenCalledTimes(1);
         expect(mockAlert.mock.calls[0][0]).toContain('Invalid YAML file');
+        expect(mockAlert.mock.calls[0][0]).toContain(FORM_NOT_CHANGED);
+      });
+
+      // An alias inside the block its anchor names makes the data loop forever.
+      it('returns error and leaves the form alone when an alias refers back to its own anchor', async () => {
+        validate.mockReturnValue([]);
+        const file = new File(['lab: Test Lab\nsubject: &s\n  self: *s\n'], 'test.yml', { type: 'text/yaml' });
+
+        const result = await importFiles(file);
+
+        expect(result.success).toBe(false);
+        expect(result.error).toContain('Invalid YAML file');
+        expect(result.error).toContain('refers to itself');
+        expect(result.formData).toBeNull();
+        expect(mockAlert).toHaveBeenCalledTimes(1);
+        expect(mockAlert.mock.calls[0][0]).toContain('refers to itself');
         expect(mockAlert.mock.calls[0][0]).toContain(FORM_NOT_CHANGED);
       });
 
@@ -268,6 +285,30 @@ institution: Test University
         expect(result.formData.session_id).toBe('');
         expect(result.formData.experimenter_name).toEqual([]);
         expect(result.formData.subject).toEqual(emptyFormData.subject);
+      });
+
+      // PyYAML writes &id001 / *id001 when a script dumps one dict in several places. Each place
+      // must become its own object, or editing one camera would edit the other.
+      it('imports each alias of an anchored block as a separate object', async () => {
+        const yamlContent = `
+lab: Test Lab
+cameras:
+  - &camera
+    id: 0
+    model: TestCam
+  - *camera
+`;
+        validate.mockReturnValue([]);
+        const file = new File([yamlContent], 'test.yml', { type: 'text/yaml' });
+
+        const result = await importFiles(file);
+
+        expect(result.success).toBe(true);
+        expect(result.formData.cameras).toEqual([
+          { id: 0, model: 'TestCam' },
+          { id: 0, model: 'TestCam' },
+        ]);
+        expect(result.formData.cameras[1]).not.toBe(result.formData.cameras[0]);
       });
     });
 

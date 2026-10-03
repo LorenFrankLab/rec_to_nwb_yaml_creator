@@ -504,4 +504,74 @@ describe('Import/Export Workflow Integration', () => {
       expect(document.getElementById('tasks-camera_id-1-1')).toBeChecked();
     });
   });
+
+  /**
+   * PyYAML writes one anchored block (&id001) and aliases (*id001) when a lab script dumps the
+   * same channel map for every ntrode. Each ntrode must stay its own: marking a bad channel or
+   * unmapping a channel on one tetrode used to change it on every tetrode.
+   */
+  describe('Importing a file whose ntrodes share an anchored channel map', () => {
+    const anchoredYaml = () => {
+      const yaml = getMinimalCompleteYaml();
+      return `${yaml.slice(0, yaml.indexOf('ntrode_electrode_group_channel_map:'))}ntrode_electrode_group_channel_map:
+  - ntrode_id: 0
+    electrode_group_id: 0
+    bad_channels: &id001 []
+    map: &id002
+      "0": 0
+      "1": 1
+      "2": 2
+      "3": 3
+  - ntrode_id: 1
+    electrode_group_id: 1
+    bad_channels: *id001
+    map: *id002
+`;
+    };
+    const badChannel = (ntrodeIndex, channel) =>
+      document.getElementById(`ntrode_electrode_group_channel_map-bad_channels-${ntrodeIndex}-${channel}`);
+    // Each tetrode group renders its one shank with the same id; the first is electrode group 0.
+    const channelZeroMaps = () =>
+      document.querySelectorAll('[id="ntrode_electrode_group_channel_map-map-0-0-0"]');
+
+    const importAnchoredFile = async (user) => {
+      render(
+        <StoreProvider>
+          <App />
+        </StoreProvider>
+      );
+      await user.upload(getFileInput(), new File([anchoredYaml()], 'shared.yml', { type: 'text/yaml' }));
+      await waitFor(() => expect(screen.getByLabelText(/^lab$/i)).toHaveValue('Test Lab'));
+      await waitFor(() => expect(badChannel(1, 2)).not.toBeNull());
+    };
+
+    it('marks a bad channel on one tetrode only', { timeout: 30000 }, async () => {
+      const user = userEvent.setup();
+      await importAnchoredFile(user);
+
+      await user.click(badChannel(0, 2));
+
+      await waitFor(() => expect(badChannel(0, 2)).toBeChecked());
+      expect(badChannel(1, 2)).not.toBeChecked();
+
+      await triggerExport();
+      await waitFor(() => expect(mockBlob).not.toBeNull());
+      const exported = mockBlob.content[0];
+      expect(exported).not.toMatch(/[&*]a\d/);
+      const ntrodes = YAML.parse(exported).ntrode_electrode_group_channel_map;
+      expect(ntrodes[0].bad_channels).toEqual([2]);
+      expect(ntrodes[1].bad_channels).toEqual([]);
+    });
+
+    it('unmaps a channel on one tetrode only', { timeout: 30000 }, async () => {
+      const user = userEvent.setup();
+      await importAnchoredFile(user);
+      expect(channelZeroMaps()).toHaveLength(2);
+
+      fireEvent.change(channelZeroMaps()[0], { target: { value: '-1' } });
+
+      await waitFor(() => expect(channelZeroMaps()[0].value).toBe('-1'));
+      expect(channelZeroMaps()[1].value).toBe('0');
+    });
+  });
 });
