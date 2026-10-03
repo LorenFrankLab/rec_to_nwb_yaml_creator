@@ -161,6 +161,34 @@ describe('AnimalView — catalog containers persist edits to the store (GAP-A)',
     expect(JSON.parse(screen.getByTestId('data-acq').textContent)).toEqual([rigA, rigB]);
   });
 
+  it('makes another recording system the default without moving the days on "Default" (W12)', async () => {
+    const user = userEvent.setup();
+    const rigA = { name: 'Rig A', system: 'SpikeGadgets', amplifier: 'Intan', adc_circuit: 'Intan' };
+    const rigB = { name: 'Rig B', system: 'SpikeGadgets', amplifier: 'Intan RHD2164', adc_circuit: 'Intan RHD2164' };
+    const animal = buildAnimal({
+      devices: { ...buildAnimal().devices, data_acq_device: [rigA, rigB] },
+      days: ['remy-2023-06-22'],
+    });
+    const days = { 'remy-2023-06-22': { id: 'remy-2023-06-22', animalId: 'remy', date: '2023-06-22', session: {} } };
+    /** Live-store probe: remy's 06-22 recording-system reference. */
+    function DayProbe() {
+      const { model } = useStoreContext();
+      return <pre data-testid="day-rig">{String(model.workspace.days['remy-2023-06-22']?.data_acq_device_name)}</pre>;
+    }
+    render(
+      <StoreProvider initialState={{ workspace: { animals: { remy: animal }, days, settings: {} } }}>
+        <AnimalView animalId="remy" tab="recording-system" />
+        <DataAcqProbe />
+        <DayProbe />
+      </StoreProvider>
+    );
+
+    await user.click(screen.getByRole('button', { name: /Actions for recording system Rig B/i }));
+    await user.click(screen.getByRole('menuitem', { name: /make Rig B the default/i }));
+    expect(JSON.parse(screen.getByTestId('data-acq').textContent)).toEqual([rigB, rigA]);
+    expect(screen.getByTestId('day-rig')).toHaveTextContent('Rig A');
+  });
+
   /** Live-store probe: exposes remy's task-type catalog for assertions. */
   function TaskTypesProbe() {
     const { model } = useStoreContext();

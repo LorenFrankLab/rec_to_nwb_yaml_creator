@@ -20,7 +20,7 @@ interface RecordingSystemContainerProps {
 }
 
 export default function RecordingSystemContainer({ animal, onFieldUpdate }: RecordingSystemContainerProps) {
-  const { model } = useStoreContext();
+  const { model, actions } = useStoreContext();
   // Data-acq identities elsewhere in the dataset, for the DataAcqSection divergent-reuse check.
   // Exclude this animal's ENTIRE catalog (not just index 0): intra-catalog name collisions are caught
   // by the editor's own uniqueness check, so the cross-animal registry must carry only OTHER animals'
@@ -35,6 +35,12 @@ export default function RecordingSystemContainer({ animal, onFieldUpdate }: Reco
     [animal, model.workspace]
   );
   return (
-    <DataAcqSection animal={animal} onFieldUpdate={onFieldUpdate} dataAcqRegistry={dataAcqRegistry} days={days} />
+    <DataAcqSection
+      animal={animal}
+      onFieldUpdate={onFieldUpdate}
+      dataAcqRegistry={dataAcqRegistry}
+      days={days}
+      onMakeDefault={(name) => actions.makeDataAcqDeviceDefault(animal.id, name)}
+    />
   );
 }

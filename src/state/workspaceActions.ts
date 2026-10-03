@@ -5,7 +5,13 @@ import {
   getCurrentTimestamp,
   getCurrentDate,
 } from './workspaceUtils';
-import { getAnimalDayIds, getConfigHistory, getAnimalNtrodeMaps } from './workspaceSelectors';
+import {
+  getAnimalDayIds,
+  getConfigHistory,
+  getAnimalNtrodeMaps,
+  getDataAcqDevices,
+  getDayDataAcqDeviceName,
+} from './workspaceSelectors';
 import { normalizeDevices } from '../utils/deviceNormalization';
 import { nearestEarlierDayId } from '../domain/dayCarryPolicy';
 import { subjectIdCollision } from '../domain/animalCreation';
@@ -595,6 +601,54 @@ export function createWorkspaceActions({
           changed = true;
         }
         return changed ? { ...prev, days: nextDays, lastModified: now } : prev;
+      });
+    },
+
+    /**
+     * Make another recording system the animal's DEFAULT (the first catalog entry, which new days
+     * and every day that names no system export). The days that rely on the current default are
+     * first set to name it, so their exports stay exactly as they were; then the chosen system
+     * moves to the front. One commit, so no state in between is ever observed.
+     *
+     * @param animalId - Animal identifier.
+     * @param name - The catalog name of the system that becomes the default.
+     * @throws If the animal does not exist.
+     */
+    makeDataAcqDeviceDefault: (animalId: string, name: string) => {
+      commitWorkspace((prev) => {
+        const animal = prev.animals[animalId];
+        if (!animal) throw new Error(`Animal "${animalId}" not found`);
+        const catalog = getDataAcqDevices(animal);
+        const index = catalog.findIndex((device) => device?.name === name);
+        const currentName = catalog[0]?.name;
+        // Already the default, not in the catalog, or a default without a name to pin days to.
+        if (index <= 0 || typeof currentName !== 'string' || currentName === '') return prev;
+        const now = getCurrentTimestamp();
+        const nextDays = { ...prev.days };
+        for (const dayId of getAnimalDayIds(animal)) {
+          const day = prev.days[dayId];
+          if (!day || (day.animalId != null && day.animalId !== animalId)) continue;
+          if (getDayDataAcqDeviceName(day)) continue; // already names its system
+          nextDays[dayId] = applyDayUpdates(
+            day,
+            {
+              data_acq_device_name: currentName,
+              provenance: { fields: { data_acq_device_name: 'animal-default' } },
+            },
+            now
+          );
+        }
+        const updatedAnimal = applyAnimalUpdates(
+          animal,
+          { data_acq_device: [catalog[index], ...catalog.filter((_, i) => i !== index)] },
+          now
+        );
+        return {
+          ...prev,
+          animals: { ...prev.animals, [animalId]: updatedAnimal },
+          days: nextDays,
+          lastModified: now,
+        };
       });
     },
 

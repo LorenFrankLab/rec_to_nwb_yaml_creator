@@ -75,6 +75,19 @@ function usedByNote(count: number): string | undefined {
   return `Used by ${days}: deleting it would change what ${count === 1 ? 'it exports' : 'they export'}.`;
 }
 
+/**
+ * The note on "Make default" saying which days stay on the current default.
+ *
+ * @param count - The days that name no system (they export the default).
+ * @param defaultName - The current default's name.
+ * @returns The note: new days use the chosen system, those days keep the current one.
+ */
+function keepsDefaultNote(count: number, defaultName: string): string {
+  if (count === 0) return 'New recording days will use it.';
+  const days = count === 1 ? '1 recording day keeps' : `${count} recording days keep`;
+  return `New recording days will use it; ${days} ${defaultName}.`;
+}
+
 /** The open add/edit modal state (null when closed). `index` is the edited catalog position. */
 interface EditingState {
   mode: 'add' | 'edit';
@@ -97,6 +110,11 @@ interface DataAcqSectionProps {
   dataAcqRegistry?: IdentityRegistryEntry[];
   /** This animal's recording days, so a system they use is not deleted from under them. */
   days?: Day[];
+  /**
+   * Make the named system the default. The host first sets the days on "Default" to name the
+   * current default, so their exports do not change. Absent ⇒ the action is not offered.
+   */
+  onMakeDefault?: (name: string) => void;
 }
 
 /**
@@ -111,9 +129,12 @@ interface DataAcqSectionProps {
  * The technical DEFAULTS (`raw_data_to_volts`, `times_period_multiplier`) are animal-level
  * (`animal.technicalDefaults`, seeded into each day's `technical`); never exported directly.
  */
-export default function DataAcqSection({ animal, onFieldUpdate, dataAcqRegistry = [], days = [] }: DataAcqSectionProps) {
+export default function DataAcqSection({ animal, onFieldUpdate, dataAcqRegistry = [], days = [], onMakeDefault }: DataAcqSectionProps) {
   const catalog = getDataAcqDevices(animal);
   const dayCounts = daysUsingEach(catalog, days);
+  // Days that name no system export the default; making another one the default keeps them on it.
+  const daysOnDefault = days.filter((day) => !getDayDataAcqDeviceName(day)).length;
+  const defaultName = normalizeDeviceFields(catalog[0] ?? {}).name;
   const defaults: Partial<TechnicalDefaults> = animal.technicalDefaults || {};
   const titleId = useId();
 
@@ -434,7 +455,20 @@ export default function DataAcqSection({ animal, onFieldUpdate, dataAcqRegistry 
                   {/* Always present (consistent with the Electrode Groups / Cameras tabs), but
                       disabled for the last system — the schema requires at least one — and for a
                       system recording days use, saying how many. */}
-                  <OverflowMenu label={`Actions for recording system ${d.name}`} items={[{ key: 'delete', label: `Delete recording system ${d.name}`, onSelect: () => deleteAt(index), disabled: catalog.length <= 1 || dayCounts[index] > 0, description: usedByNote(dayCounts[index]), }]} />
+                  <OverflowMenu
+                    label={`Actions for recording system ${d.name}`}
+                    items={[
+                      ...(onMakeDefault && index > 0 && defaultName !== ''
+                        ? [{
+                            key: 'make-default',
+                            label: `Make ${d.name} the default`,
+                            onSelect: () => onMakeDefault(d.name),
+                            description: keepsDefaultNote(daysOnDefault, defaultName),
+                          }]
+                        : []),
+                      { key: 'delete', label: `Delete recording system ${d.name}`, onSelect: () => deleteAt(index), disabled: catalog.length <= 1 || dayCounts[index] > 0, description: usedByNote(dayCounts[index]), },
+                    ]}
+                  />
                 </td>
               </tr>
             );

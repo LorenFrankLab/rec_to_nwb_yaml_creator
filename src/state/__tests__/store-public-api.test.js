@@ -40,6 +40,7 @@ describe('useStore public API contract', () => {
       'handleChange',
       'itemSelected',
       'loadImportedFormData',
+      'makeDataAcqDeviceDefault',
       'nTrodeMapSelected',
       'onBlur',
       'onMapInput',
