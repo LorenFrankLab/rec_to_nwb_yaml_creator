@@ -1,6 +1,5 @@
 import React from 'react';
 import { useStoreContext } from '../state/StoreContext';
-import { sanitizeTitle } from '../utils';
 import InputElement from '../element/InputElement';
 import DataListElement from '../element/DataListElement';
 import ArrayItemControl from '../element/ArrayItemControl';
@@ -32,7 +31,10 @@ export default function CamerasFields() {
             return (
               <details
                 open
-                key={`cameras-${sanitizeTitle(cameras.id)}`}
+                // Keyed by position, not by id: editing the id must not
+                // remount the row (that drops focus mid-typing and skips the
+                // blur that stores the id as a number).
+                key={`cameras-${index}`}
                 className="array-item"
               >
                 <summary>{formatCameraLabel(cameras)}</summary>
