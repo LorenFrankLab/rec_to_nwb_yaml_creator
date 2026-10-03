@@ -1335,7 +1335,7 @@ experimenter: Missing Required Fields
 
       const filename = generateFilename(data);
 
-      // Format: {mmddYYYY}_{subject_id}_metadata.yml
+      // Format: {YYYYMMDD}_{subject_id}_metadata.yml
       expect(filename).toMatch(/^\d{8}_rat01_metadata\.yml$/);
     });
 

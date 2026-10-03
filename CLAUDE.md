@@ -226,7 +226,7 @@ Spyglass database (DataJoint)
 
 3. **Hardware Channel Mapping**: The `ntrode_electrode_group_channel_map` section created by this app is validated against the actual .rec file hardware configuration during conversion. Mismatches will cause conversion failures.
 
-4. **File Naming Convention**: Generated YAML files follow strict naming: `{EXPERIMENT_DATE_in_format_mmddYYYY}_{subject_id}_metadata.yml`. The Python package's file scanner expects this format to group files by recording session.
+4. **File Naming Convention**: Generated YAML files are named `{EXPERIMENT_DATE_in_format_YYYYMMDD}_{subject_id}_metadata.yml`. trodes_to_nwb's file scanner (`data_scanner.py`) splits the name on `_`, reads the first part as the integer date and the second as the animal, and groups the file with the recordings named `{YYYYMMDD}_{animal}_{epoch}_{tag}.rec` that have the same date and the same, case-sensitive animal. So the date is year-first and the subject id is written exactly as entered (never lower-cased), and a subject id containing `_` cannot match. The form has no date field, so the user replaces the placeholder with the recording date. Any other spelling (a month-first date, a lower-cased animal) leaves the session without its metadata: "There must be exactly one metadata file per session".
 
 5. **Optogenetics Dependencies**: If any optogenetics fields are present (virus_injection, optical_fiber, opto_excitation_source), the Python package requires ALL optogenetics sections to be present. Partial optogenetics metadata will fail validation.
 
@@ -363,7 +363,7 @@ Validation errors are displayed via:
 ### File Import/Export
 
 - **Import:** Users can upload existing YAML files via `importFile()`. Invalid fields are excluded with error notifications, valid fields populate the form
-- **Export:** `generateYMLFile()` validates form data, converts to YAML using the `yaml` library, and triggers browser download with filename pattern: `{EXPERIMENT_DATE_in_format_mmddYYYY}_{subject_id}_metadata.yml`
+- **Export:** `generateYMLFile()` validates form data, converts to YAML using the `yaml` library, and triggers browser download with filename pattern: `{EXPERIMENT_DATE_in_format_YYYYMMDD}_{subject_id}_metadata.yml` (see File Naming Convention under Critical Integration Points)
 
 ### Component Organization
 

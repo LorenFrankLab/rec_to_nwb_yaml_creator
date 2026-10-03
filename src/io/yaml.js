@@ -237,28 +237,38 @@ export function decodeYaml(text) {
 /**
  * Generates deterministic filename for metadata YAML export
  *
- * Format: {EXPERIMENT_DATE_in_format_mmddYYYY}_{subject_id}_metadata.yml
+ * Format: {EXPERIMENT_DATE_in_format_YYYYMMDD}_{subject_id}_metadata.yml
  *
- * This filename format is required by trodes_to_nwb Python package.
- * The file scanner expects this pattern to group files by recording session.
+ * trodes_to_nwb groups a session's files by name (data_scanner.py): it splits the name on `_`,
+ * reads the first part as the integer date and the second as the animal, and matches them with
+ * the recordings, named `{YYYYMMDD}_{animal}_{epoch}_{tag}.rec`. So the date is year-first and
+ * the subject ID is written exactly as entered: a month-first date or a lower-cased animal puts
+ * the file in another group, and the session converts without it ("There must be exactly one
+ * metadata file per session"). The form has no date field, so without
+ * `EXPERIMENT_DATE_in_format_YYYYMMDD` the name starts with that placeholder for the user to
+ * replace with the recording date.
  *
- * @param {object} model - Form data model containing experiment date and subject ID
- * @param {string} model.EXPERIMENT_DATE_in_format_mmddYYYY - Experiment date (mmddYYYY format)
+ * @param {object} model - Form data model containing the subject ID
+ * @param {string} [model.EXPERIMENT_DATE_in_format_YYYYMMDD] - Recording date (YYYYMMDD), when known
  * @param {object} model.subject - Subject information
- * @param {string} model.subject.subject_id - Subject identifier
+ * @param {string} model.subject.subject_id - Subject identifier, used exactly as entered
  * @returns {string} Deterministic filename following trodes_to_nwb convention
  *
  * @example
+ * formatDeterministicFilename({ subject: { subject_id: 'Rat01' } });
+ * // Returns: "{EXPERIMENT_DATE_in_format_YYYYMMDD}_Rat01_metadata.yml"
+ *
+ * @example
  * const model = {
- *   EXPERIMENT_DATE_in_format_mmddYYYY: '06222023',
+ *   EXPERIMENT_DATE_in_format_YYYYMMDD: '20230622',
  *   subject: { subject_id: 'Rat01' }
  * };
  * const filename = formatDeterministicFilename(model);
- * // Returns: "06222023_rat01_metadata.yml"
+ * // Returns: "20230622_Rat01_metadata.yml"
  */
 export function formatDeterministicFilename(model) {
-  const experimentDate = model.EXPERIMENT_DATE_in_format_mmddYYYY || '{EXPERIMENT_DATE_in_format_mmddYYYY}';
-  const subjectId = (model.subject?.subject_id || '').toLocaleLowerCase();
+  const experimentDate = model.EXPERIMENT_DATE_in_format_YYYYMMDD || '{EXPERIMENT_DATE_in_format_YYYYMMDD}';
+  const subjectId = model.subject?.subject_id || '';
   return `${experimentDate}_${subjectId}_metadata.yml`;
 }
 
