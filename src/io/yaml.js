@@ -18,7 +18,89 @@
 import YAML from 'yaml';
 
 /**
+ * Plain (unquoted) scalars PyYAML reads as something other than a string.
+ *
+ * trodes_to_nwb reads the file with PyYAML's yaml.safe_load (YAML 1.1). It types a plain scalar
+ * by these implicit resolvers, which match more than YAML 1.2 does: `20230622_01` is the int
+ * 2023062201, `Off` is False, `1:1.4` is 61.4 and `2023-06-22` is a date. encodeYaml writes a
+ * string that matches one in double quotes. Copied from PyYAML 6.0.3, yaml/resolver.py (the
+ * Resolver.add_implicit_resolver calls) with the re.X layout whitespace removed; Python's `$`
+ * also matches before a final newline, which a plain scalar never ends with:
+ *
+ *   bool       ^(?:yes|Yes|YES|no|No|NO
+ *              |true|True|TRUE|false|False|FALSE
+ *              |on|On|ON|off|Off|OFF)$
+ *   float      ^(?:[-+]?(?:[0-9][0-9_]*)\.[0-9_]*(?:[eE][-+][0-9]+)?
+ *              |\.[0-9][0-9_]*(?:[eE][-+][0-9]+)?
+ *              |[-+]?[0-9][0-9_]*(?::[0-5]?[0-9])+\.[0-9_]*
+ *              |[-+]?\.(?:inf|Inf|INF)
+ *              |\.(?:nan|NaN|NAN))$
+ *   int        ^(?:[-+]?0b[0-1_]+
+ *              |[-+]?0[0-7_]+
+ *              |[-+]?(?:0|[1-9][0-9_]*)
+ *              |[-+]?0x[0-9a-fA-F_]+
+ *              |[-+]?[1-9][0-9_]*(?::[0-5]?[0-9])+)$
+ *   merge      ^(?:<<)$
+ *   null       ^(?: ~
+ *              |null|Null|NULL
+ *              | )$
+ *   timestamp  ^(?:[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]
+ *              |[0-9][0-9][0-9][0-9] -[0-9][0-9]? -[0-9][0-9]?
+ *               (?:[Tt]|[ \t]+)[0-9][0-9]?
+ *               :[0-9][0-9] :[0-9][0-9] (?:\.[0-9]*)?
+ *               (?:[ \t]*(?:Z|[-+][0-9][0-9]?(?::[0-9][0-9])?))?)$
+ *   value      ^(?:=)$
+ */
+const PYYAML_NON_STRING_SCALARS = [
+  /^(?:yes|Yes|YES|no|No|NO|true|True|TRUE|false|False|FALSE|on|On|ON|off|Off|OFF)$/,
+  /^(?:[-+]?(?:[0-9][0-9_]*)\.[0-9_]*(?:[eE][-+][0-9]+)?|\.[0-9][0-9_]*(?:[eE][-+][0-9]+)?|[-+]?[0-9][0-9_]*(?::[0-5]?[0-9])+\.[0-9_]*|[-+]?\.(?:inf|Inf|INF)|\.(?:nan|NaN|NAN))$/,
+  /^(?:[-+]?0b[0-1_]+|[-+]?0[0-7_]+|[-+]?(?:0|[1-9][0-9_]*)|[-+]?0x[0-9a-fA-F_]+|[-+]?[1-9][0-9_]*(?::[0-5]?[0-9])+)$/,
+  /^(?:<<)$/,
+  /^(?:~|null|Null|NULL|)$/,
+  /^(?:[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]|[0-9][0-9][0-9][0-9]-[0-9][0-9]?-[0-9][0-9]?(?:[Tt]|[ \t]+)[0-9][0-9]?:[0-9][0-9]:[0-9][0-9](?:\.[0-9]*)?(?:[ \t]*(?:Z|[-+][0-9][0-9]?(?::[0-9][0-9])?))?)$/,
+  /^(?:=)$/,
+];
+
+/**
+ * A number that JavaScript writes as an exponent with no dot (`2e-7`, `1e+21`) is a float in
+ * YAML 1.2 but the STRING '2e-7' to PyYAML, whose float pattern needs a dot (see above). This
+ * tag writes it with `.0` (`2.0e-7`, `1.0e+21`), which both read as the same number. encodeYaml
+ * puts it first in the tag list so the `yaml` library picks it over its own number tags.
+ */
+const EXPONENT_FLOAT_WITH_DOT = {
+  identify: (value) => typeof value === 'number' && /^-?[0-9]+e[-+][0-9]+$/.test(String(value)),
+  default: true,
+  tag: 'tag:yaml.org,2002:float',
+  test: /^[-+]?[0-9]+\.0e[-+][0-9]+$/,
+  resolve: (text) => parseFloat(text),
+  stringify: ({ value }) => String(value).replace('e', '.0e'),
+};
+
+/**
+ * Whether a visited scalar is the value of the top-level `subject.date_of_birth`. That value
+ * stays a plain scalar: pynwb needs a datetime there, and PyYAML reads the plain ISO timestamp
+ * as one.
+ *
+ * @param {number|string|null} key - The scalar's key in its parent ('value' for a map value)
+ * @param {Array<object>} ancestors - The document and the nodes above the scalar
+ * @returns {boolean} True for subject.date_of_birth's value
+ */
+function isSubjectDateOfBirth(key, ancestors) {
+  if (key !== 'value' || ancestors.length !== 5) {
+    return false;
+  }
+  const [, root, subjectPair, , pair] = ancestors;
+  const isPairNamed = (node, name) =>
+    YAML.isPair(node) && YAML.isScalar(node.key) && node.key.value === name;
+  return YAML.isMap(root) && isPairNamed(subjectPair, 'subject') && isPairNamed(pair, 'date_of_birth');
+}
+
+/**
  * Encodes a JavaScript object to deterministic YAML string format
+ *
+ * The output is meant for trodes_to_nwb, which reads it with PyYAML (YAML 1.1): a string PyYAML
+ * would read as another type is double-quoted, and a number is written so PyYAML reads the same
+ * number.
  *
  * @param {object} model - JavaScript object to convert to YAML
  * @returns {string} YAML representation with deterministic formatting
@@ -35,11 +117,27 @@ import YAML from 'yaml';
  * console.assert(yaml1 === yaml2, 'Deterministic output');
  */
 export function encodeYaml(model) {
-  const doc = new YAML.Document();
+  const doc = new YAML.Document(undefined, {
+    customTags: (tags) => [EXPONENT_FLOAT_WITH_DOT, ...tags],
+  });
   // An object that appears in more than one place is written out in full each time, never as an
   // anchor (&a1) and aliases (*a1): trodes_to_nwb would read those back as ONE dict, and it edits
   // some in place (it wraps each associated file's task_epochs in a list).
   doc.contents = doc.createNode(model || {}, { aliasDuplicateObjects: false });
+
+  // Double-quote every string, key or value, that PyYAML would not read as a string.
+  YAML.visit(doc, {
+    Scalar(key, node, ancestors) {
+      const { value } = node;
+      if (
+        typeof value === 'string' &&
+        PYYAML_NON_STRING_SCALARS.some((pattern) => pattern.test(value)) &&
+        !isSubjectDateOfBirth(key, ancestors)
+      ) {
+        node.type = YAML.Scalar.QUOTE_DOUBLE;
+      }
+    },
+  });
 
   return doc.toString();
 }
