@@ -116,23 +116,9 @@ CheckboxListComponent.defaultProps = {
   required: false,
 };
 
-const arePropsEqual = (prevProps, nextProps) => {
-  // Compare the effective selection (controlled `value`, else `defaultValue`)
-  // by reference so a state change always triggers a re-render — otherwise the
-  // controlled checkboxes could freeze out of sync with form state.
-  const prevSelected =
-    prevProps.value !== undefined ? prevProps.value : prevProps.defaultValue;
-  const nextSelected =
-    nextProps.value !== undefined ? nextProps.value : nextProps.defaultValue;
-  return (
-    prevSelected === nextSelected &&
-    prevProps.dataItems === nextProps.dataItems &&
-    prevProps.name === nextProps.name &&
-    prevProps.required === nextProps.required
-  );
-};
-
-const CheckboxList = memo(CheckboxListComponent, arePropsEqual);
+// memo compares every prop (see InputElement): the selection, and also
+// updateFormArray and metaData, whose index says which row a click writes to.
+const CheckboxList = memo(CheckboxListComponent);
 
 // Copy static properties to memoized component for backward compatibility
 CheckboxList.propTypes = CheckboxListComponent.propTypes;

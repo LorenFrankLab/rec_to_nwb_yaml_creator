@@ -150,15 +150,7 @@ SelectElementComponent.defaultProps = {
   validation: null,
 };
 
-const arePropsEqual = (prevProps, nextProps) => {
-  return (
-    prevProps.value === nextProps.value &&
-    prevProps.name === nextProps.name &&
-    prevProps.dataItems === nextProps.dataItems &&
-    prevProps.required === nextProps.required
-  );
-};
-
-const SelectElement = memo(SelectElementComponent, arePropsEqual);
+// memo compares every prop, handlers and id included (see InputElement).
+const SelectElement = memo(SelectElementComponent);
 
 export default SelectElement;
