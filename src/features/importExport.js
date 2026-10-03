@@ -7,7 +7,7 @@
  * @module features/importExport
  */
 
-import { validate } from '../validation';
+import { validate, blockingIssues, isBlockingIssue } from '../validation';
 import { removeStaleCameraReferences } from '../utils/cameraReferences';
 import {
   canonicalizeFileBadChannels,
@@ -25,6 +25,44 @@ import { emptyFormData, genderAcronym } from '../valueList';
 
 /** Every message for an import that fails says so: the page keeps the form it already has. */
 const FORM_NOT_CHANGED = 'The form was not changed.';
+
+/**
+ * Says where an issue is, in words: `cameras[0].meters_per_pixel` → "Cameras 1, meters per pixel",
+ * `subject.subject_id` → "Subject, subject id". List positions are counted from 1.
+ *
+ * @param {string} issuePath - Normalized issue path (dot + bracket notation)
+ * @returns {string} The location, or "File" for an issue about the whole file
+ */
+function describeIssueLocation(issuePath) {
+  if (typeof issuePath !== 'string' || issuePath === '') return 'File';
+  const parts = [];
+  issuePath.split('.').forEach((segment) => {
+    const [name, ...indices] = segment.split('[');
+    const words = name.replace(/_/g, ' ');
+    const positions = indices.map((index) => ` ${parseInt(index, 10) + 1}`).join('');
+    parts.push(`${words}${positions}`);
+  });
+  const [first, ...rest] = parts;
+  return [first.charAt(0).toUpperCase() + first.slice(1), ...rest].join(', ');
+}
+
+/**
+ * The one confirm message for a download that has warnings: one line per warning (where, then
+ * what), so they can all be read before choosing.
+ *
+ * @param {Array<{path: string, message: string}>} warnings - Advisory issues
+ * @returns {string} The confirm message
+ */
+function warningsConfirmMessage(warnings) {
+  const count = `${warnings.length} warning${warnings.length === 1 ? '' : 's'}`;
+  const lines = warnings.map(
+    (warning) => `- ${describeIssueLocation(warning.path)}: ${warning.message}`
+  );
+  return (
+    `This file has ${count}:\n\n${lines.join('\n')}\n\n` +
+    'Download it anyway? Choose Cancel to go back and fix them.'
+  );
+}
 
 /**
  * Import YAML files and prepare form data
@@ -171,8 +209,10 @@ export async function importFiles(file, options = {}) {
       // than excluding the whole section on validation.
       jsonFileContent = removeStaleCameraReferences(jsonFileContent);
 
-      // Validate YAML content
-      const issues = validate(jsonFileContent);
+      // Validate YAML content. Only ERRORS leave a section out: a warning is advisory (a
+      // placeholder subject id, an unusual camera calibration), so the value is imported for the
+      // user to see and fix in the form. Leaving it out would silently drop valid metadata.
+      const issues = blockingIssues(validate(jsonFileContent));
 
       if (issues.length === 0) {
         // No validation errors - ensure relevant keys exist and load all data
@@ -311,12 +351,14 @@ export async function importFiles(file, options = {}) {
  * Export form data as YAML file
  *
  * Validates form data, encodes as YAML, and triggers browser download.
- * Returns validation issues if validation fails instead of downloading.
+ * Errors block the download and are returned instead. Warnings are advisory: they are listed
+ * in one confirm dialog, and the file downloads only if the user chooses OK.
  *
  * @param {Object} model - Form data to export
  * @param {Object} [options] - Optional configuration
  * @param {Function} [options.onProgress] - Progress callback (not implemented yet)
- * @returns {Object} Result object with success, error, validationIssues, yaml, and filename
+ * @returns {Object} Result object with success, error, validationIssues (the errors that blocked
+ *   the download), warnings, yaml, and filename; `cancelled` is true when the user chose Cancel
  *
  * @example
  * const result = exportAll(formData);
@@ -341,43 +383,60 @@ export function exportAll(model, options = {}) {
 
   // Validate using unified validation API (schema + rules)
   const issues = validate(form);
+  const errors = blockingIssues(issues);
+  const warnings = issues.filter((issue) => !isBlockingIssue(issue));
 
-  // If validation passes, generate and download YAML
-  if (issues.length === 0) {
-    if (onProgress) {
-      onProgress({ stage: 'encoding', progress: 50 });
-    }
-
-    // Duplicate keys released trodes_to_nwb versions still read; validation
-    // above ran on the canonical model.
-    const yAMLForm = encodeYaml(withLegacyConverterKeys(form));
-    const fileName = formatDeterministicFilename(form);
-
-    if (onProgress) {
-      onProgress({ stage: 'downloading', progress: 80 });
-    }
-
-    downloadYamlFile(fileName, yAMLForm);
-
-    if (onProgress) {
-      onProgress({ stage: 'complete', progress: 100 });
-    }
-
+  // Errors block the download - return them for the form to show
+  if (errors.length > 0) {
     return {
-      success: true,
-      error: null,
-      validationIssues: [],
-      yaml: yAMLForm,
-      filename: fileName,
+      success: false,
+      error: 'Validation failed',
+      validationIssues: errors,
+      warnings,
+      yaml: null,
+      filename: null,
     };
   }
 
-  // Validation failed - return issues
+  // Warnings are advisory: ask once, listing them all, and download only on OK
+  // eslint-disable-next-line no-alert
+  if (warnings.length > 0 && !window.confirm(warningsConfirmMessage(warnings))) {
+    return {
+      success: false,
+      cancelled: true,
+      error: 'Download cancelled',
+      validationIssues: [],
+      warnings,
+      yaml: null,
+      filename: null,
+    };
+  }
+
+  if (onProgress) {
+    onProgress({ stage: 'encoding', progress: 50 });
+  }
+
+  // Duplicate keys released trodes_to_nwb versions still read; validation
+  // above ran on the canonical model.
+  const yAMLForm = encodeYaml(withLegacyConverterKeys(form));
+  const fileName = formatDeterministicFilename(form);
+
+  if (onProgress) {
+    onProgress({ stage: 'downloading', progress: 80 });
+  }
+
+  downloadYamlFile(fileName, yAMLForm);
+
+  if (onProgress) {
+    onProgress({ stage: 'complete', progress: 100 });
+  }
+
   return {
-    success: false,
-    error: 'Validation failed',
-    validationIssues: issues,
-    yaml: null,
-    filename: null,
+    success: true,
+    error: null,
+    validationIssues: [],
+    warnings,
+    yaml: yAMLForm,
+    filename: fileName,
   };
 }
