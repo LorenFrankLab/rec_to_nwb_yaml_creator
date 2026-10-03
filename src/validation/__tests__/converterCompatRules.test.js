@@ -176,6 +176,28 @@ describe('optogenetics device names', () => {
   });
 });
 
+// The current trodes_to_nwb release always adds the video files and fails (UnboundLocalError) on
+// an empty list, even for a session without video. A converter bug, so a warning.
+describe('empty video list', () => {
+  it('warns when no video files are listed', () => {
+    expect(rulesValidation({ associated_video_files: [] })).toEqual([
+      expect.objectContaining({
+        path: 'associated_video_files',
+        code: 'no_associated_videos',
+        severity: 'warning',
+        repairSurface: 'day',
+      }),
+    ]);
+  });
+
+  it('does not warn when a video is listed, or when the list is not there to check', () => {
+    expect(codes(rulesValidation({
+      associated_video_files: [{ name: 'a.h264', camera_id: 0, task_epochs: 1 }],
+    }))).not.toContain('no_associated_videos');
+    expect(codes(rulesValidation({}))).not.toContain('no_associated_videos');
+  });
+});
+
 describe('fail-closed on malformed shapes', () => {
   it('does not throw and returns an array for grossly malformed input', () => {
     const malformed = {

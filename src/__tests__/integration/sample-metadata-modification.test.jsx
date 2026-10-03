@@ -59,6 +59,10 @@ describe('Sample Metadata Modification Workflow', () => {
 
     // Mock window.alert
     global.window.alert = vi.fn();
+
+    // The minimal session lists no video files, which the download warns about (trodes_to_nwb
+    // fails on an empty video list); accept that warning so the file downloads.
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
   });
 
   afterEach(() => {

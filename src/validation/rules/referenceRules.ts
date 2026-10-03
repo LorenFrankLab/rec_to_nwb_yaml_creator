@@ -516,6 +516,34 @@ export function fsGuiReferences(model: ValidationModel): ValidationIssue[] {
 }
 
 /**
+ * An empty video list: the current trodes_to_nwb release always adds the video files and fails
+ * (UnboundLocalError) when the list is empty, even for a session recorded without video. Advisory:
+ * that is a converter bug, and the session may truly have no video (the workspace's "no video
+ * recorded" declaration exports an empty list on purpose).
+ *
+ * @param model - The form data to validate.
+ * @returns Validation issues.
+ */
+export function emptyVideoList(model: ValidationModel): ValidationIssue[] {
+  if (!Array.isArray(model.associated_video_files) || model.associated_video_files.length > 0) {
+    return [];
+  }
+  return [
+    {
+      path: 'associated_video_files',
+      field: 'associated_video_files',
+      step: 'epochs',
+      code: 'no_associated_videos',
+      repairSurface: 'day',
+      severity: 'warning',
+      message:
+        'No video files are listed. The current trodes_to_nwb release stops with an error ' +
+        'when the video list is empty, even for a session recorded without video.',
+    },
+  ];
+}
+
+/**
  * Rule 18: camera id uniqueness — the converter names NWB camera devices `camera_device {id}` and
  * videos dereference that exact name, so duplicate cameras[].id collide downstream.
  *

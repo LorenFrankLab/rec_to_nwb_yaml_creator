@@ -149,6 +149,7 @@ export const CATEGORY_BY_CODE: Readonly<Record<string, WorkflowCategory>> = Obje
   orphaned_fs_gui_epoch: WORKFLOW_CATEGORY.DAY_METADATA,
   // Phase 4: an epoch with no video and no "no video" declaration (the video-declaration rule).
   epoch_video_undeclared: WORKFLOW_CATEGORY.DAY_METADATA,
+  no_associated_videos: WORKFLOW_CATEGORY.DAY_METADATA,
   // Day FsGUI (opto protocol) reference rules — the fix lives in the day's epochs/FsGUI flow.
   dangling_dio_output: WORKFLOW_CATEGORY.DAY_METADATA,
   fs_gui_requires_optogenetics: WORKFLOW_CATEGORY.DAY_METADATA,

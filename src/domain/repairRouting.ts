@@ -300,6 +300,9 @@ export const SURFACE_BY_CODE: Record<string, RepairSurface> = {
   // Phase 4: the video-declaration readiness rule — a task epoch with no video and no "no video"
   // declaration. Day-owned, repaired in the Epochs tab (the epoch drill-in's video control).
   epoch_video_undeclared: 'day',
+  // An empty video list: the current trodes_to_nwb release fails on it (advisory; a day declared
+  // "no video recorded" exports it on purpose). The day's videos live in the Daily log.
+  no_associated_videos: 'day',
   orphaned_fs_gui_epoch: 'day',
   // FsGUI (day opto protocol) day-surface rules: a dangling DIO output reference and an
   // FsGUI block present while the animal's opto setup is incomplete/off. Both carry an

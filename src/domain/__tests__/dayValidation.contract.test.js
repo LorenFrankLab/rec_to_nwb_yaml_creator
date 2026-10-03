@@ -17,6 +17,7 @@ import {
 import { mergeDayMetadata } from '../../state/workspaceUtils';
 import { getDataAcqDevices } from '../../state/workspaceSelectors';
 import { buildRealisticWorkspace } from '../../__tests__/fixtures/workspaceBuilders';
+import { isExportEnabled } from '../stepGate';
 
 /**
  * Reduce an issue list to the stable contract fields (code → owner/step/repair).
@@ -207,5 +208,30 @@ describe('recording-filename contract in the day composer', () => {
     expect(issue).toBeDefined();
     expect(issue.severity).toBe('error');
     expect(issue.ownerSurface).toBe('animal');
+  });
+});
+
+describe('the empty video list advisory in the workspace', () => {
+  // The current trodes_to_nwb release fails on an empty associated_video_files list. A day whose
+  // epochs are all declared "no video recorded" exports [] on purpose: the advisory shows, and
+  // must not block.
+  it('shows for a day declared to have no video, without blocking its export', () => {
+    const { animal, day } = buildRealisticWorkspace();
+    const noVideoDay = {
+      ...day,
+      associated_video_files: [],
+      state: { ...day.state, videolessEpochs: [1, 2, 3, 4, 5] },
+    };
+    const merged = mergeDayMetadata(animal, noVideoDay);
+    expect(merged.associated_video_files).toEqual([]);
+
+    const issues = validateDay(noVideoDay, merged, animal);
+    expect(issues).toContainEqual(expect.objectContaining({
+      code: 'no_associated_videos',
+      severity: 'warning',
+      ownerSurface: 'day',
+    }));
+    expect(issues.filter((issue) => issue.severity === 'error')).toEqual([]);
+    expect(isExportEnabled(computeStepStatus(noVideoDay, merged, animal))).toBe(true);
   });
 });

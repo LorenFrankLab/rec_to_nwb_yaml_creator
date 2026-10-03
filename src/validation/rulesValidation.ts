@@ -19,6 +19,7 @@
  * 8. DANDI subject conformance: species is a Latin binomial / NCBI URI; ids have no slashes
  * 8b. Subject values pynwb rejects (date_of_birth, unknown fields, value types); a non-ISO age warns
  * 9–20. Camera/file/task/FsGUI references, probe/channel geometry, identity divergence, DIO uniqueness
+ * 15d. An empty video list warns (the current trodes_to_nwb release fails on it)
  */
 
 import {
@@ -28,6 +29,7 @@ import {
   associatedFileIntegrity,
   fsGuiReferences,
   cameraIdUniqueness,
+  emptyVideoList,
 } from './rules/referenceRules';
 import { optogeneticsRules } from './rules/optoRules';
 import {
@@ -92,6 +94,7 @@ export const rulesValidation = (model: ValidationModel): ValidationIssue[] => {
     ...uniqueBehavioralEventNames(model),         // 14
     ...taskEpochReferences(model),                // 15
     ...associatedFileIntegrity(model),            // 15b
+    ...emptyVideoList(model),                     // 15d
     ...fsGuiReferences(model),                    // 15c
     ...identityDivergences(model),                // 16
     ...danglingElectrodeGroupRefs(model),         // 10
