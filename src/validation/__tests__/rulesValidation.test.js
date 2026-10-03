@@ -1218,3 +1218,47 @@ describe('rulesValidation() - empty video list', () => {
     expect(rulesValidation({})).toEqual([]);
   });
 });
+
+// trodes_to_nwb links every optical fiber to the first virus injection, and records each virus once
+// with the titer of its first injection: the file converts, but the NWB file misstates the setup.
+describe('rulesValidation() - several virus injections', () => {
+  const injection = (name, virus, titer) => ({
+    name, virus_name: virus, titer_in_vg_per_ml: titer, reference: 'Bregma', hemisphere: 'left',
+  });
+  const opto = (injections) => ({
+    opto_excitation_source: [{ name: 'Laser' }],
+    optical_fiber: [{ name: 'Fiber 1', reference: 'Bregma' }],
+    virus_injection: injections,
+    optogenetic_stimulation_software: 'fsgui',
+  });
+
+  it('does not warn for a single injection', () => {
+    expect(rulesValidation(opto([injection('Injection 1', 'AAV-ChR2', 1e12)]))).toEqual([]);
+  });
+
+  it('warns that every fiber will be linked to the first injection', () => {
+    const issues = rulesValidation(opto([
+      injection('Left CA1', 'AAV-ChR2', 1e12),
+      injection('Right CA1', 'AAV-ChR2', 1e12),
+    ]));
+    expect(issues).toEqual([expect.objectContaining({
+      path: 'virus_injection',
+      code: 'multiple_virus_injections',
+      severity: 'warning',
+      message: expect.stringContaining('"Left CA1"'),
+    })]);
+  });
+
+  it('also warns when the same virus has different titers (only the first is kept)', () => {
+    const issues = rulesValidation(opto([
+      injection('Left CA1', 'AAV-ChR2', 1e12),
+      injection('Right CA1', 'AAV-ChR2', 5e12),
+      injection('PFC', 'AAV-ArchT', 2e12),
+    ]));
+    expect(issues.map((i) => i.code)).toEqual(['multiple_virus_injections', 'conflicting_virus_titers']);
+    expect(issues[1]).toMatchObject({ path: 'virus_injection', severity: 'warning' });
+    expect(issues[1].message).toContain('"AAV-ChR2"');
+    expect(issues[1].message).toContain('1000000000000');
+    expect(issues[1].message).toContain('5000000000000');
+  });
+});

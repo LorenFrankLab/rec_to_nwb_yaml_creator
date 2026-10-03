@@ -22,6 +22,7 @@
  * 12. There is at least one task
  * 13. Subject values pynwb rejects (date_of_birth, unknown fields, types); a non-ISO age warns
  * 14. An empty video list warns
+ * 15. Several virus injections, or one virus with different titers, warn
  *
  * Rules 7-10 are the trodes_to_nwb crash guards of the modern branch's rule set, with the same
  * codes and messages.
@@ -649,6 +650,42 @@ export const rulesValidation = (model) => {
       message:
         'No video files are listed. The current trodes_to_nwb release stops with an error ' +
         'when the video list is empty, even for a session recorded without video.',
+    });
+  }
+
+  // Rule 15: several virus injections. trodes_to_nwb links every optical fiber to the FIRST
+  // injection, and records each virus once with the titer of its first injection. Advisory:
+  // the file converts, but the NWB file does not say what the injections were.
+  if (Array.isArray(model.virus_injection) && model.virus_injection.length > 1) {
+    const first = model.virus_injection[0];
+    issues.push({
+      path: 'virus_injection',
+      code: 'multiple_virus_injections',
+      severity: 'warning',
+      message:
+        `${model.virus_injection.length} virus injections are listed. trodes_to_nwb links ` +
+        `every optical fiber to the first one${first?.name ? ` ("${first.name}")` : ''}, so the ` +
+        `NWB file will say every fiber targets that injection's virus.`,
+    });
+    const titers = new Map();
+    model.virus_injection.forEach((injection) => {
+      const virus = injection?.virus_name;
+      const titer = injection?.titer_in_vg_per_ml;
+      if (typeof virus !== 'string' || virus === '' || titer === undefined || titer === null || titer === '') return;
+      if (!titers.has(virus)) titers.set(virus, []);
+      if (!titers.get(virus).some((seen) => Number(seen) === Number(titer))) titers.get(virus).push(titer);
+    });
+    titers.forEach((values, virus) => {
+      if (values.length < 2) return;
+      issues.push({
+        path: 'virus_injection',
+        code: 'conflicting_virus_titers',
+        severity: 'warning',
+        message:
+          `Virus "${virus}" is injected with different titers (${values.join(', ')} vg/ml). ` +
+          `trodes_to_nwb records the virus once, with the first titer (${values[0]}); the ` +
+          `others are lost.`,
+      });
     });
   }
 
