@@ -354,6 +354,8 @@ export const SURFACE_BY_CODE: Record<string, RepairSurface> = {
   // (advisory). Edited in the Animal Editor Optogenetics step.
   multiple_virus_injections: 'animal',
   conflicting_virus_titers: 'animal',
+  // A virus injection hemisphere other than left/right (trodes_to_nwb raises a ValueError).
+  invalid_injection_hemisphere: 'animal',
   // No editable in-app target — read-only identity (slash ids). The explanatory
   // message states the remedy (recreate the animal); a "Fix in …" button would
   // dead-end on a disabled control.

@@ -48,7 +48,8 @@ function repeatedNames(items: unknown): string[] {
 
 /**
  * Rules 3 / 3c / 3b: optogenetics completeness, coordinate references, source power, single excitation
- * source, distinct device names, and what the NWB file records for several virus injections.
+ * source, distinct device names, what the NWB file records for several virus injections, and the
+ * virus injection hemisphere.
  *
  * @param model - The form data to validate.
  * @returns Validation issues.
@@ -243,6 +244,30 @@ export function optogeneticsRules(model: ValidationModel): ValidationIssue[] {
       });
     });
   }
+
+  // trodes_to_nwb accepts only "left" or "right" (any case) as a virus injection's hemisphere and
+  // raises a ValueError otherwise ("bilateral" in an imported file, for example). A blank value is
+  // the schema's required check.
+  (Array.isArray(model.virus_injection) ? model.virus_injection : []).forEach((injection, i) => {
+    const hemisphere = injection?.hemisphere;
+    if (
+      typeof hemisphere === 'string' &&
+      hemisphere.trim() !== '' &&
+      !['left', 'right'].includes(hemisphere.toLowerCase())
+    ) {
+      issues.push({
+        path: `virus_injection[${i}].hemisphere`,
+        field: 'hemisphere',
+        code: 'invalid_injection_hemisphere',
+        repairSurface: 'animal',
+        severity: 'error',
+        message:
+          `Virus injection ${i + 1}${injection?.name ? ` ("${injection.name}")` : ''} has ` +
+          `hemisphere "${hemisphere}". trodes_to_nwb accepts only "left" or "right" — record ` +
+          `one injection per hemisphere.`,
+      });
+    }
+  });
 
   return issues;
 }

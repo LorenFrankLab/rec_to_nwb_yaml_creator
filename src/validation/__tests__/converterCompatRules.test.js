@@ -243,6 +243,34 @@ describe('several virus injections', () => {
   });
 });
 
+// trodes_to_nwb accepts only "left" or "right" (any case) as a virus injection's hemisphere.
+describe('virus injection hemisphere', () => {
+  const opto = (hemisphere) => ({
+    opto_excitation_source: [{ name: 'Laser' }],
+    optical_fiber: [{ name: 'Fiber 1', reference: 'Bregma' }],
+    virus_injection: [{ name: 'Injection 1', reference: 'Bregma', hemisphere }],
+    optogenetic_stimulation_software: 'fsgui',
+  });
+
+  it.each(['left', 'right', 'Left', 'RIGHT'])('accepts %s', (hemisphere) => {
+    expect(rulesValidation(opto(hemisphere))).toEqual([]);
+  });
+
+  it.each(['bilateral', ' left'])('blocks "%s"', (hemisphere) => {
+    expect(rulesValidation(opto(hemisphere))).toEqual([expect.objectContaining({
+      path: 'virus_injection[0].hemisphere',
+      code: 'invalid_injection_hemisphere',
+      severity: 'error',
+      repairSurface: 'animal',
+      message: expect.stringContaining(`"${hemisphere}"`),
+    })]);
+  });
+
+  it('leaves a blank hemisphere to the schema', () => {
+    expect(rulesValidation(opto(''))).toEqual([]);
+  });
+});
+
 describe('fail-closed on malformed shapes', () => {
   it('does not throw and returns an array for grossly malformed input', () => {
     const malformed = {

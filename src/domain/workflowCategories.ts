@@ -115,6 +115,7 @@ export const CATEGORY_BY_CODE: Readonly<Record<string, WorkflowCategory>> = Obje
   duplicate_opto_device_name: WORKFLOW_CATEGORY.ANIMAL_SETUP,
   multiple_virus_injections: WORKFLOW_CATEGORY.ANIMAL_SETUP,
   conflicting_virus_titers: WORKFLOW_CATEGORY.ANIMAL_SETUP,
+  invalid_injection_hemisphere: WORKFLOW_CATEGORY.ANIMAL_SETUP,
   // Subject identity is part of the animal's shared setup and is edited from the animal profile.
   invalid_species: WORKFLOW_CATEGORY.ANIMAL_SETUP,
   subject_genotype_strain: WORKFLOW_CATEGORY.ANIMAL_SETUP,
