@@ -137,3 +137,63 @@ describe('ElectrodeGroupFields - read-only Ntrode Id', () => {
     expect(model().ntrode_electrode_group_channel_map.map((n) => n.ntrode_id)).toEqual([1, 2, 3, 4]);
   });
 });
+
+describe('ElectrodeGroupFields - changing a group id keeps its channel maps', () => {
+  const tetrode = (electrodeGroupId, ntrodeId) => ({
+    ntrode_id: ntrodeId,
+    electrode_group_id: electrodeGroupId,
+    bad_channels: [],
+    map: { 0: 0, 1: 1, 2: 2, 3: 3 },
+  });
+  const renderTwoTetrodes = () =>
+    renderGroups({
+      electrode_groups: [
+        { ...group(0), device_type: 'tetrode_12.5' },
+        { ...group(1), device_type: 'tetrode_12.5' },
+      ],
+      ntrode_electrode_group_channel_map: [tetrode(0, 1), tetrode(1, 2)],
+    });
+  // [ntrode_id, electrode_group_id] for every ntrode
+  const pairs = () =>
+    model().ntrode_electrode_group_channel_map.map((n) => [n.ntrode_id, n.electrode_group_id]);
+  const typeId = async (user, groupId, text) => {
+    const idInput = within(groupArea(groupId)).getByLabelText(/^Id$/);
+    await user.clear(idInput);
+    await user.type(idInput, text);
+    await user.tab();
+    return idInput;
+  };
+
+  it('moves the channel maps to the new id', async () => {
+    const { user } = renderTwoTetrodes();
+
+    await typeId(user, 0, '5');
+
+    expect(model().electrode_groups.map((g) => g.id)).toEqual([5, 1]);
+    expect(pairs()).toEqual([[1, 5], [2, 1]]);
+    expect(within(groupArea(5)).getByPlaceholderText('Ntrode Id')).toHaveValue(1);
+  });
+
+  it('moves them when the id typed passes through another group\'s id', async () => {
+    // "13" is typed as "1" (group 1's id), then "13"
+    const { user } = renderTwoTetrodes();
+
+    await typeId(user, 0, '13');
+
+    expect(model().electrode_groups.map((g) => g.id)).toEqual([13, 1]);
+    expect(pairs()).toEqual([[1, 13], [2, 1]]);
+  });
+
+  it('refuses another group\'s id: the field goes back and no maps move', async () => {
+    const { user } = renderTwoTetrodes();
+
+    const idInput = await typeId(user, 0, '1');
+
+    expect(model().electrode_groups.map((g) => g.id)).toEqual([0, 1]);
+    expect(pairs()).toEqual([[1, 0], [2, 1]]);
+    expect(idInput).toHaveValue(0);
+    expect(
+      screen.getByText('Must be a whole number no other electrode group uses')
+    ).toBeInTheDocument();
+  });
+});

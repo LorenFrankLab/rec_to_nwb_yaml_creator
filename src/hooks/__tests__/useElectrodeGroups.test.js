@@ -938,3 +938,102 @@ describe('useElectrodeGroups - other groups keep their ntrode ids', () => {
     expect(pairs(result)).toEqual([[1, 0], [3, 2]]);
   });
 });
+
+/**
+ * Channel maps belong to an electrode group through electrode_group_id, so a
+ * group's id can only change together with its maps. trodes_to_nwb looks the
+ * maps up by group id: maps left on the old id fail the conversion, and maps
+ * that end up on another group's id are silently filed under that group.
+ */
+describe('useElectrodeGroups - changeElectrodeGroupId', () => {
+  function useSeededHook(initialFormData) {
+    const [formData, setFormData] = useState(initialFormData);
+    return { formData, ...useElectrodeGroups(formData, setFormData) };
+  }
+
+  const group = (id) => ({ id, device_type: 'tetrode_12.5', location: 'CA1' });
+  const tetrode = (electrodeGroupId, ntrodeId) => ({
+    ntrode_id: ntrodeId,
+    electrode_group_id: electrodeGroupId,
+    bad_channels: [],
+    map: { 0: 0, 1: 1, 2: 2, 3: 3 },
+  });
+  const twoTetrodes = () => ({
+    electrode_groups: [group(0), group(1)],
+    ntrode_electrode_group_channel_map: [tetrode(0, 1), tetrode(1, 2)],
+  });
+  const groupIds = (result) => result.current.formData.electrode_groups.map((g) => g.id);
+  // [ntrode_id, electrode_group_id] for every ntrode, in array order
+  const pairs = (result) =>
+    result.current.formData.ntrode_electrode_group_channel_map.map((n) => [
+      n.ntrode_id,
+      n.electrode_group_id,
+    ]);
+  const changeId = (result, index, value) =>
+    act(() => {
+      result.current.changeElectrodeGroupId(index, value);
+    });
+
+  it('moves the group\'s channel maps to its new id', () => {
+    const { result } = renderHook(() => useSeededHook(twoTetrodes()));
+
+    changeId(result, 0, '12');
+
+    expect(groupIds(result)).toEqual([12, 1]);
+    expect(pairs(result)).toEqual([[1, 12], [2, 1]]);
+  });
+
+  it('swapping two ids through a free one keeps each group\'s channel maps', () => {
+    const { result } = renderHook(() => useSeededHook(twoTetrodes()));
+
+    changeId(result, 0, '9');
+    changeId(result, 1, '0');
+    changeId(result, 0, '1');
+
+    expect(groupIds(result)).toEqual([1, 0]);
+    expect(pairs(result)).toEqual([[1, 1], [2, 0]]);
+  });
+
+  it('refuses an id another group uses and changes nothing', () => {
+    const { result } = renderHook(() => useSeededHook(twoTetrodes()));
+    const before = result.current.formData;
+
+    changeId(result, 0, '1');
+
+    expect(result.current.formData).toBe(before);
+  });
+
+  it('refuses a value that is not a whole number and changes nothing', () => {
+    const { result } = renderHook(() => useSeededHook(twoTetrodes()));
+    const before = result.current.formData;
+
+    ['', ' ', '1.5', '-1', 'abc'].forEach((value) => changeId(result, 0, value));
+
+    expect(result.current.formData).toBe(before);
+  });
+
+  it('leaves the state alone when the id is unchanged', () => {
+    const { result } = renderHook(() => useSeededHook(twoTetrodes()));
+    const before = result.current.formData;
+
+    changeId(result, 1, '1');
+
+    expect(result.current.formData).toBe(before);
+  });
+
+  it('leaves the channel maps when another group also had the old id', () => {
+    // e.g. an imported file where two groups share id 0: whose maps are whose
+    // cannot be told, so they stay with the group that keeps the id
+    const { result } = renderHook(() =>
+      useSeededHook({
+        electrode_groups: [group(0), group(0)],
+        ntrode_electrode_group_channel_map: [tetrode(0, 1), tetrode(0, 2)],
+      })
+    );
+
+    changeId(result, 1, '5');
+
+    expect(groupIds(result)).toEqual([0, 5]);
+    expect(pairs(result)).toEqual([[1, 0], [2, 0]]);
+  });
+});

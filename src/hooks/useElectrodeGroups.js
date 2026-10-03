@@ -259,9 +259,60 @@ export function useElectrodeGroups(formData, setFormData) {
     [formData, setFormData]
   );
 
+  /**
+   * Changes an electrode group's id and moves its ntrode channel maps with it
+   *
+   * The maps belong to the group through electrode_group_id, so they are
+   * re-pointed in the same update; maps left on the old id would belong to
+   * no group, or to whichever group takes that id next. Only a whole number
+   * that no other group uses is accepted, so two groups never claim the same
+   * maps; anything else leaves the form unchanged. If another group already
+   * shared the old id (e.g. an imported file), whose maps are whose cannot
+   * be told, so the maps stay where they are.
+   *
+   * @param {number} index - The index of the electrode group
+   * @param {string|number} value - The new id, as typed
+   * @returns {null} Always returns null
+   */
+  const changeElectrodeGroupId = useCallback(
+    (index, value) => {
+      const text = String(value).trim();
+      const newId = /^\d+$/.test(text) ? Number(text) : NaN;
+      const electrodeGroups = formData.electrode_groups || [];
+      const electrodeGroup = electrodeGroups[index];
+
+      if (!electrodeGroup || !Number.isSafeInteger(newId) || newId === electrodeGroup.id) {
+        return null;
+      }
+
+      const otherIds = electrodeGroups.filter((_, i) => i !== index).map((eg) => eg.id);
+
+      if (otherIds.includes(newId)) {
+        return null;
+      }
+
+      const form = structuredClone(formData);
+      const oldId = electrodeGroup.id;
+      form.electrode_groups[index].id = newId;
+
+      if (!otherIds.includes(oldId)) {
+        (form.ntrode_electrode_group_channel_map || []).forEach((n) => {
+          if (n.electrode_group_id === oldId) {
+            n.electrode_group_id = newId;
+          }
+        });
+      }
+
+      setFormData(form);
+      return null;
+    },
+    [formData, setFormData]
+  );
+
   return {
     nTrodeMapSelected,
     removeElectrodeGroupItem,
     duplicateElectrodeGroupItem,
+    changeElectrodeGroupId,
   };
 }
