@@ -148,6 +148,7 @@ export const CATEGORY_BY_CODE: Readonly<Record<string, WorkflowCategory>> = Obje
   dangling_dio_output: WORKFLOW_CATEGORY.DAY_METADATA,
   fs_gui_requires_optogenetics: WORKFLOW_CATEGORY.DAY_METADATA,
   divergent_task_identity: WORKFLOW_CATEGORY.DAY_METADATA,
+  divergent_task_identity_across_days: WORKFLOW_CATEGORY.DAY_METADATA,
   missing_camera: WORKFLOW_CATEGORY.DAY_METADATA,
 
   // Day-specific failed (bad) channels.

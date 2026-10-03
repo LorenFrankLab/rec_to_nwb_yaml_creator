@@ -305,6 +305,7 @@ export const SURFACE_BY_CODE: Record<string, RepairSurface> = {
   dangling_dio_output: 'day',
   fs_gui_requires_optogenetics: 'day',
   divergent_task_identity: 'day',
+  divergent_task_identity_across_days: 'day',
   // Task-type catalog (Phase 8C): epoch/order/reference + migration-reconciliation problems are
   // day-owned (the Tasks & Epochs step); catalog DEFINITION uniqueness is animal-owned (above).
   dangling_task_type_ref: 'day',

@@ -202,6 +202,62 @@ describe('planImport — divergence flags', () => {
     // Latest date wins → genotype is Knockout.
     expect(remy.subject.genotype).toBe('Knockout');
   });
+
+  // Spyglass keeps one description per task_name and refuses the task epochs of a recording that
+  // reuses the name with another — so the preview must show the disagreement before anything is written.
+  it('lists a task name described differently across the files', () => {
+    const describeSleep = (description) => (animal, day) => {
+      day.tasks = day.tasks.map((task) =>
+        task.task_name === 'sleep' ? { ...task, task_description: description } : task
+      );
+    };
+    const files = [
+      makeFile({ subjectId: 'remy', date: '2023-06-22', mutateConfig: describeSleep('sleeping') }),
+      makeFile({
+        subjectId: 'remy',
+        date: '2023-06-23',
+        mutateConfig: describeSleep('resting in the sleep box'),
+      }),
+    ];
+    const plan = planImport(files, createDefaultWorkspace());
+    const remy = plan.animals.find((a) => a.subjectId === 'remy');
+    const taskDivergences = remy.divergences.filter((d) => d.field === 'tasks');
+    expect(taskDivergences).toHaveLength(1);
+    expect(taskDivergences[0].detail).toMatch(
+      /^Task "sleep" has different descriptions across these recordings: "sleeping" \(06222023_remy_metadata\.yml\); "resting in the sleep box" \(06232023_remy_metadata\.yml\)\./
+    );
+  });
+
+  it('lists no task difference when the files describe their tasks the same way', () => {
+    const files = [
+      makeFile({ subjectId: 'remy', date: '2023-06-22' }),
+      makeFile({ subjectId: 'remy', date: '2023-06-23' }),
+    ];
+    const remy = planImport(files, createDefaultWorkspace()).animals[0];
+    expect(remy.divergences.filter((d) => d.field === 'tasks')).toEqual([]);
+  });
+
+  it("lists a file whose task disagrees with the existing animal's day", () => {
+    const { animal, day } = buildRealisticWorkspace();
+    const ws = createDefaultWorkspace();
+    ws.animals.remy = { ...animal, id: 'remy', days: [day.id] };
+    ws.days[day.id] = { ...day, animalId: 'remy' };
+
+    const file = makeFile({
+      subjectId: 'remy',
+      date: '2023-06-23',
+      mutateConfig: (_animal, fileDay) => {
+        fileDay.tasks = fileDay.tasks.map((task) =>
+          task.task_name === 'sleep' ? { ...task, task_description: 'resting in the sleep box' } : task
+        );
+      },
+    });
+    const remy = planImport([file], ws).animals[0];
+    expect(remy.conflict).toBe('exists');
+    expect(remy.divergences.find((d) => d.field === 'tasks').detail).toMatch(
+      /"Rest in home cage" \(already on this animal: 2023-06-22\); "resting in the sleep box" \(06232023_remy_metadata\.yml\)/
+    );
+  });
 });
 
 describe('planImport — camera references follow the unioned catalog', () => {

@@ -15,6 +15,8 @@ import path from 'path';
 import { StoreProvider, useStoreContext } from '../../../state/StoreContext';
 import { decodeYaml, encodeYaml } from '../../../io/yaml';
 import { mergeDayMetadata } from '../../../state/workspaceUtils';
+import { getAnimalDays } from '../../../state/workspaceSelectors';
+import { validateDay } from '../../../domain/validation';
 import ImportRepair from '../index';
 
 const originalHash = window.location.hash;
@@ -229,6 +231,67 @@ describe('ImportRepair — suggestions are answers the user can change', () => {
 
     const [dayId] = Object.keys(captured.days);
     expect(mergeDayMetadata(captured.animals.remy, captured.days[dayId]).subject.weight).toBe(450);
+  });
+});
+
+describe('ImportRepair — one task name, two descriptions', () => {
+  /**
+   * A clean remy day file whose `sleep` task carries the given description.
+   * @param {string} dateDigits - The recording date as `YYYYMMDD`.
+   * @param {string} description - The `sleep` task description.
+   * @returns {string} YAML text.
+   */
+  const dayYaml = (dateDigits, description) => {
+    const model = decodeYaml(cleanYaml);
+    model.session_id = `remy_${dateDigits}`;
+    model.tasks = model.tasks.map((task) =>
+      task.task_name === 'sleep' ? { ...task, task_description: description } : task
+    );
+    return encodeYaml(model);
+  };
+
+  /**
+   * Upload the two disagreeing days and open the batch preview.
+   * @param {object} user - userEvent session.
+   */
+  async function openPreview(user) {
+    await user.upload(screen.getByLabelText(/choose a metadata yaml file/i), [
+      makeFile('06222023_remy_metadata.yml', dayYaml('20230622', 'sleeping')),
+      makeFile('06232023_remy_metadata.yml', dayYaml('20230623', 'resting in the sleep box')),
+    ]);
+    await user.click(await screen.findByRole('button', { name: /review 2 ready files/i }));
+  }
+
+  it('lists the difference in the batch preview before anything is written', async () => {
+    const user = userEvent.setup();
+    renderScreen();
+    await openPreview(user);
+
+    const card = screen.getByRole('region', { name: 'remy' });
+    const differences = within(card).getByText('Differences to review').closest('[role="status"]');
+    expect(differences).toHaveTextContent(
+      'Task "sleep" has different descriptions across these recordings: "sleeping" (06222023_remy_metadata.yml); "resting in the sleep box" (06232023_remy_metadata.yml).'
+    );
+    expect(captured.animals).toEqual({});
+  });
+
+  it('imports both days, and neither can be exported until the descriptions match', async () => {
+    const user = userEvent.setup();
+    renderScreen();
+    await openPreview(user);
+    await user.click(screen.getByRole('button', { name: /confirm import/i }));
+    await screen.findByRole('heading', { name: /import complete/i });
+
+    const animal = captured.animals.remy;
+    const days = getAnimalDays(captured, 'remy');
+    expect(days.map((day) => day.date)).toEqual(['2023-06-22', '2023-06-23']);
+    for (const day of days) {
+      const issue = validateDay(day, mergeDayMetadata(animal, day), animal, days).find(
+        (candidate) => candidate.code === 'divergent_task_identity_across_days'
+      );
+      // An export-blocking error on each day, routed to its Tasks & Epochs step.
+      expect(issue).toMatchObject({ severity: 'error', ownerSurface: 'day', step: 'epochs' });
+    }
   });
 });
 

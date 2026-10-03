@@ -28,6 +28,7 @@ import { getAnimalCameras, getDataAcqDevices } from './workspaceSelectors';
 import type { ValidationModel } from '../validation/issueTypes';
 import { isBlockingIssue } from '../validation/issueTypes';
 import { canonicalJson } from '../utils/canonicalJson';
+import { importTaskDescriptionDivergences } from '../domain/taskIdentity';
 import { remapCameraRefs } from './cameraUsage';
 import {
   analyzeCameraCalibrations,
@@ -982,7 +983,14 @@ export function planImport(
       cameraConflicts: facts.cameraConflicts,
       configVersions,
       days,
-      divergences: facts.divergences,
+      // A task name described two ways is refused by Spyglass; list it with the other differences.
+      divergences: [
+        ...facts.divergences,
+        ...importTaskDescriptionDivergences(
+          entries.map((entry) => ({ sourceName: entry.sourceName, tasks: entry.dayFacts.tasks })),
+          existingAnimalId ? { workspace: existingWorkspace, animalId: existingAnimalId } : null
+        ),
+      ],
     });
   }
 

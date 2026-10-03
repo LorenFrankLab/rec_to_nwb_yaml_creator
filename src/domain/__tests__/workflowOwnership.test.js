@@ -197,6 +197,7 @@ describe('ownershipForIssue — pattern refinement', () => {
     for (const code of [
       'duplicate_task_epoch',
       'divergent_task_identity',
+      'divergent_task_identity_across_days',
       'orphaned_fs_gui_epoch',
       'dangling_dio_output',
       'fs_gui_requires_optogenetics',
