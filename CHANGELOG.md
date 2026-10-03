@@ -307,30 +307,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     imported day whose channel map is not in order (0, 1, 2, 3), and download such days again even if
     they show as current. The Day Editor's channel map reference now labels its columns "Channel" and
     "Probe electrode" (they were swapped).
+
 - **Exported files keep their values when trodes_to_nwb reads them.** trodes_to_nwb reads YAML 1.1
   (PyYAML). Text it would have taken as a number, yes/no, a date or a time (a session id
   `20230622_01`, a task environment `Off`, a lens `1:1.4`) is now written in quotes, and numbers such as
   `2e-7` are written `2.0e-7` so they stay numbers. The subject's date of birth is still written as a
   date. A pilot day downloaded earlier with such a value now shows "changed since download".
+
 - **Importing a file whose sections share a YAML anchor (`&id001` / `*id001`, as Python scripts often
   write) no longer links them together.** Marking a bad channel or unmapping a channel on one tetrode
   changed every tetrode sharing the anchor. A file whose alias refers back to itself is rejected with a
   clear message, and exported files never contain anchors or aliases.
+
 - **The legacy form's download is named `{EXPERIMENT_DATE_in_format_YYYYMMDD}_{subject_id}_metadata.yml`,**
   with the subject id exactly as entered. It said `mmddYYYY` and lower-cased the id, so a file renamed
   as suggested did not match its `.rec` files in trodes_to_nwb.
+
 - **Warnings no longer block the legacy download.** They are listed in one dialog, and the file
   downloads on OK; errors still block and are shown on the form. Before, any advisory (an experimenter
   name, a genotype, a camera scale, a relative file path) stopped the download.
+
 - **New checks for problems that stop trodes_to_nwb or pynwb** (blocking): repeated optical fiber or
   virus injection names, or a fiber named like the light source; a session with no tasks (legacy form;
   a workspace day without tasks was already incomplete); a date of birth without seconds or an
   impossible date; subject fields the NWB subject does not have (both imports now leave these out and
   list them); a number as the age; a virus injection hemisphere other than left or right.
+
 - **New warnings:** an age that is not an ISO 8601 duration (DANDI rejects `P164`; use `P164D`); no
-  video files (the current trodes_to_nwb fails on an empty video list); more than one virus injection,
+  video files (the current trodes_to_nwb fails on an empty video list; in the workspace it shows once
+  every epoch's video question is answered); more than one virus injection,
   or one virus with different titers (only the first injection and titer reach the NWB file); a subject
   id the converter cannot match with its recordings (legacy form).
+
+- **Uploading into the legacy form keeps values you can fix in the form.** Two optical fibers with the
+  same name (common in files from earlier versions), a date of birth without seconds, a numeric age, a
+  "bilateral" virus injection or an empty task list are imported and listed under "To fix before
+  download", and the download stays blocked until they are fixed, instead of the upload dropping the
+  whole section. Subject values the form has no field for (a strain that is not text, an age that is
+  neither text nor a number, an age reference other than birth or gestational) are left out on their
+  own and named in the import summary. The Subject section has an optional Age field (an ISO 8601
+  duration such as P90D); leaving it empty writes no age.
+
 - **Legacy form editing:**
   - After Duplicate or Remove, typing in a moved electrode group or camera edits that row. It could edit
     another row, and removing a group could add an empty phantom group.
@@ -338,7 +355,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     first digit or leaves a text id that blocked the download with "must be integer".
   - Choosing a device type no longer renumbers other electrode groups' ntrodes, which could file a
     tetrode's channels under its neighbour's group and location. Each group keeps its ntrode ids; extra
-    shanks get new ids after the largest in use.
+    shanks and duplicated groups get the lowest unused ids, so a removed group's gap is filled.
   - Clicking a read-only Ntrode Id no longer changes another ntrode's id.
   - Changing an electrode group's id keeps its channel maps. An id another group uses, or a value that
     is not a whole number, is not accepted and the previous id comes back; to swap two ids, go through
@@ -346,6 +363,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - New optical fibers and virus injections get unique names ("Optical fiber 2"; a duplicate is
     numbered after its source), which trodes_to_nwb requires.
   - The 64c-3s probe's third shank offers electrodes 42–63 in the channel map (it offered 44–65).
+
 - **Pilot workspace import:**
   - Importing YAML files no longer changes which probe setup other recording days get. An older
     recording added to an existing animal uses its own file's setup (or the animal's matching setup when
@@ -365,8 +383,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - A recording system with the same name but different hardware is kept as its own entry (named with
     the date it was first recorded), so each day exports its own file's hardware. Subject facts that
     differ from the existing animal's are listed before the day is added.
-  - Each imported day exports the subject age its own file recorded.
+  - Each imported day exports the subject age its own file recorded, and each day's age can be edited in
+    the Daily log ("Age on <date>"). Days logged or duplicated in the app get the age on their own date
+    from the date of birth (or no age), instead of the age from the file that created the animal.
   - A file listing more than one recording system asks which one the day was recorded on.
+  - Adding an older file with the same probe hardware no longer blocks export of a later existing day
+    when the older file marks a failed channel the later day doesn't; the older day gets its own setup.
+  - Adding a single file whose task description differs from the animal's existing days opens the
+    review screen before anything is written.
+  - A date of birth without seconds is asked for with a date field instead of requiring an edit to the
+    file, and saving the animal profile with the same date fixes one stored that way.
   - Import & Repair suggests a value only when the file states it unambiguously: "0.45 kg", "1.1 lb",
     "1,250 g" or a `times_period_multiplier` of "1,5" are asked for instead of being imported as 0.45,
     1.1, 1 or 1; "macaque" and "marmoset" are no longer turned into one species. Each suggestion has an
@@ -374,6 +400,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - A file missing a required number (raw_data_to_volts, an electrode group's targeted x/y/z, …) asks
     for it in a number box and imports the number. It was stored as text and the file could never be
     imported.
+
 - **Pilot workspace:**
   - A recording system that days use can no longer be deleted (deleting the default silently switched
     those days to another system's hardware). "Make <name> the default" changes the default for new
@@ -381,12 +408,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - The same task name with different descriptions on two recording days of one animal blocks export
     of those days (Spyglass refuses the task epochs of such a recording) and is listed in the batch
     import preview.
+  - Subject fields an earlier import stored on an animal (an unknown field such as `notes`, a non-text
+    strain, an invalid `age__reference`) can be removed with one click; they blocked every day's export.
+  - Renaming a recording system keeps the days that use it on it (their export failed after "Make
+    default" followed by a rename).
+  - On load, animals whose electrode setup an older import left showing an earlier configuration are
+    re-synced to their current configuration, and a notice names them; exports are unchanged. The
+    configuration history warns when the current version starts before an earlier one.
   - Undo after deleting a recording day brings the day back exactly as it was. It could come back with
     the animal's default team and optogenetics and lose review flags, a confirmed setup choice, its data
     folder and its download history.
   - Upgrading an older saved workspace no longer loses a day's tasks when the day appeared in two
     animals' day lists, and treats an animal's initial setup date as unknown when the animal was
     entered in the evening (US time) or early morning (zones ahead of UTC).
+
 - **Fixes from `main` (#73) apply to the legacy form:** the DIO description refreshes when its stored
   text changes on re-import, and a file that cannot be imported (read error, rich text, invalid YAML,
   no metadata fields, an unexpected error) leaves the form as it was and says so.
