@@ -4,40 +4,6 @@
  * Validates business logic that is not easily expressed in JSON schema.
  */
 
-/**
- * Custom business logic validation rules
- *
- * Rules enforced:
- * 1. Tasks with camera_ids require cameras to be defined
- * 2. Single-valued camera_id references require cameras to be defined
- * 3. Optogenetics configuration must be complete (all or none of the 3 fields)
- * 4. Ntrode channel mappings must have unique physical channels (no duplicates)
- * 5. Every camera_id reference must match a defined camera id
- * 6. optogenetic_stimulation_software is required when optogenetics is configured
- * 7. Optical fibers and virus injections carry a reference; one excitation source at most
- * 8. FsGUI protocols need complete optogenetics, task epochs and an existing DIO event
- * 9. Behavioral event names and descriptions are unique
- * 10. Camera, electrode group and ntrode ids are unique; channel-map rows name a group
- * 11. Optical fibers, virus injections and the excitation source have distinct names
- * 12. There is at least one task
- * 13. Subject values pynwb rejects (date_of_birth, unknown fields, types); a non-ISO age warns
- * 14. An empty video list warns
- * 15. Several virus injections, or one virus with different titers, warn
- * 16. A subject id the converter cannot group with its recordings warns
- * 17. A virus injection's hemisphere is left or right
- *
- * Rules 7-10 are the trodes_to_nwb crash guards of the modern branch's rule set, with the same
- * codes and messages.
- *
- * @param {object} model - The form data to validate
- * @returns {Issue[]} Array of validation issues with format:
- *   {
- *     path: string,       // Normalized path: "tasks", "optogenetics", etc.
- *     code: string,       // Rule code: "missing_camera", "partial_configuration", etc.
- *     severity: "error",  // "error" blocks the download; "warning" asks the user to confirm
- *     message: string     // User-friendly message
- *   }
- */
 import { getDefinedCameraIds } from '../utils/cameraReferences';
 import JsonSchemaFile from '../nwb_schema.json';
 
@@ -125,7 +91,12 @@ export const isIsoAge = (age) => {
   return bounds.length === 2 && bounds.every((bound) => bound === '' || ISO_DURATION.test(bound));
 };
 
-const AGE_UNITS = { d: 'D', day: 'D', days: 'D', w: 'W', wk: 'W', wks: 'W', week: 'W', weeks: 'W', mo: 'M', month: 'M', months: 'M', y: 'Y', yr: 'Y', yrs: 'Y', year: 'Y', years: 'Y' };
+const AGE_UNITS = {
+  d: 'D', day: 'D', days: 'D',
+  w: 'W', wk: 'W', wks: 'W', week: 'W', weeks: 'W',
+  mo: 'M', month: 'M', months: 'M',
+  y: 'Y', yr: 'Y', yrs: 'Y', year: 'Y', years: 'Y',
+};
 
 /**
  * The ISO 8601 duration an age most likely means (`P164` or `164` → `P164D`, `6 weeks` →
@@ -151,6 +122,40 @@ const SCHEMA_DATE_OF_BIRTH = new RegExp(
   JsonSchemaFile.properties.subject.properties.date_of_birth.pattern
 );
 
+/**
+ * Custom business logic validation rules
+ *
+ * Rules enforced:
+ * 1. Tasks with camera_ids require cameras to be defined
+ * 2. Single-valued camera_id references require cameras to be defined
+ * 3. Optogenetics configuration must be complete (all or none of the 3 fields)
+ * 4. Ntrode channel mappings must have unique physical channels (no duplicates)
+ * 5. Every camera_id reference must match a defined camera id
+ * 6. optogenetic_stimulation_software is required when optogenetics is configured
+ * 7. Optical fibers and virus injections carry a reference; one excitation source at most
+ * 8. FsGUI protocols need complete optogenetics, task epochs and an existing DIO event
+ * 9. Behavioral event names and descriptions are unique
+ * 10. Camera, electrode group and ntrode ids are unique; channel-map rows name a group
+ * 11. Optical fibers, virus injections and the excitation source have distinct names
+ * 12. There is at least one task
+ * 13. Subject values pynwb rejects (date_of_birth, unknown fields, types); a non-ISO age warns
+ * 14. An empty video list warns
+ * 15. Several virus injections, or one virus with different titers, warn
+ * 16. A subject id the converter cannot group with its recordings warns
+ * 17. A virus injection's hemisphere is left or right
+ *
+ * Rules 7-10 are the trodes_to_nwb crash guards of the modern branch's rule set, with the same
+ * codes and messages.
+ *
+ * @param {object} model - The form data to validate
+ * @returns {Issue[]} Array of validation issues with format:
+ *   {
+ *     path: string,       // Normalized path: "tasks", "optogenetics", etc.
+ *     code: string,       // Rule code: "missing_camera", "partial_configuration", etc.
+ *     severity: "error",  // "error" blocks the download; "warning" asks the user to confirm
+ *     message: string     // User-friendly message
+ *   }
+ */
 export const rulesValidation = (model) => {
   // Handle null/undefined model gracefully
   if (!model || typeof model !== 'object') {
