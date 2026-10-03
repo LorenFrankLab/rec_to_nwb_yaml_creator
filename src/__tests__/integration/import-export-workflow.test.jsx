@@ -649,4 +649,65 @@ describe('Import/Export Workflow Integration', () => {
       expect(channelZeroMaps()[1].value).toBe('0');
     });
   });
+
+  /**
+   * The download warns about an age that is not an ISO 8601 duration ("Did you mean P164D?"), and
+   * the form now has an Age field to fix it in. An empty Age field writes no age.
+   */
+  describe('Subject age', () => {
+    const uploadWithAge = async (user, age) => {
+      await renderLegacyApp();
+      const session = YAML.parse(getMinimalCompleteYaml());
+      session.subject.age = age;
+      await user.upload(getFileInput(), new File([YAML.stringify(session)], 'age.yml', { type: 'text/yaml' }));
+      await waitFor(() => expect(screen.getByLabelText(/^lab$/i)).toHaveValue('Test Lab'));
+    };
+    const exported = () => YAML.parse(mockBlob.content[0]);
+
+    it('shows an imported age and exports the one typed over it', { timeout: 30000 }, async () => {
+      const user = userEvent.setup();
+      await uploadWithAge(user, 'P164');
+      const ageInput = screen.getByLabelText(/^age$/i);
+      expect(ageInput).toHaveValue('P164');
+
+      await triggerExport();
+      await waitFor(() => expect(window.confirm).toHaveBeenCalledWith(expect.stringContaining('Did you mean "P164D"?')));
+
+      window.confirm.mockClear();
+      mockBlob = null;
+      await user.clear(ageInput);
+      await user.type(ageInput, 'P164D');
+      await user.tab();
+      await triggerExport();
+
+      await waitFor(() => expect(mockBlob).not.toBeNull());
+      expect(exported().subject.age).toBe('P164D');
+      expect(window.confirm).not.toHaveBeenCalledWith(expect.stringContaining('age'));
+    });
+
+    it('writes no age once the Age field is cleared', { timeout: 30000 }, async () => {
+      const user = userEvent.setup();
+      await uploadWithAge(user, 'P164D');
+      const ageInput = screen.getByLabelText(/^age$/i);
+
+      await user.clear(ageInput);
+      await user.tab();
+      await triggerExport();
+
+      await waitFor(() => expect(mockBlob).not.toBeNull());
+      expect(exported().subject).not.toHaveProperty('age');
+      expect(mockBlob.content[0]).not.toMatch(/^\s+age:/m);
+    });
+
+    it('writes no age when none was entered', { timeout: 30000 }, async () => {
+      const user = userEvent.setup();
+      await uploadWithAge(user, undefined);
+      expect(screen.getByLabelText(/^age$/i)).toHaveValue('');
+
+      await triggerExport();
+
+      await waitFor(() => expect(mockBlob).not.toBeNull());
+      expect(exported().subject).not.toHaveProperty('age');
+    });
+  });
 });
