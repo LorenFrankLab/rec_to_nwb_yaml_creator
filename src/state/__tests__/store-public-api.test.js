@@ -28,6 +28,7 @@ describe('useStore public API contract', () => {
       'acknowledgeReceiptStorage',
       'addArrayItem',
       'applyAnimalDefaultsToDays',
+      'changeElectrodeGroupId',
       'correctChannelMaps',
       'createAnimal',
       'createConfigurationSnapshotAndApplyForward',
