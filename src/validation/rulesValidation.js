@@ -24,6 +24,7 @@
  * 14. An empty video list warns
  * 15. Several virus injections, or one virus with different titers, warn
  * 16. A subject id the converter cannot group with its recordings warns
+ * 17. A virus injection's hemisphere is left or right
  *
  * Rules 7-10 are the trodes_to_nwb crash guards of the modern branch's rule set, with the same
  * codes and messages.
@@ -718,6 +719,28 @@ export const rulesValidation = (model) => {
         `{date}_{subject}_metadata.yml groups with the {date}_{subject}_{epoch}_{tag}.rec files.`,
     });
   }
+
+  // Rule 17: trodes_to_nwb accepts only "left" or "right" (any case) as a virus injection's
+  // hemisphere and raises a ValueError otherwise ("bilateral" in an imported file, for example).
+  // A blank value is the schema's required check.
+  (Array.isArray(model.virus_injection) ? model.virus_injection : []).forEach((injection, i) => {
+    const hemisphere = injection?.hemisphere;
+    if (
+      typeof hemisphere === 'string' &&
+      hemisphere.trim() !== '' &&
+      !['left', 'right'].includes(hemisphere.toLowerCase())
+    ) {
+      issues.push({
+        path: `virus_injection[${i}].hemisphere`,
+        code: 'invalid_injection_hemisphere',
+        severity: 'error',
+        message:
+          `Virus injection ${i + 1}${injection?.name ? ` ("${injection.name}")` : ''} has ` +
+          `hemisphere "${hemisphere}". trodes_to_nwb accepts only "left" or "right" — record ` +
+          `one injection per hemisphere.`,
+      });
+    }
+  });
 
   return issues;
 };
