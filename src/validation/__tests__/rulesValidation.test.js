@@ -1068,3 +1068,18 @@ describe('rulesValidation() - optogenetics device names', () => {
     expect(validate(blank)).toContainEqual(expect.objectContaining({ path: 'optical_fiber[0].name', code: 'pattern' }));
   });
 });
+
+// trodes_to_nwb always builds the position data from the tasks' epochs (pd.concat over the tasks),
+// which fails when there are no tasks.
+describe('rulesValidation() - at least one task', () => {
+  it('blocks an empty task list', () => {
+    expect(rulesValidation(createTestYaml({ tasks: [] }))).toEqual([
+      expect.objectContaining({ path: 'tasks', code: 'no_tasks', severity: 'error' }),
+    ]);
+  });
+
+  it('accepts a session with a task', () => {
+    const model = createTestYaml({ tasks: [{ task_name: 'Sleep', camera_id: [], task_epochs: [1] }] });
+    expect(rulesValidation(model)).toEqual([]);
+  });
+});

@@ -19,6 +19,7 @@
  * 9. Behavioral event names and descriptions are unique
  * 10. Camera, electrode group and ntrode ids are unique; channel-map rows name a group
  * 11. Optical fibers, virus injections and the excitation source have distinct names
+ * 12. There is at least one task
  *
  * Rules 7-10 are the trodes_to_nwb crash guards of the modern branch's rule set, with the same
  * codes and messages.
@@ -442,6 +443,19 @@ export const rulesValidation = (model) => {
       });
     }
   });
+
+  // Rule 12: at least one task. trodes_to_nwb always builds the position data from the tasks'
+  // epochs and fails when the list is empty.
+  if (Array.isArray(model.tasks) && model.tasks.length === 0) {
+    issues.push({
+      path: 'tasks',
+      code: 'no_tasks',
+      severity: 'error',
+      message:
+        'Add at least one task (with its epochs). trodes_to_nwb builds the position data ' +
+        'from the tasks and fails when there are none.',
+    });
+  }
 
   return issues;
 };
