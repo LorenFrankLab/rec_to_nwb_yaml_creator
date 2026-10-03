@@ -107,8 +107,9 @@ const exportYaml = async (page) => {
     })),
   );
   expect(invalidFields, 'the imported YAML should satisfy legacy form validation').toEqual([]);
-  // The sample still has warnings (e.g. its relative associated-file paths): the download asks once
-  // to confirm them. Accept, as a user who has read them would.
+  // The sample upload leaves out associated_files (two rows share one path), and once the subject
+  // id is corrected the download has no warnings, so no dialog appears today. If a warning does
+  // appear, the download asks once to confirm it: accept, as a user who has read it would.
   page.once('dialog', (dialog) => dialog.accept());
   return await waitForDownload(page, async () => {
     await downloadButton.click();
