@@ -562,3 +562,113 @@ describe('useArrayManagement', () => {
     });
   });
 });
+
+/**
+ * trodes_to_nwb raises a ValueError on two optical fibers or two virus
+ * injections with the same name, and fibers share the NWB device namespace
+ * with the excitation source, so new items must not copy a name in use.
+ */
+describe('useArrayManagement - optogenetics names stay unique', () => {
+  function useSeededHook(initialFormData) {
+    const [formData, setFormData] = useState({
+      opto_excitation_source: [],
+      optical_fiber: [],
+      virus_injection: [],
+      ...initialFormData,
+    });
+    return { formData, ...useArrayManagement(formData, setFormData) };
+  }
+
+  const names = (result, key) => result.current.formData[key].map((item) => item.name);
+  const add = (result, key, count) =>
+    act(() => {
+      result.current.addArrayItem(key, count);
+    });
+  const duplicate = (result, index, key) =>
+    act(() => {
+      result.current.duplicateArrayItem(index, key);
+    });
+
+  it('Add gives each new optical fiber the next unused default name', () => {
+    const { result } = renderHook(() => useSeededHook({}));
+
+    add(result, 'optical_fiber');
+    add(result, 'optical_fiber');
+    add(result, 'optical_fiber', 2);
+
+    expect(names(result, 'optical_fiber')).toEqual([
+      'Optical fiber 1',
+      'Optical fiber 2',
+      'Optical fiber 3',
+      'Optical fiber 4',
+    ]);
+  });
+
+  it('Add gives each new virus injection the next unused default name', () => {
+    const { result } = renderHook(() => useSeededHook({}));
+
+    add(result, 'virus_injection');
+    add(result, 'virus_injection');
+
+    expect(names(result, 'virus_injection')).toEqual(['Injection 1', 'Injection 2']);
+  });
+
+  it('Add skips names that are already in use', () => {
+    const { result } = renderHook(() =>
+      useSeededHook({ optical_fiber: [{ name: 'Optical fiber 1' }, { name: 'Optical fiber 2' }] })
+    );
+
+    add(result, 'optical_fiber');
+
+    expect(names(result, 'optical_fiber')[2]).toBe('Optical fiber 3');
+  });
+
+  it('Duplicate names the copy after its source with the next unused number', () => {
+    const { result } = renderHook(() =>
+      useSeededHook({
+        optical_fiber: [{ name: 'Optical fiber 1' }, { name: 'Optical fiber 2' }],
+        virus_injection: [{ name: 'CA1 injection' }],
+      })
+    );
+
+    duplicate(result, 0, 'optical_fiber');
+    duplicate(result, 0, 'virus_injection');
+    duplicate(result, 0, 'virus_injection');
+
+    expect(names(result, 'optical_fiber')).toEqual([
+      'Optical fiber 1',
+      'Optical fiber 3',
+      'Optical fiber 2',
+    ]);
+    expect(names(result, 'virus_injection')).toEqual([
+      'CA1 injection',
+      'CA1 injection 3',
+      'CA1 injection 2',
+    ]);
+  });
+
+  it('fiber and excitation source names do not repeat each other', () => {
+    const { result } = renderHook(() =>
+      useSeededHook({ opto_excitation_source: [{ name: 'Optical fiber 1' }] })
+    );
+
+    add(result, 'optical_fiber');
+    add(result, 'opto_excitation_source');
+    duplicate(result, 0, 'opto_excitation_source');
+
+    expect(names(result, 'optical_fiber')).toEqual(['Optical fiber 2']);
+    expect(names(result, 'opto_excitation_source')).toEqual([
+      'Optical fiber 1',
+      'Optical fiber 3',
+      'Omicron LuxX+ Blue',
+    ]);
+  });
+
+  it('leaves a blank name blank (validation asks for a name)', () => {
+    const { result } = renderHook(() => useSeededHook({ virus_injection: [{ name: '' }] }));
+
+    duplicate(result, 0, 'virus_injection');
+
+    expect(names(result, 'virus_injection')).toEqual(['', '']);
+  });
+});
