@@ -361,10 +361,11 @@ export const SURFACE_BY_CODE: Record<string, RepairSurface> = {
   // dead-end on a disabled control.
   subject_id_slash: 'none',
   session_id_slash: 'none',
-  // Subject fields no in-app editor holds (an unknown field, age, strain, age__reference): the
-  // message states the remedy.
-  unknown_subject_field: 'none',
-  subject_value_type: 'none',
+  // Subject values pynwb rejects. The shared rule marks them 'none' (the legacy form has no editor);
+  // the workspace composer re-routes them (domain/subjectValueRepairs): a stored unknown field,
+  // strain or age__reference is removed from the animal.
+  unknown_subject_field: 'animal',
+  subject_value_type: 'animal',
   subject_age_format: 'none',
 };
 

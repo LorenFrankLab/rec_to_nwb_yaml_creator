@@ -17,12 +17,14 @@
 import type { Animal, Day } from './workspaceTypes';
 import type { AnimalUpdates, DayUpdates } from './workspaceTransitions';
 import { isRecord } from '../utils/records';
+import { isRemovableSubjectField } from '../domain/subjectValueRepairs';
 
 /** A serializable repair command (persisted/rehydrated, then executed by {@link applyRepairCommand}). */
 export interface RepairCommand {
   /** The command type (one of {@link REPAIR_COMMAND_TYPES}); an unknown type is a no-op. */
   type?: string;
-  /** The day-owned collection to clear (for `resetDayCollection`). */
+  /** The day-owned collection to clear (`resetDayCollection`), or the subject field to remove
+   *  (`removeSubjectField`). */
   field?: string;
   /** The override / ntrode key to drop (for the `remove*Key` commands). */
   key?: string;
@@ -72,6 +74,7 @@ export const REPAIR_COMMAND_TYPES: readonly string[] = Object.freeze([
   'resetDaySession',
   'confirmConfigurationChoice',
   'confirmWeightMeasurement',
+  'removeSubjectField',
 ]);
 
 /**
@@ -95,6 +98,7 @@ const COMMAND_SURFACE: Readonly<Record<string, 'day' | 'animal'>> = Object.freez
   resetAnimalCameras: 'animal',
   resetDataAcqDevice: 'animal',
   rebuildConfigurationHistory: 'animal',
+  removeSubjectField: 'animal',
 });
 
 /**
@@ -259,6 +263,14 @@ export function applyRepairCommand(command: RepairCommand, ctx: RepairCommandCon
           fields: { 'session.weight': 'entered' },
         },
       });
+      return;
+    }
+    case 'removeSubjectField': {
+      // Delete one subject field pynwb rejects (an unknown field, or a strain / age__reference of
+      // the wrong type, stored by an earlier import). `undefined` deletes the fact (mergeSubject).
+      // A schema-required field is never removed.
+      if (!isRemovableSubjectField(command.field)) return;
+      actions.updateAnimal(guardedAnimalId, { subject: { [command.field]: undefined } });
       return;
     }
     default:

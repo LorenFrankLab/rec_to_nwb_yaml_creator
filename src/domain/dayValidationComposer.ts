@@ -33,6 +33,7 @@ import { crossDayTaskIdentityIssues } from './taskIdentity';
 import { recordingFilenameIssues } from './recordingFilename';
 import { configurationChoiceIssues, provenanceReviewIssues } from './datedFactsValidation';
 import { suspiciousVoltageIssues } from './rigConstants';
+import { withSubjectValueRepair } from './subjectValueRepairs';
 import type { ValidationModel } from '../validation/issueTypes';
 
 /**
@@ -90,7 +91,10 @@ export function validateDay(
   const exportBase = videoUndeclared.length > 0
     ? base.filter((issue) => issue.code !== 'no_associated_videos')
     : base;
-  const taggedBase = tagBaseOwnershipByProvenance(exportBase, dayGeometryProvenance(day));
+  // Subject values pynwb rejects get their workspace repair (the shared rule has none): a stored
+  // field is removed from the animal, an age is edited on this day.
+  const taggedBase = tagBaseOwnershipByProvenance(exportBase, dayGeometryProvenance(day))
+    .map(withSubjectValueRepair);
   // Stamp every issue with the canonical ownership contract (normalizeIssue) so consumers
   // read `ownerSurface`/`step`/`focusPath` directly — never re-inferring — and an issue
   // with no resolvable owner throws loudly instead of silently routing to the Day Editor.

@@ -47,6 +47,7 @@ export const WORKFLOW_COMMAND_CATALOG = Object.freeze({
   resetDaySession: 'repair',
   confirmConfigurationChoice: 'repair',
   confirmWeightMeasurement: 'repair',
+  removeSubjectField: 'repair',
   acknowledgeBadChannelRemoval: 'repair',
   repairAnimalCollection: 'repair',
 
