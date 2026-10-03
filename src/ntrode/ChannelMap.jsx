@@ -20,7 +20,6 @@ const ChannelMap = (prop) => {
   const {
     nTrodeItems,
     nTrodeIndices,
-    onBlur,
     onMapInput,
     electrodeGroupId,
     updateFormArray,
@@ -64,8 +63,9 @@ const ChannelMap = (prop) => {
                     value={item.ntrode_id}
                     onChange={() => {}}
                     placeholder="Ntrode Id"
+                    // Read-only: generated with the device type, so leaving
+                    // the field must not write anything.
                     readOnly
-                    onBlur={onBlur}
                   />
                   <CheckboxList
                     id={`ntrode_electrode_group_channel_map-bad_channels-${flatIndex}`}
@@ -148,7 +148,6 @@ ChannelMap.propTypes = {
   electrodeGroupId: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
   nTrodeItems: PropTypes.arrayOf(PropTypes.object),
   nTrodeIndices: PropTypes.arrayOf(PropTypes.number).isRequired,
-  onBlur: PropTypes.func,
   updateFormArray: PropTypes.func,
   onMapInput: PropTypes.func,
 };

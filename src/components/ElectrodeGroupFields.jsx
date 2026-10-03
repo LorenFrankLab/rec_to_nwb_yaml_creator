@@ -236,13 +236,6 @@ export default function ElectrodeGroupFields() {
                       nTrodeItems={nTrodeItems}
                       nTrodeIndices={nTrodeIndices}
                       updateFormArray={updateFormArray}
-                      onBlur={(e) =>
-                        onBlur(e, {
-                          key: 'ntrode_electrode_group_channel_map',
-                          name: 'map',
-                          index,
-                        })
-                      }
                       onMapInput={onMapInput}
                     />
                   </div>
