@@ -23,6 +23,7 @@
  * 13. Subject values pynwb rejects (date_of_birth, unknown fields, types); a non-ISO age warns
  * 14. An empty video list warns
  * 15. Several virus injections, or one virus with different titers, warn
+ * 16. A subject id the converter cannot group with its recordings warns
  *
  * Rules 7-10 are the trodes_to_nwb crash guards of the modern branch's rule set, with the same
  * codes and messages.
@@ -138,6 +139,11 @@ export const likelyIsoAge = (age) => {
   const unit = match[2] === '' ? 'D' : AGE_UNITS[match[2].toLowerCase()];
   return unit ? `P${match[1]}${unit}` : null;
 };
+
+// The characters a subject id may hold so trodes_to_nwb, which splits file names on "_", can group
+// {date}_{subject}_metadata.yml with the {date}_{subject}_{epoch}_{tag}.rec files. (The modern
+// branch's RECORDING_SUBJECT_TOKEN_PATTERN.)
+const RECORDING_SUBJECT_TOKEN_PATTERN = /^[A-Za-z0-9-]+$/;
 
 // The schema's own (unanchored) date_of_birth pattern: a value it rejects gets its message.
 const SCHEMA_DATE_OF_BIRTH = new RegExp(
@@ -686,6 +692,30 @@ export const rulesValidation = (model) => {
           `trodes_to_nwb records the virus once, with the first titer (${values[0]}); the ` +
           `others are lost.`,
       });
+    });
+  }
+
+  // Rule 16: a subject id the converter cannot group with its recordings. trodes_to_nwb finds a
+  // session's files by splitting their names on "_" ({date}_{subject}_...), so the id may hold
+  // only letters, digits and hyphens. A blank id is the schema's required check.
+  const subjectId = model.subject?.subject_id;
+  if (
+    typeof subjectId === 'string' &&
+    subjectId.trim() !== '' &&
+    !RECORDING_SUBJECT_TOKEN_PATTERN.test(subjectId)
+  ) {
+    const problem = subjectId.includes('_')
+      ? 'contains an underscore, which the converter uses to split filename parts'
+      : /\s/.test(subjectId)
+        ? 'contains whitespace'
+        : 'contains characters that cannot appear in a recording filename';
+    issues.push({
+      path: 'subject.subject_id',
+      code: 'subject_id_not_recording_compatible',
+      severity: 'warning',
+      message:
+        `Subject ID "${subjectId}" ${problem}. Use only letters, digits and hyphens so ` +
+        `{date}_{subject}_metadata.yml groups with the {date}_{subject}_{epoch}_{tag}.rec files.`,
     });
   }
 

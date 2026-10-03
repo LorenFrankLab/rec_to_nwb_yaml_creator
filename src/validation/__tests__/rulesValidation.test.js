@@ -1262,3 +1262,23 @@ describe('rulesValidation() - several virus injections', () => {
     expect(issues[1].message).toContain('5000000000000');
   });
 });
+
+// trodes_to_nwb groups a session's files by splitting their names on "_", so a subject id with
+// anything but letters, digits and hyphens cannot be matched with its recordings.
+describe('rulesValidation() - subject id the converter can group', () => {
+  it.each(['rat_01', 'rat 01', 'rat.01'])('warns for the subject id %s', (subjectId) => {
+    expect(rulesValidation({ subject: { subject_id: subjectId } })).toEqual([
+      expect.objectContaining({
+        path: 'subject.subject_id',
+        code: 'subject_id_not_recording_compatible',
+        severity: 'warning',
+        message: expect.stringContaining(`"${subjectId}"`),
+      }),
+    ]);
+  });
+
+  it('accepts letters, digits and hyphens, and leaves a blank id to the schema', () => {
+    expect(rulesValidation({ subject: { subject_id: 'Rat-01' } })).toEqual([]);
+    expect(rulesValidation({ subject: { subject_id: '' } })).toEqual([]);
+  });
+});
