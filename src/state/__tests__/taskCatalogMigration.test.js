@@ -18,6 +18,7 @@
 import { describe, it, expect } from 'vitest';
 import { migrateTasksToCatalogV2ToV3 } from '../taskCatalogMigration';
 import { resolveTaskInstances } from '../taskCatalog';
+import { resolveDayTasks } from '../dayTaskCatalog';
 import {
   WORKSPACE_SCHEMA_VERSION,
   MIGRATABLE_SCHEMA_VERSIONS,
@@ -193,6 +194,61 @@ describe('migrateTasksToCatalogV2ToV3 — non-destructive workspace→workspace 
     expect(environmentOf('remy-2023-06-02')).toBe('B');
     expect(environmentOf('remy-2023-06-03')).toBe('C');
     expect(out.days['remy-2023-06-03'].state?.taskDefinitionReconciliations).toBeUndefined();
+  });
+});
+
+describe('migrateTasksToCatalogV2ToV3 — corrupted day lists never lose or misfile a day\'s tasks', () => {
+  const REMY_TASKS = [{ task_name: 'sleep', task_description: 'A', task_environment: 'e', camera_id: [0], task_epochs: [1] }];
+  const JAQ_TASKS = [{ task_name: 'run', task_description: 'B', task_environment: 'track', camera_id: [0], task_epochs: [1] }];
+
+  /**
+   * remy's day `r1` and jaq's day `j1`, with the given day lists and `r1` owner.
+   * @param {object} lists - Each animal's `days` list, in the order the animals are stored.
+   * @param {object} [r1Extra] - Overrides for the `r1` record (e.g. its `animalId`).
+   * @returns {object} A v2 workspace.
+   */
+  const workspace = (lists, r1Extra = {}) => ({
+    animals: Object.fromEntries(Object.entries(lists).map(([id, days]) => [id, { id, days }])),
+    days: {
+      r1: { id: 'r1', animalId: 'remy', date: '2023-06-01', tasks: structuredClone(REMY_TASKS), ...r1Extra },
+      j1: { id: 'j1', animalId: 'jaq', date: '2023-06-01', tasks: structuredClone(JAQ_TASKS) },
+    },
+  });
+
+  it.each([
+    ['the owner first', { remy: ['r1'], jaq: ['r1', 'j1'] }],
+    ['the owner second', { jaq: ['r1', 'j1'], remy: ['r1'] }],
+  ])('a day listed by TWO animals keeps its tasks, catalogued under the animal it names (%s)', (_label, lists) => {
+    const out = migrateTasksToCatalogV2ToV3(workspace(lists));
+    expect(resolveDayTasks(out.animals.remy, out.days.r1)).toEqual(REMY_TASKS);
+    // The other animal's catalog does not absorb it; its own day is untouched.
+    expect(out.animals.jaq.taskTypes.map((t) => t.task_name)).toEqual(['run']);
+    expect(resolveDayTasks(out.animals.jaq, out.days.j1)).toEqual(JAQ_TASKS);
+  });
+
+  it('a day that names no animal and is listed by two keeps its inline tasks: either animal exports them', () => {
+    const out = migrateTasksToCatalogV2ToV3(workspace({ remy: ['r1'], jaq: ['r1', 'j1'] }, { animalId: undefined }));
+    expect(out.days.r1.tasks).toEqual(REMY_TASKS);
+    expect(out.days.r1).not.toHaveProperty('taskInstances');
+    expect(resolveDayTasks(out.animals.remy, out.days.r1)).toEqual(REMY_TASKS);
+    expect(resolveDayTasks(out.animals.jaq, out.days.r1)).toEqual(REMY_TASKS);
+  });
+
+  it('a day listed only by an animal it does NOT name keeps tasks that still resolve under its own animal', () => {
+    // r1 belongs to jaq but only remy lists it (wrong owner): once moved back to jaq, it must not
+    // resolve against jaq's catalog through references minted in remy's.
+    const out = migrateTasksToCatalogV2ToV3(workspace({ remy: ['r1'], jaq: ['j1'] }, { animalId: 'jaq' }));
+    expect(resolveDayTasks(out.animals.jaq, out.days.r1)).toEqual(REMY_TASKS);
+    expect(out.animals.remy.taskTypes).toEqual([]);
+  });
+
+  it('two records without an id field each keep their own tasks', () => {
+    const ws = workspace({ remy: ['r1', 'r2'], jaq: ['j1'] });
+    delete ws.days.r1.id;
+    ws.days.r2 = { animalId: 'remy', date: '2023-06-02', tasks: structuredClone(JAQ_TASKS) };
+    const out = migrateTasksToCatalogV2ToV3(ws);
+    expect(resolveDayTasks(out.animals.remy, out.days.r1)).toEqual(REMY_TASKS);
+    expect(resolveDayTasks(out.animals.remy, out.days.r2)).toEqual(JAQ_TASKS);
   });
 });
 

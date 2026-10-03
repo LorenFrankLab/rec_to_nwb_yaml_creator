@@ -249,4 +249,26 @@ describe('loadWorkspace upgrades old blobs losslessly (fixtures)', () => {
     expect(mergeDayMetadata(animal, day1).tasks[0].task_environment).toBe('home cage');
     expect(mergeDayMetadata(animal, day2).tasks[0].task_environment).toBe('QUIET ROOM');
   });
+
+  it('migrates a v2 blob whose day is ALSO listed by a second animal without losing the day\'s tasks', () => {
+    // Corrupted day lists: a second animal's list names remy's day too. The day still exports its
+    // tasks under remy (the animal it names), and the second animal's catalog does not absorb them.
+    const blob = structuredClone(v2Blob);
+    const { remy } = blob.workspace.animals;
+    blob.workspace.animals.jaq = {
+      ...structuredClone(remy),
+      id: 'jaq',
+      subject: { ...remy.subject, subject_id: 'jaq' },
+      days: ['remy-2023-06-22'],
+    };
+    const tasks = structuredClone(blob.workspace.days['remy-2023-06-22'].tasks);
+
+    window.localStorage.setItem(WORKSPACE_STORAGE_KEY, JSON.stringify(blob));
+    const loaded = loadWorkspace();
+    expect(loaded.discarded).toBeUndefined();
+
+    const { animals, days } = loaded.workspace;
+    expect(mergeDayMetadata(animals.remy, days['remy-2023-06-22']).tasks).toEqual(tasks);
+    expect(animals.jaq.taskTypes).toEqual([]);
+  });
 });
