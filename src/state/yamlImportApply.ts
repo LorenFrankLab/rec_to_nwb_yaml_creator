@@ -48,6 +48,7 @@ import { materializePlanDay } from './yamlImportPlan';
 import type { ConfigVersion, ImportPlan, ImportPlanAnimal, ImportPlanDay } from './yamlImportPlan';
 import { referencedCameraRefs } from './cameraUsage';
 import { selectConfigurationForDate } from '../domain/configurationSelection';
+import { badChannelRegressions } from '../domain/badChannelMonotonicity';
 import { canonicalJson } from '../utils/canonicalJson';
 import { normalizeProbeConfigDevices } from '../utils/deviceNormalization';
 
@@ -556,7 +557,10 @@ function timelineFrontier(animal: unknown, days: Record<string, any>): string {
  *    version that already has its configuration (the one in effect on its date first, else the
  *    latest such); a configuration no version has gets ONE pinned-only version, which is never
  *    chosen for another date and never becomes the current setup. A back-fill therefore changes no
- *    other day's configuration and supersedes nothing.
+ *    other day's configuration and supersedes nothing. Nor does it change an existing day's
+ *    exportability: failed channels only accumulate within a version, so a back-fill whose failed
+ *    channels a LATER existing day on that version does not mark is not pinned to it (that day
+ *    would read as un-failing them) — it takes a pinned-only version like an unmatched one.
  *
  * Every imported day is pinned explicitly here; its import provenance (written afterwards) makes
  * that pin conclusive.
@@ -585,6 +589,26 @@ function placeOnExistingTimeline(
   const dayId = (day: ImportPlanDay) => generateDayId(targetId, day.date);
   const placed = animalPlan.days.filter((day) => configOf(day) !== undefined);
 
+  // The existing days, plus the back-fills pinned to an existing version so far, as the
+  // monotonicity check reads them (date, version, day-owned failed channels).
+  const existingDays = getAnimalDayIds(existing)
+    .map((id) => workspace.days?.[id])
+    .filter((day): day is Record<string, unknown> => day != null && typeof day === 'object');
+  const pinnedBackfills: Array<Record<string, unknown>> = [];
+  const regressionCount = (day: unknown, days: unknown[]) =>
+    Object.values(badChannelRegressions(existing, day, days)).reduce((n, channels) => n + channels.length, 0);
+  // Whether pinning `day` to `version` would make a later existing day on it un-fail a channel.
+  const blocksLaterDay = (day: ImportPlanDay, version: number, candidate: Record<string, unknown>) => {
+    const earlier = [...existingDays, ...pinnedBackfills];
+    return existingDays.some(
+      (other) =>
+        other.configurationVersion === version &&
+        typeof other.date === 'string' &&
+        other.date > day.date &&
+        regressionCount(other, [...earlier, candidate]) > regressionCount(other, earlier)
+    );
+  };
+
   // Back-fills: reuse a version with the same configuration, else one pinned-only version per
   // configuration (shared by every back-filled day that recorded it).
   const unmatched = new Map<string, ImportPlanDay[]>();
@@ -595,8 +619,21 @@ function placeOnExistingTimeline(
       versionKey(inEffect) === key
         ? inEffect
         : [...history].reverse().find((entry) => geometryKey(entry.devices) === key)?.version;
-    if (match != null) actions.updateDay(dayId(day), { configurationVersion: match });
-    else unmatched.set(key, [...(unmatched.get(key) ?? []), day]);
+    const candidate = {
+      id: dayId(day),
+      date: day.date,
+      configurationVersion: match,
+      deviceOverrides: day.deviceOverrides,
+    };
+    if (match != null && !blocksLaterDay(day, match, candidate)) {
+      actions.updateDay(dayId(day), { configurationVersion: match });
+      pinnedBackfills.push(candidate);
+    } else {
+      // A same-geometry back-fill kept apart for its failed channels gets its own pinned-only
+      // version, not one shared with back-fills that could reuse the existing version.
+      const group = match != null ? `${key}|failed-channels` : key;
+      unmatched.set(group, [...(unmatched.get(group) ?? []), day]);
+    }
   }
   for (const days of unmatched.values()) {
     const first = days[0].date;

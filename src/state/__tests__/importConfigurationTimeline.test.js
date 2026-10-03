@@ -321,6 +321,28 @@ describe('W1: an import never takes over the effective-date timeline', () => {
     expect(choiceStatus(result, next)).toBe('confirmed');
   });
 
+  it('back-filling a same-hardware file with a failed channel a LATER existing day does not mark keeps that day exportable', () => {
+    // Failed channels only accumulate within one configuration version, so pinning the older day to
+    // the existing version would make the existing 06-22 day "un-fail" its channel and block export.
+    const { result } = renderHook(() => useStore());
+    importFiles(result, [makeFile({ date: '2023-06-22' })]);
+    const before = blockingCodes(result, '2023-06-22');
+    const failedFirstChannel = (animal, day) => {
+      const ntrode = animal.configurationHistory[0].devices.ntrode_electrode_group_channel_map[0];
+      day.deviceOverrides = { ...day.deviceOverrides, bad_channels: { [String(ntrode.ntrode_id)]: [2] } };
+    };
+    importFiles(result, [makeFile({ date: '2023-06-10', mutate: failedFirstChannel })]);
+
+    expect(blockingCodes(result, '2023-06-22')).toEqual(before);
+    expect(exportDay(result, '2023-06-10').ntrode_electrode_group_channel_map[0].bad_channels).toEqual([2]);
+    const ws = result.current.model.workspace;
+    const older = ws.days['remy-2023-06-10'].configurationVersion;
+    expect(older).not.toBe(ws.days['remy-2023-06-22'].configurationVersion);
+    expect(getConfigHistory(ws.animals.remy).find((snapshot) => snapshot.version === older).pinnedOnly).toBe(true);
+    expect(choiceStatus(result, '2023-06-10')).toBe('confirmed');
+    expect(exportDay(result, '2023-06-10').electrode_groups).toEqual(exportDay(result, '2023-06-22').electrode_groups);
+  });
+
   it('back-filled days that recorded the same other setup share ONE pinned-only version; a day logged between them keeps the timeline setup', () => {
     const { result } = renderHook(() => useStore());
     createAnimalInApp(result, 8, { effectiveDate: '2023-01-01' });
