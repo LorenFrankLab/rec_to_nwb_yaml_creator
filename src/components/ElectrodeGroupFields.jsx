@@ -269,6 +269,7 @@ export default function ElectrodeGroupFields() {
                     <ChannelMap
                       title="Ntrode"
                       electrodeGroupId={electrodeGroupId}
+                      deviceType={electrodeGroup.device_type}
                       nTrodeItems={nTrodeItems}
                       nTrodeIndices={nTrodeIndices}
                       updateFormArray={updateFormArray}
