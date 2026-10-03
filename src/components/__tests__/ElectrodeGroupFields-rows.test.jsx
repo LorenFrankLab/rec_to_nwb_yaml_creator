@@ -110,3 +110,31 @@ describe('ElectrodeGroupFields - editing a group id', () => {
     expect(model().electrode_groups.map((g) => g.id)).toEqual([0, 12]);
   });
 });
+
+describe('ElectrodeGroupFields - read-only Ntrode Id', () => {
+  // 64c-4s6mm6cm-20um-40um-dl: 4 shanks of 16 electrodes, ntrode ids 1-4
+  const shankNtrode = (shank) => ({
+    ntrode_id: shank + 1,
+    electrode_group_id: 0,
+    bad_channels: [],
+    map: Object.fromEntries(Array.from({ length: 16 }, (_, k) => [k, shank * 16 + k])),
+  });
+
+  it('leaving the Ntrode Id fields changes no ntrode id', async () => {
+    const { user } = renderGroups({
+      electrode_groups: [{ ...group(0), device_type: '64c-4s6mm6cm-20um-40um-dl' }],
+      ntrode_electrode_group_channel_map: [0, 1, 2, 3].map(shankNtrode),
+    });
+    const ntrodeIdInputs = screen.getAllByPlaceholderText('Ntrode Id');
+
+    await user.click(ntrodeIdInputs[1]);
+    await user.click(descriptionInput(0));
+    expect(model().ntrode_electrode_group_channel_map.map((n) => n.ntrode_id)).toEqual([1, 2, 3, 4]);
+
+    for (const input of ntrodeIdInputs) {
+      await user.click(input);
+    }
+    await user.click(descriptionInput(0));
+    expect(model().ntrode_electrode_group_channel_map.map((n) => n.ntrode_id)).toEqual([1, 2, 3, 4]);
+  });
+});

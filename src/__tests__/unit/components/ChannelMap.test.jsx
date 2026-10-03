@@ -34,7 +34,6 @@ describe('ChannelMap', () => {
   const defaultProps = {
     nTrodeItems: singleShankData,
     electrodeGroupId: 0,
-    onBlur: vi.fn(),
     onMapInput: vi.fn(),
     updateFormArray: vi.fn(),
     nTrodeIndices: [5, 6],
@@ -380,12 +379,6 @@ describe('ChannelMap', () => {
 
     it('accepts electrodeGroupId prop (number)', () => {
       render(<ChannelMap {...defaultProps} electrodeGroupId={5} />);
-      expect(screen.getByText('Shank #1')).toBeInTheDocument();
-    });
-
-    it('accepts onBlur prop (function)', () => {
-      const onBlur = vi.fn();
-      render(<ChannelMap {...defaultProps} onBlur={onBlur} />);
       expect(screen.getByText('Shank #1')).toBeInTheDocument();
     });
 
