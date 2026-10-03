@@ -27,7 +27,7 @@ import { describe, it, expect } from 'vitest';
 import YAML from 'yaml';
 import fs from 'fs';
 import path from 'path';
-import { validate } from '../../../validation';
+import { validate, schemaValidation } from '../../../validation';
 
 function loadFixture(category, filename) {
   const fixturePath = path.join(
@@ -51,6 +51,10 @@ const camera0 = {
 
 describe('Empty Array Validation (P2)', () => {
   describe('fs_gui_yamls[].epochs empty array bug', () => {
+    // These tests isolate the SCHEMA behavior of fs_gui_yamls[].epochs (minItems), so
+    // they validate with schemaValidation directly. The rules-level requirements that
+    // fs_gui needs complete optogenetics + resolvable epoch/dio references are
+    // covered separately in rulesValidation.test.js.
     it('should REJECT fs_gui_yamls with empty epochs array', () => {
       // ARRANGE: Create YAML with fs_gui_yaml containing empty epochs
       const yaml = {
@@ -68,7 +72,7 @@ describe('Empty Array Validation (P2)', () => {
       };
 
       // ACT: Validate the YAML
-      const issues = validate(yaml);
+      const issues = schemaValidation(yaml);
       const isValid = issues.length === 0;
 
       // ASSERT: Should REJECT empty epochs array (currently FAILS - bug exists)
@@ -97,7 +101,7 @@ describe('Empty Array Validation (P2)', () => {
       };
 
       // ACT
-      const issues = validate(yaml);
+      const issues = schemaValidation(yaml);
       const isValid = issues.length === 0;
 
       // ASSERT: Should ACCEPT
@@ -122,7 +126,7 @@ describe('Empty Array Validation (P2)', () => {
       };
 
       // ACT
-      const issues = validate(yaml);
+      const issues = schemaValidation(yaml);
       const isValid = issues.length === 0;
 
       // ASSERT: Should ACCEPT

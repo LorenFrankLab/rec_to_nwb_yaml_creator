@@ -220,8 +220,11 @@ describe('Fixture Verification', () => {
       // Verify optional objects omitted
       expect(data).not.toHaveProperty('subject');
 
-      // Should pass validation
-      expect(data).toBeValidYaml();
+      // Every optional array may be empty except tasks: trodes_to_nwb needs at least one task,
+      // so the empty task list is the one error.
+      expect(validate(data).filter((issue) => issue.severity === 'error')).toEqual([
+        expect.objectContaining({ path: 'tasks', code: 'no_tasks' }),
+      ]);
     });
   });
 

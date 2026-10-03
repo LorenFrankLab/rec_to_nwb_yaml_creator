@@ -661,8 +661,9 @@ const generateYMLFile = (e) => {
   if (isValid && isFormValid && dbErrors.length === 0) {
     // Proceed with YAML generation
     const yAMLForm = convertObjectToYAMLString(form);
-    const subjectId = formData.subject.subject_id.toLowerCase();
-    const fileName = `{EXPERIMENT_DATE_in_format_mmddYYYY}_${subjectId}_metadata.yml`;
+    // trodes_to_nwb matches {YYYYMMDD}_{animal} against the .rec names: keep the id as entered
+    const subjectId = formData.subject.subject_id;
+    const fileName = `{EXPERIMENT_DATE_in_format_YYYYMMDD}_${subjectId}_metadata.yml`;
     createYAMLFile(fileName, yAMLForm);
     return;
   }

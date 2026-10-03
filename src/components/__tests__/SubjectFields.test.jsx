@@ -230,6 +230,21 @@ describe('SubjectFields', () => {
       expect(input).toBeRequired();
     });
 
+    // trodes_to_nwb splits file names on "_", so the download warns on an underscore in the
+    // subject id; the hint while typing must say the same.
+    it('hints that a subject id takes letters, numbers and hyphens, not underscores', async () => {
+      const user = userEvent.setup();
+      renderWithProviders(<SubjectFields />, { initialState: defaultFormData });
+
+      await user.type(screen.getByLabelText(/Subject Id/i), 'rat_01');
+      // Wait for the debounced hint
+      await new Promise((resolve) => setTimeout(resolve, 350));
+
+      expect(
+        screen.getByText('Subject ID must contain only letters, numbers, or hyphens')
+      ).toBeInTheDocument();
+    });
+
     it('marks date_of_birth as required', () => {
       renderWithProviders(<SubjectFields />, { initialState: defaultFormData });
 

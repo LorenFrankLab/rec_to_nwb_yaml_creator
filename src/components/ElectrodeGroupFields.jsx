@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useStoreContext } from '../state/StoreContext';
 import InputElement from '../element/InputElement';
 import DataListElement from '../element/DataListElement';
@@ -8,6 +8,15 @@ import ArrayItemControl from '../element/ArrayItemControl';
 import ChannelMap from '../ntrode/ChannelMap';
 import { locations, deviceTypes, units } from '../valueList';
 import { formatElectrodeGroupLabel } from '../utils/labelFormatters';
+
+/**
+ * Matches a whole number that is not one of `ids` (leading zeros allowed)
+ *
+ * @param {number[]} ids Ids already in use
+ * @returns {RegExp} The pattern
+ */
+const unusedIdPattern = (ids) =>
+  ids.length === 0 ? /^\d+$/ : new RegExp(`^(?!0*(?:${ids.join('|')})$)\\d+$`);
 
 /**
  * ElectrodeGroupFields Component
@@ -34,7 +43,24 @@ export default function ElectrodeGroupFields() {
     duplicateElectrodeGroupItem,
     updateFormArray,
     onMapInput,
+    changeElectrodeGroupId,
   } = actions;
+
+  // An Id being typed, by row, until the field is left: only then is it
+  // stored, together with the group's channel maps. Storing every keystroke
+  // would let a partly typed id (the 1 of 13) collide with another group's.
+  const [idDrafts, setIdDrafts] = useState({});
+  const setIdDraft = (index, text) =>
+    setIdDrafts((drafts) => {
+      const next = { ...drafts };
+      if (text === undefined) {
+        delete next[index];
+      } else {
+        next[index] = text;
+      }
+      return next;
+    });
+
   return (
     <div id="electrode_groups-area" className="area-region">
       <details open>
@@ -59,7 +85,10 @@ export default function ElectrodeGroupFields() {
               <details
                 open
                 id={`electrode_group_item_${electrodeGroupId}-area`}
-                key={electrodeGroupId}
+                // Keyed by position, not by id: editing the id must not
+                // remount the row (that drops focus mid-typing and skips the
+                // blur that stores the id).
+                key={`electrode_groups-${index}`}
                 className="array-item"
               >
                 <summary>{formatElectrodeGroupLabel(electrodeGroup)}</summary>
@@ -75,18 +104,28 @@ export default function ElectrodeGroupFields() {
                     type="number"
                     name="id"
                     title="Id"
-                    value={electrodeGroup.id}
-                    onChange={handleChange('id', 'electrode_groups', index)}
+                    value={idDrafts[index] ?? electrodeGroup.id}
+                    onChange={(e) => setIdDraft(index, e.target.value)}
                     placeholder="Typically a number"
                     required
                     min="0"
-                    onBlur={(e) =>
-                      onBlur(e, {
-                        key,
-                        index,
-                      })
-                    }
-                    validation={{ type: 'numberRange', min: 0 }}
+                    onBlur={(e) => {
+                      // Stores a whole number no other group uses and moves
+                      // the channel maps with it; anything else is dropped
+                      // and the field shows the stored id again.
+                      changeElectrodeGroupId(index, e.target.value);
+                      setIdDraft(index, undefined);
+                    }}
+                    validation={{
+                      type: 'pattern',
+                      pattern: unusedIdPattern(
+                        formData.electrode_groups
+                          .filter((_, i) => i !== index)
+                          .map((eg) => eg.id)
+                          .filter(Number.isInteger)
+                      ),
+                      patternMessage: 'Must be a whole number no other electrode group uses',
+                    }}
                   />
                   <DataListElement
                     id={`electrode_groups-location-${index}`}
@@ -230,16 +269,10 @@ export default function ElectrodeGroupFields() {
                     <ChannelMap
                       title="Ntrode"
                       electrodeGroupId={electrodeGroupId}
+                      deviceType={electrodeGroup.device_type}
                       nTrodeItems={nTrodeItems}
                       nTrodeIndices={nTrodeIndices}
                       updateFormArray={updateFormArray}
-                      onBlur={(e) =>
-                        onBlur(e, {
-                          key: 'ntrode_electrode_group_channel_map',
-                          name: 'map',
-                          index,
-                        })
-                      }
                       onMapInput={onMapInput}
                     />
                   </div>

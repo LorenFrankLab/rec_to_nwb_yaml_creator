@@ -449,6 +449,11 @@ const InputElement = (prop) => {
 
 ### 6. Filename Placeholder is Confusing
 
+> **Update:** the download is now named `{EXPERIMENT_DATE_in_format_YYYYMMDD}_{subject_id}_metadata.yml`,
+> with the subject id exactly as entered. trodes_to_nwb reads the first part of the name as the date
+> (`YYYYMMDD`) and the second as the animal, matched case-sensitively against the `.rec` file names, so the
+> month-first date and the lower-cased subject id shown below never matched the recordings.
+
 **Location:** App.js line 662
 **Impact:** Users don't understand what to do with the generated file.
 
@@ -506,14 +511,15 @@ const generateYMLFile = (e) => {
     return;
   }
 
-  // Format date correctly: mmddYYYY
+  // Format the date as trodes_to_nwb reads it: YYYYMMDD
   const date = new Date(form.experiment_date);
   const month = String(date.getMonth() + 1).padStart(2, '0');
   const day = String(date.getDate()).padStart(2, '0');
   const year = date.getFullYear();
-  const dateStr = `${month}${day}${year}`;
+  const dateStr = `${year}${month}${day}`;
 
-  const subjectId = form.subject.subject_id.toLowerCase();
+  // The subject id exactly as entered: it must match the animal in the .rec file names
+  const subjectId = form.subject.subject_id;
   const fileName = `${dateStr}_${subjectId}_metadata.yml`;
 
   const yAMLForm = convertObjectToYAMLString(form);

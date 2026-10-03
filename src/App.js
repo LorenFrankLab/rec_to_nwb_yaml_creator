@@ -119,11 +119,21 @@ export function App() {
       ).join('\n');
     }
 
+    // Values the import set because the form has no input for them
+    const changedFields = summary.changedFields || [];
+    if (changedFields.length > 0) {
+      message += `\n\nCHANGED (${changedFields.length}):\n`;
+      message += changedFields.map(({ field, reason }) =>
+        `  ${formatFieldName(field)}: ${reason}`
+      ).join('\n');
+    }
+
+    const needsReview = hasExclusions || changedFields.length > 0;
     setAlertState({
       isOpen: true,
       message,
       title: hasExclusions ? 'Import Summary - Partial Import' : 'Import Summary - Success',
-      type: hasExclusions ? 'warning' : 'success',
+      type: needsReview ? 'warning' : 'success',
     });
   };
 

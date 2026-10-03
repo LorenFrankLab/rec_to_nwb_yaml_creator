@@ -1,87 +1,54 @@
 /**
- * maps device type to device json schema file
+ * Electrodes per shank, in shank order, for every supported device type.
  *
- * @param {string} deviceType
- * @returns
+ * The trodes_to_nwb probe files (device_metadata/probe_metadata) number a
+ * probe's electrodes 0..N-1 across its shanks in this order. Most probes
+ * split them evenly; 64c-3s6mm6cm-20um-40um-sl has shanks of 21, 21 and 22.
  */
-export const deviceTypeMap = (deviceType) => {
-  let defaults = [0, 1, 2, 3];
-
-  switch (deviceType) {
-    case 'tetrode_12.5':
-      defaults = [0, 1, 2, 3];
-      break;
-    case 'A1x32-6mm-50-177-H32_21mm':
-      defaults = [
-        0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18,
-        19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31
-      ];
-      break;
-    case '128c-4s8mm6cm-20um-40um-sl':
-      defaults = [
-        0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18,
-        19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31
-      ];
-      break;
-    case '128c-4s6mm6cm-15um-26um-sl':
-      defaults = [
-        0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18,
-        19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31
-      ];
-      break;
-    case '128c-4s8mm6cm-15um-26um-sl':
-      defaults = [
-        0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18,
-        19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31
-      ];
-      break;
-    case '128c-4s6mm6cm-20um-40um-sl':
-      defaults = [
-        0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18,
-        19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31
-      ];
-      break;
-    case '128c-4s4mm6cm-20um-40um-sl':
-      defaults = [
-        0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18,
-        19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31
-      ];
-      break;
-    case '128c-4s4mm6cm-15um-26um-sl':
-      defaults = [
-        0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18,
-        19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31
-      ];
-      break;
-    case '32c-2s8mm6cm-20um-40um-dl':
-      defaults = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
-      break;
-    case '64c-4s6mm6cm-20um-40um-dl':
-      defaults = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
-      break;
-    case '64c-3s6mm6cm-20um-40um-sl':
-      defaults = [
-        0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18,
-        19
-      ];
-      break;
-    case 'NET-EBL-128ch-single-shank':
-      defaults = [
-        0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24,
-        25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47,
-        48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69,
-        70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92,
-        93, 94, 95, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112,
-        113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127
-      ];
-      break;
-    default:
-      break;
-  }
-
-  return defaults;
+const SHANK_SIZES = {
+  'tetrode_12.5': [4],
+  'A1x32-6mm-50-177-H32_21mm': [32],
+  '128c-4s8mm6cm-20um-40um-sl': [32, 32, 32, 32],
+  '128c-4s6mm6cm-15um-26um-sl': [32, 32, 32, 32],
+  '128c-4s8mm6cm-15um-26um-sl': [32, 32, 32, 32],
+  '128c-4s6mm6cm-20um-40um-sl': [32, 32, 32, 32],
+  '128c-4s4mm6cm-20um-40um-sl': [32, 32, 32, 32],
+  '128c-4s4mm6cm-15um-26um-sl': [32, 32, 32, 32],
+  '32c-2s8mm6cm-20um-40um-dl': [16, 16],
+  '64c-4s6mm6cm-20um-40um-dl': [16, 16, 16, 16],
+  '64c-3s6mm6cm-20um-40um-sl': [21, 21, 22],
+  'NET-EBL-128ch-single-shank': [128],
 };
 
+/**
+ * Returns the electrode ids on each shank of a device, as numbered in its
+ * trodes_to_nwb probe file
+ *
+ * @param {string} deviceType
+ * @returns {number[][]} One array of electrode ids per shank, in shank order;
+ *   [] for an unknown device type
+ */
+export const getShankElectrodeIds = (deviceType) => {
+  const shankSizes = Object.prototype.hasOwnProperty.call(SHANK_SIZES, deviceType)
+    ? SHANK_SIZES[deviceType]
+    : [];
+  let firstId = 0;
+
+  return shankSizes.map((shankSize) => {
+    const electrodeIds = Array.from({ length: shankSize }, (_, i) => firstId + i);
+    firstId += shankSize;
+    return electrodeIds;
+  });
+};
+
+/**
+ * Returns the electrode ids on a device's first shank
+ *
+ * @param {string} deviceType
+ * @returns {number[]} The first shank's electrode ids; [0, 1, 2, 3] for an
+ *   unknown device type
+ */
+export const deviceTypeMap = (deviceType) => getShankElectrodeIds(deviceType)[0] || [0, 1, 2, 3];
 
 /**
  * Returns the shank count of a device
@@ -89,49 +56,4 @@ export const deviceTypeMap = (deviceType) => {
  * @param {string} deviceType
  * @returns integer for shank count
  */
-export const getShankCount = (deviceType) => {
-  let shankCount = 0;
-
-  switch (deviceType) {
-    case 'tetrode_12.5':
-      shankCount = 1;
-      break;
-    case 'A1x32-6mm-50-177-H32_21mm':
-      shankCount = 1;
-      break;
-    case '128c-4s8mm6cm-20um-40um-sl':
-      shankCount = 4;
-      break;
-    case '128c-4s6mm6cm-15um-26um-sl':
-      shankCount = 4;
-      break;
-    case '128c-4s8mm6cm-15um-26um-sl':
-      shankCount = 4;
-      break;
-    case '128c-4s6mm6cm-20um-40um-sl':
-      shankCount = 4;
-      break;
-    case '128c-4s4mm6cm-20um-40um-sl':
-      shankCount = 4;
-      break;
-    case '128c-4s4mm6cm-15um-26um-sl':
-      shankCount = 4;
-      break;
-    case '32c-2s8mm6cm-20um-40um-dl':
-      shankCount = 2;
-      break;
-    case '64c-4s6mm6cm-20um-40um-dl':
-      shankCount = 4;
-      break;
-    case '64c-3s6mm6cm-20um-40um-sl':
-      shankCount = 3;
-      break;
-    case 'NET-EBL-128ch-single-shank':
-      shankCount = 1;
-      break;
-    default:
-      break;
-  }
-
-  return shankCount;
-}
+export const getShankCount = (deviceType) => getShankElectrodeIds(deviceType).length;

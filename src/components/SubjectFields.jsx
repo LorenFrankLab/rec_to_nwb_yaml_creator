@@ -79,8 +79,9 @@ export default function SubjectFields() {
             onBlur={(e) => onBlur(e, { key: 'subject' })}
             validation={{
               type: 'pattern',
-              pattern: /^[a-zA-Z0-9_-]+$/,
-              patternMessage: 'Subject ID must contain only letters, numbers, underscores, or hyphens'
+              // The download warns on anything else: trodes_to_nwb splits file names on "_"
+              pattern: /^[A-Za-z0-9-]+$/,
+              patternMessage: 'Subject ID must contain only letters, numbers, or hyphens'
             }}
           />
           <InputElement

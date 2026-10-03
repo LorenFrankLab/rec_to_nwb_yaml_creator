@@ -6,7 +6,7 @@
  */
 
 import { schemaValidation } from './schemaValidation';
-import { rulesValidation } from './rulesValidation';
+import { rulesValidation, unknownSubjectFields } from './rulesValidation';
 
 /**
  * @typedef {Object} Issue
@@ -58,5 +58,32 @@ export function validateField(model, fieldPath) {
   );
 }
 
+/**
+ * Whether an issue blocks the download (and leaves its section out of an import). Only an
+ * explicit 'error' blocks: a warning is advisory, so the user is asked to confirm it instead.
+ * Every gate calls this rather than comparing the string itself.
+ *
+ * @param {Issue} issue - Any validation issue
+ * @returns {boolean} True when the issue blocks
+ */
+export const isBlockingIssue = (issue) => issue?.severity === 'error';
+
+/**
+ * The blocking subset of an issue list, in its original order
+ *
+ * @param {Issue[]} issues - Validation issues
+ * @returns {Issue[]} Only the issues that block
+ */
+export const blockingIssues = (issues) => issues.filter(isBlockingIssue);
+
+/**
+ * Whether an issue comes from the JSON schema (every schema issue carries its AJV schemaPath;
+ * a business-rule issue does not). The import leaves a section out only for these.
+ *
+ * @param {Issue} issue - Any validation issue
+ * @returns {boolean} True for a schema issue
+ */
+export const isSchemaIssue = (issue) => typeof issue?.schemaPath === 'string';
+
 // Re-export individual validation functions for advanced use cases
-export { schemaValidation, rulesValidation };
+export { schemaValidation, rulesValidation, unknownSubjectFields };

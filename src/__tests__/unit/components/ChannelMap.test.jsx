@@ -34,7 +34,6 @@ describe('ChannelMap', () => {
   const defaultProps = {
     nTrodeItems: singleShankData,
     electrodeGroupId: 0,
-    onBlur: vi.fn(),
     onMapInput: vi.fn(),
     updateFormArray: vi.fn(),
     nTrodeIndices: [5, 6],
@@ -372,6 +371,59 @@ describe('ChannelMap', () => {
     });
   });
 
+  describe('Map options come from the shank\'s own electrode ids', () => {
+    // A shank's channels can only map to that shank's electrode ids, as the
+    // probe file numbers them (0..N-1 across the shanks, in shank order).
+    const range = (first, last) => Array.from({ length: last - first + 1 }, (_, i) => first + i);
+    const unmappedShanks = (sizes) =>
+      sizes.map((size, shank) => ({
+        ntrode_id: shank + 1,
+        electrode_group_id: 0,
+        bad_channels: [],
+        map: Object.fromEntries(range(0, size - 1).map((channel) => [channel, -1])),
+      }));
+    // option values offered for a shank's first channel, without the blank (-1)
+    const offeredIds = (shankNumber) => {
+      const shank = screen.getByText(`Shank #${shankNumber}`).closest('fieldset');
+      const select = within(shank).getAllByRole('combobox')[0];
+      return [...select.options]
+        .map((option) => Number(option.value))
+        .filter((value) => value !== -1)
+        .sort((a, b) => a - b);
+    };
+
+    it('offers 0-20, 21-41 and 42-63 on the 21/21/22 shanks of 64c-3s', () => {
+      render(
+        <ChannelMap
+          {...defaultProps}
+          deviceType="64c-3s6mm6cm-20um-40um-sl"
+          nTrodeItems={unmappedShanks([21, 21, 22])}
+          nTrodeIndices={[0, 1, 2]}
+        />
+      );
+
+      expect(offeredIds(1)).toEqual(range(0, 20));
+      expect(offeredIds(2)).toEqual(range(21, 41));
+      expect(offeredIds(3)).toEqual(range(42, 63));
+    });
+
+    it('offers each 32-electrode block on the shanks of a 4 x 32 probe', () => {
+      render(
+        <ChannelMap
+          {...defaultProps}
+          deviceType="128c-4s6mm6cm-20um-40um-sl"
+          nTrodeItems={unmappedShanks([32, 32, 32, 32])}
+          nTrodeIndices={[0, 1, 2, 3]}
+        />
+      );
+
+      expect(offeredIds(1)).toEqual(range(0, 31));
+      expect(offeredIds(2)).toEqual(range(32, 63));
+      expect(offeredIds(3)).toEqual(range(64, 95));
+      expect(offeredIds(4)).toEqual(range(96, 127));
+    });
+  });
+
   describe('Props and PropTypes', () => {
     it('accepts nTrodeItems prop (array of objects)', () => {
       render(<ChannelMap {...defaultProps} nTrodeItems={singleShankData} />);
@@ -380,12 +432,6 @@ describe('ChannelMap', () => {
 
     it('accepts electrodeGroupId prop (number)', () => {
       render(<ChannelMap {...defaultProps} electrodeGroupId={5} />);
-      expect(screen.getByText('Shank #1')).toBeInTheDocument();
-    });
-
-    it('accepts onBlur prop (function)', () => {
-      const onBlur = vi.fn();
-      render(<ChannelMap {...defaultProps} onBlur={onBlur} />);
       expect(screen.getByText('Shank #1')).toBeInTheDocument();
     });
 

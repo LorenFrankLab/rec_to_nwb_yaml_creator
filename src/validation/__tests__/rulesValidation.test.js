@@ -16,10 +16,15 @@ import { describe, it, expect } from 'vitest';
 import fs from 'fs';
 import path from 'path';
 import YAML from 'yaml';
-import { rulesValidation } from '../rulesValidation';
+import { rulesValidation, unknownSubjectFields } from '../rulesValidation';
 import { validate } from '../index';
 import JsonSchema from '../../nwb_schema.json';
 import { createTestYaml } from '../../__tests__/helpers/test-utils';
+
+// Issues about camera references, as opposed to other rules a minimal fixture can trip (an epoch
+// no task defines, an FsGUI row without optogenetics).
+const cameraIssues = (issues) =>
+  issues.filter((issue) => issue.code === 'missing_camera' || issue.code === 'unknown_camera');
 
 describe('rulesValidation()', () => {
   describe('Valid Models', () => {
@@ -44,8 +49,9 @@ describe('rulesValidation()', () => {
       const model = createTestYaml({
         optogenetic_stimulation_software: 'fsgui',
         opto_excitation_source: [{ opto_excitation_source_name: 'LED' }],
-        optical_fiber: [{ fiber_model_number: 'FiberX' }],
-        virus_injection: [{ virus_name: 'AAV' }]
+        // Fibers/virus injections need a coordinate `reference` (the converter reads it).
+        optical_fiber: [{ fiber_model_number: 'FiberX', reference: 'Bregma' }],
+        virus_injection: [{ virus_name: 'AAV', reference: 'Bregma' }]
       });
       const issues = rulesValidation(model);
 
@@ -65,6 +71,8 @@ describe('rulesValidation()', () => {
 
     it('should return empty array for valid ntrode channel mappings', () => {
       const model = createTestYaml({
+        // Every channel-map row names an existing electrode group.
+        electrode_groups: [{ id: 0 }],
         ntrode_electrode_group_channel_map: [
           {
             ntrode_id: 1,
@@ -241,7 +249,7 @@ describe('rulesValidation()', () => {
         cameras: undefined,
       };
 
-      expect(rulesValidation(model)).toEqual([]);
+      expect(cameraIssues(rulesValidation(model))).toEqual([]);
     });
 
     it('should not error when no associated_video_files exist', () => {
@@ -599,20 +607,20 @@ describe('rulesValidation() - unknown camera references', () => {
       cameras,
       fs_gui_yamls: [{ name: 'f.yaml', epochs: [1], camera_id: 7 }],
     });
-    const issues = rulesValidation(model);
+    const issues = cameraIssues(rulesValidation(model));
     expect(issues).toEqual([
       expect.objectContaining({ path: 'fs_gui_yamls[0].camera_id', code: 'unknown_camera' }),
     ]);
   });
 
-  it('returns no issue when every reference exists', () => {
+  it('returns no camera issue when every reference exists', () => {
     const model = createTestYaml({
       cameras,
       tasks: [{ task_name: 'Run', camera_id: [4] }],
       associated_video_files: [{ name: 'v.mp4', camera_id: 4, task_epochs: 1 }],
       fs_gui_yamls: [{ name: 'f.yaml', epochs: [1], camera_id: 4 }],
     });
-    expect(rulesValidation(model)).toEqual([]);
+    expect(cameraIssues(rulesValidation(model))).toEqual([]);
   });
 
   it('ignores unset video camera_id and tasks with no camera', () => {
@@ -655,10 +663,12 @@ describe('rulesValidation() - unknown camera references', () => {
 });
 
 describe('rulesValidation() - optogenetic_stimulation_software', () => {
+  // Each section carries a `reference` so no other rule fires.
+  const reference = 'Bregma at the cortical surface';
   const fullOpto = {
     opto_excitation_source: [{ name: 'LED' }],
-    optical_fiber: [{ name: 'fiber' }],
-    virus_injection: [{ virus_name: 'v' }],
+    optical_fiber: [{ name: 'fiber', reference }],
+    virus_injection: [{ virus_name: 'v', reference }],
   };
 
   it('requires the software name when optogenetics sections are present', () => {
@@ -742,5 +752,573 @@ describe('rulesValidation() - empty (null) list entries', () => {
     expect(validate(model)).toContainEqual(
       expect.objectContaining({ path: 'ntrode_electrode_group_channel_map[0]' })
     );
+  });
+});
+
+// Converter guards ported from the modern branch's rule set. Each state either crashes
+// trodes_to_nwb or makes it silently write the wrong data.
+describe('rulesValidation() - converter guards', () => {
+  const codes = (issues) => issues.map((i) => i.code);
+  const completeOpto = {
+    opto_excitation_source: [{ name: 'LED' }],
+    optical_fiber: [{ name: 'F', reference: 'Bregma' }],
+    virus_injection: [{ name: 'V', reference: 'Bregma' }],
+    optogenetic_stimulation_software: 'fsgui',
+  };
+
+  describe('optogenetics', () => {
+    it('errors when more than one excitation source is defined', () => {
+      // trodes_to_nwb raises a ValueError on more than one opto_excitation_source.
+      const model = createTestYaml({
+        ...completeOpto,
+        opto_excitation_source: [{ name: 'LED-1' }, { name: 'LED-2' }],
+      });
+
+      expect(rulesValidation(model)).toContainEqual(expect.objectContaining({
+        path: 'opto_excitation_source',
+        code: 'multiple_excitation_sources',
+        severity: 'error',
+      }));
+    });
+
+    it('errors when an optical_fiber lacks a reference (converter reads it unconditionally)', () => {
+      const model = createTestYaml({ ...completeOpto, optical_fiber: [{ name: 'F' }] });
+
+      expect(rulesValidation(model)).toContainEqual(expect.objectContaining({
+        path: 'optical_fiber[0].reference',
+        code: 'missing_opto_reference',
+        severity: 'error',
+      }));
+    });
+
+    it('errors when a virus_injection lacks a reference', () => {
+      const model = createTestYaml({ ...completeOpto, virus_injection: [{ name: 'V', reference: ' ' }] });
+
+      expect(rulesValidation(model)).toContainEqual(expect.objectContaining({
+        path: 'virus_injection[0].reference',
+        code: 'missing_opto_reference',
+        severity: 'error',
+      }));
+    });
+  });
+
+  describe('FsGUI protocols', () => {
+    const session = {
+      cameras: [{ id: 0 }],
+      tasks: [{ task_name: 't', task_epochs: [1, 2] }],
+      behavioral_events: [{ name: 'laser', description: 'Dout1' }],
+    };
+
+    it('errors when fs_gui_yamls exist but optogenetics is not fully configured', () => {
+      // FsGUI epochs make the converter read the optogenetics metadata, which it only writes when
+      // every optogenetics section is present (KeyError otherwise).
+      const model = createTestYaml({
+        ...session,
+        fs_gui_yamls: [{ name: 'p.yaml', epochs: [1], camera_id: 0, dio_output_name: 'laser' }],
+      });
+
+      expect(rulesValidation(model)).toContainEqual(expect.objectContaining({
+        path: 'fs_gui_yamls',
+        code: 'fs_gui_requires_optogenetics',
+        severity: 'error',
+      }));
+    });
+
+    it('treats corrupt non-array opto list fields as absent for the FsGUI opto gate', () => {
+      const model = createTestYaml({
+        ...session,
+        opto_excitation_source: 'LED',
+        optical_fiber: 'Fiber',
+        virus_injection: 'AAV',
+        optogenetic_stimulation_software: 'fsgui',
+        fs_gui_yamls: [{ name: 'p.yaml', epochs: [1], camera_id: 0, dio_output_name: 'laser' }],
+      });
+
+      expect(codes(rulesValidation(model))).toContain('fs_gui_requires_optogenetics');
+    });
+
+    it('errors on an fs_gui_yamls epoch that no task defines (orphaned epoch)', () => {
+      // The converter indexes the epochs table by this number: IndexError, or silently another
+      // epoch's start/stop times.
+      const model = createTestYaml({
+        ...session,
+        ...completeOpto,
+        fs_gui_yamls: [{ name: 'p.yaml', epochs: [1, 99], camera_id: 0, dio_output_name: 'laser' }],
+      });
+
+      const orphaned = rulesValidation(model).filter((i) => i.code === 'orphaned_fs_gui_epoch');
+      expect(orphaned).toEqual([expect.objectContaining({
+        path: 'fs_gui_yamls[0].epochs',
+        severity: 'error',
+        message: expect.stringContaining('99'),
+      })]);
+    });
+
+    it('errors when fs_gui dio_output_name has no matching behavioral event', () => {
+      // A renamed or removed event leaves the name stale; the converter looks it up (KeyError).
+      const model = createTestYaml({
+        ...session,
+        ...completeOpto,
+        fs_gui_yamls: [{ name: 'p.yaml', epochs: [1], camera_id: 0, dio_output_name: 'old_laser' }],
+      });
+
+      expect(rulesValidation(model)).toContainEqual(expect.objectContaining({
+        path: 'fs_gui_yamls[0].dio_output_name',
+        code: 'dangling_dio_output',
+        severity: 'error',
+        message: expect.stringContaining('old_laser'),
+      }));
+    });
+
+    it('accepts a complete opto + fs_gui session with valid references and dio name', () => {
+      const model = createTestYaml({
+        ...session,
+        ...completeOpto,
+        fs_gui_yamls: [{ name: 'p.yaml', epochs: [1, 2], camera_id: 0, dio_output_name: 'laser' }],
+      });
+
+      expect(rulesValidation(model)).toEqual([]);
+    });
+
+    it('accepts optogenetics with no FsGUI protocol this session', () => {
+      const model = createTestYaml({ ...session, ...completeOpto, fs_gui_yamls: [] });
+
+      expect(rulesValidation(model)).toEqual([]);
+    });
+  });
+
+  describe('behavioral events', () => {
+    it('errors when two behavioral_events share a description', () => {
+      // convert_dios keys DIO channels by description and raises on a duplicate.
+      const issues = rulesValidation({
+        behavioral_events: [
+          { name: 'reward_left', description: 'Din1' },
+          { name: 'reward_right', description: 'Din1' },
+        ],
+      });
+
+      expect(issues).toEqual([expect.objectContaining({
+        path: 'behavioral_events',
+        code: 'duplicate_behavioral_event_description',
+        severity: 'error',
+        message: expect.stringContaining('Din1'),
+      })]);
+    });
+
+    it('errors when two behavioral_events share a name', () => {
+      const issues = rulesValidation({
+        behavioral_events: [
+          { name: 'reward', description: 'Din1' },
+          { name: 'reward', description: 'Din2' },
+        ],
+      });
+
+      expect(issues).toEqual([expect.objectContaining({
+        path: 'behavioral_events',
+        code: 'duplicate_behavioral_event_name',
+        severity: 'error',
+        message: expect.stringContaining('reward'),
+      })]);
+    });
+
+    it('passes unique events, and does not count blank names as duplicates', () => {
+      expect(rulesValidation({
+        behavioral_events: [
+          { name: '', description: 'Din1' },
+          { name: '', description: 'Din2' },
+          { name: 'reward', description: 'Din3' },
+        ],
+      })).toEqual([]);
+    });
+  });
+
+  describe('identity uniqueness and channel-map references', () => {
+    it('errors when two cameras share an id', () => {
+      const issues = rulesValidation({
+        cameras: [
+          { id: 0, camera_name: 'overhead' },
+          { id: 0, camera_name: 'side' },
+        ],
+      });
+
+      expect(issues).toEqual([expect.objectContaining({
+        path: 'cameras',
+        code: 'duplicate_camera_id',
+        severity: 'error',
+      })]);
+    });
+
+    it('errors when two electrode groups share an id', () => {
+      const issues = rulesValidation({
+        electrode_groups: [{ id: 0 }, { id: 0 }, { id: 1 }],
+      });
+
+      expect(issues).toEqual([expect.objectContaining({
+        path: 'electrode_groups',
+        code: 'duplicate_electrode_group_id',
+        severity: 'error',
+        message: expect.stringContaining('"0"'),
+      })]);
+    });
+
+    it('reports a triplicated ntrode_id exactly once', () => {
+      const issues = rulesValidation({
+        electrode_groups: [{ id: 0 }, { id: 1 }, { id: 2 }],
+        ntrode_electrode_group_channel_map: [
+          { ntrode_id: 2, electrode_group_id: 0, map: { 0: 0, 1: 1, 2: 2, 3: 3 } },
+          { ntrode_id: 2, electrode_group_id: 1, map: { 0: 0, 1: 1, 2: 2, 3: 3 } },
+          { ntrode_id: 2, electrode_group_id: 2, map: { 0: 0, 1: 1, 2: 2, 3: 3 } },
+        ],
+      });
+
+      expect(issues).toEqual([expect.objectContaining({
+        path: 'ntrode_electrode_group_channel_map',
+        code: 'duplicate_ntrode_id',
+        severity: 'error',
+      })]);
+      // The form shows ntrode ids read-only, so the message says how to get new ones there.
+      expect(issues[0].message).toContain('choose another device type');
+    });
+
+    it('errors when a channel-map row names no electrode group', () => {
+      const issues = rulesValidation({
+        electrode_groups: [{ id: 0 }],
+        ntrode_electrode_group_channel_map: [
+          { ntrode_id: 1, electrode_group_id: 0, map: { 0: 0, 1: 1, 2: 2, 3: 3 } },
+          { ntrode_id: 2, electrode_group_id: 7, map: { 0: 0, 1: 1, 2: 2, 3: 3 } },
+        ],
+      });
+
+      expect(issues).toEqual([expect.objectContaining({
+        path: 'ntrode_electrode_group_channel_map[2]',
+        code: 'dangling_electrode_group_ref',
+        severity: 'error',
+        message: expect.stringContaining('7'),
+      })]);
+    });
+
+    it('passes unique ids whose channel-map rows all name a group', () => {
+      expect(rulesValidation({
+        cameras: [{ id: 0 }, { id: 1 }],
+        electrode_groups: [{ id: 0 }, { id: 1 }],
+        ntrode_electrode_group_channel_map: [
+          { ntrode_id: 1, electrode_group_id: 0, map: { 0: 0, 1: 1, 2: 2, 3: 3 } },
+          { ntrode_id: 2, electrode_group_id: 1, map: { 0: 0, 1: 1, 2: 2, 3: 3 } },
+        ],
+      })).toEqual([]);
+    });
+  });
+});
+
+// trodes_to_nwb adds the excitation source and every optical fiber to the NWB file as devices
+// named after them, and keys the virus injections by name: a repeated name raises a ValueError.
+describe('rulesValidation() - optogenetics device names', () => {
+  const opto = (overrides) => ({
+    opto_excitation_source: [{ name: 'Laser' }],
+    optical_fiber: [{ name: 'Fiber 1', reference: 'Bregma' }, { name: 'Fiber 2', reference: 'Bregma' }],
+    virus_injection: [{ name: 'Injection 1', reference: 'Bregma' }],
+    optogenetic_stimulation_software: 'fsgui',
+    ...overrides,
+  });
+  const nameIssues = (model) =>
+    rulesValidation(model).filter((i) => i.code === 'duplicate_opto_device_name');
+
+  it('errors when two optical fibers share a name', () => {
+    expect(nameIssues(opto({
+      optical_fiber: [{ name: 'Fiber 1', reference: 'Bregma' }, { name: 'Fiber 1', reference: 'Bregma' }],
+    }))).toEqual([expect.objectContaining({
+      path: 'optical_fiber',
+      severity: 'error',
+      message: expect.stringContaining('"Fiber 1"'),
+    })]);
+  });
+
+  it('errors when two virus injections share a name', () => {
+    expect(nameIssues(opto({
+      virus_injection: [
+        { name: 'Injection 1', reference: 'Bregma' },
+        { name: 'Injection 1', reference: 'Bregma' },
+      ],
+    }))).toEqual([expect.objectContaining({
+      path: 'virus_injection',
+      severity: 'error',
+      message: expect.stringContaining('"Injection 1"'),
+    })]);
+  });
+
+  it('errors when a fiber has the excitation source name (one device namespace)', () => {
+    expect(nameIssues(opto({
+      optical_fiber: [{ name: 'Fiber 1', reference: 'Bregma' }, { name: 'Laser', reference: 'Bregma' }],
+    }))).toEqual([expect.objectContaining({
+      path: 'optical_fiber[1].name',
+      severity: 'error',
+      message: expect.stringContaining('"Laser"'),
+    })]);
+  });
+
+  it('passes distinct names, compares them exactly, and leaves blank names to the schema', () => {
+    expect(nameIssues(opto())).toEqual([]);
+    // "Fiber 1" and "Fiber 1 " are different NWB names; the converter does not trim.
+    expect(nameIssues(opto({
+      optical_fiber: [{ name: 'Fiber 1', reference: 'Bregma' }, { name: 'Fiber 1 ', reference: 'Bregma' }],
+    }))).toEqual([]);
+    const blank = opto({
+      optical_fiber: [{ name: '', reference: 'Bregma' }, { name: '', reference: 'Bregma' }],
+    });
+    expect(nameIssues(blank)).toEqual([]);
+    // The schema requires a non-blank name.
+    expect(validate(blank)).toContainEqual(expect.objectContaining({ path: 'optical_fiber[0].name', code: 'pattern' }));
+  });
+});
+
+// trodes_to_nwb always builds the position data from the tasks' epochs (pd.concat over the tasks),
+// which fails when there are no tasks.
+describe('rulesValidation() - at least one task', () => {
+  it('blocks an empty task list', () => {
+    expect(rulesValidation(createTestYaml({ tasks: [] }))).toEqual([
+      expect.objectContaining({ path: 'tasks', code: 'no_tasks', severity: 'error' }),
+    ]);
+  });
+
+  it('accepts a session with a task', () => {
+    const model = createTestYaml({ tasks: [{ task_name: 'Sleep', camera_id: [], task_epochs: [1] }] });
+    expect(rulesValidation(model)).toEqual([]);
+  });
+});
+
+// Subject values pynwb's Subject rejects (mostly from imported files), and an age DANDI rejects.
+describe('rulesValidation() - subject values', () => {
+  const subject = (overrides) => ({
+    subject: {
+      description: 'Long-Evans Rat',
+      genotype: 'Wild Type',
+      sex: 'M',
+      species: 'Rattus norvegicus',
+      subject_id: 'rat01',
+      date_of_birth: '2023-01-10T00:00:00.000Z',
+      weight: 300,
+      ...overrides,
+    },
+  });
+  const codes = (issues) => issues.map((i) => i.code);
+
+  describe('date_of_birth', () => {
+    it.each([
+      '2023-01-10T00:00:00.000Z',
+      '2023-01-10T00:00:00',
+      '2023-01-10T05:30:59+02:00',
+      '2024-02-29T00:00:00Z',
+    ])('accepts %s, which PyYAML reads as a datetime', (dateOfBirth) => {
+      expect(codes(rulesValidation(subject({ date_of_birth: dateOfBirth }))))
+        .not.toContain('subject_date_of_birth_format');
+    });
+
+    it('blocks a time without seconds, which the schema allows but PyYAML keeps as text', () => {
+      const model = subject({ date_of_birth: '2023-01-10T00:00' });
+      expect(validate(model).filter((i) => i.path === 'subject.date_of_birth')).toEqual([
+        expect.objectContaining({
+          code: 'subject_date_of_birth_format',
+          severity: 'error',
+          message: expect.stringContaining('"2023-01-10T00:00:00"'),
+        }),
+      ]);
+      // The form's date field has no time: choosing the date again stores it with one.
+      expect(validate(model).find((i) => i.path === 'subject.date_of_birth').message)
+        .toContain('choose the date of birth again');
+    });
+
+    it.each([
+      ['an impossible date (PyYAML cannot read the file)', '2023-02-30T00:00:00Z'],
+      ['an impossible time', '2023-01-10T24:00:00'],
+      ['text after the timestamp (the schema pattern is not anchored)', '2023-01-10T00:00:00 approx'],
+    ])('blocks %s', (_label, dateOfBirth) => {
+      expect(rulesValidation(subject({ date_of_birth: dateOfBirth }))).toContainEqual(
+        expect.objectContaining({ path: 'subject.date_of_birth', code: 'subject_date_of_birth_format', severity: 'error' })
+      );
+    });
+
+    it('leaves an empty or schema-invalid date to the schema message', () => {
+      expect(codes(rulesValidation(subject({ date_of_birth: '' })))).not.toContain('subject_date_of_birth_format');
+      expect(codes(rulesValidation(subject({ date_of_birth: '2023-01-10' })))).not.toContain('subject_date_of_birth_format');
+    });
+  });
+
+  describe('unknown subject fields', () => {
+    it('blocks a field pynwb Subject does not accept', () => {
+      expect(rulesValidation(subject({ weight_unit: 'g', nickname: null }))).toEqual([
+        expect.objectContaining({ path: 'subject.weight_unit', code: 'unknown_subject_field', severity: 'error' }),
+        expect.objectContaining({ path: 'subject.nickname', code: 'unknown_subject_field', severity: 'error' }),
+      ]);
+    });
+
+    it('accepts every field pynwb Subject knows', () => {
+      expect(rulesValidation(subject({ age: 'P90D', age__reference: 'birth', strain: 'Long-Evans' }))).toEqual([]);
+    });
+
+    it('lists the unknown fields of a subject', () => {
+      expect(unknownSubjectFields({ subject_id: 'a', foo: 1, age: 'P1D', bar: undefined })).toEqual(['foo']);
+      expect(unknownSubjectFields('not an object')).toEqual([]);
+      expect(unknownSubjectFields(null)).toEqual([]);
+    });
+  });
+
+  describe('age', () => {
+    it.each(['P90D', 'P2Y', 'P23W', 'P1Y2M3DT4H', 'P1D/P3D', 'P90Y/', '/P3D'])('accepts the ISO 8601 age %s', (age) => {
+      expect(rulesValidation(subject({ age }))).toEqual([]);
+    });
+
+    it('warns, with the likely fix, on an age that is not an ISO 8601 duration', () => {
+      expect(rulesValidation(subject({ age: 'P164' }))).toEqual([
+        expect.objectContaining({
+          path: 'subject.age',
+          code: 'subject_age_format',
+          severity: 'warning',
+          message: expect.stringContaining('"P164D"'),
+        }),
+      ]);
+      expect(rulesValidation(subject({ age: '12 weeks' }))[0].message).toContain('"P12W"');
+      expect(rulesValidation(subject({ age: 'adult' }))[0].message).toContain('"P90D"');
+    });
+
+    // The form has no age field: the age only arrives in an imported file, so that is where the
+    // user must correct it.
+    it('says the age comes from the imported file and must be corrected there', () => {
+      const [issue] = rulesValidation(subject({ age: 'P164' }));
+      expect(issue.message).toContain('imported file');
+      expect(issue.message).toContain('the form has no age field');
+    });
+
+    it('does not warn on an empty age', () => {
+      expect(rulesValidation(subject({ age: '' }))).toEqual([]);
+      expect(rulesValidation(subject({ age: null }))).toEqual([]);
+    });
+
+    it('blocks values pynwb rejects outright', () => {
+      expect(rulesValidation(subject({ age: 164 }))).toEqual([
+        expect.objectContaining({
+          path: 'subject.age',
+          code: 'subject_value_type',
+          severity: 'error',
+          message: expect.stringContaining('"P164D"'),
+        }),
+      ]);
+      expect(codes(rulesValidation(subject({ strain: 5 })))).toEqual(['subject_value_type']);
+      expect(codes(rulesValidation(subject({ age__reference: 'Birth' })))).toEqual(['subject_value_type']);
+      expect(codes(rulesValidation(subject({ age__reference: null })))).toEqual(['subject_value_type']);
+    });
+  });
+});
+
+// The current trodes_to_nwb release always adds the video files and fails (UnboundLocalError) on
+// an empty list, even for a session without video. A converter bug, so a warning.
+describe('rulesValidation() - empty video list', () => {
+  it('warns when no video files are listed', () => {
+    expect(rulesValidation({ associated_video_files: [] })).toEqual([
+      expect.objectContaining({
+        path: 'associated_video_files',
+        code: 'no_associated_videos',
+        severity: 'warning',
+      }),
+    ]);
+  });
+
+  it('does not warn when a video is listed, or when the list is not there to check', () => {
+    expect(rulesValidation({
+      cameras: [{ id: 0 }],
+      tasks: [{ task_name: 'Sleep', camera_id: [0], task_epochs: [1] }],
+      associated_video_files: [{ name: 'a.h264', camera_id: 0, task_epochs: 1 }],
+    })).toEqual([]);
+    expect(rulesValidation({})).toEqual([]);
+  });
+});
+
+// trodes_to_nwb links every optical fiber to the first virus injection, and records each virus once
+// with the titer of its first injection: the file converts, but the NWB file misstates the setup.
+describe('rulesValidation() - several virus injections', () => {
+  const injection = (name, virus, titer) => ({
+    name, virus_name: virus, titer_in_vg_per_ml: titer, reference: 'Bregma', hemisphere: 'left',
+  });
+  const opto = (injections) => ({
+    opto_excitation_source: [{ name: 'Laser' }],
+    optical_fiber: [{ name: 'Fiber 1', reference: 'Bregma' }],
+    virus_injection: injections,
+    optogenetic_stimulation_software: 'fsgui',
+  });
+
+  it('does not warn for a single injection', () => {
+    expect(rulesValidation(opto([injection('Injection 1', 'AAV-ChR2', 1e12)]))).toEqual([]);
+  });
+
+  it('warns that every fiber will be linked to the first injection', () => {
+    const issues = rulesValidation(opto([
+      injection('Left CA1', 'AAV-ChR2', 1e12),
+      injection('Right CA1', 'AAV-ChR2', 1e12),
+    ]));
+    expect(issues).toEqual([expect.objectContaining({
+      path: 'virus_injection',
+      code: 'multiple_virus_injections',
+      severity: 'warning',
+      message: expect.stringContaining('"Left CA1"'),
+    })]);
+  });
+
+  it('also warns when the same virus has different titers (only the first is kept)', () => {
+    const issues = rulesValidation(opto([
+      injection('Left CA1', 'AAV-ChR2', 1e12),
+      injection('Right CA1', 'AAV-ChR2', 5e12),
+      injection('PFC', 'AAV-ArchT', 2e12),
+    ]));
+    expect(issues.map((i) => i.code)).toEqual(['multiple_virus_injections', 'conflicting_virus_titers']);
+    expect(issues[1]).toMatchObject({ path: 'virus_injection', severity: 'warning' });
+    expect(issues[1].message).toContain('"AAV-ChR2"');
+    expect(issues[1].message).toContain('1000000000000');
+    expect(issues[1].message).toContain('5000000000000');
+  });
+});
+
+// trodes_to_nwb groups a session's files by splitting their names on "_", so a subject id with
+// anything but letters, digits and hyphens cannot be matched with its recordings.
+describe('rulesValidation() - subject id the converter can group', () => {
+  it.each(['rat_01', 'rat 01', 'rat.01'])('warns for the subject id %s', (subjectId) => {
+    expect(rulesValidation({ subject: { subject_id: subjectId } })).toEqual([
+      expect.objectContaining({
+        path: 'subject.subject_id',
+        code: 'subject_id_not_recording_compatible',
+        severity: 'warning',
+        message: expect.stringContaining(`"${subjectId}"`),
+      }),
+    ]);
+  });
+
+  it('accepts letters, digits and hyphens, and leaves a blank id to the schema', () => {
+    expect(rulesValidation({ subject: { subject_id: 'Rat-01' } })).toEqual([]);
+    expect(rulesValidation({ subject: { subject_id: '' } })).toEqual([]);
+  });
+});
+
+// trodes_to_nwb accepts only "left" or "right" (any case) as a virus injection's hemisphere.
+describe('rulesValidation() - virus injection hemisphere', () => {
+  const opto = (hemisphere) => ({
+    opto_excitation_source: [{ name: 'Laser' }],
+    optical_fiber: [{ name: 'Fiber 1', reference: 'Bregma' }],
+    virus_injection: [{ name: 'Injection 1', reference: 'Bregma', hemisphere }],
+    optogenetic_stimulation_software: 'fsgui',
+  });
+
+  it.each(['left', 'right', 'Left', 'RIGHT'])('accepts %s', (hemisphere) => {
+    expect(rulesValidation(opto(hemisphere))).toEqual([]);
+  });
+
+  it.each(['bilateral', ' left'])('blocks "%s"', (hemisphere) => {
+    expect(rulesValidation(opto(hemisphere))).toEqual([expect.objectContaining({
+      path: 'virus_injection[0].hemisphere',
+      code: 'invalid_injection_hemisphere',
+      severity: 'error',
+      message: expect.stringContaining(`"${hemisphere}"`),
+    })]);
+  });
+
+  it('leaves a blank hemisphere to the schema', () => {
+    expect(rulesValidation(opto(''))).toEqual([]);
   });
 });

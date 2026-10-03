@@ -4,6 +4,7 @@ import InputElement from '../element/InputElement';
 import CheckboxList from '../element/CheckboxList';
 import { isNumeric } from '../utils';
 import InfoIcon from './../element/InfoIcon';
+import { getShankElectrodeIds } from './deviceTypes';
 
 
 /**
@@ -13,6 +14,7 @@ import InfoIcon from './../element/InfoIcon';
  * @param {Object[]} prop.nTrodeItems Ntrodes belonging to this electrode group
  * @param {number[]} prop.nTrodeIndices Index of each of those ntrodes in the
  *   flat ntrode_electrode_group_channel_map array (same order as nTrodeItems)
+ * @param {string} prop.deviceType The electrode group's device type
  *
  * @returns Virtual DOM of the map for ntrode_electrode_group_channel_map
  */
@@ -20,11 +22,14 @@ const ChannelMap = (prop) => {
   const {
     nTrodeItems,
     nTrodeIndices,
-    onBlur,
     onMapInput,
     electrodeGroupId,
     updateFormArray,
+    deviceType,
   } = prop;
+
+  // Each shank's electrode ids, as numbered in the probe file
+  const shankElectrodeIds = getShankElectrodeIds(deviceType);
 
   const getOptions = (options, mapValue, mapValues) => {
     const items = [...new Set([
@@ -45,6 +50,11 @@ const ChannelMap = (prop) => {
           const mapKeys = Object.keys(item.map).map((i) => parseInt(i, 10));
           const mapValues = Object.values(item.map).filter((i) => isNumeric(i));
           const options = [...mapKeys];
+          // A shank's channels map to that shank's electrode ids. Shanks can
+          // differ in size (64c-3s is 21/21/22), so they come from the probe;
+          // for a device type the app does not know, offset by channel count.
+          const shankIds =
+            shankElectrodeIds[index] || options.map((o) => o + options.length * index);
           const keyBase = 'nTrode-container';
 
           return (
@@ -64,8 +74,9 @@ const ChannelMap = (prop) => {
                     value={item.ntrode_id}
                     onChange={() => {}}
                     placeholder="Ntrode Id"
+                    // Read-only: generated with the device type, so leaving
+                    // the field must not write anything.
                     readOnly
-                    onBlur={onBlur}
                   />
                   <CheckboxList
                     id={`ntrode_electrode_group_channel_map-bad_channels-${flatIndex}`}
@@ -116,7 +127,7 @@ const ChannelMap = (prop) => {
                                   })
                                 }
                               >
-                                {getOptions(options.map((o) => o + optionsLength * index), mapValue, mapValues).map((option, optionIndex) => {
+                                {getOptions(shankIds, mapValue, mapValues).map((option, optionIndex) => {
                                   return (
                                     <option
                                       key={`${mapId}-option-${optionIndex}`}
@@ -148,9 +159,9 @@ ChannelMap.propTypes = {
   electrodeGroupId: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
   nTrodeItems: PropTypes.arrayOf(PropTypes.object),
   nTrodeIndices: PropTypes.arrayOf(PropTypes.number).isRequired,
-  onBlur: PropTypes.func,
   updateFormArray: PropTypes.func,
   onMapInput: PropTypes.func,
+  deviceType: PropTypes.string,
 };
 
 export default ChannelMap;

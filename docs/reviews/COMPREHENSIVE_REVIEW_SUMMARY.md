@@ -482,6 +482,11 @@ const getUserFriendlyError = (error) => {
 
 #### 18. Filename Placeholder Confusion
 
+> **Update:** the download is now named `{EXPERIMENT_DATE_in_format_YYYYMMDD}_{subject_id}_metadata.yml`,
+> with the subject id exactly as entered. trodes_to_nwb reads the first part of the name as the date
+> (`YYYYMMDD`) and the second as the animal, matched case-sensitively against the `.rec` file names, so the
+> month-first date and the lower-cased subject id shown below never matched the recordings.
+
 **Current:**
 
 ```javascript

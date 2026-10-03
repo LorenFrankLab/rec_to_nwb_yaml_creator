@@ -1,12 +1,13 @@
 import { expect } from 'vitest';
-import { validate } from '../../validation';
+import { validate, blockingIssues } from '../../validation';
 
 /**
  * Custom matchers for YAML validation testing
  */
 expect.extend({
+  // Valid means nothing blocks the download: a warning is advisory (the user confirms it).
   toBeValidYaml(received) {
-    const issues = validate(received);
+    const issues = blockingIssues(validate(received));
     const isValid = issues.length === 0;
 
     return {
