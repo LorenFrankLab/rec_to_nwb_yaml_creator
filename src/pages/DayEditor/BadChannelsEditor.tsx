@@ -459,10 +459,12 @@ export default function BadChannelsEditor({ ntrodes, badChannels, onUpdate, onBa
               {expandedMaps[ntrodeKey] && (
                 <div id={`channel-map-${ntrodeKey}`} className="channel-map-content">
                   <table className="channel-map-table">
+                    {/* The map takes the ntrode's local channel (the checkbox above) to a probe
+                        electrode id, as in the channel-mapping dialog. */}
                     <thead>
                       <tr>
-                        <th>Electrode</th>
-                        <th>Hardware Channel</th>
+                        <th>Channel</th>
+                        <th>Probe electrode</th>
                       </tr>
                     </thead>
                     <tbody>
