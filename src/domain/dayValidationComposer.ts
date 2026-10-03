@@ -83,7 +83,14 @@ export function validateDay(
   // or a day-level override (day-owned, the snapshot is the wrong editor). Re-tag base
   // geometry errors to the day when the day overrides that geometry, so they don't
   // dead-end on "Fix in Animal Setup".
-  const taggedBase = tagBaseOwnershipByProvenance(base, dayGeometryProvenance(day));
+  const videoUndeclared = epochVideoUndeclared(day);
+  // An empty video list is only worth the converter advisory once every epoch's video
+  // question is answered; until then `epoch_video_undeclared` already blocks the day, and the
+  // advisory would just repeat it on every new day.
+  const exportBase = videoUndeclared.length > 0
+    ? base.filter((issue) => issue.code !== 'no_associated_videos')
+    : base;
+  const taggedBase = tagBaseOwnershipByProvenance(exportBase, dayGeometryProvenance(day));
   // Stamp every issue with the canonical ownership contract (normalizeIssue) so consumers
   // read `ownerSurface`/`step`/`focusPath` directly — never re-inferring — and an issue
   // with no resolvable owner throws loudly instead of silently routing to the Day Editor.
@@ -110,7 +117,7 @@ export function validateDay(
     // RAW day's task epochs + associated videos + the OFF-EXPORT `videolessEpochs` set — never the
     // merged YAML — so it adds a day-readiness blocker without touching export (a flagged epoch's
     // row reads `Needs video`). Deliberately NOT in `validate(mergedDay)`, which is export-shaped.
-    ...epochVideoUndeclared(day),
+    ...videoUndeclared,
     // The converter filename contract (`{YYYYMMDD}_{subject_id}_metadata.yml`): a subject id the
     // scanner cannot group with the recordings blocks export. Owned here (the workspace export path
     // names its download by this contract), not in the shared rule set the legacy form uses.

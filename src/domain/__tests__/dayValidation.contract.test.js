@@ -234,4 +234,14 @@ describe('the empty video list advisory in the workspace', () => {
     expect(issues.filter((issue) => issue.severity === 'error')).toEqual([]);
     expect(isExportEnabled(computeStepStatus(noVideoDay, merged, animal))).toBe(true);
   });
+
+  it('stays hidden while epochs still need their video answer (a new, unfinished day)', () => {
+    const { animal, day } = buildRealisticWorkspace();
+    const unfinishedDay = { ...day, associated_video_files: [], state: { ...day.state, videolessEpochs: [] } };
+    const merged = mergeDayMetadata(animal, unfinishedDay);
+
+    const codes = validateDay(unfinishedDay, merged, animal).map((issue) => issue.code);
+    expect(codes).toContain('epoch_video_undeclared');
+    expect(codes).not.toContain('no_associated_videos');
+  });
 });
