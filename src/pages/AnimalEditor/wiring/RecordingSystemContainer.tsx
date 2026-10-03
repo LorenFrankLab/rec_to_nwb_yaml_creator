@@ -7,7 +7,8 @@
  */
 import { useMemo } from 'react';
 import { useStoreContext } from '../../../state/StoreContext';
-import type { Animal } from '../../../state/workspaceTypes';
+import { getAnimalDayIds } from '../../../state/workspaceSelectors';
+import type { Animal, Day } from '../../../state/workspaceTypes';
 import DataAcqSection from '../DataAcqSection';
 import { collectDataAcqIdentities } from '../identitySafety';
 
@@ -28,7 +29,12 @@ export default function RecordingSystemContainer({ animal, onFieldUpdate }: Reco
     () => collectDataAcqIdentities(model.workspace, { animalId: animal.id }),
     [model.workspace, animal.id]
   );
+  // This animal's recording days: a recording system they use is not deleted from under them.
+  const days = useMemo(
+    () => getAnimalDayIds(animal).map((id) => model.workspace?.days?.[id]).filter((d): d is Day => Boolean(d)),
+    [animal, model.workspace]
+  );
   return (
-    <DataAcqSection animal={animal} onFieldUpdate={onFieldUpdate} dataAcqRegistry={dataAcqRegistry} />
+    <DataAcqSection animal={animal} onFieldUpdate={onFieldUpdate} dataAcqRegistry={dataAcqRegistry} days={days} />
   );
 }

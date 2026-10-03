@@ -5,8 +5,8 @@ import { RIG_FALLBACK } from '../../domain/rigConstants';
 import { useState, useId } from 'react';
 import { findIdentityDivergence, DATA_ACQ_DEPENDENT_FIELDS, IDENTITY_FIELD_LABELS } from './identitySafety';
 import type { IdentityDivergence, IdentityRegistryEntry } from './identitySafety';
-import { getDataAcqDevices } from '../../state/workspaceSelectors';
-import type { Animal, TechnicalDefaults } from '../../state/workspaceTypes';
+import { getDataAcqDevices, getDayDataAcqDeviceName } from '../../state/workspaceSelectors';
+import type { Animal, DataAcqDevice, Day, TechnicalDefaults } from '../../state/workspaceTypes';
 import Modal from '../../components/Modal/Modal';
 import Button from '../../components/ui/Button';
 import './DataAcqSection.scss';
@@ -45,6 +45,36 @@ function dependentFields(device: DeviceFields): Record<string, string> {
 
 const BLANK_DEVICE: DeviceFields = { name: '', system: 'SpikeGadgets', amplifier: '', adc_circuit: '' };
 
+/**
+ * How many of `days` export each catalog entry: the one a day names, or the first (the default) for
+ * a day that names none — the export's own resolution (`resolveDayDataAcqDevice`).
+ *
+ * @param catalog - The animal's recording systems.
+ * @param days - The animal's recording days.
+ * @returns One count per catalog entry.
+ */
+function daysUsingEach(catalog: DataAcqDevice[], days: Day[]): number[] {
+  const counts = catalog.map(() => 0);
+  for (const day of days) {
+    const name = getDayDataAcqDeviceName(day) || '';
+    const index = name ? catalog.findIndex((device) => device?.name === name) : 0;
+    if (index >= 0 && index < counts.length) counts[index] += 1;
+  }
+  return counts;
+}
+
+/**
+ * The note on a system's Delete action saying how many recording days use it.
+ *
+ * @param count - The days that export the system.
+ * @returns The note, or undefined when no day uses it.
+ */
+function usedByNote(count: number): string | undefined {
+  if (count === 0) return undefined;
+  const days = count === 1 ? '1 recording day' : `${count} recording days`;
+  return `Used by ${days}: deleting it would change what ${count === 1 ? 'it exports' : 'they export'}.`;
+}
+
 /** The open add/edit modal state (null when closed). `index` is the edited catalog position. */
 interface EditingState {
   mode: 'add' | 'edit';
@@ -65,6 +95,8 @@ interface DataAcqSectionProps {
   onFieldUpdate: (field: string, value: unknown) => void;
   /** Data-acq identities elsewhere in the dataset, for divergent-reuse detection. */
   dataAcqRegistry?: IdentityRegistryEntry[];
+  /** This animal's recording days, so a system they use is not deleted from under them. */
+  days?: Day[];
 }
 
 /**
@@ -79,8 +111,9 @@ interface DataAcqSectionProps {
  * The technical DEFAULTS (`raw_data_to_volts`, `times_period_multiplier`) are animal-level
  * (`animal.technicalDefaults`, seeded into each day's `technical`); never exported directly.
  */
-export default function DataAcqSection({ animal, onFieldUpdate, dataAcqRegistry = [] }: DataAcqSectionProps) {
+export default function DataAcqSection({ animal, onFieldUpdate, dataAcqRegistry = [], days = [] }: DataAcqSectionProps) {
   const catalog = getDataAcqDevices(animal);
+  const dayCounts = daysUsingEach(catalog, days);
   const defaults: Partial<TechnicalDefaults> = animal.technicalDefaults || {};
   const titleId = useId();
 
@@ -150,8 +183,10 @@ export default function DataAcqSection({ animal, onFieldUpdate, dataAcqRegistry 
   };
 
   const deleteAt = (index: number) => {
-    // Schema requires at least one device — never delete the last.
-    if (catalog.length <= 1) return;
+    // Schema requires at least one device — never delete the last. Nor one that recording days use
+    // (W12): they export it by name, or as the default when it is first, and deleting it would
+    // silently move them to another system's hardware.
+    if (catalog.length <= 1 || dayCounts[index] > 0) return;
     onFieldUpdate('data_acq_device', catalog.filter((_, i) => i !== index));
   };
 
@@ -397,8 +432,9 @@ export default function DataAcqSection({ animal, onFieldUpdate, dataAcqRegistry 
                     Edit
                   </Button>
                   {/* Always present (consistent with the Electrode Groups / Cameras tabs), but
-                      disabled for the last system — the schema requires at least one. */}
-                  <OverflowMenu label={`Actions for recording system ${d.name}`} items={[{ key: 'delete', label: `Delete recording system ${d.name}`, onSelect: () => deleteAt(index), disabled: catalog.length <= 1, }]} />
+                      disabled for the last system — the schema requires at least one — and for a
+                      system recording days use, saying how many. */}
+                  <OverflowMenu label={`Actions for recording system ${d.name}`} items={[{ key: 'delete', label: `Delete recording system ${d.name}`, onSelect: () => deleteAt(index), disabled: catalog.length <= 1 || dayCounts[index] > 0, description: usedByNote(dayCounts[index]), }]} />
                 </td>
               </tr>
             );
