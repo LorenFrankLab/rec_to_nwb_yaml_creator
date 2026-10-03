@@ -120,9 +120,13 @@ describe('export parity (new workspace path)', () => {
   it('produces a schema-valid export for a complete day (export is reachable)', () => {
     const { animal, day } = buildRealisticWorkspace();
 
-    // A complete day must validate with zero issues — otherwise the validation
+    // A complete day must validate with zero errors — otherwise the validation
     // step would stay in error and the Export gate would never unlock.
-    expect(validate(mergeDayMetadata(animal, day))).toEqual([]);
+    // The realistic builder's age "P164" (as in the golden export) is not an ISO 8601 duration,
+    // which DANDI rejects: the one issue is that advisory, which never blocks export.
+    expect(validate(mergeDayMetadata(animal, day))).toEqual([
+      expect.objectContaining({ code: 'subject_age_format', severity: 'warning' }),
+    ]);
   });
 
   it('rejects the legacy globally-incrementing channel map (second tetrode 4..7 is invalid)', () => {

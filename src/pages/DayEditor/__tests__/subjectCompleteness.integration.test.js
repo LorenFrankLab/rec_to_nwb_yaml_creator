@@ -14,7 +14,11 @@ import { buildRealisticWorkspace } from '../../../__tests__/fixtures/workspaceBu
 describe('subject/session completeness + DANDI rules', () => {
   it('a complete session is schema + DANDI-rule valid', () => {
     const { animal, day } = buildRealisticWorkspace();
-    expect(validate(mergeDayMetadata(animal, day))).toEqual([]);
+    // The realistic builder's age "P164" (as in the golden export) is not an ISO 8601 duration,
+    // which DANDI rejects: the one issue is that advisory, which never blocks export.
+    expect(validate(mergeDayMetadata(animal, day))).toEqual([
+      expect.objectContaining({ code: 'subject_age_format', severity: 'warning' }),
+    ]);
   });
 
   it('exports a non-empty subject.description, numeric weight, and timestamp DOB', () => {

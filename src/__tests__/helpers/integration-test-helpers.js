@@ -59,6 +59,11 @@ export function makeSummaryWorkspace() {
     { name: 'sleep_video_epoch5', camera_id: 0, task_epochs: 5 },
   ];
 
+  // The builder's age "P164" (as in the golden export) is not an ISO 8601 duration, which DANDI
+  // rejects: an advisory that a batch export makes the user acknowledge. These summary animals carry
+  // a valid age so their valid day exports with no review step.
+  remy.subject = { ...remy.subject, age: 'P164D' };
+
   const incompleteDay = {
     ...structuredClone(validDay),
     id: 'remy-2023-06-23',
@@ -72,7 +77,7 @@ export function makeSummaryWorkspace() {
   // Animal "totoro": one error day (non-string session_description).
   const { animal: totoro } = buildRealisticWorkspace();
   totoro.id = 'totoro';
-  totoro.subject = { ...totoro.subject, subject_id: 'totoro' };
+  totoro.subject = { ...totoro.subject, subject_id: 'totoro', age: 'P164D' };
 
   const errorDay = {
     ...structuredClone(validDay),

@@ -17,6 +17,7 @@
  * 6. Electrode-group ids must be unique within a session
  * 7. Ntrode ids must be unique across the animal's whole channel map
  * 8. DANDI subject conformance: species is a Latin binomial / NCBI URI; ids have no slashes
+ * 8b. Subject values pynwb rejects (date_of_birth, unknown fields, value types); a non-ISO age warns
  * 9–20. Camera/file/task/FsGUI references, probe/channel geometry, identity divergence, DIO uniqueness
  */
 
@@ -45,6 +46,7 @@ import {
   consistentProbeCatalog,
 } from './rules/electrodeGroupRules';
 import { dandiSubjectConformance } from './rules/dandiSubjectRules';
+import { subjectValueRules } from './rules/subjectValueRules';
 import { identityDivergences } from './rules/identityRules';
 import {
   uniqueBehavioralEventNames,
@@ -80,6 +82,7 @@ export const rulesValidation = (model: ValidationModel): ValidationIssue[] => {
     ...uniqueElectrodeGroupIds(model),            // 6
     ...uniqueNtrodeIds(model),                    // 7
     ...dandiSubjectConformance(model),            // 8
+    ...subjectValueRules(model),                  // 8b
     ...danglingCameraReferences(model),           // 9
     ...channelBounds(model),                      // 11
     ...missingChannelMapRows(model),              // 11b

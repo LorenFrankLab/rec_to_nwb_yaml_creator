@@ -501,6 +501,29 @@ describe('benign normalizations — auto-applied and listed, never silent', () =
     expect(repaired).not.toHaveProperty('ntrode electrode group channel map');
   });
 
+  // pynwb's Subject fails on any field it does not know, and no workspace editor can remove one, so
+  // the import leaves such a field out, and lists it rather than dropping it silently.
+  it('leaves out subject fields the NWB subject does not have, and lists each one', () => {
+    const model = loadCleanExport();
+    (model.subject as Record<string, unknown>).weight_unit = 'g';
+
+    const plan = buildImportRepairPlan(model, '20230622_remy_metadata.yml', { animals: {} });
+
+    expect(plan.blockers.some((b) => b.path.startsWith('subject.'))).toBe(false);
+    expect(plan.benign).toContainEqual(
+      expect.objectContaining({
+        path: 'subject.weight_unit',
+        detail: expect.stringContaining('"weight_unit"'),
+      })
+    );
+    const repaired = applyImportRepairs(model, {});
+    expect(repaired.subject).not.toHaveProperty('weight_unit');
+    expect(repaired.subject).toHaveProperty('subject_id', 'remy');
+    expect(validate(repaired).some((issue) => issue.code === 'unknown_subject_field')).toBe(false);
+    // The input is not changed.
+    expect(model.subject).toHaveProperty('weight_unit', 'g');
+  });
+
   it('does not rewrite arbitrary space-containing keys', () => {
     const model = { subject: { subject_id: 'remy' }, 'custom legacy key': 'keep me' };
 

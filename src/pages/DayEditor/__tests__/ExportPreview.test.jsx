@@ -64,6 +64,16 @@ function buildAllChannelsBadWorkspace() {
 }
 
 /**
+ * The realistic day without the builder's one warning: its age "P164" (as in the golden export) is
+ * not an ISO 8601 duration and draws the DANDI age advisory. For tests that count warnings.
+ */
+function buildWarningFreeWorkspace() {
+  const { animal, day } = buildRealisticWorkspace();
+  animal.subject = { ...animal.subject, age: 'P164D' };
+  return { animal, day };
+}
+
+/**
  * Assert `first` precedes `second` in document order (reading order on the rendered page).
  *
  * @param {Element} first - The element expected to come first.
@@ -107,7 +117,7 @@ describe('ExportPreview — readiness gate', () => {
   });
 
   it('says how many warnings are still to review beside "Ready to export"', () => {
-    const { animal, day } = buildRealisticWorkspace();
+    const { animal, day } = buildWarningFreeWorkspace();
     // Two real, non-blocking warnings: statescript logs whose description omits the keyword
     // Spyglass needs to create StateScriptFile rows. Neither blocks the gate.
     day.associated_files.push(
@@ -124,7 +134,7 @@ describe('ExportPreview — readiness gate', () => {
   it('the scientific review reports the SAME warnings the gate counts', () => {
     // The readiness line and the review sit on one screen: a review that says "None" while the gate
     // asks for two warnings to be reviewed is a false reassurance at the download gate.
-    const { animal, day } = buildRealisticWorkspace();
+    const { animal, day } = buildWarningFreeWorkspace();
     day.associated_files.push(
       { name: 'statescript_epoch2', description: 'Log for epoch 2', path: '/data/remy/20230622/e2.stateScriptLog', task_epochs: 2 },
       { name: 'statescript_epoch4', description: 'Log for epoch 4', path: '/data/remy/20230622/e4.stateScriptLog', task_epochs: 4 }
@@ -139,7 +149,7 @@ describe('ExportPreview — readiness gate', () => {
   });
 
   it('the scientific review says "None" only when the gate counts no warnings', () => {
-    const { animal, day } = buildRealisticWorkspace();
+    const { animal, day } = buildWarningFreeWorkspace();
     renderPreview(animal, day);
 
     const review = screen.getByRole('group', { name: /effective setup for this day/i });

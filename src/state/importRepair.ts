@@ -22,6 +22,7 @@
 import nwbSchema from '../nwb_schema.json';
 import { validate } from '../validation';
 import { isValidSpecies } from '../validation/dandiSubject';
+import { unknownSubjectFields } from '../validation/rules/subjectValueRules';
 import { findIdentityDivergence } from './identityDivergence';
 import { classifyCameraAgainstCatalog } from './cameraCalibrationConflicts';
 import {
@@ -1198,6 +1199,25 @@ function leafLabel(p: string): string {
 }
 
 /**
+ * List each subject field the NWB subject does not have. pynwb's Subject fails on such a field and
+ * no workspace editor can remove one, so the commit leaves it out ({@link applyBenignNormalizations});
+ * listing it, with its value, keeps the drop visible.
+ *
+ * @param model - The flat model (after the space-key aliases are recovered).
+ * @returns One listed normalization per unknown subject field.
+ */
+function unknownSubjectFieldNotes(model: Record<string, unknown>): BenignNormalization[] {
+  const subject = model.subject as Record<string, unknown> | undefined;
+  return unknownSubjectFields(subject).map((key) => ({
+    path: `subject.${key}`,
+    label: `Left out subject.${key}`,
+    detail:
+      `Left out subject field "${key}" (${JSON.stringify(subject?.[key])}): the NWB subject has ` +
+      'no such field, and trodes_to_nwb fails on it.',
+  }));
+}
+
+/**
  * Detect the benign (format-only, lossless) normalizations the commit will apply, plus any
  * conflicting-volume reconcile items. Surfaces them so they are listed, never silent.
  *
@@ -1211,7 +1231,9 @@ function buildBenignAndShim(model: ValidationModel): {
   const benign: BenignNormalization[] = [];
   const shimItems: RepairItem[] = [];
 
-  benign.push(...applySpaceKeyAliases(structuredClone(model)));
+  const aliased = structuredClone(model) as Record<string, unknown>;
+  benign.push(...applySpaceKeyAliases(aliased));
+  benign.push(...unknownSubjectFieldNotes(aliased));
 
   // --- task_epoch (singular) + one-item task_epochs lists → canonical scalar task_epochs. ---
   for (const key of ['associated_files', 'associated_video_files'] as const) {
@@ -1348,14 +1370,21 @@ function buildBenignAndShim(model: ValidationModel): {
 /**
  * Apply the benign, lossless normalizations to a (mutable) model: recover known legacy space-key
  * schema spellings, rename `task_epoch` → the `task_epochs` key the app reads, and fill a missing
- * volume spelling from the present one. Shared by {@link buildImportRepairPlan} (which validates
- * the NORMALIZED model, so a benign-fixable issue never also surfaces as a repair item) and
+ * volume spelling from the present one. Also leaves out subject fields the NWB subject does not have
+ * (listed, with their values, by {@link unknownSubjectFieldNotes}). Shared by
+ * {@link buildImportRepairPlan} (which validates the NORMALIZED model, so a benign-fixable issue never also surfaces as a repair item) and
  * {@link applyImportRepairs}.
  *
  * @param model - The model to mutate in place.
  */
 function applyBenignNormalizations(model: Record<string, unknown>): void {
   applySpaceKeyAliases(model);
+
+  // Subject fields the NWB subject does not have are left out (listed by unknownSubjectFieldNotes).
+  const subject = model.subject as Record<string, unknown> | undefined;
+  unknownSubjectFields(subject).forEach((key) => {
+    delete (subject as Record<string, unknown>)[key];
+  });
 
   for (const key of ['associated_files', 'associated_video_files'] as const) {
     const list = model[key];

@@ -21,6 +21,9 @@ import { AnimalView } from '../index';
  */
 function buildTwoVersionWorkspace() {
   const { animal, day } = buildRealisticWorkspace();
+  // The builder's age "P164" (as in the golden export) draws the DANDI age advisory; use a valid
+  // ISO 8601 age so this day has only the warnings the test sets up.
+  animal.subject = { ...animal.subject, age: 'P164D' };
   const v1 = animal.configurationHistory[0]; // version 1, dated 2023-06-22
   const v1GroupCount = v1.devices.electrode_groups.length; // 8
   const v2 = {

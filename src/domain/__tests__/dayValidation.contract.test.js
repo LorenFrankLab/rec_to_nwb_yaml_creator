@@ -35,11 +35,15 @@ const contractOf = (issues) =>
   });
 
 describe('domain validation module preserves the issue list', () => {
-  it('a clean configured day produces no issues and every step is valid', () => {
+  it('a clean configured day produces no errors and every step is valid', () => {
     const { animal, day } = buildRealisticWorkspace();
     const merged = mergeDayMetadata(animal, day);
 
-    expect(validateDay(day, merged, animal)).toEqual([]);
+    // The fixture's age "P164" (as in the realistic golden export) is not an ISO 8601 duration,
+    // which DANDI rejects: an advisory with no in-app editor, which never blocks.
+    expect(validateDay(day, merged, animal)).toEqual([
+      expect.objectContaining({ code: 'subject_age_format', severity: 'warning', ownerSurface: 'none' }),
+    ]);
     expect(computeStepStatus(day, merged, animal)).toEqual({
       overview: 'valid',
       devices: 'valid',
@@ -153,6 +157,14 @@ describe('domain validation module preserves the issue list', () => {
         ownerSurface: 'animal',
         step: 'devices',
         repairSurface: 'animal',
+        repairStep: null,
+      },
+      {
+        // The fixture's non-ISO age (advisory; see the clean-day test above).
+        code: 'subject_age_format',
+        ownerSurface: 'none',
+        step: undefined,
+        repairSurface: 'none',
         repairStep: null,
       },
       {

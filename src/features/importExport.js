@@ -23,6 +23,7 @@ import {
 } from '../io/yaml';
 import { emptyFormData, genderAcronym } from '../valueList';
 import { blockingIssues, isBlockingIssue } from '../validation/issueTypes';
+import { unknownSubjectFields } from '../validation/rules/subjectValueRules';
 import { legacyFormRules } from '../validation/rules/legacyFormRules';
 
 /**
@@ -241,6 +242,20 @@ export async function importFiles(file, options = {}) {
       // than excluding the whole section on validation.
       jsonFileContent = removeStaleCameraReferences(jsonFileContent);
 
+      // trodes_to_nwb passes the subject to pynwb's Subject, which fails on any field it does not
+      // know, and the form has no way to remove one. Leave such fields out before validating (so
+      // they cannot cost the whole subject) and name each one in the summary.
+      const leftOutSubjectFields = unknownSubjectFields(jsonFileContent.subject).map((key) => ({
+        field: `subject.${key}`,
+        reason: `Left out: "${key}" is not a field of the NWB subject, and trodes_to_nwb fails on it.`,
+        paths: [],
+      }));
+      if (leftOutSubjectFields.length > 0) {
+        const subject = { ...jsonFileContent.subject };
+        unknownSubjectFields(subject).forEach((key) => delete subject[key]);
+        jsonFileContent = { ...jsonFileContent, subject };
+      }
+
       // Validate YAML content. Only ERRORS exclude a section: a warning is advisory (a
       // placeholder subject id, a non-absolute associated-file path) and the value must survive
       // the import so the user can see and fix it in the form. Excluding on a warning silently
@@ -274,8 +289,8 @@ export async function importFiles(file, options = {}) {
           importSummary: {
             totalFields: formContentKeys.filter(key => Object.hasOwn(jsonFileContent, key)).length,
             importedFields,
-            excludedFields: [],
-            hasExclusions: false,
+            excludedFields: leftOutSubjectFields,
+            hasExclusions: leftOutSubjectFields.length > 0,
           },
         });
         return;
@@ -363,6 +378,9 @@ export async function importFiles(file, options = {}) {
           paths: [...new Set(documentLevelIssues.map(issue => issue.path).filter(Boolean))],
         });
       }
+
+      // Subject fields left out before validation (see above).
+      excludedFields.push(...leftOutSubjectFields);
 
       // Fields skipped on a type mismatch are excluded too — surface them so a skipped
       // field is never silently absent from both the imported and excluded lists.

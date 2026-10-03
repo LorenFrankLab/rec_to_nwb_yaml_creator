@@ -282,6 +282,8 @@ export const SURFACE_BY_CODE: Record<string, RepairSurface> = {
   subject_id_not_recording_compatible: 'animal',
   subject_id_missing: 'animal',
   experimenter_name_shape: 'animal',
+  // Subject values pynwb rejects: the date of birth is edited on the animal profile.
+  subject_date_of_birth_format: 'animal',
   // Editable in the Day Editor (task/video/event re-picks, day bad-channel overrides,
   // session metadata, day-owned technical fields, optogenetics completeness).
   dangling_camera_ref: 'day',
@@ -350,6 +352,11 @@ export const SURFACE_BY_CODE: Record<string, RepairSurface> = {
   // dead-end on a disabled control.
   subject_id_slash: 'none',
   session_id_slash: 'none',
+  // Subject fields no in-app editor holds (an unknown field, age, strain, age__reference): the
+  // message states the remedy.
+  unknown_subject_field: 'none',
+  subject_value_type: 'none',
+  subject_age_format: 'none',
 };
 
 /**

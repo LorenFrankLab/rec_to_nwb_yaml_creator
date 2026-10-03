@@ -39,6 +39,9 @@ vi.mock('../../../io/yaml', async (importOriginal) => {
 function makeRegressingWorkspace() {
   const ts = '2023-06-22T12:00:00.000Z';
   const { animal, day: day1 } = buildRealisticWorkspace();
+  // The builder's age "P164" (as in the golden export) draws the DANDI age advisory; use a valid
+  // ISO 8601 age so this day has only the warnings the test sets up.
+  animal.subject = { ...animal.subject, age: 'P164D' };
   day1.id = 'remy-2023-06-22';
   day1.date = '2023-06-22';
   day1.experimentDate = '06222023';

@@ -121,6 +121,10 @@ export const CATEGORY_BY_CODE: Readonly<Record<string, WorkflowCategory>> = Obje
   subject_id_missing: WORKFLOW_CATEGORY.ANIMAL_SETUP,
   experimenter_name_shape: WORKFLOW_CATEGORY.ANIMAL_SETUP,
   subject_id_slash: WORKFLOW_CATEGORY.ANIMAL_SETUP,
+  subject_date_of_birth_format: WORKFLOW_CATEGORY.ANIMAL_SETUP,
+  unknown_subject_field: WORKFLOW_CATEGORY.ANIMAL_SETUP,
+  subject_value_type: WORKFLOW_CATEGORY.ANIMAL_SETUP,
+  subject_age_format: WORKFLOW_CATEGORY.ANIMAL_SETUP,
   session_id_slash: WORKFLOW_CATEGORY.ANIMAL_SETUP,
 
   // This recording day's metadata (tasks, videos, files, behavioral events, camera refs).
