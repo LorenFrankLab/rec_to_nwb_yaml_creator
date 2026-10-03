@@ -339,6 +339,9 @@ export const SURFACE_BY_CODE: Record<string, RepairSurface> = {
   // Optical-fiber / virus-injection coordinate reference, required by trodes_to_nwb and
   // collected only in the Animal Editor Optogenetics step (explicit repairSurface:'animal').
   missing_opto_reference: 'animal',
+  // Repeated optical-fiber / virus-injection names, or a fiber named like the excitation source:
+  // trodes_to_nwb fails on the repeated NWB name. Renamed in the Animal Editor Optogenetics step.
+  duplicate_opto_device_name: 'animal',
   // No editable in-app target — read-only identity (slash ids). The explanatory
   // message states the remedy (recreate the animal); a "Fix in …" button would
   // dead-end on a disabled control.

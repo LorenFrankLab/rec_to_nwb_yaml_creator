@@ -14,6 +14,7 @@
  */
 import { describe, it, expect } from 'vitest';
 import { rulesValidation } from '../rulesValidation';
+import { validate } from '../index';
 
 const codes = (issues) => issues.map((i) => i.code);
 
@@ -102,6 +103,76 @@ describe('multi-shank bad_channels first-row semantics', () => {
         { ntrode_id: 1, electrode_group_id: 0, bad_channels: [2], map: { 0: 0, 1: 1, 2: 2, 3: 3 } },
       ],
     }))).not.toContain('multishank_bad_channels_ignored');
+  });
+});
+
+// trodes_to_nwb adds the excitation source and every optical fiber to the NWB file as devices
+// named after them, and keys the virus injections by name: a repeated name raises a ValueError.
+describe('optogenetics device names', () => {
+  const opto = (overrides) => ({
+    opto_excitation_source: [{ name: 'Laser' }],
+    optical_fiber: [{ name: 'Fiber 1', reference: 'Bregma' }, { name: 'Fiber 2', reference: 'Bregma' }],
+    virus_injection: [{ name: 'Injection 1', reference: 'Bregma' }],
+    optogenetic_stimulation_software: 'fsgui',
+    ...overrides,
+  });
+  const nameIssues = (model) =>
+    rulesValidation(model).filter((i) => i.code === 'duplicate_opto_device_name');
+
+  it('errors when two optical fibers share a name', () => {
+    const issues = nameIssues(opto({
+      optical_fiber: [{ name: 'Fiber 1', reference: 'Bregma' }, { name: 'Fiber 1', reference: 'Bregma' }],
+    }));
+    expect(issues).toEqual([expect.objectContaining({
+      path: 'optical_fiber',
+      severity: 'error',
+      repairSurface: 'animal',
+      message: expect.stringContaining('"Fiber 1"'),
+    })]);
+  });
+
+  it('errors when two virus injections share a name', () => {
+    const issues = nameIssues(opto({
+      virus_injection: [
+        { name: 'Injection 1', reference: 'Bregma' },
+        { name: 'Injection 1', reference: 'Bregma' },
+      ],
+    }));
+    expect(issues).toEqual([expect.objectContaining({
+      path: 'virus_injection',
+      severity: 'error',
+      message: expect.stringContaining('"Injection 1"'),
+    })]);
+  });
+
+  it('errors when a fiber has the excitation source name (one device namespace)', () => {
+    const issues = nameIssues(opto({
+      optical_fiber: [{ name: 'Fiber 1', reference: 'Bregma' }, { name: 'Laser', reference: 'Bregma' }],
+    }));
+    expect(issues).toEqual([expect.objectContaining({
+      path: 'optical_fiber[1].name',
+      severity: 'error',
+      message: expect.stringContaining('"Laser"'),
+    })]);
+  });
+
+  it('passes distinct names, compares them exactly, and leaves blank names to the schema', () => {
+    expect(nameIssues(opto())).toEqual([]);
+    // "Fiber 1" and "Fiber 1 " are different NWB names; the converter does not trim.
+    expect(nameIssues(opto({
+      optical_fiber: [{ name: 'Fiber 1', reference: 'Bregma' }, { name: 'Fiber 1 ', reference: 'Bregma' }],
+    }))).toEqual([]);
+    // The schema requires a non-blank name; blank ones are reported there, not as duplicates.
+    expect(nameIssues(opto({
+      optical_fiber: [{ name: '', reference: 'Bregma' }, { name: '', reference: 'Bregma' }],
+    }))).toEqual([]);
+  });
+
+  it('is a schema error, not a duplicate, for blank names in the full validation', () => {
+    const issues = validate(opto({
+      optical_fiber: [{ name: '', reference: 'Bregma' }, { name: '', reference: 'Bregma' }],
+    }));
+    expect(issues).toContainEqual(expect.objectContaining({ path: 'optical_fiber[0].name', code: 'pattern' }));
   });
 });
 
