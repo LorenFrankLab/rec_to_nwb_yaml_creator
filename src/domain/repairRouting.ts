@@ -350,6 +350,10 @@ export const SURFACE_BY_CODE: Record<string, RepairSurface> = {
   // Repeated optical-fiber / virus-injection names, or a fiber named like the excitation source:
   // trodes_to_nwb fails on the repeated NWB name. Renamed in the Animal Editor Optogenetics step.
   duplicate_opto_device_name: 'animal',
+  // Several virus injections: every fiber is linked to the first, and one titer per virus is kept
+  // (advisory). Edited in the Animal Editor Optogenetics step.
+  multiple_virus_injections: 'animal',
+  conflicting_virus_titers: 'animal',
   // No editable in-app target — read-only identity (slash ids). The explanatory
   // message states the remedy (recreate the animal); a "Fix in …" button would
   // dead-end on a disabled control.

@@ -48,7 +48,7 @@ function repeatedNames(items: unknown): string[] {
 
 /**
  * Rules 3 / 3c / 3b: optogenetics completeness, coordinate references, source power, single excitation
- * source, and distinct device names.
+ * source, distinct device names, and what the NWB file records for several virus injections.
  *
  * @param model - The form data to validate.
  * @returns Validation issues.
@@ -204,6 +204,45 @@ export function optogeneticsRules(model: ValidationModel): ValidationIssue[] {
       });
     }
   });
+
+  // Several virus injections: trodes_to_nwb links every optical fiber to the FIRST injection, and
+  // records each virus once with the titer of its first injection. Advisory: the file converts,
+  // but the NWB file does not say what the injections were.
+  if (Array.isArray(model.virus_injection) && model.virus_injection.length > 1) {
+    const first = model.virus_injection[0];
+    issues.push({
+      path: 'virus_injection',
+      code: 'multiple_virus_injections',
+      repairSurface: 'animal',
+      severity: 'warning',
+      message:
+        `${model.virus_injection.length} virus injections are listed. trodes_to_nwb links ` +
+        `every optical fiber to the first one${first?.name ? ` ("${first.name}")` : ''}, so the ` +
+        `NWB file will say every fiber targets that injection's virus.`,
+    });
+    const titers = new Map<string, unknown[]>();
+    model.virus_injection.forEach((injection) => {
+      const virus = injection?.virus_name;
+      const titer = injection?.titer_in_vg_per_ml;
+      if (typeof virus !== 'string' || virus === '' || titer === undefined || titer === null || titer === '') return;
+      const seen = titers.get(virus) ?? [];
+      if (!seen.some((value) => Number(value) === Number(titer))) seen.push(titer);
+      titers.set(virus, seen);
+    });
+    titers.forEach((values, virus) => {
+      if (values.length < 2) return;
+      issues.push({
+        path: 'virus_injection',
+        code: 'conflicting_virus_titers',
+        repairSurface: 'animal',
+        severity: 'warning',
+        message:
+          `Virus "${virus}" is injected with different titers (${values.join(', ')} vg/ml). ` +
+          `trodes_to_nwb records the virus once, with the first titer (${String(values[0])}); the ` +
+          `others are lost.`,
+      });
+    });
+  }
 
   return issues;
 }
