@@ -7,7 +7,12 @@
  * @module features/importExport
  */
 
-import { validate, blockingIssues, isBlockingIssue } from '../validation';
+import {
+  validate,
+  blockingIssues,
+  isBlockingIssue,
+  unknownSubjectFields,
+} from '../validation';
 import { removeStaleCameraReferences } from '../utils/cameraReferences';
 import {
   canonicalizeFileBadChannels,
@@ -209,6 +214,19 @@ export async function importFiles(file, options = {}) {
       // than excluding the whole section on validation.
       jsonFileContent = removeStaleCameraReferences(jsonFileContent);
 
+      // trodes_to_nwb passes the subject to pynwb's Subject, which fails on any field it does not
+      // know, and the form has no way to remove one. Leave such fields out before validating (so
+      // they cannot cost the whole subject) and name each one in the summary.
+      const leftOutSubjectFields = unknownSubjectFields(jsonFileContent.subject).map((key) => ({
+        field: `subject.${key}`,
+        reason: `Left out: "${key}" is not a field of the NWB subject, and trodes_to_nwb fails on it.`,
+      }));
+      if (leftOutSubjectFields.length > 0) {
+        const subject = { ...jsonFileContent.subject };
+        unknownSubjectFields(subject).forEach((key) => delete subject[key]);
+        jsonFileContent = { ...jsonFileContent, subject };
+      }
+
       // Validate YAML content. Only ERRORS leave a section out: a warning is advisory (a
       // placeholder subject id, an unusual camera calibration), so the value is imported for the
       // user to see and fix in the form. Leaving it out would silently drop valid metadata.
@@ -241,8 +259,8 @@ export async function importFiles(file, options = {}) {
           importSummary: {
             totalFields: formContentKeys.filter(key => Object.hasOwn(jsonFileContent, key)).length,
             importedFields,
-            excludedFields: [],
-            hasExclusions: false,
+            excludedFields: leftOutSubjectFields,
+            hasExclusions: leftOutSubjectFields.length > 0,
           },
         });
         return;
@@ -310,6 +328,9 @@ export async function importFiles(file, options = {}) {
           .filter(issue => issue.path.split('[')[0].split('.')[0] === fieldId)
           .map(issue => issue.message)[0] || 'Validation error'
       }));
+
+      // Subject fields left out before validation (see above).
+      excludedFields.push(...leftOutSubjectFields);
 
       resolve({
         success: true,

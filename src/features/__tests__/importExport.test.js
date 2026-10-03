@@ -536,6 +536,60 @@ institution: Test University
       });
     });
 
+    // pynwb's Subject accepts only its own fields, and the form has no way to remove another one,
+    // so the import leaves such a field out and says so in the summary.
+    describe('Subject fields the NWB subject does not have', () => {
+      const yamlContent = `
+lab: Test Lab
+subject:
+  subject_id: RAT001
+  species: Rattus norvegicus
+  sex: M
+  age: P90D
+  weight_unit: g
+  nickname: Remy
+`;
+
+      it('leaves them out of a clean import and names each one in the summary', async () => {
+        const file = new File([yamlContent], 'test.yml', { type: 'text/yaml' });
+        validate.mockReturnValue([]);
+
+        const result = await importFiles(file);
+
+        expect(result.success).toBe(true);
+        expect(result.formData.subject).toEqual({
+          subject_id: 'RAT001',
+          species: 'Rattus norvegicus',
+          sex: 'M',
+          age: 'P90D',
+        });
+        // Validation ran on the subject without them, so they cannot exclude the whole subject.
+        expect(validate.mock.calls[0][0].subject).not.toHaveProperty('weight_unit');
+        expect(result.importSummary.importedFields).toContain('subject');
+        expect(result.importSummary.hasExclusions).toBe(true);
+        expect(result.importSummary.excludedFields).toEqual([
+          expect.objectContaining({ field: 'subject.weight_unit', reason: expect.stringContaining('"weight_unit"') }),
+          expect.objectContaining({ field: 'subject.nickname', reason: expect.stringContaining('"nickname"') }),
+        ]);
+      });
+
+      it('lists them beside the sections a partial import leaves out', async () => {
+        const file = new File([yamlContent], 'test.yml', { type: 'text/yaml' });
+        validate.mockReturnValue([
+          { path: 'lab', code: 'pattern', severity: 'error', message: 'lab is wrong' },
+        ]);
+
+        const result = await importFiles(file);
+
+        expect(result.formData.subject).not.toHaveProperty('nickname');
+        expect(result.importSummary.excludedFields.map((entry) => entry.field)).toEqual([
+          'lab',
+          'subject.weight_unit',
+          'subject.nickname',
+        ]);
+      });
+    });
+
     describe('Progress Callback', () => {
       it('calls onProgress callback during import', async () => {
         // ARRANGE

@@ -20,6 +20,7 @@
  * 10. Camera, electrode group and ntrode ids are unique; channel-map rows name a group
  * 11. Optical fibers, virus injections and the excitation source have distinct names
  * 12. There is at least one task
+ * 13. Subject values pynwb rejects (date_of_birth, unknown fields, types); a non-ISO age warns
  *
  * Rules 7-10 are the trodes_to_nwb crash guards of the modern branch's rule set, with the same
  * codes and messages.
@@ -34,6 +35,7 @@
  *   }
  */
 import { getDefinedCameraIds } from '../utils/cameraReferences';
+import JsonSchemaFile from '../nwb_schema.json';
 
 /**
  * The values used by more than one item, compared as the converter compares them (raw values,
@@ -54,6 +56,91 @@ const repeatedValues = (items, valueOf) => {
   });
   return [...repeated];
 };
+
+/**
+ * The fields pynwb's Subject accepts (pynwb 3.1.3). trodes_to_nwb passes `subject` to it as it
+ * is, so any other field stops the conversion with a TypeError.
+ */
+export const NWB_SUBJECT_FIELDS = [
+  'age', 'age__reference', 'description', 'genotype', 'sex', 'species', 'subject_id', 'weight',
+  'date_of_birth', 'strain',
+];
+
+/**
+ * The fields of a subject that pynwb's Subject does not accept.
+ *
+ * @param {*} subject - The subject object (anything else has none)
+ * @returns {string[]} The unknown field names, in file order
+ */
+export const unknownSubjectFields = (subject) =>
+  subject && typeof subject === 'object' && !Array.isArray(subject)
+    ? Object.keys(subject).filter(
+      (key) => subject[key] !== undefined && !NWB_SUBJECT_FIELDS.includes(key)
+    )
+    : [];
+
+// PyYAML (which trodes_to_nwb reads the file with) loads a plain timestamp with a time of day as
+// a datetime; anything else stays text, and a date alone loads as a date. Mirrors its resolver.
+const PYYAML_DATETIME =
+  /^(\d{4})-(\d{1,2})-(\d{1,2})(?:[Tt]|[ \t]+)(\d{1,2}):(\d{2}):(\d{2})(?:\.\d*)?(?:[ \t]*(?:Z|[-+](\d{1,2})(?::(\d{2}))?))?$/;
+
+/**
+ * Whether trodes_to_nwb reads a date_of_birth value as a datetime, which pynwb's Subject requires.
+ * An impossible date or time (2023-02-30, 24:00) is not one: PyYAML fails to read the whole file.
+ *
+ * @param {*} value - The date_of_birth value
+ * @returns {boolean} True when it loads as a valid datetime
+ */
+export const readsAsDatetime = (value) => {
+  const match = typeof value === 'string' ? PYYAML_DATETIME.exec(value) : null;
+  if (!match) return false;
+  const [year, month, day, hour, minute, second, zoneHours = 0, zoneMinutes = 0] =
+    match.slice(1).map((part) => Number(part ?? 0));
+  const leap = (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0;
+  const monthDays = [31, leap ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][month - 1];
+  return (
+    year >= 1 && month >= 1 && month <= 12 && day >= 1 && day <= monthDays &&
+    hour <= 23 && minute <= 59 && second <= 59 && zoneHours * 60 + zoneMinutes < 24 * 60
+  );
+};
+
+// An ISO 8601 duration, exactly as NWB Inspector's check_subject_age reads it (CRITICAL under
+// the DANDI configuration). A range "lower/upper" is accepted, either side may be blank.
+const ISO_DURATION =
+  /^P(?!$)(\d+(?:\.\d+)?Y)?(\d+(?:\.\d+)?M)?(\d+(?:\.\d+)?W)?(\d+(?:\.\d+)?D)?(T(?=\d)(\d+(?:\.\d+)?H)?(\d+(?:\.\d+)?M)?(\d+(?:\.\d+)?S)?)?$/;
+
+/**
+ * Whether a subject age passes NWB Inspector's check_subject_age.
+ *
+ * @param {string} age - The age text
+ * @returns {boolean} True for an ISO 8601 duration or a range of them
+ */
+export const isIsoAge = (age) => {
+  if (ISO_DURATION.test(age)) return true;
+  const bounds = age.split('/');
+  return bounds.length === 2 && bounds.every((bound) => bound === '' || ISO_DURATION.test(bound));
+};
+
+const AGE_UNITS = { d: 'D', day: 'D', days: 'D', w: 'W', wk: 'W', wks: 'W', week: 'W', weeks: 'W', mo: 'M', month: 'M', months: 'M', y: 'Y', yr: 'Y', yrs: 'Y', year: 'Y', years: 'Y' };
+
+/**
+ * The ISO 8601 duration an age most likely means (`P164` or `164` → `P164D`, `6 weeks` →
+ * `P6W`), or null when that cannot be told. A bare number is read as days.
+ *
+ * @param {string|number} age - The age as written
+ * @returns {string|null} The suggested duration
+ */
+export const likelyIsoAge = (age) => {
+  const match = /^\s*P?\s*(\d+(?:\.\d+)?)\s*([a-z]*)\s*$/i.exec(String(age));
+  if (!match) return null;
+  const unit = match[2] === '' ? 'D' : AGE_UNITS[match[2].toLowerCase()];
+  return unit ? `P${match[1]}${unit}` : null;
+};
+
+// The schema's own (unanchored) date_of_birth pattern: a value it rejects gets its message.
+const SCHEMA_DATE_OF_BIRTH = new RegExp(
+  JsonSchemaFile.properties.subject.properties.date_of_birth.pattern
+);
 
 export const rulesValidation = (model) => {
   // Handle null/undefined model gracefully
@@ -455,6 +542,99 @@ export const rulesValidation = (model) => {
         'Add at least one task (with its epochs). trodes_to_nwb builds the position data ' +
         'from the tasks and fails when there are none.',
     });
+  }
+
+  // Rule 13: subject values pynwb rejects, which mostly arrive in imported files.
+  const subject = model.subject;
+  if (subject && typeof subject === 'object' && !Array.isArray(subject)) {
+    // date_of_birth must load as a datetime. The schema's pattern is not anchored and also allows
+    // a time without seconds (2023-01-10T00:00), which PyYAML keeps as text: pynwb then raises a
+    // TypeError. Values the schema rejects are left to its message.
+    const dateOfBirth = subject.date_of_birth;
+    if (
+      typeof dateOfBirth === 'string' &&
+      SCHEMA_DATE_OF_BIRTH.test(dateOfBirth) &&
+      !readsAsDatetime(dateOfBirth)
+    ) {
+      const minutesOnly = /^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2})(Z|[+-]\d{2}:\d{2})?$/.exec(dateOfBirth);
+      const suggestion = minutesOnly && readsAsDatetime(`${minutesOnly[1]}:00${minutesOnly[2] || ''}`)
+        ? `${minutesOnly[1]}:00${minutesOnly[2] || ''}`
+        : '2023-01-10T00:00:00.000Z';
+      issues.push({
+        path: 'subject.date_of_birth',
+        code: 'subject_date_of_birth_format',
+        severity: 'error',
+        message:
+          `Date of birth "${dateOfBirth}" must be a real date with a time to the second, ` +
+          `such as "${suggestion}". trodes_to_nwb cannot read this one as a date and time, ` +
+          `so it fails to create the NWB subject.`,
+      });
+    }
+
+    // Any field pynwb's Subject does not know stops the conversion. The import leaves such
+    // fields out; this catches one that reaches the download another way.
+    unknownSubjectFields(subject).forEach((key) => {
+      issues.push({
+        path: `subject.${key}`,
+        code: 'unknown_subject_field',
+        severity: 'error',
+        message:
+          `Subject field "${key}" is not part of the NWB subject (allowed: ` +
+          `${NWB_SUBJECT_FIELDS.join(', ')}). trodes_to_nwb fails on it — remove it.`,
+      });
+    });
+
+    // pynwb accepts only text for age and strain, and only "birth" or "gestational" for
+    // age__reference.
+    if (subject.age !== undefined && subject.age !== null && typeof subject.age !== 'string') {
+      const likely = likelyIsoAge(subject.age);
+      issues.push({
+        path: 'subject.age',
+        code: 'subject_value_type',
+        severity: 'error',
+        message:
+          `Subject age ${JSON.stringify(subject.age)} is not text. trodes_to_nwb fails on it; ` +
+          `write it as an ISO 8601 duration${likely ? `, e.g. "${likely}"` : ' such as "P90D"'}.`,
+      });
+    }
+    if (subject.strain !== undefined && subject.strain !== null && typeof subject.strain !== 'string') {
+      issues.push({
+        path: 'subject.strain',
+        code: 'subject_value_type',
+        severity: 'error',
+        message:
+          `Subject strain ${JSON.stringify(subject.strain)} is not text. trodes_to_nwb fails on ` +
+          `it — write the strain as text.`,
+      });
+    }
+    if (
+      subject.age__reference !== undefined &&
+      subject.age__reference !== 'birth' &&
+      subject.age__reference !== 'gestational'
+    ) {
+      issues.push({
+        path: 'subject.age__reference',
+        code: 'subject_value_type',
+        severity: 'error',
+        message:
+          `Subject age__reference ${JSON.stringify(subject.age__reference)} must be "birth" or ` +
+          `"gestational". trodes_to_nwb fails on any other value.`,
+      });
+    }
+
+    // A non-empty age must be an ISO 8601 duration, or DANDI's NWB Inspector rejects the file
+    // (check_subject_age). Advisory: the conversion itself succeeds.
+    if (typeof subject.age === 'string' && subject.age.trim() !== '' && !isIsoAge(subject.age)) {
+      const likely = likelyIsoAge(subject.age);
+      issues.push({
+        path: 'subject.age',
+        code: 'subject_age_format',
+        severity: 'warning',
+        message:
+          `Subject age "${subject.age}" is not an ISO 8601 duration, so DANDI's NWB Inspector ` +
+          `rejects it. ${likely ? `Did you mean "${likely}"?` : 'Use e.g. "P90D" (90 days) or "P12W" (12 weeks); a range such as "P90D/P120D" is allowed.'}`,
+      });
+    }
   }
 
   return issues;

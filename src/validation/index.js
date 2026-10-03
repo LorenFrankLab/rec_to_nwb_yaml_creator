@@ -6,7 +6,7 @@
  */
 
 import { schemaValidation } from './schemaValidation';
-import { rulesValidation } from './rulesValidation';
+import { rulesValidation, unknownSubjectFields } from './rulesValidation';
 
 /**
  * @typedef {Object} Issue
@@ -77,4 +77,4 @@ export const isBlockingIssue = (issue) => issue?.severity === 'error';
 export const blockingIssues = (issues) => issues.filter(isBlockingIssue);
 
 // Re-export individual validation functions for advanced use cases
-export { schemaValidation, rulesValidation };
+export { schemaValidation, rulesValidation, unknownSubjectFields };
