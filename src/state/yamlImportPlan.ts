@@ -82,6 +82,8 @@ interface FileEntry {
   dayFacts: Record<string, any>;
   /** The probe configuration from {@link decomposeYaml}. */
   configuration: Record<string, any>;
+  /** The existing-animal camera ids Import & Repair MAPPED this file's references onto. */
+  mappedCameraIds: unknown[];
   /**
    * How this file's camera rows were rewritten by the calibration analysis (see
    * {@link module:state/cameraCalibrationConflicts}); absent when nothing was rewritten.
@@ -192,6 +194,28 @@ export function extractRecordingDate(
   }
 
   return null;
+}
+
+/**
+ * The key under `__importRepair` where Import & Repair records the existing-animal camera ids the
+ * user mapped a file's camera references onto (`applyImportRepairs` writes it; the planner reads it).
+ */
+export const IMPORT_REPAIR_MAPPED_CAMERA_IDS = 'mappedCameraIds';
+
+/**
+ * The existing-animal camera ids Import & Repair mapped this file's references onto. A mapped row
+ * keeps the FILE's camera name, so without this record it would read as a different camera.
+ *
+ * @param flatModel - Decoded (repaired) flat YAML model.
+ * @returns The mapped ids (empty when the user mapped none).
+ */
+function mappedCameraIdsOf(flatModel: unknown): unknown[] {
+  const marker =
+    flatModel !== null && typeof flatModel === 'object'
+      ? (flatModel as { __importRepair?: Record<string, unknown> }).__importRepair
+      : undefined;
+  const ids = marker?.[IMPORT_REPAIR_MAPPED_CAMERA_IDS];
+  return Array.isArray(ids) ? ids : [];
 }
 
 /**
@@ -438,10 +462,11 @@ interface CameraUnion {
  *
  * A camera is IDENTIFIED by its name; its id is the first-seen id, or a fresh one when a later
  * file's new-by-name camera collides with an id already taken. When `existing` is given, the
- * animal's own catalog seeds IDENTITY only — its ids (a file row naming one is a reference to that
- * camera, whatever the row's name: that is how Import & Repair records a mapping) and its names (a
- * brought row with an existing name routes onto that camera) — while `imported` still holds the
- * files' rows for those ids, never the existing rows themselves.
+ * animal's own catalog seeds IDENTITY only — its ids (a file row with one of them is a reference to
+ * that camera when it carries the same name, or when Import & Repair recorded the user's mapping onto
+ * it; a differently named row is a camera the animal does not have) and its names (a brought row
+ * with an existing name routes onto that camera) — while `imported` still holds the files' rows for
+ * those ids, never the existing rows themselves.
  *
  * @param entries - Date-sorted file entries.
  * @param existing - The existing animal to allocate against, or null to treat the files alone.
@@ -460,6 +485,7 @@ function unionCameras(entries: FileEntry[], existing: unknown, divergences: Dive
   const unionIdByName = new Map<string, unknown>();
   const usedIds = new Set<unknown>();
   const existingCameraIds = new Set<unknown>();
+  const existingNameById = new Map<unknown, string>();
   const addedCameras: any[] = [];
   const nextFreeId = (): number => {
     let candidate = 0;
@@ -486,6 +512,7 @@ function unionCameras(entries: FileEntry[], existing: unknown, divergences: Dive
       },
     });
     if (!unionIdByName.has(name)) unionIdByName.set(name, camera.id);
+    if (!existingNameById.has(camera.id)) existingNameById.set(camera.id, name);
     usedIds.add(camera.id);
     existingCameraIds.add(camera.id);
   }
@@ -507,16 +534,22 @@ function unionCameras(entries: FileEntry[], existing: unknown, divergences: Dive
     const remap = new Map<unknown, unknown>();
     const remapped: string[] = [];
     for (const camera of fileCameras) {
-      // An id the animal already has is a reference to that camera (an explicit Import & Repair
-      // mapping, or a file that already uses the animal's numbering) — never re-identified by name.
-      // EXCEPT a row a SPLIT calibration conflict renamed: the animal's id numbering says nothing
-      // about a camera the animal does not have, and collapsing it onto the existing row would
-      // re-scale this day's positions with the wrong calibration (finding F1).
-      if (existingCameraIds.has(camera.id) && entry.cameraRewrite?.reidentifiedIds.has(camera.id) !== true) {
+      const name = String(camera.camera_name ?? '').trim();
+      // An id the animal already has is a reference to that camera when the file uses the animal's
+      // numbering for it (the same name) or the user mapped it there in Import & Repair — never
+      // re-identified by name. A DIFFERENTLY named row under that id is a camera the animal does not
+      // have (W3): collapsing it onto the existing row would export the wrong camera and calibration,
+      // so it is identified by name below (a new one gets a free id, and the day's references follow
+      // it). Likewise a row a SPLIT calibration conflict renamed (finding F1).
+      if (
+        existingCameraIds.has(camera.id) &&
+        entry.cameraRewrite?.reidentifiedIds.has(camera.id) !== true &&
+        (existingNameById.get(camera.id) === name ||
+          entry.mappedCameraIds.some((id) => Object.is(id, camera.id)))
+      ) {
         if (!importedByExistingId.has(camera.id)) importedByExistingId.set(camera.id, structuredClone(camera));
         continue;
       }
-      const name = String(camera.camera_name ?? '').trim();
       const candidateFields = {
         id: camera.id,
         meters_per_pixel: camera.meters_per_pixel,
@@ -928,6 +961,7 @@ export function planImport(
       animalFacts: decomposed.animalFacts,
       dayFacts: decomposed.dayFacts,
       configuration: decomposed.configuration,
+      mappedCameraIds: mappedCameraIdsOf(flatModel),
     };
     if (!bySubject.has(subjectKey)) {
       bySubject.set(subjectKey, { subjectId, entries: [] });

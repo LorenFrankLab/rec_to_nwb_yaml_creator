@@ -24,7 +24,11 @@ import { validate } from '../validation';
 import { isValidSpecies } from '../validation/dandiSubject';
 import { findIdentityDivergence } from './identityDivergence';
 import { classifyCameraAgainstCatalog } from './cameraCalibrationConflicts';
-import { extractRecordingDate, findExistingAnimalId } from './yamlImportPlan';
+import {
+  extractRecordingDate,
+  findExistingAnimalId,
+  IMPORT_REPAIR_MAPPED_CAMERA_IDS,
+} from './yamlImportPlan';
 import { getAnimalCameras, getDataAcqDevices } from './workspaceSelectors';
 import { inferredCameraRefs } from './cameraUsage';
 import type { IdentityRegistryEntry } from './identityDivergence';
@@ -525,6 +529,34 @@ function cameraIdentityRegistry(
 }
 
 /**
+ * A camera row's `camera_name` as a trimmed string (decoded YAML carries it loosely typed).
+ *
+ * @param camera - A camera catalog row.
+ * @returns The trimmed name (`''` when absent).
+ */
+function cameraNameOf(camera: unknown): string {
+  return isRecord(camera) ? String(camera.camera_name ?? '').trim() : '';
+}
+
+/**
+ * Record on the repaired model that the user mapped a file reference onto an existing catalog
+ * entry, so the planner honors the mapping even though the file's own row (which keeps its name)
+ * would read as a different entry.
+ *
+ * @param model - The mutable repaired model.
+ * @param key - The `__importRepair` key the planner reads.
+ * @param value - The existing entry the reference was mapped onto.
+ */
+function recordRepairMapping(model: Record<string, unknown>, key: string, value: unknown): void {
+  const marker = isRecord(model.__importRepair) ? model.__importRepair : {};
+  const mapped = Array.isArray(marker[key]) ? (marker[key] as unknown[]) : [];
+  model.__importRepair = {
+    ...marker,
+    [key]: mapped.some((entry) => sameRefValue(entry, value)) ? mapped : [...mapped, value],
+  };
+}
+
+/**
  * Human-readable field list for camera identity divergence messages.
  *
  * @param fields - Dependent fields that differ.
@@ -827,8 +859,11 @@ function buildExistingAnimalCatalogItems(
 
   for (const cameraId of cameraRefs) {
     if (divergentCameraRefs.some((cameraRef) => sameRefValue(cameraRef, cameraId))) continue;
-    if (existingCameraIds.some((id) => sameRefValue(id, cameraId))) continue;
     const sourceCamera = sourceCameras.find((camera) => sameRefValue(camera?.id, cameraId));
+    // An id the animal already has is that camera only when the file gives it the same name. Under a
+    // different name it is a camera the animal does not have (W3), so it is asked about like one.
+    const takenBy = existingCameras.find((camera) => sameRefValue(camera.id, cameraId));
+    if (takenBy && (!sourceCamera || cameraNameOf(takenBy) === cameraNameOf(sourceCamera))) continue;
     if (!sourceCamera) continue;
     const sourceName = sourceCamera.camera_name;
     const nameConflicts =
@@ -838,16 +873,21 @@ function buildExistingAnimalCatalogItems(
     const canBring = !nameConflicts;
     const path = `${EXISTING_CAMERA_REF_PREFIX}${encodeRepairToken(cameraId)}`;
     const base = cameraRefLabel(sourceCamera, cameraId);
+    const missing = takenBy
+      ? `animal "${decision.existingAnimalId}" uses camera id ${String(cameraId)} for a different camera ("${cameraNameOf(takenBy)}")`
+      : `animal "${decision.existingAnimalId}" does not have it`;
     items.push({
       path,
       label: `Camera ${String(cameraId)}`,
-      code: 'existing_animal_missing_camera',
+      code: takenBy ? 'existing_animal_camera_id_taken' : 'existing_animal_missing_camera',
       group: 'attention',
       kind: canBring ? 'choice' : 'input',
       was: base,
       suggested: canBring ? BRING_CATALOG_ENTRY : undefined,
       why: canBring
-        ? `${base} is referenced by the imported day, but animal "${decision.existingAnimalId}" does not have it. Bring that camera into the animal, or map the day to an existing camera id.`
+        ? takenBy
+          ? `${base} is referenced by the imported day, but ${missing}. Bring this camera into the animal as its own camera (it gets a free id and the day's references follow it), or map the day to an existing camera id.`
+          : `${base} is referenced by the imported day, but ${missing}. Bring that camera into the animal, or map the day to an existing camera id.`
         : `${base} is referenced by the imported day, but animal "${decision.existingAnimalId}" already has a camera named "${String(sourceName)}". Map the day to an existing camera id instead of importing a conflicting catalog entry.`,
       inputType: 'number',
       mapInputLabel: `Map camera ${String(cameraId)} to existing camera id`,
@@ -1463,6 +1503,7 @@ export function applyImportRepairs(
           decodeRepairToken(path.slice(EXISTING_CAMERA_REF_PREFIX.length)),
           value
         );
+        recordRepairMapping(model, IMPORT_REPAIR_MAPPED_CAMERA_IDS, value);
       }
       continue;
     }

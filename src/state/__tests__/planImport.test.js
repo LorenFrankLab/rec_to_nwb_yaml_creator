@@ -8,7 +8,7 @@ import { describe, it, expect } from 'vitest';
 import { encodeYaml, decodeYaml } from '../../io/yaml';
 import { mergeDayMetadata, createDefaultWorkspace } from '../workspaceUtils';
 import { buildRealisticWorkspace } from '../../__tests__/fixtures/workspaceBuilders';
-import { planImport, materializePlanDay } from '../yamlImportPlan';
+import { planImport, materializePlanDay, IMPORT_REPAIR_MAPPED_CAMERA_IDS } from '../yamlImportPlan';
 
 /**
  * Encode a (animal, day) pair to a flat model exactly as an export would, then decode
@@ -508,13 +508,24 @@ describe('planImport — camera references against an EXISTING animal', () => {
     day.cameras_used = [id];
   };
 
+  /**
+   * Record on a decoded file what Import & Repair's `applyImportRepairs` records for a mapping.
+   * @param {{ flatModel: object }} file - The decoded file (mutated).
+   * @param {number} id - The existing camera id the user mapped the file's camera onto.
+   * @returns {{ flatModel: object }} The same file.
+   */
+  const mappedTo = (file, id) => {
+    file.flatModel.__importRepair = { [IMPORT_REPAIR_MAPPED_CAMERA_IDS]: [id] };
+    return file;
+  };
+
   it('keeps an explicitly mapped reference: a row whose id IS an existing camera is that camera, per day', () => {
     // Import & Repair mapped file 1's camera to existing id 0 and file 2's to existing id 1 (both
     // rows still carry the file's own name). Each day must keep the id the user chose.
     const plan = planImport(
       [
-        makeFile({ subjectId: 'remy', date: '2023-06-22', mutateConfig: singleCamera(0, 'arena_side') }),
-        makeFile({ subjectId: 'remy', date: '2023-06-23', mutateConfig: singleCamera(1, 'arena_side') }),
+        mappedTo(makeFile({ subjectId: 'remy', date: '2023-06-22', mutateConfig: singleCamera(0, 'arena_side') }), 0),
+        mappedTo(makeFile({ subjectId: 'remy', date: '2023-06-23', mutateConfig: singleCamera(1, 'arena_side') }), 1),
       ],
       existingRemy()
     );
@@ -528,6 +539,24 @@ describe('planImport — camera references against an EXISTING animal', () => {
     // ONE camera (first-seen id 0) and day 2's references follow it there.
     expect(remy.cameras.map((c) => [c.id, c.camera_name])).toEqual([[0, 'arena_side']]);
     expect(materializePlanDay(remy.days.find((d) => d.date === '2023-06-23'), 'replace').associated_video_files[0].camera_id).toBe(0);
+  });
+
+  it('brings a differently named camera that reuses an existing id under a free id, unless mapped (W3)', () => {
+    // The file numbers its own sleep-box camera 0; the animal's camera 0 is overhead_camera. Without
+    // a mapping that row is a camera the animal does not have — never overhead_camera.
+    const plan = planImport(
+      [makeFile({ subjectId: 'remy', date: '2023-06-23', mutateConfig: singleCamera(0, 'sleep_box_camera') })],
+      existingRemy()
+    );
+    const remy = plan.animals.find((a) => a.subjectId === 'remy');
+    expect(remy.catalogAdditions.cameras).toEqual([
+      expect.objectContaining({ id: 2, camera_name: 'sleep_box_camera' }),
+    ]);
+    const added = materializePlanDay(remy.days[0], 'add');
+    expect(added.associated_video_files[0].camera_id).toBe(2);
+    expect(added.tasks.every((t) => t.camera_id.every((id) => id === 2))).toBe(true);
+    expect(added.cameras_used).toEqual([2]);
+    expect(remy.divergences.some((d) => d.field === 'cameras' && /sleep_box_camera" 0 → 2/.test(d.detail))).toBe(true);
   });
 
   it('allocates a brought camera an id the existing animal does not use, and the additions carry it', () => {
@@ -603,10 +632,15 @@ describe('planImport — the imported catalog for replace', () => {
       expect.objectContaining({ id: 0, camera_name: 'recalibrated_overhead', meters_per_pixel: 0.0015 }),
     ]);
     expect(remy.devices.data_acq_device.map((d) => d.name)).toEqual(['MCU']);
-    // …while 'add' brings only what the animal lacks: nothing for camera 0 (it IS existing 0), MCU.
-    expect(remy.catalogAdditions.cameras).toEqual([]);
+    // …while 'add' brings only what the animal lacks: MCU, and the file's camera 0. That camera is
+    // named "recalibrated_overhead", not the animal's "overhead_camera", so it is a camera the
+    // animal does not have (W3) — brought under a free id, with the day's reference following it.
+    expect(remy.catalogAdditions.cameras).toEqual([
+      expect.objectContaining({ id: 2, camera_name: 'recalibrated_overhead', meters_per_pixel: 0.0015 }),
+    ]);
     expect(remy.catalogAdditions.data_acq_device.map((d) => d.name)).toEqual(['MCU']);
     expect(remy.days[0].associated_video_files[0].camera_id).toBe(0);
+    expect(materializePlanDay(remy.days[0], 'add').associated_video_files[0].camera_id).toBe(2);
   });
 });
 

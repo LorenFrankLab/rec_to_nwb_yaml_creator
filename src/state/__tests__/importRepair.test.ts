@@ -991,6 +991,62 @@ describe('existing-animal add catalog refs — surface and resolve before import
     expect(existingAnimalCatalogResolutionBlocker(plan, { [camera!.path]: 0 })).toBeNull();
   });
 
+  it('asks about a camera that reuses an existing camera id under a different name (W3)', () => {
+    const model = loadCleanExport();
+    model.cameras = [
+      {
+        id: 0,
+        camera_name: 'sleep_box_camera',
+        meters_per_pixel: 0.0021,
+        manufacturer: 'Basler',
+        model: 'acA1300',
+        lens: 'Computar 4mm',
+      },
+    ];
+    model.tasks = [
+      {
+        task_name: 'sleep',
+        task_description: 'rest',
+        task_environment: 'sleep box',
+        camera_id: [0],
+        task_epochs: [1],
+      },
+    ];
+    model.associated_files = [];
+    model.associated_video_files = [{ name: 'sleep_video', camera_id: 0, task_epochs: 1 }];
+    const workspace = {
+      animals: {
+        remy: {
+          id: 'remy',
+          subject: { subject_id: 'remy' },
+          cameras: [{ id: 0, camera_name: 'overhead_camera', meters_per_pixel: 0.00085 }],
+          devices: { data_acq_device: model.data_acq_device },
+        },
+      },
+    };
+
+    const plan = buildImportRepairPlan(model, '06232023_remy_metadata.yml', workspace);
+    const camera = plan.items.find((item) => item.code === 'existing_animal_camera_id_taken');
+    expect(camera).toMatchObject({
+      kind: 'choice',
+      suggested: 'Bring referenced catalog entry',
+      was: 'camera id 0 (sleep_box_camera)',
+      action: { catalog: 'cameras', canBring: true, missingValue: 0, validMapValues: [0] },
+    });
+    expect(camera!.why).toMatch(/uses camera id 0 for a different camera \("overhead_camera"\)/);
+    expect(existingAnimalCatalogResolutionBlocker(plan, {})).toMatch(/Resolve Camera 0/);
+
+    // Bringing it leaves the file as it is; mapping it onto the animal's camera 0 records the
+    // mapping, so the planner keeps the day on that camera although the row keeps its own name.
+    expect(applyImportRepairs(model, { [camera!.path]: camera!.suggested })).toEqual(model);
+    const mapped = applyImportRepairs(model, { [camera!.path]: 0 }) as Record<string, unknown>;
+    expect(mapped.__importRepair).toEqual({ mappedCameraIds: [0] });
+    expect((mapped.cameras as Array<Record<string, unknown>>)[0]).toMatchObject({
+      id: 0,
+      camera_name: 'sleep_box_camera',
+    });
+  });
+
   it('maps a missing recording-system ref to an existing recording-system name', () => {
     const model = loadCleanExport();
     model.data_acq_device = [
