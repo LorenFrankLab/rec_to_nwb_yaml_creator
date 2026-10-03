@@ -11,6 +11,58 @@
 import { arrayDefaultValues } from '../valueList';
 
 /**
+ * Sections whose items trodes_to_nwb turns into named NWB objects that must
+ * not share a name: two optical fibers or virus injections with one name
+ * raise a ValueError, and the fibers share the NWB device namespace with the
+ * excitation source. Maps each section to the sections its names must not
+ * repeat.
+ */
+const UNIQUE_NAME_SECTIONS = {
+  opto_excitation_source: ['opto_excitation_source', 'optical_fiber'],
+  optical_fiber: ['opto_excitation_source', 'optical_fiber'],
+  virus_injection: ['virus_injection'],
+};
+
+/**
+ * Names used in the sections whose names `key`'s new items must not repeat
+ *
+ * @param {object} form - Form data
+ * @param {string} key - Array field name
+ * @returns {Set<string>|null} The names, or null if `key` has no such rule
+ */
+const namesInUse = (form, key) => {
+  const sections = UNIQUE_NAME_SECTIONS[key];
+  if (!sections) {
+    return null;
+  }
+  return new Set(
+    sections.flatMap((section) => (form[section] || []).map((item) => item?.name))
+  );
+};
+
+/**
+ * `name` if it is not in use, else its next free numbered form:
+ * "Optical fiber 1" becomes "Optical fiber 2", "CA1 injection" becomes
+ * "CA1 injection 2". A blank name stays blank for validation to report.
+ *
+ * @param {string} name - The name to start from
+ * @param {Set<string>} taken - Names in use
+ * @returns {string} A name not in `taken`
+ */
+const unusedName = (name, taken) => {
+  if (typeof name !== 'string' || name.trim() === '' || !taken.has(name)) {
+    return name;
+  }
+  const numbered = /^(.*\S)\s+(\d+)$/.exec(name);
+  const base = numbered ? numbered[1] : name;
+  let number = numbered ? Number(numbered[2]) + 1 : 2;
+  while (taken.has(`${base} ${number}`)) {
+    number += 1;
+  }
+  return `${base} ${number}`;
+};
+
+/**
  * Custom hook for managing array operations in form data
  *
  * @param {object} formData - Current form state
@@ -64,6 +116,8 @@ export function useArrayManagement(formData, setFormData) {
       maxId = idValues.length > 0 ? Math.max(...idValues) + 1 : 0;
     }
 
+    const takenNames = namesInUse(form, key);
+
     items.forEach((item) => {
       const selectedItem = { ...item }; // best never to directly alter iterator
 
@@ -71,6 +125,12 @@ export function useArrayManagement(formData, setFormData) {
       if (maxId !== -1) {
         selectedItem.id = maxId;
         maxId += 1;
+      }
+
+      // named NWB objects get the next unused default name
+      if (takenNames) {
+        selectedItem.name = unusedName(selectedItem.name, takenNames);
+        takenNames.add(selectedItem.name);
       }
 
       formItems.push(selectedItem);
@@ -149,6 +209,12 @@ export function useArrayManagement(formData, setFormData) {
         item[keyItem] = maxId + 1;
       }
     });
+
+    // named NWB objects get a name of their own, numbered after the source's
+    const takenNames = namesInUse(form, key);
+    if (takenNames) {
+      item.name = unusedName(item.name, takenNames);
+    }
 
     form[key].splice(index + 1, 0, item);
     setFormData(form);
