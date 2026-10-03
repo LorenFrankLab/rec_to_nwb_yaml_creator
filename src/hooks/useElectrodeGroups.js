@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { deviceTypeMap, getShankCount } from '../ntrode/deviceTypes';
+import { getShankElectrodeIds } from '../ntrode/deviceTypes';
 import { arrayDefaultValues } from '../valueList';
 
 /**
@@ -55,38 +55,33 @@ export function useElectrodeGroups(formData, setFormData) {
       const { value } = e.target;
       const { key, index } = metaData;
       const electrodeGroupId = form.electrode_groups[index].id;
-      const deviceTypeValues = deviceTypeMap(value);
-      const shankCount = getShankCount(value);
-      const map = {};
 
       form[key][index].device_type = value;
 
-      // set map with default values
-      deviceTypeValues.forEach((deviceTypeValue) => {
-        map[deviceTypeValue] = deviceTypeValue;
-      });
+      // The shanks' electrode ids as numbered in the trodes_to_nwb probe file
+      // (0..N-1 across the shanks; 64c-3s splits them 21/21/22, so a shank's
+      // ids cannot be derived from the first shank's length).
+      const shanks = getShankElectrodeIds(value);
 
       const nTrodes = [];
 
-      // set nTrodes data except for bad_channel as the default suffices for now
-      for (let nIndex = 0; nIndex < shankCount; nIndex += 1) {
+      // One ntrode per shank: its map takes the shank's channels 0..n-1 to the
+      // shank's electrode ids. bad_channel defaults are left as-is.
+      shanks.forEach((electrodeIds) => {
         const nTrodeBase = structuredClone(
           arrayDefaultValues.ntrode_electrode_group_channel_map
         );
 
-        const nTrodeMap = { ...map };
-        const nTrodeMapKeys = Object.keys(nTrodeMap).map((k) => parseInt(k, 10));
-        const nTrodeMapLength = nTrodeMapKeys.length;
-
-        nTrodeMapKeys.forEach((nKey) => {
-          nTrodeMap[nKey] += nTrodeMapLength * nIndex;
+        const nTrodeMap = {};
+        electrodeIds.forEach((electrodeId, channel) => {
+          nTrodeMap[channel] = electrodeId;
         });
 
         nTrodeBase.electrode_group_id = electrodeGroupId;
         nTrodeBase.map = nTrodeMap;
 
         nTrodes.push(nTrodeBase);
-      }
+      });
 
       // Replace this group's ntrodes where they are and leave every other
       // ntrode alone. trodes_to_nwb matches the .rec header's ntrode ids to

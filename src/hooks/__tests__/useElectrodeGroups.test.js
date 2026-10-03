@@ -17,6 +17,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useState } from 'react';
 import { useElectrodeGroups } from '../useElectrodeGroups';
+import { deviceTypes } from '../../valueList';
 
 /**
  * Test wrapper that provides formData state and useElectrodeGroups hook
@@ -1036,4 +1037,61 @@ describe('useElectrodeGroups - changeElectrodeGroupId', () => {
     expect(groupIds(result)).toEqual([0, 5]);
     expect(pairs(result)).toEqual([[1, 0], [2, 0]]);
   });
+});
+
+/**
+ * Every trodes_to_nwb probe file numbers its electrodes 0..N-1 across the
+ * shanks in order. Each shank's ntrode maps its channels 0..n-1 to exactly
+ * that shank's electrode ids; a missing id fails the conversion.
+ */
+describe('useElectrodeGroups - channel maps match the probe files', () => {
+  const range = (first, last) => Array.from({ length: last - first + 1 }, (_, i) => first + i);
+  const fourShanksOf32 = [range(0, 31), range(32, 63), range(64, 95), range(96, 127)];
+  const PROBE_SHANKS = {
+    'tetrode_12.5': [range(0, 3)],
+    'A1x32-6mm-50-177-H32_21mm': [range(0, 31)],
+    '128c-4s4mm6cm-15um-26um-sl': fourShanksOf32,
+    '128c-4s4mm6cm-20um-40um-sl': fourShanksOf32,
+    '128c-4s6mm6cm-15um-26um-sl': fourShanksOf32,
+    '128c-4s6mm6cm-20um-40um-sl': fourShanksOf32,
+    '128c-4s8mm6cm-15um-26um-sl': fourShanksOf32,
+    '128c-4s8mm6cm-20um-40um-sl': fourShanksOf32,
+    '32c-2s8mm6cm-20um-40um-dl': [range(0, 15), range(16, 31)],
+    '64c-3s6mm6cm-20um-40um-sl': [range(0, 20), range(21, 41), range(42, 63)],
+    '64c-4s6mm6cm-20um-40um-dl': [range(0, 15), range(16, 31), range(32, 47), range(48, 63)],
+    'NET-EBL-128ch-single-shank': [range(0, 127)],
+  };
+
+  function useSeededHook() {
+    const [formData, setFormData] = useState({
+      electrode_groups: [{ id: 0, device_type: '', location: 'CA1' }],
+      ntrode_electrode_group_channel_map: [],
+    });
+    return { formData, ...useElectrodeGroups(formData, setFormData) };
+  }
+
+  it('covers every device type in the device type list', () => {
+    expect(Object.keys(PROBE_SHANKS).sort()).toEqual([...deviceTypes()].sort());
+  });
+
+  it.each(Object.entries(PROBE_SHANKS))(
+    '%s: one ntrode per shank, mapping its channels to that shank\'s electrode ids',
+    (deviceType, shanks) => {
+      const { result } = renderHook(() => useSeededHook());
+
+      act(() => {
+        result.current.nTrodeMapSelected(
+          { target: { value: deviceType } },
+          { key: 'electrode_groups', index: 0 }
+        );
+      });
+
+      const maps = result.current.formData.ntrode_electrode_group_channel_map.map((n) => n.map);
+      expect(maps).toEqual(
+        shanks.map((electrodeIds) =>
+          Object.fromEntries(electrodeIds.map((electrodeId, channel) => [channel, electrodeId]))
+        )
+      );
+    }
+  );
 });
