@@ -10,7 +10,8 @@
  *
  * The three dates are kept distinct throughout: the recording date (`day.date`), the setup
  * effective date (`snapshot.date`), and the entry timestamp (`provenance.enteredAt`), which is
- * never evidence of when a setup became effective.
+ * never evidence of when a setup became effective. An imported file is evidence: its first
+ * configuration is dated from the earliest file, and each imported day's pin is its own file's.
  *
  * Pure; tolerant of a malformed history.
  */
@@ -102,11 +103,12 @@ export type ConfigurationChoiceStatus =
 
 /**
  * Whether a day's pinned version is settled: its snapshot's effective date covers the recording
- * date, OR the user EXPLICITLY confirmed the choice (`provenance.configuration.source ===
- * 'explicit'`). Every other confirmation (date-selected, copied, migrated) was derived from the
- * effective dates and is only as good as they are, so it is re-evaluated here every time — correcting a
- * setup's effective date to after a day it covered un-confirms that day (its geometry is never
- * silently re-pinned; the scientist confirms or re-pins).
+ * date, OR the choice is a confirmed FACT about this recording — the user EXPLICITLY confirmed it
+ * (`provenance.configuration.source === 'explicit'`), or an import pinned the version whose
+ * geometry its file recorded (`'import'`). Every other confirmation (date-selected, copied,
+ * migrated) was derived from the effective dates and is only as good as they are, so it is
+ * re-evaluated here every time — correcting a setup's effective date to after a day it covered
+ * un-confirms that day (its geometry is never silently re-pinned; the scientist confirms or re-pins).
  *
  * @param animal - The owning animal.
  * @param day - The recording day.
@@ -118,10 +120,12 @@ export function configurationChoiceStatus(animal: unknown, day: Day): Configurat
   const snapshot = usableSnapshots(animal).find((s) => s.version === version);
   const effectiveDate = snapshot?.date ?? null;
   const choice = day.provenance?.configuration;
-  // Only a scientist's own assertion is conclusive; `copied` / `migration` / `effective-date`
-  // confirmations were all derived from effective dates and are re-derived below.
-  const explicitlyConfirmed = Boolean(choice?.confirmed) && choice?.source === 'explicit';
-  if (explicitlyConfirmed) return { status: 'confirmed', version, effectiveDate };
+  // Conclusive: a scientist's own assertion, or the imported file's own geometry (evidence about
+  // this recording, not an inference from effective dates). `copied` / `migration` /
+  // `effective-date` confirmations were all derived from effective dates and are re-derived below.
+  const conclusive =
+    Boolean(choice?.confirmed) && (choice?.source === 'explicit' || choice?.source === 'import');
+  if (conclusive) return { status: 'confirmed', version, effectiveDate };
   if (!snapshot) return { status: 'confirmed', version, effectiveDate };
   if (!isIsoDate(day.date) || snapshot.date > day.date) {
     return {

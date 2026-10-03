@@ -94,6 +94,17 @@ describe('configurationChoiceStatus', () => {
     expect(configurationChoiceStatus(animal, explicit)).toMatchObject({ status: 'confirmed' });
   });
 
+  it('an IMPORT pin is conclusive: the imported file itself states the geometry the day was recorded with', () => {
+    const imported = (date: string, version: number, confirmed: boolean) =>
+      ({ ...day(date, version), provenance: { configuration: { source: 'import', confirmed } } }) as unknown as Day;
+    const stamped = { configurationHistory: [{ version: 1, date: '2026-09-14', effectiveDateKnown: false, description: 'Initial configuration', devices: {}, appliedToDays: [] }] };
+    expect(configurationChoiceStatus(stamped, imported('2023-06-25', 1, true))).toMatchObject({ status: 'confirmed', version: 1 });
+    // A file's setup that a later reconfiguration's effective date now covers stays the file's.
+    expect(configurationChoiceStatus(animal, imported('2023-07-05', 1, true))).toMatchObject({ status: 'confirmed', version: 1 });
+    // An import record that never confirmed its pin is still judged by the effective dates.
+    expect(configurationChoiceStatus(stamped, imported('2023-06-25', 1, false))).toMatchObject({ status: 'unconfirmed', reason: 'unknown-period' });
+  });
+
   it('an AUTOMATIC (date-selected) confirmation is re-evaluated: moving v1’s effective date after the day un-confirms it', () => {
     const auto = { ...day('2023-06-25', 1), provenance: { configuration: { source: 'effective-date', confirmed: true } } } as unknown as Day;
     expect(configurationChoiceStatus(animal, auto)).toMatchObject({ status: 'confirmed' });

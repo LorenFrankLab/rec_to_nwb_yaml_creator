@@ -4,7 +4,8 @@
  * (pure, unit-testable) and the store writes (side-effectful) stay independently verifiable.
  *
  * It drives the existing workspace actions ONLY — it adds no new store transition:
- *   - `createAnimal` seeds version 1 from the earliest config + the resolved animal facts,
+ *   - `createAnimal` seeds version 1 from the earliest config + the resolved animal facts, and
+ *     `setConfigurationEffectiveDate` dates it from the earliest file (a KNOWN effective date),
  *   - `createDay` adds each day (pinned to the latest = v1 at that point),
  *   - `createConfigurationSnapshotAndApplyForward` appends each later config version and
  *     re-pins the days that use it (atomic),
@@ -45,6 +46,7 @@ interface ApplyWorkspace {
 /** The store workspace actions the executor drives (loosely typed — injected from the live store). */
 interface ImportActions {
   createAnimal: (subjectId: string, subject: any, metadata: any) => void;
+  setConfigurationEffectiveDate: (animalId: string, version: number, date: string | null) => void;
   createDay: (animalId: string, date: string, session: any) => void;
   createConfigurationSnapshotAndApplyForward: (
     animalId: string,
@@ -266,8 +268,8 @@ function preflightAnimal(
  * Apply a planned import to the live store.
  *
  * @param plan - The plan from `planImport`.
- * @param actions - The store's workspace actions (createAnimal, createDay,
- *   createConfigurationSnapshotAndApplyForward, updateDay, updateAnimal, deleteAnimal).
+ * @param actions - The store's workspace actions (createAnimal, setConfigurationEffectiveDate,
+ *   createDay, createConfigurationSnapshotAndApplyForward, updateDay, updateAnimal, deleteAnimal).
  * @param options - Apply options ({@link ApplyImportOptions}).
  * @param options.workspace - The CURRENT workspace snapshot used to PRE-FLIGHT each animal before
  *   any write (a collision is recorded in `failed`, never thrown out of a reducer). Defaults to an
@@ -390,6 +392,12 @@ function applyNewAnimal(
     optogenetics: animalPlan.optogenetics,
   });
   createdAnimals.push(subjectId);
+  // `createAnimal` stamps version 1 with today's ENTRY date ("effective date unknown"). The files
+  // are evidence: the setup was in place from the earliest file's recording date, so record that as
+  // its known effective date — otherwise every imported day before today asks for confirmation.
+  if (configVersions.length > 0) {
+    actions.setConfigurationEffectiveDate(subjectId, 1, configVersions[0].date);
+  }
 
   // Create every day in date order. Each pins to the latest (= v1 at this point); later
   // versions are re-pinned below.

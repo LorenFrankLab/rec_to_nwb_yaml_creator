@@ -538,8 +538,9 @@ export interface DayProvenance {
      */
     source: 'effective-date' | 'explicit' | 'copied' | 'import' | 'migration' | 'latest';
     /**
-     * Whether the user has explicitly confirmed the choice. Only consulted when the chosen version's
-     * effective date does not cover the recording date (see `domain/configurationSelection`).
+     * Whether the choice is confirmed. Conclusive only for `explicit` (the user's assertion) and
+     * `import` (the file's own geometry); every other source is re-evaluated against the effective
+     * dates (see `domain/configurationSelection`).
      */
     confirmed: boolean;
   };
