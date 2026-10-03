@@ -47,12 +47,14 @@ export function useWorkspace(initialState: InitialWorkspaceState | null = null) 
   // setState during render); the persistence hook consumes these refs once after mount.
   const initialDiscardRef = useRef<LoadDiscardReason | null>(null);
   const initialRecoverRef = useRef<{ missingKeys: string[] } | null>(null);
+  const initialResyncRef = useRef<string[]>([]);
 
   const [workspace, setWorkspace] = useState<Workspace>(() => {
-    const { workspace: initialWorkspace, discarded, recovered } =
+    const { workspace: initialWorkspace, discarded, recovered, resyncedSetups } =
       resolveInitialWorkspace(initialState);
     initialDiscardRef.current = discarded;
     initialRecoverRef.current = recovered;
+    initialResyncRef.current = resyncedSetups ?? [];
     // The hydration layer types the workspace loosely (`Record<string, unknown>`) because it
     // tolerates corrupt blobs; from here it is the canonical typed `Workspace` the store drives.
     return initialWorkspace as unknown as Workspace;
@@ -131,6 +133,7 @@ export function useWorkspace(initialState: InitialWorkspaceState | null = null) 
     workspaceRef,
     initialDiscardRef,
     initialRecoverRef,
+    initialResyncRef,
     replaceWorkspace,
   });
 

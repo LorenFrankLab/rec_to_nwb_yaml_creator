@@ -27,6 +27,15 @@ export default function ConfigVersionContext({ animal }: ConfigVersionContextPro
   // the imported days pinned to it, so it gets its own line instead of a "changed on" boundary.
   const timeline = ordered.filter((snapshot) => snapshot.pinnedOnly !== true);
   const pinnedOnly = ordered.filter((snapshot) => snapshot.pinnedOnly === true);
+  // The current setup is the LAST stored version (what Animal Setup edits). An older importer
+  // appended an older file's setup there, dated from that file: it then starts before a version it
+  // follows, and it can be chosen for recording days after its date. Not re-dated automatically.
+  const current = history[history.length - 1];
+  const laterStart = current?.pinnedOnly === true || typeof current?.date !== 'string'
+    ? undefined
+    : timeline
+      .filter((snapshot) => snapshot !== current && typeof snapshot.date === 'string' && snapshot.date > current.date)
+      .sort((a, b) => (a.date < b.date ? 1 : -1))[0];
 
   return (
     <section className={styles.context} role="note" aria-label="Electrode configuration history">
@@ -58,6 +67,14 @@ export default function ConfigVersionContext({ animal }: ConfigVersionContextPro
           return <li key={snapshot.version ?? `pinned-${index}`}>{line}</li>;
         })}
       </ul>
+      {laterStart && (
+        <p className={styles.advisory}>
+          {`v${current.version} is the current setup (the one Animal Setup edits) but starts on ` +
+            `${current.date}, before v${laterStart.version} (${laterStart.date}), so it can be chosen for ` +
+            'recording days after its date. An earlier version of the importer filed an older ' +
+            "file's setup this way. Check which recording days use each version before editing electrode groups."}
+        </p>
+      )}
     </section>
   );
 }

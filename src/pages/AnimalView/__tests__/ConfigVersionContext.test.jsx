@@ -63,4 +63,32 @@ describe('ConfigVersionContext', () => {
     expect(screen.queryByText(/Electrode configuration changed on/)).toBeNull();
     expect(screen.getByRole('listitem')).toHaveTextContent(/^v2 is used only by the imported recording days pinned to it/);
   });
+
+  it('warns when the current version starts before an earlier one (a back-fill filed by an older importer)', () => {
+    // The older importer appended an older file's setup LAST, dated from that file: it is what
+    // Animal Setup edits, and it can be chosen for recording days after its date.
+    render(
+      <ConfigVersionContext
+        animal={{
+          configurationHistory: [
+            snapshot(1, '2023-06-22', 'Initial configuration'),
+            snapshot(2, '2023-06-10', 'Configuration 2'),
+          ],
+        }}
+      />
+    );
+    expect(screen.getByRole('note', { name: /electrode configuration history/i })).toHaveTextContent(
+      'v2 is the current setup (the one Animal Setup edits) but starts on 2023-06-10, before v1 (2023-06-22), ' +
+        'so it can be chosen for recording days after its date.'
+    );
+  });
+
+  it('does not warn for a timeline in date order', () => {
+    render(
+      <ConfigVersionContext
+        animal={{ configurationHistory: [snapshot(1, '2023-06-01', 'implant'), snapshot(2, '2023-07-01', 'lowered')] }}
+      />
+    );
+    expect(screen.queryByText(/is the current setup/)).toBeNull();
+  });
 });

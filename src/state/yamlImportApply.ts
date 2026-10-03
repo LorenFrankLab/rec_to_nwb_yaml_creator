@@ -49,8 +49,7 @@ import type { ConfigVersion, ImportPlan, ImportPlanAnimal, ImportPlanDay } from 
 import { referencedCameraRefs } from './cameraUsage';
 import { selectConfigurationForDate } from '../domain/configurationSelection';
 import { badChannelRegressions } from '../domain/badChannelMonotonicity';
-import { canonicalJson } from '../utils/canonicalJson';
-import { normalizeProbeConfigDevices } from '../utils/deviceNormalization';
+import { probeGeometryKey } from './setupMirror';
 
 /** The current workspace snapshot read (read-only) during pre-flight. */
 interface ApplyWorkspace {
@@ -505,25 +504,6 @@ function applyAddToExistingAnimal(
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
 /**
- * A probe configuration's identity for matching an imported file against a version the animal
- * already has: everything the export emits for its electrode groups and channel maps (normalized),
- * without the day-owned failed-channel marks.
- *
- * @param devices - A probe configuration (`{ electrode_groups, ntrode_electrode_group_channel_map }`).
- * @returns A key that is equal for configurations that export identically.
- */
-function geometryKey(devices: unknown): string {
-  const probe = normalizeProbeConfigDevices(devices);
-  return canonicalJson({
-    electrode_groups: probe.electrode_groups,
-    ntrode_electrode_group_channel_map: probe.ntrode_electrode_group_channel_map.map((map) => ({
-      ...map,
-      bad_channels: [],
-    })),
-  });
-}
-
-/**
  * The last date the existing animal's recorded timeline already speaks for: its latest recording
  * day, or the latest start of a version that holds probe geometry (`''` when it has neither). A
  * version without electrode groups or channel maps records no hardware, so it anchors nothing.
@@ -584,7 +564,7 @@ function placeOnExistingTimeline(
     animalPlan.configVersions.find((cv) => cv.version === day.configurationVersion);
   const versionKey = (version: number | null) => {
     const snapshot = history.find((entry) => entry.version === version);
-    return snapshot ? geometryKey(snapshot.devices) : null;
+    return snapshot ? probeGeometryKey(snapshot.devices) : null;
   };
   const dayId = (day: ImportPlanDay) => generateDayId(targetId, day.date);
   const placed = animalPlan.days.filter((day) => configOf(day) !== undefined);
@@ -613,12 +593,12 @@ function placeOnExistingTimeline(
   // configuration (shared by every back-filled day that recorded it).
   const unmatched = new Map<string, ImportPlanDay[]>();
   for (const day of placed.filter((d) => d.date <= frontier)) {
-    const key = geometryKey(configOf(day)!.devices);
+    const key = probeGeometryKey(configOf(day)!.devices);
     const inEffect = selectConfigurationForDate(existing, day.date).version;
     const match =
       versionKey(inEffect) === key
         ? inEffect
-        : [...history].reverse().find((entry) => geometryKey(entry.devices) === key)?.version;
+        : [...history].reverse().find((entry) => probeGeometryKey(entry.devices) === key)?.version;
     const candidate = {
       id: dayId(day),
       date: day.date,
@@ -663,7 +643,7 @@ function placeOnExistingTimeline(
   for (const [index, run] of runs.entries()) {
     const { devices } = configOf(run[0])!;
     const inEffect = index === 0 ? selectConfigurationForDate(existing, run[0].date).version : null;
-    if (inEffect != null && versionKey(inEffect) === geometryKey(devices)) {
+    if (inEffect != null && versionKey(inEffect) === probeGeometryKey(devices)) {
       run.forEach((day) => actions.updateDay(dayId(day), { configurationVersion: inEffect }));
       continue;
     }

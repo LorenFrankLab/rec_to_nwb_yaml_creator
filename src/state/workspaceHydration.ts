@@ -20,6 +20,8 @@ export interface InitialWorkspaceResolution {
   discarded: LoadDiscardReason | null;
   /** Recovery notice (the shape-repaired sections) when a blob was incomplete-but-valid, else null. */
   recovered: { missingKeys: string[] } | null;
+  /** Animals whose editable setup the load re-mirrored from their last configuration (may be empty). */
+  resyncedSetups?: string[];
 }
 
 /**
@@ -60,7 +62,12 @@ export function resolveInitialWorkspace(
   if (loaded.workspace) {
     // Structurally valid but possibly shape-repaired → restored. Missing required sections drive a
     // recovery notice after mount (not a discard); a clean hydrate carries no notice.
-    return { workspace: loaded.workspace, discarded: null, recovered: loaded.recovered || null };
+    return {
+      workspace: loaded.workspace,
+      discarded: null,
+      recovered: loaded.recovered || null,
+      ...(loaded.resyncedSetups ? { resyncedSetups: loaded.resyncedSetups } : {}),
+    };
   }
   // Unusable blob → fall back to defaults; the discard reason drives a notice after mount.
   return { workspace: fallback, discarded: loaded.discarded, recovered: null };

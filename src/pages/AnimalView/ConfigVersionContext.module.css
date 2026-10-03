@@ -29,3 +29,10 @@
 .list li {
   margin: 0.15rem 0;
 }
+
+.advisory {
+  margin: 0.4rem 0 0;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-ink-warm);
+}

@@ -12,6 +12,7 @@
  */
 
 import { normalizeWorkspaceDevices } from '../utils/deviceNormalization';
+import { resyncSetupMirrors } from './setupMirror';
 import { createDefaultWorkspace } from './workspaceUtils';
 import { migrateWorkspace, WORKSPACE_SCHEMA_VERSION } from './workspaceMigrations';
 import { WRITER_ID } from './writerLock';
@@ -323,7 +324,12 @@ export type LoadDiscardReason = (typeof LOAD_DISCARD_REASON)[keyof typeof LOAD_D
 
 /** The result of {@link loadWorkspace}. */
 export type LoadWorkspaceResult =
-  | { workspace: Record<string, unknown>; recovered?: { missingKeys: string[] } }
+  | {
+      workspace: Record<string, unknown>;
+      recovered?: { missingKeys: string[] };
+      /** Animals whose editable setup was re-mirrored from their last configuration (old-import leftover). */
+      resyncedSetups?: string[];
+    }
   | { workspace: null; discarded: LoadDiscardReason }
   | null;
 
@@ -335,6 +341,9 @@ export type LoadWorkspaceResult =
  *   - `{ workspace, recovered: { missingKeys } }` when the blob was structurally
  *     valid but missing required top-level sections; they were restored to the default
  *     shape and `missingKeys` names them — caller shows a recovery notice.
+ *   - either success shape may carry `resyncedSetups`: the animals whose editable setup no longer
+ *     matched their last configuration (left by the old import) and was re-mirrored from it
+ *     ({@link resyncSetupMirrors}) — caller shows a notice.
  *   - `{ workspace: null, discarded: <reason> }` when a blob exists but is unusable
  *     (corrupt JSON, malformed shape, or wrong schemaVersion) — caller discards and
  *     shows a notice. `discarded` is a `LOAD_DISCARD_REASON` member.
@@ -420,9 +429,12 @@ export function hydrateRaw(
   // Device-normalize first, then guarantee the required top-level sections exist so a
   // valid-but-empty/partial blob hydrates cleanly. A restored section is reported via
   // `recovered` for a user-facing notice (never silently filled).
-  const { workspace, missingKeys, corruptKeys } = ensureWorkspaceShape(
+  // The animals' editable setups are then re-mirrored from their last configuration where the old
+  // import left them apart (export-neutral; see state/setupMirror).
+  const { workspace: synced, resynced } = resyncSetupMirrors(
     normalizeWorkspaceDevices(migrated.workspace)
   );
+  const { workspace, missingKeys, corruptKeys } = ensureWorkspaceShape(synced);
   // A present-but-wrong-typed required section is corruption, not absence: discard
   // loudly rather than silently overwrite real data and mislabel it as "restored".
   if (corruptKeys.length > 0) {
@@ -436,9 +448,11 @@ export function hydrateRaw(
     }
     syncRevisionFromStorage();
   }
-  return missingKeys.length > 0
-    ? { workspace: loadedWorkspace, recovered: { missingKeys } }
-    : { workspace: loadedWorkspace };
+  return {
+    workspace: loadedWorkspace,
+    ...(missingKeys.length > 0 ? { recovered: { missingKeys } } : {}),
+    ...(resynced.length > 0 ? { resyncedSetups: resynced } : {}),
+  };
 }
 
 /**
