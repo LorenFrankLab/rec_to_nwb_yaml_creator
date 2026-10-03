@@ -291,6 +291,59 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Import & Repair no longer suggests the old app's fixed 0.45 µL in place of a virus injection's
+  entered volume.** Files from older versions of this app carry `volume_in_uL: 0.45`, a fixed value,
+  beside the volume entered in the form (`volume_in_ul`), and the converter reads `volume_in_uL`. The
+  import's suggestion for the two disagreeing keys was the 0.45, so "Apply safe suggestions" wrote it
+  to both keys and the imported day exported the wrong volume. For that pattern the suggestion is now
+  the entered volume. When the two keys disagree any other way there is no suggestion: the row asks
+  for the injected volume, and the import waits for it. A file imported this way before the fix still
+  has 0.45 µL: check its virus injection's volume, or import the file again.
+
+- **Importing a file with an empty entry in its channel map no longer silently does nothing.** A
+  YAML list item with no value (`-`) parses to `null`, and two channel-map rules read it without a
+  check, so validation threw and the legacy form's import never finished or reported anything. The
+  entry is now reported like any other invalid value: the legacy import leaves out the channel map
+  and names it in the import summary. Tests now check, on a minimal file and on full sessions, that
+  an empty entry in any list section cannot make validation throw.
+
+- **Fixes released on `main` now apply to the legacy form.** Merged from `main` (#69, #70 and the
+  June controlled-input fixes). In the legacy form:
+  - The Optogenetic Stimulation Software field saves to `optogenetic_stimulation_software`, the key
+    trodes_to_nwb reads. It saved to `opto_software`, so a session with optogenetics could not be
+    downloaded: validation reported the optogenetics configuration as incomplete. (On `main`, the
+    download went through and the converter silently dropped all optogenetics.)
+  - The FsGUI train interval is written as `trainInterval`, the schema and converter key; values
+    stored as `train_interval` never reached the NWB file. The five pulse/train fields show their
+    stored values, and a new FsGUI entry starts them at 0.
+  - A new virus injection keeps its default volume under `volume_in_ul`, and the download also writes
+    `volume_in_uL`, the spelling released converters read, with the same value. Before, an untouched
+    0.45 default under `volume_in_uL` sat beside the entered volume and the converter recorded 0.45.
+  - Bad Channels marks are saved to the ntrode being edited. On a multi-shank probe, or after
+    duplicating a group, they were saved to another ntrode.
+  - Removing or renumbering a camera drops the task, video and FsGUI references to it. Removing a task
+    or changing its epochs clears the associated-file, video and FsGUI references to the epochs it
+    removed; an epoch of 0 counts. Importing a file drops references to cameras the file does not
+    define, so its tasks are kept instead of the whole section being left out.
+  - References into a section the import leaves out (for example the cameras, when one is named `1`)
+    are kept. They block the download until that section is fixed, and adding the cameras or tasks
+    back restores them. As before, a file with an orphaned task-epoch reference is imported without
+    that section.
+  - A stored 0 in Times Period Multiplier or Raw Data to Volts shows as 0 instead of a blank field
+    that became NaN when left.
+  - The DIO description and the virus-injection hemisphere show their stored values.
+
+  Validation also no longer throws on a malformed file whose task list has an empty (`null`) entry;
+  schema validation reports it instead.
+
+- **The legacy form's download no longer includes the browser's saved workspace.** The legacy form
+  exported the store's whole model: its form fields plus a top-level `workspace:` block holding every
+  animal and recording day saved in this browser (with none saved, still the workspace settings). The
+  schema allows extra top-level keys, so validation did not flag it. The download now contains only the
+  form's metadata. The released app was never affected. A file downloaded from the legacy form of an
+  unreleased build, including the `/pilot` site (where the legacy form opened only from an
+  unrecognized link), is cleaned by importing it into the legacy form and downloading it again.
+
 - **Editing an imported day's task environment or cameras preserves its task definitions.** The
   first epoch edit now saves newly imported task types before replacing inline tasks with catalog
   references. Task definitions, camera order, and earlier days remain intact after saving and reloading,

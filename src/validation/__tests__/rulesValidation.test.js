@@ -13,8 +13,18 @@
  */
 
 import { describe, it, expect } from 'vitest';
+import fs from 'fs';
+import path from 'path';
+import YAML from 'yaml';
 import { rulesValidation } from '../rulesValidation';
+import { validate } from '../index';
+import JsonSchema from '../../nwb_schema.json';
 import { createTestYaml } from '../../__tests__/helpers/test-utils';
+
+// Issues about camera references, as opposed to other rules a minimal fixture can trip (an epoch
+// no task defines, an FsGUI row without optogenetics).
+const cameraIssues = (issues) =>
+  issues.filter((issue) => issue.code === 'missing_camera' || issue.code === 'dangling_camera_ref');
 
 describe('rulesValidation()', () => {
   describe('Valid Models', () => {
@@ -186,11 +196,11 @@ describe('rulesValidation()', () => {
     });
   });
 
-  describe('Rule 2: Associated Video Files Require Cameras', () => {
+  describe('Rule 2: Single-valued Camera References Require Cameras', () => {
     it('should detect associated_video_files without cameras defined', () => {
       const model = {
         ...createTestYaml(),
-        associated_video_files: [{ camera_id: [0], task_epochs: [1] }], // Fixed: camera_id should be array
+        associated_video_files: [{ camera_id: 0, task_epochs: 1 }],
         cameras: undefined
       };
       const issues = rulesValidation(model);
@@ -205,12 +215,41 @@ describe('rulesValidation()', () => {
 
     it('should not error when associated_video_files exist with cameras', () => {
       const model = createTestYaml({
-        associated_video_files: [{ camera_id: [0], task_epochs: [1] }], // Fixed: camera_id should be array
+        associated_video_files: [{ camera_id: 0, task_epochs: 1 }],
         cameras: [{ id: 0, meters_per_pixel: 0.001, camera_name: 'cam1' }]
       });
       const issues = rulesValidation(model);
 
       expect(issues.some(i => i.code === 'missing_camera' && i.path === 'associated_video_files')).toBe(false);
+    });
+
+    it('should detect fs_gui_yamls without cameras defined', () => {
+      // An FsGUI camera id with no cameras table is reported on the row itself, as a reference
+      // to a camera that is not defined.
+      const model = {
+        ...createTestYaml(),
+        fs_gui_yamls: [{ camera_id: 0 }],
+        cameras: undefined,
+      };
+      const issues = rulesValidation(model);
+
+      expect(issues).toContainEqual(expect.objectContaining({
+        path: 'fs_gui_yamls[0].camera_id',
+        code: 'dangling_camera_ref',
+        severity: 'error',
+        message: expect.stringContaining('camera'),
+      }));
+    });
+
+    it('should ignore unset scalar camera ids when cameras are not defined', () => {
+      const model = {
+        ...createTestYaml(),
+        associated_video_files: [{ camera_id: '' }],
+        fs_gui_yamls: [{ camera_id: null }, {}],
+        cameras: undefined,
+      };
+
+      expect(cameraIssues(rulesValidation(model))).toEqual([]);
     });
 
     it('should not error when no associated_video_files exist', () => {
@@ -1059,5 +1098,191 @@ describe('rulesValidation()', () => {
       expect(Array.isArray(issues)).toBe(true);
       expect(issues).toEqual([]); // No rules violations for empty object
     });
+
+    // A YAML list item with no value (`-`) parses to null. Rules run on parsed files before the
+    // schema reports that entry, so each rule must skip it instead of throwing.
+    it('does not throw on an empty (null) entry in any list section', () => {
+      const listSections = Object.entries(JsonSchema.properties)
+        .filter(([, definition]) => definition.type === 'array')
+        .map(([key]) => key);
+      expect(listSections).toContain('ntrode_electrode_group_channel_map');
+
+      listSections.forEach((key) => {
+        expect(() => rulesValidation(createTestYaml({ [key]: [null] })), key).not.toThrow();
+      });
+    });
+
+    // The minimal model above has few cross-references, so a rule that looks one section up from
+    // another (e.g. FsGUI camera ids in cameras) never meets the null. Repeat on full sessions,
+    // with the null first and last in each list and inside the nested lists.
+    it.each([
+      '20230622_sample_metadata.yml',
+      'realistic-session.yml',
+      '20230622_sample_metadataProbeReconfig.yml',
+    ])('does not throw on empty (null) entries in the full session %s', (fixture) => {
+      const session = YAML.parse(
+        fs.readFileSync(path.join(__dirname, '../../__tests__/fixtures/valid', fixture), 'utf8')
+      );
+      const listSections = Object.entries(JsonSchema.properties)
+        .filter(([, definition]) => definition.type === 'array')
+        .map(([key]) => key);
+      const withNull = [];
+      listSections.forEach((key) => {
+        const entries = Array.isArray(session[key]) ? session[key] : [];
+        withNull.push([`${key} first`, { ...session, [key]: [null, ...entries] }]);
+        withNull.push([`${key} last`, { ...session, [key]: [...entries, null] }]);
+      });
+      const nested = (key, field, value) => {
+        const model = structuredClone(session);
+        (model[key] || []).forEach((entry) => {
+          entry[field] = value;
+        });
+        return [`${key}[].${field}`, model];
+      };
+      withNull.push(
+        nested('tasks', 'camera_id', [null]),
+        nested('tasks', 'task_epochs', [null]),
+        nested('fs_gui_yamls', 'epochs', [null]),
+        nested('ntrode_electrode_group_channel_map', 'bad_channels', [null]),
+        nested('ntrode_electrode_group_channel_map', 'map', null)
+      );
+
+      withNull.forEach(([label, model]) => {
+        expect(() => rulesValidation(model), label).not.toThrow();
+        expect(() => validate(model), label).not.toThrow();
+      });
+    });
+
+    it('reports an empty channel-map entry as a validation issue', () => {
+      const model = createTestYaml({ ntrode_electrode_group_channel_map: [null] });
+
+      expect(validate(model)).toContainEqual(
+        expect.objectContaining({ path: 'ntrode_electrode_group_channel_map[0]' })
+      );
+    });
+  });
+});
+
+describe('rulesValidation() - unknown camera references', () => {
+  // A reference to a camera id that no camera defines is `dangling_camera_ref`, reported once per
+  // id on the referencing row.
+  const cameras = [{ id: 4, meters_per_pixel: 0.001, camera_name: 'cam4' }];
+
+  it('reports a task camera_id that is not in cameras', () => {
+    const model = createTestYaml({
+      cameras,
+      tasks: [{ task_name: 'Run', camera_id: [0, 4, 7] }],
+    });
+    const issues = cameraIssues(rulesValidation(model));
+    expect(issues).toEqual([
+      expect.objectContaining({ path: 'tasks[0].camera_id', code: 'dangling_camera_ref', severity: 'error' }),
+      expect.objectContaining({ path: 'tasks[0].camera_id', code: 'dangling_camera_ref', severity: 'error' }),
+    ]);
+    expect(issues[0].message).toContain('camera id 0');
+    expect(issues[1].message).toContain('camera id 7');
+    expect(issues.some((issue) => issue.message.includes('camera id 4'))).toBe(false);
+  });
+
+  it('reports an associated_video_files camera_id that is not in cameras', () => {
+    const model = createTestYaml({
+      cameras,
+      associated_video_files: [{ name: 'v.mp4', camera_id: 7, task_epochs: 1 }],
+    });
+    expect(cameraIssues(rulesValidation(model))).toEqual([
+      expect.objectContaining({ path: 'associated_video_files[0].camera_id', code: 'dangling_camera_ref' }),
+    ]);
+  });
+
+  it('reports an fs_gui_yamls camera_id that is not in cameras', () => {
+    const model = createTestYaml({
+      cameras,
+      fs_gui_yamls: [{ name: 'f.yaml', epochs: [1], camera_id: 7 }],
+    });
+    expect(cameraIssues(rulesValidation(model))).toEqual([
+      expect.objectContaining({ path: 'fs_gui_yamls[0].camera_id', code: 'dangling_camera_ref' }),
+    ]);
+  });
+
+  it('returns no camera issue when every reference exists', () => {
+    const model = createTestYaml({
+      cameras,
+      tasks: [{ task_name: 'Run', camera_id: [4] }],
+      associated_video_files: [{ name: 'v.mp4', camera_id: 4, task_epochs: 1 }],
+      fs_gui_yamls: [{ name: 'f.yaml', epochs: [1], camera_id: 4 }],
+    });
+    expect(cameraIssues(rulesValidation(model))).toEqual([]);
+  });
+
+  it('ignores unset video camera_id and tasks with no camera', () => {
+    const model = createTestYaml({
+      cameras,
+      tasks: [{ task_name: 'Sleep', camera_id: [] }],
+      associated_video_files: [{ name: 'v.mp4', camera_id: '', task_epochs: 1 }],
+    });
+    expect(cameraIssues(rulesValidation(model))).toEqual([]);
+  });
+
+  it('does not duplicate the existing missing_camera rule when cameras is undefined', () => {
+    const model = createTestYaml({ tasks: [{ task_name: 'Run', camera_id: [0] }] });
+    const codes = rulesValidation(model).map((i) => i.code);
+    expect(codes).toEqual(['missing_camera']);
+  });
+
+  it('leaves schema-invalid camera section shapes to schema validation', () => {
+    const model = createTestYaml({
+      cameras,
+      tasks: { camera_id: [4] },
+      associated_video_files: { camera_id: 4 },
+      fs_gui_yamls: { camera_id: 4 },
+    });
+
+    expect(() => rulesValidation(model)).not.toThrow();
+    expect(rulesValidation(model)).toEqual([]);
+  });
+
+  it('does not inspect schema-invalid scalar-reference sections without cameras', () => {
+    const model = createTestYaml({
+      cameras: undefined,
+      tasks: [null],
+      associated_video_files: { camera_id: 4 },
+      fs_gui_yamls: { camera_id: 4 },
+    });
+
+    expect(() => rulesValidation(model)).not.toThrow();
+  });
+});
+
+describe('rulesValidation() - optogenetic_stimulation_software', () => {
+  // trodes_to_nwb drops ALL optogenetics when the software name is empty, so the name is the fourth
+  // section of the all-or-nothing rule: an empty name beside the other three is a
+  // `partial_configuration` error. Each section carries a `reference` so no other rule fires.
+  const reference = 'Bregma at the cortical surface';
+  const fullOpto = {
+    opto_excitation_source: [{ name: 'LED' }],
+    optical_fiber: [{ name: 'fiber', reference }],
+    virus_injection: [{ virus_name: 'v', reference }],
+  };
+
+  it('requires the software name when optogenetics sections are present', () => {
+    const model = createTestYaml({ ...fullOpto, optogenetic_stimulation_software: '' });
+    const issues = rulesValidation(model);
+    expect(issues).toEqual([
+      expect.objectContaining({
+        path: 'optogenetics',
+        code: 'partial_configuration',
+        severity: 'error',
+      }),
+    ]);
+    expect(issues[0].message).toContain('optogenetic_stimulation_software ✗');
+  });
+
+  it('accepts a non-empty software name with optogenetics present', () => {
+    const model = createTestYaml({ ...fullOpto, optogenetic_stimulation_software: 'fsgui' });
+    expect(rulesValidation(model)).toEqual([]);
+  });
+
+  it('does not require the software name when no optogenetics is configured', () => {
+    const model = createTestYaml({ optogenetic_stimulation_software: '' });
+    expect(rulesValidation(model)).toEqual([]);
   });
 });

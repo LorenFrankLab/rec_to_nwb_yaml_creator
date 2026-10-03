@@ -24,7 +24,8 @@ export function duplicateChannelMappings(model: ValidationModel): ValidationIssu
   // Hardware constraint: each logical channel must map to a unique physical channel
   if (Array.isArray(model.ntrode_electrode_group_channel_map) && model.ntrode_electrode_group_channel_map.length > 0) {
     model.ntrode_electrode_group_channel_map.forEach((ntrode) => {
-      if (ntrode.map && typeof ntrode.map === 'object') {
+      // `ntrode?.`: a malformed entry (e.g. `null`) is left to the schema error.
+      if (ntrode?.map && typeof ntrode.map === 'object') {
         const channelValues = Object.values(ntrode.map);
         const uniqueValues = new Set(channelValues);
 
@@ -66,7 +67,7 @@ export function sequentialChannelMappings(model: ValidationModel): ValidationIss
   // e.g., {0: 0, 1: 1, 2: 2, 3: 3} is valid, but {0: 0, 2: 2} is not (missing channel 1)
   if (Array.isArray(model.ntrode_electrode_group_channel_map) && model.ntrode_electrode_group_channel_map.length > 0) {
     model.ntrode_electrode_group_channel_map.forEach((ntrode) => {
-      if (ntrode.map && typeof ntrode.map === 'object') {
+      if (ntrode?.map && typeof ntrode.map === 'object') {
         const logicalChannels = Object.keys(ntrode.map).map(Number).sort((a, b) => a - b);
 
         // Expected channels should go from 0 to the maximum channel number

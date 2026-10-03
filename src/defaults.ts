@@ -192,7 +192,7 @@ export const arrayDefaultValues = {
     reference : 'Bregma at the cortical surface',
     virus_name: '',
     titer_in_vg_per_ml : 1e12,
-    volume_in_uL : 0.45,
+    volume_in_ul : 0.45,
   },
 
   fs_gui_yamls: {
@@ -202,6 +202,10 @@ export const arrayDefaultValues = {
     dio_output_name: "",
     state_script_parameters: false,
     pulseLength: 0,
+    nPulses: 0,
+    sequencePeriod: 0,
+    nOutputTrains: 0,
+    trainInterval: 0,
   },
 
   optogenetic_stimulation_software: "fsgui",

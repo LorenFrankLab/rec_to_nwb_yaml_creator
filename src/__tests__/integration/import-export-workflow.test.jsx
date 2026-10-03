@@ -1,8 +1,12 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import YAML from 'yaml';
-import { getMinimalCompleteYaml } from '../helpers/test-fixtures';
+import { App } from '../../App';
+import { StoreProvider } from '../../state/StoreContext';
+import { defaultYMLValues, emptyFormData } from '../../valueList';
+import JsonSchema from '../../nwb_schema.json';
+import { getMinimalCompleteYaml, makeConfiguredWorkspace } from '../helpers/test-fixtures';
 import { triggerExport } from '../helpers/integration-test-helpers';
 import { getFileInput } from '../helpers/test-selectors';
 import { renderLegacyApp } from '../helpers/render-legacy-app';
@@ -271,6 +275,86 @@ describe('Import/Export Workflow Integration', () => {
       expect(typeof mockBlob.content[0]).toBe('string');
       expect(mockBlob.content[0]).toContain('lab: Test Lab');
     });
+
+    /**
+     * Regression: the store's model is the legacy form data PLUS the `workspace` slice (every
+     * animal and recording day saved in this browser). The legacy export serialized the whole
+     * model, so each downloaded YAML carried a top-level `workspace:` block with that data.
+     */
+    it('exports only session metadata, never the in-browser workspace', async () => {
+      // ARRANGE - the workspace already holds an animal ("remy") when the legacy form is used.
+      // useLegacyForm seeds the form from initialState, so keep the form's own defaults; the
+      // store's workspace slice is seeded from initialState.workspace.
+      const user = userEvent.setup();
+      render(
+        <StoreProvider
+          initialState={{ ...structuredClone(defaultYMLValues), workspace: makeConfiguredWorkspace() }}
+        >
+          <App />
+        </StoreProvider>
+      );
+      await screen.findByRole('main');
+
+      const yamlFile = new File([getMinimalCompleteYaml()], 'test.yml', { type: 'text/yaml' });
+      await user.upload(getFileInput(), yamlFile);
+
+      await waitFor(() => {
+        const labInput = screen.getByLabelText(/^lab$/i);
+        expect(labInput).toHaveValue('Test Lab');
+      });
+
+      // ACT
+      await triggerExport();
+
+      // ASSERT
+      await waitFor(() => {
+        expect(mockBlob).not.toBeNull();
+      });
+
+      const exportedYaml = mockBlob.content[0];
+      const exportedData = YAML.parse(exportedYaml);
+
+      expect(exportedData).not.toHaveProperty('workspace');
+      expect(exportedYaml).not.toContain('remy');
+      // Every top-level key is a metadata section: schema-defined or one of the form's own fields.
+      const metadataKeys = new Set([
+        ...Object.keys(JsonSchema.properties),
+        ...Object.keys(emptyFormData),
+      ]);
+      expect(Object.keys(exportedData).filter((key) => !metadataKeys.has(key))).toEqual([]);
+    });
+
+    /**
+     * A file downloaded while the legacy export still leaked the workspace carries a top-level
+     * `workspace:` block. Importing it into the legacy form and downloading again must produce
+     * clean metadata.
+     */
+    it('drops a workspace block carried by a previously downloaded file', async () => {
+      // ARRANGE
+      const user = userEvent.setup();
+      await renderLegacyApp();
+
+      const leakedYaml = `${getMinimalCompleteYaml()}workspace:\n  version: 1.0.0\n  animals:\n    remy:\n      id: remy\n  days: {}\n`;
+      const yamlFile = new File([leakedYaml], 'test.yml', { type: 'text/yaml' });
+      await user.upload(getFileInput(), yamlFile);
+
+      await waitFor(() => {
+        const labInput = screen.getByLabelText(/^lab$/i);
+        expect(labInput).toHaveValue('Test Lab');
+      });
+
+      // ACT
+      await triggerExport();
+
+      // ASSERT
+      await waitFor(() => {
+        expect(mockBlob).not.toBeNull();
+      });
+
+      const exportedYaml = mockBlob.content[0];
+      expect(YAML.parse(exportedYaml)).not.toHaveProperty('workspace');
+      expect(exportedYaml).not.toContain('remy');
+    });
   });
 
   describe('Round-trip Data Preservation', () => {
@@ -362,6 +446,42 @@ describe('Import/Export Workflow Integration', () => {
 
       expect(exportedData.lab).toBe('Modified Lab'); // Modified value
       expect(exportedData.session_id).toBe('TEST001'); // Original value preserved
+    });
+  });
+
+  describe('Importing a file whose cameras are left out', () => {
+    /**
+     * A camera named "1" (a placeholder) makes the import leave out the cameras section. The
+     * reference cleanup used to clear the tasks' camera links in response, and an empty camera
+     * list is valid, so the loss was silent: adding the cameras back left every task unlinked.
+     */
+    it('keeps the task camera links, so adding the cameras back restores them', async () => {
+      const user = userEvent.setup();
+      await renderLegacyApp();
+
+      const session = YAML.parse(getMinimalCompleteYaml());
+      session.cameras[0].camera_name = '1';
+      const yamlFile = new File([YAML.stringify(session)], 'session.yml', { type: 'text/yaml' });
+
+      await user.upload(getFileInput(), yamlFile);
+      await waitFor(() => {
+        expect(screen.getByLabelText(/^lab$/i)).toHaveValue('Test Lab');
+      });
+      await user.click(screen.getByRole('button', { name: /close alert/i }));
+      expect(screen.queryAllByLabelText(/camera name/i)).toHaveLength(0);
+
+      // New cameras are numbered 0, then 1: the ids the tasks were linked to.
+      await user.click(screen.getByTitle(/Add cameras/i));
+      await user.click(screen.getByTitle(/Add cameras/i));
+      await waitFor(() => {
+        expect(screen.queryAllByLabelText(/camera name/i)).toHaveLength(2);
+      });
+
+      // Task 0 (Sleep) used camera 0 and task 1 (Run) used camera 1.
+      expect(document.getElementById('tasks-camera_id-0-0')).toBeChecked();
+      expect(document.getElementById('tasks-camera_id-0-1')).not.toBeChecked();
+      expect(document.getElementById('tasks-camera_id-1-0')).not.toBeChecked();
+      expect(document.getElementById('tasks-camera_id-1-1')).toBeChecked();
     });
   });
 });

@@ -33,7 +33,7 @@ describe('BUG: Channel Map Blank Value', () => {
         onMapInput={() => {}}
         electrodeGroupId={1}
         updateFormArray={() => {}}
-        metaData={{ index: 0 }}
+        nTrodeIndices={nTrodeItems.map((_, i) => i)}
       />
     );
 
@@ -70,7 +70,7 @@ describe('BUG: Channel Map Blank Value', () => {
         onMapInput={() => {}}
         electrodeGroupId={1}
         updateFormArray={() => {}}
-        metaData={{ index: 0 }}
+        nTrodeIndices={nTrodeItems.map((_, i) => i)}
       />
     );
 

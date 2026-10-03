@@ -826,20 +826,63 @@ describe('volume_in_uL / volume_in_ul shim — reconcile, never drop the shim ke
     expect(repaired.virus_injection[0].volume_in_ul).toBe(0.5);
   });
 
-  it('surfaces conflicting values as a reconcile suggestion (capital-L authoritative) and keeps both keys', () => {
-    const model = { virus_injection: [{ name: 'v', volume_in_uL: 0.5, volume_in_ul: 0.6 }] };
+  // Older versions of this app saved a fixed `volume_in_uL: 0.45` beside the volume entered in the
+  // form (`volume_in_ul`), and trodes_to_nwb reads `volume_in_uL`: 147 corpus files record 0.45 µL
+  // instead of the injected volume. The entered volume is the real one, so that is the suggestion
+  // ("accept all suggestions" takes it without the row being read).
+  it('suggests the entered volume over the old fixed 0.45, and sets both keys to it', () => {
+    const model = { virus_injection: [{ name: 'v', volume_in_uL: 0.45, volume_in_ul: 100 }] };
     const plan = buildImportRepairPlan(model, 'f.yml', { animals: {} });
-    const item = itemAt(plan.items, 'virus_injection[0].volume_in_ul');
-    expect(item).toBeDefined();
-    expect(item!.kind).toBe('suggestion');
-    expect(item!.suggested).toBe(0.5);
+    const item = itemAt(plan.items, 'virus_injection[0].volume_in_uL');
+    expect(item).toMatchObject({
+      code: 'volume_shim_conflict',
+      kind: 'suggestion',
+      was: 0.45,
+      suggested: 100,
+    });
+    expect(item!.why).toMatch(/0\.45/);
 
-    const repaired = applyImportRepairs(model, { 'virus_injection[0].volume_in_ul': 0.5 }) as {
+    const repaired = applyImportRepairs(model, { [item!.path]: item!.suggested }) as {
       virus_injection: Array<Record<string, unknown>>;
     };
-    // Both keys retained; reconciled to the capital-L value.
-    expect(repaired.virus_injection[0].volume_in_uL).toBe(0.5);
-    expect(repaired.virus_injection[0].volume_in_ul).toBe(0.5);
+    // Both keys retained, reconciled to the entered volume.
+    expect(repaired.virus_injection[0].volume_in_uL).toBe(100);
+    expect(repaired.virus_injection[0].volume_in_ul).toBe(100);
+  });
+
+  // With neither value the old fixed default, nothing says which one is right: no suggestion, so
+  // "accept all suggestions" cannot pick one, and the import waits for the user's value.
+  it('asks for the volume when the two spellings hold other values', () => {
+    const model = { virus_injection: [{ name: 'v', volume_in_uL: 0.5, volume_in_ul: 0.6 }] };
+    const plan = buildImportRepairPlan(model, 'f.yml', { animals: {} });
+    const item = itemAt(plan.items, 'virus_injection[0].volume_in_uL');
+    expect(item).toMatchObject({ code: 'volume_shim_conflict', kind: 'input', was: 0.5 });
+    expect(item!.suggested).toBeUndefined();
+    expect(item!.why).toMatch(/0\.5\b/);
+    expect(item!.why).toMatch(/0\.6\b/);
+
+    const repaired = applyImportRepairs(model, { [item!.path]: 0.6 }) as {
+      virus_injection: Array<Record<string, unknown>>;
+    };
+    expect(repaired.virus_injection[0].volume_in_uL).toBe(0.6);
+    expect(repaired.virus_injection[0].volume_in_ul).toBe(0.6);
+  });
+
+  it('asks for the volume when the entered value beside the old 0.45 is not a number', () => {
+    const model = { virus_injection: [{ name: 'v', volume_in_uL: 0.45, volume_in_ul: '' }] };
+    const plan = buildImportRepairPlan(model, 'f.yml', { animals: {} });
+    const item = itemAt(plan.items, 'virus_injection[0].volume_in_uL');
+    expect(item).toMatchObject({ code: 'volume_shim_conflict', kind: 'input' });
+    expect(item!.suggested).toBeUndefined();
+  });
+
+  it('sets both keys from a resolution under either spelling', () => {
+    const model = { virus_injection: [{ name: 'v', volume_in_uL: 0.5, volume_in_ul: 0.6 }] };
+    const repaired = applyImportRepairs(model, { 'virus_injection[0].volume_in_ul': 0.7 }) as {
+      virus_injection: Array<Record<string, unknown>>;
+    };
+    expect(repaired.virus_injection[0].volume_in_uL).toBe(0.7);
+    expect(repaired.virus_injection[0].volume_in_ul).toBe(0.7);
   });
 
   it('does NOT silently reconcile a conflict the user has not accepted', () => {

@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef, useCallback } from 'react';
 import { useArrayManagement } from '../hooks/useArrayManagement';
 import { useFormUpdates } from '../hooks/useFormUpdates';
 import { useElectrodeGroups } from '../hooks/useElectrodeGroups';
@@ -12,10 +12,21 @@ import { defaultYMLValues } from '../valueList';
  * @param {object|null} initialState - Optional initial form state (defaults to
  *   `defaultYMLValues`). A `{ workspace }`-only initial state still falls back to the
  *   defaults for the form fields, matching the original behavior.
- * @returns {{ formData: object, setFormData: Function, legacyActions: object, legacySelectors: object }}
+ * @returns {{ formData: object, setFormData: Function, lastLoad: { current: object|null },
+ *   legacyActions: object, legacySelectors: object }} `setFormData` is the raw state setter the
+ *   form hooks edit through; `lastLoad` records the most recent whole-form load for the
+ *   reference cleanup hooks (`useEpochCleanup`, `useCameraReferenceCleanup`).
  */
 export function useLegacyForm(initialState = null) {
   const [formData, setFormData] = useState(initialState || defaultYMLValues);
+
+  // The most recent whole-form load: a new object for each one, so the reference cleanup can
+  // tell a load from an edit. `keepReferences` is true for an imported file.
+  const lastLoad = useRef(null);
+  const loadFormData = useCallback((newFormData, keepReferences) => {
+    lastLoad.current = { keepReferences };
+    setFormData(newFormData);
+  }, []);
 
   // Delegate to existing hooks
   const arrayActions = useArrayManagement(formData, setFormData);
@@ -50,14 +61,25 @@ export function useLegacyForm(initialState = null) {
       },
 
       /**
-       * Replaces entire form state (for bulk imports).
+       * Replaces the entire form state, e.g. to clear the form. References to cameras or task
+       * epochs that the new state does not define are cleared.
        * Use sparingly - prefer individual field updates for most cases.
        *
        * @param {object} newFormData - Complete new form state
        */
-      setFormData,
+      setFormData: (newFormData) => loadFormData(newFormData, false),
+
+      /**
+       * Replaces the entire form state with an imported file (`importFiles`' `formData`).
+       * Unlike `setFormData`, references to cameras or task epochs the form does not define are
+       * kept: they point into a section the import left out, and validation reports them until
+       * that section is fixed.
+       *
+       * @param {object} newFormData - The imported form state
+       */
+      loadImportedFormData: (newFormData) => loadFormData(newFormData, true),
     }),
-    [arrayActions, formActions, electrodeActions, setFormData]
+    [arrayActions, formActions, electrodeActions, loadFormData]
   );
 
   const legacySelectors = useMemo(
@@ -106,5 +128,5 @@ export function useLegacyForm(initialState = null) {
     [formData]
   );
 
-  return { formData, setFormData, legacyActions, legacySelectors };
+  return { formData, setFormData, lastLoad, legacyActions, legacySelectors };
 }

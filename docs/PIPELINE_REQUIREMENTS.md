@@ -48,7 +48,10 @@ but `KeyError`s at conversion.
 **Optogenetics key mismatches (schema ≠ converter — emit the converter spelling):** the converter reads
 `optogenetic_stimulation_software` (schema property is `opto_software`) and `virus_injection[].volume_in_uL`
 (capital L; schema is `volume_in_ul`). Emitting the schema spelling makes opto silently vanish. Coordinate
-a `nwb_schema.json` fix across both repos.
+a `nwb_schema.json` fix across both repos. Files from older versions of this app carry a fixed
+`volume_in_uL: 0.45` beside the volume entered in the form (`volume_in_ul`), so the converter recorded
+0.45 µL for them; Import & Repair suggests the entered volume for that pattern and asks for the volume
+when the two keys disagree any other way.
 
 **Probe set (verify the app's `deviceTypes()` ⊆ this).** `device_type` must equal a `probe_type` in
 `trodes_to_nwb/src/trodes_to_nwb/device_metadata/probe_metadata/` (12 files as of the verify date):

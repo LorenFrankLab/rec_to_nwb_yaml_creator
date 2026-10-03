@@ -128,8 +128,10 @@ export function missingCameraRules(model: ValidationModel): ValidationIssue[] {
   // Rule 1: Tasks with camera_ids require cameras to be defined
   // Only trigger if tasks have non-empty camera_id arrays
   if (!model.cameras && Array.isArray(model.tasks) && model.tasks.length > 0) {
+    // `task?.`: rules also run on parsed YAML before schema validation, where a malformed task
+    // entry (e.g. `null`) must fall through to the schema error instead of throwing here.
     const tasksWithCameras = model.tasks.some(task =>
-      task.camera_id && Array.isArray(task.camera_id) && task.camera_id.length > 0
+      task?.camera_id && Array.isArray(task.camera_id) && task.camera_id.length > 0
     );
 
     if (tasksWithCameras) {
