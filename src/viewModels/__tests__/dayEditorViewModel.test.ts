@@ -615,6 +615,26 @@ describe('buildDayEditorViewModel — bad channels', () => {
     expect(vm.badChannels.marks.every((m) => !m.priorBad && !m.requiresAck)).toBe(true);
   });
 
+  it("reads a remapped single-shank row's marks as the stored channels, not the exported electrode ids", () => {
+    // Ntrode 3 is a tetrode wired 2, 0, 3, 1. The day stores "Channel 0" (electrode 2); the merged
+    // day exports it as electrode 2, but the marks the Failed Channels section and the un-mark
+    // gate read are channels.
+    const { animal, day } = loadRealistic();
+    const remapped = clone(animal);
+    const history = remapped.configurationHistory as Array<{
+      devices: { ntrode_electrode_group_channel_map: Array<{ ntrode_id: number; map: Record<string, number> }> };
+    }>;
+    history[0].devices.ntrode_electrode_group_channel_map.find((n) => n.ntrode_id === 3)!.map = {
+      0: 2, 1: 0, 2: 3, 3: 1,
+    };
+    const marked = clone(day);
+    marked.deviceOverrides = { bad_channels: { 3: [0] } } as unknown as typeof marked.deviceOverrides;
+    const vm = buildDayEditorViewModel(wrap(remapped, marked), marked.id);
+
+    expect(vm.badChannels.marks.find((m) => m.ntrodeId === '3' && m.channel === 0)?.marked).toBe(true);
+    expect(vm.badChannels.marks.find((m) => m.ntrodeId === '3' && m.channel === 2)?.marked).toBe(false);
+  });
+
   // The two-day monotonic-regression workspace is the SHARED scenario fixture (`twoDayRegression`),
   // so this suite and the cross-surface matrix draw it from one source. `workspace` is aliased to the
   // local `ws` name the assertions below use.

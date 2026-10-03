@@ -27,6 +27,7 @@
 import { validate } from '../validation';
 import type { ValidationModel, ValidationIssue } from '../validation/issueTypes';
 import { blockingIssues } from '../validation/issueTypes';
+import { singleShankBadChannelsFromFile } from '../domain/badChannels';
 
 /**
  * A successful decompose: the layered facts the export merge reads. `animalFacts` / `dayFacts` /
@@ -166,6 +167,16 @@ export function decomposeYaml(flatModel: ValidationModel): DecomposeResult {
   // an entry) and EMPTY the snapshot base rows, so the recomposed model is
   // self-consistent without depending on the load-time base→day migration. This
   // matches the post-migration shape the merge expects.
+  //
+  // The file carries probe electrode ids; the day stores a single-shank group's marks as each
+  // row's channel keys (what its Failed Channels checkboxes show), so translate those back through
+  // the row's map (the inverse of the export). A multi-shank group keeps its first-row ids.
+  if (Array.isArray(model.ntrode_electrode_group_channel_map)) {
+    model.ntrode_electrode_group_channel_map = singleShankBadChannelsFromFile(
+      model.electrode_groups,
+      model.ntrode_electrode_group_channel_map
+    );
+  }
   const importedNtrodes = Array.isArray(model.ntrode_electrode_group_channel_map)
     ? model.ntrode_electrode_group_channel_map
     : [];

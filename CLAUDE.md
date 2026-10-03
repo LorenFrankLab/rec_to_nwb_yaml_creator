@@ -214,6 +214,9 @@ This application is the **entry point** for the neuroscience data conversion pip
 - **Channel-map `map` values are probe *electrode IDs*, reset per electrode group** (a 2nd tetrode is
   `0..3`, not `4..7`), and multi-shank probes partition `0..N-1` across shanks — they are **not** global
   hardware channels. `bad_channels` are probe-local indices; out-of-range is silently ignored downstream.
+  The converter reads `bad_channels` **only from each electrode group's first row**, as electrode ids;
+  where the app keeps a row's ticked *channel keys* (legacy form rows, single-shank Day Editor rows) it
+  translates them through the row's map on download/import (`src/domain/badChannels.ts`, "Files").
 - **DANDI rejects free-text `species`** — it must be a Latin binomial (`Rattus norvegicus`) or NCBI Taxon URI.
 - **Researching trodes / trodes_to_nwb / spyglass:** the local `~/Documents/GitHub/{trodes,trodes_to_nwb,spyglass}`
   checkouts **are readable from the agent sandbox** — read them directly (verified 2026-06-19). (A prior
@@ -468,7 +471,9 @@ Plans in `.claude/docs/plans/` are written for a fresh session with no context, 
   `day.state.badChannelRemovalAcks`; an unacknowledged regression **blocks export**
   (`bad_channel_unfailed_without_ack`). The export merge reads bad channels from the day override ONLY —
   the **exported YAML shape is unchanged** (`bad_channels` still on the ntrode rows); only the app's
-  internal ownership moved from the config snapshot down to the day. See
+  internal ownership moved from the config snapshot down to the day. A single-shank row stores its
+  ticked channel keys, which the merge writes as the electrode ids they map to (the YAML import maps
+  them back); a multi-shank group stores electrode ids on its first row. See
   [src/domain/badChannelMonotonicity.ts](src/domain/badChannelMonotonicity.ts).
 
 ### State Management

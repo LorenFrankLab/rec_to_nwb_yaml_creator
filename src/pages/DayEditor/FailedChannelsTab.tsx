@@ -141,8 +141,9 @@ export default function FailedChannelsTab(props: FailedChannelsTabProps) {
   }, [effectiveConfig.ntrode_electrode_group_channel_map]);
 
   // Effective bad channels by ntrode ID. `resolveDayConfig` has already applied the
-  // day-level replacement semantics onto the pinned snapshot, so this is exactly the
-  // channel state export will encode.
+  // day-level replacement semantics onto the pinned snapshot, so this is the channel state
+  // export encodes, as the day stores it: a single-shank row's channels (the export writes
+  // the probe electrode ids they map to) and a multi-shank group's first-row electrode ids.
   const badChannels = useMemo(() => {
     return Object.fromEntries(
       ntrodeChannelMap.map((ntrode): [string, number[]] => [

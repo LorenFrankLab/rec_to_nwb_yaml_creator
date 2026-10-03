@@ -19,6 +19,8 @@ import {
   toFileBadChannels,
   canonicalizeFileBadChannels,
   toFormBadChannels,
+  singleShankBadChannelsToFile,
+  singleShankBadChannelsFromFile,
 } from '../badChannels';
 
 const SINGLE = 'tetrode_12.5'; // 1 shank, ids 0..3
@@ -316,5 +318,83 @@ describe('legacy form round trips', () => {
     const fixed = toFileBadChannels(form);
     expect(badChannelsOf(fixed)).toEqual([[3, 37], [], [], []]);
     expect(toFileBadChannels(importFile(fixed))).toEqual(fixed);
+  });
+});
+
+// ── Workspace: a single-shank group's failed channels are stored as each row's channel keys (the
+// Failed Channels checkboxes); a multi-shank group's first row stores probe electrode ids (the
+// probe-wide selector). The export and the YAML import translate the single-shank rows only. ──
+
+const group = (id, deviceType) => ({ id, device_type: deviceType });
+
+describe('singleShankBadChannelsToFile (workspace export)', () => {
+  it('writes the electrode a remapped tetrode channel maps to', () => {
+    // Channel 0 ticked on a tetrode wired 2, 0, 3, 1 is electrode 2.
+    const rows = singleShankBadChannelsToFile([group(0, SINGLE)], [row(1, 0, REMAPPED_TETRODE, [0, 3])]);
+    expect(rows.map((r) => r.bad_channels)).toEqual([[2, 1]]);
+  });
+
+  it('leaves an identity map, and every other field of the row, as they are', () => {
+    const input = [row(1, 0, IDENTITY_TETRODE, [1, 3])];
+    const rows = singleShankBadChannelsToFile([group(0, SINGLE)], input);
+    expect(rows).toEqual(input);
+  });
+
+  it('leaves a multi-shank group alone: its first row already holds probe electrode ids', () => {
+    const input = [row(1, 0, rowMap(0), [3, 20]), row(2, 0, rowMap(16), [])];
+    expect(singleShankBadChannelsToFile([group(0, MULTI)], input)).toEqual(input);
+  });
+
+  it('keeps a mark that is not a channel of its row, so validation reports it', () => {
+    const rows = singleShankBadChannelsToFile([group(0, SINGLE)], [row(1, 0, REMAPPED_TETRODE, [99, 'abc', 0])]);
+    expect(rows.map((r) => r.bad_channels)).toEqual([[99, 'abc', 2]]);
+  });
+
+  it('never writes a channel with no electrode assigned as another electrode', () => {
+    const rows = singleShankBadChannelsToFile([group(0, SINGLE)], [row(1, 0, { 0: null, 1: 1, 2: 2, 3: 3 }, [0, 2])]);
+    expect(rows.map((r) => r.bad_channels)).toEqual([[2]]);
+  });
+
+  it('translates a group with an unknown device type, or a multi-shank probe given one row, per row', () => {
+    // The Failed Channels editor shows these per row (channel keys), like a single-shank group.
+    const groups = [group(0, 'unknown-probe'), group(1, MULTI)];
+    const rows = singleShankBadChannelsToFile(groups, [
+      row(1, 0, REMAPPED_TETRODE, [0]),
+      row(2, 1, mapOf([5, 4, 3, 2, 1, 0]), [0]),
+    ]);
+    expect(rows.map((r) => r.bad_channels)).toEqual([[2], [5]]);
+  });
+
+  it('does not change the rows it is given', () => {
+    const input = [row(1, 0, REMAPPED_TETRODE, [0])];
+    singleShankBadChannelsToFile([group(0, SINGLE)], input);
+    expect(input[0].bad_channels).toEqual([0]);
+  });
+});
+
+describe('singleShankBadChannelsFromFile (workspace YAML import)', () => {
+  it('stores the channel that maps to each electrode of a remapped tetrode', () => {
+    const rows = singleShankBadChannelsFromFile([group(0, SINGLE)], [row(1, 0, REMAPPED_TETRODE, [2, 1])]);
+    expect(rows.map((r) => r.bad_channels)).toEqual([[0, 3]]);
+  });
+
+  it('keeps the first-row electrode ids of a multi-shank group (the probe-wide selector stores them)', () => {
+    const input = [row(1, 0, rowMap(0), [3, 20]), row(2, 0, rowMap(16), [])];
+    expect(singleShankBadChannelsFromFile([group(0, MULTI)], input)).toEqual(input);
+  });
+
+  it('keeps an electrode id that no channel maps to', () => {
+    const rows = singleShankBadChannelsFromFile([group(0, SINGLE)], [row(1, 0, REMAPPED_TETRODE, [7])]);
+    expect(rows.map((r) => r.bad_channels)).toEqual([[7]]);
+  });
+
+  it('is undone by the export: import then export gives back the file', () => {
+    const groups = [group(0, SINGLE), group(1, MULTI)];
+    const file = [
+      row(1, 0, REMAPPED_TETRODE, [2, 1]),
+      row(2, 1, rowMap(0), [3, 20]),
+      row(3, 1, rowMap(16), []),
+    ];
+    expect(singleShankBadChannelsToFile(groups, singleShankBadChannelsFromFile(groups, file))).toEqual(file);
   });
 });

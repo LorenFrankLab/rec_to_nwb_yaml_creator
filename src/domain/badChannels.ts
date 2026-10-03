@@ -8,8 +8,9 @@
  * `0..N-1` spanning all shanks. These helpers encode that rule, the later-row migration
  * (translate + consolidate onto the first row), and the invalid/out-of-range mark
  * interpretation, so the editors decide identically and a UI refactor cannot change
- * converter meaning. The "Files" section below translates between what the legacy form stores
- * (a row's ticked local channels) and what a file carries, for its download and upload.
+ * converter meaning. The "Files" section below translates between what the app stores (a
+ * row's ticked local channels) and what a file carries, for the legacy form's download and
+ * upload and for the workspace export and YAML import.
  */
 
 import { getProbeShanks, getProbeElectrodeIds } from '../ntrode/probeCatalog';
@@ -215,8 +216,9 @@ export function validBadChannelIds({
 // `ntrode_electrode_group_channel_map` row of each electrode group, and reads each value as a
 // probe electrode id (convert_yaml.py add_electrode_groups); a later row's list is never read. A
 // row's `map` takes the row's local channel (key) to a probe electrode id (value)
-// (convert_rec_header.py make_hw_channel_map). The legacy form keeps a row's ticked local channels,
-// so they are translated through the map on the way out and back on the way in.
+// (convert_rec_header.py make_hw_channel_map). Where the app keeps a row's ticked local channels
+// (the legacy form; a single-shank group in the Day Editor), they are translated through the map
+// on the way out and back on the way in.
 //
 // A value that is not one of its row's channel keys is kept unchanged as an electrode id (an
 // import keeps a first-row id that no channel maps to that way, so validation still sees it). A
@@ -418,5 +420,69 @@ export function toFormBadChannels<T>(file: T): T {
       });
     },
     (rows) => rows.some(hasMarks)
+  );
+}
+
+/** The electrode-group fields the Day Editor classifies a group by. */
+interface GroupDevice {
+  id?: unknown;
+  device_type?: unknown;
+}
+
+/**
+ * Apply `translate` to the stored marks of every row the Day Editor edits per row (channel keys):
+ * every group {@link isMultiShankGroup} rejects, classified exactly as the Failed Channels section
+ * does (the group's `device_type` and its number of rows). A multi-shank group's first row holds
+ * probe electrode ids (the probe-wide selector) and is left as it is.
+ *
+ * @param electrodeGroups - The electrode groups.
+ * @param rows - The ntrode rows.
+ * @param translate - Maps one row's marks.
+ * @returns New rows (a translated row is a copy; the others are the same objects).
+ */
+function mapSingleShankRows<T extends { electrode_group_id?: unknown; bad_channels?: unknown; map?: unknown }>(
+  electrodeGroups: unknown,
+  rows: T[],
+  translate: (marks: unknown[], rowMap: unknown) => unknown[]
+): T[] {
+  const groups: GroupDevice[] = Array.isArray(electrodeGroups) ? electrodeGroups : [];
+  return rows.map((row) => {
+    if (!isRecord(row) || !Array.isArray(row.bad_channels) || row.bad_channels.length === 0) return row;
+    const deviceType = groups.find((g) => isRecord(g) && g.id === row.electrode_group_id)?.device_type;
+    const rowCount = rows.filter((r) => isRecord(r) && r.electrode_group_id === row.electrode_group_id).length;
+    if (isMultiShankGroup(deviceType as string, rowCount)) return row;
+    return { ...row, bad_channels: translate(row.bad_channels, row.map) };
+  });
+}
+
+/**
+ * Workspace export: a single-shank row's stored failed channels (its channel keys) as the
+ * electrode ids they map to, in place on the row.
+ *
+ * @param electrodeGroups - The day's electrode groups.
+ * @param rows - The day's ntrode rows with their stored `bad_channels`.
+ * @returns The rows as the file carries them.
+ */
+export function singleShankBadChannelsToFile<
+  T extends { electrode_group_id?: unknown; bad_channels?: unknown; map?: unknown },
+>(electrodeGroups: unknown, rows: T[]): T[] {
+  return mapSingleShankRows(electrodeGroups, rows, (marks, rowMap) =>
+    marks.map((value) => fileValueOfMark(rowMap, value)).filter((value) => value !== undefined)
+  );
+}
+
+/**
+ * Workspace YAML import: a single-shank row's electrode ids from a file as the channel keys the Day
+ * Editor stores. An id that no channel maps to is kept.
+ *
+ * @param electrodeGroups - The file's electrode groups.
+ * @param rows - The file's ntrode rows.
+ * @returns The rows with stored-shape `bad_channels`.
+ */
+export function singleShankBadChannelsFromFile<
+  T extends { electrode_group_id?: unknown; bad_channels?: unknown; map?: unknown },
+>(electrodeGroups: unknown, rows: T[]): T[] {
+  return mapSingleShankRows(electrodeGroups, rows, (marks, rowMap) =>
+    marks.map((id) => channelOfElectrode(rowMap, id) ?? id)
   );
 }

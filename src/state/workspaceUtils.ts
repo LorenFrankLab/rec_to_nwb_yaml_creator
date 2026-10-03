@@ -14,6 +14,7 @@ import {
   normalizeNtrodeMap,
 } from '../utils/deviceNormalization';
 import { resolveEffectiveDevices } from '../domain/deviceOverrideMerge';
+import { singleShankBadChannelsToFile } from '../domain/badChannels';
 import { resolveDayCameraUsage } from './cameraUsage';
 import { resolveDayTasks } from './dayTaskCatalog';
 import { isRecord as isPlainRecord } from '../utils/records';
@@ -350,8 +351,12 @@ export function mergeDayMetadata(animal: Animal, day: Day): Record<string, unkno
   // Resolve the day's effective probe config (snapshot selection + deviceOverrides
   // precedence) via the shared helper, so the merge and the reconfig wizard's
   // notion of "effective config" cannot drift.
-  const { electrode_groups: electrodeGroups, ntrode_electrode_group_channel_map: ntrodeMap } =
+  const { electrode_groups: electrodeGroups, ntrode_electrode_group_channel_map: storedNtrodes } =
     resolveDayConfig(animal, day);
+  // The day stores a single-shank group's failed channels as each row's channel keys (the Failed
+  // Channels checkboxes); the file carries the probe electrode ids trodes_to_nwb reads, so translate
+  // them through the row's map. Identity maps (every golden fixture) are unchanged.
+  const ntrodeMap = singleShankBadChannelsToFile(electrodeGroups, storedNtrodes);
 
   const devices = normalizeDevices(getAnimalDevices(animal));
   // Resolve the day's tasks ONCE (catalog `taskInstances` → inline tasks, else legacy inline tasks)
