@@ -15,6 +15,7 @@ import {
   buildImportRepairPlan,
   applyImportRepairs,
   existingAnimalCatalogResolutionBlocker,
+  numericResolutionBlocker,
 } from '../../state/importRepair';
 import type {
   ImportRepairPlan,
@@ -138,6 +139,8 @@ function blockingReason(
   if (unresolvedCount > 0) {
     return `${unresolvedCount} flagged ${pluralize(unresolvedCount, 'field')} still need a response.`;
   }
+  const numericBlocker = numericResolutionBlocker(file.plan, file.resolutions);
+  if (numericBlocker) return numericBlocker;
   const catalogBlocker = existingAnimalCatalogResolutionBlocker(file.plan, file.resolutions);
   if (catalogBlocker) return catalogBlocker;
   if (importPlan.animals.length !== 1) {

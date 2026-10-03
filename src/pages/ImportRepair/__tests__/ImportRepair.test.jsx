@@ -232,6 +232,33 @@ describe('ImportRepair — suggestions are answers the user can change', () => {
   });
 });
 
+describe('ImportRepair — a missing required number', () => {
+  it('is entered in a number input, and the file imports with that number', async () => {
+    const user = userEvent.setup();
+    renderScreen();
+    const model = decodeYaml(cleanYaml);
+    delete model.raw_data_to_volts;
+    await user.upload(
+      screen.getByLabelText(/choose a metadata yaml file/i),
+      makeFile('06222023_remy_metadata.yml', encodeYaml(model))
+    );
+
+    const required = await screen.findByRole('region', { name: /required, but missing/i });
+    const volts = within(required).getByRole('spinbutton', { name: /raw data to volts/i });
+    const importBtn = screen.getByRole('button', { name: /import as new animal/i });
+    expect(importBtn).toBeDisabled();
+
+    fireEvent.change(volts, { target: { value: '0.195' } });
+    expect(importBtn).toBeEnabled();
+    await user.click(importBtn);
+
+    const [dayId] = Object.keys(captured.days);
+    expect(mergeDayMetadata(captured.animals.remy, captured.days[dayId]).raw_data_to_volts).toBe(
+      0.195
+    );
+  });
+});
+
 describe('ImportRepair — commit', () => {
   it('groups multiple ready day files into one animal before committing', async () => {
     const user = userEvent.setup();

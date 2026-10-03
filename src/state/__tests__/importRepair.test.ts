@@ -17,6 +17,7 @@ import {
   buildImportRepairPlan,
   applyImportRepairs,
   existingAnimalCatalogResolutionBlocker,
+  numericResolutionBlocker,
 } from '../importRepair';
 import type { RepairItem } from '../importRepair';
 import { classifyCameraAgainstCatalog } from '../cameraCalibrationConflicts';
@@ -280,6 +281,113 @@ describe('buildImportRepairPlan — a suggestion is offered only when the value 
       { animals: {} }
     );
     expect(importPlan.animals).toEqual([]);
+  });
+});
+
+/**
+ * A missing required NUMBER must be answerable on this screen: a text input stored the typed value
+ * as a string, so the repaired file failed "must be number" however it was answered.
+ */
+describe('buildImportRepairPlan — a missing required number is answered with a number', () => {
+  type Model = Record<string, any>;
+  const MISSING_NUMBERS: Array<[string, (m: Model) => void, string, (m: Model) => unknown]> = [
+    ['raw_data_to_volts', (m) => delete m.raw_data_to_volts, '0.195', (m) => m.raw_data_to_volts],
+    [
+      'times_period_multiplier',
+      (m) => delete m.times_period_multiplier,
+      '1.5',
+      (m) => m.times_period_multiplier,
+    ],
+    [
+      'electrode_groups[0].targeted_x',
+      (m) => delete m.electrode_groups[0].targeted_x,
+      '-3.25e0',
+      (m) => m.electrode_groups[0].targeted_x,
+    ],
+  ];
+
+  /**
+   * A clean export with one field removed.
+   * @param remove - Removes the field.
+   * @returns The model.
+   */
+  function cleanWithout(remove: (m: Model) => void): Model {
+    const model = loadCleanExport();
+    remove(model);
+    return model;
+  }
+
+  /**
+   * Whether a repaired model imports as one day.
+   * @param repaired - The repaired model.
+   * @returns The planner's refusals (empty when importable).
+   */
+  function refusals(repaired: Record<string, unknown>): string[] {
+    return planImport([{ sourceName: '06222023_remy_metadata.yml', flatModel: repaired }], {
+      animals: {},
+    }).unimportable.map((u) => u.reason);
+  }
+
+  it.each(MISSING_NUMBERS)('%s is a number input (the schema type at that path)', (itemPath, remove) => {
+    const plan = buildImportRepairPlan(cleanWithout(remove), '06222023_remy_metadata.yml', { animals: {} });
+    expect(itemAt(plan.items, itemPath)).toMatchObject({
+      kind: 'input',
+      group: 'required',
+      inputType: 'number',
+    });
+  });
+
+  it.each(MISSING_NUMBERS)('%s: the number typed into the row makes the file importable', (itemPath, remove, typed, read) => {
+    const model = cleanWithout(remove);
+    // What RepairRow stores for a number input.
+    const repaired = applyImportRepairs(model, { [itemPath]: Number(typed) });
+    expect(read(repaired)).toBe(Number(typed));
+    expect(refusals(repaired)).toEqual([]);
+  });
+
+  it.each(MISSING_NUMBERS)('%s: numeric text is stored as a number when the repair is applied', (itemPath, remove, typed, read) => {
+    const repaired = applyImportRepairs(cleanWithout(remove), { [itemPath]: typed });
+    expect(read(repaired)).toBe(Number(typed));
+    expect(refusals(repaired)).toEqual([]);
+  });
+
+  it('an integer field (a video file epoch) is a number input too', () => {
+    const plan = buildImportRepairPlan(
+      { associated_video_files: [{ name: 'v', camera_id: 0 }] },
+      'f.yml',
+      { animals: {} }
+    );
+    expect(itemAt(plan.items, 'associated_video_files[0].task_epochs')!.inputType).toBe('number');
+  });
+
+  it('rejects text that is not a number with a clear message, and accepts real numbers', () => {
+    const plan = buildImportRepairPlan(
+      cleanWithout((m) => delete m.raw_data_to_volts),
+      '06222023_remy_metadata.yml',
+      { animals: {} }
+    );
+    expect(numericResolutionBlocker(plan, { raw_data_to_volts: '0,195' })).toBe(
+      'Raw data to volts must be a number; “0,195” is not one.'
+    );
+    expect(numericResolutionBlocker(plan, { raw_data_to_volts: 'abc' })).toMatch(/must be a number/);
+    expect(numericResolutionBlocker(plan, { raw_data_to_volts: 0.195 })).toBeNull();
+    expect(numericResolutionBlocker(plan, { raw_data_to_volts: '1.95e-7' })).toBeNull();
+    // An unanswered row is counted by the screen's "still need a response", not here.
+    expect(numericResolutionBlocker(plan, {})).toBeNull();
+  });
+
+  it('rejects a fraction where the schema wants a whole number', () => {
+    const plan = buildImportRepairPlan(
+      { associated_video_files: [{ name: 'v', camera_id: 0 }] },
+      'f.yml',
+      { animals: {} }
+    );
+    expect(
+      numericResolutionBlocker(plan, { 'associated_video_files[0].task_epochs': 1.5 })
+    ).toMatch(/must be a whole number; “1\.5” is not one/);
+    expect(
+      numericResolutionBlocker(plan, { 'associated_video_files[0].task_epochs': 2 })
+    ).toBeNull();
   });
 });
 

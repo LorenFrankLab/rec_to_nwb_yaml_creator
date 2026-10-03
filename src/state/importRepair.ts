@@ -19,6 +19,7 @@
  * @module state/importRepair
  */
 
+import nwbSchema from '../nwb_schema.json';
 import { validate } from '../validation';
 import { isValidSpecies } from '../validation/dandiSubject';
 import { findIdentityDivergence } from './identityDivergence';
@@ -368,6 +369,59 @@ function deleteAtPath(target: Record<string, unknown>, p: string): void {
   if (cursor !== null && typeof cursor === 'object') {
     delete (cursor as Record<PathSegment, unknown>)[segments[segments.length - 1]];
   }
+}
+
+/** The part of a JSON-schema node {@link schemaNumericType} reads. */
+interface SchemaNode {
+  type?: unknown;
+  properties?: Record<string, SchemaNode>;
+  items?: SchemaNode;
+}
+
+/**
+ * Whether the schema wants a number at a repair path: `'number'`, `'integer'`, or null (any other
+ * type, or a path the schema does not describe, such as an internal `__importRepair.*` row). An array
+ * index steps into `items` (`electrode_groups[0].targeted_x`); a numeric object key (an ntrode `map`
+ * entry) is read as a property.
+ *
+ * @param p - The repair path.
+ * @returns The numeric schema type, or null.
+ */
+function schemaNumericType(p: string): 'number' | 'integer' | null {
+  let node: SchemaNode | undefined = nwbSchema as unknown as SchemaNode;
+  for (const seg of parsePath(p)) {
+    node = typeof seg === 'number' ? node?.items ?? node?.properties?.[String(seg)] : node?.properties?.[seg];
+    if (!node) return null;
+  }
+  return node.type === 'number' || node.type === 'integer' ? node.type : null;
+}
+
+/** Text a person typed as a number: optional sign, decimal point and exponent (`-3.25`, `1.95e-7`). */
+const NUMERIC_TEXT = /^\s*[-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:e[-+]?\d+)?\s*$/i;
+
+/**
+ * A typed answer as a number: a finite number as-is, numeric text converted, anything else undefined.
+ *
+ * @param value - The resolution value.
+ * @returns The number, or undefined when the value is not one.
+ */
+function typedNumber(value: unknown): number | undefined {
+  if (typeof value === 'number') return Number.isFinite(value) ? value : undefined;
+  if (typeof value === 'string' && NUMERIC_TEXT.test(value)) return Number(value);
+  return undefined;
+}
+
+/**
+ * The value to store at a path: numeric text becomes a number where the schema wants one (a typed
+ * "0.195" would otherwise fail "must be number" forever). Every other value is stored unchanged.
+ *
+ * @param p - The path the value is stored at.
+ * @param value - The resolution value.
+ * @returns The value to store.
+ */
+function schemaTypedValue(p: string, value: unknown): unknown {
+  if (typeof value !== 'string' || schemaNumericType(p) === null) return value;
+  return typedNumber(value) ?? value;
 }
 
 /**
@@ -1020,11 +1074,13 @@ function buildValidationItems(model: ValidationModel): {
       continue;
     }
 
-    // --- required-but-missing / empty required field → blocks; the user supplies it. ---
+    // --- required-but-missing / empty required field → blocks; the user supplies it. The input
+    // follows the schema type at the path, so a missing number (raw_data_to_volts,
+    // electrode_groups[i].targeted_x, …) is answered with a number, not text. ---
     if (code === 'required' || code === 'pattern') {
       const inputType: RepairItem['inputType'] = path.endsWith('date_of_birth')
         ? 'date'
-        : path.endsWith('weight')
+        : schemaNumericType(path) !== null
           ? 'number'
           : 'text';
       const item: RepairItem = { path, label: leafLabel(path), code, group: 'required', kind: 'input', why: message, inputType };
@@ -1350,10 +1406,39 @@ export function existingAnimalCatalogResolutionBlocker(
 }
 
 /**
+ * Why an answered row cannot be stored where the schema wants a number, or null when every answer
+ * there is one. Numeric text counts (it is converted by {@link applyImportRepairs}); an unanswered
+ * row is the screen's "still need a response", not this.
+ *
+ * @param plan - The import-repair plan.
+ * @param resolutions - Accepted/edited values keyed by repair-item path.
+ * @returns A blocking reason naming the field and the value, or null.
+ */
+export function numericResolutionBlocker(
+  plan: ImportRepairPlan,
+  resolutions: Record<string, unknown>
+): string | null {
+  for (const item of plan.items) {
+    const value = resolutions[item.path];
+    if (value === undefined || value === null || value === '') continue;
+    const type = schemaNumericType(item.path);
+    if (type === null) continue;
+    const number = typedNumber(value);
+    const field = item.context ? `${item.context}: ${item.label}` : item.label;
+    if (number === undefined) return `${field} must be a number; “${String(value)}” is not one.`;
+    if (type === 'integer' && !Number.isInteger(number)) {
+      return `${field} must be a whole number; “${String(value)}” is not one.`;
+    }
+  }
+  return null;
+}
+
+/**
  * Apply the benign normalizations and the user's accepted resolutions to a model, returning a NEW
  * model (the input is never mutated, and no key is dropped). Resolutions are keyed by the same path
  * the repair items carry; benign normalizations (space-key aliases, task_epoch rename, single-spelling
- * volume fill) are applied unconditionally because the screen lists them.
+ * volume fill) are applied unconditionally because the screen lists them. Numeric text answered for a
+ * field the schema types as a number is stored as a number.
  *
  * @param flatModel - The decoded flat model.
  * @param resolutions - Accepted/edited values keyed by repair-item path.
@@ -1391,11 +1476,14 @@ export function applyImportRepairs(
       }
       continue;
     }
-    setAtPath(model, path, value);
     const volMatch = path.match(/^(virus_injection\[\d+\])\.volume_in_u[lL]$/);
+    // Numeric text becomes a number where the schema wants one; a volume is typed by the schema's
+    // own spelling (`volume_in_ul`), since the converter's `volume_in_uL` is not in the schema.
+    const stored = schemaTypedValue(volMatch ? `${volMatch[1]}.volume_in_ul` : path, value);
+    setAtPath(model, path, stored);
     if (volMatch) {
-      setAtPath(model, `${volMatch[1]}.volume_in_uL`, value);
-      setAtPath(model, `${volMatch[1]}.volume_in_ul`, value);
+      setAtPath(model, `${volMatch[1]}.volume_in_uL`, stored);
+      setAtPath(model, `${volMatch[1]}.volume_in_ul`, stored);
     }
     const taskEpochMatch = path.match(/^(associated_(?:video_)?files\[\d+\])\.task_epochs$/);
     if (taskEpochMatch) deleteAtPath(model, `${taskEpochMatch[1]}.task_epoch`);
