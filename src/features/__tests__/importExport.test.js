@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { importFiles, exportAll } from '../importExport';
 import { validate } from '../../validation';
-import { encodeYaml, formatDeterministicFilename } from '../../io/yaml';
+import { encodeYaml, formatDeterministicFilename, downloadYamlFile } from '../../io/yaml';
 import { emptyFormData } from '../../valueList';
 
 /**
@@ -799,6 +799,97 @@ institution: Test University
         const rulesError = result.validationIssues.find(i => !i.instancePath);
         expect(schemaError).toBeDefined();
         expect(rulesError).toBeDefined();
+      });
+    });
+
+    // Errors block the download; warnings are advisory and go into ONE confirm that lists them.
+    describe('Warnings', () => {
+      const error = {
+        path: 'lab',
+        code: 'required',
+        severity: 'error',
+        message: 'lab is required',
+        instancePath: '/lab',
+      };
+      const subjectWarning = {
+        path: 'subject.subject_id',
+        code: 'placeholder_subject_id',
+        severity: 'warning',
+        message: 'Subject ID "54321" looks like a template placeholder.',
+      };
+      const cameraWarning = {
+        path: 'cameras[0].meters_per_pixel',
+        code: 'camera_meters_per_pixel_implausible',
+        severity: 'warning',
+        message: 'Confirm the tracking calibration.',
+      };
+
+      beforeEach(() => {
+        encodeYaml.mockReturnValue('encoded: yaml');
+        formatDeterministicFilename.mockReturnValue('20230622_RAT001_metadata.yml');
+      });
+
+      it('downloads without asking when there are no warnings', () => {
+        validate.mockReturnValue([]);
+        const confirmSpy = vi.spyOn(window, 'confirm');
+
+        const result = exportAll(mockModel);
+
+        expect(result.success).toBe(true);
+        expect(confirmSpy).not.toHaveBeenCalled();
+        expect(downloadYamlFile).toHaveBeenCalledTimes(1);
+      });
+
+      it('asks once, listing every warning on its own line, and downloads on OK', () => {
+        validate.mockReturnValue([cameraWarning, subjectWarning]);
+        const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
+
+        const result = exportAll(mockModel);
+
+        expect(confirmSpy).toHaveBeenCalledTimes(1);
+        const message = confirmSpy.mock.calls[0][0];
+        const lines = message.split('\n');
+        expect(lines).toContain(
+          '- Cameras 1, meters per pixel: Confirm the tracking calibration.'
+        );
+        expect(lines).toContain(
+          '- Subject, subject id: Subject ID "54321" looks like a template placeholder.'
+        );
+        expect(message).toMatch(/2 warnings/);
+        expect(result.success).toBe(true);
+        expect(result.warnings).toEqual([cameraWarning, subjectWarning]);
+        expect(downloadYamlFile).toHaveBeenCalledTimes(1);
+        expect(downloadYamlFile).toHaveBeenCalledWith('20230622_RAT001_metadata.yml', 'encoded: yaml');
+      });
+
+      it('does not download when the warnings are cancelled', () => {
+        validate.mockReturnValue([subjectWarning]);
+        const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false);
+
+        const result = exportAll(mockModel);
+
+        expect(confirmSpy).toHaveBeenCalledTimes(1);
+        expect(confirmSpy.mock.calls[0][0]).toMatch(/1 warning\b/);
+        expect(result.success).toBe(false);
+        expect(result.cancelled).toBe(true);
+        // Nothing to mark on the form: the user chose to go back, no field is in error.
+        expect(result.validationIssues).toEqual([]);
+        expect(result.yaml).toBeNull();
+        expect(encodeYaml).not.toHaveBeenCalled();
+        expect(downloadYamlFile).not.toHaveBeenCalled();
+      });
+
+      it('blocks on errors without asking, and reports only the errors', () => {
+        validate.mockReturnValue([error, subjectWarning]);
+        const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
+
+        const result = exportAll(mockModel);
+
+        expect(confirmSpy).not.toHaveBeenCalled();
+        expect(result.success).toBe(false);
+        expect(result.error).toBe('Validation failed');
+        expect(result.validationIssues).toEqual([error]);
+        expect(downloadYamlFile).not.toHaveBeenCalled();
       });
     });
 
