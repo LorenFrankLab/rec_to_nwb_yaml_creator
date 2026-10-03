@@ -600,7 +600,8 @@ function placeOnExistingTimeline(
   for (const days of unmatched.values()) {
     const first = days[0].date;
     const last = days[days.length - 1].date;
-    const recorded = first === last ? `on ${first}` : `${first} to ${last}`;
+    // Not a period: other configurations may have been in use between these recordings.
+    const recorded = days.length === 1 ? `on ${first}` : `on ${days.length} days, ${first} to ${last}`;
     actions.createConfigurationSnapshotAndApplyForward(
       targetId,
       {

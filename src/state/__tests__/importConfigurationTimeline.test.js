@@ -321,6 +321,31 @@ describe('W1: an import never takes over the effective-date timeline', () => {
     expect(choiceStatus(result, next)).toBe('confirmed');
   });
 
+  it('back-filled days that recorded the same other setup share ONE pinned-only version; a day logged between them keeps the timeline setup', () => {
+    const { result } = renderHook(() => useStore());
+    createAnimalInApp(result, 8, { effectiveDate: '2023-01-01' });
+    logDay(result, '2023-07-01');
+    importFiles(result, [
+      makeFile({ date: '2023-06-10', mutate: keepTetrodes(7) }),
+      makeFile({ date: '2023-06-12', mutate: keepTetrodes(7) }),
+    ]);
+
+    const history = getConfigHistory(result.current.model.workspace.animals.remy);
+    // The back-fill is filed before the current setup, which stays last (what Animal Setup edits).
+    expect(history.map((snapshot) => [snapshot.version, snapshot.pinnedOnly === true])).toEqual([
+      [2, true],
+      [1, false],
+    ]);
+    expect(history[0]).toMatchObject({ date: '2023-06-10', description: 'Imported setup recorded on 2 days, 2023-06-10 to 2023-06-12' });
+    for (const date of ['2023-06-10', '2023-06-12']) {
+      expect(exportDay(result, date).electrode_groups).toHaveLength(7);
+      expect(choiceStatus(result, date)).toBe('confirmed');
+    }
+    logDay(result, '2023-06-11');
+    expect(exportDay(result, '2023-06-11').electrode_groups).toHaveLength(8);
+    expect(choiceStatus(result, '2023-06-11')).toBe('confirmed');
+  });
+
   it('batch A (06-20) → B (06-21) → A (06-22): each day keeps its own file and the next day (06-23) gets A', () => {
     const { result } = renderHook(() => useStore());
     importFiles(result, [
@@ -406,6 +431,20 @@ describe('W2: after an import, Animal Setup edits the configuration days get fro
     const june10 = exportDay(result, '2023-06-10');
     expect(june10.electrode_groups).toHaveLength(7);
     expect(june10.electrode_groups[0].location).toBe('CA1');
+  });
+
+  it('an animal created in the app WITHOUT probes takes an imported file’s probe setup as its current one', () => {
+    const { result } = renderHook(() => useStore());
+    createAnimalInApp(result, 0);
+    importFiles(result, [makeFile({ date: '2023-06-22' })]);
+    const remy = result.current.model.workspace.animals.remy;
+    expect(getAnimalElectrodeGroups(remy)).toHaveLength(8);
+    expect(getConfigHistory(remy).at(-1)).toMatchObject({ date: '2023-06-22' });
+
+    const next = dayAfterToday();
+    logDay(result, next);
+    expect(exportDay(result, next).electrode_groups).toHaveLength(8);
+    expect(choiceStatus(result, next)).toBe('confirmed');
   });
 
   it('after adding a NEWER file with different hardware, Animal Setup holds that newer setup', () => {
