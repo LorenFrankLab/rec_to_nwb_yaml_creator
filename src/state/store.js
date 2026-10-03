@@ -1,9 +1,13 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { useArrayManagement } from '../hooks/useArrayManagement';
 import { useFormUpdates } from '../hooks/useFormUpdates';
 import { useElectrodeGroups } from '../hooks/useElectrodeGroups';
 import { defaultYMLValues } from '../valueList';
-import { removeStaleCameraReferences } from '../utils/cameraReferences';
+import {
+  getDefinedCameraIds,
+  removeCameraReferences,
+  removeStaleCameraReferences,
+} from '../utils/cameraReferences';
 
 /**
  * Lightweight store facade that provides unified access to form state, actions, and selectors.
@@ -40,6 +44,14 @@ import { removeStaleCameraReferences } from '../utils/cameraReferences';
  */
 export function useStore(initialState = null) {
   const [formData, setFormData] = useState(initialState || defaultYMLValues);
+
+  // The most recent whole-form load: a new object for each one, so the camera cleanup below can
+  // tell a load from an edit. `keepCameraLinks` is true for an imported file.
+  const lastLoad = useRef(null);
+  const loadFormData = useCallback((newFormData, keepCameraLinks) => {
+    lastLoad.current = { keepCameraLinks };
+    setFormData(newFormData);
+  }, []);
 
   // Delegate to existing hooks
   const arrayActions = useArrayManagement(formData, setFormData);
@@ -144,14 +156,41 @@ export function useStore(initialState = null) {
    * When a camera is removed or its id is changed, camera_id references in
    * tasks, associated_video_files, and fs_gui_yamls become invalid. The form
    * only renders checkboxes for cameras that exist, so such references are
-   * invisible to the user and would be exported silently. Drop them whenever
-   * the cameras list changes (including on import).
+   * invisible to the user and would be exported silently. An edit drops the
+   * references to the camera ids it removed; replacing the whole form with
+   * setFormData drops every reference to a camera the new state lacks.
    *
-   * removeStaleCameraReferences returns the same object when nothing is
-   * stale, so React bails out of the update and no re-render loop occurs.
+   * Loading an imported file (loadImportedFormData) drops nothing. The import
+   * has already removed links to cameras the file does not define, so a
+   * dangling link after an import points into a cameras section the import
+   * left out: it was valid in the file. It stays, and validation reports it
+   * (unknown_camera) until the cameras are fixed; adding them back restores
+   * the links. (A task's camera list may be empty, so dropping them was a
+   * silent loss.) Edits after the import still drop only the ids they remove.
+   *
+   * Both updates return the same object when nothing is dropped, so React
+   * bails out of the update and no re-render loop occurs.
    */
+  const previousCameraRun = useRef(null); // { load, ids } seen by the previous run
   useEffect(() => {
-    setFormData((currentFormData) => removeStaleCameraReferences(currentFormData));
+    const load = lastLoad.current;
+    const ids = getDefinedCameraIds(formData.cameras);
+    const before = previousCameraRun.current;
+    previousCameraRun.current = { load, ids };
+
+    if (before === null || before.load !== load) {
+      // The first run, or the whole form was just replaced.
+      if (!load?.keepCameraLinks) {
+        setFormData((currentFormData) => removeStaleCameraReferences(currentFormData));
+      }
+      return;
+    }
+
+    // An edit: drop only the ids it removed.
+    const removedIds = before.ids.filter((id) => !ids.includes(id));
+    if (removedIds.length > 0) {
+      setFormData((currentFormData) => removeCameraReferences(currentFormData, removedIds));
+    }
   }, [formData.cameras]);
 
   /**
@@ -236,14 +275,27 @@ export function useStore(initialState = null) {
       },
 
       /**
-       * Replaces entire form state (for bulk imports).
+       * Replaces the entire form state, e.g. to clear the form. References to
+       * cameras or task epochs that the new state does not define are cleared.
        * Use sparingly - prefer individual field updates for most cases.
        *
        * @param {Object} newFormData - Complete new form state
        */
-      setFormData,
+      setFormData: (newFormData) => loadFormData(newFormData, false),
+
+      /**
+       * Replaces the entire form state with an imported file (importFiles'
+       * formData). Unlike setFormData, links to cameras the form does not
+       * define are kept: they point into a cameras section the import left
+       * out, and validation reports them until the cameras are fixed.
+       * Task-epoch references to epochs the form does not define are still
+       * cleared, and validation then reports the emptied fields.
+       *
+       * @param {Object} newFormData - The imported form state
+       */
+      loadImportedFormData: (newFormData) => loadFormData(newFormData, true),
     }),
-    [arrayActions, formActions, electrodeActions, setFormData]
+    [arrayActions, formActions, electrodeActions, loadFormData]
   );
 
   return {
