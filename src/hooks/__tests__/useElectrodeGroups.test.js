@@ -13,7 +13,7 @@
  * - duplicateElectrodeGroupItem(index, key) - Duplicates electrode group with new ID and ntrode maps
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useState } from 'react';
 import { useElectrodeGroups } from '../useElectrodeGroups';
@@ -201,7 +201,7 @@ describe('useElectrodeGroups', () => {
       });
     });
 
-    describe('Ntrode ID Renumbering', () => {
+    describe('Ntrode ID Numbering', () => {
       it('should assign sequential ntrode_id values starting at 1', () => {
         const { result } = renderHook(() => useTestHook());
 
@@ -223,7 +223,7 @@ describe('useElectrodeGroups', () => {
         expect(ntrodes[1].ntrode_id).toBe(2);
       });
 
-      it('should renumber all ntrode_id values when device type changed', () => {
+      it('should number a later group\'s ntrodes after the ntrode_ids in use', () => {
         const { result } = renderHook(() => useTestHook());
 
         // Start with 2 electrode groups
@@ -803,5 +803,138 @@ describe('useElectrodeGroups', () => {
         expect(result.current.formData).not.toBe(originalFormData);
       });
     });
+  });
+});
+
+/**
+ * trodes_to_nwb matches each ntrode in the .rec header to the YAML entry with
+ * the same ntrode_id, and takes that entry's electrode group and location. An
+ * edit to one electrode group must therefore never change another group's
+ * ntrode ids: the shifted hardware channels would be filed under a
+ * neighbouring group, and the channel counts would still match.
+ */
+describe('useElectrodeGroups - other groups keep their ntrode ids', () => {
+  function useSeededHook(initialFormData) {
+    const [formData, setFormData] = useState(initialFormData);
+    return { formData, ...useElectrodeGroups(formData, setFormData) };
+  }
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  const groups = (...ids) => ids.map((id) => ({ id, device_type: 'tetrode_12.5', location: 'CA1' }));
+  const tetrode = (electrodeGroupId, ntrodeId) => ({
+    ntrode_id: ntrodeId,
+    electrode_group_id: electrodeGroupId,
+    bad_channels: [],
+    map: { 0: 0, 1: 1, 2: 2, 3: 3 },
+  });
+  // [ntrode_id, electrode_group_id] for every ntrode, in array order
+  const pairs = (result) =>
+    result.current.formData.ntrode_electrode_group_channel_map.map((n) => [
+      n.ntrode_id,
+      n.electrode_group_id,
+    ]);
+  const selectDevice = (result, index, deviceType) =>
+    act(() => {
+      result.current.nTrodeMapSelected(
+        { target: { value: deviceType } },
+        { key: 'electrode_groups', index }
+      );
+    });
+
+  it('changing a device type and back leaves every group with its ntrode ids', () => {
+    const { result } = renderHook(() =>
+      useSeededHook({ electrode_groups: groups(0, 1, 2), ntrode_electrode_group_channel_map: [] })
+    );
+    selectDevice(result, 0, 'tetrode_12.5');
+    selectDevice(result, 1, 'tetrode_12.5');
+    selectDevice(result, 2, 'tetrode_12.5');
+    expect(pairs(result)).toEqual([[1, 0], [2, 1], [3, 2]]);
+
+    selectDevice(result, 0, '128c-4s6mm6cm-15um-26um-sl');
+    expect(pairs(result)).toEqual([[1, 0], [4, 0], [5, 0], [6, 0], [2, 1], [3, 2]]);
+
+    selectDevice(result, 0, 'tetrode_12.5');
+    expect(pairs(result)).toEqual([[1, 0], [2, 1], [3, 2]]);
+  });
+
+  it('choosing a device type again keeps the group\'s ntrode ids and position', () => {
+    const { result } = renderHook(() =>
+      useSeededHook({
+        electrode_groups: groups(0, 1, 2, 3),
+        ntrode_electrode_group_channel_map: [tetrode(0, 1), tetrode(1, 2), tetrode(2, 3), tetrode(3, 4)],
+      })
+    );
+
+    selectDevice(result, 1, 'tetrode_12.5');
+
+    expect(pairs(result)).toEqual([[1, 0], [2, 1], [3, 2], [4, 3]]);
+  });
+
+  it('a group with fewer shanks keeps its first ntrode ids', () => {
+    const { result } = renderHook(() =>
+      useSeededHook({
+        electrode_groups: groups(0, 1),
+        ntrode_electrode_group_channel_map: [
+          tetrode(0, 1), tetrode(0, 2), tetrode(0, 3), tetrode(0, 4), tetrode(1, 5),
+        ],
+      })
+    );
+
+    selectDevice(result, 0, '32c-2s8mm6cm-20um-40um-dl');
+
+    expect(pairs(result)).toEqual([[1, 0], [2, 0], [5, 1]]);
+  });
+
+  it('never gives the regenerated ntrodes an id another group already uses', () => {
+    // e.g. an imported file where two groups share ntrode_id 1
+    const { result } = renderHook(() =>
+      useSeededHook({
+        electrode_groups: groups(0, 1),
+        ntrode_electrode_group_channel_map: [tetrode(0, 1), tetrode(1, 1)],
+      })
+    );
+
+    selectDevice(result, 0, 'tetrode_12.5');
+
+    expect(pairs(result)).toEqual([[2, 0], [1, 1]]);
+  });
+
+  it('Duplicate gives the copy new ntrode ids and changes no other group\'s', () => {
+    const { result } = renderHook(() =>
+      useSeededHook({
+        electrode_groups: groups(0, 1, 2),
+        ntrode_electrode_group_channel_map: [tetrode(0, 1), tetrode(1, 2), tetrode(2, 3)],
+      })
+    );
+
+    act(() => {
+      result.current.duplicateElectrodeGroupItem(0, 'electrode_groups');
+    });
+    expect(result.current.formData.electrode_groups.map((g) => g.id)).toEqual([0, 3, 1, 2]);
+    expect(pairs(result)).toEqual([[1, 0], [2, 1], [3, 2], [4, 3]]);
+
+    selectDevice(result, 0, '32c-2s8mm6cm-20um-40um-dl');
+    expect(pairs(result)).toEqual([[1, 0], [5, 0], [2, 1], [3, 2], [4, 3]]);
+  });
+
+  it('Remove leaves the other groups\' ntrode ids, also at the next device type change', () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    const { result } = renderHook(() =>
+      useSeededHook({
+        electrode_groups: groups(0, 1, 2),
+        ntrode_electrode_group_channel_map: [tetrode(0, 1), tetrode(1, 2), tetrode(2, 3)],
+      })
+    );
+
+    act(() => {
+      result.current.removeElectrodeGroupItem(1, 'electrode_groups');
+    });
+    expect(pairs(result)).toEqual([[1, 0], [3, 2]]);
+
+    selectDevice(result, 1, 'tetrode_12.5');
+    expect(pairs(result)).toEqual([[1, 0], [3, 2]]);
   });
 });
