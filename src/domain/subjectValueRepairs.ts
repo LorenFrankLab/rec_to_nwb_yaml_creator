@@ -7,13 +7,18 @@
  * then inherits it and re-importing does not help. This pass gives each a fix where it lives:
  *
  *  - an unknown subject field, or a strain / age__reference of a type pynwb rejects, is on the
- *    animal's subject → a one-click `removeSubjectField` repair (animal surface).
+ *    animal's subject → a one-click `removeSubjectField` repair (animal surface);
+ *  - the age is per recording day (`day.session.age`, else the animal-level fallback) → the day's
+ *    own age field in the Daily log (day surface), for both the non-text and the non-ISO age.
  *
  * Pure.
  */
 
 import { NWB_SUBJECT_FIELDS } from '../validation/rules/subjectValueRules';
 import type { RepairableIssue } from './repairRouting';
+
+/** Where the Day Editor's per-day age input registers (its `data-field-path`). */
+export const DAY_AGE_FIELD_PATH = 'session.age';
 
 /** The subject fields the schema requires: never removable by the subject-field repair. */
 const REQUIRED_SUBJECT_FIELDS: ReadonlySet<string> = new Set([
@@ -39,6 +44,15 @@ export function isRemovableSubjectField(field: unknown): field is string {
  */
 export function withSubjectValueRepair(issue: RepairableIssue): RepairableIssue {
   const field = issue.field;
+  if (issue.code === 'subject_age_format' || (issue.code === 'subject_value_type' && field === 'age')) {
+    return {
+      ...issue,
+      repairSurface: 'day',
+      step: 'overview',
+      focusPath: DAY_AGE_FIELD_PATH,
+      actionLabel: "Edit this day's age",
+    };
+  }
   if (
     (issue.code === 'unknown_subject_field' || issue.code === 'subject_value_type') &&
     isRemovableSubjectField(field)

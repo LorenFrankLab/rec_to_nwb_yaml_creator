@@ -41,9 +41,9 @@ describe('domain validation module preserves the issue list', () => {
     const merged = mergeDayMetadata(animal, day);
 
     // The fixture's age "P164" (as in the realistic golden export) is not an ISO 8601 duration,
-    // which DANDI rejects: an advisory with no in-app editor, which never blocks.
+    // which DANDI rejects: an advisory, edited as this day's age, which never blocks.
     expect(validateDay(day, merged, animal)).toEqual([
-      expect.objectContaining({ code: 'subject_age_format', severity: 'warning', ownerSurface: 'none' }),
+      expect.objectContaining({ code: 'subject_age_format', severity: 'warning', ownerSurface: 'day' }),
     ]);
     expect(computeStepStatus(day, merged, animal)).toEqual({
       overview: 'valid',
@@ -163,10 +163,10 @@ describe('domain validation module preserves the issue list', () => {
       {
         // The fixture's non-ISO age (advisory; see the clean-day test above).
         code: 'subject_age_format',
-        ownerSurface: 'none',
-        step: undefined,
-        repairSurface: 'none',
-        repairStep: null,
+        ownerSurface: 'day',
+        step: 'overview',
+        repairSurface: 'day',
+        repairStep: 'overview',
       },
       {
         code: 'dangling_camera_ref',

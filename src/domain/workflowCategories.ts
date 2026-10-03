@@ -127,7 +127,6 @@ export const CATEGORY_BY_CODE: Readonly<Record<string, WorkflowCategory>> = Obje
   subject_date_of_birth_format: WORKFLOW_CATEGORY.ANIMAL_SETUP,
   unknown_subject_field: WORKFLOW_CATEGORY.ANIMAL_SETUP,
   subject_value_type: WORKFLOW_CATEGORY.ANIMAL_SETUP,
-  subject_age_format: WORKFLOW_CATEGORY.ANIMAL_SETUP,
   session_id_slash: WORKFLOW_CATEGORY.ANIMAL_SETUP,
 
   // This recording day's metadata (tasks, videos, files, behavioral events, camera refs).
@@ -185,6 +184,8 @@ export const CATEGORY_BY_CODE: Readonly<Record<string, WorkflowCategory>> = Obje
   voltage_units_review: WORKFLOW_CATEGORY.DAY_METADATA,
   copied_task_context_review: WORKFLOW_CATEGORY.DAY_METADATA,
   weight_from_baseline: WORKFLOW_CATEGORY.DAY_METADATA,
+  // The age is per recording day (edited in the Daily log), like the weight.
+  subject_age_format: WORKFLOW_CATEGORY.DAY_METADATA,
 });
 
 /**

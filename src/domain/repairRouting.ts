@@ -363,10 +363,10 @@ export const SURFACE_BY_CODE: Record<string, RepairSurface> = {
   session_id_slash: 'none',
   // Subject values pynwb rejects. The shared rule marks them 'none' (the legacy form has no editor);
   // the workspace composer re-routes them (domain/subjectValueRepairs): a stored unknown field,
-  // strain or age__reference is removed from the animal.
+  // strain or age__reference is removed from the animal, an age is edited on the recording day.
   unknown_subject_field: 'animal',
   subject_value_type: 'animal',
-  subject_age_format: 'none',
+  subject_age_format: 'day',
 };
 
 /**

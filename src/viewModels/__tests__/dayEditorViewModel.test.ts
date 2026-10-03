@@ -286,6 +286,28 @@ describe('buildDayEditorViewModel — overview field sources', () => {
     expect(f.value).toBe('');
   });
 
+  it("age: a day's own age reads \"day\"; a day saved without one shows the animal fallback it exports, with the age on its date as a suggestion", () => {
+    const { animal, day } = loadRealistic();
+    // The realistic day predates day-owned ages: it exports the animal-level "P164".
+    const inherited = fieldsByPath(animal, day)['session.age'];
+    expect(inherited.source).toBe('inherited');
+    expect(inherited.inheritedFrom).toBe('animal');
+    expect(inherited.value).toBe('P164');
+    // Born 2023-01-10, recorded 2023-06-22.
+    expect(inherited.fallbackValue).toBe('P163D');
+
+    const own = clone(day);
+    (own.session as Record<string, unknown>).age = 'P163D';
+    const set = fieldsByPath(animal, own)['session.age'];
+    expect(set.source).toBe('day');
+    expect(set.value).toBe('P163D');
+    expect(set.fallbackValue).toBeUndefined();
+
+    const none = clone(day);
+    (none.session as Record<string, unknown>).age = null;
+    expect(fieldsByPath(animal, none)['session.age']).toMatchObject({ source: 'day', value: '' });
+  });
+
   it('a field unset on both day and animal reads "default"', () => {
     const { animal, day } = loadRealistic();
     // Remove the animal baseline weight and the day weight → neither has it → default.

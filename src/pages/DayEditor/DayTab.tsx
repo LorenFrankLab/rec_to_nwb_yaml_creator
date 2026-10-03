@@ -12,14 +12,17 @@ import {
   getDaySession,
   getDayKeywords,
   getAnimalExperimenters,
+  getAnimalSubject,
 } from '../../state/workspaceSelectors';
 import { previousWeightSuggestion } from '../../domain/dayCarryPolicy';
+import { ageOnDate } from '../../domain/subjectAge';
+import { DAY_AGE_FIELD_PATH } from '../../domain/subjectValueRepairs';
 import { useDayEditorContext } from './DayEditorContext';
 import type { DayEditorBundle } from './DayEditorContext';
 import type { FieldValueViewModel } from '../../viewModels/types';
 import type { ExperimenterInfo } from '../../state/workspaceTypes';
 import { pluralize } from '../../utils/pluralize';
-import { DraftTextArea, DraftNumberInput } from '../../components/ui/DraftFields';
+import { DraftTextArea, DraftTextInput, DraftNumberInput } from '../../components/ui/DraftFields';
 
 interface DayTabProps extends DayEditorBundle {
   /** A repair request focusing a field in this section (or the embedded epoch editor). */
@@ -136,6 +139,15 @@ export default function DayTab(props: DayTabProps) {
     return overviewField('session.weight')?.helpText ?? 'No weight entered for this day — required for export.';
   })();
 
+  // The age this day exports (its own, else the animal-level fallback of a day saved before ages
+  // were day-owned), and the age on this date from the date of birth, offered when it differs.
+  const mergedAge = (mergedDay?.subject as { age?: unknown } | undefined)?.age;
+  const exportedAge = typeof mergedAge === 'string' ? mergedAge : '';
+  const computedAge = ageOnDate(getAnimalSubject(animal).date_of_birth, String(day.date ?? ''));
+  const ageHelp =
+    overviewField(DAY_AGE_FIELD_PATH)?.helpText ??
+    'Exported as the subject age for this day (an ISO 8601 duration, e.g. P90D).';
+
   return (
     <div className="overview-step">
       <MalformedCollectionNotice
@@ -188,6 +200,35 @@ export default function DayTab(props: DayTabProps) {
                   </div>
                   <span id="session-weight-help" className="field-help-text">
                     {weightHelp}
+                  </span>
+                </div>
+                <div className="form-field">
+                  <label htmlFor="session-age">Age on {day.date}</label>
+                  <div className="daily-log-weight-row">
+                    <DraftTextInput
+                      draftKey={draftKey(DAY_AGE_FIELD_PATH)}
+                      id="session-age"
+                      name={DAY_AGE_FIELD_PATH}
+                      data-field-path={DAY_AGE_FIELD_PATH}
+                      value={exportedAge}
+                      // A cleared age is `null`: this day exports none (never another day's).
+                      onCommit={(value) => onFieldUpdate(DAY_AGE_FIELD_PATH, value.trim() === '' ? null : value.trim())}
+                      aria-describedby="session-age-help"
+                      placeholder="e.g. P90D"
+                    />
+                    {computedAge && computedAge !== exportedAge && (
+                      <Button
+                        variant="secondary"
+                        size="small"
+                        onClick={() => onFieldUpdate(DAY_AGE_FIELD_PATH, computedAge)}
+                      >
+                        Use {computedAge}
+                      </Button>
+                    )}
+                  </div>
+                  <span id="session-age-help" className="field-help-text">
+                    {ageHelp}
+                    {computedAge && computedAge !== exportedAge ? ` From the date of birth: ${computedAge}.` : ''}
                   </span>
                 </div>
               </div>

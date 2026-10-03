@@ -33,8 +33,10 @@ import {
   getDayBadChannelOverrides,
   getDayDataAcqDeviceName,
   getDaySession,
+  getAnimalSubject,
 } from './workspaceSelectors';
 import { selectConfigurationForDate } from '../domain/configurationSelection';
+import { ageOnDate } from '../domain/subjectAge';
 import { stripTaskContext } from './taskCatalog';
 import {
   ensureAssociatedFileIdentity,
@@ -612,6 +614,9 @@ export interface CreateDayRecordOptions {
  *    keywords, technical, session.experiment_description, the chosen recording system
  *    (`data_acq_device_name`), the optogenetics snapshot;
  *  - animal default: experimenters, so a one-day exception does not carry forward;
+ *  - derived, never copied: `session.age` — the age on THIS date from the animal's date of birth,
+ *    or `null` (no age exported) without one; never the source day's or the animal-level age, which
+ *    belong to other recordings. A caller's explicit `session.age` (an import's file age) wins;
  *  - NOT copied: `session.weight` (a measurement — shown as a dated suggestion instead),
  *    `session_id` / `session_description` (date-derived, from the caller), associated_files,
  *    associated_video_files, fs_gui_yamls, cameras_used, and every review/export state flag;
@@ -742,6 +747,12 @@ export function createDayRecord(
     fields['session.experiment_description'] = 'animal-default';
   }
 
+  // --- Age on this recording date (see the function doc). ---
+  const age = session.age !== undefined
+    ? session.age
+    : ageOnDate(getAnimalSubject(animal).date_of_birth, date);
+  if (session.age === undefined) fields['session.age'] = 'derived';
+
   // --- Recording system: preserve the source day's rig choice (finding F7). ---
   const carriedRig = carryFrom ? getDayDataAcqDeviceName(carryFrom) : undefined;
   if (carriedRig) fields.data_acq_device_name = 'copied';
@@ -775,6 +786,7 @@ export function createDayRecord(
       experiment_description: experimentDescription,
       // A MEASUREMENT: only the caller's explicit value, never the source day's.
       ...(session.weight !== undefined ? { weight: session.weight } : {}),
+      age,
     },
     experimenters,
     optogenetics,

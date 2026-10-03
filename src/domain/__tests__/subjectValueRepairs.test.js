@@ -36,6 +36,19 @@ describe('subject values stored by an earlier import', () => {
     expect(issue.message).not.toMatch(/importing the file again/);
   });
 
+  it.each([
+    ['a non-ISO age (DANDI advisory)', 'P164', 'subject_age_format'],
+    ['a non-text age', 164, 'subject_value_type'],
+  ])("routes %s to this day's age in the Daily log", (_label, age, code) => {
+    const { animal, day } = buildRealisticWorkspace();
+    animal.subject = { ...animal.subject, age };
+    const issue = validateDay(day, mergeDayMetadata(animal, day), animal, [day]).find((i) => i.code === code);
+
+    expect(issue).toMatchObject({ ownerSurface: 'day', step: 'overview', focusPath: 'session.age' });
+    expect(issue.repairCommand).toBeUndefined();
+    expect(repairTargetForIssue(issue).label).toBe('Fix in Daily log');
+  });
+
   it('removing the field clears the export block on every day of the animal', () => {
     const { result } = renderHook(() => useStore());
     const { animal } = buildRealisticWorkspace();

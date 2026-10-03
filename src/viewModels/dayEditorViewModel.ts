@@ -73,6 +73,7 @@ import { validateRawDay, validateRawAnimal } from '../validation/rawShape';
 import type { Animal, Day } from '../state/workspaceTypes';
 import { isRecord } from '../utils/records';
 import { previousWeightSuggestion } from '../domain/dayCarryPolicy';
+import { ageOnDate } from '../domain/subjectAge';
 import { exportFreshnessStatus } from '../domain/exportReceipt';
 import { isBlockingIssue, blockingIssues } from '../validation/issueTypes';
 import type {
@@ -664,6 +665,30 @@ function buildOverviewFields(
           ? `No weight entered for this day — required for export. Previous: ${suggestionText}. ` +
             'Enter the measurement for this recording date (the previous value is a suggestion, not a measurement).'
           : 'No weight entered for this day — required for export. Enter the measurement for this recording date.',
+  });
+
+  // Age on this recording day — day-owned like the weight. A day saved before ages were day-owned
+  // has no `session.age` key and exports the animal-level fallback; `null` = no age exported. The
+  // age on this date computed from the date of birth is offered as a suggestion when it differs.
+  const dayAge = daySession.age;
+  const exportedAge = mergedSubject.age;
+  const computedAge = ageOnDate(subject.date_of_birth, String((day as { date?: unknown }).date ?? ''));
+  fields.push({
+    fieldPath: 'session.age',
+    label: 'Age on this recording day',
+    value: asDisplay(exportedAge),
+    ...(dayAge !== undefined
+      ? { source: 'day' as const }
+      : exportedAge !== undefined
+        ? { source: 'inherited' as const, inheritedFrom: 'animal' }
+        : { source: 'default' as const }),
+    ...(computedAge && computedAge !== exportedAge ? { fallbackValue: computedAge } : {}),
+    helpText:
+      dayAge !== undefined
+        ? 'Exported as the subject age for this day (an ISO 8601 duration, e.g. P90D).'
+        : exportedAge !== undefined
+          ? "From the animal profile, which may be another recording's age. Enter this day's age."
+          : 'No age for this day. Optional; an ISO 8601 duration such as P90D.',
   });
 
   // Read-only inherited subject identity facts (always animal-owned / inherited on this surface).
