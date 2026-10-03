@@ -151,6 +151,7 @@ export const CATEGORY_BY_CODE: Readonly<Record<string, WorkflowCategory>> = Obje
   divergent_task_identity: WORKFLOW_CATEGORY.DAY_METADATA,
   divergent_task_identity_across_days: WORKFLOW_CATEGORY.DAY_METADATA,
   missing_camera: WORKFLOW_CATEGORY.DAY_METADATA,
+  no_tasks: WORKFLOW_CATEGORY.DAY_METADATA,
 
   // Day-specific failed (bad) channels.
   bad_channel_out_of_range: WORKFLOW_CATEGORY.FAILED_CHANNELS,

@@ -23,6 +23,18 @@ import {
 } from '../io/yaml';
 import { emptyFormData, genderAcronym } from '../valueList';
 import { blockingIssues, isBlockingIssue } from '../validation/issueTypes';
+import { legacyFormRules } from '../validation/rules/legacyFormRules';
+
+/**
+ * The legacy form's validation: the shared schema + rules, plus the rules only this form needs
+ * (the workspace enforces those through its own day model; see legacyFormRules).
+ *
+ * @param {object} model - The form data (or a parsed file).
+ * @returns {Array<object>} Validation issues.
+ */
+function validateLegacyForm(model) {
+  return [...validate(model), ...legacyFormRules(model)];
+}
 
 /**
  * Extracts the top-level form field id from a normalized validation path.
@@ -233,7 +245,7 @@ export async function importFiles(file, options = {}) {
       // placeholder subject id, a non-absolute associated-file path) and the value must survive
       // the import so the user can see and fix it in the form. Excluding on a warning silently
       // discards a whole section of a scientifically valid file.
-      const issues = blockingIssues(validate(jsonFileContent));
+      const issues = blockingIssues(validateLegacyForm(jsonFileContent));
 
       if (issues.length === 0) {
         // No validation errors - ensure relevant keys exist and load all data
@@ -432,8 +444,8 @@ export function exportAll(model, options = {}) {
   // form's ticked channels before validating and encoding.
   const form = toFileBadChannels(structuredClone(model));
 
-  // Validate using unified validation API (schema + rules)
-  const issues = validate(form);
+  // Validate using unified validation API (schema + rules) plus the legacy-form rules
+  const issues = validateLegacyForm(form);
   const errors = blockingIssues(issues);
   const warnings = issues.filter((issue) => !isBlockingIssue(issue));
 

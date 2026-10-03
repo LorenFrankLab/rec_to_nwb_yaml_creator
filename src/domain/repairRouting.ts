@@ -331,6 +331,9 @@ export const SURFACE_BY_CODE: Record<string, RepairSurface> = {
   malformed_animal_collection: 'animal',
   missing_configuration_history: 'animal',
   missing_camera: 'day',
+  // The legacy form's "at least one task" rule (legacyFormRules). The workspace does not emit it
+  // (a day without tasks is incomplete there); listed so the code is owned like every other.
+  no_tasks: 'day',
   // Optogenetics sections live on the Animal Editor's Optogenetics step (the rule also
   // sets repairSurface:'animal' explicitly; this keeps the authoritative table in sync).
   partial_configuration: 'animal',

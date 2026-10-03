@@ -893,6 +893,21 @@ institution: Test University
       });
     });
 
+    // The legacy form adds its own rules to the shared validation (see legacyFormRules).
+    it('blocks a session with no tasks', () => {
+      validate.mockReturnValue([]);
+      const confirmSpy = vi.spyOn(window, 'confirm');
+
+      const result = exportAll({ ...mockModel, tasks: [] });
+
+      expect(result.success).toBe(false);
+      expect(result.validationIssues).toEqual([
+        expect.objectContaining({ path: 'tasks', code: 'no_tasks', severity: 'error' }),
+      ]);
+      expect(confirmSpy).not.toHaveBeenCalled();
+      expect(downloadYamlFile).not.toHaveBeenCalled();
+    });
+
     describe('Edge Cases', () => {
       it('handles null model gracefully', () => {
         // ARRANGE
