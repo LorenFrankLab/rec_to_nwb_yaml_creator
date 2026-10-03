@@ -68,7 +68,10 @@ export type CameraConflictResolution =
 
 /** A `camera_name` recorded with more than one calibration, plus the resolution in force. */
 export interface CameraCalibrationConflict {
-  /** Stable across re-plans: `${subjectId}:${camera_name}`. */
+  /**
+   * Stable across re-plans: `${subjectId}:${camera_name}` (`${subjectId} (replace):…` for the
+   * questions a replace answers, which leave the existing animal out).
+   */
   key: string;
   /** The reused `camera_name`. */
   cameraName: string;

@@ -155,3 +155,82 @@ describe('a different camera that reuses an existing camera id is imported as it
     ]);
   });
 });
+
+describe('Replace imports the files\' cameras, not conflicts with the animal it deletes (W4)', () => {
+  /**
+   * The overhead camera recorded with a WRONG calibration.
+   * @param {object} animal - The fixture animal (cameras rewritten).
+   */
+  const wrongOverheadCalibration = (animal) => {
+    animal.cameras = animal.cameras.map((c) =>
+      c.camera_name === 'overhead_camera' ? { ...c, meters_per_pixel: 0.5 } : c
+    );
+  };
+
+  /**
+   * `remy` imported with the wrong calibration, plus the corrected files (overhead_camera at
+   * 0.00085 m/px) the user re-imports to replace it.
+   *
+   * @returns {{ result: object, files: Array<{ sourceName: string, flatModel: object }> }}
+   */
+  function setup() {
+    const { result } = renderHook(() => useStore());
+    const first = planImport(
+      [makeFile({ date: '2023-06-22', mutate: wrongOverheadCalibration })],
+      result.current.model.workspace
+    );
+    act(() => {
+      applyImportPlan(first, result.current.actions, { workspace: result.current.model.workspace });
+    });
+    return { result, files: [makeFile({ date: '2023-06-22' }), makeFile({ date: '2023-06-23' })] };
+  }
+
+  /**
+   * Commit `plan` with Replace and return the 06-22 export.
+   *
+   * @param {object} result - The `renderHook(useStore)` result.
+   * @param {object} plan - The import plan.
+   * @returns {object} The merged 2023-06-22 metadata.
+   */
+  function replaceAndExport(result, plan) {
+    act(() => {
+      applyImportPlan(plan, result.current.actions, {
+        workspace: result.current.model.workspace,
+        resolutions: { remy: 'replace' },
+      });
+    });
+    return exportDay(result, '2023-06-22');
+  }
+
+  it('keeps the files\' camera_name with the default resolution (no split against the deleted animal)', () => {
+    const { result, files } = setup();
+    const plan = planImport(files, result.current.model.workspace);
+    // Adding would ask about the animal's 0.5 against the files' 0.00085; replacing has nothing to ask.
+    expect(plan.animals[0].cameraConflicts).toHaveLength(1);
+    expect(plan.animals[0].replaceCameraConflicts).toEqual([]);
+
+    const exported = replaceAndExport(result, plan);
+    expect(exported.cameras.find((c) => c.id === 0)).toMatchObject({
+      camera_name: 'overhead_camera',
+      meters_per_pixel: 0.00085,
+    });
+    expect(exportDay(result, '2023-06-23').cameras.find((c) => c.id === 0).camera_name).toBe('overhead_camera');
+    expect(result.current.model.workspace.animals.remy.cameras.map((c) => c.camera_name)).toEqual([
+      'overhead_camera',
+      'side_camera',
+    ]);
+  });
+
+  it('keeps the files\' 0.00085 m/px even after "use one calibration" was chosen for adding', () => {
+    const { result, files } = setup();
+    const [conflict] = planImport(files, result.current.model.workspace).animals[0].cameraConflicts;
+    // The only unify the add question offers is the existing animal's calibration (candidate 0).
+    expect(conflict.candidates[0]).toMatchObject({ fromExisting: true });
+    const plan = planImport(files, result.current.model.workspace, {
+      cameraConflictResolutions: { [conflict.key]: { kind: 'unify', candidateIndex: 0 } },
+    });
+
+    const exported = replaceAndExport(result, plan);
+    expect(exported.cameras.find((c) => c.id === 0).meters_per_pixel).toBe(0.00085);
+  });
+});

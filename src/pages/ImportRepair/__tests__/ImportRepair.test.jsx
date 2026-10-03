@@ -1140,6 +1140,37 @@ describe('ImportRepair — a recalibrated camera on an EXISTING animal (F1)', ()
     expect(captured.animals.remy.cameras.map((c) => c.camera_name)).toEqual(['arena_side']);
     expect(captured.days['remy-2023-06-22'].associated_video_files[0].camera_id).toBe(0);
   });
+
+  it('drops the question about the animal’s calibration once Replace is chosen (W4)', async () => {
+    const user = userEvent.setup();
+    renderScreen(existingRemyWithArenaSide());
+
+    await user.upload(
+      screen.getByLabelText(/choose a metadata yaml file/i),
+      makeFile('06222023_remy_metadata.yml', existingCatalogGapYaml())
+    );
+    await user.click(await screen.findByRole('button', { name: /add recording day/i }));
+    await screen.findByRole('group', { name: /arena_side.*2 calibrations/i });
+
+    expect(screen.getByText('Differences to review').parentElement).toHaveTextContent(
+      /already on this animal/i
+    );
+
+    // Replacing deletes the animal whose 0.002 the question compares against: nothing to ask, and
+    // nothing listed about it.
+    await user.click(screen.getByRole('radio', { name: /replace the existing animal/i }));
+    expect(screen.queryByRole('group', { name: /arena_side.*calibrations/i })).not.toBeInTheDocument();
+    expect(screen.queryByText(/already on this animal/i)).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /confirm import/i }));
+    await screen.findByRole('heading', { name: /import complete/i });
+    // The file's camera, under its own name and calibration — no dated split against the deleted
+    // animal, and nothing reported as split or not imported.
+    expect(captured.animals.remy.cameras.map((c) => [c.camera_name, c.meters_per_pixel])).toEqual([
+      ['arena_side', 0.001],
+    ]);
+    expect(screen.queryByRole('region', { name: /camera calibrations/i })).not.toBeInTheDocument();
+  });
 });
 
 describe('ImportRepair — a LATER calibration of a camera the animal already has (R3)', () => {

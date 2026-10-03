@@ -52,6 +52,12 @@ export interface Divergence {
   field: string;
   /** A human-readable description of the disagreement. */
   detail: string;
+  /**
+   * The resolution of an EXISTING animal the note is about, when it is about only one: `add`
+   * compares the files with the animal, `replace` describes the files alone where that differs
+   * (the animal is deleted). Absent ⇒ it holds either way.
+   */
+  scope?: 'add' | 'replace';
 }
 
 /** One resolved configuration version within a subject (a run of files with one electrode config). */
@@ -121,6 +127,8 @@ interface ResolvedAnimalFacts {
   cameras: any[];
   /** The same-name/different-calibration conflicts and how this plan resolved them. */
   cameraConflicts: CameraCalibrationConflict[];
+  /** The conflicts the `'replace'` catalog resolved (the files alone). */
+  replaceCameraConflicts: CameraCalibrationConflict[];
   divergences: Divergence[];
 }
 
@@ -330,9 +338,16 @@ export interface ImportPlanAnimal {
    * The `camera_name`s this batch records with MORE THAN ONE calibration, each with one candidate
    * per distinct calibration and the resolution this plan applied (`split` by default — a different
    * calibration is a different camera). The preview renders these; a caller changes one by
-   * re-planning with {@link PlanImportOptions.cameraConflictResolutions}.
+   * re-planning with {@link PlanImportOptions.cameraConflictResolutions}. For an existing animal
+   * these are the `'add'` questions: the animal's own rows take part.
    */
   cameraConflicts: CameraCalibrationConflict[];
+  /**
+   * The questions the `'replace'` result answers: the files' calibrations among themselves, since
+   * the animal being replaced is deleted (W4). Keyed apart from `cameraConflicts`, so each is
+   * answered for its own resolution. For a new animal, the same list as `cameraConflicts`.
+   */
+  replaceCameraConflicts: CameraCalibrationConflict[];
   configVersions: ConfigVersion[];
   days: ImportPlanDay[];
   divergences: Divergence[];
@@ -342,7 +357,8 @@ export interface ImportPlanAnimal {
 export interface PlanImportOptions {
   /**
    * How to resolve each camera calibration conflict, keyed by
-   * `ImportPlanAnimal.cameraConflicts[].key`. Absent (or an entry absent) ⇒ `{ kind: 'split' }`.
+   * `ImportPlanAnimal.cameraConflicts[].key` / `replaceCameraConflicts[].key`. Absent (or an entry
+   * absent) ⇒ `{ kind: 'split' }`.
    */
   cameraConflictResolutions?: Record<string, CameraConflictResolution>;
 }
@@ -614,7 +630,12 @@ function unionCameras(entries: FileEntry[], existing: unknown, divergences: Dive
 
 /** Push a divergence unless an identical one is already listed (the two camera spaces overlap). */
 function pushDivergence(divergences: Divergence[], divergence: Divergence): void {
-  if (!divergences.some((d) => d.field === divergence.field && d.detail === divergence.detail)) {
+  if (
+    !divergences.some(
+      (d) =>
+        d.field === divergence.field && d.detail === divergence.detail && d.scope === divergence.scope
+    )
+  ) {
     divergences.push(divergence);
   }
 }
@@ -624,9 +645,10 @@ function pushDivergence(divergences: Divergence[], divergence: Divergence): void
  * flag for every disagreement (never a silent pick). Resolution policy:
  *  - cameras: two allocations (see {@link unionCameras}) because the user picks Add or Replace
  *    AFTER planning and the answers differ: the `add` space allocates against the existing
- *    animal (an existing id IS that camera; brought rows get ids free in existing ∪ additions),
- *    the `replace` space treats the files as self-describing (the only space for a new animal).
- *    Each day carries both remaps; `materializePlanDay` applies the committed one.
+ *    animal (an existing id with the same name IS that camera; brought rows get ids free in
+ *    existing ∪ additions), the `replace` space treats the files as self-describing (the only space
+ *    for a new animal), calibration conflicts included. Each day carries both remaps;
+ *    `materializePlanDay` applies the committed one.
  *  - data_acq_device: UNION by `name`; divergent dependent fields → `data_acq_device` flag.
  *  - subject scalars: latest-date-wins; any difference → `subject` flag (lists the keys).
  *  - experimenters / optogenetics / device: latest-date-wins; differences → a flag.
@@ -648,41 +670,43 @@ function resolveAnimalFacts(
   // --- cameras: same name, different calibration = a DIFFERENT camera (finding F1). Resolve every
   // such conflict BEFORE unioning, so the union sees rows that already say what they are: split
   // rows carry their own dated name, unified rows carry the chosen calibration. ---
-  const cameraAnalysis = analyzeCameraCalibrations(
+  const addCalibrations = resolveCameraCalibrations(
+    entries,
     subjectId,
-    entries.map((entry) => ({
-      sourceName: entry.sourceName,
-      date: entry.date,
-      cameras: getAnimalCameras(entry.animalFacts) as unknown as Array<Record<string, unknown>>,
-    })),
     existing,
     cameraConflictResolutions
   );
-  const { conflicts: cameraConflicts } = cameraAnalysis;
-  const rewriting = cameraConflicts.length > 0 || cameraAnalysis.reroutes.size > 0;
-  const resolvedEntries: FileEntry[] = !rewriting
-    ? entries
-    : entries.map((entry) => {
-        const { cameras, reidentifiedCameraIds, originalNames } = applyCameraConflictResolutions(
-          getAnimalCameras(entry.animalFacts) as unknown as Array<Record<string, unknown>>,
-          cameraAnalysis
-        );
-        return {
-          ...entry,
-          animalFacts: { ...entry.animalFacts, cameras },
-          cameraRewrite: { reidentifiedIds: reidentifiedCameraIds, originalNames },
-        };
-      });
-  for (const conflict of cameraConflicts) {
-    pushDivergence(divergences, { field: 'cameras', detail: describeCameraConflict(conflict) });
+  for (const conflict of addCalibrations.conflicts) {
+    pushDivergence(divergences, {
+      field: 'cameras',
+      detail: describeCameraConflict(conflict),
+      ...(existing ? { scope: 'add' as const } : {}),
+    });
   }
 
-  const latest = resolvedEntries[resolvedEntries.length - 1].animalFacts;
-  const addSpace = unionCameras(resolvedEntries, existing, divergences);
+  const latest = entries[entries.length - 1].animalFacts;
+  const addSpace = unionCameras(addCalibrations.entries, existing, divergences);
   // For 'replace' the existing animal is discarded, so the files are self-describing: identity
-  // is by name across files, ids are allocated among the files alone. For a new animal that is
-  // the only space there is.
-  const replaceSpace = existing ? unionCameras(resolvedEntries, null, divergences) : addSpace;
+  // is by name across files, ids are allocated among the files alone, and so are the calibration
+  // conflicts (W4) — the animal being deleted is no candidate, so it can neither rename the files'
+  // cameras nor lend them its calibration. Its questions are keyed apart from the add space's, so an
+  // answer given for adding never answers one for replacing. For a new animal that is the only
+  // space there is.
+  const replaceCalibrations = existing
+    ? resolveCameraCalibrations(entries, `${subjectId} (replace)`, null, cameraConflictResolutions)
+    : addCalibrations;
+  if (existing) {
+    for (const conflict of replaceCalibrations.conflicts) {
+      pushDivergence(divergences, {
+        field: 'cameras',
+        detail: describeCameraConflict(conflict),
+        scope: 'replace',
+      });
+    }
+  }
+  const replaceSpace = existing
+    ? unionCameras(replaceCalibrations.entries, null, divergences)
+    : addSpace;
 
   // --- data_acq_device: union by NAME across the files, first-seen fields win, every file-vs-file
   // disagreement flagged. A row whose name the existing animal already has is that system under
@@ -765,8 +789,54 @@ function resolveAnimalFacts(
     cameras: replaceSpace.imported,
     cameraIdRemaps: { add: addSpace.remaps, replace: replaceSpace.remaps },
     catalogAdditions: { cameras: addSpace.added, data_acq_device: addedDevices },
-    cameraConflicts,
+    cameraConflicts: addCalibrations.conflicts,
+    replaceCameraConflicts: replaceCalibrations.conflicts,
     divergences,
+  };
+}
+
+/**
+ * Analyze one subject's camera calibrations (see {@link analyzeCameraCalibrations}) and apply the
+ * resolutions to its files' camera rows.
+ *
+ * @param entries - Date-sorted file entries.
+ * @param conflictNamespace - Prefix of the conflict keys (the subject id, or a per-space variant).
+ * @param existing - The animal whose catalog takes part in the analysis, or null for the files alone.
+ * @param cameraConflictResolutions - Caller-chosen camera-conflict resolutions, keyed by conflict key.
+ * @returns The entries with their camera rows rewritten, plus the conflicts found.
+ */
+function resolveCameraCalibrations(
+  entries: FileEntry[],
+  conflictNamespace: string,
+  existing: unknown,
+  cameraConflictResolutions: Record<string, CameraConflictResolution>
+): { entries: FileEntry[]; conflicts: CameraCalibrationConflict[] } {
+  const analysis = analyzeCameraCalibrations(
+    conflictNamespace,
+    entries.map((entry) => ({
+      sourceName: entry.sourceName,
+      date: entry.date,
+      cameras: getAnimalCameras(entry.animalFacts) as unknown as Array<Record<string, unknown>>,
+    })),
+    existing,
+    cameraConflictResolutions
+  );
+  if (analysis.conflicts.length === 0 && analysis.reroutes.size === 0) {
+    return { entries, conflicts: analysis.conflicts };
+  }
+  return {
+    conflicts: analysis.conflicts,
+    entries: entries.map((entry) => {
+      const { cameras, reidentifiedCameraIds, originalNames } = applyCameraConflictResolutions(
+        getAnimalCameras(entry.animalFacts) as unknown as Array<Record<string, unknown>>,
+        analysis
+      );
+      return {
+        ...entry,
+        animalFacts: { ...entry.animalFacts, cameras },
+        cameraRewrite: { reidentifiedIds: reidentifiedCameraIds, originalNames },
+      };
+    }),
   };
 }
 
@@ -1015,6 +1085,7 @@ export function planImport(
       cameras: facts.cameras,
       catalogAdditions: facts.catalogAdditions,
       cameraConflicts: facts.cameraConflicts,
+      replaceCameraConflicts: facts.replaceCameraConflicts,
       configVersions,
       days,
       // A task name described two ways is refused by Spyglass; list it with the other differences.

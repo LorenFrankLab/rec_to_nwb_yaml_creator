@@ -164,20 +164,41 @@ function plannedCatalogAdditions(plan: ImportPlan): NonNullable<ApplyImportOptio
 }
 
 /**
+ * The camera calibration questions an animal's chosen resolution answers. Replacing deletes the
+ * existing animal, so its questions are the files' own (W4); otherwise the animal's rows take part.
+ *
+ * @param animal - The planned animal.
+ * @param resolution - The chosen resolution (absent ⇒ the default, add).
+ * @returns The conflicts to show and report.
+ */
+function cameraConflictsFor(
+  animal: ImportPlanAnimal,
+  resolution: ConflictResolution | undefined
+): CameraCalibrationConflict[] {
+  return resolution === 'replace' ? animal.replaceCameraConflicts : animal.cameraConflicts;
+}
+
+/**
  * The camera calibration conflicts of the animals this import actually WROTE — what the result
  * screen reports (the cameras a split created, and the values a unify did not import).
  *
  * @param plan - The plan that was applied.
  * @param wasWritten - Whether an animal's days were written.
+ * @param resolutionOf - The resolution each animal was written with.
  * @returns One entry per animal that had a conflict.
  */
 function writtenCameraConflicts(
   plan: ImportPlan,
-  wasWritten: (animal: ImportPlanAnimal) => boolean
+  wasWritten: (animal: ImportPlanAnimal) => boolean,
+  resolutionOf: (animal: ImportPlanAnimal) => ConflictResolution | undefined
 ): ImportResult['cameraConflicts'] {
   return plan.animals
-    .filter((animal) => animal.cameraConflicts.length > 0 && wasWritten(animal))
-    .map((animal) => ({ subjectId: animal.subjectId, conflicts: animal.cameraConflicts }));
+    .filter(wasWritten)
+    .map((animal) => ({
+      subjectId: animal.subjectId,
+      conflicts: cameraConflictsFor(animal, resolutionOf(animal)),
+    }))
+    .filter((entry) => entry.conflicts.length > 0);
 }
 
 /** Suggestions in a file the user has neither accepted nor overridden. */
@@ -440,10 +461,14 @@ export default function ImportRepair() {
       mode: 'batch',
       animalIds,
       excluded: preview.excluded,
-      cameraConflicts: writtenCameraConflicts(preview.plan, (animal) => {
-        const resolution = conflictResolutions[animal.subjectId];
-        return resolution !== 'skip' && !failedIds.has(animal.subjectId);
-      }),
+      cameraConflicts: writtenCameraConflicts(
+        preview.plan,
+        (animal) => {
+          const resolution = conflictResolutions[animal.subjectId];
+          return resolution !== 'skip' && !failedIds.has(animal.subjectId);
+        },
+        (animal) => conflictResolutions[animal.subjectId]
+      ),
       summary,
     });
     setPhase('result');
@@ -959,6 +984,11 @@ function AnimalPreviewCard({
   onResolution,
   onCameraConflictResolution,
 }: AnimalPreviewCardProps) {
+  // A note about only one resolution (see `Divergence.scope`) is shown only while it is chosen.
+  const shownScope = resolution === 'replace' ? 'replace' : 'add';
+  const divergences = animal.divergences.filter(
+    (divergence) => divergence.scope === undefined || divergence.scope === shownScope
+  );
   return (
     <section className={styles.animalCard} aria-labelledby={`preview-animal-${animal.subjectId}`}>
       <h2 id={`preview-animal-${animal.subjectId}`}>{animal.subjectId}</h2>
@@ -978,17 +1008,17 @@ function AnimalPreviewCard({
           ))}
         </ul>
       )}
-      {animal.divergences.length > 0 && (
+      {divergences.length > 0 && (
         <div className={styles.divergences} role="status">
           <strong>Differences to review</strong>
           <ul>
-            {animal.divergences.map((divergence, index) => (
+            {divergences.map((divergence, index) => (
               <li key={`${divergence.field}-${index}`}>{divergence.detail}</li>
             ))}
           </ul>
         </div>
       )}
-      {animal.cameraConflicts.map((conflict) => (
+      {cameraConflictsFor(animal, resolution).map((conflict) => (
         <CameraConflictFieldset
           key={conflict.key}
           conflict={conflict}

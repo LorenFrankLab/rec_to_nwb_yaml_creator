@@ -1004,6 +1004,77 @@ describe('planImport — camera calibration conflicts (F1)', () => {
     expect(remy.cameraConflicts).toEqual([]);
     expect(remy.cameras.map((c) => c.camera_name)).toEqual(['overhead_camera', 'side_camera']);
   });
+
+  describe('Replace resolves the files among themselves — the animal it deletes is no candidate (W4)', () => {
+    it('for a new animal, the replace conflicts are the conflicts', () => {
+      const remy = planImport(twoCalibrationFiles(), createDefaultWorkspace()).animals[0];
+      expect(remy.replaceCameraConflicts).toBe(remy.cameraConflicts);
+    });
+
+    it('re-importing files that agree with each other imports their calibration under its own name', () => {
+      const plan = planImport(
+        [
+          makeFile({ subjectId: 'remy', date: '2023-06-22', mutateConfig: withOverheadCalibration(0.002) }),
+          makeFile({ subjectId: 'remy', date: '2023-06-23', mutateConfig: withOverheadCalibration(0.002) }),
+        ],
+        existingRemyAt(0.001)
+      );
+      const remy = plan.animals.find((a) => a.subjectId === 'remy');
+      // Adding still asks about the animal's 0.001; replacing has nothing to ask.
+      expect(remy.cameraConflicts.map((c) => c.candidates.map((x) => x.fields.meters_per_pixel))).toEqual([
+        [0.001, 0.002],
+      ]);
+      expect(remy.replaceCameraConflicts).toEqual([]);
+      expect(remy.cameras.map((c) => [c.id, c.camera_name, c.meters_per_pixel])).toEqual([
+        [0, 'overhead_camera', 0.002],
+        [1, 'side_camera', 0.0009],
+      ]);
+      for (const day of remy.days) {
+        expect(materializePlanDay(day, 'replace').cameras_used).toEqual([0, 1]);
+      }
+      // …while adding keeps the animal's row and brings the files' calibration as its own camera.
+      expect(remy.catalogAdditions.cameras.map((c) => c.camera_name)).toEqual(['overhead_camera_20230622']);
+      // The preview lists that add question only while Add is chosen.
+      const calibrationNotes = remy.divergences.filter((d) => /2 calibrations/.test(d.detail));
+      expect(calibrationNotes.map((d) => d.scope)).toEqual(['add']);
+    });
+
+    it('asks a separate replace question whose single calibration may be any file\'s', () => {
+      const ws = existingRemyAt(0.001);
+      const files = [
+        makeFile({ subjectId: 'remy', date: '2023-06-22', mutateConfig: withOverheadCalibration(0.002) }),
+        makeFile({ subjectId: 'remy', date: '2023-06-23', mutateConfig: withOverheadCalibration(0.003) }),
+      ];
+      const [addConflict] = planImport(files, ws).animals[0].cameraConflicts;
+      const [replaceConflict] = planImport(files, ws).animals[0].replaceCameraConflicts;
+      expect(addConflict.candidates.map((c) => c.fromExisting)).toEqual([true, false, false]);
+      expect(replaceConflict.candidates.map((c) => [c.fields.meters_per_pixel, c.fromExisting])).toEqual([
+        [0.002, false],
+        [0.003, false],
+      ]);
+      expect(replaceConflict.key).not.toBe(addConflict.key);
+      const notes = planImport(files, ws).animals[0].divergences.filter((d) => /calibrations/.test(d.detail));
+      expect(notes.map((d) => [d.scope, /already on this animal/.test(d.detail)])).toEqual([
+        ['add', true],
+        ['replace', false],
+      ]);
+
+      // Unify onto the LATER file's calibration: honored for replace (no existing row to protect),
+      // while the add question keeps its own default.
+      const remy = planImport(files, ws, {
+        cameraConflictResolutions: { [replaceConflict.key]: { kind: 'unify', candidateIndex: 1 } },
+      }).animals[0];
+      expect(remy.replaceCameraConflicts[0].resolution).toEqual({ kind: 'unify', candidateIndex: 1 });
+      expect(remy.cameraConflicts[0].resolution).toEqual({ kind: 'split' });
+      expect(remy.cameras.map((c) => [c.camera_name, c.meters_per_pixel])).toEqual([
+        ['overhead_camera', 0.003],
+        ['side_camera', 0.0009],
+      ]);
+      for (const day of remy.days) {
+        expect(materializePlanDay(day, 'replace').cameras_used).toEqual([0, 1]);
+      }
+    });
+  });
 });
 
 describe('planImport — an import never rewrites an existing animal\'s camera', () => {
