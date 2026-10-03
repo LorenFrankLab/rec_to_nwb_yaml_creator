@@ -21,6 +21,7 @@
  * 11. Optical fibers, virus injections and the excitation source have distinct names
  * 12. There is at least one task
  * 13. Subject values pynwb rejects (date_of_birth, unknown fields, types); a non-ISO age warns
+ * 14. An empty video list warns
  *
  * Rules 7-10 are the trodes_to_nwb crash guards of the modern branch's rule set, with the same
  * codes and messages.
@@ -635,6 +636,20 @@ export const rulesValidation = (model) => {
           `rejects it. ${likely ? `Did you mean "${likely}"?` : 'Use e.g. "P90D" (90 days) or "P12W" (12 weeks); a range such as "P90D/P120D" is allowed.'}`,
       });
     }
+  }
+
+  // Rule 14: an empty video list. The current trodes_to_nwb release always adds the video
+  // files and fails (UnboundLocalError) when the list is empty, even for a session recorded
+  // without video. Advisory: that is a converter bug, and the session may truly have no video.
+  if (Array.isArray(model.associated_video_files) && model.associated_video_files.length === 0) {
+    issues.push({
+      path: 'associated_video_files',
+      code: 'no_associated_videos',
+      severity: 'warning',
+      message:
+        'No video files are listed. The current trodes_to_nwb release stops with an error ' +
+        'when the video list is empty, even for a session recorded without video.',
+    });
   }
 
   return issues;

@@ -1195,3 +1195,26 @@ describe('rulesValidation() - subject values', () => {
     });
   });
 });
+
+// The current trodes_to_nwb release always adds the video files and fails (UnboundLocalError) on
+// an empty list, even for a session without video. A converter bug, so a warning.
+describe('rulesValidation() - empty video list', () => {
+  it('warns when no video files are listed', () => {
+    expect(rulesValidation({ associated_video_files: [] })).toEqual([
+      expect.objectContaining({
+        path: 'associated_video_files',
+        code: 'no_associated_videos',
+        severity: 'warning',
+      }),
+    ]);
+  });
+
+  it('does not warn when a video is listed, or when the list is not there to check', () => {
+    expect(rulesValidation({
+      cameras: [{ id: 0 }],
+      tasks: [{ task_name: 'Sleep', camera_id: [0], task_epochs: [1] }],
+      associated_video_files: [{ name: 'a.h264', camera_id: 0, task_epochs: 1 }],
+    })).toEqual([]);
+    expect(rulesValidation({})).toEqual([]);
+  });
+});

@@ -78,6 +78,10 @@ describe('End-to-End Session Creation Workflow', () => {
 
     // Mock window.alert
     global.window.alert = vi.fn();
+
+    // The sessions built here list no video files, which the download warns about (trodes_to_nwb
+    // fails on an empty video list); accept that warning so the file downloads.
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
   });
 
   afterEach(() => {
@@ -234,6 +238,9 @@ describe('End-to-End Session Creation Workflow', () => {
     await waitFor(() => {
       expect(mockBlob).not.toBeNull();
     });
+    // ...after one confirm that listed the warnings (no video files here)
+    expect(window.confirm).toHaveBeenCalledTimes(1);
+    expect(window.confirm).toHaveBeenCalledWith(expect.stringContaining('No video files are listed'));
 
     // Parse exported YAML
     const exportedYaml = mockBlob.content[0];

@@ -51,6 +51,10 @@ describe('Import/Export Workflow Integration', () => {
 
     // Mock window.alert
     global.window.alert = vi.fn();
+
+    // The minimal session lists no video files, which the download warns about (trodes_to_nwb
+    // fails on an empty video list); accept that warning so the file downloads.
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
   });
 
   afterEach(() => {
@@ -293,6 +297,32 @@ describe('Import/Export Workflow Integration', () => {
       expect(mockBlob.content).toHaveLength(1);
       expect(typeof mockBlob.content[0]).toBe('string');
       expect(mockBlob.content[0]).toContain('lab: Test Lab');
+    });
+
+    // A warning (here: no video files) asks once; Cancel keeps the form and downloads nothing.
+    it('downloads nothing when the warning is cancelled', { timeout: 30000 }, async () => {
+      const user = userEvent.setup();
+      render(
+        <StoreProvider>
+          <App />
+        </StoreProvider>
+      );
+      await user.upload(
+        getFileInput(),
+        new File([getMinimalCompleteYaml()], 'test.yml', { type: 'text/yaml' })
+      );
+      await waitFor(() => {
+        expect(screen.getByLabelText(/^lab$/i)).toHaveValue('Test Lab');
+      });
+      window.confirm.mockReturnValue(false);
+
+      await triggerExport();
+
+      await waitFor(() => {
+        expect(window.confirm).toHaveBeenCalledWith(expect.stringContaining('No video files are listed'));
+      });
+      expect(window.confirm).toHaveBeenCalledTimes(1);
+      expect(mockBlob).toBeNull();
     });
   });
 
