@@ -976,6 +976,8 @@ describe('rulesValidation() - converter guards', () => {
         code: 'duplicate_ntrode_id',
         severity: 'error',
       })]);
+      // The form shows ntrode ids read-only, so the message says how to get new ones there.
+      expect(issues[0].message).toContain('choose another device type');
     });
 
     it('errors when a channel-map row names no electrode group', () => {
@@ -1120,6 +1122,9 @@ describe('rulesValidation() - subject values', () => {
           message: expect.stringContaining('"2023-01-10T00:00:00"'),
         }),
       ]);
+      // The form's date field has no time: choosing the date again stores it with one.
+      expect(validate(model).find((i) => i.path === 'subject.date_of_birth').message)
+        .toContain('choose the date of birth again');
     });
 
     it.each([
@@ -1173,6 +1178,14 @@ describe('rulesValidation() - subject values', () => {
       ]);
       expect(rulesValidation(subject({ age: '12 weeks' }))[0].message).toContain('"P12W"');
       expect(rulesValidation(subject({ age: 'adult' }))[0].message).toContain('"P90D"');
+    });
+
+    // The form has no age field: the age only arrives in an imported file, so that is where the
+    // user must correct it.
+    it('says the age comes from the imported file and must be corrected there', () => {
+      const [issue] = rulesValidation(subject({ age: 'P164' }));
+      expect(issue.message).toContain('imported file');
+      expect(issue.message).toContain('the form has no age field');
     });
 
     it('does not warn on an empty age', () => {

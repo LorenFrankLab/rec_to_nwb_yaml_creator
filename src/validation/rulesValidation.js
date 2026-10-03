@@ -474,7 +474,10 @@ export const rulesValidation = (model) => {
         severity: 'error',
         message:
           `Duplicate ntrode id "${id}". Each ntrode must have a unique id — ` +
-          `duplicates misroute bad-channel marks and collapse ntrodes downstream.`,
+          `duplicates misroute bad-channel marks and collapse ntrodes downstream. Ntrode ids ` +
+          `cannot be typed in the form: choose another device type for the electrode group of ` +
+          `one of them, then its own type again, to give that group new ntrode ids (this resets ` +
+          `its channel map and bad channels).`,
       });
     }
   );
@@ -581,7 +584,8 @@ export const rulesValidation = (model) => {
         message:
           `Date of birth "${dateOfBirth}" must be a real date with a time to the second, ` +
           `such as "${suggestion}". trodes_to_nwb cannot read this one as a date and time, ` +
-          `so it fails to create the NWB subject.`,
+          `so it fails to create the NWB subject. In the form, choose the date of birth again: ` +
+          `it is stored with a time.`,
       });
     }
 
@@ -637,7 +641,8 @@ export const rulesValidation = (model) => {
     }
 
     // A non-empty age must be an ISO 8601 duration, or DANDI's NWB Inspector rejects the file
-    // (check_subject_age). Advisory: the conversion itself succeeds.
+    // (check_subject_age). Advisory: the conversion itself succeeds. The form has no age field,
+    // so the age comes from an imported file, and the message says to correct it there.
     if (typeof subject.age === 'string' && subject.age.trim() !== '' && !isIsoAge(subject.age)) {
       const likely = likelyIsoAge(subject.age);
       issues.push({
@@ -646,7 +651,9 @@ export const rulesValidation = (model) => {
         severity: 'warning',
         message:
           `Subject age "${subject.age}" is not an ISO 8601 duration, so DANDI's NWB Inspector ` +
-          `rejects it. ${likely ? `Did you mean "${likely}"?` : 'Use e.g. "P90D" (90 days) or "P12W" (12 weeks); a range such as "P90D/P120D" is allowed.'}`,
+          `rejects it. ${likely ? `Did you mean "${likely}"?` : 'Use e.g. "P90D" (90 days) or "P12W" (12 weeks); a range such as "P90D/P120D" is allowed.'} ` +
+          'The age comes from the imported file and the form has no age field: correct it in ' +
+          'the file and import it again.',
       });
     }
   }
