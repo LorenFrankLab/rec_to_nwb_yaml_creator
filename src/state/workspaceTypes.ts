@@ -194,7 +194,10 @@ export interface SubjectMetadata {
    * export never substitutes this baseline for a measurement).
    */
   weight?: number;
-  /** Age string (optional, computed from DOB). */
+  /**
+   * Age string (optional). A per-recording value: an imported day exports its own file's age
+   * (`SessionMetadata.age`); this animal-level value is only the fallback for a day without one.
+   */
   age?: string;
 }
 
@@ -514,6 +517,12 @@ export interface SessionMetadata {
   experiment_description?: string;
   /** The weight measured on this recording day (grams). Required for export; never inferred. */
   weight?: number;
+  /**
+   * The subject's age on this recording day as its file recorded it (`subject.age`, e.g. `P163D`),
+   * or `null` when that file stated none. Written by import; exported instead of the animal-level
+   * `subject.age`, which only a day without this key (one created in the app) falls back to.
+   */
+  age?: string | null;
 }
 
 /** Where a copied / derived day fact came from. */

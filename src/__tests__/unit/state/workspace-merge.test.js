@@ -367,6 +367,22 @@ describe('mergeDayMetadata', () => {
       expect(merged.subject.weight).toBe(490);
     });
 
+    it('exports the age the day recorded, none when it recorded none, else the animal\'s', () => {
+      const animal = createTestAnimal({ subject: { age: 'P164D' } });
+      const session = { session_id: 'remy_20230622', session_description: 'Test', weight: 490 };
+      const ageOf = (dayAge) =>
+        mergeDayMetadata(animal, createTestDay({ session: { ...session, ...dayAge } })).subject;
+
+      // An imported day owns the age its file recorded (age is a per-recording value).
+      expect(ageOf({ age: 'P193D' }).age).toBe('P193D');
+      // Its file stated none: no age, never the animal's.
+      expect(ageOf({ age: null })).not.toHaveProperty('age');
+      // A day that never recorded one (created in the app) keeps the animal-level fallback.
+      expect(ageOf({}).age).toBe('P164D');
+      // The day's age takes the animal's key position, so the subject's key order is unchanged.
+      expect(Object.keys(ageOf({ age: 'P193D' }))).toEqual(Object.keys(ageOf({})));
+    });
+
     it('uses day experiment_description if specified (override)', () => {
       const animal = createTestAnimal();
       const day = createTestDay({

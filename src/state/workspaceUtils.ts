@@ -411,11 +411,13 @@ export function mergeDayMetadata(animal: Animal, day: Day): Record<string, unkno
     // The exported weight is the day's measurement only. The animal `subject.weight` is a baseline
     // shown as a dated suggestion in the editor and is never substituted for a measurement: a day
     // with no weight has no `weight` key, which the schema rejects (export blocked) — never a
-    // silently invented number.
+    // silently invented number. The AGE is per-recording too: the day's own when it has one (`null`
+    // = its file stated none, so no age is exported); the animal-level age only for a day without.
     subject: reorderKeys(
       {
         ...subject,
         ...(session.weight !== undefined ? { weight: session.weight } : {}),
+        ...(session.age !== undefined ? { age: session.age } : {}),
       },
       SUBJECT_ORDER
     ),
@@ -503,6 +505,9 @@ export function mergeDayMetadata(animal: Animal, day: Day): Record<string, unkno
   // The animal baseline weight never reaches the export (see the subject block above).
   if (session.weight === undefined && isPlainRecord(merged.subject)) {
     delete (merged.subject as Record<string, unknown>).weight;
+  }
+  if (session.age === null && isPlainRecord(merged.subject)) {
+    delete (merged.subject as Record<string, unknown>).age;
   }
 
   return structuredClone(merged);

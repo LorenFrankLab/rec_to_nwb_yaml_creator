@@ -102,6 +102,13 @@ describe('adding to an existing animal lists the subject facts its file disagree
     expect(plan.animals[0].divergences.filter((d) => d.field === 'subject')).toEqual([]);
   });
 
+  it('does not list an age that differs: age belongs to each recording, not to the animal', () => {
+    const { result } = renderHook(() => useStore());
+    commit(result, [makeFile('2023-06-22', { age: 'P163D' })]);
+    const plan = commit(result, [makeFile('2023-07-22', { age: 'P193D' })]);
+    expect(plan.animals[0].divergences.filter((d) => d.field === 'subject')).toEqual([]);
+  });
+
   it('does not list a fact the animal has not recorded yet', () => {
     // A draft animal without a date of birth disagrees with nothing; the export gate asks for it.
     const { result } = renderHook(() => useStore());
@@ -112,5 +119,48 @@ describe('adding to an existing animal lists the subject facts its file disagree
 
     const plan = planImport([makeFile('2023-06-23', { date_of_birth: '2023-02-14T00:00:00' })], draft);
     expect(plan.animals[0].divergences.filter((d) => d.field === 'subject')).toEqual([]);
+  });
+});
+
+describe('each imported day exports the age its own file recorded (W7)', () => {
+  // The fixture's date of birth is 2023-01-10: P163D on 2023-06-22, P193D on 2023-07-22.
+
+  it('batch: 2023-06-22 exports P163D, not the later file\'s P193D', () => {
+    const { result } = renderHook(() => useStore());
+    commit(result, [makeFile('2023-06-22', { age: 'P163D' }), makeFile('2023-07-22', { age: 'P193D' })]);
+    expect(exportDay(result, '2023-06-22').subject.age).toBe('P163D');
+    expect(exportDay(result, '2023-07-22').subject.age).toBe('P193D');
+  });
+
+  it('add: a 2023-07-22 day exports P193D, not the existing animal\'s P163D', () => {
+    const { result } = renderHook(() => useStore());
+    commit(result, [makeFile('2023-06-22', { age: 'P163D' })]);
+    commit(result, [makeFile('2023-07-22', { age: 'P193D' })]);
+    expect(exportDay(result, '2023-07-22').subject.age).toBe('P193D');
+    expect(exportDay(result, '2023-06-22').subject.age).toBe('P163D');
+  });
+
+  it('a file that records no age exports none, whatever another file recorded', () => {
+    const { result } = renderHook(() => useStore());
+    const ageless = makeFile('2023-06-22');
+    delete ageless.flatModel.subject.age;
+    commit(result, [ageless, makeFile('2023-07-22', { age: 'P193D' })]);
+    expect(exportDay(result, '2023-06-22').subject).not.toHaveProperty('age');
+    expect(exportDay(result, '2023-07-22').subject.age).toBe('P193D');
+
+    const later = makeFile('2023-08-21');
+    delete later.flatModel.subject.age;
+    commit(result, [later]);
+    expect(exportDay(result, '2023-08-21').subject).not.toHaveProperty('age');
+  });
+
+  it('re-exports each day\'s subject in the file\'s own key order', () => {
+    const { result } = renderHook(() => useStore());
+    const files = [makeFile('2023-06-22', { age: 'P163D' }), makeFile('2023-07-22', { age: 'P193D' })];
+    commit(result, files);
+    for (const file of files) {
+      const date = `2023-${file.sourceName.slice(0, 2)}-${file.sourceName.slice(2, 4)}`;
+      expect(encodeYaml(exportDay(result, date))).toBe(encodeYaml(file.flatModel));
+    }
   });
 });

@@ -136,7 +136,7 @@ function decomposeOptogenetics(flatModel: ValidationModel): Record<string, any> 
  * Attribution (mirrors the merge's read sources — see the merge JSDoc):
  * - animalFacts ← experimenters / subject (incl. weight, which the day overrides) /
  *   data_acq_device catalog / cameras / device / optogenetics (null when absent).
- * - dayFacts ← session (description, id, experiment_description, weight) / keywords /
+ * - dayFacts ← session (description, id, experiment_description, weight, age) / keywords /
  *   tasks / associated_files / associated_video_files / behavioral_events / technical
  *   params / fs_gui_yamls (DAY-owned) / data_acq_device_name / cameras_used /
  *   deviceOverrides.bad_channels (DAY-owned — extracted from the ntrode rows).
@@ -220,6 +220,9 @@ export function decomposeYaml(flatModel: ValidationModel): DecomposeResult {
       experiment_description: model.experiment_description,
       // weight is a day override of the subject weight (landmine 4).
       weight: model.subject?.weight,
+      // age is the subject's age at THIS recording — day-owned like the weight; `null` records
+      // that the file stated none, so no other file's age is exported for this day.
+      age: model.subject?.age ?? null,
     },
     // keywords is OMITTED-when-empty by the merge; recompose with `?? []` so the
     // merge re-omits when it was absent (landmine 8).
@@ -275,7 +278,8 @@ export function decomposeYaml(flatModel: ValidationModel): DecomposeResult {
  *  1. `animal.optogenetics` is the `null`-or-populated value from decompose (never `{}`).
  *  2. `fs_gui_yamls` lives on the DAY.
  *  3. `day.cameras_used` pins the exact exported camera set in order.
- *  4. `day.session.weight` carries the subject-weight override.
+ *  4. `day.session.weight` carries the subject-weight override, and `day.session.age` the
+ *     subject's age at this recording (`null` when the file stated none).
  *  5. `day.session.experiment_description` holds it; `animal.experiment_description`
  *     stays undefined.
  *  6. `animal.devices.data_acq_device` is the catalog; `day.data_acq_device_name` refs it.
