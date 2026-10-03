@@ -3,6 +3,25 @@ import { getProbeShanks } from '../ntrode/probeCatalog';
 import { arrayDefaultValues } from '../valueList';
 
 /**
+ * The lowest positive whole numbers not in use, as many as asked for. New ntrodes take these:
+ * trodes_to_nwb looks up each of the .rec header's ntrodes (numbered 1..N) by ntrode_id, and the
+ * form shows ntrode ids read-only, so a gap left by a removed group must be filled by the next new
+ * ntrodes or it can never be closed. Ids in use are never changed.
+ *
+ * @param {Array} usedIds - The ntrode ids in use
+ * @param {number} count - How many ids are needed
+ * @returns {number[]} The ids, in increasing order
+ */
+const lowestUnusedIds = (usedIds, count) => {
+  const used = new Set(usedIds);
+  const ids = [];
+  for (let id = 1; ids.length < count; id += 1) {
+    if (!used.has(id)) ids.push(id);
+  }
+  return ids;
+};
+
+/**
  * Custom hook for managing electrode group operations including ntrode channel map synchronization
  *
  * @param {object} formData - The current form state
@@ -30,8 +49,8 @@ export function useElectrodeGroups(formData, setFormData) {
    * 1. Sets the device_type on the electrode group
    * 2. Generates ntrode objects (one per shank) with channel mappings
    * 3. Replaces this group's old ntrode maps with them, in the same place
-   * 4. Gives them the group's old ntrode_ids in order; extra shanks get ids
-   *    after the largest ntrode_id in use. Other groups' ntrodes are untouched.
+   * 4. Gives them the group's old ntrode_ids in order; extra shanks get the
+   *    lowest unused ids. Other groups' ntrodes are untouched.
    *
    * @param {Event} e - The select change event
    * @param {object} metaData - Metadata about which electrode group was modified
@@ -97,20 +116,18 @@ export function useElectrodeGroups(formData, setFormData) {
       const otherIds = otherNtrodes.map((n) => n.ntrode_id);
 
       // The group keeps its ntrode ids, in order (skipping any another group
-      // also uses); shanks beyond them get ids after the largest one in use.
+      // also uses); shanks beyond them get the lowest ids no ntrode uses.
       const keptIds = [
         ...new Set(channelMap.filter(isThisGroup).map((n) => n.ntrode_id)),
-      ].filter((id) => Number.isInteger(id) && !otherIds.includes(id));
-      let nextId =
-        Math.max(0, ...channelMap.map((n) => n.ntrode_id).filter(Number.isInteger)) + 1;
+      ].filter((id) => Number.isInteger(id) && !otherIds.includes(id))
+        .slice(0, nTrodes.length);
+      const newIds = lowestUnusedIds(
+        [...otherIds, ...keptIds],
+        nTrodes.length - keptIds.length
+      );
 
       nTrodes.forEach((n, nIndex) => {
-        if (nIndex < keptIds.length) {
-          n.ntrode_id = keptIds[nIndex];
-        } else {
-          n.ntrode_id = nextId;
-          nextId += 1;
-        }
+        n.ntrode_id = nIndex < keptIds.length ? keptIds[nIndex] : newIds[nIndex - keptIds.length];
       });
 
       // In place of the group's first old ntrode; a group without any yet
@@ -184,7 +201,7 @@ export function useElectrodeGroups(formData, setFormData) {
    * This function:
    * 1. Clones the electrode group with a new ID (max ID + 1)
    * 2. Finds all associated ntrode maps by electrode_group_id
-   * 3. Duplicates ntrode maps with incremented ntrode_ids
+   * 3. Duplicates ntrode maps with the lowest unused ntrode_ids
    * 4. Updates electrode_group_id on duplicated ntrodes
    * 5. Inserts cloned electrode group immediately after the original
    * 6. Updates formData state
@@ -236,16 +253,15 @@ export function useElectrodeGroups(formData, setFormData) {
         })
       );
 
-      // ntrode_id increments; find largest one and use that as a base for new nTrodes
-      let largestNtrodeElectrodeGroupId =
-        ntrodeElectrodeGroupChannelMap.length === 0
-          ? 0
-          : Math.max(...ntrodeElectrodeGroupChannelMap.map((n) => n.ntrode_id));
+      // The copies take the lowest ntrode ids no ntrode uses
+      const newIds = lowestUnusedIds(
+        ntrodeElectrodeGroupChannelMap.map((n) => n.ntrode_id),
+        nTrodes.length
+      );
 
-      nTrodes.forEach((n) => {
-        largestNtrodeElectrodeGroupId += 1;
+      nTrodes.forEach((n, nIndex) => {
         n.electrode_group_id = clonedElectrodeGroup.id;
-        n.ntrode_id = largestNtrodeElectrodeGroupId;
+        n.ntrode_id = newIds[nIndex];
       });
 
       form.ntrode_electrode_group_channel_map.push(...nTrodes);
