@@ -25,6 +25,34 @@ describe('legacyFormRules()', () => {
     });
   });
 
+  describe('subject id the converter can group', () => {
+    // trodes_to_nwb groups a session's files by splitting their names on "_", so a subject id with
+    // anything but letters, digits and hyphens cannot be matched with its recordings.
+    it.each(['rat_01', 'rat 01', 'rat.01'])('warns for the subject id %s', (subjectId) => {
+      expect(legacyFormRules({ subject: { subject_id: subjectId } })).toEqual([
+        expect.objectContaining({
+          path: 'subject.subject_id',
+          code: 'subject_id_not_recording_compatible',
+          severity: 'warning',
+          message: expect.stringContaining(`"${subjectId}"`),
+        }),
+      ]);
+    });
+
+    it('accepts letters, digits and hyphens, and leaves a blank id to the schema', () => {
+      expect(legacyFormRules({ subject: { subject_id: 'Rat-01' } })).toEqual([]);
+      expect(legacyFormRules({ subject: { subject_id: '' } })).toEqual([]);
+    });
+
+    it('stays out of the shared validation (the workspace blocks it instead)', () => {
+      expect(
+        validate({ subject: { subject_id: 'rat_01' } }).some(
+          (issue) => issue.code === 'subject_id_not_recording_compatible'
+        )
+      ).toBe(false);
+    });
+  });
+
   it('handles a missing or malformed model', () => {
     expect(legacyFormRules(null)).toEqual([]);
     expect(legacyFormRules({ tasks: 'none' })).toEqual([]);
