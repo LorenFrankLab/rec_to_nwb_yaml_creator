@@ -217,6 +217,10 @@ This application is the **entry point** for the neuroscience data conversion pip
   The converter reads `bad_channels` **only from each electrode group's first row**, as electrode ids;
   where the app keeps a row's ticked *channel keys* (legacy form rows, single-shank Day Editor rows) it
   translates them through the row's map on download/import (`src/domain/badChannels.ts`, "Files").
+- **trodes_to_nwb reads YAML 1.1 (PyYAML), the app writes with a YAML 1.2 library.** `encodeYaml` quotes
+  strings PyYAML would read as bool/int/float/null/date (`20230622_01`, `Off`, `1:1.4`, `2023-06-22`),
+  writes exponent floats with a dot (`2.0e-7`), and keeps `subject.date_of_birth` plain because pynwb
+  needs a datetime. Don't bypass `encodeYaml`/`decodeYaml` (the decoder also breaks YAML alias sharing).
 - **DANDI rejects free-text `species`** — it must be a Latin binomial (`Rattus norvegicus`) or NCBI Taxon URI.
 - **Researching trodes / trodes_to_nwb / spyglass:** the local `~/Documents/GitHub/{trodes,trodes_to_nwb,spyglass}`
   checkouts **are readable from the agent sandbox** — read them directly (verified 2026-06-19). (A prior
