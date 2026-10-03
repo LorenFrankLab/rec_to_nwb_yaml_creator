@@ -815,6 +815,12 @@ describe('useElectrodeGroups', () => {
  * neighbouring group, and the channel counts would still match.
  */
 describe('useElectrodeGroups - other groups keep their ntrode ids', () => {
+  /**
+   * Holds the form state in React state and edits it through the hook
+   *
+   * @param {object} initialFormData - The starting form state
+   * @returns {object} The form state and the hook's functions
+   */
   function useSeededHook(initialFormData) {
     const [formData, setFormData] = useState(initialFormData);
     return { formData, ...useElectrodeGroups(formData, setFormData) };
@@ -947,6 +953,12 @@ describe('useElectrodeGroups - other groups keep their ntrode ids', () => {
  * that end up on another group's id are silently filed under that group.
  */
 describe('useElectrodeGroups - changeElectrodeGroupId', () => {
+  /**
+   * Holds the form state in React state and edits it through the hook
+   *
+   * @param {object} initialFormData - The starting form state
+   * @returns {object} The form state and the hook's functions
+   */
   function useSeededHook(initialFormData) {
     const [formData, setFormData] = useState(initialFormData);
     return { formData, ...useElectrodeGroups(formData, setFormData) };
@@ -1062,6 +1074,11 @@ describe('useElectrodeGroups - channel maps match the probe files', () => {
     'NET-EBL-128ch-single-shank': [range(0, 127)],
   };
 
+  /**
+   * Holds a form with one electrode group in React state and edits it through the hook
+   *
+   * @returns {object} The form state and the hook's functions
+   */
   function useSeededHook() {
     const [formData, setFormData] = useState({
       electrode_groups: [{ id: 0, device_type: '', location: 'CA1' }],

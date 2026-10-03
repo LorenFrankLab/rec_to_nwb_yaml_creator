@@ -10,6 +10,7 @@ import { renderWithProviders } from '../../__tests__/helpers/test-utils';
 import { useStoreContext } from '../../state/StoreContext';
 import ElectrodeGroupFields from '../ElectrodeGroupFields';
 
+/** Renders the form state, so a test can assert what an edit changed. */
 function StateProbe() {
   const { model } = useStoreContext();
   return <span data-testid="model">{JSON.stringify(model)}</span>;

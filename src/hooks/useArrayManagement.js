@@ -26,7 +26,7 @@ const UNIQUE_NAME_SECTIONS = {
 /**
  * Names used in the sections whose names `key`'s new items must not repeat
  *
- * @param {Object} form - Form data
+ * @param {object} form - Form data
  * @param {string} key - Array field name
  * @returns {Set<string>|null} The names, or null if `key` has no such rule
  */

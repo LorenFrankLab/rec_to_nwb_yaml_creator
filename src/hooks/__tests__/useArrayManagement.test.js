@@ -569,6 +569,12 @@ describe('useArrayManagement', () => {
  * with the excitation source, so new items must not copy a name in use.
  */
 describe('useArrayManagement - optogenetics names stay unique', () => {
+  /**
+   * Holds the form state in React state and edits it through the hook
+   *
+   * @param {object} initialFormData - Sections to start from
+   * @returns {object} The form state and the hook's functions
+   */
   function useSeededHook(initialFormData) {
     const [formData, setFormData] = useState({
       opto_excitation_source: [],

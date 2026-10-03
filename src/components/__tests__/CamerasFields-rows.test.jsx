@@ -10,6 +10,7 @@ import { renderWithProviders } from '../../__tests__/helpers/test-utils';
 import { useStoreContext } from '../../state/StoreContext';
 import CamerasFields from '../CamerasFields';
 
+/** Renders the cameras in the form state, so a test can assert what an edit changed. */
 function StateProbe() {
   const { model } = useStoreContext();
   return <span data-testid="model">{JSON.stringify(model.cameras)}</span>;
