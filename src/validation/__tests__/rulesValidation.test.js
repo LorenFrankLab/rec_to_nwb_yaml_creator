@@ -21,6 +21,11 @@ import { validate } from '../index';
 import JsonSchema from '../../nwb_schema.json';
 import { createTestYaml } from '../../__tests__/helpers/test-utils';
 
+// Issues about camera references, as opposed to other rules a minimal fixture can trip (an epoch
+// no task defines, an FsGUI row without optogenetics).
+const cameraIssues = (issues) =>
+  issues.filter((issue) => issue.code === 'missing_camera' || issue.code === 'unknown_camera');
+
 describe('rulesValidation()', () => {
   describe('Valid Models', () => {
     it('should return empty array for minimal valid model', () => {
@@ -44,8 +49,9 @@ describe('rulesValidation()', () => {
       const model = createTestYaml({
         optogenetic_stimulation_software: 'fsgui',
         opto_excitation_source: [{ opto_excitation_source_name: 'LED' }],
-        optical_fiber: [{ fiber_model_number: 'FiberX' }],
-        virus_injection: [{ virus_name: 'AAV' }]
+        // Fibers/virus injections need a coordinate `reference` (the converter reads it).
+        optical_fiber: [{ fiber_model_number: 'FiberX', reference: 'Bregma' }],
+        virus_injection: [{ virus_name: 'AAV', reference: 'Bregma' }]
       });
       const issues = rulesValidation(model);
 
@@ -65,6 +71,8 @@ describe('rulesValidation()', () => {
 
     it('should return empty array for valid ntrode channel mappings', () => {
       const model = createTestYaml({
+        // Every channel-map row names an existing electrode group.
+        electrode_groups: [{ id: 0 }],
         ntrode_electrode_group_channel_map: [
           {
             ntrode_id: 1,
@@ -241,7 +249,7 @@ describe('rulesValidation()', () => {
         cameras: undefined,
       };
 
-      expect(rulesValidation(model)).toEqual([]);
+      expect(cameraIssues(rulesValidation(model))).toEqual([]);
     });
 
     it('should not error when no associated_video_files exist', () => {
@@ -599,20 +607,20 @@ describe('rulesValidation() - unknown camera references', () => {
       cameras,
       fs_gui_yamls: [{ name: 'f.yaml', epochs: [1], camera_id: 7 }],
     });
-    const issues = rulesValidation(model);
+    const issues = cameraIssues(rulesValidation(model));
     expect(issues).toEqual([
       expect.objectContaining({ path: 'fs_gui_yamls[0].camera_id', code: 'unknown_camera' }),
     ]);
   });
 
-  it('returns no issue when every reference exists', () => {
+  it('returns no camera issue when every reference exists', () => {
     const model = createTestYaml({
       cameras,
       tasks: [{ task_name: 'Run', camera_id: [4] }],
       associated_video_files: [{ name: 'v.mp4', camera_id: 4, task_epochs: 1 }],
       fs_gui_yamls: [{ name: 'f.yaml', epochs: [1], camera_id: 4 }],
     });
-    expect(rulesValidation(model)).toEqual([]);
+    expect(cameraIssues(rulesValidation(model))).toEqual([]);
   });
 
   it('ignores unset video camera_id and tasks with no camera', () => {
@@ -655,10 +663,12 @@ describe('rulesValidation() - unknown camera references', () => {
 });
 
 describe('rulesValidation() - optogenetic_stimulation_software', () => {
+  // Each section carries a `reference` so no other rule fires.
+  const reference = 'Bregma at the cortical surface';
   const fullOpto = {
     opto_excitation_source: [{ name: 'LED' }],
-    optical_fiber: [{ name: 'fiber' }],
-    virus_injection: [{ virus_name: 'v' }],
+    optical_fiber: [{ name: 'fiber', reference }],
+    virus_injection: [{ virus_name: 'v', reference }],
   };
 
   it('requires the software name when optogenetics sections are present', () => {
@@ -742,5 +752,258 @@ describe('rulesValidation() - empty (null) list entries', () => {
     expect(validate(model)).toContainEqual(
       expect.objectContaining({ path: 'ntrode_electrode_group_channel_map[0]' })
     );
+  });
+});
+
+// Converter guards ported from the modern branch's rule set. Each state either crashes
+// trodes_to_nwb or makes it silently write the wrong data.
+describe('rulesValidation() - converter guards', () => {
+  const codes = (issues) => issues.map((i) => i.code);
+  const completeOpto = {
+    opto_excitation_source: [{ name: 'LED' }],
+    optical_fiber: [{ name: 'F', reference: 'Bregma' }],
+    virus_injection: [{ name: 'V', reference: 'Bregma' }],
+    optogenetic_stimulation_software: 'fsgui',
+  };
+
+  describe('optogenetics', () => {
+    it('errors when more than one excitation source is defined', () => {
+      // trodes_to_nwb raises a ValueError on more than one opto_excitation_source.
+      const model = createTestYaml({
+        ...completeOpto,
+        opto_excitation_source: [{ name: 'LED-1' }, { name: 'LED-2' }],
+      });
+
+      expect(rulesValidation(model)).toContainEqual(expect.objectContaining({
+        path: 'opto_excitation_source',
+        code: 'multiple_excitation_sources',
+        severity: 'error',
+      }));
+    });
+
+    it('errors when an optical_fiber lacks a reference (converter reads it unconditionally)', () => {
+      const model = createTestYaml({ ...completeOpto, optical_fiber: [{ name: 'F' }] });
+
+      expect(rulesValidation(model)).toContainEqual(expect.objectContaining({
+        path: 'optical_fiber[0].reference',
+        code: 'missing_opto_reference',
+        severity: 'error',
+      }));
+    });
+
+    it('errors when a virus_injection lacks a reference', () => {
+      const model = createTestYaml({ ...completeOpto, virus_injection: [{ name: 'V', reference: ' ' }] });
+
+      expect(rulesValidation(model)).toContainEqual(expect.objectContaining({
+        path: 'virus_injection[0].reference',
+        code: 'missing_opto_reference',
+        severity: 'error',
+      }));
+    });
+  });
+
+  describe('FsGUI protocols', () => {
+    const session = {
+      cameras: [{ id: 0 }],
+      tasks: [{ task_name: 't', task_epochs: [1, 2] }],
+      behavioral_events: [{ name: 'laser', description: 'Dout1' }],
+    };
+
+    it('errors when fs_gui_yamls exist but optogenetics is not fully configured', () => {
+      // FsGUI epochs make the converter read the optogenetics metadata, which it only writes when
+      // every optogenetics section is present (KeyError otherwise).
+      const model = createTestYaml({
+        ...session,
+        fs_gui_yamls: [{ name: 'p.yaml', epochs: [1], camera_id: 0, dio_output_name: 'laser' }],
+      });
+
+      expect(rulesValidation(model)).toContainEqual(expect.objectContaining({
+        path: 'fs_gui_yamls',
+        code: 'fs_gui_requires_optogenetics',
+        severity: 'error',
+      }));
+    });
+
+    it('treats corrupt non-array opto list fields as absent for the FsGUI opto gate', () => {
+      const model = createTestYaml({
+        ...session,
+        opto_excitation_source: 'LED',
+        optical_fiber: 'Fiber',
+        virus_injection: 'AAV',
+        optogenetic_stimulation_software: 'fsgui',
+        fs_gui_yamls: [{ name: 'p.yaml', epochs: [1], camera_id: 0, dio_output_name: 'laser' }],
+      });
+
+      expect(codes(rulesValidation(model))).toContain('fs_gui_requires_optogenetics');
+    });
+
+    it('errors on an fs_gui_yamls epoch that no task defines (orphaned epoch)', () => {
+      // The converter indexes the epochs table by this number: IndexError, or silently another
+      // epoch's start/stop times.
+      const model = createTestYaml({
+        ...session,
+        ...completeOpto,
+        fs_gui_yamls: [{ name: 'p.yaml', epochs: [1, 99], camera_id: 0, dio_output_name: 'laser' }],
+      });
+
+      const orphaned = rulesValidation(model).filter((i) => i.code === 'orphaned_fs_gui_epoch');
+      expect(orphaned).toEqual([expect.objectContaining({
+        path: 'fs_gui_yamls[0].epochs',
+        severity: 'error',
+        message: expect.stringContaining('99'),
+      })]);
+    });
+
+    it('errors when fs_gui dio_output_name has no matching behavioral event', () => {
+      // A renamed or removed event leaves the name stale; the converter looks it up (KeyError).
+      const model = createTestYaml({
+        ...session,
+        ...completeOpto,
+        fs_gui_yamls: [{ name: 'p.yaml', epochs: [1], camera_id: 0, dio_output_name: 'old_laser' }],
+      });
+
+      expect(rulesValidation(model)).toContainEqual(expect.objectContaining({
+        path: 'fs_gui_yamls[0].dio_output_name',
+        code: 'dangling_dio_output',
+        severity: 'error',
+        message: expect.stringContaining('old_laser'),
+      }));
+    });
+
+    it('accepts a complete opto + fs_gui session with valid references and dio name', () => {
+      const model = createTestYaml({
+        ...session,
+        ...completeOpto,
+        fs_gui_yamls: [{ name: 'p.yaml', epochs: [1, 2], camera_id: 0, dio_output_name: 'laser' }],
+      });
+
+      expect(rulesValidation(model)).toEqual([]);
+    });
+
+    it('accepts optogenetics with no FsGUI protocol this session', () => {
+      const model = createTestYaml({ ...session, ...completeOpto, fs_gui_yamls: [] });
+
+      expect(rulesValidation(model)).toEqual([]);
+    });
+  });
+
+  describe('behavioral events', () => {
+    it('errors when two behavioral_events share a description', () => {
+      // convert_dios keys DIO channels by description and raises on a duplicate.
+      const issues = rulesValidation({
+        behavioral_events: [
+          { name: 'reward_left', description: 'Din1' },
+          { name: 'reward_right', description: 'Din1' },
+        ],
+      });
+
+      expect(issues).toEqual([expect.objectContaining({
+        path: 'behavioral_events',
+        code: 'duplicate_behavioral_event_description',
+        severity: 'error',
+        message: expect.stringContaining('Din1'),
+      })]);
+    });
+
+    it('errors when two behavioral_events share a name', () => {
+      const issues = rulesValidation({
+        behavioral_events: [
+          { name: 'reward', description: 'Din1' },
+          { name: 'reward', description: 'Din2' },
+        ],
+      });
+
+      expect(issues).toEqual([expect.objectContaining({
+        path: 'behavioral_events',
+        code: 'duplicate_behavioral_event_name',
+        severity: 'error',
+        message: expect.stringContaining('reward'),
+      })]);
+    });
+
+    it('passes unique events, and does not count blank names as duplicates', () => {
+      expect(rulesValidation({
+        behavioral_events: [
+          { name: '', description: 'Din1' },
+          { name: '', description: 'Din2' },
+          { name: 'reward', description: 'Din3' },
+        ],
+      })).toEqual([]);
+    });
+  });
+
+  describe('identity uniqueness and channel-map references', () => {
+    it('errors when two cameras share an id', () => {
+      const issues = rulesValidation({
+        cameras: [
+          { id: 0, camera_name: 'overhead' },
+          { id: 0, camera_name: 'side' },
+        ],
+      });
+
+      expect(issues).toEqual([expect.objectContaining({
+        path: 'cameras',
+        code: 'duplicate_camera_id',
+        severity: 'error',
+      })]);
+    });
+
+    it('errors when two electrode groups share an id', () => {
+      const issues = rulesValidation({
+        electrode_groups: [{ id: 0 }, { id: 0 }, { id: 1 }],
+      });
+
+      expect(issues).toEqual([expect.objectContaining({
+        path: 'electrode_groups',
+        code: 'duplicate_electrode_group_id',
+        severity: 'error',
+        message: expect.stringContaining('"0"'),
+      })]);
+    });
+
+    it('reports a triplicated ntrode_id exactly once', () => {
+      const issues = rulesValidation({
+        electrode_groups: [{ id: 0 }, { id: 1 }, { id: 2 }],
+        ntrode_electrode_group_channel_map: [
+          { ntrode_id: 2, electrode_group_id: 0, map: { 0: 0, 1: 1, 2: 2, 3: 3 } },
+          { ntrode_id: 2, electrode_group_id: 1, map: { 0: 0, 1: 1, 2: 2, 3: 3 } },
+          { ntrode_id: 2, electrode_group_id: 2, map: { 0: 0, 1: 1, 2: 2, 3: 3 } },
+        ],
+      });
+
+      expect(issues).toEqual([expect.objectContaining({
+        path: 'ntrode_electrode_group_channel_map',
+        code: 'duplicate_ntrode_id',
+        severity: 'error',
+      })]);
+    });
+
+    it('errors when a channel-map row names no electrode group', () => {
+      const issues = rulesValidation({
+        electrode_groups: [{ id: 0 }],
+        ntrode_electrode_group_channel_map: [
+          { ntrode_id: 1, electrode_group_id: 0, map: { 0: 0, 1: 1, 2: 2, 3: 3 } },
+          { ntrode_id: 2, electrode_group_id: 7, map: { 0: 0, 1: 1, 2: 2, 3: 3 } },
+        ],
+      });
+
+      expect(issues).toEqual([expect.objectContaining({
+        path: 'ntrode_electrode_group_channel_map[2]',
+        code: 'dangling_electrode_group_ref',
+        severity: 'error',
+        message: expect.stringContaining('7'),
+      })]);
+    });
+
+    it('passes unique ids whose channel-map rows all name a group', () => {
+      expect(rulesValidation({
+        cameras: [{ id: 0 }, { id: 1 }],
+        electrode_groups: [{ id: 0 }, { id: 1 }],
+        ntrode_electrode_group_channel_map: [
+          { ntrode_id: 1, electrode_group_id: 0, map: { 0: 0, 1: 1, 2: 2, 3: 3 } },
+          { ntrode_id: 2, electrode_group_id: 1, map: { 0: 0, 1: 1, 2: 2, 3: 3 } },
+        ],
+      })).toEqual([]);
+    });
   });
 });

@@ -14,17 +14,44 @@
  * 4. Ntrode channel mappings must have unique physical channels (no duplicates)
  * 5. Every camera_id reference must match a defined camera id
  * 6. optogenetic_stimulation_software is required when optogenetics is configured
+ * 7. Optical fibers and virus injections carry a reference; one excitation source at most
+ * 8. FsGUI protocols need complete optogenetics, task epochs and an existing DIO event
+ * 9. Behavioral event names and descriptions are unique
+ * 10. Camera, electrode group and ntrode ids are unique; channel-map rows name a group
+ *
+ * Rules 7-10 are the trodes_to_nwb crash guards of the modern branch's rule set, with the same
+ * codes and messages.
  *
  * @param {object} model - The form data to validate
  * @returns {Issue[]} Array of validation issues with format:
  *   {
  *     path: string,       // Normalized path: "tasks", "optogenetics", etc.
  *     code: string,       // Rule code: "missing_camera", "partial_configuration", etc.
- *     severity: "error",  // Always "error" for rule violations
+ *     severity: "error",  // "error" blocks the download; "warning" asks the user to confirm
  *     message: string     // User-friendly message
  *   }
  */
 import { getDefinedCameraIds } from '../utils/cameraReferences';
+
+/**
+ * The values used by more than one item, compared as the converter compares them (raw values,
+ * no trimming). Unset values (`undefined`, `null`, `''`) are never duplicates.
+ *
+ * @param {Array} items - The list to check (anything else counts as empty)
+ * @param {Function} valueOf - Reads the compared value from an item
+ * @returns {Array} The repeated values, each once, in first-seen order
+ */
+const repeatedValues = (items, valueOf) => {
+  const seen = new Set();
+  const repeated = new Set();
+  (Array.isArray(items) ? items : []).forEach((item) => {
+    const value = valueOf(item);
+    if (value === undefined || value === null || value === '') return;
+    if (seen.has(value)) repeated.add(value);
+    seen.add(value);
+  });
+  return [...repeated];
+};
 
 export const rulesValidation = (model) => {
   // Handle null/undefined model gracefully
@@ -178,6 +205,196 @@ export const rulesValidation = (model) => {
           report(`${key}[${index}].camera_id`, [id]);
         }
       });
+    });
+  }
+
+  // Rule 7: optical fibers and virus injections need a coordinate reference, and there is at
+  // most one excitation source. trodes_to_nwb reads `reference` unconditionally (KeyError when
+  // missing) and raises a ValueError on more than one opto_excitation_source.
+  const nonEmptyStr = (v) => typeof v === 'string' && v.trim() !== '';
+  [
+    ['optical_fiber', model.optical_fiber],
+    ['virus_injection', model.virus_injection],
+  ].forEach(([key, items]) => {
+    if (!Array.isArray(items)) return;
+    items.forEach((item, i) => {
+      if (!nonEmptyStr(item?.reference)) {
+        issues.push({
+          path: `${key}[${i}].reference`,
+          code: 'missing_opto_reference',
+          severity: 'error',
+          message:
+            `${key === 'optical_fiber' ? 'Optical fiber' : 'Virus injection'} ${i + 1}` +
+            `${nonEmptyStr(item?.name) ? ` ("${item.name}")` : ''} is missing a coordinate ` +
+            `reference (e.g. "Bregma at the cortical surface"). trodes_to_nwb requires it and ` +
+            `crashes without it.`,
+        });
+      }
+    });
+  });
+
+  if (Array.isArray(model.opto_excitation_source) && model.opto_excitation_source.length > 1) {
+    issues.push({
+      path: 'opto_excitation_source',
+      code: 'multiple_excitation_sources',
+      severity: 'error',
+      message:
+        `${model.opto_excitation_source.length} optogenetic excitation sources are defined, ` +
+        `but trodes_to_nwb supports exactly one (it raises an error on more). Keep a single ` +
+        `opto_excitation_source.`,
+    });
+  }
+
+  // Rule 8: FsGUI protocols. The converter writes them only after the optogenetics metadata,
+  // which it skips unless all four optogenetics fields are filled in (KeyError then). Each epoch
+  // indexes the session's epochs table (IndexError, or silently another epoch's start/stop
+  // times), and dio_output_name looks up a behavioral event by name (KeyError). The form offers
+  // only valid choices, but an imported value, or a renamed or removed event, is caught here.
+  // (Camera references are Rule 5.)
+  if (Array.isArray(model.fs_gui_yamls) && model.fs_gui_yamls.length > 0) {
+    const optoComplete =
+      [model.opto_excitation_source, model.optical_fiber, model.virus_injection].every(
+        (items) => Array.isArray(items) && items.length > 0
+      ) && nonEmptyStr(model.optogenetic_stimulation_software);
+    if (!optoComplete) {
+      issues.push({
+        path: 'fs_gui_yamls',
+        code: 'fs_gui_requires_optogenetics',
+        severity: 'error',
+        message:
+          `FsGUI optogenetics protocols are present, but the optogenetics configuration is ` +
+          `incomplete (or off). trodes_to_nwb crashes converting FsGUI protocols without the ` +
+          `full optogenetics implant metadata. Complete the optogenetics sections, or remove ` +
+          `these FsGUI protocols.`,
+      });
+    }
+
+    const taskEpochs = new Set();
+    (Array.isArray(model.tasks) ? model.tasks : []).forEach((task) => {
+      (Array.isArray(task?.task_epochs) ? task.task_epochs : []).forEach((epoch) => {
+        if (epoch !== undefined && epoch !== null) taskEpochs.add(epoch);
+      });
+    });
+    const eventNames = new Set(
+      (Array.isArray(model.behavioral_events) ? model.behavioral_events : [])
+        .map((event) => event?.name)
+        .filter((name) => typeof name === 'string' && name !== '')
+    );
+
+    model.fs_gui_yamls.forEach((fsGui, fi) => {
+      const label = `FsGUI protocol ${fi + 1}${fsGui?.name ? ` ("${fsGui.name}")` : ''}`;
+      (Array.isArray(fsGui?.epochs) ? fsGui.epochs : []).forEach((epoch) => {
+        if (epoch === undefined || epoch === null || epoch === '') return;
+        if (!taskEpochs.has(epoch)) {
+          issues.push({
+            path: `fs_gui_yamls[${fi}].epochs`,
+            code: 'orphaned_fs_gui_epoch',
+            severity: 'error',
+            message:
+              `${label} references task epoch ${epoch}, which no task defines. Point it at an ` +
+              `existing epoch or remove it.`,
+          });
+        }
+      });
+
+      // A blank value is the schema's required check.
+      const dio = fsGui?.dio_output_name;
+      if (typeof dio === 'string' && dio.trim() !== '' && !eventNames.has(dio)) {
+        issues.push({
+          path: `fs_gui_yamls[${fi}].dio_output_name`,
+          code: 'dangling_dio_output',
+          severity: 'error',
+          message:
+            `${label} uses DIO output "${dio}", which no behavioral event defines. ` +
+            `trodes_to_nwb looks up the behavioral event by this name and fails if it is ` +
+            `missing — use an existing behavioral event name.`,
+        });
+      }
+    });
+  }
+
+  // Rule 9: behavioral events. A duplicate name collides on the Spyglass DIOEvents primary key
+  // and in trodes_to_nwb; convert_dios keys DIO channels by description and raises a ValueError
+  // on a duplicate. A blank name is an unused channel, not a duplicate.
+  repeatedValues(model.behavioral_events, (event) =>
+    typeof event?.name === 'string' && event.name.trim() !== '' ? event.name : undefined
+  ).forEach((name) => {
+    issues.push({
+      path: 'behavioral_events',
+      code: 'duplicate_behavioral_event_name',
+      severity: 'error',
+      message:
+        `Duplicate behavioral event name "${name}". Each behavioral (DIO) event name ` +
+        `must be unique — duplicates collide on the Spyglass DIOEvents primary key.`,
+    });
+  });
+  repeatedValues(model.behavioral_events, (event) => event?.description).forEach((desc) => {
+    issues.push({
+      path: 'behavioral_events',
+      code: 'duplicate_behavioral_event_description',
+      severity: 'error',
+      message:
+        `Duplicate behavioral event description "${desc}". The converter keys DIO ` +
+        `channels by description and fails on duplicates — each must be unique.`,
+    });
+  });
+
+  // Rule 10: identities. The converter names NWB devices and groups from these ids
+  // ("camera_device {id}", the electrode group name), so a duplicate collides or collapses two
+  // into one; ntrode_id keys the channel map. A channel-map row must name an existing electrode
+  // group, or the converter fails looking it up.
+  repeatedValues(model.cameras, (camera) => camera?.id).forEach((id) => {
+    issues.push({
+      path: 'cameras',
+      code: 'duplicate_camera_id',
+      severity: 'error',
+      message:
+        `Duplicate camera id "${id}". Camera ids must be unique — the converter names ` +
+        `each NWB camera device "camera_device ${id}" and videos reference it by id.`,
+    });
+  });
+  repeatedValues(model.electrode_groups, (group) => group?.id).forEach((id) => {
+    issues.push({
+      path: 'electrode_groups',
+      code: 'duplicate_electrode_group_id',
+      severity: 'error',
+      message:
+        `Duplicate electrode group id "${id}". Each electrode group must have a ` +
+        `unique id — duplicates collapse groups during NWB conversion and Spyglass ingestion.`,
+    });
+  });
+  repeatedValues(model.ntrode_electrode_group_channel_map, (ntrode) => ntrode?.ntrode_id).forEach(
+    (id) => {
+      issues.push({
+        path: 'ntrode_electrode_group_channel_map',
+        code: 'duplicate_ntrode_id',
+        severity: 'error',
+        message:
+          `Duplicate ntrode id "${id}". Each ntrode must have a unique id — ` +
+          `duplicates misroute bad-channel marks and collapse ntrodes downstream.`,
+      });
+    }
+  );
+
+  if (Array.isArray(model.ntrode_electrode_group_channel_map)) {
+    const groupIds = new Set(
+      (Array.isArray(model.electrode_groups) ? model.electrode_groups : [])
+        .map((group) => group?.id)
+        .filter((id) => id !== undefined && id !== null)
+    );
+    model.ntrode_electrode_group_channel_map.forEach((ntrode) => {
+      const groupId = ntrode?.electrode_group_id;
+      if (groupId === undefined || groupId === null) return;
+      if (!groupIds.has(groupId)) {
+        issues.push({
+          path: `ntrode_electrode_group_channel_map[${ntrode.ntrode_id}]`,
+          code: 'dangling_electrode_group_ref',
+          severity: 'error',
+          message:
+            `Ntrode ${ntrode.ntrode_id} references electrode group id ${groupId}, but no ` +
+            `electrode group with that id exists. Remove the ntrode or add the group.`,
+        });
+      }
     });
   }
 
