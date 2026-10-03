@@ -176,3 +176,43 @@ describe('a recording system with the same name but other hardware is its own sy
     }
   });
 });
+
+describe('a file listing two recording systems asks which one its day used (W8)', () => {
+  const spikeGadgets = { name: 'SpikeGadgets', system: 'SpikeGadgets', amplifier: 'Intan', adc_circuit: 'Intan' };
+  const behaviorDaq = { name: 'Behavior DAQ', system: 'NI', amplifier: 'none', adc_circuit: 'NI-6008' };
+
+  /**
+   * Answer the file's "which recording system" row and commit it as a new animal.
+   *
+   * @param {object} result - The `renderHook(useStore)` result.
+   * @param {Function} answer - Returns the resolution for the row.
+   * @returns {object} The repair row that was answered.
+   */
+  function importTwoSystemFile(result, answer) {
+    const file = makeFile({ date: '2023-06-22' });
+    file.flatModel.data_acq_device = [structuredClone(spikeGadgets), structuredClone(behaviorDaq)];
+    const repairPlan = buildImportRepairPlan(file.flatModel, file.sourceName, { animals: {} });
+    const row = repairPlan.items.find((item) => /data_acq_device/.test(item.path));
+    const repaired = applyImportRepairs(file.flatModel, { [row.path]: answer(row) });
+    commit(result, [{ sourceName: file.sourceName, flatModel: repaired }]);
+    return row;
+  }
+
+  it('names both systems, and exports the first for the day when that is accepted', () => {
+    const { result } = renderHook(() => useStore());
+    const row = importTwoSystemFile(result, (item) => item.suggested);
+
+    expect(row).toMatchObject({ code: 'multiple_data_acq_devices', was: ['SpikeGadgets', 'Behavior DAQ'] });
+    expect(exportedSystems(result, '2023-06-22')).toEqual([spikeGadgets]);
+    // The other system is kept in the animal's catalog (in the file's order), not exported this day.
+    expect(result.current.model.workspace.animals.remy.devices.data_acq_device).toEqual([spikeGadgets, behaviorDaq]);
+  });
+
+  it('exports the system the user chose for the day', () => {
+    const { result } = renderHook(() => useStore());
+    importTwoSystemFile(result, () => 'Behavior DAQ');
+
+    expect(exportedSystems(result, '2023-06-22')).toEqual([behaviorDaq]);
+    expect(result.current.model.workspace.animals.remy.devices.data_acq_device).toEqual([spikeGadgets, behaviorDaq]);
+  });
+});

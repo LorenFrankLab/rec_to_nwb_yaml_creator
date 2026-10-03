@@ -21,7 +21,7 @@
  */
 
 import { decomposeYaml } from './yamlImport';
-import type { DecomposeResult } from './yamlImport';
+import type { DecomposeResult, DecomposeSuccess } from './yamlImport';
 import { findIdentityDivergence, valuesEqual } from './identityDivergence';
 import type { IdentityRegistryEntry } from './identityDivergence';
 import { getAnimalCameras, getAnimalSubject, getDataAcqDevices } from './workspaceSelectors';
@@ -224,6 +224,26 @@ export const IMPORT_REPAIR_MAPPED_CAMERA_IDS = 'mappedCameraIds';
 export const IMPORT_REPAIR_MAPPED_DATA_ACQ_NAMES = 'mappedDataAcqDeviceNames';
 
 /**
+ * The key under `__importRepair` where Import & Repair records which of a file's several recording
+ * systems its day was recorded on (W8).
+ */
+export const IMPORT_REPAIR_DAY_DATA_ACQ_NAME = 'day_data_acq_device';
+
+/**
+ * What Import & Repair recorded on a repaired flat model (`__importRepair`), or `{}`.
+ *
+ * @param flatModel - Decoded (repaired) flat YAML model.
+ * @returns The record.
+ */
+function importRepairRecord(flatModel: unknown): Record<string, unknown> {
+  const marker =
+    flatModel !== null && typeof flatModel === 'object'
+      ? (flatModel as { __importRepair?: unknown }).__importRepair
+      : undefined;
+  return marker !== null && typeof marker === 'object' ? (marker as Record<string, unknown>) : {};
+}
+
+/**
  * The existing-animal catalog entries Import & Repair mapped this file's references onto, under one
  * `__importRepair` key. A mapped camera row keeps the FILE's name, and a mapped recording system
  * keeps the FILE's hardware, so without this record either would read as a different entry.
@@ -233,12 +253,27 @@ export const IMPORT_REPAIR_MAPPED_DATA_ACQ_NAMES = 'mappedDataAcqDeviceNames';
  * @returns The mapped values (empty when the user mapped none).
  */
 function repairMappingsOf(flatModel: unknown, key: string): unknown[] {
-  const marker =
-    flatModel !== null && typeof flatModel === 'object'
-      ? (flatModel as { __importRepair?: Record<string, unknown> }).__importRepair
-      : undefined;
-  const mapped = marker?.[key];
+  const mapped = importRepairRecord(flatModel)[key];
   return Array.isArray(mapped) ? mapped : [];
+}
+
+/**
+ * The day-owned facts of a decomposed file, referencing the recording system Import & Repair's user
+ * chose when the file lists several (W8). Without a choice the day references the first.
+ *
+ * @param decomposed - The file's successful decompose.
+ * @param flatModel - Decoded (repaired) flat YAML model.
+ * @returns The day facts.
+ */
+function dayFactsWithChosenSystem(
+  decomposed: DecomposeSuccess,
+  flatModel: unknown
+): Record<string, any> {
+  const chosen = importRepairRecord(flatModel)[IMPORT_REPAIR_DAY_DATA_ACQ_NAME];
+  const listed = getDataAcqDevices(decomposed.animalFacts).some((device) => device?.name === chosen);
+  return typeof chosen === 'string' && listed
+    ? { ...decomposed.dayFacts, data_acq_device_name: chosen }
+    : decomposed.dayFacts;
 }
 
 /**
@@ -1197,7 +1232,7 @@ export function planImport(
       sourceKey,
       date,
       animalFacts: decomposed.animalFacts,
-      dayFacts: decomposed.dayFacts,
+      dayFacts: dayFactsWithChosenSystem(decomposed, flatModel),
       configuration: decomposed.configuration,
       mappedCameraIds: repairMappingsOf(flatModel, IMPORT_REPAIR_MAPPED_CAMERA_IDS),
       mappedDataAcqDeviceNames: repairMappingsOf(flatModel, IMPORT_REPAIR_MAPPED_DATA_ACQ_NAMES),

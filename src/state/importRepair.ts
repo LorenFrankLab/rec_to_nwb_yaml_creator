@@ -27,6 +27,7 @@ import { classifyCameraAgainstCatalog } from './cameraCalibrationConflicts';
 import {
   extractRecordingDate,
   findExistingAnimalId,
+  IMPORT_REPAIR_DAY_DATA_ACQ_NAME,
   IMPORT_REPAIR_MAPPED_CAMERA_IDS,
   IMPORT_REPAIR_MAPPED_DATA_ACQ_NAMES,
 } from './yamlImportPlan';
@@ -133,6 +134,9 @@ const EXISTING_DATA_ACQ_REF_PREFIX = '__importRepair.existingAnimal.data_acq_dev
 /** Internal repair path used when a legacy filename/session_id cannot provide the recording date. */
 const IMPORT_RECORDING_DATE_PATH = '__importRepair.recording_date';
 
+/** Internal repair path recording which of a file's several recording systems its day used. */
+const IMPORT_DAY_DATA_ACQ_PATH = `__importRepair.${IMPORT_REPAIR_DAY_DATA_ACQ_NAME}`;
+
 const CAMERA_IDENTITY_FIELDS = ['id', 'meters_per_pixel', 'lens', 'model', 'manufacturer'] as const;
 
 const CAMERA_IDENTITY_FIELD_LABELS: Readonly<Record<string, string>> = Object.freeze({
@@ -174,7 +178,7 @@ export interface RepairItem {
   /** Optional label for a choice-row alternate input. */
   mapInputLabel?: string;
   /** Optional structured action for import-only repairs. */
-  action?: ExistingAnimalCatalogRepairAction;
+  action?: ExistingAnimalCatalogRepairAction | FileChoiceRepairAction;
 }
 
 /** An error this screen cannot repair in place (structural / cross-field) — fix in the file. */
@@ -217,6 +221,14 @@ interface ExistingAnimalCatalogRepairAction {
   canBring: boolean;
   /** Valid existing values the user may map to instead. */
   validMapValues: unknown[];
+}
+
+/** A choice among values the imported file itself lists; only those are valid answers. */
+interface FileChoiceRepairAction {
+  /** Discriminator for custom import-repair actions. */
+  kind: 'file_choice';
+  /** The values the file lists. */
+  validValues: unknown[];
 }
 
 /** The new-animal vs existing-day routing for the parsed file. */
@@ -944,6 +956,39 @@ function buildExistingAnimalCatalogItems(
 }
 
 /**
+ * Ask which recording system a file's day was recorded on when the file lists several (W8). A
+ * workspace day references ONE system and exports only that one (trodes_to_nwb would write every
+ * entry), so without this row every system but the first would silently drop out of the day's
+ * export. The others stay in the animal's recording-system catalog.
+ *
+ * @param model - The normalized flat model.
+ * @returns The choice row, or null when the file lists at most one system.
+ */
+function buildDayDataAcqChoice(model: ValidationModel): RepairItem | null {
+  const devices = Array.isArray(model.data_acq_device) ? model.data_acq_device.filter(isRecord) : [];
+  if (devices.length < 2) return null;
+  const names = devices.map((device) => device.name);
+  const listed = names.map((name) => String(name)).join(', ');
+  return {
+    path: IMPORT_DAY_DATA_ACQ_PATH,
+    label: 'Recording system for this day',
+    code: 'multiple_data_acq_devices',
+    group: 'attention',
+    kind: 'choice',
+    was: names,
+    suggested: names[0],
+    why:
+      `This file lists ${names.length} recording systems (${listed}). A recording day here ` +
+      'exports one recording system, the one it was recorded on: the others are kept in the ' +
+      "animal's recording-system catalog but left out of this day's YAML. Accept " +
+      `"${String(names[0])}" (the first), or enter the name of the one this day used.`,
+    inputType: 'text',
+    mapInputLabel: 'Recording system this day used',
+    action: { kind: 'file_choice', validValues: names },
+  };
+}
+
+/**
  * Build the repair items + blockers for a model's `validate` errors. Known leaf codes map to
  * suggestions/inputs; everything else becomes a blocker (fix-in-file).
  *
@@ -1378,6 +1423,8 @@ export function buildImportRepairPlan(
       inputType: 'date',
     });
   }
+  const dayDataAcqChoice = buildDayDataAcqChoice(normalized as ValidationModel);
+  if (dayDataAcqChoice) importOnlyItems.push(dayDataAcqChoice);
 
   // Decision: match the subject id against the existing workspace (by key or subject.subject_id).
   const subjectId = (normalized.subject as { subject_id?: unknown } | undefined)?.subject_id;
@@ -1417,7 +1464,8 @@ export function buildImportRepairPlan(
 }
 
 /**
- * Validate custom existing-animal catalog repair rows after the user resolves them.
+ * Validate custom existing-animal catalog repair rows, and choices among a file's own values, after
+ * the user resolves them.
  *
  * @param plan - The import-repair plan.
  * @param resolutions - Accepted/edited values keyed by repair-item path.
@@ -1429,10 +1477,16 @@ export function existingAnimalCatalogResolutionBlocker(
 ): string | null {
   for (const item of plan.items) {
     const action = item.action;
-    if (action?.kind !== 'existing_animal_catalog_ref') continue;
+    if (action === undefined) continue;
     const value = resolutions[item.path];
     if (value === undefined || value === null || value === '') {
       return `Resolve ${item.label} before importing.`;
+    }
+    if (action.kind === 'file_choice') {
+      if (!action.validValues.some((candidate) => sameRefValue(candidate, value))) {
+        return `Choose ${item.label} from the ones the file lists: ${validValueList(action.validValues)}.`;
+      }
+      continue;
     }
     if (value === item.suggested) {
       if (action.canBring) continue;

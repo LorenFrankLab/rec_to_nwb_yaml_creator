@@ -1089,6 +1089,53 @@ describe('existing-animal add catalog refs — surface and resolve before import
   });
 });
 
+describe('a file listing more than one recording system — ask which one the day used (W8)', () => {
+  const systems = [
+    { name: 'SpikeGadgets', system: 'SpikeGadgets', amplifier: 'Intan', adc_circuit: 'Intan' },
+    { name: 'Behavior DAQ', system: 'NI', amplifier: 'none', adc_circuit: 'NI-6008' },
+  ];
+
+  it('asks, naming every system and what happens to the others', () => {
+    const model = loadCleanExport();
+    model.data_acq_device = structuredClone(systems);
+
+    const plan = buildImportRepairPlan(model, '06222023_remy_metadata.yml', { animals: {} });
+    const row = plan.items.find((item) => item.code === 'multiple_data_acq_devices');
+    expect(row).toMatchObject({
+      path: '__importRepair.day_data_acq_device',
+      kind: 'choice',
+      was: ['SpikeGadgets', 'Behavior DAQ'],
+      suggested: 'SpikeGadgets',
+      action: { kind: 'file_choice', validValues: ['SpikeGadgets', 'Behavior DAQ'] },
+    });
+    expect(row!.why).toMatch(/exports one recording system/);
+    expect(row!.why).toMatch(/left out of this day's YAML/);
+    expect(plan.hasErrors).toBe(true);
+  });
+
+  it('accepts only a system the file lists, and records the choice without reordering them', () => {
+    const model = loadCleanExport();
+    model.data_acq_device = structuredClone(systems);
+    const plan = buildImportRepairPlan(model, '06222023_remy_metadata.yml', { animals: {} });
+    const row = plan.items.find((item) => item.code === 'multiple_data_acq_devices')!;
+
+    expect(existingAnimalCatalogResolutionBlocker(plan, { [row.path]: 'Rig C' })).toMatch(
+      /SpikeGadgets, Behavior DAQ/
+    );
+    expect(existingAnimalCatalogResolutionBlocker(plan, { [row.path]: 'Behavior DAQ' })).toBeNull();
+    expect(existingAnimalCatalogResolutionBlocker(plan, { [row.path]: row.suggested })).toBeNull();
+
+    const chosen = applyImportRepairs(model, { [row.path]: 'Behavior DAQ' });
+    expect(chosen.data_acq_device).toEqual(systems);
+    expect(chosen.__importRepair).toEqual({ day_data_acq_device: 'Behavior DAQ' });
+  });
+
+  it('does not ask when the file lists one system', () => {
+    const plan = buildImportRepairPlan(loadCleanExport(), '06222023_remy_metadata.yml', { animals: {} });
+    expect(plan.items.some((item) => item.code === 'multiple_data_acq_devices')).toBe(false);
+  });
+});
+
 describe('volume_in_uL / volume_in_ul shim — reconcile, never drop the shim key', () => {
   it('fills the missing lowercase spelling from the present one (benign)', () => {
     const model = { virus_injection: [{ name: 'v', volume_in_uL: 0.5 }] };
