@@ -100,3 +100,45 @@ describe('making another recording system the default (W12 follow-up)', () => {
     }
   });
 });
+
+describe('renaming a recording system that days name', () => {
+  it('after "make default", renaming the old default keeps its days on it (no dangling name)', () => {
+    const result = setup();
+    act(() => {
+      result.current.actions.makeDataAcqDeviceDefault('remy', 'Rig B');
+    });
+    const before = exports(result);
+
+    // DataAcqSection.saveEditor writes the catalog back whole, with the edited row in place.
+    act(() => {
+      result.current.actions.updateAnimal('remy', {
+        data_acq_device: [rigB, { ...rigA, name: 'SpikeGadgets MCU' }],
+      });
+    });
+
+    const ws = result.current.model.workspace;
+    for (const dayId of ['remy-2023-06-22', 'remy-2023-06-23']) {
+      expect(ws.days[dayId].data_acq_device_name).toBe('SpikeGadgets MCU');
+      expect(exports(result)[dayId]).toBe(before[dayId].replace('name: SpikeGadgets\n', 'name: SpikeGadgets MCU\n'));
+    }
+    expect(ws.days['remy-2023-06-24'].data_acq_device_name).toBe('Rig B');
+  });
+
+  it('does not treat adding, removing or reordering systems as a rename', () => {
+    const result = setup();
+    act(() => {
+      result.current.actions.updateAnimal('remy', { data_acq_device: [rigB, rigA] });
+    });
+    expect(result.current.model.workspace.days['remy-2023-06-24'].data_acq_device_name).toBe('Rig B');
+    const rigC = { ...rigB, name: 'Rig C' };
+    act(() => {
+      result.current.actions.updateAnimal('remy', { data_acq_device: [rigB, rigA, rigC] });
+    });
+    act(() => {
+      result.current.actions.updateAnimal('remy', { data_acq_device: [rigB, rigA] });
+    });
+    const ws = result.current.model.workspace;
+    expect(ws.days['remy-2023-06-24'].data_acq_device_name).toBe('Rig B');
+    expect(ws.days['remy-2023-06-22'].data_acq_device_name).toBe('SpikeGadgets');
+  });
+});

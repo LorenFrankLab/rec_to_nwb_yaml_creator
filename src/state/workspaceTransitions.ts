@@ -356,6 +356,33 @@ export function applyAnimalUpdates(animal: Animal, updates: AnimalUpdates, now: 
 }
 
 /**
+ * The recording systems a catalog write renames in place: a same-length catalog in which an entry
+ * keeps its position but changes its name, the old name gone from the new catalog and the new one
+ * absent from the old (how the recording-system editor saves an edited row). Adding, removing or
+ * reordering systems renames nothing.
+ *
+ * @param before - The current catalog (`animal.devices.data_acq_device`).
+ * @param after - The catalog being written.
+ * @returns Old name → new name.
+ */
+export function dataAcqDeviceRenames(before: unknown[], after: unknown[]): Map<string, string> {
+  const renames = new Map<string, string>();
+  if (before.length !== after.length) return renames;
+  const nameOf = (device: unknown) =>
+    device !== null && typeof device === 'object' && typeof (device as { name?: unknown }).name === 'string'
+      ? (device as { name: string }).name
+      : undefined;
+  const oldNames = new Set(before.map(nameOf));
+  const newNames = new Set(after.map(nameOf));
+  before.forEach((device, index) => {
+    const from = nameOf(device);
+    const to = nameOf(after[index]);
+    if (from && to && from !== to && !newNames.has(from) && !oldNames.has(to)) renames.set(from, to);
+  });
+  return renames;
+}
+
+/**
  * The next configuration version to allocate for an animal's history: `max(existing) + 1`
  * (or 1 for an empty/missing history). Using the max — not the count — guarantees a UNIQUE
  * version even for a non-contiguous imported/repaired history (e.g. `[1, 3]` → 4, not a

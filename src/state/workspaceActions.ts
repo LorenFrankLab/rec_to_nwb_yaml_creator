@@ -27,6 +27,7 @@ import {
   nextConfigurationVersion,
   sortDayIdsByDate,
   withoutUnknownFacts,
+  dataAcqDeviceRenames,
 } from './workspaceTransitions';
 import type { AnimalUpdates, ConfigSnapshotInput, DayUpdates } from './workspaceTransitions';
 import type {
@@ -265,12 +266,29 @@ export function createWorkspaceActions({
         // latest configuration snapshot (see workspaceTransitions.applyAnimalUpdates).
         const updated = applyAnimalUpdates(prev.animals[animalId], updates, getCurrentTimestamp());
 
+        // A recording system renamed in place: the days that name it follow the rename in this same
+        // write, or their export would fail on a name the catalog no longer has.
+        const renames = updates.data_acq_device
+          ? dataAcqDeviceRenames(getDataAcqDevices(prev.animals[animalId]), updates.data_acq_device)
+          : new Map<string, string>();
+        let days = prev.days;
+        if (renames.size > 0) {
+          days = { ...prev.days };
+          for (const dayId of getAnimalDayIds(updated)) {
+            const day = prev.days[dayId];
+            const renamed = day ? renames.get(getDayDataAcqDeviceName(day) ?? '') : undefined;
+            if (!day || renamed === undefined || (day.animalId != null && day.animalId !== animalId)) continue;
+            days[dayId] = applyDayUpdates(day, { data_acq_device_name: renamed }, updated.lastModified);
+          }
+        }
+
         return {
           ...prev,
           animals: {
             ...prev.animals,
             [animalId]: updated,
           },
+          days,
           lastModified: updated.lastModified,
         };
       });
