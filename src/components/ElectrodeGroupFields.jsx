@@ -59,7 +59,10 @@ export default function ElectrodeGroupFields() {
               <details
                 open
                 id={`electrode_group_item_${electrodeGroupId}-area`}
-                key={electrodeGroupId}
+                // Keyed by position, not by id: editing the id must not
+                // remount the row (that drops focus mid-typing and skips the
+                // blur that stores the id as a number).
+                key={`electrode_groups-${index}`}
                 className="array-item"
               >
                 <summary>{formatElectrodeGroupLabel(electrodeGroup)}</summary>

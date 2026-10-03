@@ -79,4 +79,33 @@ describe('ElectrodeGroupFields - rows that move', () => {
       [2, 'third!'],
     ]);
   });
+
+  it('types into a group added after the others', async () => {
+    const { user } = renderGroups({ electrode_groups: [group(0, 'first')] });
+
+    await user.click(screen.getByRole('button', { name: '＋' }));
+    await user.type(descriptionInput(1), 'second');
+
+    expect(model().electrode_groups.map((g) => [g.id, g.description])).toEqual([
+      [0, 'first'],
+      [1, 'second'],
+    ]);
+  });
+});
+
+describe('ElectrodeGroupFields - editing a group id', () => {
+  it('keeps the field focused while typing and stores an integer', async () => {
+    const { user } = renderGroups({ electrode_groups: [group(0), group(1)] });
+
+    const idInput = within(groupArea(1)).getByLabelText(/^Id$/);
+    await user.clear(idInput);
+    await user.type(idInput, '12');
+
+    expect(idInput).toHaveFocus();
+    expect(idInput).toHaveValue(12);
+
+    await user.tab();
+
+    expect(model().electrode_groups.map((g) => g.id)).toEqual([0, 12]);
+  });
 });

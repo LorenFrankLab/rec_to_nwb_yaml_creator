@@ -71,4 +71,34 @@ describe('CamerasFields - rows that move', () => {
       [1, 'sleep box2'],
     ]);
   });
+
+  it('types into a camera added after the others', async () => {
+    const { user } = renderCameras([camera(0, 'overhead')]);
+
+    await user.click(screen.getByRole('button', { name: '＋' }));
+    const names = screen.getAllByLabelText(/Camera Name/i);
+    await user.type(names[1], 'sleep box');
+
+    expect(cameras().map((c) => [c.id, c.camera_name])).toEqual([
+      [0, 'overhead'],
+      [1, 'sleep box'],
+    ]);
+  });
+});
+
+describe('CamerasFields - editing a camera id', () => {
+  it('keeps the field focused while typing and stores an integer', async () => {
+    const { user } = renderCameras([camera(0, 'overhead'), camera(1, 'sleep box')]);
+
+    const idInput = screen.getAllByLabelText(/Camera Id/i)[1];
+    await user.clear(idInput);
+    await user.type(idInput, '12');
+
+    expect(idInput).toHaveFocus();
+    expect(idInput).toHaveValue(12);
+
+    await user.tab();
+
+    expect(cameras().map((c) => c.id)).toEqual([0, 12]);
+  });
 });
