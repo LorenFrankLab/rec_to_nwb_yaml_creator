@@ -18,6 +18,7 @@
  * 8. FsGUI protocols need complete optogenetics, task epochs and an existing DIO event
  * 9. Behavioral event names and descriptions are unique
  * 10. Camera, electrode group and ntrode ids are unique; channel-map rows name a group
+ * 11. Optical fibers, virus injections and the excitation source have distinct names
  *
  * Rules 7-10 are the trodes_to_nwb crash guards of the modern branch's rule set, with the same
  * codes and messages.
@@ -397,6 +398,50 @@ export const rulesValidation = (model) => {
       }
     });
   }
+
+  // Rule 11: optogenetics device names. trodes_to_nwb adds the excitation source and every
+  // optical fiber to the NWB file as devices named after them, and builds the virus injections
+  // into containers keyed by name, so a repeated name (or a fiber named like the source) raises
+  // a ValueError. A blank name is the schema's required check.
+  const nonBlankName = (item) =>
+    typeof item?.name === 'string' && item.name.trim() !== '' ? item.name : undefined;
+  repeatedValues(model.optical_fiber, nonBlankName).forEach((name) => {
+    issues.push({
+      path: 'optical_fiber',
+      code: 'duplicate_opto_device_name',
+      severity: 'error',
+      message:
+        `More than one optical fiber is named "${name}". trodes_to_nwb stores each fiber as ` +
+        `a device named after it and fails on a repeated name — give each fiber its own name.`,
+    });
+  });
+  repeatedValues(model.virus_injection, nonBlankName).forEach((name) => {
+    issues.push({
+      path: 'virus_injection',
+      code: 'duplicate_opto_device_name',
+      severity: 'error',
+      message:
+        `More than one virus injection is named "${name}". trodes_to_nwb stores each ` +
+        `injection under its name and fails on a repeated name — give each injection its own name.`,
+    });
+  });
+  const sourceNames = new Set(
+    (Array.isArray(model.opto_excitation_source) ? model.opto_excitation_source : [])
+      .map((source) => source?.name)
+      .filter((name) => typeof name === 'string' && name.trim() !== '')
+  );
+  (Array.isArray(model.optical_fiber) ? model.optical_fiber : []).forEach((fiber, i) => {
+    if (typeof fiber?.name === 'string' && sourceNames.has(fiber.name)) {
+      issues.push({
+        path: `optical_fiber[${i}].name`,
+        code: 'duplicate_opto_device_name',
+        severity: 'error',
+        message:
+          `Optical fiber ${i + 1} is named "${fiber.name}", the same as the excitation source. ` +
+          `trodes_to_nwb stores both as devices, which need different names.`,
+      });
+    }
+  });
 
   return issues;
 };

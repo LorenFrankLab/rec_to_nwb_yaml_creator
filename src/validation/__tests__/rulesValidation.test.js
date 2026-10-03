@@ -1007,3 +1007,64 @@ describe('rulesValidation() - converter guards', () => {
     });
   });
 });
+
+// trodes_to_nwb adds the excitation source and every optical fiber to the NWB file as devices
+// named after them, and keys the virus injections by name: a repeated name raises a ValueError.
+describe('rulesValidation() - optogenetics device names', () => {
+  const opto = (overrides) => ({
+    opto_excitation_source: [{ name: 'Laser' }],
+    optical_fiber: [{ name: 'Fiber 1', reference: 'Bregma' }, { name: 'Fiber 2', reference: 'Bregma' }],
+    virus_injection: [{ name: 'Injection 1', reference: 'Bregma' }],
+    optogenetic_stimulation_software: 'fsgui',
+    ...overrides,
+  });
+  const nameIssues = (model) =>
+    rulesValidation(model).filter((i) => i.code === 'duplicate_opto_device_name');
+
+  it('errors when two optical fibers share a name', () => {
+    expect(nameIssues(opto({
+      optical_fiber: [{ name: 'Fiber 1', reference: 'Bregma' }, { name: 'Fiber 1', reference: 'Bregma' }],
+    }))).toEqual([expect.objectContaining({
+      path: 'optical_fiber',
+      severity: 'error',
+      message: expect.stringContaining('"Fiber 1"'),
+    })]);
+  });
+
+  it('errors when two virus injections share a name', () => {
+    expect(nameIssues(opto({
+      virus_injection: [
+        { name: 'Injection 1', reference: 'Bregma' },
+        { name: 'Injection 1', reference: 'Bregma' },
+      ],
+    }))).toEqual([expect.objectContaining({
+      path: 'virus_injection',
+      severity: 'error',
+      message: expect.stringContaining('"Injection 1"'),
+    })]);
+  });
+
+  it('errors when a fiber has the excitation source name (one device namespace)', () => {
+    expect(nameIssues(opto({
+      optical_fiber: [{ name: 'Fiber 1', reference: 'Bregma' }, { name: 'Laser', reference: 'Bregma' }],
+    }))).toEqual([expect.objectContaining({
+      path: 'optical_fiber[1].name',
+      severity: 'error',
+      message: expect.stringContaining('"Laser"'),
+    })]);
+  });
+
+  it('passes distinct names, compares them exactly, and leaves blank names to the schema', () => {
+    expect(nameIssues(opto())).toEqual([]);
+    // "Fiber 1" and "Fiber 1 " are different NWB names; the converter does not trim.
+    expect(nameIssues(opto({
+      optical_fiber: [{ name: 'Fiber 1', reference: 'Bregma' }, { name: 'Fiber 1 ', reference: 'Bregma' }],
+    }))).toEqual([]);
+    const blank = opto({
+      optical_fiber: [{ name: '', reference: 'Bregma' }, { name: '', reference: 'Bregma' }],
+    });
+    expect(nameIssues(blank)).toEqual([]);
+    // The schema requires a non-blank name.
+    expect(validate(blank)).toContainEqual(expect.objectContaining({ path: 'optical_fiber[0].name', code: 'pattern' }));
+  });
+});
