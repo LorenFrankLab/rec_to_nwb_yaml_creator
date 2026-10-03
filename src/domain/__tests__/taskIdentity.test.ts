@@ -198,6 +198,28 @@ describe('importTaskDescriptionDivergences', () => {
     ]);
   });
 
+  it('scopes a difference involving the existing days to adding; the files alone are compared for replacing', () => {
+    const { animal, dayA } = twoDays();
+    animal.days = [dayA.id];
+    const workspace = { animals: { [animal.id]: animal }, days: { [dayA.id]: dayA } };
+    const divergences = importTaskDescriptionDivergences(
+      [
+        { sourceName: 'b.yml', tasks: sleep('resting in the sleep box') },
+        { sourceName: 'c.yml', tasks: sleep('sleeping') },
+      ],
+      { workspace, animalId: animal.id }
+    );
+    expect(divergences.map((d) => d.scope)).toEqual(['add', 'replace']);
+    expect(divergences[1].detail).not.toMatch(/already on this animal/);
+    // Files that agree with each other differ only from the animal: nothing to say for replacing.
+    expect(
+      importTaskDescriptionDivergences(
+        [{ sourceName: 'b.yml', tasks: sleep('x') }, { sourceName: 'c.yml', tasks: sleep('x') }],
+        { workspace, animalId: animal.id }
+      ).map((d) => d.scope)
+    ).toEqual(['add']);
+  });
+
   it('lists nothing when the files agree (rooms and cameras may differ)', () => {
     const tasks = sleep('sleeping');
     const elsewhere = [{ ...tasks[0], task_environment: 'sleep box', camera_id: [1] }];
@@ -220,6 +242,9 @@ describe('importTaskDescriptionDivergences', () => {
     expect(divergence.detail).toMatch(
       /"Rest in home cage" \(already on this animal: 2023-06-22\); "resting in the sleep box" \(06232023_remy_metadata\.yml\)/
     );
+    // It is about adding to the animal (replacing deletes those days), and it must be reviewed
+    // before the commit: adding the file would block the existing day's export.
+    expect(divergence.scope).toBe('add');
     // A disagreement among the existing days alone is not something this import brings.
     const { dayB } = twoDays();
     editTask(dayB, 'sleep', { task_description: 'resting in the sleep box' });

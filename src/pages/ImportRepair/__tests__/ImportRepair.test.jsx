@@ -457,6 +457,41 @@ describe('ImportRepair — commit', () => {
     expect(captured.animals.remy.subject.genotype).toBe('Wild Type');
   });
 
+  it("reviews a file whose task description differs from the existing animal's days before adding it", async () => {
+    const user = userEvent.setup();
+    // The existing animal: the clean file's own day, imported earlier.
+    const first = renderScreen();
+    await user.upload(
+      screen.getByLabelText(/choose a metadata yaml file/i),
+      makeFile('06222023_remy_metadata.yml', cleanYaml)
+    );
+    await user.click(await screen.findByRole('button', { name: /import as new animal/i }));
+    const { animals, days } = captured;
+    expect(Object.keys(days)).toEqual(['remy-2023-06-22']);
+    const existingDays = Object.keys(days);
+    const existingTask = decodeYaml(cleanYaml).tasks[0];
+    first.unmount();
+    renderScreen(animals, days);
+
+    const later = decodeYaml(cleanYaml);
+    later.session_id = 'remy_20230623';
+    later.tasks = later.tasks.map((task) =>
+      task.task_name === existingTask.task_name ? { ...task, task_description: 'A different description' } : task
+    );
+    await user.upload(
+      screen.getByLabelText(/choose a metadata yaml file/i),
+      makeFile('06232023_remy_metadata.yml', encodeYaml(later))
+    );
+    await user.click(await screen.findByRole('button', { name: /add recording day/i }));
+
+    // Nothing is written until the difference has been shown.
+    await screen.findByRole('heading', { name: /review batch import/i });
+    expect(Object.keys(captured.days)).toEqual(existingDays);
+    expect(screen.getByText('Differences to review').parentElement).toHaveTextContent(
+      new RegExp(`Task "${existingTask.task_name}" has different descriptions`)
+    );
+  });
+
   it('gates existing-animal catalog gaps until the user accepts selected catalog entries', async () => {
     const user = userEvent.setup();
     renderScreen({

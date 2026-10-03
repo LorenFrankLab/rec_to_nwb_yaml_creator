@@ -193,12 +193,14 @@ export function crossDayTaskIdentityIssues(
  * @param existing - The workspace and the existing animal's id, when the subject already exists.
  * @param existing.workspace - The current workspace (`{ animals, days }`); read-only.
  * @param existing.animalId - The existing animal's store key.
- * @returns One `tasks` divergence per task name with more than one description.
+ * @returns One `tasks` divergence per task name with more than one description; when the existing
+ *   animal's days take part, it is scoped to `add`, plus a `replace`-scoped one when the files
+ *   disagree among themselves (see `Divergence.scope` in state/yamlImportPlan).
  */
 export function importTaskDescriptionDivergences(
   files: ReadonlyArray<{ sourceName: string; tasks: unknown }>,
   existing: { workspace: unknown; animalId: string } | null = null
-): Array<{ field: string; detail: string }> {
+): Array<{ field: string; detail: string; scope?: 'add' | 'replace' }> {
   const recordings: Array<{ existingDay?: string; file?: string; tasks: TaskDescription[] }> = [];
   const workspace = existing?.workspace;
   if (existing && isRecord(workspace) && isRecord(workspace.animals) && isRecord(workspace.days)) {
@@ -224,24 +226,43 @@ export function importTaskDescriptionDivergences(
     }
   }
 
+  const describe = (taskName: string, variants: Array<[string, { days: string[]; files: string[] }]>) => {
+    const listed = variants.map(([description, { days, files: fileNames }]) => {
+      const where = [
+        ...(days.length > 0 ? [`already on this animal: ${listLabels(days, 'days')}`] : []),
+        ...(fileNames.length > 0 ? [listLabels(fileNames, 'files')] : []),
+      ].join('; ');
+      return `${quoted(description)} (${where})`;
+    });
+    return {
+      field: 'tasks',
+      detail:
+        `Task "${taskName}" has different descriptions across these recordings: ` +
+        `${listed.join('; ')}. Spyglass keeps one description per task name, so these days ` +
+        'cannot be exported until the descriptions match or the task is renamed.',
+    };
+  };
+
   return [...byName]
     // Only names an imported file uses: a disagreement among the existing days alone is not
     // something this import brings (each of those days already carries the export block).
     .filter(([, variants]) => variants.size > 1 && [...variants.values()].some((s) => s.files.length > 0))
-    .map(([taskName, variants]) => {
-      const listed = [...variants].map(([description, { days, files: fileNames }]) => {
-        const where = [
-          ...(days.length > 0 ? [`already on this animal: ${listLabels(days, 'days')}`] : []),
-          ...(fileNames.length > 0 ? [listLabels(fileNames, 'files')] : []),
-        ].join('; ');
-        return `${quoted(description)} (${where})`;
-      });
-      return {
-        field: 'tasks',
-        detail:
-          `Task "${taskName}" has different descriptions across these recordings: ` +
-          `${listed.join('; ')}. Spyglass keeps one description per task name, so these days ` +
-          'cannot be exported until the descriptions match or the task is renamed.',
-      };
+    .flatMap(([taskName, variants]) => {
+      // A difference involving the existing days is about ADDING to the animal (replacing deletes
+      // those days), so it is scoped to `add` — which also sends a single file to the review screen
+      // before the commit. For replacing, only the files' own descriptions are compared.
+      if (![...variants.values()].some((sources) => sources.days.length > 0)) {
+        return [describe(taskName, [...variants])];
+      }
+      const filesOnly = [...variants]
+        .filter(([, sources]) => sources.files.length > 0)
+        .map(([description, sources]): [string, { days: string[]; files: string[] }] => [
+          description,
+          { days: [], files: sources.files },
+        ]);
+      return [
+        { ...describe(taskName, [...variants]), scope: 'add' as const },
+        ...(filesOnly.length > 1 ? [{ ...describe(taskName, filesOnly), scope: 'replace' as const }] : []),
+      ];
     });
 }
