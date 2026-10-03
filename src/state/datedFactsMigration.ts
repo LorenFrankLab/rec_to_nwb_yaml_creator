@@ -33,6 +33,17 @@ import type {
   ExportReceipt,
 } from './workspaceTypes';
 
+/**
+ * The LOCAL calendar date (`YYYY-MM-DD`) of a timestamp, the frame `getCurrentDate` stamps dates in;
+ * null when the timestamp does not parse.
+ */
+function localDateOf(timestamp: string): string | null {
+  const at = new Date(timestamp);
+  if (Number.isNaN(at.getTime())) return null;
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${at.getFullYear()}-${pad(at.getMonth() + 1)}-${pad(at.getDate())}`;
+}
+
 /** The filename the v3 (pre-fix) formatter produced, so a migrated receipt names the real download. */
 function legacyDownloadFilename(day: Record<string, unknown>, animal: Record<string, unknown>): string {
   const date = typeof day.date === 'string' ? day.date : '';
@@ -150,7 +161,13 @@ export function migrateDatedFactsV3ToV4(workspace: object): object {
       animals[id] = animal;
       continue;
     }
-    const created = typeof animal.created === 'string' ? animal.created.slice(0, 10) : '';
+    const created = typeof animal.created === 'string' ? animal.created : '';
+    // `createAnimal` dated the initial snapshot with the LOCAL calendar date of the entry
+    // (`getCurrentDate`), but `created` is a UTC timestamp: an evening entry in a US zone is already
+    // the next day in UTC. So compare in the local frame. The UTC date (what this compared before)
+    // still counts, so nothing recognised before is lost, e.g. when the browser's zone changed since
+    // the animal was entered. Only an entry stamp can match: v3 dated this snapshot with nothing else.
+    const entryDates = [created.slice(0, 10), localDateOf(created)];
     const history = Array.isArray(animal.configurationHistory)
       ? animal.configurationHistory.map((snapshot) => {
           if (!isRecord(snapshot)) return snapshot;
@@ -160,7 +177,7 @@ export function migrateDatedFactsV3ToV4(workspace: object): object {
             snapshot.version === 1 &&
             snapshot.description === 'Initial configuration' &&
             typeof snapshot.date === 'string' &&
-            snapshot.date === created &&
+            entryDates.includes(snapshot.date) &&
             !('effectiveDateKnown' in snapshot);
           return entryStamped ? { ...snapshot, effectiveDateKnown: false } : snapshot;
         })

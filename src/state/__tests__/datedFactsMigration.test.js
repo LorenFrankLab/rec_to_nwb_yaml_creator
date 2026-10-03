@@ -2,7 +2,7 @@
  * v3 → v4 dated-facts migration: every previously effective export is reproduced, unresolved
  * historical choices are flagged for review, and nothing is invented (fix plan, increment 2).
  */
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import { migrateDatedFactsV3ToV4 } from '../datedFactsMigration';
 import { applyDayUpdates } from '../workspaceTransitions';
 import { mergeDayMetadata } from '../workspaceUtils';
@@ -169,5 +169,48 @@ describe('migrateDatedFactsV3ToV4', () => {
     expect(out.animals.a).toBe('nope');
     expect(out.days.d).toBe(42);
     expect(out.days.e.provenance).toBeDefined();
+  });
+});
+
+describe('migrateDatedFactsV3ToV4 — the initial setup is stamped with the LOCAL entry date', () => {
+  // `createAnimal` stamps the initial snapshot with the local calendar date (`getCurrentDate`) but
+  // `created` with a UTC timestamp. Each test pins the zone, so none depends on the machine's.
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  /**
+   * The initial snapshot after migrating a v3 animal entered at `created`.
+   *
+   * @param {string} created - The animal's `created` timestamp.
+   * @param {string} snapshotDate - The initial snapshot's date.
+   * @returns {object}
+   */
+  const migratedInitialSnapshot = (created, snapshotDate) => {
+    const ws = v3Workspace();
+    ws.animals.remy.created = created;
+    ws.animals.remy.configurationHistory[0].date = snapshotDate;
+    return migrateDatedFactsV3ToV4(ws).animals.remy.configurationHistory[0];
+  };
+
+  it.each([
+    // 18:00 on 2023-06-22 in Los Angeles is already 2023-06-23 in UTC.
+    ['America/Los_Angeles', '2023-06-23T01:00:00.000Z'],
+    // 05:00 on 2023-06-22 in Tokyo is still 2023-06-21 in UTC.
+    ['Asia/Tokyo', '2023-06-21T20:00:00.000Z'],
+  ])('recognises an animal entered on 2023-06-22 in %s, when UTC is on another date', (zone, created) => {
+    vi.stubEnv('TZ', zone);
+    expect(new Date(created).getDate()).toBe(22); // the pinned zone is in effect
+    expect(migratedInitialSnapshot(created, '2023-06-22').effectiveDateKnown).toBe(false);
+  });
+
+  it('still recognises a stamp that matches the UTC date (an animal entered in another zone)', () => {
+    vi.stubEnv('TZ', 'America/Los_Angeles');
+    expect(migratedInitialSnapshot('2023-06-23T01:00:00.000Z', '2023-06-23').effectiveDateKnown).toBe(false);
+  });
+
+  it('leaves an initial setup dated on neither calendar date of the entry as a known date', () => {
+    vi.stubEnv('TZ', 'America/Los_Angeles');
+    expect(migratedInitialSnapshot('2023-06-23T01:00:00.000Z', '2023-06-15')).not.toHaveProperty('effectiveDateKnown');
   });
 });
