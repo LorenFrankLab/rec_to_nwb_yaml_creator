@@ -11,6 +11,8 @@
  *     re-pins the days that use it (atomic); onto an EXISTING animal, a file older than its
  *     recorded timeline instead reuses a matching version or gets a pinned-only one, so it never
  *     changes another day's configuration,
+ *   - `updateAnimal` makes a new current (last) version what Animal Setup edits (the animal's
+ *     editable `devices` mirror it),
  *   - `updateDay` writes the day-owned content `createDay` does not take (tasks, files,
  *     behavioral_events, fs_gui_yamls, technical, keywords, data_acq_device_name, cameras_used,
  *     deviceOverrides — the day-owned bad-channel marks).
@@ -43,7 +45,7 @@ import {
   getProbeNtrodeMaps,
 } from './workspaceSelectors';
 import { materializePlanDay } from './yamlImportPlan';
-import type { ImportPlan, ImportPlanAnimal, ImportPlanDay } from './yamlImportPlan';
+import type { ConfigVersion, ImportPlan, ImportPlanAnimal, ImportPlanDay } from './yamlImportPlan';
 import { referencedCameraRefs } from './cameraUsage';
 import { selectConfigurationForDate } from '../domain/configurationSelection';
 import { canonicalJson } from '../utils/canonicalJson';
@@ -428,6 +430,10 @@ function applyNewAnimal(
       dayIds
     );
   }
+  // `createAnimal` seeded the editable setup from version 1; the LAST version is the current one.
+  if (configVersions.length > 1) {
+    mirrorCurrentConfiguration(actions, subjectId, configVersions[configVersions.length - 1].devices);
+  }
 
   // Write each day's day-owned content (createDay only takes a session).
   for (const day of animalPlan.days) {
@@ -614,18 +620,45 @@ function placeOnExistingTimeline(
     if (run && run[0].configurationVersion === day.configurationVersion) run.push(day);
     else runs.push([day]);
   }
-  runs.forEach((run, index) => {
+  let current: ConfigVersion['devices'] | null = null;
+  for (const [index, run] of runs.entries()) {
     const { devices } = configOf(run[0])!;
     const inEffect = index === 0 ? selectConfigurationForDate(existing, run[0].date).version : null;
     if (inEffect != null && versionKey(inEffect) === geometryKey(devices)) {
       run.forEach((day) => actions.updateDay(dayId(day), { configurationVersion: inEffect }));
-      return;
+      continue;
     }
     actions.createConfigurationSnapshotAndApplyForward(
       targetId,
       { date: run[0].date, description: `Imported setup from ${run[0].date}`, devices },
       run.map(dayId)
     );
+    current = devices;
+  }
+  // The last new version is the animal's current configuration now.
+  if (current) mirrorCurrentConfiguration(actions, targetId, current);
+}
+
+/**
+ * Make an imported version the one Animal Setup edits: the animal's editable `devices` mirror its
+ * current (last) configuration — as the app's own "new configuration" flow leaves them — because a
+ * setup edit writes that mirror back over the current version. A stale mirror (an earlier file's
+ * electrode groups) would replace that version's geometry on the next edit.
+ *
+ * @param actions - The store workspace actions.
+ * @param animalId - The animal.
+ * @param devices - The current version's probe configuration.
+ */
+function mirrorCurrentConfiguration(
+  actions: ImportActions,
+  animalId: string,
+  devices: ConfigVersion['devices']
+): void {
+  actions.updateAnimal(animalId, {
+    devices: {
+      electrode_groups: devices.electrode_groups,
+      ntrode_electrode_group_channel_map: devices.ntrode_electrode_group_channel_map,
+    },
   });
 }
 

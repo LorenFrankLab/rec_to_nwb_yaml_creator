@@ -8,8 +8,12 @@
  *  - W1: an import never takes over the effective-date timeline. Each imported day uses its own
  *    file's configuration; a back-filled (older) file changes no other day's configuration, and
  *    after A → B → A the next day gets A.
+ *  - W2: after an import, Animal Setup edits the configuration new days get (the animal's editable
+ *    `devices` mirror it), and an edit never rewrites another configuration's electrode groups.
  */
 import { describe, it, expect } from 'vitest';
+import fs from 'fs';
+import path from 'path';
 import { renderHook, act } from '@testing-library/react';
 import { encodeYaml, decodeYaml } from '../../io/yaml';
 import { mergeDayMetadata, getCurrentDate } from '../workspaceUtils';
@@ -17,9 +21,13 @@ import { buildRealisticWorkspace } from '../../__tests__/fixtures/workspaceBuild
 import { useStore } from '../store';
 import { planImport } from '../yamlImportPlan';
 import { applyImportPlan } from '../yamlImportApply';
+import { getAnimalDevices, getAnimalElectrodeGroups, getConfigHistory } from '../workspaceSelectors';
 import { validateDay } from '../../domain/dayValidationComposer';
 import { configurationChoiceStatus } from '../../domain/configurationSelection';
 import { isBlockingIssue } from '../../validation/issueTypes';
+import { normalizeElectrodeGroupWithDefaults, normalizeIdKey } from '../../utils/deviceNormalization';
+
+const goldenDir = path.join(__dirname, '../../__tests__/fixtures/golden');
 
 /**
  * A genuine app export (decoded flat YAML) of `remy` recorded on `date`, from the realistic fixture.
@@ -148,15 +156,60 @@ function dayAfterToday() {
 }
 
 /**
- * The exported (merged) metadata of one day of `remy`.
+ * The exported (merged) metadata of one recording day.
  *
  * @param {object} result - The `renderHook(useStore)` result.
  * @param {string} date - The day's ISO date.
+ * @param {string} [animalId] - The animal (default `remy`).
  * @returns {object} The flat export model.
  */
-function exportDay(result, date) {
+function exportDay(result, date, animalId = 'remy') {
   const ws = result.current.model.workspace;
-  return mergeDayMetadata(ws.animals.remy, ws.days[`remy-${date}`]);
+  return mergeDayMetadata(ws.animals[animalId], ws.days[`${animalId}-${date}`]);
+}
+
+/**
+ * Edit one electrode group in Animal Setup exactly as `ElectrodeGroupsContainer.handleSaveGroup`
+ * saves it: the edited row replaces its group in the editable setup, which is written back whole.
+ *
+ * @param {object} result - The `renderHook(useStore)` result.
+ * @param {string} animalId - The animal.
+ * @param {number} groupId - The electrode group being edited.
+ * @param {object} changes - The edited fields.
+ */
+function editGroupInAnimalSetup(result, animalId, groupId, changes) {
+  const devices = getAnimalDevices(result.current.model.workspace.animals[animalId]);
+  const isEdited = (group) => normalizeIdKey(group.id) === normalizeIdKey(groupId);
+  const edited = normalizeElectrodeGroupWithDefaults(
+    { ...devices.electrode_groups.find(isEdited), ...changes, id: groupId },
+    groupId
+  );
+  act(() => {
+    result.current.actions.updateAnimal(animalId, {
+      devices: {
+        ...devices,
+        electrode_groups: devices.electrode_groups.map((group) => (isEdited(group) ? edited : group)),
+        ntrode_electrode_group_channel_map: devices.ntrode_electrode_group_channel_map,
+      },
+    });
+  });
+}
+
+/**
+ * A golden fixture as an import file recorded on the date `sourceName` names. The fixtures share
+ * one placeholder path for their associated files, which import rejects, so each gets its own.
+ *
+ * @param {string} fixture - The golden fixture filename.
+ * @param {string} sourceName - The import filename (`{mmddYYYY}_{subject}_metadata.yml`).
+ * @returns {{ sourceName: string, flatModel: object }} The decoded file.
+ */
+function goldenFile(fixture, sourceName) {
+  const flatModel = decodeYaml(fs.readFileSync(path.join(goldenDir, fixture), 'utf8'));
+  flatModel.associated_files = flatModel.associated_files.map((file, index) => ({
+    ...file,
+    path: `${file.path}file_${index}.txt`,
+  }));
+  return { sourceName, flatModel };
 }
 
 /**
@@ -298,5 +351,72 @@ describe('W1: an import never takes over the effective-date timeline', () => {
     expect(exportDay(result, '2023-06-26').electrode_groups).toHaveLength(7);
     // Before the newer file, the earlier configuration was still in effect.
     expect(exportDay(result, '2023-06-23').electrode_groups).toHaveLength(8);
+  });
+});
+
+describe('W2: after an import, Animal Setup edits the configuration days get from now on', () => {
+  it('a batch whose setup changed (8 tetrodes 06-22, 7 on 06-23) leaves Animal Setup holding the latest 7-tetrode setup', () => {
+    const { result } = renderHook(() => useStore());
+    importFiles(result, [makeFile({ date: '2023-06-22' }), makeFile({ date: '2023-06-23', mutate: keepTetrodes(7) })]);
+    const remy = result.current.model.workspace.animals.remy;
+    expect(getAnimalElectrodeGroups(remy)).toHaveLength(7);
+    expect(getAnimalElectrodeGroups(remy)).toEqual(getConfigHistory(remy).at(-1).devices.electrode_groups);
+  });
+
+  it('…and a location fix there reaches 06-23 without rewriting either day’s electrode groups', () => {
+    const { result } = renderHook(() => useStore());
+    importFiles(result, [makeFile({ date: '2023-06-22' }), makeFile({ date: '2023-06-23', mutate: keepTetrodes(7) })]);
+    editGroupInAnimalSetup(result, 'remy', 0, { location: 'CA1 dorsal' });
+
+    const june23 = exportDay(result, '2023-06-23');
+    expect(june23.electrode_groups).toHaveLength(7);
+    expect(june23.ntrode_electrode_group_channel_map).toHaveLength(7);
+    expect(june23.electrode_groups[0].location).toBe('CA1 dorsal');
+    const june22 = exportDay(result, '2023-06-22');
+    expect(june22.electrode_groups).toHaveLength(8);
+    expect(june22.electrode_groups[0].location).toBe('CA1');
+  });
+
+  it('a description fix after importing the 32-tetrode sample (06-01) and its 128c reconfiguration (06-02) changes only 06-02’s probe', () => {
+    const { result } = renderHook(() => useStore());
+    importFiles(result, [
+      goldenFile('20230622_sample_metadata.yml', '06012023_54321_metadata.yml'),
+      goldenFile('20230622_sample_metadataProbeReconfig.yml', '06022023_54321_metadata.yml'),
+    ]);
+    const before = exportDay(result, '2023-06-02', '54321');
+    expect(before.electrode_groups.map((group) => group.device_type)).toEqual(['128c-4s6mm6cm-15um-26um-sl']);
+
+    editGroupInAnimalSetup(result, '54321', 0, { description: 'probe device description' });
+    const after = exportDay(result, '2023-06-02', '54321');
+    expect(after.electrode_groups).toEqual([{ ...before.electrode_groups[0], description: 'probe device description' }]);
+    expect(after.ntrode_electrode_group_channel_map).toEqual(before.ntrode_electrode_group_channel_map);
+    const june1 = exportDay(result, '2023-06-01', '54321');
+    expect(june1.electrode_groups).toHaveLength(32);
+    expect(june1.electrode_groups[0].description).toBe('terode device description');
+  });
+
+  it('after ADDING an older 7-tetrode day, a location fix reaches the current day and leaves the older day’s own groups', () => {
+    const { result } = renderHook(() => useStore());
+    importFiles(result, [makeFile({ date: '2023-06-22' })]);
+    importFiles(result, [makeFile({ date: '2023-06-10', mutate: keepTetrodes(7) })]);
+    expect(getAnimalElectrodeGroups(result.current.model.workspace.animals.remy)).toHaveLength(8);
+
+    editGroupInAnimalSetup(result, 'remy', 0, { location: 'CA1 dorsal' });
+    expect(exportDay(result, '2023-06-22').electrode_groups[0].location).toBe('CA1 dorsal');
+    const june10 = exportDay(result, '2023-06-10');
+    expect(june10.electrode_groups).toHaveLength(7);
+    expect(june10.electrode_groups[0].location).toBe('CA1');
+  });
+
+  it('after adding a NEWER file with different hardware, Animal Setup holds that newer setup', () => {
+    const { result } = renderHook(() => useStore());
+    importFiles(result, [makeFile({ date: '2023-06-22' })]);
+    importFiles(result, [makeFile({ date: '2023-06-25', mutate: keepTetrodes(7) })]);
+    expect(getAnimalElectrodeGroups(result.current.model.workspace.animals.remy)).toHaveLength(7);
+
+    editGroupInAnimalSetup(result, 'remy', 0, { location: 'CA1 dorsal' });
+    expect(exportDay(result, '2023-06-25').electrode_groups[0].location).toBe('CA1 dorsal');
+    expect(exportDay(result, '2023-06-22').electrode_groups).toHaveLength(8);
+    expect(exportDay(result, '2023-06-22').electrode_groups[0].location).toBe('CA1');
   });
 });
