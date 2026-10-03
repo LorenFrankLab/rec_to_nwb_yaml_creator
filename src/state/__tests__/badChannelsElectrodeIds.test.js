@@ -12,6 +12,8 @@ import { describe, it, expect } from 'vitest';
 import { encodeYaml, decodeYaml } from '../../io/yaml';
 import { mergeDayMetadata } from '../workspaceUtils';
 import { decomposeYaml, recomposeDayModel } from '../yamlImport';
+import { buildImportRepairPlan, applyImportRepairs } from '../importRepair';
+import { planImport } from '../yamlImportPlan';
 import { validate } from '../../validation';
 import { blockingIssues } from '../../validation/issueTypes';
 import { buildRealisticWorkspace } from '../../__tests__/fixtures/workspaceBuilders';
@@ -110,5 +112,61 @@ describe('workspace YAML import: electrode ids back to the stored channels', () 
 
     const { animal: a2, day: d2 } = recomposeDayModel(decomposed);
     expect(encodeYaml(mergeDayMetadata(a2, d2))).toBe(yaml);
+  });
+});
+
+describe('Import & Repair: a file from an earlier version with later-row marks', () => {
+  /**
+   * An exported day whose electrode group 0 is a 128c-4s probe (ntrode 1: electrodes 0–31, then
+   * ntrodes 9–11: 32–63, 64–95, 96–127), with the bad channels written the way earlier versions of
+   * the legacy form wrote them: each shank's ticked channels on that shank's row.
+   *
+   * @returns {object} The decoded file
+   */
+  function oldFourShankFile() {
+    const { animal, day } = buildRealisticWorkspace();
+    const devices = animal.configurationHistory[0].devices;
+    devices.electrode_groups[0].device_type = '128c-4s6mm6cm-15um-26um-sl';
+    const rows = devices.ntrode_electrode_group_channel_map;
+    rows.forEach((row) => {
+      row.bad_channels = [];
+    });
+    rows[0].map = mapOf(range(0, 31));
+    rows.splice(
+      1,
+      0,
+      ...[range(32, 63), range(64, 95), range(96, 127)].map((ids, i) => ({
+        ntrode_id: 9 + i,
+        electrode_group_id: 0,
+        bad_channels: [],
+        map: mapOf(ids),
+      }))
+    );
+    day.deviceOverrides = { bad_channels: {} };
+    const file = mergeDayMetadata(animal, day);
+    // Shank 1 channel 3 (electrode 3) and shank 2 channel 5 (electrode 37).
+    file.ntrode_electrode_group_channel_map[0].bad_channels = [3];
+    file.ntrode_electrode_group_channel_map[1].bad_channels = [5];
+    return decodeYaml(encodeYaml(file));
+  }
+
+  it('is not blocked, and the day exports the mark on the first row as the electrode id', () => {
+    const decoded = oldFourShankFile();
+
+    const repairPlan = buildImportRepairPlan(decoded, '20230622_remy_metadata.yml', { animals: {} });
+    expect(repairPlan.blockers.map((b) => b.code)).not.toContain('multishank_bad_channels_ignored');
+    expect(repairPlan.hasErrors).toBe(false);
+
+    const repaired = applyImportRepairs(decoded, {});
+    const plan = planImport([{ sourceName: '20230622_remy_metadata.yml', flatModel: repaired }], { animals: {} });
+    expect(plan.unimportable).toEqual([]);
+
+    const result = decomposeYaml(repaired);
+    expect(result.ok).toBe(true);
+    expect(result.dayFacts.deviceOverrides).toEqual({ bad_channels: { 1: [3, 37] } });
+
+    const { animal, day } = recomposeDayModel(result);
+    const bad = exportedBadChannels(mergeDayMetadata(animal, day));
+    expect([bad[1], bad[9], bad[10], bad[11]]).toEqual([[3, 37], [], [], []]);
   });
 });

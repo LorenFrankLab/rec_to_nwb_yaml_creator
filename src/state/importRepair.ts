@@ -36,6 +36,7 @@ import { inferredCameraRefs } from './cameraUsage';
 import type { IdentityRegistryEntry } from './identityDivergence';
 import type { ValidationModel } from '../validation/issueTypes';
 import { blockingIssues } from '../validation/issueTypes';
+import { canonicalizeFileBadChannels } from '../domain/badChannels';
 
 /** The schema enum for `subject.sex` (mirrors nwb_schema.json — single-letter NWB/DANDI codes). */
 const SEX_ENUM: ReadonlyArray<string> = ['M', 'F', 'U', 'O'];
@@ -1405,7 +1406,9 @@ export function buildImportRepairPlan(
   const { benign, shimItems } = buildBenignAndShim(model);
   const normalized = structuredClone(model) as Record<string, unknown>;
   applyBenignNormalizations(normalized);
-  const validation = buildValidationItems(normalized as ValidationModel);
+  // Validate what the commit imports: `decomposeYaml` moves later-row bad channels (from earlier
+  // versions) to the group's first row before validating, so the multi-shank rule must not block them.
+  const validation = buildValidationItems(canonicalizeFileBadChannels(normalized) as ValidationModel);
   const shimPaths = new Set(shimItems.map((item) => item.path));
   const items = validation.items.filter((item) => !shimPaths.has(item.path));
   const blockers = validation.blockers.filter((blocker) => !shimPaths.has(blocker.path));

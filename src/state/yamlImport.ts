@@ -27,7 +27,10 @@
 import { validate } from '../validation';
 import type { ValidationModel, ValidationIssue } from '../validation/issueTypes';
 import { blockingIssues } from '../validation/issueTypes';
-import { singleShankBadChannelsFromFile } from '../domain/badChannels';
+import {
+  canonicalizeFileBadChannels,
+  singleShankBadChannelsFromFile,
+} from '../domain/badChannels';
 
 /**
  * A successful decompose: the layered facts the export merge reads. `animalFacts` / `dayFacts` /
@@ -143,10 +146,15 @@ function decomposeOptogenetics(flatModel: ValidationModel): Record<string, any> 
  * - configuration ← electrode_groups + ntrode_electrode_group_channel_map (with
  *   bad_channels emptied — they are day-owned, not snapshot-base).
  *
- * @param flatModel - Decoded flat YAML metadata (a `mergeDayMetadata` output).
+ * @param rawModel - Decoded flat YAML metadata (a `mergeDayMetadata` output, or a file from an
+ *   earlier version).
  * @returns The typed decompose result, or a rejection carrying the blocking issues.
  */
-export function decomposeYaml(flatModel: ValidationModel): DecomposeResult {
+export function decomposeYaml(rawModel: ValidationModel): DecomposeResult {
+  // A file from an earlier version of the legacy form carries a shank's bad channels on that
+  // shank's row, which trodes_to_nwb never reads: move them to the group's first row as electrode
+  // ids (as the legacy form's upload does) before validating, so they are kept, not rejected.
+  const flatModel = canonicalizeFileBadChannels(rawModel);
   const issues = validate(flatModel);
   const errors = blockingIssues(issues);
   if (errors.length > 0) {
