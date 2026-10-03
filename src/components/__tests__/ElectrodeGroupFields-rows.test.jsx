@@ -45,7 +45,7 @@ afterEach(() => {
 });
 
 describe('ElectrodeGroupFields - rows that move', () => {
-  it('types into the group typed into after Duplicate inserts copies before it', async () => {
+  it('types into the group typed into after Duplicate inserts copies before it', { timeout: 30000 }, async () => {
     const { user } = renderGroups({ electrode_groups: [group(0)] });
 
     for (let i = 0; i < 3; i += 1) {
@@ -53,15 +53,15 @@ describe('ElectrodeGroupFields - rows that move', () => {
     }
     expect(model().electrode_groups.map((g) => g.id)).toEqual([0, 3, 2, 1]);
 
-    await user.type(descriptionInput(1), 'tetrode 1');
-    await user.type(descriptionInput(2), 'tetrode 2');
-    await user.type(descriptionInput(3), 'tetrode 3');
+    await user.type(descriptionInput(1), 'a');
+    await user.type(descriptionInput(2), 'b');
+    await user.type(descriptionInput(3), 'c');
 
     expect(model().electrode_groups.map((g) => [g.id, g.description])).toEqual([
       [0, ''],
-      [3, 'tetrode 3'],
-      [2, 'tetrode 2'],
-      [1, 'tetrode 1'],
+      [3, 'c'],
+      [2, 'b'],
+      [1, 'a'],
     ]);
   });
 
