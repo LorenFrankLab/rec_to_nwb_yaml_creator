@@ -9,6 +9,11 @@
 
 import { validate } from '../validation';
 import { removeStaleCameraReferences } from '../utils/cameraReferences';
+import {
+  canonicalizeFileBadChannels,
+  toFileBadChannels,
+  toFormBadChannels,
+} from '../domain/badChannels';
 import { withLegacyConverterKeys } from '../io/legacyCompat';
 import {
   decodeYaml,
@@ -176,6 +181,11 @@ export async function importFiles(file, options = {}) {
         onProgress({ stage: 'validating', progress: 50 });
       }
 
+      // Files written by earlier versions carry a shank's bad channels on that
+      // shank's row, which trodes_to_nwb never reads: move them to the group's
+      // first row, as electrode ids, before validating the file.
+      jsonFileContent = canonicalizeFileBadChannels(jsonFileContent);
+
       // Files written before stale camera references were cleaned up may
       // reference cameras that no longer exist; drop those references rather
       // than excluding the whole section on validation.
@@ -209,7 +219,8 @@ export async function importFiles(file, options = {}) {
         resolve({
           success: true,
           error: null,
-          formData: structuredClone(jsonFileContent),
+          // The form ticks each bad channel on the row and channel that map to it
+          formData: structuredClone(toFormBadChannels(jsonFileContent)),
           importSummary: {
             totalFields: formContentKeys.filter(key => Object.hasOwn(jsonFileContent, key)).length,
             importedFields,
@@ -316,7 +327,7 @@ export async function importFiles(file, options = {}) {
       resolve({
         success: true,
         error: null,
-        formData: structuredClone(formContent),
+        formData: structuredClone(toFormBadChannels(formContent)),
         importSummary: {
           totalFields: formContentKeys.filter(key => Object.hasOwn(jsonFileContent, key)).length,
           importedFields,
@@ -376,8 +387,10 @@ export function exportAll(model, options = {}) {
     onProgress({ stage: 'validating', progress: 0 });
   }
 
-  // Clone to avoid mutations
-  const form = structuredClone(model);
+  // Clone to avoid mutations. The file carries bad channels as trodes_to_nwb
+  // reads them (electrode ids on each group's first row), so translate the
+  // form's ticked channels before validating and encoding.
+  const form = toFileBadChannels(structuredClone(model));
 
   // Validate using unified validation API (schema + rules)
   const issues = validate(form);
