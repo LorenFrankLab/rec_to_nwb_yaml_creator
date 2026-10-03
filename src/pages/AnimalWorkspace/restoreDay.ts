@@ -1,98 +1,52 @@
 /**
  * @fileoverview Undo-restore for a deleted recording day.
  *
- * `restoreDay(record, actions)` re-creates a day from a captured pre-delete record by replaying the
- * existing store actions: `createDay` rebuilds the day shell (same id, since the id is derived from
- * animalId + date) and re-adds it to the owning animal's index, then `updateDay` restores every
- * day-owned field captured from the deleted record. This is the Undo half of the undo-able delete —
- * reusing the normal create/update write paths rather than a bespoke "reinsert" action.
+ * `restoreDay(deleted, actions)` puts a day back exactly as it was captured before the delete, through
+ * the store's `restoreDeletedDay`: the WHOLE record (every field, including any added to the day
+ * record later) under its own store key, back in the owning animal's index. This is the Undo half of
+ * the undo-able delete.
+ *
+ * It used to replay `createDay` + `updateDay` with a hand-picked list of fields. Everything the list
+ * missed was re-derived from the animal's CURRENT defaults — the day's own team and optogenetics, its
+ * provenance (review flags, a confirmed setup choice), data folder and download receipt — so an Undo
+ * could change what the day exported. Copying the record makes that structurally impossible.
  */
 
-import { generateDayId } from '../../state/workspaceUtils';
-import type { SessionMetadata } from '../../state/workspaceTypes';
-import { isRecord } from '../../utils/records';
+import type { Day } from '../../state/workspaceTypes';
 
-/** The store writes the restore replays. */
+/** The store write the restore uses. */
 export interface RestoreDayActions {
-  createDay: (animalId: string, date: string, session: SessionMetadata, options?: Record<string, unknown>) => void;
-  updateDay: (dayId: string, updates: Record<string, unknown>) => void;
+  restoreDeletedDay: (dayId: string, record: Day, ownerAnimalId?: string) => void;
 }
 
-/** A captured day record (the structure `model.workspace.days[id]` holds). */
-export interface CapturedDay {
-  animalId?: string;
-  date?: string;
-  session?: unknown;
-  tasks?: unknown;
-  taskInstances?: unknown;
-  behavioral_events?: unknown;
-  associated_files?: unknown;
-  associated_video_files?: unknown;
-  fs_gui_yamls?: unknown;
-  technical?: unknown;
-  deviceOverrides?: unknown;
-  state?: unknown;
-  configurationVersion?: unknown;
-  keywords?: unknown;
-  data_acq_device_name?: unknown;
-  cameras_used?: unknown;
+/** A recording day captured before it was deleted. */
+export interface DeletedDay {
+  /** The day's store key (the id the owner's index listed). */
+  dayId: string;
+  /** The animal the day was deleted from. */
+  ownerAnimalId: string;
+  /** The day record as it was (a deep copy taken before the delete). */
+  record: Day;
 }
 
 /**
- * Re-create a deleted day from its captured record.
+ * Put a deleted day back from its captured record.
  *
- * @param record - The day record captured BEFORE deletion (deep copy recommended by the caller).
- * @param actions - The store's `createDay` / `updateDay`.
- * @returns True when the day could be restored; false for a record too malformed to recreate
- *   (no resolvable animal id or date).
+ * @param deleted - What the delete captured: store key, owning animal, record.
+ * @param actions - The store's `restoreDeletedDay`.
+ * @returns True when the day was restored; false when the store refused it (a day on that date was
+ *   created during the undo window, or the owning animal is gone).
  */
-export function restoreDay(record: CapturedDay, actions: RestoreDayActions): boolean {
-  const animalId = record.animalId;
-  const date = record.date;
-  if (typeof animalId !== 'string' || typeof date !== 'string') return false;
-
-  const session = (isRecord(record.session) ? record.session : {}) as unknown as SessionMetadata;
-  // createDay rebuilds the shell pinned to the LATEST config + animal-default technical; updateDay then
-  // overwrites with the captured day-owned content (including the captured configuration version pin).
-  // createDay THROWS on a date collision (a new day created on this date during the undo window) or a
-  // missing animal — catch so the restore is TOTAL: a throw here must not strand the toast or, in a
-  // bulk undo, abort restoring the remaining records. A failure leaves nothing created (createDay
-  // throws before any state change), so the day simply isn't restored and the caller is told.
+export function restoreDay(deleted: DeletedDay, actions: RestoreDayActions): boolean {
+  // TOTAL: a refusal must not strand the UndoToast or, in a bulk undo, abort restoring the remaining
+  // records. The store throws before committing anything, so a refused day simply isn't restored and
+  // the caller is told.
   try {
-    actions.createDay(animalId, date, session, {});
-
-    // Re-derive the day id the SAME way `createDay` (and the YAML import path) mint it — both assign
-    // `generateDayId(animalId, date)`, so a day's id is ALWAYS `animalId-date` (no non-canonical /
-    // foreign ids exist in this store). The recreated id therefore matches the deleted one exactly;
-    // `updateDay` targets the day `createDay` just made. (Using the captured `record.id` instead
-    // would be WRONG: createDay always mints the canonical id, so a divergent captured id would make
-    // `updateDay` miss.)
-    const dayId = generateDayId(animalId, date);
-    // Replay only the day-owned fields applyDayUpdates recognizes; absent fields are left as the
-    // freshly-created defaults. session is restored too (createDay seeds a date-derived default).
-    const updates: Record<string, unknown> = { session };
-    for (const key of [
-      'tasks',
-      'taskInstances',
-      'behavioral_events',
-      'associated_files',
-      'associated_video_files',
-      'fs_gui_yamls',
-      'technical',
-      'deviceOverrides',
-      'state',
-      'configurationVersion',
-      'keywords',
-      'data_acq_device_name',
-      'cameras_used',
-    ] as const) {
-      if (record[key] !== undefined) updates[key] = record[key];
-    }
-    actions.updateDay(dayId, updates);
+    actions.restoreDeletedDay(deleted.dayId, deleted.record, deleted.ownerAnimalId);
     return true;
   } catch (err) {
     // eslint-disable-next-line no-console
-    console.error(`[restore-day] could not restore "${animalId}-${date}":`, err);
+    console.error(`[restore-day] could not restore "${deleted.dayId}":`, err);
     return false;
   }
 }

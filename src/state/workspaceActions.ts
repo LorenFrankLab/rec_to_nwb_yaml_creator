@@ -827,6 +827,49 @@ export function createWorkspaceActions({
     },
 
     /**
+     * Puts back a day that {@link deleteDay} removed (the Undo of a delete). The captured record is
+     * restored VERBATIM (deep-cloned): every field, including the ones `createDay` would derive from
+     * the animal's current defaults — the day's own team and optogenetics, its provenance (review
+     * flags, a confirmed setup choice), data folder, download receipt and timestamps — so the day
+     * exports exactly what it did before. Its id goes back into the owner's index, date-sorted as
+     * `createDay` keeps it.
+     *
+     * @param dayId - The deleted day's store key.
+     * @param record - The day record captured before the delete.
+     * @param ownerAnimalId - The animal the day was deleted from (default: the record's `animalId`).
+     * @throws If the owning animal no longer exists, or a day with this id exists again (a day created
+     *   on the same date during the undo window gets the same `animalId-date` id). Nothing is changed
+     *   then.
+     */
+    restoreDeletedDay: (dayId: string, record: Workspace['days'][string], ownerAnimalId?: string) => {
+      commitWorkspace((prev) => {
+        const ownerKey = ownerAnimalId ?? record.animalId;
+        const animal = prev.animals[ownerKey];
+        if (!animal) {
+          throw new Error(`Animal "${ownerKey}" not found`);
+        }
+        if (prev.days[dayId]) {
+          throw new Error(`Day "${dayId}" already exists`);
+        }
+
+        const dayIds = getAnimalDayIds(animal);
+        const nextDays = { ...prev.days, [dayId]: structuredClone(record) };
+        return {
+          ...prev,
+          animals: {
+            ...prev.animals,
+            [ownerKey]: {
+              ...animal,
+              days: sortDayIdsByDate([...dayIds.filter((id) => id !== dayId), dayId], nextDays),
+            },
+          },
+          days: nextDays,
+          lastModified: getCurrentTimestamp(),
+        };
+      });
+    },
+
+    /**
      * Removes a DANGLING day reference: drops `dayId` from the animal's `days` array and
      * deletes any corrupt leftover `days[dayId]` record. Unlike {@link deleteDay} (which
      * throws on a missing record and assumes a well-formed day with an `animalId`), this is

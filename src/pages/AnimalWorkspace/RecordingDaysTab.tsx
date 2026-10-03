@@ -52,6 +52,7 @@ import DayList from './DayList';
 import DuplicateDayModal from './DuplicateDayModal';
 import LogDayPanel, { formatShortDate } from './LogDayPanel';
 import { restoreDay } from './restoreDay';
+import type { DeletedDay } from './restoreDay';
 import styles from './AnimalWorkspace.module.css';
 import { pluralize } from '../../utils/pluralize';
 
@@ -159,27 +160,25 @@ export function RecordingDaysTab({ animalId }: RecordingDaysTabProps) {
   }, [selectedAnimalId]);
 
   /**
-   * Delete the given days (row or bulk) and offer Undo. Captures each record BEFORE deleting so the
-   * Undo can faithfully re-create it (`createDay` + `updateDay`). No hard confirm — delete is the
-   * frequent reversible action (the catastrophic animal delete keeps its confirm in the header).
+   * Delete the given days (row or bulk) and offer Undo. Captures each day's store key, owner and full
+   * record BEFORE deleting so the Undo puts back exactly what was there (`restoreDeletedDay`). No hard
+   * confirm — delete is the frequent reversible action (the catastrophic animal delete keeps its
+   * confirm in the header).
    */
   const handleDeleteDays = useCallback(
     (ids: string[]) => {
-      const records = ids
-        .map((id) => days[id])
-        .filter((rec): rec is NonNullable<typeof rec> => Boolean(rec))
-        .map((rec) => structuredClone(rec));
-      if (records.length === 0) return;
+      const deleted: DeletedDay[] = ids
+        .filter((id) => Boolean(days[id]))
+        .map((id) => ({ dayId: id, ownerAnimalId: selectedAnimalId, record: structuredClone(days[id]) }));
+      if (deleted.length === 0) return;
       ids.forEach((id) => actions.deleteDay(id, selectedAnimalId));
       setSelectedDayIds(new Set());
-      const n = records.length;
+      const n = deleted.length;
       undo.show(`Deleted ${n} recording ${pluralize(n, 'day')}`, () => {
         // restoreDay is TOTAL (never throws), so one un-restorable record (e.g. its date was re-used
         // during the undo window) can't abort the rest. Count failures and surface them — deferred
         // past the toast host's own dismiss(), which runs right after this Undo handler.
-        const failed = records.filter(
-          (rec) => !restoreDay(rec, actions as unknown as Parameters<typeof restoreDay>[1])
-        ).length;
+        const failed = deleted.filter((entry) => !restoreDay(entry, actions)).length;
         if (failed > 0) {
           const noun = pluralize(failed, 'day');
           queueMicrotask(() =>

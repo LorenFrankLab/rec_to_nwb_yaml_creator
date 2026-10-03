@@ -794,6 +794,101 @@ describe('Day State Management', () => {
     });
   });
 
+  describe('restoreDeletedDay', () => {
+    /**
+     * Create remy with three days, give the middle one day-owned facts, and return a deep copy of it.
+     * @param result
+     * @returns {object} The middle day's record before any delete.
+     */
+    function threeDays(result) {
+      createTestAnimal(result);
+      act(() => {
+        for (const date of ['2023-06-22', '2023-06-23', '2023-06-24']) {
+          result.current.actions.createDay('remy', date, { session_id: `remy_${date}`, session_description: 'Day' });
+        }
+      });
+      act(() => {
+        result.current.actions.updateDay('remy-2023-06-23', {
+          experimenters: { experimenter_name: ['Doe, Jane'], lab: 'Frank', institution: 'UCSF' },
+          dataFolder: '/stelmo/remy/20230623/',
+          provenance: { review: ['weight_from_baseline'] },
+        });
+      });
+      return structuredClone(result.current.model.workspace.days['remy-2023-06-23']);
+    }
+
+    it('puts the captured record back verbatim and re-indexes it in date order', () => {
+      const { result } = renderHook(() => useStore());
+      const captured = threeDays(result);
+
+      act(() => {
+        result.current.actions.deleteDay('remy-2023-06-23', 'remy');
+      });
+      // A changed animal default must not leak into the restored day.
+      act(() => {
+        result.current.actions.updateAnimal('remy', { experimenters: { experimenter_name: ['Someone, Else'] } });
+      });
+      act(() => {
+        result.current.actions.restoreDeletedDay('remy-2023-06-23', captured, 'remy');
+      });
+
+      const { animals, days } = result.current.model.workspace;
+      expect(days['remy-2023-06-23']).toEqual(captured);
+      expect(animals.remy.days).toEqual(['remy-2023-06-22', 'remy-2023-06-23', 'remy-2023-06-24']);
+    });
+
+    it('restores under the animal it was deleted from when the record names no owner', () => {
+      const record = { id: 'remy-2023-06-22', date: '2023-06-22', session: { session_id: 's1' } };
+      const initialState = {
+        workspace: {
+          animals: { remy: { id: 'remy', subject: { subject_id: 'remy' }, days: ['remy-2023-06-22'] } },
+          days: { 'remy-2023-06-22': record },
+          settings: {},
+        },
+      };
+      const { result } = renderHook(() => useStore(initialState));
+
+      act(() => {
+        result.current.actions.deleteDay('remy-2023-06-22', 'remy');
+      });
+      act(() => {
+        result.current.actions.restoreDeletedDay('remy-2023-06-22', record, 'remy');
+      });
+
+      expect(result.current.model.workspace.days['remy-2023-06-22']).toEqual(record);
+      expect(result.current.model.workspace.animals.remy.days).toEqual(['remy-2023-06-22']);
+    });
+
+    it('refuses, changing nothing, when the date was re-used or the animal is gone', () => {
+      const { result } = renderHook(() => useStore());
+      const captured = threeDays(result);
+      act(() => {
+        result.current.actions.deleteDay('remy-2023-06-23', 'remy');
+      });
+      // A new day created on that date during the undo window is never overwritten.
+      act(() => {
+        result.current.actions.createDay('remy', '2023-06-23', { session_id: 'new', session_description: 'New' });
+      });
+      const replacement = result.current.model.workspace.days['remy-2023-06-23'];
+      expect(() => {
+        act(() => {
+          result.current.actions.restoreDeletedDay('remy-2023-06-23', captured, 'remy');
+        });
+      }).toThrow(/already exists/i);
+      expect(result.current.model.workspace.days['remy-2023-06-23']).toBe(replacement);
+
+      act(() => {
+        result.current.actions.deleteAnimal('remy');
+      });
+      expect(() => {
+        act(() => {
+          result.current.actions.restoreDeletedDay('remy-2023-06-23', captured, 'remy');
+        });
+      }).toThrow(/not found/i);
+      expect(result.current.model.workspace.days).toEqual({});
+    });
+  });
+
   describe('relinkDayReference', () => {
     it('re-links an orphaned record (present in days, not in the index) back into the animal', () => {
       const { result } = renderHook(() => useStore());

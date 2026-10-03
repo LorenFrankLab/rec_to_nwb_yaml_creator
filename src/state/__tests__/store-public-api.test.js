@@ -49,6 +49,7 @@ describe('useStore public API contract', () => {
       'removeDayReference',
       'removeElectrodeGroupItem',
       'reseedDayFrom',
+      'restoreDeletedDay',
       'setConfigurationEffectiveDate',
       'setFormData',
       'unlinkDayReference',
