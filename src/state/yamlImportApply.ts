@@ -8,7 +8,9 @@
  *     `setConfigurationEffectiveDate` dates it from the earliest file (a KNOWN effective date),
  *   - `createDay` adds each day (pinned to the latest = v1 at that point),
  *   - `createConfigurationSnapshotAndApplyForward` appends each later config version and
- *     re-pins the days that use it (atomic),
+ *     re-pins the days that use it (atomic); onto an EXISTING animal, a file older than its
+ *     recorded timeline instead reuses a matching version or gets a pinned-only one, so it never
+ *     changes another day's configuration,
  *   - `updateDay` writes the day-owned content `createDay` does not take (tasks, files,
  *     behavioral_events, fs_gui_yamls, technical, keywords, data_acq_device_name, cameras_used,
  *     deviceOverrides — the day-owned bad-channel marks).
@@ -32,10 +34,20 @@
  */
 
 import { generateDayId } from './workspaceUtils';
-import { getAnimalCameras, getDataAcqDevices } from './workspaceSelectors';
+import {
+  getAnimalCameras,
+  getAnimalDayIds,
+  getConfigHistory,
+  getDataAcqDevices,
+  getProbeElectrodeGroups,
+  getProbeNtrodeMaps,
+} from './workspaceSelectors';
 import { materializePlanDay } from './yamlImportPlan';
 import type { ImportPlan, ImportPlanAnimal, ImportPlanDay } from './yamlImportPlan';
 import { referencedCameraRefs } from './cameraUsage';
+import { selectConfigurationForDate } from '../domain/configurationSelection';
+import { canonicalJson } from '../utils/canonicalJson';
+import { normalizeProbeConfigDevices } from '../utils/deviceNormalization';
 
 /** The current workspace snapshot read (read-only) during pre-flight. */
 interface ApplyWorkspace {
@@ -427,11 +439,11 @@ function applyNewAnimal(
  * Conflict → 'add': layer a plan's days onto an EXISTING animal without recreating it.
  *
  * Behavior (kept deliberately MINIMAL and documented): the plan's days are added to the
- * existing animal id, their day-owned content is written through `updateDay`, and each
- * imported config version is appended to the existing animal's history (then its days are
- * re-pinned). The existing animal's animal-level facts (subject / experimenters / optogenetics)
- * and its catalogs (cameras / data_acq_device) are NOT clobbered — the existing animal is
- * authoritative for those.
+ * existing animal id, their day-owned content is written through `updateDay`, and each file's
+ * configuration is placed on the existing timeline ({@link placeOnExistingTimeline}: a newer file
+ * extends it, an older one only pins its own day). The existing animal's animal-level facts
+ * (subject / experimenters / optogenetics) and its catalogs (cameras / data_acq_device) are NOT
+ * clobbered — the existing animal is authoritative for those.
  *
  * The executor still does NOT auto-merge full catalogs. It accepts only explicit, targeted
  * `catalogAdditions` selected by Import & Repair and preflights that every added day resolves
@@ -470,23 +482,151 @@ function applyAddToExistingAnimal(
     actions.updateAnimal(targetId, animalUpdates);
   }
 
-  // Add each day (pins to the existing animal's latest version initially), then append each
-  // imported config version and re-pin its days onto it.
+  // Add each day (pinned by its date at first), then place each file's configuration on the
+  // existing animal's timeline (re-pinning the day to it).
   for (const day of animalPlan.days) {
     actions.createDay(targetId, day.date, day.session);
     createdDays.push(generateDayId(targetId, day.date));
   }
-  for (const cv of animalPlan.configVersions) {
-    const dayIds = cv.dayDates.map((d) => generateDayId(targetId, d));
-    actions.createConfigurationSnapshotAndApplyForward(
-      targetId,
-      { date: cv.date, description: cv.description, devices: cv.devices },
-      dayIds
-    );
-  }
+  placeOnExistingTimeline(animalPlan, actions, targetId, workspace);
   for (const day of animalPlan.days) {
     actions.updateDay(generateDayId(targetId, day.date), dayOwnedUpdates(materializePlanDay(day, 'add')));
   }
+}
+
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+
+/**
+ * A probe configuration's identity for matching an imported file against a version the animal
+ * already has: everything the export emits for its electrode groups and channel maps (normalized),
+ * without the day-owned failed-channel marks.
+ *
+ * @param devices - A probe configuration (`{ electrode_groups, ntrode_electrode_group_channel_map }`).
+ * @returns A key that is equal for configurations that export identically.
+ */
+function geometryKey(devices: unknown): string {
+  const probe = normalizeProbeConfigDevices(devices);
+  return canonicalJson({
+    electrode_groups: probe.electrode_groups,
+    ntrode_electrode_group_channel_map: probe.ntrode_electrode_group_channel_map.map((map) => ({
+      ...map,
+      bad_channels: [],
+    })),
+  });
+}
+
+/**
+ * The last date the existing animal's recorded timeline already speaks for: its latest recording
+ * day, or the latest start of a version that holds probe geometry (`''` when it has neither). A
+ * version without electrode groups or channel maps records no hardware, so it anchors nothing.
+ *
+ * @param animal - The existing animal record.
+ * @param days - The workspace days map.
+ * @returns ISO date, or `''`.
+ */
+function timelineFrontier(animal: unknown, days: Record<string, any>): string {
+  const dayDates = getAnimalDayIds(animal).map((dayId) => days[dayId]?.date);
+  const setupDates = getConfigHistory(animal)
+    .filter(
+      (snapshot) =>
+        getProbeElectrodeGroups(snapshot?.devices).length > 0 ||
+        getProbeNtrodeMaps(snapshot?.devices).length > 0
+    )
+    .map((snapshot) => snapshot.date);
+  return [...dayDates, ...setupDates]
+    .filter((date): date is string => typeof date === 'string' && ISO_DATE.test(date))
+    .reduce((latest, date) => (date > latest ? date : latest), '');
+}
+
+/**
+ * Conflict → 'add': place each imported day's configuration on the existing animal's timeline.
+ *
+ *  - Days AFTER everything the animal has recorded ({@link timelineFrontier}) extend the timeline
+ *    as a new animal's files do: each run of one configuration is a version effective from its
+ *    first day (the version already in effect is reused when nothing changed), so the last run is
+ *    the configuration the days logged after it get.
+ *  - Days on or before it are BACK-FILLS, evidence about their own recording only. Each pins a
+ *    version that already has its configuration (the one in effect on its date first, else the
+ *    latest such); a configuration no version has gets ONE pinned-only version, which is never
+ *    chosen for another date and never becomes the current setup. A back-fill therefore changes no
+ *    other day's configuration and supersedes nothing.
+ *
+ * Every imported day is pinned explicitly here; its import provenance (written afterwards) makes
+ * that pin conclusive.
+ *
+ * @param animalPlan - The planned animal.
+ * @param actions - The store workspace actions.
+ * @param targetId - The existing animal's id.
+ * @param workspace - The workspace as it was before this import.
+ */
+function placeOnExistingTimeline(
+  animalPlan: ImportPlanAnimal,
+  actions: ImportActions,
+  targetId: string,
+  workspace: ApplyWorkspace
+): void {
+  const existing = workspace.animals?.[targetId];
+  const history = getConfigHistory(existing);
+  // With no version on record there is no current configuration to protect: every file extends.
+  const frontier = history.length > 0 ? timelineFrontier(existing, workspace.days ?? {}) : '';
+  const configOf = (day: ImportPlanDay) =>
+    animalPlan.configVersions.find((cv) => cv.version === day.configurationVersion);
+  const versionKey = (version: number | null) => {
+    const snapshot = history.find((entry) => entry.version === version);
+    return snapshot ? geometryKey(snapshot.devices) : null;
+  };
+  const dayId = (day: ImportPlanDay) => generateDayId(targetId, day.date);
+  const placed = animalPlan.days.filter((day) => configOf(day) !== undefined);
+
+  // Back-fills: reuse a version with the same configuration, else one pinned-only version per
+  // configuration (shared by every back-filled day that recorded it).
+  const unmatched = new Map<string, ImportPlanDay[]>();
+  for (const day of placed.filter((d) => d.date <= frontier)) {
+    const key = geometryKey(configOf(day)!.devices);
+    const inEffect = selectConfigurationForDate(existing, day.date).version;
+    const match =
+      versionKey(inEffect) === key
+        ? inEffect
+        : [...history].reverse().find((entry) => geometryKey(entry.devices) === key)?.version;
+    if (match != null) actions.updateDay(dayId(day), { configurationVersion: match });
+    else unmatched.set(key, [...(unmatched.get(key) ?? []), day]);
+  }
+  for (const days of unmatched.values()) {
+    const first = days[0].date;
+    const last = days[days.length - 1].date;
+    const recorded = first === last ? `on ${first}` : `${first} to ${last}`;
+    actions.createConfigurationSnapshotAndApplyForward(
+      targetId,
+      {
+        date: first,
+        description: `Imported setup recorded ${recorded}`,
+        devices: configOf(days[0])!.devices,
+        pinnedOnly: true,
+      },
+      days.map(dayId)
+    );
+  }
+
+  // Extensions: consecutive days of one planned version form a run.
+  const runs: ImportPlanDay[][] = [];
+  for (const day of placed.filter((d) => d.date > frontier)) {
+    const run = runs[runs.length - 1];
+    if (run && run[0].configurationVersion === day.configurationVersion) run.push(day);
+    else runs.push([day]);
+  }
+  runs.forEach((run, index) => {
+    const { devices } = configOf(run[0])!;
+    const inEffect = index === 0 ? selectConfigurationForDate(existing, run[0].date).version : null;
+    if (inEffect != null && versionKey(inEffect) === geometryKey(devices)) {
+      run.forEach((day) => actions.updateDay(dayId(day), { configurationVersion: inEffect }));
+      return;
+    }
+    actions.createConfigurationSnapshotAndApplyForward(
+      targetId,
+      { date: run[0].date, description: `Imported setup from ${run[0].date}`, devices },
+      run.map(dayId)
+    );
+  });
 }
 
 /**

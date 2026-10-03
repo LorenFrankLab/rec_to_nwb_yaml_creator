@@ -135,6 +135,32 @@ describe('planImport — configuration versions', () => {
     expect(remy.configVersions[0].dayDates).toEqual(['2023-06-22', '2023-06-23']);
     expect(remy.days.every((d) => d.configurationVersion === 1)).toBe(true);
   });
+
+  it('a configuration that RECURS after a change (A → B → A) starts a new version, so the timeline ends on A', () => {
+    const relabel = (animal) => {
+      const groups = animal.configurationHistory[0].devices.electrode_groups;
+      groups[4] = { ...groups[4], location: 'DG', targeted_location: 'DG' };
+    };
+    const files = [
+      makeFile({ subjectId: 'remy', date: '2023-06-22' }),
+      makeFile({ subjectId: 'remy', date: '2023-06-20' }),
+      makeFile({ subjectId: 'remy', date: '2023-06-21', mutateConfig: relabel }),
+    ];
+    const remy = planImport(files, createDefaultWorkspace()).animals[0];
+
+    expect(remy.configVersions.map((cv) => [cv.version, cv.date, cv.dayDates])).toEqual([
+      [1, '2023-06-20', ['2023-06-20']],
+      [2, '2023-06-21', ['2023-06-21']],
+      [3, '2023-06-22', ['2023-06-22']],
+    ]);
+    expect(remy.configVersions[2].devices).toEqual(remy.configVersions[0].devices);
+    expect(remy.configVersions[2].description).toMatch(/same as configuration 1/i);
+    expect(Object.fromEntries(remy.days.map((d) => [d.date, d.configurationVersion]))).toEqual({
+      '2023-06-20': 1,
+      '2023-06-21': 2,
+      '2023-06-22': 3,
+    });
+  });
 });
 
 describe('planImport — divergence flags', () => {

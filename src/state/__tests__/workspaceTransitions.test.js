@@ -180,6 +180,19 @@ describe('addConfigurationSnapshotToAnimal', () => {
     );
     expect(updated.configurationHistory.map((s) => s.version)).toEqual([1, 3, 4]);
   });
+
+  it('files a PINNED-ONLY (back-filled) version before the latest entry, which stays the current setup', () => {
+    const animal = { configurationHistory: [{ version: 1, appliedToDays: [] }, { version: 2, appliedToDays: [] }] };
+    const updated = addConfigurationSnapshotToAnimal(
+      animal,
+      { date: '2023-06-10', description: 'imported', devices: emptyDevices(), pinnedOnly: true },
+      NOW
+    );
+    expect(updated.configurationHistory.map((s) => s.version)).toEqual([1, 3, 2]);
+    expect(updated.configurationHistory[1]).toMatchObject({ version: 3, date: '2023-06-10', pinnedOnly: true });
+    // A timeline version carries no flag at all (the persisted shape is unchanged for it).
+    expect(updated.configurationHistory[2]).not.toHaveProperty('pinnedOnly');
+  });
 });
 
 describe('nextConfigurationVersion', () => {
@@ -261,6 +274,32 @@ describe('createSnapshotAndApplyForward', () => {
     expect(result.animal.configurationHistory.map((s) => s.version)).toEqual([1, 3, 4]);
     expect(result.days.d1.configurationVersion).toBe(4);
     expect(result.days.d2.configurationVersion).toBe(4);
+  });
+
+  it('pins the given days to a PINNED-ONLY version without making it the current one', () => {
+    const result = createSnapshotAndApplyForward(
+      { ...animal(), devices: emptyDevices() },
+      days(),
+      { date: '2023-06-10', description: 'imported', devices: emptyDevices(), pinnedOnly: true },
+      ['d1'],
+      NOW
+    );
+    expect(result.version).toBe(2);
+    expect(result.animal.configurationHistory.map((s) => s.version)).toEqual([2, 1]);
+    expect(result.days.d1.configurationVersion).toBe(2);
+    expect(result.days.d2).toEqual({ id: 'd2' });
+  });
+
+  it('refuses a hardware-failure policy for a pinned-only version (it never becomes the current setup)', () => {
+    expect(() =>
+      createSnapshotAndApplyForward(
+        animal(),
+        days(),
+        { date: '2023-06-10', description: 'imported', devices: emptyDevices(), pinnedOnly: true, failurePolicy: 'replacement' },
+        ['d1'],
+        NOW
+      )
+    ).toThrow(/pinned-only/i);
   });
 });
 

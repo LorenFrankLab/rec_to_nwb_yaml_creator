@@ -102,6 +102,12 @@ export interface ConfigSnapshotInput {
   description: string;
   /** Raw device payload (a devices object); `normalizeProbeConfigDevices` tolerates the contents. */
   devices: Record<string, unknown>;
+  /**
+   * Import back-fill only: a setup known only from the days it is applied to
+   * (`ConfigurationSnapshot.pinnedOnly`). It is filed BEFORE the latest entry, which stays the
+   * current configuration; it takes no `failurePolicy`.
+   */
+  pinnedOnly?: boolean;
 }
 
 /**
@@ -372,6 +378,10 @@ export function nextConfigurationVersion(history: unknown): number {
  * so it is unique even for a non-contiguous history. The atomic reconfiguration transition
  * {@link createSnapshotAndApplyForward} composes this with the forward-apply in one step.
  *
+ * The LAST entry is the animal's current configuration (the one `animal.devices` mirrors and an
+ * Animal Setup edit rewrites), so a `pinnedOnly` snapshot — an imported back-fill, never current —
+ * is filed just before it instead of appended.
+ *
  * @param animal - The current animal record.
  * @param config - `{ date, description, devices }` for the new snapshot.
  * @param now - Timestamp to stamp `lastModified`.
@@ -395,9 +405,13 @@ export function addConfigurationSnapshotToAnimal(
     description: config.description,
     devices: normalizeProbeConfigDevices(config.devices),
     appliedToDays: [],
+    ...(config.pinnedOnly ? { pinnedOnly: true } : {}),
   };
 
-  updated.configurationHistory = [...history, newVersion];
+  updated.configurationHistory =
+    config.pinnedOnly && history.length > 0
+      ? [...history.slice(0, -1), newVersion, history[history.length - 1]]
+      : [...history, newVersion];
   updated.lastModified = now;
   return updated;
 }
@@ -432,6 +446,9 @@ export function createSnapshotAndApplyForward(
   ownerKey?: string
 ): { animal: Animal; days: Record<string, Day>; version: number } {
   const previous = getConfigHistory(animal).slice(-1)[0];
+  if (config.pinnedOnly && config.failurePolicy) {
+    throw new Error('A pinned-only (back-filled) configuration never becomes the current setup, so it takes no hardware-change policy.');
+  }
   if (config.failurePolicy === 'same-hardware' && (!previous || hardwareIdentity(previous.devices) !== hardwareIdentity(config.devices))) {
     throw new Error('Keeping failed channels requires the same probe types, ntrode IDs and channel mapping. Choose replacement hardware if these changed.');
   }

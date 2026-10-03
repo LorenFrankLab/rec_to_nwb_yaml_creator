@@ -5,16 +5,20 @@
  *  - W10: a clean imported day is not blocked on its own configuration choice. The first
  *    configuration is dated from the earliest file (a known effective date, not the import's entry
  *    date), and the import's pin — the file's own geometry — is conclusive.
+ *  - W1: an import never takes over the effective-date timeline. Each imported day uses its own
+ *    file's configuration; a back-filled (older) file changes no other day's configuration, and
+ *    after A → B → A the next day gets A.
  */
 import { describe, it, expect } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { encodeYaml, decodeYaml } from '../../io/yaml';
-import { mergeDayMetadata } from '../workspaceUtils';
+import { mergeDayMetadata, getCurrentDate } from '../workspaceUtils';
 import { buildRealisticWorkspace } from '../../__tests__/fixtures/workspaceBuilders';
 import { useStore } from '../store';
 import { planImport } from '../yamlImportPlan';
 import { applyImportPlan } from '../yamlImportApply';
 import { validateDay } from '../../domain/dayValidationComposer';
+import { configurationChoiceStatus } from '../../domain/configurationSelection';
 import { isBlockingIssue } from '../../validation/issueTypes';
 
 /**
@@ -63,6 +67,111 @@ function importFiles(result, files) {
 }
 
 /**
+ * Keep the fixture configuration's first `count` tetrodes (and their channel maps).
+ *
+ * @param {number} count - Tetrodes to keep.
+ * @returns {Function} A `makeFile` mutation.
+ */
+const keepTetrodes = (count) => (animal) => {
+  const config = animal.configurationHistory[0].devices;
+  config.electrode_groups = config.electrode_groups.slice(0, count);
+  config.ntrode_electrode_group_channel_map = config.ntrode_electrode_group_channel_map.slice(0, count);
+};
+
+/**
+ * Record one tetrode in a different brain region (a location-only configuration difference).
+ *
+ * @param {number} groupId - The electrode group to relabel.
+ * @param {string} location - Its new location.
+ * @returns {Function} A `makeFile` mutation.
+ */
+const relocate = (groupId, location) => (animal) => {
+  const groups = animal.configurationHistory[0].devices.electrode_groups;
+  groups[groupId] = { ...groups[groupId], location, targeted_location: location };
+};
+
+/**
+ * Set `remy` up in the app (the creation-wizard path) with the fixture's first `groupCount`
+ * tetrodes, optionally recording when that setup became effective.
+ *
+ * @param {object} result - The `renderHook(useStore)` result.
+ * @param {number} groupCount - Tetrodes in the setup.
+ * @param {object} [options]
+ * @param {string} [options.effectiveDate] - The setup's known effective date.
+ */
+function createAnimalInApp(result, groupCount, { effectiveDate } = {}) {
+  const { animal } = buildRealisticWorkspace();
+  const config = animal.configurationHistory[0].devices;
+  act(() => {
+    result.current.actions.createAnimal('remy', animal.subject, {
+      devices: {
+        data_acq_device: animal.devices.data_acq_device,
+        device: animal.devices.device,
+        electrode_groups: config.electrode_groups.slice(0, groupCount),
+        ntrode_electrode_group_channel_map: config.ntrode_electrode_group_channel_map.slice(0, groupCount),
+      },
+      cameras: animal.cameras,
+      experimenters: animal.experimenters,
+    });
+  });
+  if (effectiveDate) {
+    act(() => {
+      result.current.actions.setConfigurationEffectiveDate('remy', 1, effectiveDate);
+    });
+  }
+}
+
+/**
+ * Log a new recording day for `remy` in the app ("Log today" / the calendar).
+ *
+ * @param {object} result - The `renderHook(useStore)` result.
+ * @param {string} date - ISO date.
+ */
+function logDay(result, date) {
+  act(() => {
+    result.current.actions.createDay('remy', date, {
+      session_id: `remy_${date.replace(/-/g, '')}`,
+      session_description: 'logged in the app',
+      weight: 480,
+    });
+  });
+}
+
+/**
+ * The day after the app's "today" — after an in-app setup's entry date.
+ *
+ * @returns {string} ISO date.
+ */
+function dayAfterToday() {
+  const [year, month, day] = getCurrentDate().split('-').map(Number);
+  return new Date(Date.UTC(year, month - 1, day + 1)).toISOString().slice(0, 10);
+}
+
+/**
+ * The exported (merged) metadata of one day of `remy`.
+ *
+ * @param {object} result - The `renderHook(useStore)` result.
+ * @param {string} date - The day's ISO date.
+ * @returns {object} The flat export model.
+ */
+function exportDay(result, date) {
+  const ws = result.current.model.workspace;
+  return mergeDayMetadata(ws.animals.remy, ws.days[`remy-${date}`]);
+}
+
+/**
+ * Whether one day's configuration choice is settled for export.
+ *
+ * @param {object} result - The `renderHook(useStore)` result.
+ * @param {string} date - The day's ISO date.
+ * @returns {string} `'confirmed'` / `'unconfirmed'` / `'unpinned'`.
+ */
+function choiceStatus(result, date) {
+  const ws = result.current.model.workspace;
+  return configurationChoiceStatus(ws.animals.remy, ws.days[`remy-${date}`]).status;
+}
+
+/**
  * The blocking issue codes of one day of `remy`.
  *
  * @param {object} result - The `renderHook(useStore)` result.
@@ -107,5 +216,87 @@ describe('W10: an imported day is not blocked on its own configuration choice', 
       source: 'effective-date',
       confirmed: true,
     });
+  });
+});
+
+describe('W1: an import never takes over the effective-date timeline', () => {
+  it('back-filling an OLDER 8-tetrode file onto an animal set up in the app with 7 leaves new days on the 7-tetrode setup', () => {
+    const { result } = renderHook(() => useStore());
+    createAnimalInApp(result, 7);
+    expect(importFiles(result, [makeFile({ date: '2023-06-10' })]).createdDays).toEqual(['remy-2023-06-10']);
+    // The imported day exports its own file's configuration, unblocked.
+    expect(exportDay(result, '2023-06-10').electrode_groups).toHaveLength(8);
+    expect(choiceStatus(result, '2023-06-10')).toBe('confirmed');
+
+    const next = dayAfterToday();
+    logDay(result, next);
+    expect(exportDay(result, next).electrode_groups).toHaveLength(7);
+    expect(choiceStatus(result, next)).toBe('confirmed');
+  });
+
+  it('with a known setup date, a back-filled file recorded elsewhere changes neither the existing later day nor new days', () => {
+    const { result } = renderHook(() => useStore());
+    createAnimalInApp(result, 8, { effectiveDate: '2023-01-01' });
+    logDay(result, '2023-07-01');
+    importFiles(result, [makeFile({ date: '2023-03-01', mutate: relocate(0, 'CA3') })]);
+
+    expect(exportDay(result, '2023-03-01').electrode_groups[0].location).toBe('CA3');
+    // The existing day is not superseded by the back-filled configuration (its export is not blocked).
+    expect(choiceStatus(result, '2023-07-01')).toBe('confirmed');
+    expect(exportDay(result, '2023-07-01').electrode_groups[0].location).toBe('CA1');
+    // New days — after the existing day, or between it and the file — keep the in-app setup.
+    logDay(result, '2023-07-02');
+    logDay(result, '2023-03-02');
+    for (const date of ['2023-07-02', '2023-03-02']) {
+      expect(exportDay(result, date).electrode_groups[0].location).toBe('CA1');
+      expect(choiceStatus(result, date)).toBe('confirmed');
+    }
+  });
+
+  it('back-filling a file with the SAME hardware reuses the configuration and leaves the existing day confirmed', () => {
+    const { result } = renderHook(() => useStore());
+    createAnimalInApp(result, 8);
+    const next = dayAfterToday();
+    logDay(result, next);
+    expect(choiceStatus(result, next)).toBe('confirmed');
+
+    importFiles(result, [makeFile({ date: '2023-06-20' })]);
+    const ws = result.current.model.workspace;
+    expect(ws.animals.remy.configurationHistory.map((snapshot) => snapshot.version)).toEqual([1]);
+    expect(ws.days['remy-2023-06-20'].configurationVersion).toBe(1);
+    expect(choiceStatus(result, '2023-06-20')).toBe('confirmed');
+    expect(choiceStatus(result, next)).toBe('confirmed');
+  });
+
+  it('batch A (06-20) → B (06-21) → A (06-22): each day keeps its own file and the next day (06-23) gets A', () => {
+    const { result } = renderHook(() => useStore());
+    importFiles(result, [
+      makeFile({ date: '2023-06-20' }),
+      makeFile({ date: '2023-06-21', mutate: relocate(4, 'DG') }),
+      makeFile({ date: '2023-06-22' }),
+    ]);
+    expect(exportDay(result, '2023-06-21').electrode_groups[4].location).toBe('DG');
+    expect(exportDay(result, '2023-06-22').electrode_groups[4].location).toBe('CA3');
+
+    logDay(result, '2023-06-23');
+    expect(exportDay(result, '2023-06-23').electrode_groups[4].location).toBe('CA3');
+    expect(choiceStatus(result, '2023-06-23')).toBe('confirmed');
+    for (const date of ['2023-06-20', '2023-06-21', '2023-06-22']) {
+      expect(choiceStatus(result, date)).toBe('confirmed');
+    }
+  });
+
+  it('adding a NEWER file with different hardware starts a new configuration for the days after it', () => {
+    const { result } = renderHook(() => useStore());
+    importFiles(result, [makeFile({ date: '2023-06-22' })]);
+    importFiles(result, [makeFile({ date: '2023-06-25', mutate: keepTetrodes(7) })]);
+
+    expect(exportDay(result, '2023-06-25').electrode_groups).toHaveLength(7);
+    expect(choiceStatus(result, '2023-06-22')).toBe('confirmed');
+    logDay(result, '2023-06-26');
+    logDay(result, '2023-06-23');
+    expect(exportDay(result, '2023-06-26').electrode_groups).toHaveLength(7);
+    // Before the newer file, the earlier configuration was still in effect.
+    expect(exportDay(result, '2023-06-23').electrode_groups).toHaveLength(8);
   });
 });

@@ -69,6 +69,37 @@ describe('selectConfigurationForDate — entry-stamped version 1', () => {
   });
 });
 
+describe('selectConfigurationForDate — pinned-only (back-filled) versions', () => {
+  // v3 / v4 are imported back-fills recorded on 2023-05-10 / 2023-06-10 with other hardware: each
+  // applies to the days pinned to it and is never chosen for another date — neither as the covering
+  // version nor as the candidate for a date before the timeline.
+  const backfilled = {
+    configurationHistory: [
+      { version: 3, date: '2023-05-10', pinnedOnly: true, description: 'imported', devices: {}, appliedToDays: [] },
+      { version: 4, date: '2023-06-10', pinnedOnly: true, description: 'imported', devices: {}, appliedToDays: [] },
+      ...animal.configurationHistory,
+    ],
+  };
+
+  it('a date on the timeline keeps the setup effective then', () => {
+    expect(selectConfigurationForDate(backfilled, '2023-06-10')).toEqual({ version: 1, covered: true, effectiveDate: '2023-06-01' });
+    expect(selectConfigurationForDate(backfilled, '2023-06-25').version).toBe(1);
+    expect(selectConfigurationForDate(backfilled, '2023-07-05').version).toBe(2);
+  });
+
+  it('a date before the timeline gets the earliest TIMELINE version as its unconfirmed candidate', () => {
+    expect(selectConfigurationForDate(backfilled, '2023-05-20')).toEqual({ version: 1, covered: false, effectiveDate: '2023-06-01' });
+    expect(selectConfigurationForDate(backfilled, '2023-05-01')).toEqual({ version: 1, covered: false, effectiveDate: '2023-06-01' });
+  });
+
+  it('a day the import pinned to it is confirmed, and a day on the timeline is not superseded by it', () => {
+    const imported = { ...day('2023-06-10', 4), provenance: { configuration: { source: 'import', confirmed: true } } } as unknown as Day;
+    expect(configurationChoiceStatus(backfilled, imported)).toMatchObject({ status: 'confirmed', version: 4, effectiveDate: '2023-06-10' });
+    const auto = { ...day('2023-06-25', 1), provenance: { configuration: { source: 'effective-date', confirmed: true } } } as unknown as Day;
+    expect(configurationChoiceStatus(backfilled, auto)).toMatchObject({ status: 'confirmed', version: 1 });
+  });
+});
+
 describe('configurationChoiceStatus', () => {
   it('is confirmed when the pinned version’s effective date covers the recording date', () => {
     expect(configurationChoiceStatus(animal, day('2023-06-25', 1))).toMatchObject({ status: 'confirmed', version: 1 });

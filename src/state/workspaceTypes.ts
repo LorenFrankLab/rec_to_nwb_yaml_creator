@@ -359,6 +359,14 @@ export interface ConfigurationSnapshot {
    * before it needs an explicit setup choice — `domain/configurationSelection`). Absent ⇒ known.
    */
   effectiveDateKnown?: boolean;
+  /**
+   * A setup known only from the recordings pinned to it: an imported file OLDER than the animal's
+   * recorded timeline (a back-fill) whose geometry matches no version on it. It applies to exactly
+   * those days — it is never chosen for another recording date and never becomes the current
+   * (last) configuration — and `date` is its first such recording, not the start of an open-ended
+   * effective period. Absent ⇒ an ordinary timeline version.
+   */
+  pinnedOnly?: boolean;
   /** Sequential version number (1, 2, 3, ...). */
   version: number;
   /** Change description (e.g., "Lowered CA1 tetrodes by 40um"). */

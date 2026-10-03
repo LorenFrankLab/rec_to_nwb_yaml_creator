@@ -12,6 +12,8 @@
  * effective date (`snapshot.date`), and the entry timestamp (`provenance.enteredAt`), which is
  * never evidence of when a setup became effective. An imported file is evidence: its first
  * configuration is dated from the earliest file, and each imported day's pin is its own file's.
+ * A file older than the animal's recorded timeline is evidence about its own day only: its setup is
+ * pinned-only and never selected for another date (see `selectConfigurationForDate`).
  *
  * Pure; tolerant of a malformed history.
  */
@@ -65,14 +67,16 @@ function usableSnapshots(animalOrHistory: unknown): ConfigurationSnapshot[] {
 }
 
 /**
- * Choose the configuration version effective on `date`.
+ * Choose the configuration version effective on `date`. A pinned-only version (an imported
+ * back-fill, `ConfigurationSnapshot.pinnedOnly`) applies only to the days pinned to it, so it is
+ * never chosen here — neither as the version covering a date nor as the candidate before them all.
  *
  * @param animalOrHistory - The animal record (or a bare history array).
  * @param date - The recording date, `YYYY-MM-DD`.
  * @returns The choice.
  */
 export function selectConfigurationForDate(animalOrHistory: unknown, date: string): ConfigurationChoice {
-  const snapshots = usableSnapshots(animalOrHistory);
+  const snapshots = usableSnapshots(animalOrHistory).filter((s) => s.pinnedOnly !== true);
   if (snapshots.length === 0) return { version: null, covered: false, effectiveDate: null };
   // A snapshot covers the date when its KNOWN effective date is on/before it, or — for an entry-
   // stamped snapshot — when the day is on/after the entry (the setup was in place by then).

@@ -23,16 +23,26 @@ export default function ConfigVersionContext({ animal }: ConfigVersionContextPro
   // version (or none) means no reconfiguration ever happened — nothing to explain.
   if (history.length < 2) return null;
   const ordered = [...history].sort((a, b) => (a.version ?? 0) - (b.version ?? 0));
+  // A pinned-only version (an imported back-fill) is not a point on the timeline: it belongs only to
+  // the imported days pinned to it, so it gets its own line instead of a "changed on" boundary.
+  const timeline = ordered.filter((snapshot) => snapshot.pinnedOnly !== true);
+  const pinnedOnly = ordered.filter((snapshot) => snapshot.pinnedOnly === true);
 
   return (
     <section className={styles.context} role="note" aria-label="Electrode configuration history">
       <p className={styles.intro}>
-        This animal&apos;s electrode configuration was changed during the study. Recording days keep
-        the version that was active when they ran:
+        {timeline.length > 1 ? (
+          <>
+            This animal&apos;s electrode configuration was changed during the study. Recording days keep
+            the version that was active when they ran:
+          </>
+        ) : (
+          <>Some imported recordings used a different electrode configuration. Each keeps its own:</>
+        )}
       </p>
       <ul className={styles.list}>
-        {ordered.slice(1).map((snapshot, index) => {
-          const previous = ordered[index];
+        {timeline.slice(1).map((snapshot, index) => {
+          const previous = timeline[index];
           // Render the whole sentence as ONE text node so it reads as a single sentence (and so
           // screen readers / tests see it as one phrase rather than fragmented spans).
           const line =
@@ -40,6 +50,12 @@ export default function ConfigVersionContext({ animal }: ConfigVersionContextPro
             `earlier recording days use v${previous.version}, this and later days use v${snapshot.version}.` +
             (snapshot.description ? ` (${snapshot.description})` : '');
           return <li key={snapshot.version ?? index}>{line}</li>;
+        })}
+        {pinnedOnly.map((snapshot, index) => {
+          const line =
+            `v${snapshot.version} is used only by the imported recording days pinned to it; other days never get it.` +
+            (snapshot.description ? ` (${snapshot.description})` : '');
+          return <li key={snapshot.version ?? `pinned-${index}`}>{line}</li>;
         })}
       </ul>
     </section>

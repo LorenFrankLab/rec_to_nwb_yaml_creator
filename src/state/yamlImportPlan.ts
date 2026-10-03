@@ -9,8 +9,8 @@
  *   - derives each file's recording date (the flat model carries none — see
  *     {@link extractRecordingDate}),
  *   - groups files by subject into per-animal plans,
- *   - infers configuration VERSIONS within a subject (distinct electrode configs in
- *     date order),
+ *   - infers configuration VERSIONS within a subject (runs of files with the same electrode
+ *     config, in date order),
  *   - resolves animal-level facts with an explicit default policy, surfacing every
  *     disagreement as a `divergence` flag (never a silent pick),
  *   - flags conflicts with animals already in the workspace (never overwrites silently).
@@ -53,11 +53,11 @@ export interface Divergence {
   detail: string;
 }
 
-/** One resolved configuration version within a subject (a distinct electrode config in date order). */
+/** One resolved configuration version within a subject (a run of files with one electrode config). */
 export interface ConfigVersion {
-  /** Sequential version number (1 = earliest distinct config). */
+  /** Sequential version number (1 = the earliest run). */
   version: number;
-  /** The earliest date that introduced this config. */
+  /** The run's first recording date — the version's effective date. */
   date: string;
   /** Display description. */
   description: string;
@@ -369,9 +369,13 @@ export function findExistingAnimalId(
 const SUBJECT_SCALAR_FIELDS: ReadonlyArray<string> = ['species', 'sex', 'genotype', 'description', 'date_of_birth'];
 
 /**
- * Resolve a subject's configuration VERSIONS from its date-ordered files: the DISTINCT
- * electrode configurations (deep-equal by {@link canonicalJson}), numbered 1..K in date
- * order (1 = earliest distinct config). Returns the version list plus a per-file version map.
+ * Resolve a subject's configuration VERSIONS from its date-ordered files: each run of consecutive
+ * files with the same electrode configuration (deep-equal by {@link canonicalJson}) is one version,
+ * effective from its first file's date until the next run starts, numbered 1..K in date order
+ * (1 = the earliest). A configuration that RECURS after a change (A → B → A) starts a new version
+ * rather than reusing the first one: versions are effective-date periods, so only a new one can
+ * say that the later days (and the days logged after them) are back on A. Returns the version list
+ * plus a per-file version map.
  *
  * @param entries - Date-sorted file entries.
  * @returns The version list plus a per-file version map.
@@ -381,8 +385,9 @@ function resolveConfigVersions(entries: FileEntry[]): {
   versionByDate: Record<string, number>;
 } {
   const configVersions: ConfigVersion[] = [];
-  const keyToVersion = new Map<string, number>();
+  const firstVersionByKey = new Map<string, number>();
   const versionByDate: Record<string, number> = {};
+  let previousKey: string | null = null;
 
   for (const entry of entries) {
     const devices = {
@@ -391,20 +396,27 @@ function resolveConfigVersions(entries: FileEntry[]): {
         entry.configuration.ntrode_electrode_group_channel_map ?? [],
     };
     const key = canonicalJson(devices);
-    let version = keyToVersion.get(key);
-    if (version === undefined) {
-      version = configVersions.length + 1;
-      keyToVersion.set(key, version);
+    if (key !== previousKey) {
+      const version = configVersions.length + 1;
+      const sameAs = firstVersionByKey.get(key);
+      if (sameAs === undefined) firstVersionByKey.set(key, version);
       configVersions.push({
         version,
         date: entry.date,
-        description: version === 1 ? 'Initial configuration' : `Configuration ${version}`,
+        description:
+          version === 1
+            ? 'Initial configuration'
+            : sameAs === undefined
+              ? `Configuration ${version}`
+              : `Configuration ${version} (same as configuration ${sameAs})`,
         devices,
         dayDates: [],
       });
+      previousKey = key;
     }
-    configVersions[version - 1].dayDates.push(entry.date);
-    versionByDate[entry.date] = version;
+    const current = configVersions[configVersions.length - 1];
+    current.dayDates.push(entry.date);
+    versionByDate[entry.date] = current.version;
   }
 
   return { configVersions, versionByDate };
