@@ -944,6 +944,52 @@ describe('useElectrodeGroups - other groups keep their ntrode ids', () => {
     selectDevice(result, 1, 'tetrode_12.5');
     expect(pairs(result)).toEqual([[1, 0], [3, 2]]);
   });
+
+  // trodes_to_nwb looks up each of the .rec header's ntrodes (1..N) by ntrode_id, so a gap left
+  // by a removed group fails the conversion; the form shows ntrode ids read-only, so only new
+  // ntrodes can close it.
+  it('gives a new group\'s ntrodes the lowest unused ids, closing a gap a removal left', () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    const { result } = renderHook(() =>
+      useSeededHook({
+        electrode_groups: groups(0, 1, 2, 3),
+        ntrode_electrode_group_channel_map: [tetrode(0, 1), tetrode(1, 2), tetrode(2, 3), tetrode(3, 4)],
+      })
+    );
+
+    act(() => {
+      result.current.removeElectrodeGroupItem(1, 'electrode_groups');
+    });
+    act(() => {
+      result.current.formData.electrode_groups.push({ id: 4, device_type: '', location: 'CA1' });
+    });
+    selectDevice(result, 3, 'tetrode_12.5');
+
+    expect(pairs(result)).toEqual([[1, 0], [3, 2], [4, 3], [2, 4]]);
+
+    // A second shank fills the next gap up, after the ids in use
+    selectDevice(result, 3, '32c-2s8mm6cm-20um-40um-dl');
+    expect(pairs(result)).toEqual([[1, 0], [3, 2], [4, 3], [2, 4], [5, 4]]);
+  });
+
+  it('Duplicate gives the copy\'s ntrodes the lowest unused ids', () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    const { result } = renderHook(() =>
+      useSeededHook({
+        electrode_groups: groups(0, 1, 2),
+        ntrode_electrode_group_channel_map: [tetrode(0, 1), tetrode(1, 2), tetrode(2, 3)],
+      })
+    );
+
+    act(() => {
+      result.current.removeElectrodeGroupItem(1, 'electrode_groups');
+    });
+    act(() => {
+      result.current.duplicateElectrodeGroupItem(1, 'electrode_groups');
+    });
+
+    expect(pairs(result)).toEqual([[1, 0], [3, 2], [2, 3]]);
+  });
 });
 
 /**
