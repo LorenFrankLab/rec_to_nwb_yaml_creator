@@ -344,6 +344,12 @@ export function danglingElectrodeGroupRefs(model: ValidationModel): ValidationIs
  * Rule 19: multi-shank bad_channels are ignored downstream — convert_yaml.add_electrode_groups uses
  * ONLY the first ntrode row of a group for bad_channels, so marks on a later row are silently dropped.
  *
+ * A check on the file's shape, so it never fires for marks the app translates: the legacy form
+ * validates its download and its uploads after moving every row's marks to the group's first row
+ * (`domain/badChannels` file helpers), and the Day Editor's probe-wide selector writes the first
+ * row. It still fires for YAML that carries later-row marks as written — a file from an earlier
+ * version in Import & Repair, or a stored day that predates the probe-wide selector.
+ *
  * @param model - The form data to validate.
  * @returns Validation issues.
  */

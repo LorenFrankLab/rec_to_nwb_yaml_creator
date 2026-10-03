@@ -112,6 +112,10 @@ export const CATEGORY_BY_CODE: Readonly<Record<string, WorkflowCategory>> = Obje
   opto_power_watts_suspicious: WORKFLOW_CATEGORY.ANIMAL_SETUP,
   // Optical-fiber / virus-injection coordinate reference is part of the animal's opto setup.
   missing_opto_reference: WORKFLOW_CATEGORY.ANIMAL_SETUP,
+  duplicate_opto_device_name: WORKFLOW_CATEGORY.ANIMAL_SETUP,
+  multiple_virus_injections: WORKFLOW_CATEGORY.ANIMAL_SETUP,
+  conflicting_virus_titers: WORKFLOW_CATEGORY.ANIMAL_SETUP,
+  invalid_injection_hemisphere: WORKFLOW_CATEGORY.ANIMAL_SETUP,
   // Subject identity is part of the animal's shared setup and is edited from the animal profile.
   invalid_species: WORKFLOW_CATEGORY.ANIMAL_SETUP,
   subject_genotype_strain: WORKFLOW_CATEGORY.ANIMAL_SETUP,
@@ -120,6 +124,9 @@ export const CATEGORY_BY_CODE: Readonly<Record<string, WorkflowCategory>> = Obje
   subject_id_missing: WORKFLOW_CATEGORY.ANIMAL_SETUP,
   experimenter_name_shape: WORKFLOW_CATEGORY.ANIMAL_SETUP,
   subject_id_slash: WORKFLOW_CATEGORY.ANIMAL_SETUP,
+  subject_date_of_birth_format: WORKFLOW_CATEGORY.ANIMAL_SETUP,
+  unknown_subject_field: WORKFLOW_CATEGORY.ANIMAL_SETUP,
+  subject_value_type: WORKFLOW_CATEGORY.ANIMAL_SETUP,
   session_id_slash: WORKFLOW_CATEGORY.ANIMAL_SETUP,
 
   // This recording day's metadata (tasks, videos, files, behavioral events, camera refs).
@@ -144,11 +151,14 @@ export const CATEGORY_BY_CODE: Readonly<Record<string, WorkflowCategory>> = Obje
   orphaned_fs_gui_epoch: WORKFLOW_CATEGORY.DAY_METADATA,
   // Phase 4: an epoch with no video and no "no video" declaration (the video-declaration rule).
   epoch_video_undeclared: WORKFLOW_CATEGORY.DAY_METADATA,
+  no_associated_videos: WORKFLOW_CATEGORY.DAY_METADATA,
   // Day FsGUI (opto protocol) reference rules — the fix lives in the day's epochs/FsGUI flow.
   dangling_dio_output: WORKFLOW_CATEGORY.DAY_METADATA,
   fs_gui_requires_optogenetics: WORKFLOW_CATEGORY.DAY_METADATA,
   divergent_task_identity: WORKFLOW_CATEGORY.DAY_METADATA,
+  divergent_task_identity_across_days: WORKFLOW_CATEGORY.DAY_METADATA,
   missing_camera: WORKFLOW_CATEGORY.DAY_METADATA,
+  no_tasks: WORKFLOW_CATEGORY.DAY_METADATA,
 
   // Day-specific failed (bad) channels.
   bad_channel_out_of_range: WORKFLOW_CATEGORY.FAILED_CHANNELS,
@@ -174,6 +184,8 @@ export const CATEGORY_BY_CODE: Readonly<Record<string, WorkflowCategory>> = Obje
   voltage_units_review: WORKFLOW_CATEGORY.DAY_METADATA,
   copied_task_context_review: WORKFLOW_CATEGORY.DAY_METADATA,
   weight_from_baseline: WORKFLOW_CATEGORY.DAY_METADATA,
+  // The age is per recording day (edited in the Daily log), like the weight.
+  subject_age_format: WORKFLOW_CATEGORY.DAY_METADATA,
 });
 
 /**

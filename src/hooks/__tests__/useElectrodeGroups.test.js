@@ -13,10 +13,11 @@
  * - duplicateElectrodeGroupItem(index, key) - Duplicates electrode group with new ID and ntrode maps
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useState } from 'react';
 import { useElectrodeGroups } from '../useElectrodeGroups';
+import { deviceTypes } from '../../valueList';
 
 /**
  * Test wrapper that provides formData state and useElectrodeGroups hook
@@ -309,7 +310,7 @@ describe('useElectrodeGroups', () => {
       });
     });
 
-    describe('Ntrode ID Renumbering', () => {
+    describe('Ntrode ID Numbering', () => {
       it('should assign sequential ntrode_id values starting at 1', () => {
         const { result } = renderHook(() => useTestHook());
 
@@ -331,7 +332,7 @@ describe('useElectrodeGroups', () => {
         expect(ntrodes[1].ntrode_id).toBe(2);
       });
 
-      it('should renumber all ntrode_id values when device type changed', () => {
+      it('should number a later group\'s ntrodes after the ntrode_ids in use', () => {
         const { result } = renderHook(() => useTestHook());
 
         // Start with 2 electrode groups
@@ -912,4 +913,356 @@ describe('useElectrodeGroups', () => {
       });
     });
   });
+});
+
+/**
+ * trodes_to_nwb matches each ntrode in the .rec header to the YAML entry with
+ * the same ntrode_id, and takes that entry's electrode group and location. An
+ * edit to one electrode group must therefore never change another group's
+ * ntrode ids: the shifted hardware channels would be filed under a
+ * neighbouring group, and the channel counts would still match.
+ */
+describe('useElectrodeGroups - other groups keep their ntrode ids', () => {
+  /**
+   * Holds the form state in React state and edits it through the hook
+   *
+   * @param {object} initialFormData - The starting form state
+   * @returns {object} The form state and the hook's functions
+   */
+  function useSeededHook(initialFormData) {
+    const [formData, setFormData] = useState(initialFormData);
+    return { formData, ...useElectrodeGroups(formData, setFormData) };
+  }
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  const groups = (...ids) => ids.map((id) => ({ id, device_type: 'tetrode_12.5', location: 'CA1' }));
+  const tetrode = (electrodeGroupId, ntrodeId) => ({
+    ntrode_id: ntrodeId,
+    electrode_group_id: electrodeGroupId,
+    bad_channels: [],
+    map: { 0: 0, 1: 1, 2: 2, 3: 3 },
+  });
+  // [ntrode_id, electrode_group_id] for every ntrode, in array order
+  const pairs = (result) =>
+    result.current.formData.ntrode_electrode_group_channel_map.map((n) => [
+      n.ntrode_id,
+      n.electrode_group_id,
+    ]);
+  const selectDevice = (result, index, deviceType) =>
+    act(() => {
+      result.current.nTrodeMapSelected(
+        { target: { value: deviceType } },
+        { key: 'electrode_groups', index }
+      );
+    });
+
+  it('changing a device type and back leaves every group with its ntrode ids', () => {
+    const { result } = renderHook(() =>
+      useSeededHook({ electrode_groups: groups(0, 1, 2), ntrode_electrode_group_channel_map: [] })
+    );
+    selectDevice(result, 0, 'tetrode_12.5');
+    selectDevice(result, 1, 'tetrode_12.5');
+    selectDevice(result, 2, 'tetrode_12.5');
+    expect(pairs(result)).toEqual([[1, 0], [2, 1], [3, 2]]);
+
+    selectDevice(result, 0, '128c-4s6mm6cm-15um-26um-sl');
+    expect(pairs(result)).toEqual([[1, 0], [4, 0], [5, 0], [6, 0], [2, 1], [3, 2]]);
+
+    selectDevice(result, 0, 'tetrode_12.5');
+    expect(pairs(result)).toEqual([[1, 0], [2, 1], [3, 2]]);
+  });
+
+  it('choosing a device type again keeps the group\'s ntrode ids and position', () => {
+    const { result } = renderHook(() =>
+      useSeededHook({
+        electrode_groups: groups(0, 1, 2, 3),
+        ntrode_electrode_group_channel_map: [tetrode(0, 1), tetrode(1, 2), tetrode(2, 3), tetrode(3, 4)],
+      })
+    );
+
+    selectDevice(result, 1, 'tetrode_12.5');
+
+    expect(pairs(result)).toEqual([[1, 0], [2, 1], [3, 2], [4, 3]]);
+  });
+
+  it('a group with fewer shanks keeps its first ntrode ids', () => {
+    const { result } = renderHook(() =>
+      useSeededHook({
+        electrode_groups: groups(0, 1),
+        ntrode_electrode_group_channel_map: [
+          tetrode(0, 1), tetrode(0, 2), tetrode(0, 3), tetrode(0, 4), tetrode(1, 5),
+        ],
+      })
+    );
+
+    selectDevice(result, 0, '32c-2s8mm6cm-20um-40um-dl');
+
+    expect(pairs(result)).toEqual([[1, 0], [2, 0], [5, 1]]);
+  });
+
+  it('never gives the regenerated ntrodes an id another group already uses', () => {
+    // e.g. an imported file where two groups share ntrode_id 1
+    const { result } = renderHook(() =>
+      useSeededHook({
+        electrode_groups: groups(0, 1),
+        ntrode_electrode_group_channel_map: [tetrode(0, 1), tetrode(1, 1)],
+      })
+    );
+
+    selectDevice(result, 0, 'tetrode_12.5');
+
+    expect(pairs(result)).toEqual([[2, 0], [1, 1]]);
+  });
+
+  it('Duplicate gives the copy new ntrode ids and changes no other group\'s', () => {
+    const { result } = renderHook(() =>
+      useSeededHook({
+        electrode_groups: groups(0, 1, 2),
+        ntrode_electrode_group_channel_map: [tetrode(0, 1), tetrode(1, 2), tetrode(2, 3)],
+      })
+    );
+
+    act(() => {
+      result.current.duplicateElectrodeGroupItem(0, 'electrode_groups');
+    });
+    expect(result.current.formData.electrode_groups.map((g) => g.id)).toEqual([0, 3, 1, 2]);
+    expect(pairs(result)).toEqual([[1, 0], [2, 1], [3, 2], [4, 3]]);
+
+    selectDevice(result, 0, '32c-2s8mm6cm-20um-40um-dl');
+    expect(pairs(result)).toEqual([[1, 0], [5, 0], [2, 1], [3, 2], [4, 3]]);
+  });
+
+  it('Remove leaves the other groups\' ntrode ids, also at the next device type change', () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    const { result } = renderHook(() =>
+      useSeededHook({
+        electrode_groups: groups(0, 1, 2),
+        ntrode_electrode_group_channel_map: [tetrode(0, 1), tetrode(1, 2), tetrode(2, 3)],
+      })
+    );
+
+    act(() => {
+      result.current.removeElectrodeGroupItem(1, 'electrode_groups');
+    });
+    expect(pairs(result)).toEqual([[1, 0], [3, 2]]);
+
+    selectDevice(result, 1, 'tetrode_12.5');
+    expect(pairs(result)).toEqual([[1, 0], [3, 2]]);
+  });
+
+  // trodes_to_nwb looks up each of the .rec header's ntrodes (1..N) by ntrode_id, so a gap left
+  // by a removed group fails the conversion; the form shows ntrode ids read-only, so only new
+  // ntrodes can close it.
+  it('gives a new group\'s ntrodes the lowest unused ids, closing a gap a removal left', () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    const { result } = renderHook(() =>
+      useSeededHook({
+        electrode_groups: groups(0, 1, 2, 3),
+        ntrode_electrode_group_channel_map: [tetrode(0, 1), tetrode(1, 2), tetrode(2, 3), tetrode(3, 4)],
+      })
+    );
+
+    act(() => {
+      result.current.removeElectrodeGroupItem(1, 'electrode_groups');
+    });
+    act(() => {
+      result.current.formData.electrode_groups.push({ id: 4, device_type: '', location: 'CA1' });
+    });
+    selectDevice(result, 3, 'tetrode_12.5');
+
+    expect(pairs(result)).toEqual([[1, 0], [3, 2], [4, 3], [2, 4]]);
+
+    // A second shank fills the next gap up, after the ids in use
+    selectDevice(result, 3, '32c-2s8mm6cm-20um-40um-dl');
+    expect(pairs(result)).toEqual([[1, 0], [3, 2], [4, 3], [2, 4], [5, 4]]);
+  });
+
+  it('Duplicate gives the copy\'s ntrodes the lowest unused ids', () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    const { result } = renderHook(() =>
+      useSeededHook({
+        electrode_groups: groups(0, 1, 2),
+        ntrode_electrode_group_channel_map: [tetrode(0, 1), tetrode(1, 2), tetrode(2, 3)],
+      })
+    );
+
+    act(() => {
+      result.current.removeElectrodeGroupItem(1, 'electrode_groups');
+    });
+    act(() => {
+      result.current.duplicateElectrodeGroupItem(1, 'electrode_groups');
+    });
+
+    expect(pairs(result)).toEqual([[1, 0], [3, 2], [2, 3]]);
+  });
+});
+
+/**
+ * Channel maps belong to an electrode group through electrode_group_id, so a
+ * group's id can only change together with its maps. trodes_to_nwb looks the
+ * maps up by group id: maps left on the old id fail the conversion, and maps
+ * that end up on another group's id are silently filed under that group.
+ */
+describe('useElectrodeGroups - changeElectrodeGroupId', () => {
+  /**
+   * Holds the form state in React state and edits it through the hook
+   *
+   * @param {object} initialFormData - The starting form state
+   * @returns {object} The form state and the hook's functions
+   */
+  function useSeededHook(initialFormData) {
+    const [formData, setFormData] = useState(initialFormData);
+    return { formData, ...useElectrodeGroups(formData, setFormData) };
+  }
+
+  const group = (id) => ({ id, device_type: 'tetrode_12.5', location: 'CA1' });
+  const tetrode = (electrodeGroupId, ntrodeId) => ({
+    ntrode_id: ntrodeId,
+    electrode_group_id: electrodeGroupId,
+    bad_channels: [],
+    map: { 0: 0, 1: 1, 2: 2, 3: 3 },
+  });
+  const twoTetrodes = () => ({
+    electrode_groups: [group(0), group(1)],
+    ntrode_electrode_group_channel_map: [tetrode(0, 1), tetrode(1, 2)],
+  });
+  const groupIds = (result) => result.current.formData.electrode_groups.map((g) => g.id);
+  // [ntrode_id, electrode_group_id] for every ntrode, in array order
+  const pairs = (result) =>
+    result.current.formData.ntrode_electrode_group_channel_map.map((n) => [
+      n.ntrode_id,
+      n.electrode_group_id,
+    ]);
+  const changeId = (result, index, value) =>
+    act(() => {
+      result.current.changeElectrodeGroupId(index, value);
+    });
+
+  it('moves the group\'s channel maps to its new id', () => {
+    const { result } = renderHook(() => useSeededHook(twoTetrodes()));
+
+    changeId(result, 0, '12');
+
+    expect(groupIds(result)).toEqual([12, 1]);
+    expect(pairs(result)).toEqual([[1, 12], [2, 1]]);
+  });
+
+  it('swapping two ids through a free one keeps each group\'s channel maps', () => {
+    const { result } = renderHook(() => useSeededHook(twoTetrodes()));
+
+    changeId(result, 0, '9');
+    changeId(result, 1, '0');
+    changeId(result, 0, '1');
+
+    expect(groupIds(result)).toEqual([1, 0]);
+    expect(pairs(result)).toEqual([[1, 1], [2, 0]]);
+  });
+
+  it('refuses an id another group uses and changes nothing', () => {
+    const { result } = renderHook(() => useSeededHook(twoTetrodes()));
+    const before = result.current.formData;
+
+    changeId(result, 0, '1');
+
+    expect(result.current.formData).toBe(before);
+  });
+
+  it('refuses a value that is not a whole number and changes nothing', () => {
+    const { result } = renderHook(() => useSeededHook(twoTetrodes()));
+    const before = result.current.formData;
+
+    ['', ' ', '1.5', '-1', 'abc'].forEach((value) => changeId(result, 0, value));
+
+    expect(result.current.formData).toBe(before);
+  });
+
+  it('leaves the state alone when the id is unchanged', () => {
+    const { result } = renderHook(() => useSeededHook(twoTetrodes()));
+    const before = result.current.formData;
+
+    changeId(result, 1, '1');
+
+    expect(result.current.formData).toBe(before);
+  });
+
+  it('leaves the channel maps when another group also had the old id', () => {
+    // e.g. an imported file where two groups share id 0: whose maps are whose
+    // cannot be told, so they stay with the group that keeps the id
+    const { result } = renderHook(() =>
+      useSeededHook({
+        electrode_groups: [group(0), group(0)],
+        ntrode_electrode_group_channel_map: [tetrode(0, 1), tetrode(0, 2)],
+      })
+    );
+
+    changeId(result, 1, '5');
+
+    expect(groupIds(result)).toEqual([0, 5]);
+    expect(pairs(result)).toEqual([[1, 0], [2, 0]]);
+  });
+});
+
+/**
+ * Every trodes_to_nwb probe file numbers its electrodes 0..N-1 across the
+ * shanks in order. Each shank's ntrode maps its channels 0..n-1 to exactly
+ * that shank's electrode ids; a missing id fails the conversion.
+ */
+describe('useElectrodeGroups - channel maps match the probe files', () => {
+  const range = (first, last) => Array.from({ length: last - first + 1 }, (_, i) => first + i);
+  const fourShanksOf32 = [range(0, 31), range(32, 63), range(64, 95), range(96, 127)];
+  const PROBE_SHANKS = {
+    'tetrode_12.5': [range(0, 3)],
+    'A1x32-6mm-50-177-H32_21mm': [range(0, 31)],
+    '128c-4s4mm6cm-15um-26um-sl': fourShanksOf32,
+    '128c-4s4mm6cm-20um-40um-sl': fourShanksOf32,
+    '128c-4s6mm6cm-15um-26um-sl': fourShanksOf32,
+    '128c-4s6mm6cm-20um-40um-sl': fourShanksOf32,
+    '128c-4s8mm6cm-15um-26um-sl': fourShanksOf32,
+    '128c-4s8mm6cm-20um-40um-sl': fourShanksOf32,
+    '32c-2s8mm6cm-20um-40um-dl': [range(0, 15), range(16, 31)],
+    '64c-3s6mm6cm-20um-40um-sl': [range(0, 20), range(21, 41), range(42, 63)],
+    '64c-4s6mm6cm-20um-40um-dl': [range(0, 15), range(16, 31), range(32, 47), range(48, 63)],
+    'NET-EBL-128ch-single-shank': [range(0, 127)],
+  };
+
+  /**
+   * Holds a form with one electrode group in React state and edits it through the hook
+   *
+   * @returns {object} The form state and the hook's functions
+   */
+  function useSeededHook() {
+    const [formData, setFormData] = useState({
+      electrode_groups: [{ id: 0, device_type: '', location: 'CA1' }],
+      ntrode_electrode_group_channel_map: [],
+    });
+    return { formData, ...useElectrodeGroups(formData, setFormData) };
+  }
+
+  it('covers every device type in the device type list', () => {
+    expect(Object.keys(PROBE_SHANKS).sort()).toEqual([...deviceTypes()].sort());
+  });
+
+  it.each(Object.entries(PROBE_SHANKS))(
+    '%s: one ntrode per shank, mapping its channels to that shank\'s electrode ids',
+    (deviceType, shanks) => {
+      const { result } = renderHook(() => useSeededHook());
+
+      act(() => {
+        result.current.nTrodeMapSelected(
+          { target: { value: deviceType } },
+          { key: 'electrode_groups', index: 0 }
+        );
+      });
+
+      const maps = result.current.formData.ntrode_electrode_group_channel_map.map((n) => n.map);
+      expect(maps).toEqual(
+        shanks.map((electrodeIds) =>
+          Object.fromEntries(electrodeIds.map((electrodeId, channel) => [channel, electrodeId]))
+        )
+      );
+    }
+  );
 });

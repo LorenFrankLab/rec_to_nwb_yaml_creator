@@ -7,7 +7,8 @@
  */
 import { useMemo } from 'react';
 import { useStoreContext } from '../../../state/StoreContext';
-import type { Animal } from '../../../state/workspaceTypes';
+import { getAnimalDayIds } from '../../../state/workspaceSelectors';
+import type { Animal, Day } from '../../../state/workspaceTypes';
 import DataAcqSection from '../DataAcqSection';
 import { collectDataAcqIdentities } from '../identitySafety';
 
@@ -19,7 +20,7 @@ interface RecordingSystemContainerProps {
 }
 
 export default function RecordingSystemContainer({ animal, onFieldUpdate }: RecordingSystemContainerProps) {
-  const { model } = useStoreContext();
+  const { model, actions } = useStoreContext();
   // Data-acq identities elsewhere in the dataset, for the DataAcqSection divergent-reuse check.
   // Exclude this animal's ENTIRE catalog (not just index 0): intra-catalog name collisions are caught
   // by the editor's own uniqueness check, so the cross-animal registry must carry only OTHER animals'
@@ -28,7 +29,18 @@ export default function RecordingSystemContainer({ animal, onFieldUpdate }: Reco
     () => collectDataAcqIdentities(model.workspace, { animalId: animal.id }),
     [model.workspace, animal.id]
   );
+  // This animal's recording days: a recording system they use is not deleted from under them.
+  const days = useMemo(
+    () => getAnimalDayIds(animal).map((id) => model.workspace?.days?.[id]).filter((d): d is Day => Boolean(d)),
+    [animal, model.workspace]
+  );
   return (
-    <DataAcqSection animal={animal} onFieldUpdate={onFieldUpdate} dataAcqRegistry={dataAcqRegistry} />
+    <DataAcqSection
+      animal={animal}
+      onFieldUpdate={onFieldUpdate}
+      dataAcqRegistry={dataAcqRegistry}
+      days={days}
+      onMakeDefault={(name) => actions.makeDataAcqDeviceDefault(animal.id, name)}
+    />
   );
 }

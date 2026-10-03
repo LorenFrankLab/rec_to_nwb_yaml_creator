@@ -148,8 +148,9 @@ unless `DJ_SUPPORT_FILEPATH_MANAGEMENT=TRUE`; Spyglass `test_mode` requires the 
   own fixture converts (plan §"Pilot acceptance").
 
 ### Deferred (out of this release, with the trigger to pick each up)
-- Legacy single-page form still names files `MMDDYYYY_subject_metadata.yml` — change when the legacy route is
-  retired or a legacy user reports a scanner miss.
+- ~~Legacy single-page form still names files `MMDDYYYY_subject_metadata.yml`~~ — done:
+  `formatDeterministicFilename` (`src/io/yaml.ts`) now writes `{EXPERIMENT_DATE_in_format_YYYYMMDD}_{subject_id}_metadata.yml`
+  with the subject id as entered, the same contract as `src/domain/recordingFilename.ts`.
 - `TaskInstance.camera_id` per-day override exists in the type but is not written by import or editable in the
   UI (tasks reference the catalog camera) — pick up with bulk catch-up.
 - Main autosave blob stays in localStorage (receipt YAML in IndexedDB); measured headroom covers 3 animals ×

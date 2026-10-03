@@ -40,6 +40,11 @@ export interface UseWorkspacePersistenceParams {
   initialDiscardRef: { current: LoadDiscardReason | null };
   /** Shape-recovery `{ missingKeys }` captured at hydration, or null (consumed once after mount). */
   initialRecoverRef: { current: { missingKeys: string[] } | null };
+  /**
+   * Animals whose editable setup the load re-mirrored from their last configuration (consumed once
+   * after mount; optional — empty when absent).
+   */
+  initialResyncRef?: { current: string[] };
   /** Replace the whole in-memory workspace (reader live-follow, take-over, backup restore). */
   replaceWorkspace: (next: Workspace) => void;
 }
@@ -91,6 +96,7 @@ const READER_RETRY_MS = 3_000;
  * @param params.workspaceRef - Live ref to the committed workspace (saveNow).
  * @param params.initialDiscardRef - Unusable-blob discard reason, or null.
  * @param params.initialRecoverRef - Shape-recovery `{ missingKeys }`, or null.
+ * @param params.initialResyncRef - Animals whose editable setup the load re-mirrored.
  * @param params.replaceWorkspace - Whole-workspace replacer.
  * @returns The persistence status plus its actions.
  */
@@ -99,6 +105,7 @@ export function useWorkspacePersistence({
   workspaceRef,
   initialDiscardRef,
   initialRecoverRef,
+  initialResyncRef,
   replaceWorkspace,
 }: UseWorkspacePersistenceParams): WorkspacePersistence {
   // Persistence status: drives the truthful SaveIndicator and the beforeunload guard.
@@ -240,6 +247,17 @@ export function useWorkspacePersistence({
       );
       setLoadOutcome('recovered');
       initialRecoverRef.current = null;
+    } else if (initialResyncRef && initialResyncRef.current.length > 0) {
+      // The editable electrode setup of an animal saved by an older import showed an earlier
+      // configuration than the one an edit overwrites; the load re-mirrored the current one. Every
+      // export is unchanged — say so once, so the scientist reviews before editing.
+      const animals = initialResyncRef.current.join(', ');
+      setLoadNotice(
+        `The electrode setup shown for ${animals} was out of date (left by an earlier import) and ` +
+          "now shows the animal's current configuration, which setup edits change. No recording " +
+          "day's export changed. Review the electrode groups before editing."
+      );
+      initialResyncRef.current = [];
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

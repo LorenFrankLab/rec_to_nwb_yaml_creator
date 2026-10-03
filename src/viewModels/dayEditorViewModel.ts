@@ -19,7 +19,7 @@ import { isIncompleteEntryIssue } from '../domain/validationPresentation';
  *   - the effective field values from `mergeDayMetadata` compared against the day override vs the
  *     animal value (never re-implementing the merge rules);
  *   - bad-channel marks + the un-mark-needs-ack monotonicity from `priorBadChannels` /
- *     `getBadChannelRemovalAcks` over the merged channel map;
+ *     `getBadChannelRemovalAcks` over the day's resolved (stored-shape) channel map;
  *   - the malformed-collection / stale-override / missing-config notices from the existing raw-shape
  *     and device-override detectors (`validateRawDay` / `validateRawAnimal` / `classifyDeviceOverrides`).
  *
@@ -44,6 +44,7 @@ import {
 } from '../state/workspaceSelectors';
 import { isExportEnabled } from '../domain/stepGate';
 import { evaluateDay } from '../domain/dayEvaluation';
+import { resolveDayConfig } from '../state/workspaceUtils';
 import type { DayEvaluation } from '../domain/dayEvaluation';
 import { ownershipForIssue } from '../domain/workflowOwnership';
 import {
@@ -72,6 +73,7 @@ import { validateRawDay, validateRawAnimal } from '../validation/rawShape';
 import type { Animal, Day } from '../state/workspaceTypes';
 import { isRecord } from '../utils/records';
 import { previousWeightSuggestion } from '../domain/dayCarryPolicy';
+import { ageOnDate } from '../domain/subjectAge';
 import { exportFreshnessStatus } from '../domain/exportReceipt';
 import { isBlockingIssue, blockingIssues } from '../validation/issueTypes';
 import type {
@@ -665,6 +667,30 @@ function buildOverviewFields(
           : 'No weight entered for this day — required for export. Enter the measurement for this recording date.',
   });
 
+  // Age on this recording day — day-owned like the weight. A day saved before ages were day-owned
+  // has no `session.age` key and exports the animal-level fallback; `null` = no age exported. The
+  // age on this date computed from the date of birth is offered as a suggestion when it differs.
+  const dayAge = daySession.age;
+  const exportedAge = mergedSubject.age;
+  const computedAge = ageOnDate(subject.date_of_birth, String((day as { date?: unknown }).date ?? ''));
+  fields.push({
+    fieldPath: 'session.age',
+    label: 'Age on this recording day',
+    value: asDisplay(exportedAge),
+    ...(dayAge !== undefined
+      ? { source: 'day' as const }
+      : exportedAge !== undefined
+        ? { source: 'inherited' as const, inheritedFrom: 'animal' }
+        : { source: 'default' as const }),
+    ...(computedAge && computedAge !== exportedAge ? { fallbackValue: computedAge } : {}),
+    helpText:
+      dayAge !== undefined
+        ? 'Exported as the subject age for this day (an ISO 8601 duration, e.g. P90D).'
+        : exportedAge !== undefined
+          ? "From the animal profile, which may be another recording's age. Enter this day's age."
+          : 'No age for this day. Optional; an ISO 8601 duration such as P90D.',
+  });
+
   // Read-only inherited subject identity facts (always animal-owned / inherited on this surface).
   fields.push(readOnlyInherited('subject.subject_id', 'Subject ID', subject.subject_id));
   fields.push(readOnlyInherited('subject.species', 'Species', subject.species));
@@ -1131,8 +1157,8 @@ function staleOverrideNotice(
 // ──────────────────────────────────────────────────────────────────────────────────────────
 // Bad-channel monotonicity / ack.
 //
-// Per-channel mark state comes from the merged channel map (the effective bad set the export
-// encodes); `priorBad` / `requiresAck` / `acked` come from the monotonicity domain (earlier
+// Per-channel mark state comes from the day's resolved channel map (the effective bad set, as the
+// day stores it); `priorBad` / `requiresAck` / `acked` come from the monotonicity domain (earlier
 // same-config days' bad set vs the off-export ack store). The export-blocking
 // `bad_channel_unfailed_without_ack` issues become blockedRemovals with an ack command.
 // ──────────────────────────────────────────────────────────────────────────────────────────
@@ -1143,7 +1169,8 @@ function staleOverrideNotice(
  * keys for a single-shank (or multi-shank later) row, but the full probe-wide range `0..N-1` for a
  * multi-shank group's FIRST row (the ids trodes_to_nwb honors, via `validBadChannelIds`), so a
  * prior-bad channel on another shank is not dropped. Each mark carries `marked` from the row's
- * effective `bad_channels`; `priorBad` from the earlier-same-config union (`priorBadChannels`);
+ * effective `bad_channels` as stored (a single-shank row's channels, not the electrode ids the merged
+ * day exports); `priorBad` from the earlier-same-config union (`priorBadChannels`);
  * `acked` from the day's off-export ack store; `requiresAck` when a marked-bad-on-an-earlier-day
  * channel is now un-marked and not yet acknowledged (the monotonicity exception).
  */
@@ -1161,12 +1188,22 @@ function buildBadChannelMarks(
     : [];
   const prior = priorBadChannels(animal, day, animalDays);
   const acks = getBadChannelRemovalAcks(day);
+  // The marks as the day stores them, row for row with `ntrodeMap`: the merged day carries a
+  // single-shank row's channels as the electrode ids they map to (the file's shape), but these marks
+  // are channels, like the Failed Channels checkboxes and the earlier days they are compared with.
+  let storedNtrodes: Array<{ bad_channels?: unknown }> = ntrodeMap;
+  try {
+    storedNtrodes = resolveDayConfig(animal, day as unknown as Day).ntrode_electrode_group_channel_map;
+  } catch {
+    // Unreachable when the merge succeeded (it resolves the same configuration); keep the merged rows.
+  }
 
   const marks: BadChannelMarkViewModel[] = [];
-  for (const ntrode of ntrodeMap) {
+  for (const [index, ntrode] of ntrodeMap.entries()) {
     const ntrodeId = String(ntrode.ntrode_id);
+    const stored = storedNtrodes[index] ?? ntrode;
     const marked = new Set(
-      Array.isArray(ntrode.bad_channels) ? (ntrode.bad_channels as number[]) : []
+      Array.isArray(stored.bad_channels) ? (stored.bad_channels as number[]) : []
     );
     const priorSet = new Set(Array.isArray(prior[ntrodeId]) ? prior[ntrodeId] : []);
     const ackedSet = new Set(Array.isArray(acks[ntrodeId]) ? acks[ntrodeId] : []);

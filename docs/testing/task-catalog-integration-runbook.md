@@ -28,7 +28,7 @@ cover end-to-end.
    2. Add a recording day. On **Tasks & Epochs**, click **+ Add Task**, pick the task type, and assign
       its epochs. Add a second task / second epoch set if desired (ordering matters).
    3. Complete the remaining required day fields and **Export** the YAML
-      (`{mmddYYYY}_{subject}_metadata.yml`).
+      (`{YYYYMMDD}_{subject}_metadata.yml`).
 2. **Assemble a minimal dataset**: place the exported YAML beside a matching `.rec` file (or a
    trodes_to_nwb test fixture dataset) in a data directory.
 3. **Convert** with the Python pipeline:

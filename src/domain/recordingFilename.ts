@@ -110,8 +110,8 @@ export function subjectMatchesRecordingToken(subjectId: string, recordingAnimalT
 /**
  * The export-blocking issue list for a merged day model (the workspace day-validation composer's
  * step). Only the workspace export path names its download by this contract, so this is NOT part
- * of the shared `rulesValidation` (the frozen legacy form names its download differently and
- * blocks on every issue). Animal-owned: the subject id is edited on the animal profile.
+ * of the shared `rulesValidation`: the legacy form only warns about such an id
+ * (`validation/rules/legacyFormRules`). Animal-owned: the subject id is edited on the animal profile.
  *
  * @param mergedDay - The merged day metadata (reads `subject.subject_id`).
  * @returns Zero or one blocking issue.

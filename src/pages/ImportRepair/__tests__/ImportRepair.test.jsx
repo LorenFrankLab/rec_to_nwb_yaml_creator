@@ -15,6 +15,8 @@ import path from 'path';
 import { StoreProvider, useStoreContext } from '../../../state/StoreContext';
 import { decodeYaml, encodeYaml } from '../../../io/yaml';
 import { mergeDayMetadata } from '../../../state/workspaceUtils';
+import { getAnimalDays } from '../../../state/workspaceSelectors';
+import { validateDay } from '../../../domain/validation';
 import ImportRepair from '../index';
 
 const originalHash = window.location.hash;
@@ -181,6 +183,145 @@ describe('ImportRepair — flagging + suggested fixes', () => {
   });
 });
 
+describe('ImportRepair — suggestions are answers the user can change', () => {
+  it('lets a suggested value be overridden, and applying the safe suggestions keeps the override', async () => {
+    const user = userEvent.setup();
+    renderScreen();
+    await uploadNonconforming(user);
+
+    const speciesOverride = screen.getByRole('textbox', {
+      name: /subject — species — enter a different value/i,
+    });
+    await user.type(speciesOverride, 'Rattus rattus');
+    expect(screen.getByRole('button', { name: /accept subject — species/i })).toHaveAttribute(
+      'aria-pressed',
+      'false'
+    );
+
+    // "Apply safe suggestions" answers the rows still waiting, and leaves the typed value alone.
+    await user.click(screen.getByRole('button', { name: /^apply safe suggestions/i }));
+    expect(speciesOverride).toHaveValue('Rattus rattus');
+    await user.type(screen.getByLabelText(/Electrode group location/i), 'CA1');
+    fireEvent.change(screen.getByLabelText(/Date of birth/i), { target: { value: '2023-01-10' } });
+    await user.click(screen.getByRole('button', { name: /import as new animal/i }));
+
+    expect(captured.animals.remy.subject.species).toBe('Rattus rattus');
+    expect(captured.animals.remy.subject.sex).toBe('M');
+  });
+
+  it('asks for a weight written in another unit instead of suggesting it as grams', async () => {
+    const user = userEvent.setup();
+    renderScreen();
+    const model = decodeYaml(cleanYaml);
+    model.subject.weight = '0.45 kg';
+    await user.upload(
+      screen.getByLabelText(/choose a metadata yaml file/i),
+      makeFile('06222023_remy_metadata.yml', encodeYaml(model))
+    );
+
+    const attention = await screen.findByRole('region', { name: /needs attention/i });
+    // Nothing to accept unread: "0.45 kg" is not 0.45 g.
+    expect(screen.queryByRole('button', { name: /apply safe suggestions/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^accept /i })).not.toBeInTheDocument();
+    expect(within(attention).getByText('0.45 kg')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /import as new animal/i })).toBeDisabled();
+
+    await user.type(screen.getByRole('spinbutton', { name: /subject — weight/i }), '450');
+    await user.click(screen.getByRole('button', { name: /import as new animal/i }));
+
+    const [dayId] = Object.keys(captured.days);
+    expect(mergeDayMetadata(captured.animals.remy, captured.days[dayId]).subject.weight).toBe(450);
+  });
+});
+
+describe('ImportRepair — one task name, two descriptions', () => {
+  /**
+   * A clean remy day file whose `sleep` task carries the given description.
+   * @param {string} dateDigits - The recording date as `YYYYMMDD`.
+   * @param {string} description - The `sleep` task description.
+   * @returns {string} YAML text.
+   */
+  const dayYaml = (dateDigits, description) => {
+    const model = decodeYaml(cleanYaml);
+    model.session_id = `remy_${dateDigits}`;
+    model.tasks = model.tasks.map((task) =>
+      task.task_name === 'sleep' ? { ...task, task_description: description } : task
+    );
+    return encodeYaml(model);
+  };
+
+  /**
+   * Upload the two disagreeing days and open the batch preview.
+   * @param {object} user - userEvent session.
+   */
+  async function openPreview(user) {
+    await user.upload(screen.getByLabelText(/choose a metadata yaml file/i), [
+      makeFile('06222023_remy_metadata.yml', dayYaml('20230622', 'sleeping')),
+      makeFile('06232023_remy_metadata.yml', dayYaml('20230623', 'resting in the sleep box')),
+    ]);
+    await user.click(await screen.findByRole('button', { name: /review 2 ready files/i }));
+  }
+
+  it('lists the difference in the batch preview before anything is written', async () => {
+    const user = userEvent.setup();
+    renderScreen();
+    await openPreview(user);
+
+    const card = screen.getByRole('region', { name: 'remy' });
+    const differences = within(card).getByText('Differences to review').closest('[role="status"]');
+    expect(differences).toHaveTextContent(
+      'Task "sleep" has different descriptions across these recordings: "sleeping" (06222023_remy_metadata.yml); "resting in the sleep box" (06232023_remy_metadata.yml).'
+    );
+    expect(captured.animals).toEqual({});
+  });
+
+  it('imports both days, and neither can be exported until the descriptions match', async () => {
+    const user = userEvent.setup();
+    renderScreen();
+    await openPreview(user);
+    await user.click(screen.getByRole('button', { name: /confirm import/i }));
+    await screen.findByRole('heading', { name: /import complete/i });
+
+    const animal = captured.animals.remy;
+    const days = getAnimalDays(captured, 'remy');
+    expect(days.map((day) => day.date)).toEqual(['2023-06-22', '2023-06-23']);
+    for (const day of days) {
+      const issue = validateDay(day, mergeDayMetadata(animal, day), animal, days).find(
+        (candidate) => candidate.code === 'divergent_task_identity_across_days'
+      );
+      // An export-blocking error on each day, routed to its Tasks & Epochs step.
+      expect(issue).toMatchObject({ severity: 'error', ownerSurface: 'day', step: 'epochs' });
+    }
+  });
+});
+
+describe('ImportRepair — a missing required number', () => {
+  it('is entered in a number input, and the file imports with that number', async () => {
+    const user = userEvent.setup();
+    renderScreen();
+    const model = decodeYaml(cleanYaml);
+    delete model.raw_data_to_volts;
+    await user.upload(
+      screen.getByLabelText(/choose a metadata yaml file/i),
+      makeFile('06222023_remy_metadata.yml', encodeYaml(model))
+    );
+
+    const required = await screen.findByRole('region', { name: /required, but missing/i });
+    const volts = within(required).getByRole('spinbutton', { name: /raw data to volts/i });
+    const importBtn = screen.getByRole('button', { name: /import as new animal/i });
+    expect(importBtn).toBeDisabled();
+
+    fireEvent.change(volts, { target: { value: '0.195' } });
+    expect(importBtn).toBeEnabled();
+    await user.click(importBtn);
+
+    const [dayId] = Object.keys(captured.days);
+    expect(mergeDayMetadata(captured.animals.remy, captured.days[dayId]).raw_data_to_volts).toBe(
+      0.195
+    );
+  });
+});
+
 describe('ImportRepair — commit', () => {
   it('groups multiple ready day files into one animal before committing', async () => {
     const user = userEvent.setup();
@@ -267,6 +408,88 @@ describe('ImportRepair — commit', () => {
     // A day was added to the existing animal (no new animal created).
     expect(Object.keys(captured.animals)).toEqual(['remy']);
     expect(Object.keys(captured.days).length).toBe(1);
+  });
+
+  it('shows how a file differs from the existing animal before adding its day (W5)', async () => {
+    const user = userEvent.setup();
+    const clean = decodeYaml(cleanYaml);
+    renderScreen({
+      remy: {
+        id: 'remy',
+        subject: { ...clean.subject },
+        days: [],
+        cameras: clean.cameras,
+        devices: {
+          data_acq_device: clean.data_acq_device,
+          device: clean.device,
+          electrode_groups: [],
+          ntrode_electrode_group_channel_map: [],
+        },
+        configurationHistory: [
+          {
+            version: 1,
+            devices: { electrode_groups: [], ntrode_electrode_group_channel_map: [] },
+            appliedToDays: [],
+          },
+        ],
+      },
+    });
+    const differing = decodeYaml(cleanYaml);
+    differing.subject.genotype = 'Pvalb-Cre';
+    differing.data_acq_device = [{ ...differing.data_acq_device[0], amplifier: 'Intan RHD2164' }];
+
+    await user.upload(
+      screen.getByLabelText(/choose a metadata yaml file/i),
+      makeFile('06222023_remy_metadata.yml', encodeYaml(differing))
+    );
+    await user.click(await screen.findByRole('button', { name: /add recording day/i }));
+
+    // Nothing is written until the differences have been shown.
+    await screen.findByRole('heading', { name: /review batch import/i });
+    expect(captured.days).toEqual({});
+    const differences = screen.getByText('Differences to review').parentElement;
+    expect(differences).toHaveTextContent(/genotype \("Wild Type" on the animal; "Pvalb-Cre"/);
+    expect(differences).toHaveTextContent(/Recording system "SpikeGadgets"/);
+
+    await user.click(screen.getByRole('button', { name: /confirm import/i }));
+    await screen.findByRole('heading', { name: /import complete/i });
+    expect(Object.keys(captured.days)).toEqual(['remy-2023-06-22']);
+    expect(captured.animals.remy.subject.genotype).toBe('Wild Type');
+  });
+
+  it("reviews a file whose task description differs from the existing animal's days before adding it", async () => {
+    const user = userEvent.setup();
+    // The existing animal: the clean file's own day, imported earlier.
+    const first = renderScreen();
+    await user.upload(
+      screen.getByLabelText(/choose a metadata yaml file/i),
+      makeFile('06222023_remy_metadata.yml', cleanYaml)
+    );
+    await user.click(await screen.findByRole('button', { name: /import as new animal/i }));
+    const { animals, days } = captured;
+    expect(Object.keys(days)).toEqual(['remy-2023-06-22']);
+    const existingDays = Object.keys(days);
+    const existingTask = decodeYaml(cleanYaml).tasks[0];
+    first.unmount();
+    renderScreen(animals, days);
+
+    const later = decodeYaml(cleanYaml);
+    later.session_id = 'remy_20230623';
+    later.tasks = later.tasks.map((task) =>
+      task.task_name === existingTask.task_name ? { ...task, task_description: 'A different description' } : task
+    );
+    await user.upload(
+      screen.getByLabelText(/choose a metadata yaml file/i),
+      makeFile('06232023_remy_metadata.yml', encodeYaml(later))
+    );
+    await user.click(await screen.findByRole('button', { name: /add recording day/i }));
+
+    // Nothing is written until the difference has been shown.
+    await screen.findByRole('heading', { name: /review batch import/i });
+    expect(Object.keys(captured.days)).toEqual(existingDays);
+    expect(screen.getByText('Differences to review').parentElement).toHaveTextContent(
+      new RegExp(`Task "${existingTask.task_name}" has different descriptions`)
+    );
   });
 
   it('gates existing-animal catalog gaps until the user accepts selected catalog entries', async () => {
@@ -998,6 +1221,37 @@ describe('ImportRepair — a recalibrated camera on an EXISTING animal (F1)', ()
     await screen.findByRole('heading', { name: /import complete/i });
     expect(captured.animals.remy.cameras.map((c) => c.camera_name)).toEqual(['arena_side']);
     expect(captured.days['remy-2023-06-22'].associated_video_files[0].camera_id).toBe(0);
+  });
+
+  it('drops the question about the animal’s calibration once Replace is chosen (W4)', async () => {
+    const user = userEvent.setup();
+    renderScreen(existingRemyWithArenaSide());
+
+    await user.upload(
+      screen.getByLabelText(/choose a metadata yaml file/i),
+      makeFile('06222023_remy_metadata.yml', existingCatalogGapYaml())
+    );
+    await user.click(await screen.findByRole('button', { name: /add recording day/i }));
+    await screen.findByRole('group', { name: /arena_side.*2 calibrations/i });
+
+    expect(screen.getByText('Differences to review').parentElement).toHaveTextContent(
+      /already on this animal/i
+    );
+
+    // Replacing deletes the animal whose 0.002 the question compares against: nothing to ask, and
+    // nothing listed about it.
+    await user.click(screen.getByRole('radio', { name: /replace the existing animal/i }));
+    expect(screen.queryByRole('group', { name: /arena_side.*calibrations/i })).not.toBeInTheDocument();
+    expect(screen.queryByText(/already on this animal/i)).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /confirm import/i }));
+    await screen.findByRole('heading', { name: /import complete/i });
+    // The file's camera, under its own name and calibration — no dated split against the deleted
+    // animal, and nothing reported as split or not imported.
+    expect(captured.animals.remy.cameras.map((c) => [c.camera_name, c.meters_per_pixel])).toEqual([
+      ['arena_side', 0.001],
+    ]);
+    expect(screen.queryByRole('region', { name: /camera calibrations/i })).not.toBeInTheDocument();
   });
 });
 

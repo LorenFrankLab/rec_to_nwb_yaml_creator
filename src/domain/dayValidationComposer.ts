@@ -29,9 +29,11 @@ import {
 import { repairTargetForIssue, REPAIR_SURFACES } from './repairRouting';
 import type { RepairableIssue } from './repairRouting';
 import { epochVideoUndeclared } from './epochVideoValidation';
+import { crossDayTaskIdentityIssues } from './taskIdentity';
 import { recordingFilenameIssues } from './recordingFilename';
 import { configurationChoiceIssues, provenanceReviewIssues } from './datedFactsValidation';
 import { suspiciousVoltageIssues } from './rigConstants';
+import { withSubjectValueRepair } from './subjectValueRepairs';
 import type { ValidationModel } from '../validation/issueTypes';
 
 /**
@@ -82,7 +84,17 @@ export function validateDay(
   // or a day-level override (day-owned, the snapshot is the wrong editor). Re-tag base
   // geometry errors to the day when the day overrides that geometry, so they don't
   // dead-end on "Fix in Animal Setup".
-  const taggedBase = tagBaseOwnershipByProvenance(base, dayGeometryProvenance(day));
+  const videoUndeclared = epochVideoUndeclared(day);
+  // An empty video list is only worth the converter advisory once every epoch's video
+  // question is answered; until then `epoch_video_undeclared` already blocks the day, and the
+  // advisory would just repeat it on every new day.
+  const exportBase = videoUndeclared.length > 0
+    ? base.filter((issue) => issue.code !== 'no_associated_videos')
+    : base;
+  // Subject values pynwb rejects get their workspace repair (the shared rule has none): a stored
+  // field is removed from the animal, an age is edited on this day.
+  const taggedBase = tagBaseOwnershipByProvenance(exportBase, dayGeometryProvenance(day))
+    .map(withSubjectValueRepair);
   // Stamp every issue with the canonical ownership contract (normalizeIssue) so consumers
   // read `ownerSurface`/`step`/`focusPath` directly — never re-inferring — and an issue
   // with no resolvable owner throws loudly instead of silently routing to the Day Editor.
@@ -102,11 +114,14 @@ export function validateDay(
     // catalog data (the catalog dedups by name), so the two do not double-report.
     ...animalTaskCatalogIssues(animal),
     ...dayTaskCatalogIssues(animal, day),
+    // Across days: a task name this day describes differently from another day of the animal
+    // (inline/imported days keep their own task rows). Needs `animalDays`; a no-op without them.
+    ...crossDayTaskIdentityIssues(day, animal, animalDays),
     // Phase 4: the video-declaration readiness rule (the ONE authorized new rule). It reads the
     // RAW day's task epochs + associated videos + the OFF-EXPORT `videolessEpochs` set — never the
     // merged YAML — so it adds a day-readiness blocker without touching export (a flagged epoch's
     // row reads `Needs video`). Deliberately NOT in `validate(mergedDay)`, which is export-shaped.
-    ...epochVideoUndeclared(day),
+    ...videoUndeclared,
     // The converter filename contract (`{YYYYMMDD}_{subject_id}_metadata.yml`): a subject id the
     // scanner cannot group with the recordings blocks export. Owned here (the workspace export path
     // names its download by this contract), not in the shared rule set the legacy form uses.

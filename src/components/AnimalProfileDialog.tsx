@@ -3,6 +3,7 @@ import { FieldRequirements, RequiredMark } from './ui/FieldRequirements';
 import { useId, useMemo, useState, useEffect } from 'react';
 import { getAnimalSubject } from '../state/workspaceSelectors';
 import { isValidSpecies } from '../validation/dandiSubject';
+import { readsAsDatetime } from '../validation/rules/subjectValueRules';
 import { recordingFilenameIssue } from '../domain/recordingFilename';
 import { subjectIdCollision } from '../domain/animalCreation';
 import Modal from './Modal/Modal';
@@ -126,13 +127,18 @@ export default function AnimalProfileDialog({
     if (form.subject_id.trim() !== initial.subject_id) out.subject_id = form.subject_id.trim();
     if (form.species.trim() !== (initial.species || '').trim()) out.species = form.species.trim();
     if (form.sex !== initial.sex) out.sex = form.sex;
-    if (form.date_of_birth !== initial.date_of_birth) {
+    // A stored value the converter cannot read as a date and time (e.g. "2023-01-10T00:00", no
+    // seconds) shows as the same calendar date, so re-saving that date is a change: it writes the
+    // full timestamp that repairs `subject_date_of_birth_format`.
+    const storedDob = subject.date_of_birth;
+    const storedUnreadable = typeof storedDob === 'string' && storedDob !== '' && !readsAsDatetime(storedDob);
+    if (form.date_of_birth !== initial.date_of_birth || (storedUnreadable && form.date_of_birth !== '')) {
       out.date_of_birth = form.date_of_birth ? new Date(form.date_of_birth).toISOString() : undefined;
     }
     if (form.genotype !== initial.genotype) out.genotype = form.genotype;
     if (form.description !== initial.description) out.description = form.description;
     return out;
-  }, [form, initial]);
+  }, [form, initial, subject.date_of_birth]);
 
   const isDirty = Object.keys(changedFields).length > 0;
 

@@ -27,6 +27,10 @@
 import { validate } from '../validation';
 import type { ValidationModel, ValidationIssue } from '../validation/issueTypes';
 import { blockingIssues } from '../validation/issueTypes';
+import {
+  canonicalizeFileBadChannels,
+  singleShankBadChannelsFromFile,
+} from '../domain/badChannels';
 
 /**
  * A successful decompose: the layered facts the export merge reads. `animalFacts` / `dayFacts` /
@@ -135,17 +139,22 @@ function decomposeOptogenetics(flatModel: ValidationModel): Record<string, any> 
  * Attribution (mirrors the merge's read sources — see the merge JSDoc):
  * - animalFacts ← experimenters / subject (incl. weight, which the day overrides) /
  *   data_acq_device catalog / cameras / device / optogenetics (null when absent).
- * - dayFacts ← session (description, id, experiment_description, weight) / keywords /
+ * - dayFacts ← session (description, id, experiment_description, weight, age) / keywords /
  *   tasks / associated_files / associated_video_files / behavioral_events / technical
  *   params / fs_gui_yamls (DAY-owned) / data_acq_device_name / cameras_used /
  *   deviceOverrides.bad_channels (DAY-owned — extracted from the ntrode rows).
  * - configuration ← electrode_groups + ntrode_electrode_group_channel_map (with
  *   bad_channels emptied — they are day-owned, not snapshot-base).
  *
- * @param flatModel - Decoded flat YAML metadata (a `mergeDayMetadata` output).
+ * @param rawModel - Decoded flat YAML metadata (a `mergeDayMetadata` output, or a file from an
+ *   earlier version).
  * @returns The typed decompose result, or a rejection carrying the blocking issues.
  */
-export function decomposeYaml(flatModel: ValidationModel): DecomposeResult {
+export function decomposeYaml(rawModel: ValidationModel): DecomposeResult {
+  // A file from an earlier version of the legacy form carries a shank's bad channels on that
+  // shank's row, which trodes_to_nwb never reads: move them to the group's first row as electrode
+  // ids (as the legacy form's upload does) before validating, so they are kept, not rejected.
+  const flatModel = canonicalizeFileBadChannels(rawModel);
   const issues = validate(flatModel);
   const errors = blockingIssues(issues);
   if (errors.length > 0) {
@@ -166,6 +175,16 @@ export function decomposeYaml(flatModel: ValidationModel): DecomposeResult {
   // an entry) and EMPTY the snapshot base rows, so the recomposed model is
   // self-consistent without depending on the load-time base→day migration. This
   // matches the post-migration shape the merge expects.
+  //
+  // The file carries probe electrode ids; the day stores a single-shank group's marks as each
+  // row's channel keys (what its Failed Channels checkboxes show), so translate those back through
+  // the row's map (the inverse of the export). A multi-shank group keeps its first-row ids.
+  if (Array.isArray(model.ntrode_electrode_group_channel_map)) {
+    model.ntrode_electrode_group_channel_map = singleShankBadChannelsFromFile(
+      model.electrode_groups,
+      model.ntrode_electrode_group_channel_map
+    );
+  }
   const importedNtrodes = Array.isArray(model.ntrode_electrode_group_channel_map)
     ? model.ntrode_electrode_group_channel_map
     : [];
@@ -209,6 +228,9 @@ export function decomposeYaml(flatModel: ValidationModel): DecomposeResult {
       experiment_description: model.experiment_description,
       // weight is a day override of the subject weight (landmine 4).
       weight: model.subject?.weight,
+      // age is the subject's age at THIS recording — day-owned like the weight; `null` records
+      // that the file stated none, so no other file's age is exported for this day.
+      age: model.subject?.age ?? null,
     },
     // keywords is OMITTED-when-empty by the merge; recompose with `?? []` so the
     // merge re-omits when it was absent (landmine 8).
@@ -264,7 +286,8 @@ export function decomposeYaml(flatModel: ValidationModel): DecomposeResult {
  *  1. `animal.optogenetics` is the `null`-or-populated value from decompose (never `{}`).
  *  2. `fs_gui_yamls` lives on the DAY.
  *  3. `day.cameras_used` pins the exact exported camera set in order.
- *  4. `day.session.weight` carries the subject-weight override.
+ *  4. `day.session.weight` carries the subject-weight override, and `day.session.age` the
+ *     subject's age at this recording (`null` when the file stated none).
  *  5. `day.session.experiment_description` holds it; `animal.experiment_description`
  *     stays undefined.
  *  6. `animal.devices.data_acq_device` is the catalog; `day.data_acq_device_name` refs it.

@@ -37,6 +37,7 @@ describe('SubjectFields', () => {
       expect(screen.getByLabelText(/Genotype/i)).toBeInTheDocument();
       expect(screen.getByLabelText(/Sex/i)).toBeInTheDocument();
       expect(screen.getByLabelText(/Subject Id/i)).toBeInTheDocument();
+      expect(screen.getByLabelText(/^Age$/i)).toBeInTheDocument();
       expect(screen.getByLabelText(/Date of Birth/i)).toBeInTheDocument();
       expect(screen.getByLabelText(/Weight/i)).toBeInTheDocument();
     });
@@ -129,6 +130,26 @@ describe('SubjectFields', () => {
       const input = screen.getByLabelText(/Date of Birth/i);
       // Date input shows YYYY-MM-DD format
       expect(input).toHaveValue('2023-06-22');
+    });
+
+    it('displays age from store, including a number from an uploaded file', () => {
+      const formData = {
+        ...defaultFormData,
+        subject: { ...defaultFormData.subject, age: 164 },
+      };
+
+      renderWithProviders(<SubjectFields />, { initialState: formData });
+
+      // Shown so it can be retyped as text (the download is blocked until it is)
+      const input = screen.getByLabelText(/^Age$/i);
+      expect(input).toHaveValue('164');
+      expect(input).not.toBeRequired();
+    });
+
+    it('shows an empty Age field when the subject has no age', () => {
+      renderWithProviders(<SubjectFields />, { initialState: defaultFormData });
+
+      expect(screen.getByLabelText(/^Age$/i)).toHaveValue('');
     });
 
     it('displays weight from store', () => {

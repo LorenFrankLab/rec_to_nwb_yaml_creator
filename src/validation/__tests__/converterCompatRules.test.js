@@ -14,6 +14,7 @@
  */
 import { describe, it, expect } from 'vitest';
 import { rulesValidation } from '../rulesValidation';
+import { validate } from '../index';
 
 const codes = (issues) => issues.map((i) => i.code);
 
@@ -102,6 +103,171 @@ describe('multi-shank bad_channels first-row semantics', () => {
         { ntrode_id: 1, electrode_group_id: 0, bad_channels: [2], map: { 0: 0, 1: 1, 2: 2, 3: 3 } },
       ],
     }))).not.toContain('multishank_bad_channels_ignored');
+  });
+});
+
+// trodes_to_nwb adds the excitation source and every optical fiber to the NWB file as devices
+// named after them, and keys the virus injections by name: a repeated name raises a ValueError.
+describe('optogenetics device names', () => {
+  const opto = (overrides) => ({
+    opto_excitation_source: [{ name: 'Laser' }],
+    optical_fiber: [{ name: 'Fiber 1', reference: 'Bregma' }, { name: 'Fiber 2', reference: 'Bregma' }],
+    virus_injection: [{ name: 'Injection 1', reference: 'Bregma' }],
+    optogenetic_stimulation_software: 'fsgui',
+    ...overrides,
+  });
+  const nameIssues = (model) =>
+    rulesValidation(model).filter((i) => i.code === 'duplicate_opto_device_name');
+
+  it('errors when two optical fibers share a name', () => {
+    const issues = nameIssues(opto({
+      optical_fiber: [{ name: 'Fiber 1', reference: 'Bregma' }, { name: 'Fiber 1', reference: 'Bregma' }],
+    }));
+    expect(issues).toEqual([expect.objectContaining({
+      path: 'optical_fiber',
+      severity: 'error',
+      repairSurface: 'animal',
+      message: expect.stringContaining('"Fiber 1"'),
+    })]);
+  });
+
+  it('errors when two virus injections share a name', () => {
+    const issues = nameIssues(opto({
+      virus_injection: [
+        { name: 'Injection 1', reference: 'Bregma' },
+        { name: 'Injection 1', reference: 'Bregma' },
+      ],
+    }));
+    expect(issues).toEqual([expect.objectContaining({
+      path: 'virus_injection',
+      severity: 'error',
+      message: expect.stringContaining('"Injection 1"'),
+    })]);
+  });
+
+  it('errors when a fiber has the excitation source name (one device namespace)', () => {
+    const issues = nameIssues(opto({
+      optical_fiber: [{ name: 'Fiber 1', reference: 'Bregma' }, { name: 'Laser', reference: 'Bregma' }],
+    }));
+    expect(issues).toEqual([expect.objectContaining({
+      path: 'optical_fiber[1].name',
+      severity: 'error',
+      message: expect.stringContaining('"Laser"'),
+    })]);
+  });
+
+  it('passes distinct names, compares them exactly, and leaves blank names to the schema', () => {
+    expect(nameIssues(opto())).toEqual([]);
+    // "Fiber 1" and "Fiber 1 " are different NWB names; the converter does not trim.
+    expect(nameIssues(opto({
+      optical_fiber: [{ name: 'Fiber 1', reference: 'Bregma' }, { name: 'Fiber 1 ', reference: 'Bregma' }],
+    }))).toEqual([]);
+    // The schema requires a non-blank name; blank ones are reported there, not as duplicates.
+    expect(nameIssues(opto({
+      optical_fiber: [{ name: '', reference: 'Bregma' }, { name: '', reference: 'Bregma' }],
+    }))).toEqual([]);
+  });
+
+  it('is a schema error, not a duplicate, for blank names in the full validation', () => {
+    const issues = validate(opto({
+      optical_fiber: [{ name: '', reference: 'Bregma' }, { name: '', reference: 'Bregma' }],
+    }));
+    expect(issues).toContainEqual(expect.objectContaining({ path: 'optical_fiber[0].name', code: 'pattern' }));
+  });
+});
+
+// The current trodes_to_nwb release always adds the video files and fails (UnboundLocalError) on
+// an empty list, even for a session without video. A converter bug, so a warning.
+describe('empty video list', () => {
+  it('warns when no video files are listed', () => {
+    expect(rulesValidation({ associated_video_files: [] })).toEqual([
+      expect.objectContaining({
+        path: 'associated_video_files',
+        code: 'no_associated_videos',
+        severity: 'warning',
+        repairSurface: 'day',
+      }),
+    ]);
+  });
+
+  it('does not warn when a video is listed, or when the list is not there to check', () => {
+    expect(codes(rulesValidation({
+      associated_video_files: [{ name: 'a.h264', camera_id: 0, task_epochs: 1 }],
+    }))).not.toContain('no_associated_videos');
+    expect(codes(rulesValidation({}))).not.toContain('no_associated_videos');
+  });
+});
+
+// trodes_to_nwb links every optical fiber to the first virus injection, and records each virus once
+// with the titer of its first injection: the file converts, but the NWB file misstates the setup.
+describe('several virus injections', () => {
+  const injection = (name, virus, titer) => ({
+    name, virus_name: virus, titer_in_vg_per_ml: titer, reference: 'Bregma', hemisphere: 'left',
+  });
+  const opto = (injections) => ({
+    opto_excitation_source: [{ name: 'Laser' }],
+    optical_fiber: [{ name: 'Fiber 1', reference: 'Bregma' }],
+    virus_injection: injections,
+    optogenetic_stimulation_software: 'fsgui',
+  });
+
+  it('does not warn for a single injection', () => {
+    expect(rulesValidation(opto([injection('Injection 1', 'AAV-ChR2', 1e12)]))).toEqual([]);
+  });
+
+  it('warns that every fiber will be linked to the first injection', () => {
+    const issues = rulesValidation(opto([
+      injection('Left CA1', 'AAV-ChR2', 1e12),
+      injection('Right CA1', 'AAV-ChR2', 1e12),
+    ]));
+    expect(issues).toEqual([expect.objectContaining({
+      path: 'virus_injection',
+      code: 'multiple_virus_injections',
+      severity: 'warning',
+      repairSurface: 'animal',
+      message: expect.stringContaining('"Left CA1"'),
+    })]);
+  });
+
+  it('also warns when the same virus has different titers (only the first is kept)', () => {
+    const issues = rulesValidation(opto([
+      injection('Left CA1', 'AAV-ChR2', 1e12),
+      injection('Right CA1', 'AAV-ChR2', 5e12),
+      injection('PFC', 'AAV-ArchT', 2e12),
+    ]));
+    expect(issues.map((i) => i.code)).toEqual(['multiple_virus_injections', 'conflicting_virus_titers']);
+    expect(issues[1]).toMatchObject({ path: 'virus_injection', severity: 'warning' });
+    expect(issues[1].message).toContain('"AAV-ChR2"');
+    expect(issues[1].message).toContain('1000000000000');
+    expect(issues[1].message).toContain('5000000000000');
+  });
+});
+
+// trodes_to_nwb accepts only "left" or "right" (any case) as a virus injection's hemisphere.
+describe('virus injection hemisphere', () => {
+  const opto = (hemisphere) => ({
+    opto_excitation_source: [{ name: 'Laser' }],
+    optical_fiber: [{ name: 'Fiber 1', reference: 'Bregma' }],
+    virus_injection: [{ name: 'Injection 1', reference: 'Bregma', hemisphere }],
+    optogenetic_stimulation_software: 'fsgui',
+  });
+
+  it.each(['left', 'right', 'Left', 'RIGHT'])('accepts %s', (hemisphere) => {
+    expect(rulesValidation(opto(hemisphere))).toEqual([]);
+  });
+
+  it.each(['bilateral', ' left'])('blocks "%s"', (hemisphere) => {
+    expect(rulesValidation(opto(hemisphere))).toEqual([expect.objectContaining({
+      path: 'virus_injection[0].hemisphere',
+      code: 'invalid_injection_hemisphere',
+      severity: 'error',
+      repairSurface: 'animal',
+      message: expect.stringContaining(`"${hemisphere}"`),
+    })]);
+  });
+
+  it('leaves a blank hemisphere to the schema', () => {
+    expect(rulesValidation(opto(''))).toEqual([]);
   });
 });
 

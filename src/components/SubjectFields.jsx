@@ -9,7 +9,7 @@ import { species, genotypes, genderAcronym } from '../valueList';
  * SubjectFields component
  *
  * Renders the subject information section of the form, including fields for
- * description, species, genotype, sex, subject ID, date of birth, and weight.
+ * description, species, genotype, sex, subject ID, age, date of birth, and weight.
  *
  * Uses the shared store context to access form data and actions, eliminating
  * the need for prop drilling from App.js.
@@ -18,7 +18,7 @@ import { species, genotypes, genderAcronym } from '../valueList';
  */
 export default function SubjectFields() {
   const { model: formData, actions } = useStoreContext();
-  const { handleChange, onBlur, itemSelected } = actions;
+  const { handleChange, onBlur, itemSelected, updateFormData } = actions;
 
   return (
     <div id="subject-area" className="area-region">
@@ -82,6 +82,18 @@ export default function SubjectFields() {
               pattern: /^[a-zA-Z0-9_-]+$/,
               patternMessage: 'Subject ID must contain only letters, numbers, underscores, or hyphens'
             }}
+          />
+          <InputElement
+            id="subject-age"
+            type="text"
+            name="age"
+            title="Age"
+            value={formData.subject.age ?? ''}
+            // Optional: an empty field writes no age to the file (never `age: ''`).
+            onChange={(e) =>
+              updateFormData('age', e.target.value.trim() === '' ? undefined : e.target.value, 'subject')
+            }
+            placeholder="Age at the time of the session, as an ISO 8601 duration: P90D is 90 days, P12W is 12 weeks"
           />
           <InputElement
             id="subject-dateOfBirth"

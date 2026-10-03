@@ -158,7 +158,7 @@ export function makeEmptyAnimal(id, overrides = {}) {
       subject_id: id,
       weight: 400,
       date_of_birth: '2023-01-10T00:00:00',
-      age: 'P164',
+      age: 'P164D',
       ...subjectOverride,
     },
     devices: {
@@ -212,6 +212,10 @@ export function makeEmptyAnimal(id, overrides = {}) {
  */
 export function buildConfiguredWorkspaceBlob(overrides = {}) {
   const { animal, day } = buildRealisticWorkspace();
+  // The realistic fixture's `age: P164` (kept for the golden export) is not an ISO 8601
+  // duration and raises the subject_age_format advisory, which export asks the user to
+  // acknowledge. These scenarios seed a day that is meant to export without warnings.
+  animal.subject = { ...animal.subject, age: 'P164D' };
   const { settings: settingsOverride, ...workspaceOverride } = overrides;
 
   // Shape-of-record for these defaults is `createDefaultWorkspace()` in

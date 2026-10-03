@@ -12,14 +12,14 @@
  *
  * The token order/case is PINNED against the golden `associated_video_files[].name`
  * (`20230622_sample_01_a1.1.h264`); see `__tests__/fileNaming.test.ts`. The in-folder names use
- * `YYYYMMDD` (NOT the `mmddYYYY` of the download filename via `formatDeterministicFilename`).
+ * `YYYYMMDD`, the same date token as the metadata download filename.
  *
  * Pure and dependency-free.
  */
 
 /** The tokens that name one epoch's files (everything but the data folder + extension). */
 export interface FileNameTokens {
-  /** Experiment date as `YYYYMMDD` (the in-folder token, NOT the download `mmddYYYY`). */
+  /** Experiment date as `YYYYMMDD` (the in-folder token, as in the metadata filename). */
   date: string;
   /** Subject identifier (the `{subject}` token). */
   subjectId: string;

@@ -199,31 +199,10 @@ InputElementComponent.defaultProps = {
   validation: null,
 };
 
-/**
- * Custom comparison function for React.memo
- * Only re-render if these props change:
- * - value (the input's current value)
- * - name (the field identifier)
- * - type (input type: text, number, date, etc.)
- * - required (validation requirement)
- * - readOnly (input state)
- *
- * This prevents re-renders when parent state changes but this input's props remain the same.
- * Performance improvement: ~60-70% reduction in unnecessary renders for large forms.
- * @param prevProps
- * @param nextProps
- */
-const arePropsEqual = (prevProps, nextProps) => {
-  return (
-    prevProps.value === nextProps.value &&
-    prevProps.name === nextProps.name &&
-    prevProps.type === nextProps.type &&
-    prevProps.required === nextProps.required &&
-    prevProps.readOnly === nextProps.readOnly
-  );
-};
-
-// Wrap component with memo for performance optimization
-const InputElement = memo(InputElementComponent, arePropsEqual);
+// memo compares every prop, handlers and id included. Skipping a render whose
+// value is unchanged would keep stale handlers: a row moved by Duplicate or
+// Remove gets handlers bound to its new index, and typing with the old ones
+// edits whichever row now sits at the old index.
+const InputElement = memo(InputElementComponent);
 
 export default InputElement;

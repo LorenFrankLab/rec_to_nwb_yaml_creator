@@ -194,7 +194,10 @@ export interface SubjectMetadata {
    * export never substitutes this baseline for a measurement).
    */
   weight?: number;
-  /** Age string (optional, computed from DOB). */
+  /**
+   * Age string (optional). A per-recording value: an imported day exports its own file's age
+   * (`SessionMetadata.age`); this animal-level value is only the fallback for a day without one.
+   */
   age?: string;
 }
 
@@ -359,6 +362,14 @@ export interface ConfigurationSnapshot {
    * before it needs an explicit setup choice — `domain/configurationSelection`). Absent ⇒ known.
    */
   effectiveDateKnown?: boolean;
+  /**
+   * A setup known only from the recordings pinned to it: an imported file OLDER than the animal's
+   * recorded timeline (a back-fill) whose geometry matches no version on it. It applies to exactly
+   * those days — it is never chosen for another recording date and never becomes the current
+   * (last) configuration — and `date` is its first such recording, not the start of an open-ended
+   * effective period. Absent ⇒ an ordinary timeline version.
+   */
+  pinnedOnly?: boolean;
   /** Sequential version number (1, 2, 3, ...). */
   version: number;
   /** Change description (e.g., "Lowered CA1 tetrodes by 40um"). */
@@ -506,6 +517,12 @@ export interface SessionMetadata {
   experiment_description?: string;
   /** The weight measured on this recording day (grams). Required for export; never inferred. */
   weight?: number;
+  /**
+   * The subject's age on this recording day as its file recorded it (`subject.age`, e.g. `P163D`),
+   * or `null` when that file stated none. Written by import; exported instead of the animal-level
+   * `subject.age`, which only a day without this key (one created in the app) falls back to.
+   */
+  age?: string | null;
 }
 
 /** Where a copied / derived day fact came from. */
@@ -538,8 +555,9 @@ export interface DayProvenance {
      */
     source: 'effective-date' | 'explicit' | 'copied' | 'import' | 'migration' | 'latest';
     /**
-     * Whether the user has explicitly confirmed the choice. Only consulted when the chosen version's
-     * effective date does not cover the recording date (see `domain/configurationSelection`).
+     * Whether the choice is confirmed. Conclusive only for `explicit` (the user's assertion) and
+     * `import` (the file's own geometry); every other source is re-evaluated against the effective
+     * dates (see `domain/configurationSelection`).
      */
     confirmed: boolean;
   };

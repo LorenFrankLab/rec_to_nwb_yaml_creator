@@ -1,7 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import YAML from 'yaml';
+import fs from 'fs';
+import path from 'path';
 import { App } from '../../App';
 import { StoreProvider } from '../../state/StoreContext';
 import { defaultYMLValues, emptyFormData } from '../../valueList';
@@ -52,6 +54,10 @@ describe('Import/Export Workflow Integration', () => {
 
     // Mock window.alert
     global.window.alert = vi.fn();
+
+    // The minimal session lists no video files, which the download warns about (trodes_to_nwb
+    // fails on an empty video list); accept that warning so the file downloads.
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
   });
 
   afterEach(() => {
@@ -355,6 +361,28 @@ describe('Import/Export Workflow Integration', () => {
       expect(YAML.parse(exportedYaml)).not.toHaveProperty('workspace');
       expect(exportedYaml).not.toContain('remy');
     });
+
+    // A warning (here: no video files) asks once; Cancel keeps the form and downloads nothing.
+    it('downloads nothing when the warning is cancelled', async () => {
+      const user = userEvent.setup();
+      await renderLegacyApp();
+      await user.upload(
+        getFileInput(),
+        new File([getMinimalCompleteYaml()], 'test.yml', { type: 'text/yaml' })
+      );
+      await waitFor(() => {
+        expect(screen.getByLabelText(/^lab$/i)).toHaveValue('Test Lab');
+      });
+      window.confirm.mockReturnValue(false);
+
+      await triggerExport();
+
+      await waitFor(() => {
+        expect(window.confirm).toHaveBeenCalledWith(expect.stringContaining('No video files are listed'));
+      });
+      expect(window.confirm).toHaveBeenCalledTimes(1);
+      expect(mockBlob).toBeNull();
+    });
   });
 
   describe('Round-trip Data Preservation', () => {
@@ -482,6 +510,226 @@ describe('Import/Export Workflow Integration', () => {
       expect(document.getElementById('tasks-camera_id-0-1')).not.toBeChecked();
       expect(document.getElementById('tasks-camera_id-1-0')).not.toBeChecked();
       expect(document.getElementById('tasks-camera_id-1-1')).toBeChecked();
+    });
+  });
+
+  /**
+   * A scientist edits a downloaded file in a text editor and uploads it into the page that still
+   * has the previous file loaded.
+   */
+  describe('Importing another file into an open form', () => {
+    const sampleModel = () => {
+      const model = YAML.parse(
+        fs.readFileSync(path.join(__dirname, '../fixtures/valid/20230622_sample_metadata.yml'), 'utf8')
+      );
+      model.subject.subject_id = 'sample-rat';
+      return model;
+    };
+    const yamlFile = (model, name) => new File([YAML.stringify(model)], name, { type: 'text/yaml' });
+
+    it("shows and exports the second file's DIO description", { timeout: 30000 }, async () => {
+      // ARRANGE - a file whose first DIO event is Din1 is loaded
+      const user = userEvent.setup();
+      await renderLegacyApp();
+      const edited = sampleModel();
+      edited.behavioral_events[0].description = 'Dout9';
+      const dioType = () => document.querySelector('#behavioral_events-description-0-list');
+      const dioIndex = () => document.querySelector('#behavioral_events-description-0');
+
+      await user.upload(getFileInput(), yamlFile(sampleModel(), 'first.yml'));
+      await waitFor(() => expect(dioIndex()).toHaveValue(1));
+
+      // ACT - load the edited file into the same page
+      await user.upload(getFileInput(), yamlFile(edited, 'edited.yml'));
+
+      // ASSERT - the field shows the edited value...
+      await waitFor(() => expect(dioType()).toHaveValue('Dout'));
+      expect(dioIndex()).toHaveValue(9);
+
+      // ...and leaving the field, which saves what it shows, keeps it
+      fireEvent.blur(dioIndex());
+      await triggerExport();
+      await waitFor(() => expect(mockBlob).not.toBeNull());
+      expect(YAML.parse(mockBlob.content[0]).behavioral_events[0].description).toBe('Dout9');
+    });
+
+    it('keeps the loaded form when an uploaded file cannot be read', { timeout: 30000 }, async () => {
+      // ARRANGE - a valid file is loaded
+      const user = userEvent.setup();
+      await renderLegacyApp();
+      await user.upload(
+        getFileInput(),
+        new File([getMinimalCompleteYaml()], 'good.yml', { type: 'text/yaml' })
+      );
+      await waitFor(() => expect(screen.getByLabelText(/^lab$/i)).toHaveValue('Test Lab'));
+
+      // ACT - upload a file that TextEdit saved as rich text
+      const richText = [
+        '{\\rtf1\\ansi\\ansicpg1252\\cocoartf2761',
+        '\\cocoatextscaling0\\cocoaplatform0{\\fonttbl\\f0\\fswiss\\fcharset0 Helvetica;}',
+        '\\f0\\fs24 \\cf0 lab: Other Lab\\',
+        '}',
+      ].join('\n');
+      await user.upload(getFileInput(), new File([richText], 'edited.yml', { type: 'text/yaml' }));
+      await waitFor(() =>
+        expect(window.alert).toHaveBeenCalledWith(expect.stringContaining('Make Plain Text'))
+      );
+      // Let the import finish before checking what the form holds.
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      });
+
+      // ASSERT - the loaded form is unchanged
+      expect(screen.getByLabelText(/^lab$/i)).toHaveValue('Test Lab');
+    });
+  });
+
+  /**
+   * PyYAML writes one anchored block (&id001) and aliases (*id001) when a lab script dumps the
+   * same channel map for every ntrode. Each ntrode must stay its own: marking a bad channel or
+   * unmapping a channel on one tetrode used to change it on every tetrode.
+   */
+  describe('Importing a file whose ntrodes share an anchored channel map', () => {
+    const anchoredYaml = () => {
+      const yaml = getMinimalCompleteYaml();
+      return `${yaml.slice(0, yaml.indexOf('ntrode_electrode_group_channel_map:'))}ntrode_electrode_group_channel_map:
+  - ntrode_id: 0
+    electrode_group_id: 0
+    bad_channels: &id001 []
+    map: &id002
+      "0": 0
+      "1": 1
+      "2": 2
+      "3": 3
+  - ntrode_id: 1
+    electrode_group_id: 1
+    bad_channels: *id001
+    map: *id002
+`;
+    };
+    const badChannel = (ntrodeIndex, channel) =>
+      document.getElementById(`ntrode_electrode_group_channel_map-bad_channels-${ntrodeIndex}-${channel}`);
+    // Each tetrode group renders its one shank with the same id; the first is electrode group 0.
+    const channelZeroMaps = () =>
+      document.querySelectorAll('[id="ntrode_electrode_group_channel_map-map-0-0-0"]');
+
+    const importAnchoredFile = async (user) => {
+      await renderLegacyApp();
+      await user.upload(getFileInput(), new File([anchoredYaml()], 'shared.yml', { type: 'text/yaml' }));
+      await waitFor(() => expect(screen.getByLabelText(/^lab$/i)).toHaveValue('Test Lab'));
+      await waitFor(() => expect(badChannel(1, 2)).not.toBeNull());
+    };
+
+    it('marks a bad channel on one tetrode only', { timeout: 30000 }, async () => {
+      const user = userEvent.setup();
+      await importAnchoredFile(user);
+
+      await user.click(badChannel(0, 2));
+
+      await waitFor(() => expect(badChannel(0, 2)).toBeChecked());
+      expect(badChannel(1, 2)).not.toBeChecked();
+
+      await triggerExport();
+      await waitFor(() => expect(mockBlob).not.toBeNull());
+      const exported = mockBlob.content[0];
+      expect(exported).not.toMatch(/[&*]a\d/);
+      const ntrodes = YAML.parse(exported).ntrode_electrode_group_channel_map;
+      expect(ntrodes[0].bad_channels).toEqual([2]);
+      expect(ntrodes[1].bad_channels).toEqual([]);
+    });
+
+    it('unmaps a channel on one tetrode only', { timeout: 30000 }, async () => {
+      const user = userEvent.setup();
+      await importAnchoredFile(user);
+      expect(channelZeroMaps()).toHaveLength(2);
+
+      fireEvent.change(channelZeroMaps()[0], { target: { value: '-1' } });
+
+      await waitFor(() => expect(channelZeroMaps()[0].value).toBe('-1'));
+      expect(channelZeroMaps()[1].value).toBe('0');
+    });
+  });
+
+  /**
+   * The download warns about an age that is not an ISO 8601 duration ("Did you mean P164D?"), and
+   * the form now has an Age field to fix it in. An empty Age field writes no age.
+   */
+  describe('Subject age', () => {
+    const uploadWithAge = async (user, age) => {
+      await renderLegacyApp();
+      const session = YAML.parse(getMinimalCompleteYaml());
+      session.subject.age = age;
+      await user.upload(getFileInput(), new File([YAML.stringify(session)], 'age.yml', { type: 'text/yaml' }));
+      await waitFor(() => expect(screen.getByLabelText(/^lab$/i)).toHaveValue('Test Lab'));
+    };
+    const exported = () => YAML.parse(mockBlob.content[0]);
+
+    it('shows an imported age and exports the one typed over it', { timeout: 30000 }, async () => {
+      const user = userEvent.setup();
+      await uploadWithAge(user, 'P164');
+      const ageInput = screen.getByLabelText(/^age$/i);
+      expect(ageInput).toHaveValue('P164');
+
+      await triggerExport();
+      await waitFor(() => expect(window.confirm).toHaveBeenCalledWith(expect.stringContaining('Did you mean "P164D"?')));
+
+      window.confirm.mockClear();
+      mockBlob = null;
+      await user.clear(ageInput);
+      await user.type(ageInput, 'P164D');
+      await user.tab();
+      await triggerExport();
+
+      await waitFor(() => expect(mockBlob).not.toBeNull());
+      expect(exported().subject.age).toBe('P164D');
+      expect(window.confirm).not.toHaveBeenCalledWith(expect.stringContaining('age'));
+    });
+
+    it('writes no age once the Age field is cleared', { timeout: 30000 }, async () => {
+      const user = userEvent.setup();
+      await uploadWithAge(user, 'P164D');
+      const ageInput = screen.getByLabelText(/^age$/i);
+
+      await user.clear(ageInput);
+      await user.tab();
+      await triggerExport();
+
+      await waitFor(() => expect(mockBlob).not.toBeNull());
+      expect(exported().subject).not.toHaveProperty('age');
+      expect(mockBlob.content[0]).not.toMatch(/^\s+age:/m);
+    });
+
+    it('writes no age when none was entered', { timeout: 30000 }, async () => {
+      const user = userEvent.setup();
+      await uploadWithAge(user, undefined);
+      expect(screen.getByLabelText(/^age$/i)).toHaveValue('');
+
+      await triggerExport();
+
+      await waitFor(() => expect(mockBlob).not.toBeNull());
+      expect(exported().subject).not.toHaveProperty('age');
+    });
+  });
+
+  /**
+   * Two optical fibers with one name stop trodes_to_nwb, but the user can rename one in the form:
+   * the upload keeps both and the summary says what to fix before downloading.
+   */
+  describe('Importing a file with a value to fix', () => {
+    it('keeps both fibers and lists the repeated name to fix', { timeout: 30000 }, async () => {
+      const user = userEvent.setup();
+      await renderLegacyApp();
+      const session = YAML.parse(
+        fs.readFileSync(path.join(__dirname, '../fixtures/valid/20230622_sample_metadata.yml'), 'utf8')
+      );
+      session.optical_fiber = [session.optical_fiber[0], { ...session.optical_fiber[0] }];
+
+      await user.upload(getFileInput(), new File([YAML.stringify(session)], 'fibers.yml', { type: 'text/yaml' }));
+
+      expect(await screen.findByText(/TO FIX BEFORE DOWNLOAD \(1\)/)).toBeInTheDocument();
+      expect(screen.getByText(/Optical fiber: More than one optical fiber is named "Fiber 1"/)).toBeInTheDocument();
+      expect(document.getElementById('optical_fiber-name-0')).toHaveValue('Fiber 1');
+      expect(document.getElementById('optical_fiber-name-1')).toHaveValue('Fiber 1');
     });
   });
 });

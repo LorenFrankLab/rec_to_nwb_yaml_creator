@@ -8,7 +8,7 @@ import { describe, it, expect } from 'vitest';
 import { encodeYaml, decodeYaml } from '../../io/yaml';
 import { mergeDayMetadata, createDefaultWorkspace } from '../workspaceUtils';
 import { buildRealisticWorkspace } from '../../__tests__/fixtures/workspaceBuilders';
-import { planImport, materializePlanDay } from '../yamlImportPlan';
+import { planImport, materializePlanDay, IMPORT_REPAIR_MAPPED_CAMERA_IDS } from '../yamlImportPlan';
 
 /**
  * Encode a (animal, day) pair to a flat model exactly as an export would, then decode
@@ -135,6 +135,32 @@ describe('planImport — configuration versions', () => {
     expect(remy.configVersions[0].dayDates).toEqual(['2023-06-22', '2023-06-23']);
     expect(remy.days.every((d) => d.configurationVersion === 1)).toBe(true);
   });
+
+  it('a configuration that RECURS after a change (A → B → A) starts a new version, so the timeline ends on A', () => {
+    const relabel = (animal) => {
+      const groups = animal.configurationHistory[0].devices.electrode_groups;
+      groups[4] = { ...groups[4], location: 'DG', targeted_location: 'DG' };
+    };
+    const files = [
+      makeFile({ subjectId: 'remy', date: '2023-06-22' }),
+      makeFile({ subjectId: 'remy', date: '2023-06-20' }),
+      makeFile({ subjectId: 'remy', date: '2023-06-21', mutateConfig: relabel }),
+    ];
+    const remy = planImport(files, createDefaultWorkspace()).animals[0];
+
+    expect(remy.configVersions.map((cv) => [cv.version, cv.date, cv.dayDates])).toEqual([
+      [1, '2023-06-20', ['2023-06-20']],
+      [2, '2023-06-21', ['2023-06-21']],
+      [3, '2023-06-22', ['2023-06-22']],
+    ]);
+    expect(remy.configVersions[2].devices).toEqual(remy.configVersions[0].devices);
+    expect(remy.configVersions[2].description).toMatch(/same as configuration 1/i);
+    expect(Object.fromEntries(remy.days.map((d) => [d.date, d.configurationVersion]))).toEqual({
+      '2023-06-20': 1,
+      '2023-06-21': 2,
+      '2023-06-22': 3,
+    });
+  });
 });
 
 describe('planImport — divergence flags', () => {
@@ -175,6 +201,62 @@ describe('planImport — divergence flags', () => {
     expect(subjectDivergence).toBeTruthy();
     // Latest date wins → genotype is Knockout.
     expect(remy.subject.genotype).toBe('Knockout');
+  });
+
+  // Spyglass keeps one description per task_name and refuses the task epochs of a recording that
+  // reuses the name with another — so the preview must show the disagreement before anything is written.
+  it('lists a task name described differently across the files', () => {
+    const describeSleep = (description) => (animal, day) => {
+      day.tasks = day.tasks.map((task) =>
+        task.task_name === 'sleep' ? { ...task, task_description: description } : task
+      );
+    };
+    const files = [
+      makeFile({ subjectId: 'remy', date: '2023-06-22', mutateConfig: describeSleep('sleeping') }),
+      makeFile({
+        subjectId: 'remy',
+        date: '2023-06-23',
+        mutateConfig: describeSleep('resting in the sleep box'),
+      }),
+    ];
+    const plan = planImport(files, createDefaultWorkspace());
+    const remy = plan.animals.find((a) => a.subjectId === 'remy');
+    const taskDivergences = remy.divergences.filter((d) => d.field === 'tasks');
+    expect(taskDivergences).toHaveLength(1);
+    expect(taskDivergences[0].detail).toMatch(
+      /^Task "sleep" has different descriptions across these recordings: "sleeping" \(06222023_remy_metadata\.yml\); "resting in the sleep box" \(06232023_remy_metadata\.yml\)\./
+    );
+  });
+
+  it('lists no task difference when the files describe their tasks the same way', () => {
+    const files = [
+      makeFile({ subjectId: 'remy', date: '2023-06-22' }),
+      makeFile({ subjectId: 'remy', date: '2023-06-23' }),
+    ];
+    const remy = planImport(files, createDefaultWorkspace()).animals[0];
+    expect(remy.divergences.filter((d) => d.field === 'tasks')).toEqual([]);
+  });
+
+  it("lists a file whose task disagrees with the existing animal's day", () => {
+    const { animal, day } = buildRealisticWorkspace();
+    const ws = createDefaultWorkspace();
+    ws.animals.remy = { ...animal, id: 'remy', days: [day.id] };
+    ws.days[day.id] = { ...day, animalId: 'remy' };
+
+    const file = makeFile({
+      subjectId: 'remy',
+      date: '2023-06-23',
+      mutateConfig: (_animal, fileDay) => {
+        fileDay.tasks = fileDay.tasks.map((task) =>
+          task.task_name === 'sleep' ? { ...task, task_description: 'resting in the sleep box' } : task
+        );
+      },
+    });
+    const remy = planImport([file], ws).animals[0];
+    expect(remy.conflict).toBe('exists');
+    expect(remy.divergences.find((d) => d.field === 'tasks').detail).toMatch(
+      /"Rest in home cage" \(already on this animal: 2023-06-22\); "resting in the sleep box" \(06232023_remy_metadata\.yml\)/
+    );
   });
 });
 
@@ -426,13 +508,24 @@ describe('planImport — camera references against an EXISTING animal', () => {
     day.cameras_used = [id];
   };
 
+  /**
+   * Record on a decoded file what Import & Repair's `applyImportRepairs` records for a mapping.
+   * @param {{ flatModel: object }} file - The decoded file (mutated).
+   * @param {number} id - The existing camera id the user mapped the file's camera onto.
+   * @returns {{ flatModel: object }} The same file.
+   */
+  const mappedTo = (file, id) => {
+    file.flatModel.__importRepair = { [IMPORT_REPAIR_MAPPED_CAMERA_IDS]: [id] };
+    return file;
+  };
+
   it('keeps an explicitly mapped reference: a row whose id IS an existing camera is that camera, per day', () => {
     // Import & Repair mapped file 1's camera to existing id 0 and file 2's to existing id 1 (both
     // rows still carry the file's own name). Each day must keep the id the user chose.
     const plan = planImport(
       [
-        makeFile({ subjectId: 'remy', date: '2023-06-22', mutateConfig: singleCamera(0, 'arena_side') }),
-        makeFile({ subjectId: 'remy', date: '2023-06-23', mutateConfig: singleCamera(1, 'arena_side') }),
+        mappedTo(makeFile({ subjectId: 'remy', date: '2023-06-22', mutateConfig: singleCamera(0, 'arena_side') }), 0),
+        mappedTo(makeFile({ subjectId: 'remy', date: '2023-06-23', mutateConfig: singleCamera(1, 'arena_side') }), 1),
       ],
       existingRemy()
     );
@@ -446,6 +539,24 @@ describe('planImport — camera references against an EXISTING animal', () => {
     // ONE camera (first-seen id 0) and day 2's references follow it there.
     expect(remy.cameras.map((c) => [c.id, c.camera_name])).toEqual([[0, 'arena_side']]);
     expect(materializePlanDay(remy.days.find((d) => d.date === '2023-06-23'), 'replace').associated_video_files[0].camera_id).toBe(0);
+  });
+
+  it('brings a differently named camera that reuses an existing id under a free id, unless mapped (W3)', () => {
+    // The file numbers its own sleep-box camera 0; the animal's camera 0 is overhead_camera. Without
+    // a mapping that row is a camera the animal does not have — never overhead_camera.
+    const plan = planImport(
+      [makeFile({ subjectId: 'remy', date: '2023-06-23', mutateConfig: singleCamera(0, 'sleep_box_camera') })],
+      existingRemy()
+    );
+    const remy = plan.animals.find((a) => a.subjectId === 'remy');
+    expect(remy.catalogAdditions.cameras).toEqual([
+      expect.objectContaining({ id: 2, camera_name: 'sleep_box_camera' }),
+    ]);
+    const added = materializePlanDay(remy.days[0], 'add');
+    expect(added.associated_video_files[0].camera_id).toBe(2);
+    expect(added.tasks.every((t) => t.camera_id.every((id) => id === 2))).toBe(true);
+    expect(added.cameras_used).toEqual([2]);
+    expect(remy.divergences.some((d) => d.field === 'cameras' && /sleep_box_camera" 0 → 2/.test(d.detail))).toBe(true);
   });
 
   it('allocates a brought camera an id the existing animal does not use, and the additions carry it', () => {
@@ -521,10 +632,15 @@ describe('planImport — the imported catalog for replace', () => {
       expect.objectContaining({ id: 0, camera_name: 'recalibrated_overhead', meters_per_pixel: 0.0015 }),
     ]);
     expect(remy.devices.data_acq_device.map((d) => d.name)).toEqual(['MCU']);
-    // …while 'add' brings only what the animal lacks: nothing for camera 0 (it IS existing 0), MCU.
-    expect(remy.catalogAdditions.cameras).toEqual([]);
+    // …while 'add' brings only what the animal lacks: MCU, and the file's camera 0. That camera is
+    // named "recalibrated_overhead", not the animal's "overhead_camera", so it is a camera the
+    // animal does not have (W3) — brought under a free id, with the day's reference following it.
+    expect(remy.catalogAdditions.cameras).toEqual([
+      expect.objectContaining({ id: 2, camera_name: 'recalibrated_overhead', meters_per_pixel: 0.0015 }),
+    ]);
     expect(remy.catalogAdditions.data_acq_device.map((d) => d.name)).toEqual(['MCU']);
     expect(remy.days[0].associated_video_files[0].camera_id).toBe(0);
+    expect(materializePlanDay(remy.days[0], 'add').associated_video_files[0].camera_id).toBe(2);
   });
 });
 
@@ -545,10 +661,22 @@ describe('planImport — recording systems named like an existing one still dive
     );
     const remy = plan.animals.find((a) => a.subjectId === 'remy');
     expect(remy.divergences.some((d) => d.field === 'data_acq_device' && /SpikeGadgets/.test(d.detail))).toBe(true);
-    // The name matches the animal's own system, so nothing is brought under 'add'…
-    expect(remy.catalogAdditions.data_acq_device).toEqual([]);
-    // …and 'replace' gets the first-seen imported definition.
-    expect(remy.devices.data_acq_device).toEqual([expect.objectContaining({ name: 'SpikeGadgets', system: 'SpikeGadgets' })]);
+    // Other hardware under the animal's own name is another system (W5): adding brings it under a
+    // dated name, and only the 06-23 day references it…
+    expect(remy.catalogAdditions.data_acq_device).toEqual([
+      { name: 'SpikeGadgets_20230623', system: 'MCU', amplifier: 'Intan', adc_circuit: 'Intan' },
+    ]);
+    const systemOf = (date, resolution) =>
+      materializePlanDay(remy.days.find((d) => d.date === date), resolution).data_acq_device_name;
+    expect(systemOf('2023-06-22', 'add')).toBe('SpikeGadgets');
+    expect(systemOf('2023-06-23', 'add')).toBe('SpikeGadgets_20230623');
+    // …and 'replace' keeps both definitions the files give, each day on its own.
+    expect(remy.devices.data_acq_device).toEqual([
+      expect.objectContaining({ name: 'SpikeGadgets', system: 'SpikeGadgets' }),
+      expect.objectContaining({ name: 'SpikeGadgets_20230623', system: 'MCU' }),
+    ]);
+    expect(systemOf('2023-06-22', 'replace')).toBe('SpikeGadgets');
+    expect(systemOf('2023-06-23', 'replace')).toBe('SpikeGadgets_20230623');
   });
 });
 
@@ -887,6 +1015,77 @@ describe('planImport — camera calibration conflicts (F1)', () => {
     const remy = plan.animals.find((a) => a.subjectId === 'remy');
     expect(remy.cameraConflicts).toEqual([]);
     expect(remy.cameras.map((c) => c.camera_name)).toEqual(['overhead_camera', 'side_camera']);
+  });
+
+  describe('Replace resolves the files among themselves — the animal it deletes is no candidate (W4)', () => {
+    it('for a new animal, the replace conflicts are the conflicts', () => {
+      const remy = planImport(twoCalibrationFiles(), createDefaultWorkspace()).animals[0];
+      expect(remy.replaceCameraConflicts).toBe(remy.cameraConflicts);
+    });
+
+    it('re-importing files that agree with each other imports their calibration under its own name', () => {
+      const plan = planImport(
+        [
+          makeFile({ subjectId: 'remy', date: '2023-06-22', mutateConfig: withOverheadCalibration(0.002) }),
+          makeFile({ subjectId: 'remy', date: '2023-06-23', mutateConfig: withOverheadCalibration(0.002) }),
+        ],
+        existingRemyAt(0.001)
+      );
+      const remy = plan.animals.find((a) => a.subjectId === 'remy');
+      // Adding still asks about the animal's 0.001; replacing has nothing to ask.
+      expect(remy.cameraConflicts.map((c) => c.candidates.map((x) => x.fields.meters_per_pixel))).toEqual([
+        [0.001, 0.002],
+      ]);
+      expect(remy.replaceCameraConflicts).toEqual([]);
+      expect(remy.cameras.map((c) => [c.id, c.camera_name, c.meters_per_pixel])).toEqual([
+        [0, 'overhead_camera', 0.002],
+        [1, 'side_camera', 0.0009],
+      ]);
+      for (const day of remy.days) {
+        expect(materializePlanDay(day, 'replace').cameras_used).toEqual([0, 1]);
+      }
+      // …while adding keeps the animal's row and brings the files' calibration as its own camera.
+      expect(remy.catalogAdditions.cameras.map((c) => c.camera_name)).toEqual(['overhead_camera_20230622']);
+      // The preview lists that add question only while Add is chosen.
+      const calibrationNotes = remy.divergences.filter((d) => /2 calibrations/.test(d.detail));
+      expect(calibrationNotes.map((d) => d.scope)).toEqual(['add']);
+    });
+
+    it('asks a separate replace question whose single calibration may be any file\'s', () => {
+      const ws = existingRemyAt(0.001);
+      const files = [
+        makeFile({ subjectId: 'remy', date: '2023-06-22', mutateConfig: withOverheadCalibration(0.002) }),
+        makeFile({ subjectId: 'remy', date: '2023-06-23', mutateConfig: withOverheadCalibration(0.003) }),
+      ];
+      const [addConflict] = planImport(files, ws).animals[0].cameraConflicts;
+      const [replaceConflict] = planImport(files, ws).animals[0].replaceCameraConflicts;
+      expect(addConflict.candidates.map((c) => c.fromExisting)).toEqual([true, false, false]);
+      expect(replaceConflict.candidates.map((c) => [c.fields.meters_per_pixel, c.fromExisting])).toEqual([
+        [0.002, false],
+        [0.003, false],
+      ]);
+      expect(replaceConflict.key).not.toBe(addConflict.key);
+      const notes = planImport(files, ws).animals[0].divergences.filter((d) => /calibrations/.test(d.detail));
+      expect(notes.map((d) => [d.scope, /already on this animal/.test(d.detail)])).toEqual([
+        ['add', true],
+        ['replace', false],
+      ]);
+
+      // Unify onto the LATER file's calibration: honored for replace (no existing row to protect),
+      // while the add question keeps its own default.
+      const remy = planImport(files, ws, {
+        cameraConflictResolutions: { [replaceConflict.key]: { kind: 'unify', candidateIndex: 1 } },
+      }).animals[0];
+      expect(remy.replaceCameraConflicts[0].resolution).toEqual({ kind: 'unify', candidateIndex: 1 });
+      expect(remy.cameraConflicts[0].resolution).toEqual({ kind: 'split' });
+      expect(remy.cameras.map((c) => [c.camera_name, c.meters_per_pixel])).toEqual([
+        ['overhead_camera', 0.003],
+        ['side_camera', 0.0009],
+      ]);
+      for (const day of remy.days) {
+        expect(materializePlanDay(day, 'replace').cameras_used).toEqual([0, 1]);
+      }
+    });
   });
 });
 

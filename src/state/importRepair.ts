@@ -19,16 +19,25 @@
  * @module state/importRepair
  */
 
+import nwbSchema from '../nwb_schema.json';
 import { validate } from '../validation';
 import { isValidSpecies } from '../validation/dandiSubject';
+import { unknownSubjectFields } from '../validation/rules/subjectValueRules';
 import { findIdentityDivergence } from './identityDivergence';
 import { classifyCameraAgainstCatalog } from './cameraCalibrationConflicts';
-import { extractRecordingDate, findExistingAnimalId } from './yamlImportPlan';
+import {
+  extractRecordingDate,
+  findExistingAnimalId,
+  IMPORT_REPAIR_DAY_DATA_ACQ_NAME,
+  IMPORT_REPAIR_MAPPED_CAMERA_IDS,
+  IMPORT_REPAIR_MAPPED_DATA_ACQ_NAMES,
+} from './yamlImportPlan';
 import { getAnimalCameras, getDataAcqDevices } from './workspaceSelectors';
 import { inferredCameraRefs } from './cameraUsage';
 import type { IdentityRegistryEntry } from './identityDivergence';
 import type { ValidationModel } from '../validation/issueTypes';
 import { blockingIssues } from '../validation/issueTypes';
+import { canonicalizeFileBadChannels } from '../domain/badChannels';
 
 /** The schema enum for `subject.sex` (mirrors nwb_schema.json — single-letter NWB/DANDI codes). */
 const SEX_ENUM: ReadonlyArray<string> = ['M', 'F', 'U', 'O'];
@@ -46,6 +55,11 @@ const STRUCTURED_REQUIRED_FIELDS: ReadonlySet<string> = new Set(['experimenter_n
  * source value; the VALUE is a Latin binomial that MUST pass `isValidSpecies` (a unit test asserts
  * this). A source value with no entry gets NO suggestion — it surfaces as a user-input row rather
  * than being laundered into a guess.
+ *
+ * Every key names exactly ONE species: a strain, a species' own common name, or the bare name of a
+ * laboratory animal ("rat" and "mouse" mean the laboratory rat and mouse). A name shared by several
+ * species that labs record from — "macaque" (rhesus, cynomolgus, pig-tailed), "marmoset" (several
+ * Callithrix species) — is deliberately absent: the user names the species.
  */
 const SPECIES_SUGGESTIONS: Readonly<Record<string, string>> = {
   rat: 'Rattus norvegicus',
@@ -58,11 +72,35 @@ const SPECIES_SUGGESTIONS: Readonly<Record<string, string>> = {
   'sprague-dawley': 'Rattus norvegicus',
   mouse: 'Mus musculus',
   mice: 'Mus musculus',
-  marmoset: 'Callithrix jacchus',
-  macaque: 'Macaca mulatta',
+  'common marmoset': 'Callithrix jacchus',
   'rhesus macaque': 'Macaca mulatta',
   human: 'Homo sapiens',
 };
+
+/**
+ * A weight written as a plain number, optionally in grams (`485`, `485g`, `412.5 grams`; any case).
+ * Anything else — another unit, a decimal comma or digit grouping — is not suggested: "0.45 kg"
+ * would otherwise export as 0.45 g.
+ */
+const GRAM_WEIGHT = /^\s*(\d+(?:\.\d+)?|\.\d+)\s*(?:g|grams?)?\s*$/i;
+
+/** A plain decimal number stored as text (`1.5`); no unit, sign, exponent, or comma. */
+const PLAIN_DECIMAL = /^\s*(\d+(?:\.\d+)?|\.\d+)\s*$/;
+
+/**
+ * The number a text value states unambiguously, by `pattern`'s first capture group.
+ *
+ * @param value - The original (rejected) value.
+ * @param pattern - {@link GRAM_WEIGHT} or {@link PLAIN_DECIMAL}.
+ * @returns The number, or undefined when the text needs the user to say what it means.
+ */
+function unambiguousNumber(value: unknown, pattern: RegExp): number | undefined {
+  if (typeof value !== 'string') return undefined;
+  const match = pattern.exec(value);
+  if (!match) return undefined;
+  const parsed = Number(match[1]);
+  return Number.isFinite(parsed) ? parsed : undefined;
+}
 
 /** Free-text → schema-enum sex suggestions (lower-cased, trimmed lookup). */
 const SEX_SUGGESTIONS: Readonly<Record<string, string>> = {
@@ -97,6 +135,9 @@ const EXISTING_DATA_ACQ_REF_PREFIX = '__importRepair.existingAnimal.data_acq_dev
 
 /** Internal repair path used when a legacy filename/session_id cannot provide the recording date. */
 const IMPORT_RECORDING_DATE_PATH = '__importRepair.recording_date';
+
+/** Internal repair path recording which of a file's several recording systems its day used. */
+const IMPORT_DAY_DATA_ACQ_PATH = `__importRepair.${IMPORT_REPAIR_DAY_DATA_ACQ_NAME}`;
 
 const CAMERA_IDENTITY_FIELDS = ['id', 'meters_per_pixel', 'lens', 'model', 'manufacturer'] as const;
 
@@ -139,7 +180,7 @@ export interface RepairItem {
   /** Optional label for a choice-row alternate input. */
   mapInputLabel?: string;
   /** Optional structured action for import-only repairs. */
-  action?: ExistingAnimalCatalogRepairAction;
+  action?: ExistingAnimalCatalogRepairAction | FileChoiceRepairAction;
 }
 
 /** An error this screen cannot repair in place (structural / cross-field) — fix in the file. */
@@ -182,6 +223,14 @@ interface ExistingAnimalCatalogRepairAction {
   canBring: boolean;
   /** Valid existing values the user may map to instead. */
   validMapValues: unknown[];
+}
+
+/** A choice among values the imported file itself lists; only those are valid answers. */
+interface FileChoiceRepairAction {
+  /** Discriminator for custom import-repair actions. */
+  kind: 'file_choice';
+  /** The values the file lists. */
+  validValues: unknown[];
 }
 
 /** The new-animal vs existing-day routing for the parsed file. */
@@ -341,6 +390,59 @@ function deleteAtPath(target: Record<string, unknown>, p: string): void {
   }
 }
 
+/** The part of a JSON-schema node {@link schemaNumericType} reads. */
+interface SchemaNode {
+  type?: unknown;
+  properties?: Record<string, SchemaNode>;
+  items?: SchemaNode;
+}
+
+/**
+ * Whether the schema wants a number at a repair path: `'number'`, `'integer'`, or null (any other
+ * type, or a path the schema does not describe, such as an internal `__importRepair.*` row). An array
+ * index steps into `items` (`electrode_groups[0].targeted_x`); a numeric object key (an ntrode `map`
+ * entry) is read as a property.
+ *
+ * @param p - The repair path.
+ * @returns The numeric schema type, or null.
+ */
+function schemaNumericType(p: string): 'number' | 'integer' | null {
+  let node: SchemaNode | undefined = nwbSchema as unknown as SchemaNode;
+  for (const seg of parsePath(p)) {
+    node = typeof seg === 'number' ? node?.items ?? node?.properties?.[String(seg)] : node?.properties?.[seg];
+    if (!node) return null;
+  }
+  return node.type === 'number' || node.type === 'integer' ? node.type : null;
+}
+
+/** Text a person typed as a number: optional sign, decimal point and exponent (`-3.25`, `1.95e-7`). */
+const NUMERIC_TEXT = /^\s*[-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:e[-+]?\d+)?\s*$/i;
+
+/**
+ * A typed answer as a number: a finite number as-is, numeric text converted, anything else undefined.
+ *
+ * @param value - The resolution value.
+ * @returns The number, or undefined when the value is not one.
+ */
+function typedNumber(value: unknown): number | undefined {
+  if (typeof value === 'number') return Number.isFinite(value) ? value : undefined;
+  if (typeof value === 'string' && NUMERIC_TEXT.test(value)) return Number(value);
+  return undefined;
+}
+
+/**
+ * The value to store at a path: numeric text becomes a number where the schema wants one (a typed
+ * "0.195" would otherwise fail "must be number" forever). Every other value is stored unchanged.
+ *
+ * @param p - The path the value is stored at.
+ * @param value - The resolution value.
+ * @returns The value to store.
+ */
+function schemaTypedValue(p: string, value: unknown): unknown {
+  if (typeof value !== 'string' || schemaNumericType(p) === null) return value;
+  return typedNumber(value) ?? value;
+}
+
 /**
  * Stable equality for decoded YAML values. Used only to decide whether dual legacy/current keys are
  * value-identical and therefore safe to normalize silently.
@@ -439,6 +541,34 @@ function cameraIdentityRegistry(
       fields: cameraIdentityFields(camera),
       label: `animal "${animalId}" camera id ${String(camera.id)}`,
     }));
+}
+
+/**
+ * A camera row's `camera_name` as a trimmed string (decoded YAML carries it loosely typed).
+ *
+ * @param camera - A camera catalog row.
+ * @returns The trimmed name (`''` when absent).
+ */
+function cameraNameOf(camera: unknown): string {
+  return isRecord(camera) ? String(camera.camera_name ?? '').trim() : '';
+}
+
+/**
+ * Record on the repaired model that the user mapped a file reference onto an existing catalog
+ * entry, so the planner honors the mapping even though the file's own row (which keeps its name)
+ * would read as a different entry.
+ *
+ * @param model - The mutable repaired model.
+ * @param key - The `__importRepair` key the planner reads.
+ * @param value - The existing entry the reference was mapped onto.
+ */
+function recordRepairMapping(model: Record<string, unknown>, key: string, value: unknown): void {
+  const marker = isRecord(model.__importRepair) ? model.__importRepair : {};
+  const mapped = Array.isArray(marker[key]) ? (marker[key] as unknown[]) : [];
+  model.__importRepair = {
+    ...marker,
+    [key]: mapped.some((entry) => sameRefValue(entry, value)) ? mapped : [...mapped, value],
+  };
 }
 
 /**
@@ -744,8 +874,11 @@ function buildExistingAnimalCatalogItems(
 
   for (const cameraId of cameraRefs) {
     if (divergentCameraRefs.some((cameraRef) => sameRefValue(cameraRef, cameraId))) continue;
-    if (existingCameraIds.some((id) => sameRefValue(id, cameraId))) continue;
     const sourceCamera = sourceCameras.find((camera) => sameRefValue(camera?.id, cameraId));
+    // An id the animal already has is that camera only when the file gives it the same name. Under a
+    // different name it is a camera the animal does not have (W3), so it is asked about like one.
+    const takenBy = existingCameras.find((camera) => sameRefValue(camera.id, cameraId));
+    if (takenBy && (!sourceCamera || cameraNameOf(takenBy) === cameraNameOf(sourceCamera))) continue;
     if (!sourceCamera) continue;
     const sourceName = sourceCamera.camera_name;
     const nameConflicts =
@@ -755,16 +888,21 @@ function buildExistingAnimalCatalogItems(
     const canBring = !nameConflicts;
     const path = `${EXISTING_CAMERA_REF_PREFIX}${encodeRepairToken(cameraId)}`;
     const base = cameraRefLabel(sourceCamera, cameraId);
+    const missing = takenBy
+      ? `animal "${decision.existingAnimalId}" uses camera id ${String(cameraId)} for a different camera ("${cameraNameOf(takenBy)}")`
+      : `animal "${decision.existingAnimalId}" does not have it`;
     items.push({
       path,
       label: `Camera ${String(cameraId)}`,
-      code: 'existing_animal_missing_camera',
+      code: takenBy ? 'existing_animal_camera_id_taken' : 'existing_animal_missing_camera',
       group: 'attention',
       kind: canBring ? 'choice' : 'input',
       was: base,
       suggested: canBring ? BRING_CATALOG_ENTRY : undefined,
       why: canBring
-        ? `${base} is referenced by the imported day, but animal "${decision.existingAnimalId}" does not have it. Bring that camera into the animal, or map the day to an existing camera id.`
+        ? takenBy
+          ? `${base} is referenced by the imported day, but ${missing}. Bring this camera into the animal as its own camera (it gets a free id and the day's references follow it), or map the day to an existing camera id.`
+          : `${base} is referenced by the imported day, but ${missing}. Bring that camera into the animal, or map the day to an existing camera id.`
         : `${base} is referenced by the imported day, but animal "${decision.existingAnimalId}" already has a camera named "${String(sourceName)}". Map the day to an existing camera id instead of importing a conflicting catalog entry.`,
       inputType: 'number',
       mapInputLabel: `Map camera ${String(cameraId)} to existing camera id`,
@@ -820,6 +958,39 @@ function buildExistingAnimalCatalogItems(
 }
 
 /**
+ * Ask which recording system a file's day was recorded on when the file lists several (W8). A
+ * workspace day references ONE system and exports only that one (trodes_to_nwb would write every
+ * entry), so without this row every system but the first would silently drop out of the day's
+ * export. The others stay in the animal's recording-system catalog.
+ *
+ * @param model - The normalized flat model.
+ * @returns The choice row, or null when the file lists at most one system.
+ */
+function buildDayDataAcqChoice(model: ValidationModel): RepairItem | null {
+  const devices = Array.isArray(model.data_acq_device) ? model.data_acq_device.filter(isRecord) : [];
+  if (devices.length < 2) return null;
+  const names = devices.map((device) => device.name);
+  const listed = names.map((name) => String(name)).join(', ');
+  return {
+    path: IMPORT_DAY_DATA_ACQ_PATH,
+    label: 'Recording system for this day',
+    code: 'multiple_data_acq_devices',
+    group: 'attention',
+    kind: 'choice',
+    was: names,
+    suggested: names[0],
+    why:
+      `This file lists ${names.length} recording systems (${listed}). A recording day here ` +
+      'exports one recording system, the one it was recorded on: the others are kept in the ' +
+      "animal's recording-system catalog but left out of this day's YAML. Accept " +
+      `"${String(names[0])}" (the first), or enter the name of the one this day used.`,
+    inputType: 'text',
+    mapInputLabel: 'Recording system this day used',
+    action: { kind: 'file_choice', validValues: names },
+  };
+}
+
+/**
  * Build the repair items + blockers for a model's `validate` errors. Known leaf codes map to
  * suggestions/inputs; everything else becomes a blocker (fix-in-file).
  *
@@ -870,10 +1041,10 @@ function buildValidationItems(model: ValidationModel): {
       continue;
     }
 
-    // --- weight: a "541g"-style string → suggest the parsed number. ---
+    // --- weight: a "541g"-style string → suggest the number of grams; any other unit is asked. ---
     if (code === 'type' && path === 'subject.weight') {
-      const parsed = parseFloat(String(was));
-      if (Number.isFinite(parsed) && parsed >= 0) {
+      const parsed = unambiguousNumber(was, GRAM_WEIGHT);
+      if (parsed !== undefined) {
         items.push({ path, label: 'Weight (g)', code, group: 'attention', kind: 'suggestion', was, suggested: parsed, why: message, inputType: 'number' });
       } else {
         items.push({ path, label: 'Weight (g)', code, group: 'attention', kind: 'input', was, why: message, inputType: 'number' });
@@ -881,10 +1052,11 @@ function buildValidationItems(model: ValidationModel): {
       continue;
     }
 
-    // --- technical scalar: a legacy string like "1.5cd" → suggest the numeric prefix. ---
+    // --- technical scalar: a plain number stored as text ("1.5") → suggest it. A suffix or a
+    // decimal comma ("1.5cd", "1,5") is asked, never cut down to a numeric prefix. ---
     if (code === 'type' && path === 'times_period_multiplier') {
-      const parsed = parseFloat(String(was));
-      if (Number.isFinite(parsed)) {
+      const parsed = unambiguousNumber(was, PLAIN_DECIMAL);
+      if (parsed !== undefined) {
         items.push({ path, label: 'Times period multiplier', code, group: 'attention', kind: 'suggestion', was, suggested: parsed, why: message, inputType: 'number' });
       } else {
         items.push({ path, label: 'Times period multiplier', code, group: 'attention', kind: 'input', was, why: message, inputType: 'number' });
@@ -910,6 +1082,13 @@ function buildValidationItems(model: ValidationModel): {
       } else {
         items.push({ path, label: 'Experimenter name', code, group: 'attention', kind: 'input', was, why: message, inputType: 'text' });
       }
+      continue;
+    }
+
+    // --- date of birth the converter cannot read as a date and time (e.g. no seconds) → the user
+    // picks the date in the date row, which answers a full timestamp. ---
+    if (code === 'subject_date_of_birth_format' && path === 'subject.date_of_birth') {
+      items.push({ path, label: 'Date of birth', code, group: 'attention', kind: 'input', was, why: message, inputType: 'date' });
       continue;
     }
 
@@ -990,11 +1169,13 @@ function buildValidationItems(model: ValidationModel): {
       continue;
     }
 
-    // --- required-but-missing / empty required field → blocks; the user supplies it. ---
+    // --- required-but-missing / empty required field → blocks; the user supplies it. The input
+    // follows the schema type at the path, so a missing number (raw_data_to_volts,
+    // electrode_groups[i].targeted_x, …) is answered with a number, not text. ---
     if (code === 'required' || code === 'pattern') {
       const inputType: RepairItem['inputType'] = path.endsWith('date_of_birth')
         ? 'date'
-        : path.endsWith('weight')
+        : schemaNumericType(path) !== null
           ? 'number'
           : 'text';
       const item: RepairItem = { path, label: leafLabel(path), code, group: 'required', kind: 'input', why: message, inputType };
@@ -1025,6 +1206,25 @@ function leafLabel(p: string): string {
 }
 
 /**
+ * List each subject field the NWB subject does not have. pynwb's Subject fails on such a field and
+ * no workspace editor can remove one, so the commit leaves it out ({@link applyBenignNormalizations});
+ * listing it, with its value, keeps the drop visible.
+ *
+ * @param model - The flat model (after the space-key aliases are recovered).
+ * @returns One listed normalization per unknown subject field.
+ */
+function unknownSubjectFieldNotes(model: Record<string, unknown>): BenignNormalization[] {
+  const subject = model.subject as Record<string, unknown> | undefined;
+  return unknownSubjectFields(subject).map((key) => ({
+    path: `subject.${key}`,
+    label: `Left out subject.${key}`,
+    detail:
+      `Left out subject field "${key}" (${JSON.stringify(subject?.[key])}): the NWB subject has ` +
+      'no such field, and trodes_to_nwb fails on it.',
+  }));
+}
+
+/**
  * Detect the benign (format-only, lossless) normalizations the commit will apply, plus any
  * conflicting-volume reconcile items. Surfaces them so they are listed, never silent.
  *
@@ -1038,7 +1238,9 @@ function buildBenignAndShim(model: ValidationModel): {
   const benign: BenignNormalization[] = [];
   const shimItems: RepairItem[] = [];
 
-  benign.push(...applySpaceKeyAliases(structuredClone(model)));
+  const aliased = structuredClone(model) as Record<string, unknown>;
+  benign.push(...applySpaceKeyAliases(aliased));
+  benign.push(...unknownSubjectFieldNotes(aliased));
 
   // --- task_epoch (singular) + one-item task_epochs lists → canonical scalar task_epochs. ---
   for (const key of ['associated_files', 'associated_video_files'] as const) {
@@ -1175,14 +1377,21 @@ function buildBenignAndShim(model: ValidationModel): {
 /**
  * Apply the benign, lossless normalizations to a (mutable) model: recover known legacy space-key
  * schema spellings, rename `task_epoch` → the `task_epochs` key the app reads, and fill a missing
- * volume spelling from the present one. Shared by {@link buildImportRepairPlan} (which validates
- * the NORMALIZED model, so a benign-fixable issue never also surfaces as a repair item) and
+ * volume spelling from the present one. Also leaves out subject fields the NWB subject does not have
+ * (listed, with their values, by {@link unknownSubjectFieldNotes}). Shared by
+ * {@link buildImportRepairPlan} (which validates the NORMALIZED model, so a benign-fixable issue never also surfaces as a repair item) and
  * {@link applyImportRepairs}.
  *
  * @param model - The model to mutate in place.
  */
 function applyBenignNormalizations(model: Record<string, unknown>): void {
   applySpaceKeyAliases(model);
+
+  // Subject fields the NWB subject does not have are left out (listed by unknownSubjectFieldNotes).
+  const subject = model.subject as Record<string, unknown> | undefined;
+  unknownSubjectFields(subject).forEach((key) => {
+    delete (subject as Record<string, unknown>)[key];
+  });
 
   for (const key of ['associated_files', 'associated_video_files'] as const) {
     const list = model[key];
@@ -1233,7 +1442,9 @@ export function buildImportRepairPlan(
   const { benign, shimItems } = buildBenignAndShim(model);
   const normalized = structuredClone(model) as Record<string, unknown>;
   applyBenignNormalizations(normalized);
-  const validation = buildValidationItems(normalized as ValidationModel);
+  // Validate what the commit imports: `decomposeYaml` moves later-row bad channels (from earlier
+  // versions) to the group's first row before validating, so the multi-shank rule must not block them.
+  const validation = buildValidationItems(canonicalizeFileBadChannels(normalized) as ValidationModel);
   const shimPaths = new Set(shimItems.map((item) => item.path));
   const items = validation.items.filter((item) => !shimPaths.has(item.path));
   const blockers = validation.blockers.filter((blocker) => !shimPaths.has(blocker.path));
@@ -1251,6 +1462,8 @@ export function buildImportRepairPlan(
       inputType: 'date',
     });
   }
+  const dayDataAcqChoice = buildDayDataAcqChoice(normalized as ValidationModel);
+  if (dayDataAcqChoice) importOnlyItems.push(dayDataAcqChoice);
 
   // Decision: match the subject id against the existing workspace (by key or subject.subject_id).
   const subjectId = (normalized.subject as { subject_id?: unknown } | undefined)?.subject_id;
@@ -1290,7 +1503,8 @@ export function buildImportRepairPlan(
 }
 
 /**
- * Validate custom existing-animal catalog repair rows after the user resolves them.
+ * Validate custom existing-animal catalog repair rows, and choices among a file's own values, after
+ * the user resolves them.
  *
  * @param plan - The import-repair plan.
  * @param resolutions - Accepted/edited values keyed by repair-item path.
@@ -1302,10 +1516,16 @@ export function existingAnimalCatalogResolutionBlocker(
 ): string | null {
   for (const item of plan.items) {
     const action = item.action;
-    if (action?.kind !== 'existing_animal_catalog_ref') continue;
+    if (action === undefined) continue;
     const value = resolutions[item.path];
     if (value === undefined || value === null || value === '') {
       return `Resolve ${item.label} before importing.`;
+    }
+    if (action.kind === 'file_choice') {
+      if (!action.validValues.some((candidate) => sameRefValue(candidate, value))) {
+        return `Choose ${item.label} from the ones the file lists: ${validValueList(action.validValues)}.`;
+      }
+      continue;
     }
     if (value === item.suggested) {
       if (action.canBring) continue;
@@ -1320,10 +1540,39 @@ export function existingAnimalCatalogResolutionBlocker(
 }
 
 /**
+ * Why an answered row cannot be stored where the schema wants a number, or null when every answer
+ * there is one. Numeric text counts (it is converted by {@link applyImportRepairs}); an unanswered
+ * row is the screen's "still need a response", not this.
+ *
+ * @param plan - The import-repair plan.
+ * @param resolutions - Accepted/edited values keyed by repair-item path.
+ * @returns A blocking reason naming the field and the value, or null.
+ */
+export function numericResolutionBlocker(
+  plan: ImportRepairPlan,
+  resolutions: Record<string, unknown>
+): string | null {
+  for (const item of plan.items) {
+    const value = resolutions[item.path];
+    if (value === undefined || value === null || value === '') continue;
+    const type = schemaNumericType(item.path);
+    if (type === null) continue;
+    const number = typedNumber(value);
+    const field = item.context ? `${item.context}: ${item.label}` : item.label;
+    if (number === undefined) return `${field} must be a number; “${String(value)}” is not one.`;
+    if (type === 'integer' && !Number.isInteger(number)) {
+      return `${field} must be a whole number; “${String(value)}” is not one.`;
+    }
+  }
+  return null;
+}
+
+/**
  * Apply the benign normalizations and the user's accepted resolutions to a model, returning a NEW
  * model (the input is never mutated, and no key is dropped). Resolutions are keyed by the same path
  * the repair items carry; benign normalizations (space-key aliases, task_epoch rename, single-spelling
- * volume fill) are applied unconditionally because the screen lists them.
+ * volume fill) are applied unconditionally because the screen lists them. Numeric text answered for a
+ * field the schema types as a number is stored as a number.
  *
  * @param flatModel - The decoded flat model.
  * @param resolutions - Accepted/edited values keyed by repair-item path.
@@ -1348,6 +1597,7 @@ export function applyImportRepairs(
           decodeRepairToken(path.slice(EXISTING_CAMERA_REF_PREFIX.length)),
           value
         );
+        recordRepairMapping(model, IMPORT_REPAIR_MAPPED_CAMERA_IDS, value);
       }
       continue;
     }
@@ -1358,14 +1608,18 @@ export function applyImportRepairs(
           decodeRepairToken(path.slice(EXISTING_DATA_ACQ_REF_PREFIX.length)),
           value
         );
+        recordRepairMapping(model, IMPORT_REPAIR_MAPPED_DATA_ACQ_NAMES, value);
       }
       continue;
     }
-    setAtPath(model, path, value);
     const volMatch = path.match(/^(virus_injection\[\d+\])\.volume_in_u[lL]$/);
+    // Numeric text becomes a number where the schema wants one; a volume is typed by the schema's
+    // own spelling (`volume_in_ul`), since the converter's `volume_in_uL` is not in the schema.
+    const stored = schemaTypedValue(volMatch ? `${volMatch[1]}.volume_in_ul` : path, value);
+    setAtPath(model, path, stored);
     if (volMatch) {
-      setAtPath(model, `${volMatch[1]}.volume_in_uL`, value);
-      setAtPath(model, `${volMatch[1]}.volume_in_ul`, value);
+      setAtPath(model, `${volMatch[1]}.volume_in_uL`, stored);
+      setAtPath(model, `${volMatch[1]}.volume_in_ul`, stored);
     }
     const taskEpochMatch = path.match(/^(associated_(?:video_)?files\[\d+\])\.task_epochs$/);
     if (taskEpochMatch) deleteAtPath(model, `${taskEpochMatch[1]}.task_epoch`);

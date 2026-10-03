@@ -25,6 +25,7 @@ import { describe, it, expect } from 'vitest';
 import fs from 'fs';
 import path from 'path';
 import { encodeYaml, decodeYaml, formatDeterministicFilename } from '../../../io/yaml';
+import { formatRecordingMetadataFilename, recordingDateToken } from '../../../domain/recordingFilename';
 import { mergeDayMetadata } from '../../../state/workspaceUtils';
 import { normalizeWorkspaceDevices } from '../../../utils/deviceNormalization';
 import { validate } from '../../../validation';
@@ -119,9 +120,13 @@ describe('export parity (new workspace path)', () => {
   it('produces a schema-valid export for a complete day (export is reachable)', () => {
     const { animal, day } = buildRealisticWorkspace();
 
-    // A complete day must validate with zero issues — otherwise the validation
+    // A complete day must validate with zero errors — otherwise the validation
     // step would stay in error and the Export gate would never unlock.
-    expect(validate(mergeDayMetadata(animal, day))).toEqual([]);
+    // The realistic builder's age "P164" (as in the golden export) is not an ISO 8601 duration,
+    // which DANDI rejects: the one issue is that advisory, which never blocks export.
+    expect(validate(mergeDayMetadata(animal, day))).toEqual([
+      expect.objectContaining({ code: 'subject_age_format', severity: 'warning' }),
+    ]);
   });
 
   it('rejects the legacy globally-incrementing channel map (second tetrode 4..7 is invalid)', () => {
@@ -144,18 +149,20 @@ describe('export parity (new workspace path)', () => {
     expect(first).toBe(second);
   });
 
-  it('computes a filename matching the legacy format with the experiment date injected', () => {
+  it('computes the same filename as a workspace download once the experiment date is injected', () => {
     const { animal, day } = buildRealisticWorkspace();
     const merged = mergeDayMetadata(animal, day);
 
     const fileName = formatDeterministicFilename({
       ...merged,
-      EXPERIMENT_DATE_in_format_mmddYYYY: day.experimentDate,
+      EXPERIMENT_DATE_in_format_YYYYMMDD: recordingDateToken(day.date),
     });
 
-    expect(fileName).toBe(`${day.experimentDate}_${merged.subject.subject_id.toLowerCase()}_metadata.yml`);
-    expect(fileName).toBe('06222023_remy_metadata.yml');
+    expect(fileName).toBe(
+      formatRecordingMetadataFilename({ date: day.date, subjectId: merged.subject.subject_id })
+    );
+    expect(fileName).toBe('20230622_remy_metadata.yml');
     // Guard: the date is injected, not left as the literal placeholder.
-    expect(fileName).not.toContain('{EXPERIMENT_DATE_in_format_mmddYYYY}');
+    expect(fileName).not.toContain('{EXPERIMENT_DATE_in_format_YYYYMMDD}');
   });
 });

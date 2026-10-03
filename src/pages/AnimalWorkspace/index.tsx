@@ -88,8 +88,8 @@ export function AnimalWorkspace() {
   };
 
   // Import is the full-page Import & Repair screen (epoch-editor Phase 7): it brings an existing
-  // {mmddYYYY}_{subject}_metadata.yml file in, flagging anything that won't validate with a
-  // suggested fix, and never writes until the user confirms.
+  // {YYYYMMDD}_{subject}_metadata.yml (or older {mmddYYYY}_…) file in, flagging anything that
+  // won't validate with a suggested fix, and never writes until the user confirms.
   const goToImport = () => {
     window.location.hash = '#/import';
   };

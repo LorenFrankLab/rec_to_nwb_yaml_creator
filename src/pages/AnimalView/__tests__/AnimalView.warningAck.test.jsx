@@ -42,6 +42,9 @@ function buildWarningWorkspace() {
  */
 function buildCleanWorkspace() {
   const { animal, day } = buildRealisticWorkspace();
+  // The builder's age "P164" (as in the golden export) draws the DANDI age advisory; use a valid
+  // ISO 8601 age so this day has only the warnings the test sets up.
+  animal.subject = { ...animal.subject, age: 'P164D' };
   return { animals: { [animal.id]: animal }, days: { [day.id]: day }, settings: {} };
 }
 

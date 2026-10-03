@@ -133,6 +133,43 @@ describe('DayTab', () => {
     expect(onFieldUpdate).toHaveBeenCalledWith('session.weight', 450);
   });
 
+  it("edits this day's age (session.age); clearing it exports none", async () => {
+    const user = userEvent.setup();
+    const onFieldUpdate = vi.fn();
+    render(
+      <DayTab
+        animal={mockAnimal}
+        day={{ ...mockDay, session: { ...mockDay.session, age: 'P164' } }}
+        mergedDay={{ ...mockMergedDay, subject: { age: 'P164' } }}
+        onFieldUpdate={onFieldUpdate}
+      />
+    );
+
+    const age = screen.getByLabelText(/^Age on 2023-06-22/i);
+    expect(age).toHaveValue('P164');
+    expect(age).toHaveAttribute('data-field-path', 'session.age');
+    await user.clear(age);
+    await user.type(age, 'P172D');
+    await user.tab();
+    expect(onFieldUpdate).toHaveBeenLastCalledWith('session.age', 'P172D');
+
+    await user.clear(age);
+    await user.tab();
+    expect(onFieldUpdate).toHaveBeenLastCalledWith('session.age', null);
+  });
+
+  it('offers the age computed from the date of birth', async () => {
+    const user = userEvent.setup();
+    const onFieldUpdate = vi.fn();
+    render(
+      <DayTab animal={mockAnimal} day={mockDay} mergedDay={mockMergedDay} onFieldUpdate={onFieldUpdate} />
+    );
+
+    // Born 2023-01-01, recorded 2023-06-22.
+    await user.click(screen.getByRole('button', { name: 'Use P172D' }));
+    expect(onFieldUpdate).toHaveBeenCalledWith('session.age', 'P172D');
+  });
+
   it('shows the dated previous measurement as reference and requires a new entry', async () => {
     const user = userEvent.setup();
     const onFieldUpdate = vi.fn();

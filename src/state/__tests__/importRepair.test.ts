@@ -17,9 +17,11 @@ import {
   buildImportRepairPlan,
   applyImportRepairs,
   existingAnimalCatalogResolutionBlocker,
+  numericResolutionBlocker,
 } from '../importRepair';
 import type { RepairItem } from '../importRepair';
 import { classifyCameraAgainstCatalog } from '../cameraCalibrationConflicts';
+import { planImport } from '../yamlImportPlan';
 
 const fixtureDir = path.join(__dirname, '../../__tests__/fixtures/import');
 
@@ -168,12 +170,241 @@ describe('buildImportRepairPlan — flags each non-conforming field from the sha
     expect(plan.hasErrors).toBe(true);
   });
 
+  it('asks for a date of birth the converter cannot read (no seconds) in the date row, not as a fix-in-file blocker', () => {
+    const model = loadCleanExport();
+    (model.subject as Record<string, unknown>).date_of_birth = '2023-01-10T00:00';
+    const plan = buildImportRepairPlan(model, '20230622_remy_metadata.yml', { animals: {} });
+
+    expect(plan.blockers.some((b) => b.path === 'subject.date_of_birth')).toBe(false);
+    expect(itemAt(plan.items, 'subject.date_of_birth')).toMatchObject({
+      code: 'subject_date_of_birth_format',
+      kind: 'input',
+      inputType: 'date',
+      was: '2023-01-10T00:00',
+    });
+    // The date row answers `YYYY-MM-DDT00:00:00`, which the converter reads.
+    const repaired = applyImportRepairs(model, { 'subject.date_of_birth': '2023-01-10T00:00:00' });
+    expect(validate(repaired as never).filter((i) => i.severity === 'error')).toEqual([]);
+  });
+
   it('never silently drops a value: every flagged item carries the original value', () => {
     const plan = buildImportRepairPlan(loadNonconforming(), 'nonconforming-remy.yml', { animals: {} });
     // Every "attention" item (one that had an original value) preserves it verbatim.
     for (const item of plan.items.filter((i) => i.group === 'attention')) {
       expect('was' in item).toBe(true);
     }
+  });
+});
+
+/**
+ * "Apply safe suggestions" accepts every suggestion unread, so a suggestion must be exactly what the
+ * file meant. A value that needs a guess (a unit, a decimal comma, one species out of several)
+ * becomes a row the user answers, with the original shown.
+ */
+describe('buildImportRepairPlan — a suggestion is offered only when the value is unambiguous', () => {
+  /**
+   * The repair row at a path after changing a clean export.
+   * @param itemPath - The row's path.
+   * @param mutate - Changes the clean model before planning.
+   * @returns The row, or undefined.
+   */
+  function rowFor(itemPath: string, mutate: (model: Record<string, any>) => void): RepairItem | undefined {
+    const model = loadCleanExport();
+    mutate(model);
+    return itemAt(buildImportRepairPlan(model, '06222023_remy_metadata.yml', { animals: {} }).items, itemPath);
+  }
+
+  it.each(['0.45 kg', '7.2 kg', '1,250 g', '1.1 lb', '450 mg', 'about 450 g', 'Unknown'])(
+    'weight %j is a number input with no suggestion (never a guessed unit)',
+    (weight) => {
+      const row = rowFor('subject.weight', (m) => {
+        m.subject.weight = weight;
+      });
+      expect(row).toMatchObject({ kind: 'input', inputType: 'number', was: weight });
+      expect(row!.suggested).toBeUndefined();
+    }
+  );
+
+  it.each([
+    ['485g', 485],
+    ['485 g', 485],
+    ['485 grams', 485],
+    ['485 Gram', 485],
+    ['485', 485],
+    [' 412.5 G ', 412.5],
+  ])('weight %j (grams, or no unit) suggests %d', (weight, grams) => {
+    const row = rowFor('subject.weight', (m) => {
+      m.subject.weight = weight;
+    });
+    expect(row).toMatchObject({ kind: 'suggestion', suggested: grams, was: weight });
+  });
+
+  it.each(['1,5', '1.5cd', '1.5 x', 'not_a_number'])(
+    'times_period_multiplier %j is a number input with no suggestion',
+    (value) => {
+      const row = rowFor('times_period_multiplier', (m) => {
+        m.times_period_multiplier = value;
+      });
+      expect(row).toMatchObject({ kind: 'input', inputType: 'number', was: value });
+      expect(row!.suggested).toBeUndefined();
+    }
+  );
+
+  it('times_period_multiplier "1.5" (a plain number stored as text) suggests 1.5', () => {
+    const row = rowFor('times_period_multiplier', (m) => {
+      m.times_period_multiplier = '1.5';
+    });
+    expect(row).toMatchObject({ kind: 'suggestion', suggested: 1.5, was: '1.5' });
+  });
+
+  it.each(['macaque', 'Macaque', 'marmoset'])(
+    'species %j names several species, so it is an input with no suggestion',
+    (species) => {
+      const row = rowFor('subject.species', (m) => {
+        m.subject.species = species;
+      });
+      expect(row).toMatchObject({ kind: 'input', was: species });
+      expect(row!.suggested).toBeUndefined();
+    }
+  );
+
+  it.each([
+    ['rhesus macaque', 'Macaca mulatta'],
+    ['common marmoset', 'Callithrix jacchus'],
+    ['Long-Evans', 'Rattus norvegicus'],
+    ['mouse', 'Mus musculus'],
+  ])('species %j names one species and suggests %j', (species, binomial) => {
+    const row = rowFor('subject.species', (m) => {
+      m.subject.species = species;
+    });
+    expect(row).toMatchObject({ kind: 'suggestion', suggested: binomial });
+    expect(isValidSpecies(row!.suggested)).toBe(true);
+  });
+
+  it('accepting every suggestion for a "0.45 kg" weight never imports 0.45 g', () => {
+    const model = loadCleanExport();
+    (model.subject as Record<string, unknown>).weight = '0.45 kg';
+    const plan = buildImportRepairPlan(model, '06222023_remy_metadata.yml', { animals: {} });
+    // What the page's "Apply safe suggestions" button resolves.
+    const accepted = Object.fromEntries(
+      plan.items.filter((i) => i.kind === 'suggestion').map((i) => [i.path, i.suggested])
+    );
+    expect(accepted).toEqual({});
+    const repaired = applyImportRepairs(model, accepted);
+    expect((repaired.subject as Record<string, unknown>).weight).toBe('0.45 kg');
+    // The weight still needs an answer, so the file cannot be imported with a wrong number.
+    const importPlan = planImport(
+      [{ sourceName: '06222023_remy_metadata.yml', flatModel: repaired }],
+      { animals: {} }
+    );
+    expect(importPlan.animals).toEqual([]);
+  });
+});
+
+/**
+ * A missing required NUMBER must be answerable on this screen: a text input stored the typed value
+ * as a string, so the repaired file failed "must be number" however it was answered.
+ */
+describe('buildImportRepairPlan — a missing required number is answered with a number', () => {
+  type Model = Record<string, any>;
+  const MISSING_NUMBERS: Array<[string, (m: Model) => void, string, (m: Model) => unknown]> = [
+    ['raw_data_to_volts', (m) => delete m.raw_data_to_volts, '0.195', (m) => m.raw_data_to_volts],
+    [
+      'times_period_multiplier',
+      (m) => delete m.times_period_multiplier,
+      '1.5',
+      (m) => m.times_period_multiplier,
+    ],
+    [
+      'electrode_groups[0].targeted_x',
+      (m) => delete m.electrode_groups[0].targeted_x,
+      '-3.25e0',
+      (m) => m.electrode_groups[0].targeted_x,
+    ],
+  ];
+
+  /**
+   * A clean export with one field removed.
+   * @param remove - Removes the field.
+   * @returns The model.
+   */
+  function cleanWithout(remove: (m: Model) => void): Model {
+    const model = loadCleanExport();
+    remove(model);
+    return model;
+  }
+
+  /**
+   * Whether a repaired model imports as one day.
+   * @param repaired - The repaired model.
+   * @returns The planner's refusals (empty when importable).
+   */
+  function refusals(repaired: Record<string, unknown>): string[] {
+    return planImport([{ sourceName: '06222023_remy_metadata.yml', flatModel: repaired }], {
+      animals: {},
+    }).unimportable.map((u) => u.reason);
+  }
+
+  it.each(MISSING_NUMBERS)('%s is a number input (the schema type at that path)', (itemPath, remove) => {
+    const plan = buildImportRepairPlan(cleanWithout(remove), '06222023_remy_metadata.yml', { animals: {} });
+    expect(itemAt(plan.items, itemPath)).toMatchObject({
+      kind: 'input',
+      group: 'required',
+      inputType: 'number',
+    });
+  });
+
+  it.each(MISSING_NUMBERS)('%s: the number typed into the row makes the file importable', (itemPath, remove, typed, read) => {
+    const model = cleanWithout(remove);
+    // What RepairRow stores for a number input.
+    const repaired = applyImportRepairs(model, { [itemPath]: Number(typed) });
+    expect(read(repaired)).toBe(Number(typed));
+    expect(refusals(repaired)).toEqual([]);
+  });
+
+  it.each(MISSING_NUMBERS)('%s: numeric text is stored as a number when the repair is applied', (itemPath, remove, typed, read) => {
+    const repaired = applyImportRepairs(cleanWithout(remove), { [itemPath]: typed });
+    expect(read(repaired)).toBe(Number(typed));
+    expect(refusals(repaired)).toEqual([]);
+  });
+
+  it('an integer field (a video file epoch) is a number input too', () => {
+    const plan = buildImportRepairPlan(
+      { associated_video_files: [{ name: 'v', camera_id: 0 }] },
+      'f.yml',
+      { animals: {} }
+    );
+    expect(itemAt(plan.items, 'associated_video_files[0].task_epochs')!.inputType).toBe('number');
+  });
+
+  it('rejects text that is not a number with a clear message, and accepts real numbers', () => {
+    const plan = buildImportRepairPlan(
+      cleanWithout((m) => delete m.raw_data_to_volts),
+      '06222023_remy_metadata.yml',
+      { animals: {} }
+    );
+    expect(numericResolutionBlocker(plan, { raw_data_to_volts: '0,195' })).toBe(
+      'Raw data to volts must be a number; “0,195” is not one.'
+    );
+    expect(numericResolutionBlocker(plan, { raw_data_to_volts: 'abc' })).toMatch(/must be a number/);
+    expect(numericResolutionBlocker(plan, { raw_data_to_volts: 0.195 })).toBeNull();
+    expect(numericResolutionBlocker(plan, { raw_data_to_volts: '1.95e-7' })).toBeNull();
+    // An unanswered row is counted by the screen's "still need a response", not here.
+    expect(numericResolutionBlocker(plan, {})).toBeNull();
+  });
+
+  it('rejects a fraction where the schema wants a whole number', () => {
+    const plan = buildImportRepairPlan(
+      { associated_video_files: [{ name: 'v', camera_id: 0 }] },
+      'f.yml',
+      { animals: {} }
+    );
+    expect(
+      numericResolutionBlocker(plan, { 'associated_video_files[0].task_epochs': 1.5 })
+    ).toMatch(/must be a whole number; “1\.5” is not one/);
+    expect(
+      numericResolutionBlocker(plan, { 'associated_video_files[0].task_epochs': 2 })
+    ).toBeNull();
   });
 });
 
@@ -285,6 +516,29 @@ describe('benign normalizations — auto-applied and listed, never silent', () =
     expect(repaired).not.toHaveProperty('electrode groups');
     expect(repaired).toHaveProperty('ntrode_electrode_group_channel_map');
     expect(repaired).not.toHaveProperty('ntrode electrode group channel map');
+  });
+
+  // pynwb's Subject fails on any field it does not know, and no workspace editor can remove one, so
+  // the import leaves such a field out, and lists it rather than dropping it silently.
+  it('leaves out subject fields the NWB subject does not have, and lists each one', () => {
+    const model = loadCleanExport();
+    (model.subject as Record<string, unknown>).weight_unit = 'g';
+
+    const plan = buildImportRepairPlan(model, '20230622_remy_metadata.yml', { animals: {} });
+
+    expect(plan.blockers.some((b) => b.path.startsWith('subject.'))).toBe(false);
+    expect(plan.benign).toContainEqual(
+      expect.objectContaining({
+        path: 'subject.weight_unit',
+        detail: expect.stringContaining('"weight_unit"'),
+      })
+    );
+    const repaired = applyImportRepairs(model, {});
+    expect(repaired.subject).not.toHaveProperty('weight_unit');
+    expect(repaired.subject).toHaveProperty('subject_id', 'remy');
+    expect(validate(repaired).some((issue) => issue.code === 'unknown_subject_field')).toBe(false);
+    // The input is not changed.
+    expect(model.subject).toHaveProperty('weight_unit', 'g');
   });
 
   it('does not rewrite arbitrary space-containing keys', () => {
@@ -432,16 +686,19 @@ describe('benign normalizations — auto-applied and listed, never silent', () =
 });
 
 describe('import-only repair rows — scalar coercions and recording date', () => {
-  it('suggests a numeric times_period_multiplier from a legacy string with suffix text', () => {
+  it('asks for times_period_multiplier when a legacy string has suffix text (no guessed prefix)', () => {
     const model = loadNonconforming();
     model.times_period_multiplier = '1.5cd';
 
     const plan = buildImportRepairPlan(model, 'nonconforming-remy.yml', { animals: {} });
     const item = itemAt(plan.items, 'times_period_multiplier');
     expect(item).toBeDefined();
-    expect(item!.kind).toBe('suggestion');
+    // A numeric prefix is not a safe suggestion ("1,5" would read as 1), so the row is a number
+    // input showing the original value.
+    expect(item!.kind).toBe('input');
+    expect(item!.inputType).toBe('number');
     expect(item!.was).toBe('1.5cd');
-    expect(item!.suggested).toBe(1.5);
+    expect(item!.suggested).toBeUndefined();
   });
 
   it('surfaces a slash-containing session_id as a repair row, not a fix-in-file blocker', () => {
@@ -774,6 +1031,62 @@ describe('existing-animal add catalog refs — surface and resolve before import
     expect(existingAnimalCatalogResolutionBlocker(plan, { [camera!.path]: 0 })).toBeNull();
   });
 
+  it('asks about a camera that reuses an existing camera id under a different name (W3)', () => {
+    const model = loadCleanExport();
+    model.cameras = [
+      {
+        id: 0,
+        camera_name: 'sleep_box_camera',
+        meters_per_pixel: 0.0021,
+        manufacturer: 'Basler',
+        model: 'acA1300',
+        lens: 'Computar 4mm',
+      },
+    ];
+    model.tasks = [
+      {
+        task_name: 'sleep',
+        task_description: 'rest',
+        task_environment: 'sleep box',
+        camera_id: [0],
+        task_epochs: [1],
+      },
+    ];
+    model.associated_files = [];
+    model.associated_video_files = [{ name: 'sleep_video', camera_id: 0, task_epochs: 1 }];
+    const workspace = {
+      animals: {
+        remy: {
+          id: 'remy',
+          subject: { subject_id: 'remy' },
+          cameras: [{ id: 0, camera_name: 'overhead_camera', meters_per_pixel: 0.00085 }],
+          devices: { data_acq_device: model.data_acq_device },
+        },
+      },
+    };
+
+    const plan = buildImportRepairPlan(model, '06232023_remy_metadata.yml', workspace);
+    const camera = plan.items.find((item) => item.code === 'existing_animal_camera_id_taken');
+    expect(camera).toMatchObject({
+      kind: 'choice',
+      suggested: 'Bring referenced catalog entry',
+      was: 'camera id 0 (sleep_box_camera)',
+      action: { catalog: 'cameras', canBring: true, missingValue: 0, validMapValues: [0] },
+    });
+    expect(camera!.why).toMatch(/uses camera id 0 for a different camera \("overhead_camera"\)/);
+    expect(existingAnimalCatalogResolutionBlocker(plan, {})).toMatch(/Resolve Camera 0/);
+
+    // Bringing it leaves the file as it is; mapping it onto the animal's camera 0 records the
+    // mapping, so the planner keeps the day on that camera although the row keeps its own name.
+    expect(applyImportRepairs(model, { [camera!.path]: camera!.suggested })).toEqual(model);
+    const mapped = applyImportRepairs(model, { [camera!.path]: 0 }) as Record<string, unknown>;
+    expect(mapped.__importRepair).toEqual({ mappedCameraIds: [0] });
+    expect((mapped.cameras as Array<Record<string, unknown>>)[0]).toMatchObject({
+      id: 0,
+      camera_name: 'sleep_box_camera',
+    });
+  });
+
   it('maps a missing recording-system ref to an existing recording-system name', () => {
     const model = loadCleanExport();
     model.data_acq_device = [
@@ -813,6 +1126,53 @@ describe('existing-animal add catalog refs — surface and resolve before import
       data_acq_device: Array<Record<string, unknown>>;
     };
     expect(repaired.data_acq_device[0].name).toBe('ExistingRig');
+  });
+});
+
+describe('a file listing more than one recording system — ask which one the day used (W8)', () => {
+  const systems = [
+    { name: 'SpikeGadgets', system: 'SpikeGadgets', amplifier: 'Intan', adc_circuit: 'Intan' },
+    { name: 'Behavior DAQ', system: 'NI', amplifier: 'none', adc_circuit: 'NI-6008' },
+  ];
+
+  it('asks, naming every system and what happens to the others', () => {
+    const model = loadCleanExport();
+    model.data_acq_device = structuredClone(systems);
+
+    const plan = buildImportRepairPlan(model, '06222023_remy_metadata.yml', { animals: {} });
+    const row = plan.items.find((item) => item.code === 'multiple_data_acq_devices');
+    expect(row).toMatchObject({
+      path: '__importRepair.day_data_acq_device',
+      kind: 'choice',
+      was: ['SpikeGadgets', 'Behavior DAQ'],
+      suggested: 'SpikeGadgets',
+      action: { kind: 'file_choice', validValues: ['SpikeGadgets', 'Behavior DAQ'] },
+    });
+    expect(row!.why).toMatch(/exports one recording system/);
+    expect(row!.why).toMatch(/left out of this day's YAML/);
+    expect(plan.hasErrors).toBe(true);
+  });
+
+  it('accepts only a system the file lists, and records the choice without reordering them', () => {
+    const model = loadCleanExport();
+    model.data_acq_device = structuredClone(systems);
+    const plan = buildImportRepairPlan(model, '06222023_remy_metadata.yml', { animals: {} });
+    const row = plan.items.find((item) => item.code === 'multiple_data_acq_devices')!;
+
+    expect(existingAnimalCatalogResolutionBlocker(plan, { [row.path]: 'Rig C' })).toMatch(
+      /SpikeGadgets, Behavior DAQ/
+    );
+    expect(existingAnimalCatalogResolutionBlocker(plan, { [row.path]: 'Behavior DAQ' })).toBeNull();
+    expect(existingAnimalCatalogResolutionBlocker(plan, { [row.path]: row.suggested })).toBeNull();
+
+    const chosen = applyImportRepairs(model, { [row.path]: 'Behavior DAQ' });
+    expect(chosen.data_acq_device).toEqual(systems);
+    expect(chosen.__importRepair).toEqual({ day_data_acq_device: 'Behavior DAQ' });
+  });
+
+  it('does not ask when the file lists one system', () => {
+    const plan = buildImportRepairPlan(loadCleanExport(), '06222023_remy_metadata.yml', { animals: {} });
+    expect(plan.items.some((item) => item.code === 'multiple_data_acq_devices')).toBe(false);
   });
 });
 

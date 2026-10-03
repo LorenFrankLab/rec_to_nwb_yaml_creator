@@ -286,6 +286,28 @@ describe('buildDayEditorViewModel — overview field sources', () => {
     expect(f.value).toBe('');
   });
 
+  it("age: a day's own age reads \"day\"; a day saved without one shows the animal fallback it exports, with the age on its date as a suggestion", () => {
+    const { animal, day } = loadRealistic();
+    // The realistic day predates day-owned ages: it exports the animal-level "P164".
+    const inherited = fieldsByPath(animal, day)['session.age'];
+    expect(inherited.source).toBe('inherited');
+    expect(inherited.inheritedFrom).toBe('animal');
+    expect(inherited.value).toBe('P164');
+    // Born 2023-01-10, recorded 2023-06-22.
+    expect(inherited.fallbackValue).toBe('P163D');
+
+    const own = clone(day);
+    (own.session as Record<string, unknown>).age = 'P163D';
+    const set = fieldsByPath(animal, own)['session.age'];
+    expect(set.source).toBe('day');
+    expect(set.value).toBe('P163D');
+    expect(set.fallbackValue).toBeUndefined();
+
+    const none = clone(day);
+    (none.session as Record<string, unknown>).age = null;
+    expect(fieldsByPath(animal, none)['session.age']).toMatchObject({ source: 'day', value: '' });
+  });
+
   it('a field unset on both day and animal reads "default"', () => {
     const { animal, day } = loadRealistic();
     // Remove the animal baseline weight and the day weight → neither has it → default.
@@ -613,6 +635,26 @@ describe('buildDayEditorViewModel — bad channels', () => {
     expect(unmarkedThree?.marked).toBe(false);
     // No prior days → nothing is prior-bad and nothing needs ack.
     expect(vm.badChannels.marks.every((m) => !m.priorBad && !m.requiresAck)).toBe(true);
+  });
+
+  it("reads a remapped single-shank row's marks as the stored channels, not the exported electrode ids", () => {
+    // Ntrode 3 is a tetrode wired 2, 0, 3, 1. The day stores "Channel 0" (electrode 2); the merged
+    // day exports it as electrode 2, but the marks the Failed Channels section and the un-mark
+    // gate read are channels.
+    const { animal, day } = loadRealistic();
+    const remapped = clone(animal);
+    const history = remapped.configurationHistory as Array<{
+      devices: { ntrode_electrode_group_channel_map: Array<{ ntrode_id: number; map: Record<string, number> }> };
+    }>;
+    history[0].devices.ntrode_electrode_group_channel_map.find((n) => n.ntrode_id === 3)!.map = {
+      0: 2, 1: 0, 2: 3, 3: 1,
+    };
+    const marked = clone(day);
+    marked.deviceOverrides = { bad_channels: { 3: [0] } } as unknown as typeof marked.deviceOverrides;
+    const vm = buildDayEditorViewModel(wrap(remapped, marked), marked.id);
+
+    expect(vm.badChannels.marks.find((m) => m.ntrodeId === '3' && m.channel === 0)?.marked).toBe(true);
+    expect(vm.badChannels.marks.find((m) => m.ntrodeId === '3' && m.channel === 2)?.marked).toBe(false);
   });
 
   // The two-day monotonic-regression workspace is the SHARED scenario fixture (`twoDayRegression`),

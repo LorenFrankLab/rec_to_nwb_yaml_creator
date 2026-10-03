@@ -37,7 +37,7 @@ but `KeyError`s at conversion.
 | `ntrode_..._channel_map[].map` | keys = header position (0-based, local); **values = probe electrode IDs** | `len(map)` ≠ header group channel count → `ValueError`; yaml ntrodes > header → `IndexError` | values are **per-probe electrode IDs reset per group** (a 2nd tetrode is `0..3`, *not* `4..7`); multi-shank probes partition `0..N-1` across shanks |
 | `…[].electrode_group_id` / `id` | matched group↔ntrode by `==` (**not** str-coerced in `add_electrode_groups`) | type drift (str vs int) → `KeyError`/`TypeError` | — |
 | `…[].ntrode_id` | matched to header, **str-coerced** (tolerant) | missing yaml ntrode for a header ntrode → `KeyError` | — |
-| `…[].bad_channels` | `bool(electrode_index in bad_channels)` | — | **probe-local 0-based electrode indices**; out-of-range values are **silently ignored** (nothing flagged) |
+| `…[].bad_channels` | `bool(electrode_index in bad_channels)`, read from the group's **first** ntrode row only | — | **probe-local 0-based electrode indices**; out-of-range values are **silently ignored** (nothing flagged); a later row's list is **never read** |
 | `cameras[]` | array; reads `id`,`model`,`manufacturer`,`meters_per_pixel`,`lens`,`camera_name` | missing any → `KeyError` | NWB device named `camera_device {id}` (Spyglass parses the numeric id from this) |
 | `tasks[].camera_id`, `.task_epochs` | **arrays** of ints | non-numeric → `TypeError` | **no dangling-camera-id check** — a bad id is written silently |
 | `associated_files[].task_epochs` | **scalar** int (list-wrapped by loader) | — | missing `path` → logged, file created with empty content |
@@ -65,6 +65,9 @@ Channels"), not on the hardware-configuration snapshot. The export merge resolve
 into the ntrode rows it writes, so the **emitted YAML is byte-identical** for existing data — only the app's
 editing model moved to day-ownership (carry-forward to the next same-config day; monotonic, with an
 unacknowledged un-mark export-blocked). Nothing downstream (trodes_to_nwb / DANDI / Spyglass) sees a change.
+A single-shank row stores its ticked **channel keys**; the export writes the electrode id each maps to
+(identical for an identity map), and the legacy form collects every row's ticks on the group's first row
+as electrode ids (`src/domain/badChannels.ts`, "Files").
 
 ---
 

@@ -10,7 +10,10 @@
  *
  * The three dates are kept distinct throughout: the recording date (`day.date`), the setup
  * effective date (`snapshot.date`), and the entry timestamp (`provenance.enteredAt`), which is
- * never evidence of when a setup became effective.
+ * never evidence of when a setup became effective. An imported file is evidence: its first
+ * configuration is dated from the earliest file, and each imported day's pin is its own file's.
+ * A file older than the animal's recorded timeline is evidence about its own day only: its setup is
+ * pinned-only and never selected for another date (see `selectConfigurationForDate`).
  *
  * Pure; tolerant of a malformed history.
  */
@@ -64,14 +67,16 @@ function usableSnapshots(animalOrHistory: unknown): ConfigurationSnapshot[] {
 }
 
 /**
- * Choose the configuration version effective on `date`.
+ * Choose the configuration version effective on `date`. A pinned-only version (an imported
+ * back-fill, `ConfigurationSnapshot.pinnedOnly`) applies only to the days pinned to it, so it is
+ * never chosen here — neither as the version covering a date nor as the candidate before them all.
  *
  * @param animalOrHistory - The animal record (or a bare history array).
  * @param date - The recording date, `YYYY-MM-DD`.
  * @returns The choice.
  */
 export function selectConfigurationForDate(animalOrHistory: unknown, date: string): ConfigurationChoice {
-  const snapshots = usableSnapshots(animalOrHistory);
+  const snapshots = usableSnapshots(animalOrHistory).filter((s) => s.pinnedOnly !== true);
   if (snapshots.length === 0) return { version: null, covered: false, effectiveDate: null };
   // A snapshot covers the date when its KNOWN effective date is on/before it, or — for an entry-
   // stamped snapshot — when the day is on/after the entry (the setup was in place by then).
@@ -102,11 +107,12 @@ export type ConfigurationChoiceStatus =
 
 /**
  * Whether a day's pinned version is settled: its snapshot's effective date covers the recording
- * date, OR the user EXPLICITLY confirmed the choice (`provenance.configuration.source ===
- * 'explicit'`). Every other confirmation (date-selected, copied, migrated) was derived from the
- * effective dates and is only as good as they are, so it is re-evaluated here every time — correcting a
- * setup's effective date to after a day it covered un-confirms that day (its geometry is never
- * silently re-pinned; the scientist confirms or re-pins).
+ * date, OR the choice is a confirmed FACT about this recording — the user EXPLICITLY confirmed it
+ * (`provenance.configuration.source === 'explicit'`), or an import pinned the version whose
+ * geometry its file recorded (`'import'`). Every other confirmation (date-selected, copied,
+ * migrated) was derived from the effective dates and is only as good as they are, so it is
+ * re-evaluated here every time — correcting a setup's effective date to after a day it covered
+ * un-confirms that day (its geometry is never silently re-pinned; the scientist confirms or re-pins).
  *
  * @param animal - The owning animal.
  * @param day - The recording day.
@@ -118,10 +124,12 @@ export function configurationChoiceStatus(animal: unknown, day: Day): Configurat
   const snapshot = usableSnapshots(animal).find((s) => s.version === version);
   const effectiveDate = snapshot?.date ?? null;
   const choice = day.provenance?.configuration;
-  // Only a scientist's own assertion is conclusive; `copied` / `migration` / `effective-date`
-  // confirmations were all derived from effective dates and are re-derived below.
-  const explicitlyConfirmed = Boolean(choice?.confirmed) && choice?.source === 'explicit';
-  if (explicitlyConfirmed) return { status: 'confirmed', version, effectiveDate };
+  // Conclusive: a scientist's own assertion, or the imported file's own geometry (evidence about
+  // this recording, not an inference from effective dates). `copied` / `migration` /
+  // `effective-date` confirmations were all derived from effective dates and are re-derived below.
+  const conclusive =
+    Boolean(choice?.confirmed) && (choice?.source === 'explicit' || choice?.source === 'import');
+  if (conclusive) return { status: 'confirmed', version, effectiveDate };
   if (!snapshot) return { status: 'confirmed', version, effectiveDate };
   if (!isIsoDate(day.date) || snapshot.date > day.date) {
     return {

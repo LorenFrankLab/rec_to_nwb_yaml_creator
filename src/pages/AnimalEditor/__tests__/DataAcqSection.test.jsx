@@ -152,3 +152,59 @@ describe('DataAcqSection — technical defaults (animal-level)', () => {
     expect(screen.queryByText(/future capability/i)).not.toBeInTheDocument();
   });
 });
+
+describe('DataAcqSection — a system recording days use is not deleted (W12)', () => {
+  it('keeps the default while days use it by default, and says how many', async () => {
+    // Days left on "Default" export the FIRST system: deleting it would silently move them all to
+    // the next one.
+    const days = [
+      { id: 'remy-2023-06-22', date: '2023-06-22' },
+      { id: 'remy-2023-06-23', date: '2023-06-23', data_acq_device_name: '' },
+    ];
+    render(<DataAcqSection animal={animalWith([sg, np])} days={days} onFieldUpdate={onFieldUpdate} />);
+    await user.click(screen.getByRole('button', { name: /Actions for recording system SpikeGadgets_MCU/i }));
+    const del = screen.getByRole('menuitem', { name: /delete recording system SpikeGadgets_MCU/i });
+
+    expect(del).toHaveAttribute('aria-disabled', 'true');
+    expect(del).toHaveTextContent(/used by 2 recording days/i);
+    await user.click(del);
+    expect(onFieldUpdate).not.toHaveBeenCalled();
+  });
+
+  it('keeps a system a day chose, while an unused default can go (that day keeps its choice)', async () => {
+    const days = [{ id: 'remy-2023-06-22', date: '2023-06-22', data_acq_device_name: 'Neuropixels_rig' }];
+    render(<DataAcqSection animal={animalWith([sg, np])} days={days} onFieldUpdate={onFieldUpdate} />);
+
+    await user.click(screen.getByRole('button', { name: /Actions for recording system Neuropixels_rig/i }));
+    const chosen = screen.getByRole('menuitem', { name: /delete recording system Neuropixels_rig/i });
+    expect(chosen).toHaveAttribute('aria-disabled', 'true');
+    expect(chosen).toHaveTextContent(/used by 1 recording day\b/i);
+    await user.keyboard('{Escape}');
+
+    await user.click(screen.getByRole('button', { name: /Actions for recording system SpikeGadgets_MCU/i }));
+    await user.click(screen.getByRole('menuitem', { name: /delete recording system SpikeGadgets_MCU/i }));
+    expect(onFieldUpdate).toHaveBeenCalledWith('data_acq_device', [np]);
+  });
+});
+
+describe('DataAcqSection — make another system the default (W12 follow-up)', () => {
+  it('offers "Make default" for every system but the current default', async () => {
+    const onMakeDefault = vi.fn();
+    const days = [{ id: 'remy-2023-06-22', date: '2023-06-22' }];
+    render(
+      <DataAcqSection animal={animalWith([sg, np])} days={days} onFieldUpdate={onFieldUpdate} onMakeDefault={onMakeDefault} />
+    );
+
+    await user.click(screen.getByRole('button', { name: /Actions for recording system SpikeGadgets_MCU/i }));
+    expect(screen.queryByRole('menuitem', { name: /make default/i })).not.toBeInTheDocument();
+    await user.keyboard('{Escape}');
+
+    await user.click(screen.getByRole('button', { name: /Actions for recording system Neuropixels_rig/i }));
+    const item = screen.getByRole('menuitem', { name: /make Neuropixels_rig the default/i });
+    // The days now on Default are said to stay on the current default.
+    expect(item).toHaveTextContent(/1 recording day keeps SpikeGadgets_MCU/i);
+    await user.click(item);
+    expect(onMakeDefault).toHaveBeenCalledWith('Neuropixels_rig');
+    expect(onFieldUpdate).not.toHaveBeenCalled();
+  });
+});

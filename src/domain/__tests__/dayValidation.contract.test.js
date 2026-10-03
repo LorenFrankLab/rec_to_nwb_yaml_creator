@@ -17,6 +17,7 @@ import {
 import { mergeDayMetadata } from '../../state/workspaceUtils';
 import { getDataAcqDevices } from '../../state/workspaceSelectors';
 import { buildRealisticWorkspace } from '../../__tests__/fixtures/workspaceBuilders';
+import { isExportEnabled } from '../stepGate';
 
 /**
  * Reduce an issue list to the stable contract fields (code → owner/step/repair).
@@ -35,11 +36,15 @@ const contractOf = (issues) =>
   });
 
 describe('domain validation module preserves the issue list', () => {
-  it('a clean configured day produces no issues and every step is valid', () => {
+  it('a clean configured day produces no errors and every step is valid', () => {
     const { animal, day } = buildRealisticWorkspace();
     const merged = mergeDayMetadata(animal, day);
 
-    expect(validateDay(day, merged, animal)).toEqual([]);
+    // The fixture's age "P164" (as in the realistic golden export) is not an ISO 8601 duration,
+    // which DANDI rejects: an advisory, edited as this day's age, which never blocks.
+    expect(validateDay(day, merged, animal)).toEqual([
+      expect.objectContaining({ code: 'subject_age_format', severity: 'warning', ownerSurface: 'day' }),
+    ]);
     expect(computeStepStatus(day, merged, animal)).toEqual({
       overview: 'valid',
       devices: 'valid',
@@ -156,6 +161,14 @@ describe('domain validation module preserves the issue list', () => {
         repairStep: null,
       },
       {
+        // The fixture's non-ISO age (advisory; see the clean-day test above).
+        code: 'subject_age_format',
+        ownerSurface: 'day',
+        step: 'overview',
+        repairSurface: 'day',
+        repairStep: 'overview',
+      },
+      {
         code: 'dangling_camera_ref',
         ownerSurface: 'day',
         step: 'epochs',
@@ -195,5 +208,40 @@ describe('recording-filename contract in the day composer', () => {
     expect(issue).toBeDefined();
     expect(issue.severity).toBe('error');
     expect(issue.ownerSurface).toBe('animal');
+  });
+});
+
+describe('the empty video list advisory in the workspace', () => {
+  // The current trodes_to_nwb release fails on an empty associated_video_files list. A day whose
+  // epochs are all declared "no video recorded" exports [] on purpose: the advisory shows, and
+  // must not block.
+  it('shows for a day declared to have no video, without blocking its export', () => {
+    const { animal, day } = buildRealisticWorkspace();
+    const noVideoDay = {
+      ...day,
+      associated_video_files: [],
+      state: { ...day.state, videolessEpochs: [1, 2, 3, 4, 5] },
+    };
+    const merged = mergeDayMetadata(animal, noVideoDay);
+    expect(merged.associated_video_files).toEqual([]);
+
+    const issues = validateDay(noVideoDay, merged, animal);
+    expect(issues).toContainEqual(expect.objectContaining({
+      code: 'no_associated_videos',
+      severity: 'warning',
+      ownerSurface: 'day',
+    }));
+    expect(issues.filter((issue) => issue.severity === 'error')).toEqual([]);
+    expect(isExportEnabled(computeStepStatus(noVideoDay, merged, animal))).toBe(true);
+  });
+
+  it('stays hidden while epochs still need their video answer (a new, unfinished day)', () => {
+    const { animal, day } = buildRealisticWorkspace();
+    const unfinishedDay = { ...day, associated_video_files: [], state: { ...day.state, videolessEpochs: [] } };
+    const merged = mergeDayMetadata(animal, unfinishedDay);
+
+    const codes = validateDay(unfinishedDay, merged, animal).map((issue) => issue.code);
+    expect(codes).toContain('epoch_video_undeclared');
+    expect(codes).not.toContain('no_associated_videos');
   });
 });

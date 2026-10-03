@@ -3,6 +3,25 @@ import { getProbeShanks } from '../ntrode/probeCatalog';
 import { arrayDefaultValues } from '../valueList';
 
 /**
+ * The lowest positive whole numbers not in use, as many as asked for. New ntrodes take these:
+ * trodes_to_nwb looks up each of the .rec header's ntrodes (numbered 1..N) by ntrode_id, and the
+ * form shows ntrode ids read-only, so a gap left by a removed group must be filled by the next new
+ * ntrodes or it can never be closed. Ids in use are never changed.
+ *
+ * @param {Array} usedIds - The ntrode ids in use
+ * @param {number} count - How many ids are needed
+ * @returns {number[]} The ids, in increasing order
+ */
+const lowestUnusedIds = (usedIds, count) => {
+  const used = new Set(usedIds);
+  const ids = [];
+  for (let id = 1; ids.length < count; id += 1) {
+    if (!used.has(id)) ids.push(id);
+  }
+  return ids;
+};
+
+/**
  * Custom hook for managing electrode group operations including ntrode channel map synchronization
  *
  * @param {object} formData - The current form state
@@ -29,9 +48,9 @@ export function useElectrodeGroups(formData, setFormData) {
    * This function:
    * 1. Sets the device_type on the electrode group
    * 2. Generates ntrode objects (one per shank) with channel mappings
-   * 3. Removes old ntrode maps for this electrode group
-   * 4. Adds new ntrode maps to formData
-   * 5. Renumbers all ntrode_id values sequentially (1, 2, 3, ...)
+   * 3. Replaces this group's old ntrode maps with them, in the same place
+   * 4. Gives them the group's old ntrode_ids in order; extra shanks get the
+   *    lowest unused ids. Other groups' ntrodes are untouched.
    *
    * @param {Event} e - The select change event
    * @param {object} metaData - Metadata about which electrode group was modified
@@ -87,25 +106,35 @@ export function useElectrodeGroups(formData, setFormData) {
         nTrodes.push(nTrodeBase);
       });
 
-      const nTrodeMapFormData = form?.ntrode_electrode_group_channel_map?.filter(
-        (n) => n.electrode_group_id !== electrodeGroupId
+      // Replace this group's ntrodes where they are and leave every other
+      // ntrode alone. trodes_to_nwb matches the .rec header's ntrode ids to
+      // ntrode_id, so renumbering another group's ntrodes would silently file
+      // its hardware channels under a different electrode group.
+      const channelMap = form.ntrode_electrode_group_channel_map || [];
+      const isThisGroup = (n) => n.electrode_group_id === electrodeGroupId;
+      const otherNtrodes = channelMap.filter((n) => !isThisGroup(n));
+      const otherIds = otherNtrodes.map((n) => n.ntrode_id);
+
+      // The group keeps its ntrode ids, in order (skipping any another group
+      // also uses); shanks beyond them get the lowest ids no ntrode uses.
+      const keptIds = [
+        ...new Set(channelMap.filter(isThisGroup).map((n) => n.ntrode_id)),
+      ].filter((id) => Number.isInteger(id) && !otherIds.includes(id))
+        .slice(0, nTrodes.length);
+      const newIds = lowestUnusedIds(
+        [...otherIds, ...keptIds],
+        nTrodes.length - keptIds.length
       );
 
-      form.ntrode_electrode_group_channel_map = structuredClone(nTrodeMapFormData);
-
-      nTrodes.forEach((n) => {
-        form?.ntrode_electrode_group_channel_map?.push(n);
+      nTrodes.forEach((n, nIndex) => {
+        n.ntrode_id = nIndex < keptIds.length ? keptIds[nIndex] : newIds[nIndex - keptIds.length];
       });
 
-      // ntrode_id should be in increments of 1 starting at 1. This code resets
-      // ntrode_id if necessary to ensure this this.
-      //
-      // sorted by electrode_group so the UI is sorted by electrode_group and ntrode is displayed under electrode_group
-      form?.ntrode_electrode_group_channel_map
-        // ?.sort((a, b) => (a.electrode_group_id > b.electrode_group_id ? 1 : -1))
-        ?.forEach((n, nIndex) => {
-          n.ntrode_id = nIndex + 1;
-        });
+      // In place of the group's first old ntrode; a group without any yet
+      // gets them at the end.
+      const position = channelMap.findIndex(isThisGroup);
+      otherNtrodes.splice(position === -1 ? otherNtrodes.length : position, 0, ...nTrodes);
+      form.ntrode_electrode_group_channel_map = otherNtrodes;
 
       setFormData(form);
 
@@ -172,7 +201,7 @@ export function useElectrodeGroups(formData, setFormData) {
    * This function:
    * 1. Clones the electrode group with a new ID (max ID + 1)
    * 2. Finds all associated ntrode maps by electrode_group_id
-   * 3. Duplicates ntrode maps with incremented ntrode_ids
+   * 3. Duplicates ntrode maps with the lowest unused ntrode_ids
    * 4. Updates electrode_group_id on duplicated ntrodes
    * 5. Inserts cloned electrode group immediately after the original
    * 6. Updates formData state
@@ -224,16 +253,15 @@ export function useElectrodeGroups(formData, setFormData) {
         })
       );
 
-      // ntrode_id increments; find largest one and use that as a base for new nTrodes
-      let largestNtrodeElectrodeGroupId =
-        ntrodeElectrodeGroupChannelMap.length === 0
-          ? 0
-          : Math.max(...ntrodeElectrodeGroupChannelMap.map((n) => n.ntrode_id));
+      // The copies take the lowest ntrode ids no ntrode uses
+      const newIds = lowestUnusedIds(
+        ntrodeElectrodeGroupChannelMap.map((n) => n.ntrode_id),
+        nTrodes.length
+      );
 
-      nTrodes.forEach((n) => {
-        largestNtrodeElectrodeGroupId += 1;
+      nTrodes.forEach((n, nIndex) => {
         n.electrode_group_id = clonedElectrodeGroup.id;
-        n.ntrode_id = largestNtrodeElectrodeGroupId;
+        n.ntrode_id = newIds[nIndex];
       });
 
       form.ntrode_electrode_group_channel_map.push(...nTrodes);
@@ -246,9 +274,60 @@ export function useElectrodeGroups(formData, setFormData) {
     [formData, setFormData]
   );
 
+  /**
+   * Changes an electrode group's id and moves its ntrode channel maps with it
+   *
+   * The maps belong to the group through electrode_group_id, so they are
+   * re-pointed in the same update; maps left on the old id would belong to
+   * no group, or to whichever group takes that id next. Only a whole number
+   * that no other group uses is accepted, so two groups never claim the same
+   * maps; anything else leaves the form unchanged. If another group already
+   * shared the old id (e.g. an imported file), whose maps are whose cannot
+   * be told, so the maps stay where they are.
+   *
+   * @param {number} index - The index of the electrode group
+   * @param {string|number} value - The new id, as typed
+   * @returns {null} Always returns null
+   */
+  const changeElectrodeGroupId = useCallback(
+    (index, value) => {
+      const text = String(value).trim();
+      const newId = /^\d+$/.test(text) ? Number(text) : NaN;
+      const electrodeGroups = formData.electrode_groups || [];
+      const electrodeGroup = electrodeGroups[index];
+
+      if (!electrodeGroup || !Number.isSafeInteger(newId) || newId === electrodeGroup.id) {
+        return null;
+      }
+
+      const otherIds = electrodeGroups.filter((_, i) => i !== index).map((eg) => eg.id);
+
+      if (otherIds.includes(newId)) {
+        return null;
+      }
+
+      const form = structuredClone(formData);
+      const oldId = electrodeGroup.id;
+      form.electrode_groups[index].id = newId;
+
+      if (!otherIds.includes(oldId)) {
+        (form.ntrode_electrode_group_channel_map || []).forEach((n) => {
+          if (n.electrode_group_id === oldId) {
+            n.electrode_group_id = newId;
+          }
+        });
+      }
+
+      setFormData(form);
+      return null;
+    },
+    [formData, setFormData]
+  );
+
   return {
     nTrodeMapSelected,
     removeElectrodeGroupItem,
     duplicateElectrodeGroupItem,
+    changeElectrodeGroupId,
   };
 }

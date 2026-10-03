@@ -15,6 +15,7 @@ import {
   buildImportRepairPlan,
   applyImportRepairs,
   existingAnimalCatalogResolutionBlocker,
+  numericResolutionBlocker,
 } from '../../state/importRepair';
 import type {
   ImportRepairPlan,
@@ -138,6 +139,8 @@ function blockingReason(
   if (unresolvedCount > 0) {
     return `${unresolvedCount} flagged ${pluralize(unresolvedCount, 'field')} still need a response.`;
   }
+  const numericBlocker = numericResolutionBlocker(file.plan, file.resolutions);
+  if (numericBlocker) return numericBlocker;
   const catalogBlocker = existingAnimalCatalogResolutionBlocker(file.plan, file.resolutions);
   if (catalogBlocker) return catalogBlocker;
   if (importPlan.animals.length !== 1) {
@@ -161,20 +164,41 @@ function plannedCatalogAdditions(plan: ImportPlan): NonNullable<ApplyImportOptio
 }
 
 /**
+ * The camera calibration questions an animal's chosen resolution answers. Replacing deletes the
+ * existing animal, so its questions are the files' own (W4); otherwise the animal's rows take part.
+ *
+ * @param animal - The planned animal.
+ * @param resolution - The chosen resolution (absent ⇒ the default, add).
+ * @returns The conflicts to show and report.
+ */
+function cameraConflictsFor(
+  animal: ImportPlanAnimal,
+  resolution: ConflictResolution | undefined
+): CameraCalibrationConflict[] {
+  return resolution === 'replace' ? animal.replaceCameraConflicts : animal.cameraConflicts;
+}
+
+/**
  * The camera calibration conflicts of the animals this import actually WROTE — what the result
  * screen reports (the cameras a split created, and the values a unify did not import).
  *
  * @param plan - The plan that was applied.
  * @param wasWritten - Whether an animal's days were written.
+ * @param resolutionOf - The resolution each animal was written with.
  * @returns One entry per animal that had a conflict.
  */
 function writtenCameraConflicts(
   plan: ImportPlan,
-  wasWritten: (animal: ImportPlanAnimal) => boolean
+  wasWritten: (animal: ImportPlanAnimal) => boolean,
+  resolutionOf: (animal: ImportPlanAnimal) => ConflictResolution | undefined
 ): ImportResult['cameraConflicts'] {
   return plan.animals
-    .filter((animal) => animal.cameraConflicts.length > 0 && wasWritten(animal))
-    .map((animal) => ({ subjectId: animal.subjectId, conflicts: animal.cameraConflicts }));
+    .filter(wasWritten)
+    .map((animal) => ({
+      subjectId: animal.subjectId,
+      conflicts: cameraConflictsFor(animal, resolutionOf(animal)),
+    }))
+    .filter((entry) => entry.conflicts.length > 0);
 }
 
 /** Suggestions in a file the user has neither accepted nor overridden. */
@@ -313,7 +337,9 @@ export default function ImportRepair() {
     setFiles((current) =>
       current.map((file) => {
         if (scope === 'active' && file.key !== activeKey) return file;
-        const suggestions = file.plan.items.filter((item) => item.kind === 'suggestion');
+        // Only the rows still waiting for an answer: a value the user typed over a suggestion is
+        // their answer, and the button never overwrites it.
+        const suggestions = unansweredSuggestions(file);
         // Return the SAME object when there is nothing to apply: identity is what keeps this
         // file's (expensive) assessment cached.
         if (suggestions.length === 0) return file;
@@ -333,8 +359,16 @@ export default function ImportRepair() {
     const assessment = assessments[0];
     if (!assessment?.ready) return;
     // A camera calibration disagreement is a QUESTION, and F1 requires it answered before the
-    // commit, not reported after it — so this file goes through the review screen instead.
-    if (assessment.importPlan.animals.some((animal) => animal.cameraConflicts.length > 0)) {
+    // commit, not reported after it — so this file goes through the review screen instead. So does
+    // a file that differs from the existing animal it is added to (W5): the user sees the subject
+    // facts adding keeps and the recording systems it keeps apart before the day is written.
+    if (
+      assessment.importPlan.animals.some(
+        (animal) =>
+          animal.cameraConflicts.length > 0 ||
+          animal.divergences.some((divergence) => divergence.scope === 'add')
+      )
+    ) {
       openBatchPreview();
       return;
     }
@@ -435,10 +469,14 @@ export default function ImportRepair() {
       mode: 'batch',
       animalIds,
       excluded: preview.excluded,
-      cameraConflicts: writtenCameraConflicts(preview.plan, (animal) => {
-        const resolution = conflictResolutions[animal.subjectId];
-        return resolution !== 'skip' && !failedIds.has(animal.subjectId);
-      }),
+      cameraConflicts: writtenCameraConflicts(
+        preview.plan,
+        (animal) => {
+          const resolution = conflictResolutions[animal.subjectId];
+          return resolution !== 'skip' && !failedIds.has(animal.subjectId);
+        },
+        (animal) => conflictResolutions[animal.subjectId]
+      ),
       summary,
     });
     setPhase('result');
@@ -874,6 +912,10 @@ function RepairRow({ item, value, accepted, onAccept, onInput }: RepairRowProps)
   ]
     .filter(Boolean)
     .join(' — ');
+  // A suggestion can be answered with a different value. A list-valued suggestion (a scalar
+  // experimenter name wrapped into a list) cannot be retyped as one value, so it has no input.
+  const overridable = item.kind === 'suggestion' && !Array.isArray(item.suggested);
+  const inputLabel = overridable ? `${accessibleLabel} — enter a different value` : accessibleLabel;
 
   return (
     <div className={styles.row}>
@@ -916,10 +958,11 @@ function RepairRow({ item, value, accepted, onAccept, onInput }: RepairRowProps)
               }
             />
           )}
-        {(item.kind === 'input' || item.kind === 'choice') && item.inputType !== 'date' && (
+        {(item.kind === 'input' || item.kind === 'choice' || overridable) && item.inputType !== 'date' && (
           <input
             type={item.inputType === 'number' ? 'number' : 'text'}
-            aria-label={accessibleLabel}
+            aria-label={inputLabel}
+            placeholder={overridable ? 'Or enter a value' : undefined}
             value={inputValue}
             onChange={(event) =>
               onInput(
@@ -949,6 +992,11 @@ function AnimalPreviewCard({
   onResolution,
   onCameraConflictResolution,
 }: AnimalPreviewCardProps) {
+  // A note about only one resolution (see `Divergence.scope`) is shown only while it is chosen.
+  const shownScope = resolution === 'replace' ? 'replace' : 'add';
+  const divergences = animal.divergences.filter(
+    (divergence) => divergence.scope === undefined || divergence.scope === shownScope
+  );
   return (
     <section className={styles.animalCard} aria-labelledby={`preview-animal-${animal.subjectId}`}>
       <h2 id={`preview-animal-${animal.subjectId}`}>{animal.subjectId}</h2>
@@ -968,17 +1016,17 @@ function AnimalPreviewCard({
           ))}
         </ul>
       )}
-      {animal.divergences.length > 0 && (
+      {divergences.length > 0 && (
         <div className={styles.divergences} role="status">
           <strong>Differences to review</strong>
           <ul>
-            {animal.divergences.map((divergence, index) => (
+            {divergences.map((divergence, index) => (
               <li key={`${divergence.field}-${index}`}>{divergence.detail}</li>
             ))}
           </ul>
         </div>
       )}
-      {animal.cameraConflicts.map((conflict) => (
+      {cameraConflictsFor(animal, resolution).map((conflict) => (
         <CameraConflictFieldset
           key={conflict.key}
           conflict={conflict}

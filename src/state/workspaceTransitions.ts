@@ -33,8 +33,10 @@ import {
   getDayBadChannelOverrides,
   getDayDataAcqDeviceName,
   getDaySession,
+  getAnimalSubject,
 } from './workspaceSelectors';
 import { selectConfigurationForDate } from '../domain/configurationSelection';
+import { ageOnDate } from '../domain/subjectAge';
 import { stripTaskContext } from './taskCatalog';
 import {
   ensureAssociatedFileIdentity,
@@ -102,6 +104,12 @@ export interface ConfigSnapshotInput {
   description: string;
   /** Raw device payload (a devices object); `normalizeProbeConfigDevices` tolerates the contents. */
   devices: Record<string, unknown>;
+  /**
+   * Import back-fill only: a setup known only from the days it is applied to
+   * (`ConfigurationSnapshot.pinnedOnly`). It is filed BEFORE the latest entry, which stays the
+   * current configuration; it takes no `failurePolicy`.
+   */
+  pinnedOnly?: boolean;
 }
 
 /**
@@ -348,6 +356,33 @@ export function applyAnimalUpdates(animal: Animal, updates: AnimalUpdates, now: 
 }
 
 /**
+ * The recording systems a catalog write renames in place: a same-length catalog in which an entry
+ * keeps its position but changes its name, the old name gone from the new catalog and the new one
+ * absent from the old (how the recording-system editor saves an edited row). Adding, removing or
+ * reordering systems renames nothing.
+ *
+ * @param before - The current catalog (`animal.devices.data_acq_device`).
+ * @param after - The catalog being written.
+ * @returns Old name → new name.
+ */
+export function dataAcqDeviceRenames(before: unknown[], after: unknown[]): Map<string, string> {
+  const renames = new Map<string, string>();
+  if (before.length !== after.length) return renames;
+  const nameOf = (device: unknown) =>
+    device !== null && typeof device === 'object' && typeof (device as { name?: unknown }).name === 'string'
+      ? (device as { name: string }).name
+      : undefined;
+  const oldNames = new Set(before.map(nameOf));
+  const newNames = new Set(after.map(nameOf));
+  before.forEach((device, index) => {
+    const from = nameOf(device);
+    const to = nameOf(after[index]);
+    if (from && to && from !== to && !newNames.has(from) && !oldNames.has(to)) renames.set(from, to);
+  });
+  return renames;
+}
+
+/**
  * The next configuration version to allocate for an animal's history: `max(existing) + 1`
  * (or 1 for an empty/missing history). Using the max — not the count — guarantees a UNIQUE
  * version even for a non-contiguous imported/repaired history (e.g. `[1, 3]` → 4, not a
@@ -372,6 +407,10 @@ export function nextConfigurationVersion(history: unknown): number {
  * so it is unique even for a non-contiguous history. The atomic reconfiguration transition
  * {@link createSnapshotAndApplyForward} composes this with the forward-apply in one step.
  *
+ * The LAST entry is the animal's current configuration (the one `animal.devices` mirrors and an
+ * Animal Setup edit rewrites), so a `pinnedOnly` snapshot — an imported back-fill, never current —
+ * is filed just before it instead of appended.
+ *
  * @param animal - The current animal record.
  * @param config - `{ date, description, devices }` for the new snapshot.
  * @param now - Timestamp to stamp `lastModified`.
@@ -395,9 +434,13 @@ export function addConfigurationSnapshotToAnimal(
     description: config.description,
     devices: normalizeProbeConfigDevices(config.devices),
     appliedToDays: [],
+    ...(config.pinnedOnly ? { pinnedOnly: true } : {}),
   };
 
-  updated.configurationHistory = [...history, newVersion];
+  updated.configurationHistory =
+    config.pinnedOnly && history.length > 0
+      ? [...history.slice(0, -1), newVersion, history[history.length - 1]]
+      : [...history, newVersion];
   updated.lastModified = now;
   return updated;
 }
@@ -432,6 +475,9 @@ export function createSnapshotAndApplyForward(
   ownerKey?: string
 ): { animal: Animal; days: Record<string, Day>; version: number } {
   const previous = getConfigHistory(animal).slice(-1)[0];
+  if (config.pinnedOnly && config.failurePolicy) {
+    throw new Error('A pinned-only (back-filled) configuration never becomes the current setup, so it takes no hardware-change policy.');
+  }
   if (config.failurePolicy === 'same-hardware' && (!previous || hardwareIdentity(previous.devices) !== hardwareIdentity(config.devices))) {
     throw new Error('Keeping failed channels requires the same probe types, ntrode IDs and channel mapping. Choose replacement hardware if these changed.');
   }
@@ -595,6 +641,9 @@ export interface CreateDayRecordOptions {
  *    keywords, technical, session.experiment_description, the chosen recording system
  *    (`data_acq_device_name`), the optogenetics snapshot;
  *  - animal default: experimenters, so a one-day exception does not carry forward;
+ *  - derived, never copied: `session.age` — the age on THIS date from the animal's date of birth,
+ *    or `null` (no age exported) without one; never the source day's or the animal-level age, which
+ *    belong to other recordings. A caller's explicit `session.age` (an import's file age) wins;
  *  - NOT copied: `session.weight` (a measurement — shown as a dated suggestion instead),
  *    `session_id` / `session_description` (date-derived, from the caller), associated_files,
  *    associated_video_files, fs_gui_yamls, cameras_used, and every review/export state flag;
@@ -725,6 +774,12 @@ export function createDayRecord(
     fields['session.experiment_description'] = 'animal-default';
   }
 
+  // --- Age on this recording date (see the function doc). ---
+  const age = session.age !== undefined
+    ? session.age
+    : ageOnDate(getAnimalSubject(animal).date_of_birth, date);
+  if (session.age === undefined) fields['session.age'] = 'derived';
+
   // --- Recording system: preserve the source day's rig choice (finding F7). ---
   const carriedRig = carryFrom ? getDayDataAcqDeviceName(carryFrom) : undefined;
   if (carriedRig) fields.data_acq_device_name = 'copied';
@@ -758,6 +813,7 @@ export function createDayRecord(
       experiment_description: experimentDescription,
       // A MEASUREMENT: only the caller's explicit value, never the source day's.
       ...(session.weight !== undefined ? { weight: session.weight } : {}),
+      age,
     },
     experimenters,
     optogenetics,

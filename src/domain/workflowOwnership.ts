@@ -213,6 +213,7 @@ export const PATTERN_REFINEMENT_BY_CODE: Readonly<Record<string, string>> = Obje
   // including the day FsGUI (opto protocol) reference rules.
   duplicate_task_epoch: OWNERSHIP_PATTERN.TASK_EPOCH_ASSIGNMENT,
   divergent_task_identity: OWNERSHIP_PATTERN.TASK_EPOCH_ASSIGNMENT,
+  divergent_task_identity_across_days: OWNERSHIP_PATTERN.TASK_EPOCH_ASSIGNMENT,
   orphaned_fs_gui_epoch: OWNERSHIP_PATTERN.TASK_EPOCH_ASSIGNMENT,
   dangling_dio_output: OWNERSHIP_PATTERN.TASK_EPOCH_ASSIGNMENT,
   fs_gui_requires_optogenetics: OWNERSHIP_PATTERN.TASK_EPOCH_ASSIGNMENT,

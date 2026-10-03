@@ -203,6 +203,26 @@ describe('BadChannelsEditor', () => {
     expect(screen.getByText(/view channel map/i)).toBeInTheDocument();
   });
 
+  it('labels the channel map reference as channel → probe electrode', async () => {
+    // A tetrode wired 2, 0, 3, 1: channel 0 is electrode 2 (the channel-mapping modal's reading).
+    const user = userEvent.setup();
+    render(
+      <BadChannelsEditor
+        ntrodes={[{ ...mockNtrodes[0], map: { 0: 2, 1: 0, 2: 3, 3: 1 } }]}
+        badChannels={{ '0': [] }}
+        onUpdate={mockOnUpdate}
+      />
+    );
+
+    await user.click(screen.getByRole('button', { name: /view channel map/i }));
+
+    expect(screen.getAllByRole('columnheader').map((th) => th.textContent)).toEqual([
+      'Channel',
+      'Probe electrode',
+    ]);
+    expect(screen.getAllByRole('row')[1].textContent).toBe('02');
+  });
+
   it('allows multiple channels to be selected across shanks', async () => {
     const user = userEvent.setup();
 

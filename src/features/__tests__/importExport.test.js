@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { importFiles, exportAll } from '../importExport';
 import { validate } from '../../validation';
-import { encodeYaml, formatDeterministicFilename } from '../../io/yaml';
+import { encodeYaml, formatDeterministicFilename, downloadYamlFile } from '../../io/yaml';
 import { emptyFormData } from '../../valueList';
 
 /**
@@ -20,10 +20,11 @@ vi.mock('../../validation', () => ({
   validate: vi.fn(),
 }));
 
-vi.mock('../../io/yaml', () => ({
+vi.mock('../../io/yaml', async (importOriginal) => ({
   encodeYaml: vi.fn(),
   formatDeterministicFilename: vi.fn(),
-  decodeYaml: vi.fn(),
+  // importFiles reads the file with the real decoder; only the export side is mocked.
+  decodeYaml: (await importOriginal()).decodeYaml,
   downloadYamlFile: vi.fn(),
 }));
 
@@ -43,6 +44,9 @@ vi.mock('../../valueList', () => ({
   },
   genderAcronym: () => ['M', 'F', 'U', 'O'],
 }));
+
+/** Every message for an import that fails says the loaded form was left as it was. */
+const FORM_NOT_CHANGED = 'The form was not changed.';
 
 describe('importExport', () => {
   let mockAlert;
@@ -86,7 +90,9 @@ describe('importExport', () => {
         expect(result.formData).toBeNull();
       });
 
-      it('returns error and empty form data when file read fails', async () => {
+      // A file that cannot be read leaves the form as it was: the page applies `formData` only
+      // when it is set, so returning an empty form here would wipe what the user had loaded.
+      it('returns error and leaves the form alone when file read fails', async () => {
         // ARRANGE
         const file = new File(['content'], 'test.yml', { type: 'text/yaml' });
         // Mock FileReader error
@@ -97,20 +103,24 @@ describe('importExport', () => {
           }
         };
 
-        // ACT
-        const result = await importFiles(file);
+        try {
+          // ACT
+          const result = await importFiles(file);
 
-        // ASSERT
-        expect(result.success).toBe(false);
-        expect(result.error).toContain('Error reading file');
-        expect(result.formData).toEqual(emptyFormData);
-        expect(mockAlert).toHaveBeenCalledWith('Error reading file. Please try again.');
-
-        // Cleanup
-        global.FileReader = originalFileReader;
+          // ASSERT
+          expect(result.success).toBe(false);
+          expect(result.error).toContain('Error reading file');
+          expect(result.formData).toBeNull();
+          expect(mockAlert).toHaveBeenCalledTimes(1);
+          expect(mockAlert.mock.calls[0][0]).toContain('Error reading file. Please try again.');
+          expect(mockAlert.mock.calls[0][0]).toContain(FORM_NOT_CHANGED);
+        } finally {
+          // Restore even when an assertion fails, so later tests read files normally
+          global.FileReader = originalFileReader;
+        }
       });
 
-      it('returns error and empty form data when YAML parsing fails', async () => {
+      it('returns error and leaves the form alone when YAML parsing fails', async () => {
         // ARRANGE
         const invalidYaml = 'invalid: yaml: content: [unclosed';
         const file = new File([invalidYaml], 'test.yml', { type: 'text/yaml' });
@@ -121,9 +131,91 @@ describe('importExport', () => {
         // ASSERT
         expect(result.success).toBe(false);
         expect(result.error).toContain('Invalid YAML file');
-        expect(result.formData).toEqual(emptyFormData);
-        expect(mockAlert).toHaveBeenCalled();
+        expect(result.formData).toBeNull();
+        expect(mockAlert).toHaveBeenCalledTimes(1);
         expect(mockAlert.mock.calls[0][0]).toContain('Invalid YAML file');
+        expect(mockAlert.mock.calls[0][0]).toContain(FORM_NOT_CHANGED);
+      });
+
+      // An alias inside the block its anchor names makes the data loop forever.
+      it('returns error and leaves the form alone when an alias refers back to its own anchor', async () => {
+        validate.mockReturnValue([]);
+        const file = new File(['lab: Test Lab\nsubject: &s\n  self: *s\n'], 'test.yml', { type: 'text/yaml' });
+
+        const result = await importFiles(file);
+
+        expect(result.success).toBe(false);
+        expect(result.error).toContain('Invalid YAML file');
+        expect(result.error).toContain('refers to itself');
+        expect(result.formData).toBeNull();
+        expect(mockAlert).toHaveBeenCalledTimes(1);
+        expect(mockAlert.mock.calls[0][0]).toContain('refers to itself');
+        expect(mockAlert.mock.calls[0][0]).toContain(FORM_NOT_CHANGED);
+      });
+
+      // TextEdit saves a new document as rich text unless it is made plain text first.
+      it('returns error and says how to save as plain text for a rich-text (RTF) file', async () => {
+        const rtf =
+          '{\\rtf1\\ansi\\ansicpg1252\\cocoartf2761\n' +
+          '{\\fonttbl\\f0\\fswiss\\fcharset0 Helvetica;}\n' +
+          '\\f0\\fs24 \\cf0 lab: Loren Frank Lab\\\n}';
+        const file = new File([rtf], 'test.yml', { type: 'text/yaml' });
+
+        const result = await importFiles(file);
+
+        expect(result.success).toBe(false);
+        expect(result.error).toContain('rich text');
+        expect(result.formData).toBeNull();
+        expect(mockAlert).toHaveBeenCalledTimes(1);
+        expect(mockAlert.mock.calls[0][0]).toContain('Format > Make Plain Text');
+        expect(mockAlert.mock.calls[0][0]).toContain(FORM_NOT_CHANGED);
+      });
+
+      it.each([
+        ['an empty file', ''],
+        ['only a comment', '# lab: Loren Frank Lab\n'],
+        ['plain text', 'just some notes'],
+        ['a list', '- a\n- b'],
+        ['an empty mapping', '{}'],
+        ['a mapping with none of the form fields', 'name: analysis\ndependencies:\n  - python=3.11\n'],
+      ])('returns error and leaves the form alone for %s (no metadata)', async (_label, content) => {
+        // A file that got past this check would be validated; report that as a passing file so a
+        // regression fails on the result below instead of hanging.
+        validate.mockReturnValue([]);
+        const file = new File([content], 'test.yml', { type: 'text/yaml' });
+
+        const result = await importFiles(file);
+
+        expect(result.success).toBe(false);
+        expect(result.error).toContain('metadata');
+        expect(result.formData).toBeNull();
+        expect(mockAlert).toHaveBeenCalledTimes(1);
+        expect(mockAlert.mock.calls[0][0]).toContain('No metadata was found in this file');
+        expect(mockAlert.mock.calls[0][0]).toContain(FORM_NOT_CHANGED);
+      });
+
+      // An error the import does not expect (e.g. from a rule meeting an odd value) must still
+      // settle with a message: it used to leave the upload doing nothing at all.
+      it('returns error and leaves the form alone when the import fails unexpectedly', async () => {
+        validate.mockImplementation(() => {
+          throw new TypeError('Cannot read properties of null');
+        });
+        const file = new File(['lab: Test Lab\n'], 'test.yml', { type: 'text/yaml' });
+
+        const result = await Promise.race([
+          importFiles(file),
+          new Promise((resolve) => {
+            setTimeout(() => resolve('the import never finished'), 1000);
+          }),
+        ]);
+
+        expect(result).not.toBe('the import never finished');
+        expect(result.success).toBe(false);
+        expect(result.error).toContain('Cannot read properties of null');
+        expect(result.formData).toBeNull();
+        expect(mockAlert).toHaveBeenCalledTimes(1);
+        expect(mockAlert.mock.calls[0][0]).toContain('Cannot read properties of null');
+        expect(mockAlert.mock.calls[0][0]).toContain(FORM_NOT_CHANGED);
       });
     });
 
@@ -193,6 +285,30 @@ institution: Test University
         expect(result.formData.session_id).toBe('');
         expect(result.formData.experimenter_name).toEqual([]);
         expect(result.formData.subject).toEqual(emptyFormData.subject);
+      });
+
+      // PyYAML writes &id001 / *id001 when a script dumps one dict in several places. Each place
+      // must become its own object, or editing one camera would edit the other.
+      it('imports each alias of an anchored block as a separate object', async () => {
+        const yamlContent = `
+lab: Test Lab
+cameras:
+  - &camera
+    id: 0
+    model: TestCam
+  - *camera
+`;
+        validate.mockReturnValue([]);
+        const file = new File([yamlContent], 'test.yml', { type: 'text/yaml' });
+
+        const result = await importFiles(file);
+
+        expect(result.success).toBe(true);
+        expect(result.formData.cameras).toEqual([
+          { id: 0, model: 'TestCam' },
+          { id: 0, model: 'TestCam' },
+        ]);
+        expect(result.formData.cameras[1]).not.toBe(result.formData.cameras[0]);
       });
     });
 
@@ -538,6 +654,60 @@ institution: Test University
       });
     });
 
+    // pynwb's Subject accepts only its own fields, and the form has no way to remove another one,
+    // so the import leaves such a field out and says so in the summary.
+    describe('Subject fields the NWB subject does not have', () => {
+      const yamlContent = `
+lab: Test Lab
+subject:
+  subject_id: RAT001
+  species: Rattus norvegicus
+  sex: M
+  age: P90D
+  weight_unit: g
+  nickname: Remy
+`;
+
+      it('leaves them out of a clean import and names each one in the summary', async () => {
+        const file = new File([yamlContent], 'test.yml', { type: 'text/yaml' });
+        validate.mockReturnValue([]);
+
+        const result = await importFiles(file);
+
+        expect(result.success).toBe(true);
+        expect(result.formData.subject).toEqual({
+          subject_id: 'RAT001',
+          species: 'Rattus norvegicus',
+          sex: 'M',
+          age: 'P90D',
+        });
+        // Validation ran on the subject without them, so they cannot exclude the whole subject.
+        expect(validate.mock.calls[0][0].subject).not.toHaveProperty('weight_unit');
+        expect(result.importSummary.importedFields).toContain('subject');
+        expect(result.importSummary.hasExclusions).toBe(true);
+        expect(result.importSummary.excludedFields).toEqual([
+          expect.objectContaining({ field: 'subject.weight_unit', reason: expect.stringContaining('"weight_unit"') }),
+          expect.objectContaining({ field: 'subject.nickname', reason: expect.stringContaining('"nickname"') }),
+        ]);
+      });
+
+      it('lists them beside the sections a partial import leaves out', async () => {
+        const file = new File([yamlContent], 'test.yml', { type: 'text/yaml' });
+        validate.mockReturnValue([
+          { path: 'lab', code: 'pattern', severity: 'error', message: 'lab is wrong' },
+        ]);
+
+        const result = await importFiles(file);
+
+        expect(result.formData.subject).not.toHaveProperty('nickname');
+        expect(result.importSummary.excludedFields.map((entry) => entry.field)).toEqual([
+          'lab',
+          'subject.weight_unit',
+          'subject.nickname',
+        ]);
+      });
+    });
+
     describe('Progress Callback', () => {
       it('calls onProgress callback during import', async () => {
         // ARRANGE
@@ -684,6 +854,112 @@ institution: Test University
         expect(schemaError).toBeDefined();
         expect(rulesError).toBeDefined();
       });
+    });
+
+    // Errors block the download; warnings are advisory and go into ONE confirm that lists them.
+    describe('Warnings', () => {
+      const error = {
+        path: 'lab',
+        code: 'required',
+        severity: 'error',
+        message: 'lab is required',
+        instancePath: '/lab',
+      };
+      const subjectWarning = {
+        path: 'subject.subject_id',
+        code: 'placeholder_subject_id',
+        severity: 'warning',
+        message: 'Subject ID "54321" looks like a template placeholder.',
+      };
+      const cameraWarning = {
+        path: 'cameras[0].meters_per_pixel',
+        code: 'camera_meters_per_pixel_implausible',
+        severity: 'warning',
+        message: 'Confirm the tracking calibration.',
+      };
+
+      beforeEach(() => {
+        encodeYaml.mockReturnValue('encoded: yaml');
+        formatDeterministicFilename.mockReturnValue('20230622_RAT001_metadata.yml');
+      });
+
+      it('downloads without asking when there are no warnings', () => {
+        validate.mockReturnValue([]);
+        const confirmSpy = vi.spyOn(window, 'confirm');
+
+        const result = exportAll(mockModel);
+
+        expect(result.success).toBe(true);
+        expect(confirmSpy).not.toHaveBeenCalled();
+        expect(downloadYamlFile).toHaveBeenCalledTimes(1);
+      });
+
+      it('asks once, listing every warning on its own line, and downloads on OK', () => {
+        validate.mockReturnValue([cameraWarning, subjectWarning]);
+        const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
+
+        const result = exportAll(mockModel);
+
+        expect(confirmSpy).toHaveBeenCalledTimes(1);
+        const message = confirmSpy.mock.calls[0][0];
+        const lines = message.split('\n');
+        expect(lines).toContain(
+          '- Cameras 1, meters per pixel: Confirm the tracking calibration.'
+        );
+        expect(lines).toContain(
+          '- Subject, subject id: Subject ID "54321" looks like a template placeholder.'
+        );
+        expect(message).toMatch(/2 warnings/);
+        expect(result.success).toBe(true);
+        expect(result.warnings).toEqual([cameraWarning, subjectWarning]);
+        expect(downloadYamlFile).toHaveBeenCalledTimes(1);
+        expect(downloadYamlFile).toHaveBeenCalledWith('20230622_RAT001_metadata.yml', 'encoded: yaml');
+      });
+
+      it('does not download when the warnings are cancelled', () => {
+        validate.mockReturnValue([subjectWarning]);
+        const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false);
+
+        const result = exportAll(mockModel);
+
+        expect(confirmSpy).toHaveBeenCalledTimes(1);
+        expect(confirmSpy.mock.calls[0][0]).toMatch(/1 warning\b/);
+        expect(result.success).toBe(false);
+        expect(result.cancelled).toBe(true);
+        // Nothing to mark on the form: the user chose to go back, no field is in error.
+        expect(result.validationIssues).toEqual([]);
+        expect(result.yaml).toBeNull();
+        expect(encodeYaml).not.toHaveBeenCalled();
+        expect(downloadYamlFile).not.toHaveBeenCalled();
+      });
+
+      it('blocks on errors without asking, and reports only the errors', () => {
+        validate.mockReturnValue([error, subjectWarning]);
+        const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
+
+        const result = exportAll(mockModel);
+
+        expect(confirmSpy).not.toHaveBeenCalled();
+        expect(result.success).toBe(false);
+        expect(result.error).toBe('Validation failed');
+        expect(result.validationIssues).toEqual([error]);
+        expect(downloadYamlFile).not.toHaveBeenCalled();
+      });
+    });
+
+    // The legacy form adds its own rules to the shared validation (see legacyFormRules).
+    it('blocks a session with no tasks', () => {
+      validate.mockReturnValue([]);
+      const confirmSpy = vi.spyOn(window, 'confirm');
+
+      const result = exportAll({ ...mockModel, tasks: [] });
+
+      expect(result.success).toBe(false);
+      expect(result.validationIssues).toEqual([
+        expect.objectContaining({ path: 'tasks', code: 'no_tasks', severity: 'error' }),
+      ]);
+      expect(confirmSpy).not.toHaveBeenCalled();
+      expect(downloadYamlFile).not.toHaveBeenCalled();
     });
 
     describe('Edge Cases', () => {

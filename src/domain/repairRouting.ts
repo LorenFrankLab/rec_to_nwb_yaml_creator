@@ -282,6 +282,8 @@ export const SURFACE_BY_CODE: Record<string, RepairSurface> = {
   subject_id_not_recording_compatible: 'animal',
   subject_id_missing: 'animal',
   experimenter_name_shape: 'animal',
+  // Subject values pynwb rejects: the date of birth is edited on the animal profile.
+  subject_date_of_birth_format: 'animal',
   // Editable in the Day Editor (task/video/event re-picks, day bad-channel overrides,
   // session metadata, day-owned technical fields, optogenetics completeness).
   dangling_camera_ref: 'day',
@@ -298,6 +300,9 @@ export const SURFACE_BY_CODE: Record<string, RepairSurface> = {
   // Phase 4: the video-declaration readiness rule — a task epoch with no video and no "no video"
   // declaration. Day-owned, repaired in the Epochs tab (the epoch drill-in's video control).
   epoch_video_undeclared: 'day',
+  // An empty video list: the current trodes_to_nwb release fails on it (advisory; a day declared
+  // "no video recorded" exports it on purpose). The day's videos live in the Daily log.
+  no_associated_videos: 'day',
   orphaned_fs_gui_epoch: 'day',
   // FsGUI (day opto protocol) day-surface rules: a dangling DIO output reference and an
   // FsGUI block present while the animal's opto setup is incomplete/off. Both carry an
@@ -305,6 +310,7 @@ export const SURFACE_BY_CODE: Record<string, RepairSurface> = {
   dangling_dio_output: 'day',
   fs_gui_requires_optogenetics: 'day',
   divergent_task_identity: 'day',
+  divergent_task_identity_across_days: 'day',
   // Task-type catalog (Phase 8C): epoch/order/reference + migration-reconciliation problems are
   // day-owned (the Tasks & Epochs step); catalog DEFINITION uniqueness is animal-owned (above).
   dangling_task_type_ref: 'day',
@@ -330,6 +336,9 @@ export const SURFACE_BY_CODE: Record<string, RepairSurface> = {
   malformed_animal_collection: 'animal',
   missing_configuration_history: 'animal',
   missing_camera: 'day',
+  // The legacy form's "at least one task" rule (legacyFormRules). The workspace does not emit it
+  // (a day without tasks is incomplete there); listed so the code is owned like every other.
+  no_tasks: 'day',
   // Optogenetics sections live on the Animal Editor's Optogenetics step (the rule also
   // sets repairSurface:'animal' explicitly; this keeps the authoritative table in sync).
   partial_configuration: 'animal',
@@ -338,11 +347,26 @@ export const SURFACE_BY_CODE: Record<string, RepairSurface> = {
   // Optical-fiber / virus-injection coordinate reference, required by trodes_to_nwb and
   // collected only in the Animal Editor Optogenetics step (explicit repairSurface:'animal').
   missing_opto_reference: 'animal',
+  // Repeated optical-fiber / virus-injection names, or a fiber named like the excitation source:
+  // trodes_to_nwb fails on the repeated NWB name. Renamed in the Animal Editor Optogenetics step.
+  duplicate_opto_device_name: 'animal',
+  // Several virus injections: every fiber is linked to the first, and one titer per virus is kept
+  // (advisory). Edited in the Animal Editor Optogenetics step.
+  multiple_virus_injections: 'animal',
+  conflicting_virus_titers: 'animal',
+  // A virus injection hemisphere other than left/right (trodes_to_nwb raises a ValueError).
+  invalid_injection_hemisphere: 'animal',
   // No editable in-app target — read-only identity (slash ids). The explanatory
   // message states the remedy (recreate the animal); a "Fix in …" button would
   // dead-end on a disabled control.
   subject_id_slash: 'none',
   session_id_slash: 'none',
+  // Subject values pynwb rejects. The shared rule marks them 'none' (the legacy form has no editor);
+  // the workspace composer re-routes them (domain/subjectValueRepairs): a stored unknown field,
+  // strain or age__reference is removed from the animal, an age is edited on the recording day.
+  unknown_subject_field: 'animal',
+  subject_value_type: 'animal',
+  subject_age_format: 'day',
 };
 
 /**

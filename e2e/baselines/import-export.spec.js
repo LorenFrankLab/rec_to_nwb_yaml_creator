@@ -79,9 +79,9 @@ const importYaml = async (page, fixturePath, settleMs = 500) => {
 };
 
 // The pinned upstream trodes_to_nwb sample ships `subject_id: "54321"`, which the app flags as a
-// template placeholder (`placeholder_subject_id`) and refuses to export. That is correct behavior,
-// so the export smoke tests below upload the fixture BYTE FOR BYTE and then correct that one field
-// in the form, exactly as a user would, rather than uploading a doctored copy of the fixture.
+// template placeholder (`placeholder_subject_id`, a warning). The export smoke tests below upload the
+// fixture BYTE FOR BYTE and then correct that one field in the form, exactly as a user would, rather
+// than uploading a doctored copy of the fixture.
 const setRealSubjectId = async (page, subjectId = 'sample-rat') => {
   const subjectIdInput = page.locator('#subject-subjectId');
   await expect(subjectIdInput).toBeVisible({ timeout: 5000 });
@@ -107,6 +107,10 @@ const exportYaml = async (page) => {
     })),
   );
   expect(invalidFields, 'the imported YAML should satisfy legacy form validation').toEqual([]);
+  // The sample upload leaves out associated_files (two rows share one path), and once the subject
+  // id is corrected the download has no warnings, so no dialog appears today. If a warning does
+  // appear, the download asks once to confirm it: accept, as a user who has read it would.
+  page.once('dialog', (dialog) => dialog.accept());
   return await waitForDownload(page, async () => {
     await downloadButton.click();
     await page.waitForTimeout(500);
@@ -282,7 +286,7 @@ test.describe('BASELINE: Import/Export Workflow', () => {
     const filename = download.suggestedFilename();
     console.log(`Exported filename: ${filename}`);
 
-    // Document filename format (should be: mmddYYYY_subjectid_metadata.yml)
+    // Document filename format (should be: {YYYYMMDD}_{subject_id}_metadata.yml)
     // NOTE: If input file has placeholder value, it's used literally
     expect(filename).toMatch(/.+_.+_metadata\.yml/);
   });

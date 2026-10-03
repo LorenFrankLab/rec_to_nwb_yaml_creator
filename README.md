@@ -12,16 +12,17 @@ You can get the link for this page at - https://lorenfranklab.github.io/rec_to_n
 
 ## Importing existing YAML files
 
-If you already have `{mmddYYYY}_{subject}_metadata.yml` files (for example, from previous recording
-sessions), you can bring them straight into the workspace instead of re-entering them by hand. Use
+If you already have `{YYYYMMDD}_{subject}_metadata.yml` files (for example, from previous recording
+sessions; files named `{mmddYYYY}_{subject}_metadata.yml` by earlier versions of this app work too), you
+can bring them straight into the workspace instead of re-entering them by hand. Use
 the **Import YAML…** button on the Animal Workspace (it appears beside **+ New Animal**, and beside
 **Create Animal** in the empty state).
 
 What it does:
 
 - **Each file becomes a recording day, grouped into animals by subject id.** The recording date is
-  read from the file name (`{mmddYYYY}_{subject}_metadata.yml`), or from the `session_id` if the file
-  name doesn't carry it.
+  read from the file name (`{YYYYMMDD}_{subject}_metadata.yml` or `{mmddYYYY}_{subject}_metadata.yml`),
+  or from the `session_id` if the file name doesn't carry it.
 - **Configuration differences across dates become hardware-configuration versions.** If a subject's
   files describe different electrode configurations on different dates, the import creates a numbered
   configuration version for each distinct configuration (version 1 = earliest), and pins each day to

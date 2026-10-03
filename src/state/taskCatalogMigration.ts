@@ -17,27 +17,52 @@
  * Non-destructive (the migration framework's invariant): the input is never mutated, inline tasks
  * are removed only because they are fully reconstructable from `taskTypes` + `taskInstances` (a
  * conflicting day's original definition is preserved in its reconciliation record), and `task_epochs`
- * — the only genuinely per-day task data — always survives on the instance.
+ * — the only genuinely per-day task data — always survives on the instance. A day is converted ONCE,
+ * under the animal that owns it ({@link daysByOwner}); when corrupted day lists leave it without a
+ * single owner, it keeps its inline `tasks` instead.
  */
 
 import { deriveAnimalTaskCatalog } from './taskCatalog';
 import type { TaskDefinitionReconciliation } from './workspaceTypes';
 import { isRecord as isPlainRecord } from '../utils/records';
 
-/** The ordered day ids belonging to an animal: its `days` index, else days matching its `id`. */
-function collectAnimalDayIds(
-  animal: Record<string, unknown>,
+/**
+ * The store keys of the days whose tasks each animal catalogues, by animal store key. A day goes to
+ * the animal its record names (`animalId`) when that animal's `days` index lists it (or that index is
+ * corrupt, not a list); a record naming no animal goes to the ONE animal that lists it, the index
+ * being the authority as at runtime. Any other day (listed only by an animal it does not name, naming
+ * an animal that does not exist, or naming none while several list it) goes to no animal and keeps
+ * its inline `tasks`: they export unchanged under whichever animal it ends up with, and the Day
+ * Editor catalogues them once its ownership is repaired. Each day goes to at most one animal, so no
+ * later pass can find its inline tasks already moved and overwrite its instances with nothing.
+ */
+function daysByOwner(
+  animals: Record<string, unknown>,
   days: Record<string, unknown>
-): string[] {
-  if (Array.isArray(animal.days)) {
-    return animal.days.filter((id): id is string => typeof id === 'string');
+): Map<string, string[]> {
+  const listedBy = new Map<string, string[]>();
+  for (const [animalKey, animal] of Object.entries(animals)) {
+    if (!isPlainRecord(animal) || !Array.isArray(animal.days)) continue;
+    for (const dayId of new Set(animal.days)) {
+      if (typeof dayId === 'string') listedBy.set(dayId, [...(listedBy.get(dayId) ?? []), animalKey]);
+    }
   }
-  const animalId = typeof animal.id === 'string' ? animal.id : undefined;
-  if (animalId === undefined) return [];
-  return Object.keys(days).filter((id) => {
-    const day = days[id];
-    return isPlainRecord(day) && day.animalId === animalId;
-  });
+
+  const owned = new Map<string, string[]>();
+  for (const [dayId, day] of Object.entries(days)) {
+    if (!isPlainRecord(day)) continue;
+    const listers = listedBy.get(dayId) ?? [];
+    const declared = day.animalId;
+    let owner: string | undefined;
+    if (declared == null) {
+      owner = listers.length === 1 ? listers[0] : undefined;
+    } else if (typeof declared === 'string') {
+      const named = animals[declared];
+      if (isPlainRecord(named) && (!Array.isArray(named.days) || listers.includes(declared))) owner = declared;
+    }
+    if (owner !== undefined) owned.set(owner, [...(owned.get(owner) ?? []), dayId]);
+  }
+  return owned;
 }
 
 /**
@@ -54,16 +79,17 @@ export function migrateTasksToCatalogV2ToV3(workspace: object): object {
   const next = structuredClone(workspace) as Record<string, unknown>;
   const animals = isPlainRecord(next.animals) ? next.animals : {};
   const days = isPlainRecord(next.days) ? next.days : {};
+  const owned = daysByOwner(animals, days);
 
-  for (const animal of Object.values(animals)) {
+  for (const [animalKey, animal] of Object.entries(animals)) {
     if (!isPlainRecord(animal)) continue;
 
-    const dayIds = collectAnimalDayIds(animal, days);
-    const dayRecords = dayIds
-      .map((id) => days[id])
-      .filter(isPlainRecord);
-
-    const { taskTypes, instancesByDayId, reconciliations } = deriveAnimalTaskCatalog(dayRecords);
+    // Derived under each day's STORE key (what the index holds), not its own `id` field, so records
+    // with a missing or repeated `id` cannot receive one another's tasks.
+    const dayIds = owned.get(animalKey) ?? [];
+    const { taskTypes, instancesByDayId, reconciliations } = deriveAnimalTaskCatalog(
+      dayIds.map((dayId) => ({ ...(days[dayId] as Record<string, unknown>), id: dayId }))
+    );
     animal.taskTypes = taskTypes;
 
     // Group reconciliations by their source day (dropping the redundant `dayId` — the record's
@@ -77,8 +103,8 @@ export function migrateTasksToCatalogV2ToV3(workspace: object): object {
       reconByDay.set(dayId, list);
     }
 
-    for (const day of dayRecords) {
-      const dayId = typeof day.id === 'string' ? day.id : '';
+    for (const dayId of dayIds) {
+      const day = days[dayId] as Record<string, unknown>;
       day.taskInstances = instancesByDayId[dayId] ?? [];
       delete day.tasks;
 

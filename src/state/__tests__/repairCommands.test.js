@@ -65,6 +65,22 @@ describe('applyRepairCommand — animal-collection resets', () => {
   });
 });
 
+describe('applyRepairCommand — remove a stored subject field', () => {
+  it('removeSubjectField deletes the named subject fact (undefined = remove)', () => {
+    const c = ctx();
+    applyRepairCommand({ type: 'removeSubjectField', field: 'notes' }, c);
+    expect(c.actions.updateAnimal).toHaveBeenCalledWith('remy', { subject: { notes: undefined } });
+  });
+
+  it('never removes a schema-required subject field, and needs a field', () => {
+    for (const field of ['species', 'subject_id', 'date_of_birth', 'weight', undefined, '']) {
+      const c = ctx();
+      applyRepairCommand({ type: 'removeSubjectField', field }, c);
+      expect(c.actions.updateAnimal).not.toHaveBeenCalled();
+    }
+  });
+});
+
 describe('applyRepairCommand — device-override resets (partial, read current day)', () => {
   it('resetDeviceOverrides clears all overrides to an empty record', () => {
     const c = ctx({ day: { deviceOverrides: 'corrupt' } });
@@ -249,6 +265,7 @@ describe('applyRepairCommand — robustness', () => {
       removeDeviceOverrideKey: { key: 'electrode_groups' },
       removeBadChannelOverrideKey: { key: '1' },
       acknowledgeBadChannelRemovals: { acks: { 1: [0] } },
+      removeSubjectField: { field: 'notes' },
     };
     for (const type of REPAIR_COMMAND_TYPES) {
       const c = ctx({ day: { deviceOverrides: { electrode_groups: 'x', bad_channels: { 1: [0] } } } });
@@ -269,6 +286,7 @@ describe('applyRepairCommand — robustness', () => {
       removeDeviceOverrideKey: { key: 'electrode_groups' },
       removeBadChannelOverrideKey: { key: '1' },
       acknowledgeBadChannelRemovals: { acks: { 1: [0] } },
+      removeSubjectField: { field: 'notes' },
     };
     for (const type of REPAIR_COMMAND_TYPES) {
       const c = ctx({ animalId: undefined, dayId: undefined, day: undefined, animal: undefined });

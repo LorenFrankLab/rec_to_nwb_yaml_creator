@@ -5,7 +5,13 @@ import {
   getCurrentTimestamp,
   getCurrentDate,
 } from './workspaceUtils';
-import { getAnimalDayIds, getConfigHistory, getAnimalNtrodeMaps } from './workspaceSelectors';
+import {
+  getAnimalDayIds,
+  getConfigHistory,
+  getAnimalNtrodeMaps,
+  getDataAcqDevices,
+  getDayDataAcqDeviceName,
+} from './workspaceSelectors';
 import { normalizeDevices } from '../utils/deviceNormalization';
 import { nearestEarlierDayId } from '../domain/dayCarryPolicy';
 import { subjectIdCollision } from '../domain/animalCreation';
@@ -21,6 +27,7 @@ import {
   nextConfigurationVersion,
   sortDayIdsByDate,
   withoutUnknownFacts,
+  dataAcqDeviceRenames,
 } from './workspaceTransitions';
 import type { AnimalUpdates, ConfigSnapshotInput, DayUpdates } from './workspaceTransitions';
 import type {
@@ -259,12 +266,29 @@ export function createWorkspaceActions({
         // latest configuration snapshot (see workspaceTransitions.applyAnimalUpdates).
         const updated = applyAnimalUpdates(prev.animals[animalId], updates, getCurrentTimestamp());
 
+        // A recording system renamed in place: the days that name it follow the rename in this same
+        // write, or their export would fail on a name the catalog no longer has.
+        const renames = updates.data_acq_device
+          ? dataAcqDeviceRenames(getDataAcqDevices(prev.animals[animalId]), updates.data_acq_device)
+          : new Map<string, string>();
+        let days = prev.days;
+        if (renames.size > 0) {
+          days = { ...prev.days };
+          for (const dayId of getAnimalDayIds(updated)) {
+            const day = prev.days[dayId];
+            const renamed = day ? renames.get(getDayDataAcqDeviceName(day) ?? '') : undefined;
+            if (!day || renamed === undefined || (day.animalId != null && day.animalId !== animalId)) continue;
+            days[dayId] = applyDayUpdates(day, { data_acq_device_name: renamed }, updated.lastModified);
+          }
+        }
+
         return {
           ...prev,
           animals: {
             ...prev.animals,
             [animalId]: updated,
           },
+          days,
           lastModified: updated.lastModified,
         };
       });
@@ -599,6 +623,54 @@ export function createWorkspaceActions({
     },
 
     /**
+     * Make another recording system the animal's DEFAULT (the first catalog entry, which new days
+     * and every day that names no system export). The days that rely on the current default are
+     * first set to name it, so their exports stay exactly as they were; then the chosen system
+     * moves to the front. One commit, so no state in between is ever observed.
+     *
+     * @param animalId - Animal identifier.
+     * @param name - The catalog name of the system that becomes the default.
+     * @throws If the animal does not exist.
+     */
+    makeDataAcqDeviceDefault: (animalId: string, name: string) => {
+      commitWorkspace((prev) => {
+        const animal = prev.animals[animalId];
+        if (!animal) throw new Error(`Animal "${animalId}" not found`);
+        const catalog = getDataAcqDevices(animal);
+        const index = catalog.findIndex((device) => device?.name === name);
+        const currentName = catalog[0]?.name;
+        // Already the default, not in the catalog, or a default without a name to pin days to.
+        if (index <= 0 || typeof currentName !== 'string' || currentName === '') return prev;
+        const now = getCurrentTimestamp();
+        const nextDays = { ...prev.days };
+        for (const dayId of getAnimalDayIds(animal)) {
+          const day = prev.days[dayId];
+          if (!day || (day.animalId != null && day.animalId !== animalId)) continue;
+          if (getDayDataAcqDeviceName(day)) continue; // already names its system
+          nextDays[dayId] = applyDayUpdates(
+            day,
+            {
+              data_acq_device_name: currentName,
+              provenance: { fields: { data_acq_device_name: 'animal-default' } },
+            },
+            now
+          );
+        }
+        const updatedAnimal = applyAnimalUpdates(
+          animal,
+          { data_acq_device: [catalog[index], ...catalog.filter((_, i) => i !== index)] },
+          now
+        );
+        return {
+          ...prev,
+          animals: { ...prev.animals, [animalId]: updatedAnimal },
+          days: nextDays,
+          lastModified: now,
+        };
+      });
+    },
+
+    /**
      * Acknowledge that a download receipt's YAML bytes were durably stored — for THAT receipt only
      * (matched by content hash + export time). A metadata-only write: it touches no modification
      * stamp, so an edit made while the store was still writing keeps reading "Changed since
@@ -821,6 +893,49 @@ export function createWorkspaceActions({
           ...prev,
           animals: updatedAnimals,
           days: updatedDays,
+          lastModified: getCurrentTimestamp(),
+        };
+      });
+    },
+
+    /**
+     * Puts back a day that {@link deleteDay} removed (the Undo of a delete). The captured record is
+     * restored VERBATIM (deep-cloned): every field, including the ones `createDay` would derive from
+     * the animal's current defaults — the day's own team and optogenetics, its provenance (review
+     * flags, a confirmed setup choice), data folder, download receipt and timestamps — so the day
+     * exports exactly what it did before. Its id goes back into the owner's index, date-sorted as
+     * `createDay` keeps it.
+     *
+     * @param dayId - The deleted day's store key.
+     * @param record - The day record captured before the delete.
+     * @param ownerAnimalId - The animal the day was deleted from (default: the record's `animalId`).
+     * @throws If the owning animal no longer exists, or a day with this id exists again (a day created
+     *   on the same date during the undo window gets the same `animalId-date` id). Nothing is changed
+     *   then.
+     */
+    restoreDeletedDay: (dayId: string, record: Workspace['days'][string], ownerAnimalId?: string) => {
+      commitWorkspace((prev) => {
+        const ownerKey = ownerAnimalId ?? record.animalId;
+        const animal = prev.animals[ownerKey];
+        if (!animal) {
+          throw new Error(`Animal "${ownerKey}" not found`);
+        }
+        if (prev.days[dayId]) {
+          throw new Error(`Day "${dayId}" already exists`);
+        }
+
+        const dayIds = getAnimalDayIds(animal);
+        const nextDays = { ...prev.days, [dayId]: structuredClone(record) };
+        return {
+          ...prev,
+          animals: {
+            ...prev.animals,
+            [ownerKey]: {
+              ...animal,
+              days: sortDayIdsByDate([...dayIds.filter((id) => id !== dayId), dayId], nextDays),
+            },
+          },
+          days: nextDays,
           lastModified: getCurrentTimestamp(),
         };
       });

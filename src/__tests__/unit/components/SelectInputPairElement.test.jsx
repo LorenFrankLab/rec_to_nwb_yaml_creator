@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import SelectInputPairElement, { splitTextNumber } from '../../../element/SelectInputPairElement';
 
@@ -81,6 +81,82 @@ describe('SelectInputPairElement', () => {
 
       expect(screen.getByRole('combobox')).toHaveValue('Dout');
       expect(screen.getByRole('spinbutton')).toHaveValue(5);
+    });
+
+    // Importing another file changes the stored value without remounting the row, so the select
+    // and input must follow the stored value instead of keeping what they showed first.
+    it('shows a new stored value, e.g. after another file is imported', () => {
+      const { rerender } = render(
+        <SelectInputPairElement {...defaultProps} defaultValue="" value="Din1" />
+      );
+      rerender(<SelectInputPairElement {...defaultProps} defaultValue="" value="Dout9" />);
+
+      expect(screen.getByRole('combobox')).toHaveValue('Dout');
+      expect(screen.getByRole('spinbutton')).toHaveValue(9);
+    });
+
+    it('saves the new stored value, not the old one, when the field is left', () => {
+      const onBlur = vi.fn();
+      const { rerender } = render(
+        <SelectInputPairElement {...defaultProps} defaultValue="" value="Din1" onBlur={onBlur} />
+      );
+      rerender(
+        <SelectInputPairElement {...defaultProps} defaultValue="" value="Dout9" onBlur={onBlur} />
+      );
+
+      fireEvent.blur(screen.getByRole('spinbutton'));
+
+      expect(onBlur).toHaveBeenCalledTimes(1);
+      expect(onBlur.mock.calls[0][0].target.value).toBe('Dout9');
+    });
+
+    it('keeps typing that is not saved yet when the stored value has not changed', async () => {
+      const user = userEvent.setup();
+      const { rerender } = render(
+        <SelectInputPairElement {...defaultProps} defaultValue="" value="Din1" />
+      );
+      const input = screen.getByRole('spinbutton');
+      await user.clear(input);
+      await user.type(input, '7');
+
+      rerender(<SelectInputPairElement {...defaultProps} defaultValue="" value="Din1" />);
+
+      expect(input).toHaveValue(7);
+    });
+
+    // The fields follow the stored text, not only its parsed type and number: a file that corrects
+    // "Din01" to "Din1" must show "Din1", and leaving the field must save it. (A browser keeps a
+    // typed "01" in a number input; fireEvent sets it directly, as userEvent would strip the 0.)
+    it('shows a new stored value that parses the same as the one shown', () => {
+      const onBlur = vi.fn();
+      const props = { ...defaultProps, defaultValue: '', onBlur };
+      const { rerender } = render(<SelectInputPairElement {...props} value="Din1" />);
+      const input = screen.getByRole('spinbutton');
+      fireEvent.change(input, { target: { value: '01' } });
+      fireEvent.blur(input);
+      expect(onBlur.mock.lastCall[0].target.value).toBe('Din01');
+      rerender(<SelectInputPairElement {...props} value="Din01" />);
+
+      rerender(<SelectInputPairElement {...props} value="Din1" />);
+      expect(input.value).toBe('1');
+
+      fireEvent.blur(input);
+      expect(onBlur.mock.lastCall[0].target.value).toBe('Din1');
+    });
+
+    // Once saved, the field keeps showing what was typed, which is the value that was saved.
+    it('keeps showing a saved value as it was typed', () => {
+      const onBlur = vi.fn();
+      const props = { ...defaultProps, defaultValue: '', onBlur };
+      const { rerender } = render(<SelectInputPairElement {...props} value="Din2" />);
+      const input = screen.getByRole('spinbutton');
+      fireEvent.change(input, { target: { value: '01' } });
+      fireEvent.blur(input);
+      expect(onBlur.mock.lastCall[0].target.value).toBe('Din01');
+
+      rerender(<SelectInputPairElement {...props} value="Din01" />);
+
+      expect(input.value).toBe('01');
     });
   });
 

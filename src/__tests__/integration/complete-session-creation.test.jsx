@@ -45,6 +45,14 @@ const LIST_PLACEHOLDERS = {
   keywords: 'Type Keywords', // Default computed from title
 };
 
+/** trodes_to_nwb needs at least one task, so every exported session gets this one. */
+const MINIMAL_TASK = {
+  name: 'sleep',
+  description: 'Rest session',
+  environment: 'home cage',
+  epochs: [1],
+};
+
 describe('End-to-End Session Creation Workflow', () => {
   let mockBlob;
   let mockBlobUrl;
@@ -69,6 +77,10 @@ describe('End-to-End Session Creation Workflow', () => {
 
     // Mock window.alert
     global.window.alert = vi.fn();
+
+    // The sessions built here list no video files, which the download warns about (trodes_to_nwb
+    // fails on an empty video list); accept that warning so the file downloads.
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
   });
 
   afterEach(() => {
@@ -181,6 +193,9 @@ describe('End-to-End Session Creation Workflow', () => {
     const deviceAdcInput = screen.getByPlaceholderText(/type to find an adc circuit/i);
     expect(deviceAdcInput).toHaveValue('Intan');
 
+    // A task (trodes_to_nwb needs at least one)
+    await addTask(user, screen, MINIMAL_TASK);
+
     // All required fields are now filled - ready to export!
 
     // ACT - Export the minimal session
@@ -218,6 +233,9 @@ describe('End-to-End Session Creation Workflow', () => {
     await waitFor(() => {
       expect(mockBlob).not.toBeNull();
     });
+    // ...after one confirm that listed the warnings (no video files here)
+    expect(window.confirm).toHaveBeenCalledTimes(1);
+    expect(window.confirm).toHaveBeenCalledWith(expect.stringContaining('No video files are listed'));
 
     // Parse exported YAML
     const exportedYaml = mockBlob.content[0];
@@ -398,6 +416,7 @@ describe('End-to-End Session Creation Workflow', () => {
 
     // ACT - Fill required fields first
     await fillRequiredFields(user, screen);
+    await addTask(user, screen, MINIMAL_TASK);
 
     // Add second experimenter using ListElement pattern
     await addListItem(user, screen, LIST_PLACEHOLDERS.experimenter_name, 'Guidera, Jennifer');
@@ -436,6 +455,7 @@ describe('End-to-End Session Creation Workflow', () => {
 
     // ACT - Fill required fields first
     await fillRequiredFields(user, screen);
+    await addTask(user, screen, MINIMAL_TASK);
 
     // Update subject fields with specific test data
     const subjectIdInputs = screen.getAllByLabelText(/subject id/i);
@@ -496,6 +516,7 @@ describe('End-to-End Session Creation Workflow', () => {
 
     // ACT - Fill required fields (includes 1 data_acq_device with defaults)
     await fillRequiredFields(user, screen);
+    await addTask(user, screen, MINIMAL_TASK);
 
     // Verify default values from fillRequiredFields
     const deviceNameInput = screen.getByPlaceholderText(/typically a number/i);
@@ -541,6 +562,7 @@ describe('End-to-End Session Creation Workflow', () => {
 
     // ACT - Fill required fields first
     await fillRequiredFields(user, screen);
+    await addTask(user, screen, MINIMAL_TASK);
 
     // HYPOTHESIS TEST: Wait for React state to fully settle after fillRequiredFields
     await waitFor(() => {
@@ -671,6 +693,7 @@ describe('End-to-End Session Creation Workflow', () => {
 
     // ACT - Fill required fields first
     await fillRequiredFields(user, screen);
+    await addTask(user, screen, MINIMAL_TASK);
 
     // Add behavioral events
     const addBehavioralEventButton = screen.getByTitle(/Add behavioral_events/i);
@@ -738,6 +761,7 @@ describe('End-to-End Session Creation Workflow', () => {
 
     // ACT - Fill required fields first
     await fillRequiredFields(user, screen);
+    await addTask(user, screen, MINIMAL_TASK);
 
     // Add electrode group using helper
     await addElectrodeGroup(user, screen, {
@@ -794,6 +818,7 @@ describe('End-to-End Session Creation Workflow', () => {
 
     // ACT - Fill required fields first
     await fillRequiredFields(user, screen);
+    await addTask(user, screen, MINIMAL_TASK);
 
     // Add electrode group using helper (device type triggers ntrode generation)
     await addElectrodeGroup(user, screen, {

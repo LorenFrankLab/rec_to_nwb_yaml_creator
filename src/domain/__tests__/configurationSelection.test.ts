@@ -69,6 +69,37 @@ describe('selectConfigurationForDate — entry-stamped version 1', () => {
   });
 });
 
+describe('selectConfigurationForDate — pinned-only (back-filled) versions', () => {
+  // v3 / v4 are imported back-fills recorded on 2023-05-10 / 2023-06-10 with other hardware: each
+  // applies to the days pinned to it and is never chosen for another date — neither as the covering
+  // version nor as the candidate for a date before the timeline.
+  const backfilled = {
+    configurationHistory: [
+      { version: 3, date: '2023-05-10', pinnedOnly: true, description: 'imported', devices: {}, appliedToDays: [] },
+      { version: 4, date: '2023-06-10', pinnedOnly: true, description: 'imported', devices: {}, appliedToDays: [] },
+      ...animal.configurationHistory,
+    ],
+  };
+
+  it('a date on the timeline keeps the setup effective then', () => {
+    expect(selectConfigurationForDate(backfilled, '2023-06-10')).toEqual({ version: 1, covered: true, effectiveDate: '2023-06-01' });
+    expect(selectConfigurationForDate(backfilled, '2023-06-25').version).toBe(1);
+    expect(selectConfigurationForDate(backfilled, '2023-07-05').version).toBe(2);
+  });
+
+  it('a date before the timeline gets the earliest TIMELINE version as its unconfirmed candidate', () => {
+    expect(selectConfigurationForDate(backfilled, '2023-05-20')).toEqual({ version: 1, covered: false, effectiveDate: '2023-06-01' });
+    expect(selectConfigurationForDate(backfilled, '2023-05-01')).toEqual({ version: 1, covered: false, effectiveDate: '2023-06-01' });
+  });
+
+  it('a day the import pinned to it is confirmed, and a day on the timeline is not superseded by it', () => {
+    const imported = { ...day('2023-06-10', 4), provenance: { configuration: { source: 'import', confirmed: true } } } as unknown as Day;
+    expect(configurationChoiceStatus(backfilled, imported)).toMatchObject({ status: 'confirmed', version: 4, effectiveDate: '2023-06-10' });
+    const auto = { ...day('2023-06-25', 1), provenance: { configuration: { source: 'effective-date', confirmed: true } } } as unknown as Day;
+    expect(configurationChoiceStatus(backfilled, auto)).toMatchObject({ status: 'confirmed', version: 1 });
+  });
+});
+
 describe('configurationChoiceStatus', () => {
   it('is confirmed when the pinned version’s effective date covers the recording date', () => {
     expect(configurationChoiceStatus(animal, day('2023-06-25', 1))).toMatchObject({ status: 'confirmed', version: 1 });
@@ -92,6 +123,17 @@ describe('configurationChoiceStatus', () => {
     expect(configurationChoiceStatus(animal, day('2023-05-20', 1, true))).toMatchObject({ status: 'confirmed' });
     const explicit = { ...day('2023-05-20', 1, true), provenance: { configuration: { source: 'explicit', confirmed: true } } } as unknown as Day;
     expect(configurationChoiceStatus(animal, explicit)).toMatchObject({ status: 'confirmed' });
+  });
+
+  it('an IMPORT pin is conclusive: the imported file itself states the geometry the day was recorded with', () => {
+    const imported = (date: string, version: number, confirmed: boolean) =>
+      ({ ...day(date, version), provenance: { configuration: { source: 'import', confirmed } } }) as unknown as Day;
+    const stamped = { configurationHistory: [{ version: 1, date: '2026-09-14', effectiveDateKnown: false, description: 'Initial configuration', devices: {}, appliedToDays: [] }] };
+    expect(configurationChoiceStatus(stamped, imported('2023-06-25', 1, true))).toMatchObject({ status: 'confirmed', version: 1 });
+    // A file's setup that a later reconfiguration's effective date now covers stays the file's.
+    expect(configurationChoiceStatus(animal, imported('2023-07-05', 1, true))).toMatchObject({ status: 'confirmed', version: 1 });
+    // An import record that never confirmed its pin is still judged by the effective dates.
+    expect(configurationChoiceStatus(stamped, imported('2023-06-25', 1, false))).toMatchObject({ status: 'unconfirmed', reason: 'unknown-period' });
   });
 
   it('an AUTOMATIC (date-selected) confirmation is re-evaluated: moving v1’s effective date after the day un-confirms it', () => {

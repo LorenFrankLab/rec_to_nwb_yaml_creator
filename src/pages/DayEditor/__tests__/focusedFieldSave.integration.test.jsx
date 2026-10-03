@@ -52,6 +52,10 @@ function storedDescription(dayId) {
   return loaded?.workspace?.days?.[dayId]?.session?.session_description;
 }
 
+// The Day Editor is a lazily loaded route: the first render in a fresh worker compiles it, which
+// can take longer than findBy's 1 s default even on an idle machine.
+const DAY_EDITOR_LOAD = { timeout: 10000 };
+
 describe('focused-field save (F3)', () => {
   beforeEach(() => {
     resetDraftRegistryForTests();
@@ -73,7 +77,7 @@ describe('focused-field save (F3)', () => {
       </StoreProvider>
     );
 
-    const box = await screen.findByLabelText(/recording notes/i);
+    const box = await screen.findByLabelText(/recording notes/i, {}, DAY_EDITOR_LOAD);
     box.focus();
     fireEvent.change(box, { target: { value: 'Typed but not blurred' } });
 
@@ -96,7 +100,7 @@ describe('focused-field save (F3)', () => {
         <AppLayout />
       </StoreProvider>
     );
-    const reloaded = await screen.findByLabelText(/recording notes/i);
+    const reloaded = await screen.findByLabelText(/recording notes/i, {}, DAY_EDITOR_LOAD);
     expect(reloaded.value).toBe('Typed but not blurred');
   });
 
@@ -108,7 +112,7 @@ describe('focused-field save (F3)', () => {
         <AppLayout />
       </StoreProvider>
     );
-    const box = await screen.findByLabelText(/recording notes/i);
+    const box = await screen.findByLabelText(/recording notes/i, {}, DAY_EDITOR_LOAD);
     fireEvent.change(box, { target: { value: 'Closing the tab' } });
     expect(storedDescription(day.id)).not.toBe('Closing the tab');
     await act(async () => {
@@ -126,7 +130,7 @@ describe('focused-field save (F3)', () => {
         <AppLayout />
       </StoreProvider>
     );
-    const box = await screen.findByLabelText(/recording notes/i);
+    const box = await screen.findByLabelText(/recording notes/i, {}, DAY_EDITOR_LOAD);
     fireEvent.change(box, { target: { value: 'Paused typing' } });
     await act(async () => {
       // draft debounce (400ms)
