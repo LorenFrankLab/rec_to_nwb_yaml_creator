@@ -1085,6 +1085,13 @@ function buildValidationItems(model: ValidationModel): {
       continue;
     }
 
+    // --- date of birth the converter cannot read as a date and time (e.g. no seconds) → the user
+    // picks the date in the date row, which answers a full timestamp. ---
+    if (code === 'subject_date_of_birth_format' && path === 'subject.date_of_birth') {
+      items.push({ path, label: 'Date of birth', code, group: 'attention', kind: 'input', was, why: message, inputType: 'date' });
+      continue;
+    }
+
     // --- electrode-group location: empty/null → the user supplies a region (never auto-filled). ---
     if (code === 'empty_location' || code === 'empty_targeted_location') {
       const label = code === 'empty_location' ? 'Electrode group location' : 'Electrode group targeted location';

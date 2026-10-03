@@ -176,6 +176,20 @@ describe('AnimalProfileDialog', () => {
   it('disables save when nothing has changed (no accidental animal-wide write)', () => {
     renderOpen();
     expect(screen.getByRole('button', { name: /save profile/i })).toBeDisabled();
+    // A stored date and time the converter reads (no milliseconds or zone) is not a change either.
+    renderOpen({ animal: { ...animal, subject: { ...animal.subject, date_of_birth: '2023-01-15T00:00:00' } } });
+    expect(screen.getAllByRole('button', { name: /save profile/i })[1]).toBeDisabled();
+  });
+
+  it('re-saves a stored date of birth the converter cannot read (no seconds), even on the same date', async () => {
+    // An imported "2023-01-15T00:00" blocks export (subject_date_of_birth_format); the date picker
+    // shows the same calendar date, and saving it must write the full timestamp.
+    renderOpen({ dayCount: 1, animal: { ...animal, subject: { ...animal.subject, date_of_birth: '2023-01-15T00:00' } } });
+    expect(screen.getByLabelText(/Date of Birth/i)).toHaveValue('2023-01-15');
+    await user.click(screen.getByRole('button', { name: /save profile/i }));
+    await user.click(screen.getByRole('button', { name: /update/i }));
+
+    expect(onSave).toHaveBeenCalledWith({ date_of_birth: new Date('2023-01-15').toISOString() });
   });
 
   it('uses singular "1 recording day" copy when the animal has one day', () => {

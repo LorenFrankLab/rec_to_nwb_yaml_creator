@@ -170,6 +170,23 @@ describe('buildImportRepairPlan — flags each non-conforming field from the sha
     expect(plan.hasErrors).toBe(true);
   });
 
+  it('asks for a date of birth the converter cannot read (no seconds) in the date row, not as a fix-in-file blocker', () => {
+    const model = loadCleanExport();
+    (model.subject as Record<string, unknown>).date_of_birth = '2023-01-10T00:00';
+    const plan = buildImportRepairPlan(model, '20230622_remy_metadata.yml', { animals: {} });
+
+    expect(plan.blockers.some((b) => b.path === 'subject.date_of_birth')).toBe(false);
+    expect(itemAt(plan.items, 'subject.date_of_birth')).toMatchObject({
+      code: 'subject_date_of_birth_format',
+      kind: 'input',
+      inputType: 'date',
+      was: '2023-01-10T00:00',
+    });
+    // The date row answers `YYYY-MM-DDT00:00:00`, which the converter reads.
+    const repaired = applyImportRepairs(model, { 'subject.date_of_birth': '2023-01-10T00:00:00' });
+    expect(validate(repaired as never).filter((i) => i.severity === 'error')).toEqual([]);
+  });
+
   it('never silently drops a value: every flagged item carries the original value', () => {
     const plan = buildImportRepairPlan(loadNonconforming(), 'nonconforming-remy.yml', { animals: {} });
     // Every "attention" item (one that had an original value) preserves it verbatim.
