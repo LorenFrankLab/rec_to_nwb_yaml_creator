@@ -282,7 +282,7 @@ test.describe('BASELINE: Import/Export Workflow', () => {
     const filename = download.suggestedFilename();
     console.log(`Exported filename: ${filename}`);
 
-    // Document filename format (should be: mmddYYYY_subjectid_metadata.yml)
+    // Document filename format (should be: {YYYYMMDD}_{subject_id}_metadata.yml)
     // NOTE: If input file has placeholder value, it's used literally
     expect(filename).toMatch(/.+_.+_metadata\.yml/);
   });

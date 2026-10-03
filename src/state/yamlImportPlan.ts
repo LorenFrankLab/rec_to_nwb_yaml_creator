@@ -125,10 +125,12 @@ interface ResolvedAnimalFacts {
  * Derive a recording day's ISO date (`YYYY-MM-DD`) for an imported flat model. The flat
  * YAML carries NO date field, so it is reconstructed from naming conventions:
  *
- *  - PRIMARY: the `{mmddYYYY}_{subject}_metadata.yml` filename convention (the exact
- *    inverse of {@link module:io/yaml.formatDeterministicFilename}). e.g.
- *    `06222023_remy_metadata.yml` → `2023-06-22`; and the common legacy
- *    `{YYYYMMDD}_{subject}.yml` convention, e.g. `20231108_bs28.yml` → `2023-11-08`.
+ *  - PRIMARY: the `{mmddYYYY}_{subject}_metadata.yml` name earlier versions of the legacy
+ *    form's download used, e.g. `06222023_remy_metadata.yml` → `2023-06-22`; and the
+ *    `{YYYYMMDD}_{subject}...yml` convention trodes_to_nwb uses (and the app now writes, see
+ *    {@link module:io/yaml.formatDeterministicFilename}), e.g. `20231108_bs28.yml` →
+ *    `2023-11-08`. A name is never read both ways: a YYYYMMDD name starting 19/20 is not a
+ *    valid month.
  *  - FALLBACK: a `session_id` of the form `{anything}_{YYYYMMDD}`, e.g. `remy_20230622`
  *    → `2023-06-22`.
  *  - IMPORT-REPAIR FALLBACK: `__importRepair.recording_date`, written only by the
@@ -146,7 +148,7 @@ export function extractRecordingDate(
   flatModel: ValidationModel,
   sourceName?: string
 ): string | null {
-  // PRIMARY: filename {mmddYYYY}_{subject}_metadata.yml.
+  // PRIMARY: filename {mmddYYYY}_{subject}_metadata.yml (earlier app downloads).
   if (typeof sourceName === 'string') {
     const match = sourceName.match(/^(\d{2})(\d{2})(\d{4})_.+_metadata\.ya?ml$/i);
     if (match) {
@@ -854,7 +856,8 @@ export function planImport(
         sourceKey,
         reason:
           'Could not determine the recording date from the filename ' +
-          '({mmddYYYY}_{subject}_metadata.yml) or session_id ({subject}_{YYYYMMDD}).',
+          '({YYYYMMDD}_{subject}_metadata.yml or {mmddYYYY}_{subject}_metadata.yml) ' +
+          'or session_id ({subject}_{YYYYMMDD}).',
       });
       continue;
     }

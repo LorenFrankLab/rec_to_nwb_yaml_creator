@@ -233,32 +233,41 @@ export function decodeYaml(text: string): unknown {
  * Callers pass the full model; only these fields are consulted.
  */
 interface FilenameModel {
-  EXPERIMENT_DATE_in_format_mmddYYYY?: string;
+  /** Recording date as `YYYYMMDD`, when the caller knows it (the legacy form has no date field). */
+  EXPERIMENT_DATE_in_format_YYYYMMDD?: string;
   subject?: { subject_id?: string };
 }
 
 /**
  * Generates a deterministic filename for metadata YAML export.
  *
- * Format: {EXPERIMENT_DATE_in_format_mmddYYYY}_{subject_id}_metadata.yml
+ * Format: {EXPERIMENT_DATE_in_format_YYYYMMDD}_{subject_id}_metadata.yml
  *
- * This filename format is required by trodes_to_nwb Python package. The file scanner
- * expects this pattern to group files by recording session.
+ * trodes_to_nwb groups a session's files by name (data_scanner.py): it splits the name on `_`,
+ * reads the first part as the integer date and the second as the animal, and matches them with
+ * the recordings, named `{YYYYMMDD}_{animal}_{epoch}_{tag}.rec`. So the date is year-first and
+ * the subject id is written exactly as entered: a month-first date or a lower-cased animal puts
+ * the file in another group, and the session converts without it ("There must be exactly one
+ * metadata file per session"). This is the contract workspace downloads follow through
+ * `formatRecordingMetadataFilename` (src/domain/recordingFilename.ts). The legacy form has no
+ * date field, so without `EXPERIMENT_DATE_in_format_YYYYMMDD` the name starts with that
+ * placeholder for the user to replace with the recording date.
+ *
+ * @example
+ * formatDeterministicFilename({ subject: { subject_id: 'Rat01' } });
+ * // Returns: "{EXPERIMENT_DATE_in_format_YYYYMMDD}_Rat01_metadata.yml"
  *
  * @example
  * const model = {
- *   EXPERIMENT_DATE_in_format_mmddYYYY: '06222023',
+ *   EXPERIMENT_DATE_in_format_YYYYMMDD: '20230622',
  *   subject: { subject_id: 'Rat01' }
  * };
  * const filename = formatDeterministicFilename(model);
- * // Returns: "06222023_rat01_metadata.yml"
+ * // Returns: "20230622_Rat01_metadata.yml"
  */
 export function formatDeterministicFilename(model: FilenameModel): string {
-  const experimentDate = model.EXPERIMENT_DATE_in_format_mmddYYYY || '{EXPERIMENT_DATE_in_format_mmddYYYY}';
-  // `toLowerCase` (not `toLocaleLowerCase`): the download filename must be locale-INDEPENDENT, so
-  // the same metadata produces the same filename on every machine (e.g. a Turkish locale lowercases
-  // "I" to a dotless "ı"). ASCII subject ids — the norm — are unaffected.
-  const subjectId = (model.subject?.subject_id || '').toLowerCase();
+  const experimentDate = model.EXPERIMENT_DATE_in_format_YYYYMMDD || '{EXPERIMENT_DATE_in_format_YYYYMMDD}';
+  const subjectId = model.subject?.subject_id || '';
   return `${experimentDate}_${subjectId}_metadata.yml`;
 }
 

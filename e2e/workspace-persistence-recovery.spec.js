@@ -490,8 +490,8 @@ test.describe('Workspace persistence & recovery', () => {
     await page.getByRole('button', { name: /import yaml/i }).first().click();
     await expect(page.getByRole('heading', { name: 'Import metadata YAML' })).toBeVisible();
 
-    // A valid, importable single-day YAML (proper {mmddYYYY}_{subject}_metadata.yml name and all
-    // required animal-level fields present) — no repairs needed.
+    // A valid, importable single-day YAML (a {mmddYYYY}_{subject}_metadata.yml name, as earlier
+    // app versions wrote, and all required animal-level fields present) — no repairs needed.
     const validYaml = [
       'experimenter_name:',
       '  - Doe, Jane',

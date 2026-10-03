@@ -225,7 +225,7 @@ doc2: value`;
     });
 
     it('successfully round-trips complex nested structure', () => {
-      const yamlString = `EXPERIMENT_DATE_in_format_mmddYYYY: "06222023"
+      const yamlString = `EXPERIMENT_DATE_in_format_YYYYMMDD: "20230622"
 subject:
   subject_id: beans
   weight: 300
@@ -237,7 +237,7 @@ cameras:
 
       const result = decodeYaml(yamlString);
 
-      expect(result).toHaveProperty('EXPERIMENT_DATE_in_format_mmddYYYY', '06222023');
+      expect(result).toHaveProperty('EXPERIMENT_DATE_in_format_YYYYMMDD', '20230622');
       expect(result).toHaveProperty('subject.subject_id', 'beans');
       expect(result).toHaveProperty('cameras');
       expect(result.cameras).toBeInstanceOf(Array);

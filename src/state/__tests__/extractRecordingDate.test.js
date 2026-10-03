@@ -10,6 +10,11 @@ describe('extractRecordingDate', () => {
     expect(extractRecordingDate({}, '06222023_remy_metadata.yml')).toBe('2023-06-22');
   });
 
+  it('parses the {YYYYMMDD}_{subject}_metadata.yml name the app downloads (primary)', () => {
+    expect(extractRecordingDate({}, '20230622_remy_metadata.yml')).toBe('2023-06-22');
+    expect(extractRecordingDate({}, '20231108_BS28_metadata.yml')).toBe('2023-11-08');
+  });
+
   it('parses the legacy {YYYYMMDD}_{subject}.yml filename convention (primary)', () => {
     expect(extractRecordingDate({}, '20231108_bs28.yml')).toBe('2023-11-08');
     expect(extractRecordingDate({}, '20231108_bs28.yaml')).toBe('2023-11-08');
