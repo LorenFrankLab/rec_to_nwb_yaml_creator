@@ -410,6 +410,53 @@ describe('ImportRepair — commit', () => {
     expect(Object.keys(captured.days).length).toBe(1);
   });
 
+  it('shows how a file differs from the existing animal before adding its day (W5)', async () => {
+    const user = userEvent.setup();
+    const clean = decodeYaml(cleanYaml);
+    renderScreen({
+      remy: {
+        id: 'remy',
+        subject: { ...clean.subject },
+        days: [],
+        cameras: clean.cameras,
+        devices: {
+          data_acq_device: clean.data_acq_device,
+          device: clean.device,
+          electrode_groups: [],
+          ntrode_electrode_group_channel_map: [],
+        },
+        configurationHistory: [
+          {
+            version: 1,
+            devices: { electrode_groups: [], ntrode_electrode_group_channel_map: [] },
+            appliedToDays: [],
+          },
+        ],
+      },
+    });
+    const differing = decodeYaml(cleanYaml);
+    differing.subject.genotype = 'Pvalb-Cre';
+    differing.data_acq_device = [{ ...differing.data_acq_device[0], amplifier: 'Intan RHD2164' }];
+
+    await user.upload(
+      screen.getByLabelText(/choose a metadata yaml file/i),
+      makeFile('06222023_remy_metadata.yml', encodeYaml(differing))
+    );
+    await user.click(await screen.findByRole('button', { name: /add recording day/i }));
+
+    // Nothing is written until the differences have been shown.
+    await screen.findByRole('heading', { name: /review batch import/i });
+    expect(captured.days).toEqual({});
+    const differences = screen.getByText('Differences to review').parentElement;
+    expect(differences).toHaveTextContent(/genotype \("Wild Type" on the animal; "Pvalb-Cre"/);
+    expect(differences).toHaveTextContent(/Recording system "SpikeGadgets"/);
+
+    await user.click(screen.getByRole('button', { name: /confirm import/i }));
+    await screen.findByRole('heading', { name: /import complete/i });
+    expect(Object.keys(captured.days)).toEqual(['remy-2023-06-22']);
+    expect(captured.animals.remy.subject.genotype).toBe('Wild Type');
+  });
+
   it('gates existing-animal catalog gaps until the user accepts selected catalog entries', async () => {
     const user = userEvent.setup();
     renderScreen({

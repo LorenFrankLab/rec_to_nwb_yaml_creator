@@ -158,14 +158,15 @@ function calibrationKey(fields: CameraCalibrationFields): string {
 
 /**
  * The name a later calibration is committed under: `${cameraName}_${YYYYMMDD}` of the date it was
- * first recorded, suffixed `_2`, `_3`… when that name is already taken by another camera.
+ * first recorded, suffixed `_2`, `_3`… when that name is already taken by another camera. The import
+ * names a recording system recorded with other hardware under a reused name the same way.
  *
  * @param cameraName - The reused name.
  * @param date - The candidate's first date (ISO `YYYY-MM-DD`).
  * @param taken - Names already in use (mutated: the chosen name is reserved).
  * @returns The split name.
  */
-function allocateSplitName(cameraName: string, date: string, taken: Set<string>): string {
+export function allocateSplitName(cameraName: string, date: string, taken: Set<string>): string {
   const digits = date.replace(/\D/g, '');
   const base = digits === '' ? cameraName : `${cameraName}_${digits}`;
   let name = base;
@@ -191,7 +192,7 @@ function allocateSplitName(cameraName: string, date: string, taken: Set<string>)
  * @param baseName - The name a file recorded.
  * @returns True when `candidateName` is a split of `baseName`.
  */
-function isSplitNameOf(candidateName: string, baseName: string): boolean {
+export function isSplitNameOf(candidateName: string, baseName: string): boolean {
   if (candidateName === baseName || !candidateName.startsWith(`${baseName}_`)) return false;
   return /^\d{8}(_\d+)?$/.test(candidateName.slice(baseName.length + 1));
 }

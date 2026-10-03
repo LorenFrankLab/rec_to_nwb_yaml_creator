@@ -185,13 +185,14 @@ function preflightExistingAnimalCatalogRefs(
   const cameraIds = cameras.map((camera) => (camera as { id?: unknown }).id);
   const deviceNames = devices.map((device) => (device as { name?: unknown }).name);
   for (const day of animalPlan.days) {
-    const missingCamera = dayCameraRefs(materializePlanDay(day, 'add')).find(
+    const added = materializePlanDay(day, 'add');
+    const missingCamera = dayCameraRefs(added).find(
       (cameraId) => !cameraIds.some((existing) => sameRefValue(existing, cameraId))
     );
     if (missingCamera !== undefined) {
       return `Imported day "${day.date}" references camera id "${String(missingCamera)}", but animal "${animalPlan.existingAnimalId}" does not have that camera.`;
     }
-    const deviceName = day.data_acq_device_name;
+    const deviceName = added.data_acq_device_name;
     if (
       deviceName !== undefined &&
       !deviceNames.some((existing) => sameRefValue(existing, deviceName))

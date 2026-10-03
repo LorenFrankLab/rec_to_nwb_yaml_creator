@@ -28,6 +28,7 @@ import {
   extractRecordingDate,
   findExistingAnimalId,
   IMPORT_REPAIR_MAPPED_CAMERA_IDS,
+  IMPORT_REPAIR_MAPPED_DATA_ACQ_NAMES,
 } from './yamlImportPlan';
 import { getAnimalCameras, getDataAcqDevices } from './workspaceSelectors';
 import { inferredCameraRefs } from './cameraUsage';
@@ -1514,6 +1515,7 @@ export function applyImportRepairs(
           decodeRepairToken(path.slice(EXISTING_DATA_ACQ_REF_PREFIX.length)),
           value
         );
+        recordRepairMapping(model, IMPORT_REPAIR_MAPPED_DATA_ACQ_NAMES, value);
       }
       continue;
     }

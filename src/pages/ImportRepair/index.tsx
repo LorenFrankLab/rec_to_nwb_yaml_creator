@@ -359,8 +359,16 @@ export default function ImportRepair() {
     const assessment = assessments[0];
     if (!assessment?.ready) return;
     // A camera calibration disagreement is a QUESTION, and F1 requires it answered before the
-    // commit, not reported after it — so this file goes through the review screen instead.
-    if (assessment.importPlan.animals.some((animal) => animal.cameraConflicts.length > 0)) {
+    // commit, not reported after it — so this file goes through the review screen instead. So does
+    // a file that differs from the existing animal it is added to (W5): the user sees the subject
+    // facts adding keeps and the recording systems it keeps apart before the day is written.
+    if (
+      assessment.importPlan.animals.some(
+        (animal) =>
+          animal.cameraConflicts.length > 0 ||
+          animal.divergences.some((divergence) => divergence.scope === 'add')
+      )
+    ) {
       openBatchPreview();
       return;
     }

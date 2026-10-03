@@ -661,10 +661,22 @@ describe('planImport — recording systems named like an existing one still dive
     );
     const remy = plan.animals.find((a) => a.subjectId === 'remy');
     expect(remy.divergences.some((d) => d.field === 'data_acq_device' && /SpikeGadgets/.test(d.detail))).toBe(true);
-    // The name matches the animal's own system, so nothing is brought under 'add'…
-    expect(remy.catalogAdditions.data_acq_device).toEqual([]);
-    // …and 'replace' gets the first-seen imported definition.
-    expect(remy.devices.data_acq_device).toEqual([expect.objectContaining({ name: 'SpikeGadgets', system: 'SpikeGadgets' })]);
+    // Other hardware under the animal's own name is another system (W5): adding brings it under a
+    // dated name, and only the 06-23 day references it…
+    expect(remy.catalogAdditions.data_acq_device).toEqual([
+      { name: 'SpikeGadgets_20230623', system: 'MCU', amplifier: 'Intan', adc_circuit: 'Intan' },
+    ]);
+    const systemOf = (date, resolution) =>
+      materializePlanDay(remy.days.find((d) => d.date === date), resolution).data_acq_device_name;
+    expect(systemOf('2023-06-22', 'add')).toBe('SpikeGadgets');
+    expect(systemOf('2023-06-23', 'add')).toBe('SpikeGadgets_20230623');
+    // …and 'replace' keeps both definitions the files give, each day on its own.
+    expect(remy.devices.data_acq_device).toEqual([
+      expect.objectContaining({ name: 'SpikeGadgets', system: 'SpikeGadgets' }),
+      expect.objectContaining({ name: 'SpikeGadgets_20230623', system: 'MCU' }),
+    ]);
+    expect(systemOf('2023-06-22', 'replace')).toBe('SpikeGadgets');
+    expect(systemOf('2023-06-23', 'replace')).toBe('SpikeGadgets_20230623');
   });
 });
 
