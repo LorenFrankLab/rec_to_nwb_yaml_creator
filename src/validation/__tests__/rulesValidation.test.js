@@ -1286,3 +1286,65 @@ describe('rulesValidation() - optogenetic_stimulation_software', () => {
     expect(rulesValidation(model)).toEqual([]);
   });
 });
+
+describe('rulesValidation() - empty (null) list entries', () => {
+  // A YAML list item with no value (`-`) parses to null. Rules run on a parsed file before schema
+  // validation reports that entry, so each rule must skip it instead of throwing: a throw stopped
+  // the import with no message at all.
+  const listSections = Object.entries(JsonSchema.properties)
+    .filter(([, definition]) => definition.type === 'array')
+    .map(([key]) => key);
+
+  it('does not throw on an empty entry in any list section', () => {
+    expect(listSections).toContain('ntrode_electrode_group_channel_map');
+
+    listSections.forEach((key) => {
+      expect(() => rulesValidation(createTestYaml({ [key]: [null] })), key).not.toThrow();
+    });
+  });
+
+  // The minimal model above has few cross-references, so repeat on full sessions, with the null
+  // first and last in each list and inside the nested lists.
+  it.each([
+    '20230622_sample_metadata.yml',
+    'realistic-session.yml',
+    '20230622_sample_metadataProbeReconfig.yml',
+  ])('does not throw on empty entries in the full session %s', (fixture) => {
+    const session = YAML.parse(
+      fs.readFileSync(path.join(__dirname, '../../__tests__/fixtures/valid', fixture), 'utf8')
+    );
+    const withNull = [];
+    listSections.forEach((key) => {
+      const entries = Array.isArray(session[key]) ? session[key] : [];
+      withNull.push([`${key} first`, { ...session, [key]: [null, ...entries] }]);
+      withNull.push([`${key} last`, { ...session, [key]: [...entries, null] }]);
+    });
+    const nested = (key, field, value) => {
+      const model = structuredClone(session);
+      (model[key] || []).forEach((entry) => {
+        entry[field] = value;
+      });
+      return [`${key}[].${field}`, model];
+    };
+    withNull.push(
+      nested('tasks', 'camera_id', [null]),
+      nested('tasks', 'task_epochs', [null]),
+      nested('fs_gui_yamls', 'epochs', [null]),
+      nested('ntrode_electrode_group_channel_map', 'bad_channels', [null]),
+      nested('ntrode_electrode_group_channel_map', 'map', null)
+    );
+
+    withNull.forEach(([label, model]) => {
+      expect(() => rulesValidation(model), label).not.toThrow();
+      expect(() => validate(model), label).not.toThrow();
+    });
+  });
+
+  it('reports an empty channel-map entry as a validation issue', () => {
+    const model = createTestYaml({ ntrode_electrode_group_channel_map: [null] });
+
+    expect(validate(model)).toContainEqual(
+      expect.objectContaining({ path: 'ntrode_electrode_group_channel_map[0]' })
+    );
+  });
+});

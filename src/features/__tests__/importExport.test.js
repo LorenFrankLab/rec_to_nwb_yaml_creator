@@ -44,6 +44,9 @@ vi.mock('../../valueList', () => ({
   genderAcronym: () => ['M', 'F', 'U', 'O'],
 }));
 
+/** Every message for an import that fails says the loaded form was left as it was. */
+const FORM_NOT_CHANGED = 'The form was not changed.';
+
 describe('importExport', () => {
   let mockAlert;
   let mockOnProgress;
@@ -86,7 +89,9 @@ describe('importExport', () => {
         expect(result.formData).toBeNull();
       });
 
-      it('returns error and empty form data when file read fails', async () => {
+      // A file that cannot be read leaves the form as it was: the page applies `formData` only
+      // when it is set, so returning an empty form here would wipe what the user had loaded.
+      it('returns error and leaves the form alone when file read fails', async () => {
         // ARRANGE
         const file = new File(['content'], 'test.yml', { type: 'text/yaml' });
         // Mock FileReader error
@@ -97,20 +102,24 @@ describe('importExport', () => {
           }
         };
 
-        // ACT
-        const result = await importFiles(file);
+        try {
+          // ACT
+          const result = await importFiles(file);
 
-        // ASSERT
-        expect(result.success).toBe(false);
-        expect(result.error).toContain('Error reading file');
-        expect(result.formData).toEqual(emptyFormData);
-        expect(mockAlert).toHaveBeenCalledWith('Error reading file. Please try again.');
-
-        // Cleanup
-        global.FileReader = originalFileReader;
+          // ASSERT
+          expect(result.success).toBe(false);
+          expect(result.error).toContain('Error reading file');
+          expect(result.formData).toBeNull();
+          expect(mockAlert).toHaveBeenCalledTimes(1);
+          expect(mockAlert.mock.calls[0][0]).toContain('Error reading file. Please try again.');
+          expect(mockAlert.mock.calls[0][0]).toContain(FORM_NOT_CHANGED);
+        } finally {
+          // Restore even when an assertion fails, so later tests read files normally
+          global.FileReader = originalFileReader;
+        }
       });
 
-      it('returns error and empty form data when YAML parsing fails', async () => {
+      it('returns error and leaves the form alone when YAML parsing fails', async () => {
         // ARRANGE
         const invalidYaml = 'invalid: yaml: content: [unclosed';
         const file = new File([invalidYaml], 'test.yml', { type: 'text/yaml' });
@@ -121,9 +130,75 @@ describe('importExport', () => {
         // ASSERT
         expect(result.success).toBe(false);
         expect(result.error).toContain('Invalid YAML file');
-        expect(result.formData).toEqual(emptyFormData);
-        expect(mockAlert).toHaveBeenCalled();
+        expect(result.formData).toBeNull();
+        expect(mockAlert).toHaveBeenCalledTimes(1);
         expect(mockAlert.mock.calls[0][0]).toContain('Invalid YAML file');
+        expect(mockAlert.mock.calls[0][0]).toContain(FORM_NOT_CHANGED);
+      });
+
+      // TextEdit saves a new document as rich text unless it is made plain text first.
+      it('returns error and says how to save as plain text for a rich-text (RTF) file', async () => {
+        const rtf =
+          '{\\rtf1\\ansi\\ansicpg1252\\cocoartf2761\n' +
+          '{\\fonttbl\\f0\\fswiss\\fcharset0 Helvetica;}\n' +
+          '\\f0\\fs24 \\cf0 lab: Loren Frank Lab\\\n}';
+        const file = new File([rtf], 'test.yml', { type: 'text/yaml' });
+
+        const result = await importFiles(file);
+
+        expect(result.success).toBe(false);
+        expect(result.error).toContain('rich text');
+        expect(result.formData).toBeNull();
+        expect(mockAlert).toHaveBeenCalledTimes(1);
+        expect(mockAlert.mock.calls[0][0]).toContain('Format > Make Plain Text');
+        expect(mockAlert.mock.calls[0][0]).toContain(FORM_NOT_CHANGED);
+      });
+
+      it.each([
+        ['an empty file', ''],
+        ['only a comment', '# lab: Loren Frank Lab\n'],
+        ['plain text', 'just some notes'],
+        ['a list', '- a\n- b'],
+        ['an empty mapping', '{}'],
+        ['a mapping with none of the form fields', 'name: analysis\ndependencies:\n  - python=3.11\n'],
+      ])('returns error and leaves the form alone for %s (no metadata)', async (_label, content) => {
+        // A file that got past this check would be validated; report that as a passing file so a
+        // regression fails on the result below instead of hanging.
+        validate.mockReturnValue([]);
+        const file = new File([content], 'test.yml', { type: 'text/yaml' });
+
+        const result = await importFiles(file);
+
+        expect(result.success).toBe(false);
+        expect(result.error).toContain('metadata');
+        expect(result.formData).toBeNull();
+        expect(mockAlert).toHaveBeenCalledTimes(1);
+        expect(mockAlert.mock.calls[0][0]).toContain('No metadata was found in this file');
+        expect(mockAlert.mock.calls[0][0]).toContain(FORM_NOT_CHANGED);
+      });
+
+      // An error the import does not expect (e.g. from a rule meeting an odd value) must still
+      // settle with a message: it used to leave the upload doing nothing at all.
+      it('returns error and leaves the form alone when the import fails unexpectedly', async () => {
+        validate.mockImplementation(() => {
+          throw new TypeError('Cannot read properties of null');
+        });
+        const file = new File(['lab: Test Lab\n'], 'test.yml', { type: 'text/yaml' });
+
+        const result = await Promise.race([
+          importFiles(file),
+          new Promise((resolve) => {
+            setTimeout(() => resolve('the import never finished'), 1000);
+          }),
+        ]);
+
+        expect(result).not.toBe('the import never finished');
+        expect(result.success).toBe(false);
+        expect(result.error).toContain('Cannot read properties of null');
+        expect(result.formData).toBeNull();
+        expect(mockAlert).toHaveBeenCalledTimes(1);
+        expect(mockAlert.mock.calls[0][0]).toContain('Cannot read properties of null');
+        expect(mockAlert.mock.calls[0][0]).toContain(FORM_NOT_CHANGED);
       });
     });
 

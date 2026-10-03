@@ -44,15 +44,15 @@ describe('importFiles partial import (real validation)', () => {
 
   it('returns a clear error for an empty document (YAML.parse → null) instead of throwing', async () => {
     // An empty file parses to null; the partial-import path must not crash on
-    // Object.hasOwn(null, key). It should reject cleanly with empty-default form data.
+    // Object.hasOwn(null, key). It should reject cleanly and leave the open form alone
+    // (formData null, so the page keeps what is on screen; main #73).
     const file = new File([''], 'empty.yml', { type: 'text/yaml' });
 
     const result = await importFiles(file);
 
     expect(result.success).toBe(false);
     expect(result.error).toMatch(/metadata|empty|not a valid/i);
-    expect(result.formData).toBeTruthy();
-    expect(result.formData.cameras).toEqual([]);
+    expect(result.formData).toBeNull();
   });
 
   it('rejects a non-object document root (e.g. a YAML list) without throwing', async () => {
