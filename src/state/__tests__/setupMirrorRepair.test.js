@@ -30,7 +30,13 @@ afterEach(() => {
   resetWriterLockForTests();
 });
 
-/** A file of the realistic session on `date`, keeping its first `tetrodes` tetrodes. */
+/**
+ * A file of the realistic session on `date`, keeping its first `tetrodes` tetrodes.
+ *
+ * @param {string} date - ISO recording date.
+ * @param {number} [tetrodes] - Tetrodes to keep.
+ * @returns {{ sourceName: string, flatModel: object }} The decoded file.
+ */
 function makeFile(date, tetrodes = 8) {
   const { animal, day } = buildRealisticWorkspace();
   day.date = date;

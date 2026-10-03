@@ -13,7 +13,13 @@ import { planImport } from '../yamlImportPlan';
 import { applyImportPlan } from '../yamlImportApply';
 import { ageOnDate } from '../../domain/subjectAge';
 
-/** A file of the realistic session, dated `date`, with the subject's age `age`. */
+/**
+ * A file of the realistic session, dated `date`, with the subject's age `age`.
+ *
+ * @param {string} date - ISO recording date.
+ * @param {string} age - The subject age the file states.
+ * @returns {{ sourceName: string, flatModel: object }} The decoded file.
+ */
 function makeFile(date, age) {
   const { animal, day } = buildRealisticWorkspace();
   day.date = date;
