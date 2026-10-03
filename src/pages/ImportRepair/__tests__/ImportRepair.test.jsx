@@ -181,6 +181,57 @@ describe('ImportRepair — flagging + suggested fixes', () => {
   });
 });
 
+describe('ImportRepair — suggestions are answers the user can change', () => {
+  it('lets a suggested value be overridden, and applying the safe suggestions keeps the override', async () => {
+    const user = userEvent.setup();
+    renderScreen();
+    await uploadNonconforming(user);
+
+    const speciesOverride = screen.getByRole('textbox', {
+      name: /subject — species — enter a different value/i,
+    });
+    await user.type(speciesOverride, 'Rattus rattus');
+    expect(screen.getByRole('button', { name: /accept subject — species/i })).toHaveAttribute(
+      'aria-pressed',
+      'false'
+    );
+
+    // "Apply safe suggestions" answers the rows still waiting, and leaves the typed value alone.
+    await user.click(screen.getByRole('button', { name: /^apply safe suggestions/i }));
+    expect(speciesOverride).toHaveValue('Rattus rattus');
+    await user.type(screen.getByLabelText(/Electrode group location/i), 'CA1');
+    fireEvent.change(screen.getByLabelText(/Date of birth/i), { target: { value: '2023-01-10' } });
+    await user.click(screen.getByRole('button', { name: /import as new animal/i }));
+
+    expect(captured.animals.remy.subject.species).toBe('Rattus rattus');
+    expect(captured.animals.remy.subject.sex).toBe('M');
+  });
+
+  it('asks for a weight written in another unit instead of suggesting it as grams', async () => {
+    const user = userEvent.setup();
+    renderScreen();
+    const model = decodeYaml(cleanYaml);
+    model.subject.weight = '0.45 kg';
+    await user.upload(
+      screen.getByLabelText(/choose a metadata yaml file/i),
+      makeFile('06222023_remy_metadata.yml', encodeYaml(model))
+    );
+
+    const attention = await screen.findByRole('region', { name: /needs attention/i });
+    // Nothing to accept unread: "0.45 kg" is not 0.45 g.
+    expect(screen.queryByRole('button', { name: /apply safe suggestions/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^accept /i })).not.toBeInTheDocument();
+    expect(within(attention).getByText('0.45 kg')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /import as new animal/i })).toBeDisabled();
+
+    await user.type(screen.getByRole('spinbutton', { name: /subject — weight/i }), '450');
+    await user.click(screen.getByRole('button', { name: /import as new animal/i }));
+
+    const [dayId] = Object.keys(captured.days);
+    expect(mergeDayMetadata(captured.animals.remy, captured.days[dayId]).subject.weight).toBe(450);
+  });
+});
+
 describe('ImportRepair — commit', () => {
   it('groups multiple ready day files into one animal before committing', async () => {
     const user = userEvent.setup();

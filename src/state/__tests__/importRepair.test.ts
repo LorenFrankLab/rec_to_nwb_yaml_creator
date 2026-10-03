@@ -20,6 +20,7 @@ import {
 } from '../importRepair';
 import type { RepairItem } from '../importRepair';
 import { classifyCameraAgainstCatalog } from '../cameraCalibrationConflicts';
+import { planImport } from '../yamlImportPlan';
 
 const fixtureDir = path.join(__dirname, '../../__tests__/fixtures/import');
 
@@ -174,6 +175,111 @@ describe('buildImportRepairPlan — flags each non-conforming field from the sha
     for (const item of plan.items.filter((i) => i.group === 'attention')) {
       expect('was' in item).toBe(true);
     }
+  });
+});
+
+/**
+ * "Apply safe suggestions" accepts every suggestion unread, so a suggestion must be exactly what the
+ * file meant. A value that needs a guess (a unit, a decimal comma, one species out of several)
+ * becomes a row the user answers, with the original shown.
+ */
+describe('buildImportRepairPlan — a suggestion is offered only when the value is unambiguous', () => {
+  /**
+   * The repair row at a path after changing a clean export.
+   * @param itemPath - The row's path.
+   * @param mutate - Changes the clean model before planning.
+   * @returns The row, or undefined.
+   */
+  function rowFor(itemPath: string, mutate: (model: Record<string, any>) => void): RepairItem | undefined {
+    const model = loadCleanExport();
+    mutate(model);
+    return itemAt(buildImportRepairPlan(model, '06222023_remy_metadata.yml', { animals: {} }).items, itemPath);
+  }
+
+  it.each(['0.45 kg', '7.2 kg', '1,250 g', '1.1 lb', '450 mg', 'about 450 g', 'Unknown'])(
+    'weight %j is a number input with no suggestion (never a guessed unit)',
+    (weight) => {
+      const row = rowFor('subject.weight', (m) => {
+        m.subject.weight = weight;
+      });
+      expect(row).toMatchObject({ kind: 'input', inputType: 'number', was: weight });
+      expect(row!.suggested).toBeUndefined();
+    }
+  );
+
+  it.each([
+    ['485g', 485],
+    ['485 g', 485],
+    ['485 grams', 485],
+    ['485 Gram', 485],
+    ['485', 485],
+    [' 412.5 G ', 412.5],
+  ])('weight %j (grams, or no unit) suggests %d', (weight, grams) => {
+    const row = rowFor('subject.weight', (m) => {
+      m.subject.weight = weight;
+    });
+    expect(row).toMatchObject({ kind: 'suggestion', suggested: grams, was: weight });
+  });
+
+  it.each(['1,5', '1.5cd', '1.5 x', 'not_a_number'])(
+    'times_period_multiplier %j is a number input with no suggestion',
+    (value) => {
+      const row = rowFor('times_period_multiplier', (m) => {
+        m.times_period_multiplier = value;
+      });
+      expect(row).toMatchObject({ kind: 'input', inputType: 'number', was: value });
+      expect(row!.suggested).toBeUndefined();
+    }
+  );
+
+  it('times_period_multiplier "1.5" (a plain number stored as text) suggests 1.5', () => {
+    const row = rowFor('times_period_multiplier', (m) => {
+      m.times_period_multiplier = '1.5';
+    });
+    expect(row).toMatchObject({ kind: 'suggestion', suggested: 1.5, was: '1.5' });
+  });
+
+  it.each(['macaque', 'Macaque', 'marmoset'])(
+    'species %j names several species, so it is an input with no suggestion',
+    (species) => {
+      const row = rowFor('subject.species', (m) => {
+        m.subject.species = species;
+      });
+      expect(row).toMatchObject({ kind: 'input', was: species });
+      expect(row!.suggested).toBeUndefined();
+    }
+  );
+
+  it.each([
+    ['rhesus macaque', 'Macaca mulatta'],
+    ['common marmoset', 'Callithrix jacchus'],
+    ['Long-Evans', 'Rattus norvegicus'],
+    ['mouse', 'Mus musculus'],
+  ])('species %j names one species and suggests %j', (species, binomial) => {
+    const row = rowFor('subject.species', (m) => {
+      m.subject.species = species;
+    });
+    expect(row).toMatchObject({ kind: 'suggestion', suggested: binomial });
+    expect(isValidSpecies(row!.suggested)).toBe(true);
+  });
+
+  it('accepting every suggestion for a "0.45 kg" weight never imports 0.45 g', () => {
+    const model = loadCleanExport();
+    (model.subject as Record<string, unknown>).weight = '0.45 kg';
+    const plan = buildImportRepairPlan(model, '06222023_remy_metadata.yml', { animals: {} });
+    // What the page's "Apply safe suggestions" button resolves.
+    const accepted = Object.fromEntries(
+      plan.items.filter((i) => i.kind === 'suggestion').map((i) => [i.path, i.suggested])
+    );
+    expect(accepted).toEqual({});
+    const repaired = applyImportRepairs(model, accepted);
+    expect((repaired.subject as Record<string, unknown>).weight).toBe('0.45 kg');
+    // The weight still needs an answer, so the file cannot be imported with a wrong number.
+    const importPlan = planImport(
+      [{ sourceName: '06222023_remy_metadata.yml', flatModel: repaired }],
+      { animals: {} }
+    );
+    expect(importPlan.animals).toEqual([]);
   });
 });
 
@@ -432,16 +538,19 @@ describe('benign normalizations — auto-applied and listed, never silent', () =
 });
 
 describe('import-only repair rows — scalar coercions and recording date', () => {
-  it('suggests a numeric times_period_multiplier from a legacy string with suffix text', () => {
+  it('asks for times_period_multiplier when a legacy string has suffix text (no guessed prefix)', () => {
     const model = loadNonconforming();
     model.times_period_multiplier = '1.5cd';
 
     const plan = buildImportRepairPlan(model, 'nonconforming-remy.yml', { animals: {} });
     const item = itemAt(plan.items, 'times_period_multiplier');
     expect(item).toBeDefined();
-    expect(item!.kind).toBe('suggestion');
+    // A numeric prefix is not a safe suggestion ("1,5" would read as 1), so the row is a number
+    // input showing the original value.
+    expect(item!.kind).toBe('input');
+    expect(item!.inputType).toBe('number');
     expect(item!.was).toBe('1.5cd');
-    expect(item!.suggested).toBe(1.5);
+    expect(item!.suggested).toBeUndefined();
   });
 
   it('surfaces a slash-containing session_id as a repair row, not a fix-in-file blocker', () => {

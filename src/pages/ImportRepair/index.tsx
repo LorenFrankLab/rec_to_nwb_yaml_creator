@@ -313,7 +313,9 @@ export default function ImportRepair() {
     setFiles((current) =>
       current.map((file) => {
         if (scope === 'active' && file.key !== activeKey) return file;
-        const suggestions = file.plan.items.filter((item) => item.kind === 'suggestion');
+        // Only the rows still waiting for an answer: a value the user typed over a suggestion is
+        // their answer, and the button never overwrites it.
+        const suggestions = unansweredSuggestions(file);
         // Return the SAME object when there is nothing to apply: identity is what keeps this
         // file's (expensive) assessment cached.
         if (suggestions.length === 0) return file;
@@ -874,6 +876,10 @@ function RepairRow({ item, value, accepted, onAccept, onInput }: RepairRowProps)
   ]
     .filter(Boolean)
     .join(' — ');
+  // A suggestion can be answered with a different value. A list-valued suggestion (a scalar
+  // experimenter name wrapped into a list) cannot be retyped as one value, so it has no input.
+  const overridable = item.kind === 'suggestion' && !Array.isArray(item.suggested);
+  const inputLabel = overridable ? `${accessibleLabel} — enter a different value` : accessibleLabel;
 
   return (
     <div className={styles.row}>
@@ -916,10 +922,11 @@ function RepairRow({ item, value, accepted, onAccept, onInput }: RepairRowProps)
               }
             />
           )}
-        {(item.kind === 'input' || item.kind === 'choice') && item.inputType !== 'date' && (
+        {(item.kind === 'input' || item.kind === 'choice' || overridable) && item.inputType !== 'date' && (
           <input
             type={item.inputType === 'number' ? 'number' : 'text'}
-            aria-label={accessibleLabel}
+            aria-label={inputLabel}
+            placeholder={overridable ? 'Or enter a value' : undefined}
             value={inputValue}
             onChange={(event) =>
               onInput(

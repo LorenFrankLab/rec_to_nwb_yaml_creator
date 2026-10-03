@@ -46,6 +46,11 @@ const STRUCTURED_REQUIRED_FIELDS: ReadonlySet<string> = new Set(['experimenter_n
  * source value; the VALUE is a Latin binomial that MUST pass `isValidSpecies` (a unit test asserts
  * this). A source value with no entry gets NO suggestion — it surfaces as a user-input row rather
  * than being laundered into a guess.
+ *
+ * Every key names exactly ONE species: a strain, a species' own common name, or the bare name of a
+ * laboratory animal ("rat" and "mouse" mean the laboratory rat and mouse). A name shared by several
+ * species that labs record from — "macaque" (rhesus, cynomolgus, pig-tailed), "marmoset" (several
+ * Callithrix species) — is deliberately absent: the user names the species.
  */
 const SPECIES_SUGGESTIONS: Readonly<Record<string, string>> = {
   rat: 'Rattus norvegicus',
@@ -58,11 +63,35 @@ const SPECIES_SUGGESTIONS: Readonly<Record<string, string>> = {
   'sprague-dawley': 'Rattus norvegicus',
   mouse: 'Mus musculus',
   mice: 'Mus musculus',
-  marmoset: 'Callithrix jacchus',
-  macaque: 'Macaca mulatta',
+  'common marmoset': 'Callithrix jacchus',
   'rhesus macaque': 'Macaca mulatta',
   human: 'Homo sapiens',
 };
+
+/**
+ * A weight written as a plain number, optionally in grams (`485`, `485g`, `412.5 grams`; any case).
+ * Anything else — another unit, a decimal comma or digit grouping — is not suggested: "0.45 kg"
+ * would otherwise export as 0.45 g.
+ */
+const GRAM_WEIGHT = /^\s*(\d+(?:\.\d+)?|\.\d+)\s*(?:g|grams?)?\s*$/i;
+
+/** A plain decimal number stored as text (`1.5`); no unit, sign, exponent, or comma. */
+const PLAIN_DECIMAL = /^\s*(\d+(?:\.\d+)?|\.\d+)\s*$/;
+
+/**
+ * The number a text value states unambiguously, by `pattern`'s first capture group.
+ *
+ * @param value - The original (rejected) value.
+ * @param pattern - {@link GRAM_WEIGHT} or {@link PLAIN_DECIMAL}.
+ * @returns The number, or undefined when the text needs the user to say what it means.
+ */
+function unambiguousNumber(value: unknown, pattern: RegExp): number | undefined {
+  if (typeof value !== 'string') return undefined;
+  const match = pattern.exec(value);
+  if (!match) return undefined;
+  const parsed = Number(match[1]);
+  return Number.isFinite(parsed) ? parsed : undefined;
+}
 
 /** Free-text → schema-enum sex suggestions (lower-cased, trimmed lookup). */
 const SEX_SUGGESTIONS: Readonly<Record<string, string>> = {
@@ -870,10 +899,10 @@ function buildValidationItems(model: ValidationModel): {
       continue;
     }
 
-    // --- weight: a "541g"-style string → suggest the parsed number. ---
+    // --- weight: a "541g"-style string → suggest the number of grams; any other unit is asked. ---
     if (code === 'type' && path === 'subject.weight') {
-      const parsed = parseFloat(String(was));
-      if (Number.isFinite(parsed) && parsed >= 0) {
+      const parsed = unambiguousNumber(was, GRAM_WEIGHT);
+      if (parsed !== undefined) {
         items.push({ path, label: 'Weight (g)', code, group: 'attention', kind: 'suggestion', was, suggested: parsed, why: message, inputType: 'number' });
       } else {
         items.push({ path, label: 'Weight (g)', code, group: 'attention', kind: 'input', was, why: message, inputType: 'number' });
@@ -881,10 +910,11 @@ function buildValidationItems(model: ValidationModel): {
       continue;
     }
 
-    // --- technical scalar: a legacy string like "1.5cd" → suggest the numeric prefix. ---
+    // --- technical scalar: a plain number stored as text ("1.5") → suggest it. A suffix or a
+    // decimal comma ("1.5cd", "1,5") is asked, never cut down to a numeric prefix. ---
     if (code === 'type' && path === 'times_period_multiplier') {
-      const parsed = parseFloat(String(was));
-      if (Number.isFinite(parsed)) {
+      const parsed = unambiguousNumber(was, PLAIN_DECIMAL);
+      if (parsed !== undefined) {
         items.push({ path, label: 'Times period multiplier', code, group: 'attention', kind: 'suggestion', was, suggested: parsed, why: message, inputType: 'number' });
       } else {
         items.push({ path, label: 'Times period multiplier', code, group: 'attention', kind: 'input', was, why: message, inputType: 'number' });
