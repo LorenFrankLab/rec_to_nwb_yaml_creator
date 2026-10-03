@@ -72,6 +72,46 @@ describe('parseImportFiles', () => {
     expect(parseFailures.map((f) => f.sourceName)).toEqual(['oops.yml']);
   });
 
+  // PyYAML writes &id001 / *id001 when a script dumps one dict in several places; every place must
+  // reach the workspace as its own object, or an edit to one ntrode would change them all.
+  it('decodes each alias of an anchored block as its own object', async () => {
+    const file = makeFile(
+      '20230622_remy_metadata.yml',
+      [
+        'subject:',
+        '  subject_id: remy',
+        'ntrode_electrode_group_channel_map:',
+        '- ntrode_id: 1',
+        '  electrode_group_id: 0',
+        '  bad_channels: &id001 []',
+        "  map: &id002 {'0': 0, '1': 1, '2': 2, '3': 3}",
+        '- ntrode_id: 2',
+        '  electrode_group_id: 1',
+        '  bad_channels: *id001',
+        '  map: *id002',
+        '',
+      ].join('\n')
+    );
+
+    const { decodedFiles } = await parseImportFiles([file]);
+
+    const [first, second] = decodedFiles[0].flatModel.ntrode_electrode_group_channel_map;
+    expect(second.map).toEqual(first.map);
+    expect(second.map).not.toBe(first.map);
+    expect(second.bad_channels).not.toBe(first.bad_channels);
+  });
+
+  it('collects a file whose alias refers back to its own anchor into parseFailures', async () => {
+    const looped = makeFile('looped.yml', 'subject: &s\n  subject_id: remy\n  self: *s\n');
+
+    const { decodedFiles, parseFailures } = await parseImportFiles([looped]);
+
+    expect(decodedFiles).toEqual([]);
+    expect(parseFailures).toHaveLength(1);
+    expect(parseFailures[0].sourceName).toBe('looped.yml');
+    expect(parseFailures[0].reason).toContain('refers to itself');
+  });
+
   it('returns empty arrays for an empty / non-array input', async () => {
     expect(await parseImportFiles([])).toEqual({ decodedFiles: [], parseFailures: [] });
     expect(await parseImportFiles(null)).toEqual({ decodedFiles: [], parseFailures: [] });

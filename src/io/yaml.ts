@@ -20,9 +20,11 @@ import YAML from 'yaml';
 /**
  * Encodes a JavaScript value to deterministic YAML string format.
  *
- * The value is assigned directly to a fresh `Document`'s `contents` (rather than
- * passed to the constructor) so it is serialized as-is — this exact behavior is
- * what the golden baselines pin, so do not change it.
+ * The nodes are created with the same `createNode` the `Document` would otherwise call while
+ * stringifying a plain value, so the output is what the golden baselines pin — except that an
+ * object appearing in more than one place is written out in full each time, never as an anchor
+ * (`&a1`) and aliases (`*a1`): trodes_to_nwb would read those back as ONE dict, and it edits some
+ * in place (it wraps each associated file's `task_epochs` in a list).
  *
  * @example
  * const data = { name: 'test', value: 123 };
@@ -37,18 +39,67 @@ import YAML from 'yaml';
  */
 export function encodeYaml(model: unknown): string {
   const doc = new YAML.Document();
-  // `yaml` accepts a plain JS value as `contents` and serializes it directly, but
-  // its published types narrow the setter to `Node | null`; assert through `unknown`
-  // (compile-time only — no runtime change).
-  doc.contents = (model || {}) as unknown as typeof doc.contents;
+  doc.contents = doc.createNode(model || {}, { aliasDuplicateObjects: false });
 
   return doc.toString();
+}
+
+/** Why {@link decodeYaml} refuses a file whose alias points back into its own anchor. */
+const SELF_REFERENCE_MESSAGE =
+  'The YAML refers to itself: an alias (*name) is used inside the block its anchor (&name) ' +
+  'marks, so the data never ends. Replace that alias with the values it stands for.';
+
+/**
+ * Copies a parsed YAML value so that no object in it is shared.
+ *
+ * `YAML.parse` turns an anchor (`&id001`) and its aliases (`*id001`), which PyYAML writes when a
+ * lab script dumps one dict in several places, into ONE shared object. The legacy form edits
+ * objects in place, so ticking a bad channel on one ntrode marked it on every ntrode sharing the
+ * map. Here every alias becomes its own copy. The copy keeps no record of objects already copied
+ * (that would bring the sharing back); it tracks only the objects on the path from the root,
+ * which is how an alias inside its own anchor (a loop) is caught. The `yaml` library's
+ * alias-count limit has already capped how far aliases can expand.
+ *
+ * @param value - A value returned by `YAML.parse`.
+ * @param ancestors - Objects on the path from the root to `value`.
+ * @returns A copy of `value` in which no object appears twice.
+ * @throws {Error} If an alias points back into its own anchor.
+ */
+function copyWithoutSharing(value: unknown, ancestors: Set<object> = new Set()): unknown {
+  if (value === null || typeof value !== 'object') {
+    return value;
+  }
+  if (ancestors.has(value)) {
+    throw new Error(SELF_REFERENCE_MESSAGE);
+  }
+  ancestors.add(value);
+  try {
+    if (Array.isArray(value)) {
+      return value.map((item: unknown) => copyWithoutSharing(item, ancestors));
+    }
+    if (Object.getPrototypeOf(value) === Object.prototype) {
+      // fromEntries defines each key, so a "__proto__" key stays plain data, as YAML.parse left it.
+      return Object.fromEntries(
+        Object.entries(value).map(([key, item]) => [key, copyWithoutSharing(item, ancestors)])
+      );
+    }
+    // Only explicitly tagged nodes (!!set, !!omap, !!binary, !!timestamp) parse to other objects.
+    return structuredClone(value);
+  } finally {
+    ancestors.delete(value);
+  }
 }
 
 /**
  * Decodes a YAML string to a JavaScript value.
  *
+ * Every alias (`*id001`) is returned as its own copy of the anchored block, so editing one place
+ * never changes another. Every path that reads a user's YAML file (the legacy form's import and
+ * the workspace import) decodes it here.
+ *
  * @throws {YAMLParseError} If YAML string is malformed or has syntax errors
+ * @throws {Error} If an alias points back into its own anchor (the data would never end)
+ * @throws {ReferenceError} If aliases expand too far (the `yaml` library's alias-count limit)
  *
  * @example
  * // Valid YAML parsing
@@ -71,7 +122,7 @@ export function encodeYaml(model: unknown): string {
  * }
  */
 export function decodeYaml(text: string): unknown {
-  return YAML.parse(text);
+  return copyWithoutSharing(YAML.parse(text));
 }
 
 /**

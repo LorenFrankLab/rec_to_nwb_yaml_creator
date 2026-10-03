@@ -7,11 +7,11 @@
  * @module features/importExport
  */
 
-import YAML from 'yaml';
 import { validate } from '../validation';
 import { removeStaleCameraReferences } from '../utils/cameraReferences';
 import { withLegacyConverterKeys } from '../io/legacyCompat';
 import {
+  decodeYaml,
   encodeYaml,
   downloadYamlFile,
   formatDeterministicFilename
@@ -132,7 +132,7 @@ export async function importFiles(file, options = {}) {
       // Parse YAML with error handling
       let jsonFileContent;
       try {
-        jsonFileContent = YAML.parse(evt.target.result);
+        jsonFileContent = decodeYaml(evt.target.result);
       } catch (parseError) {
         // eslint-disable-next-line no-alert
         window.alert(
